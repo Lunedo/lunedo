@@ -696,7 +696,7 @@ export const changeSummarySchema = z
     counts: z
       .record(z.string(), z.number().int())
       .describe(
-        "What the comparison found: `new`, `updated`, `unchanged`, `conflicts`, `deleted`, `moved`, `movedHere`, `labels`, `deletedHere`, `newComments`, `goneComments`, `newAttachmentVersions`, `goneAttachments`, `newTemplates`, `updatedTemplates` and `permissions`.",
+        "What the comparison found: `new`, `updated`, `unchanged`, `conflicts`, `deleted`, `moved`, `movedHere`, `labels`, `deletedHere`, `newComments`, `goneComments`, `newAttachmentVersions`, `goneAttachments`, `newTemplates`, `updatedTemplates`, `permissions` and `restricted` (new pages and label changes that wait until a restriction of a page above them is applied).",
       ),
     open: z
       .number()
@@ -737,10 +737,15 @@ export const changeEntrySchema = z
       .nullable()
       .describe("The page in Pagehall, or null when the change concerns something else."),
     title: z.string().nullable().describe("Title of what changed."),
-    sourceTitle: z.string().nullable().describe("Title at the source, for changed pages."),
+    sourceTitle: z
+      .string()
+      .nullable()
+      .describe(
+        "Title at the source, for changed pages. Null for a change that waits for a restriction when the caller would lose access once it is applied.",
+      ),
     reason: extensibleEnum(
       ["both", "editing", "restricted"],
-      "Why it is a conflict: `both` when it was changed on both sides, `editing` when someone is editing the page, `restricted` when the page was restricted further at the source and that permission difference is not applied yet.",
+      "Why it is a conflict: `both` when it was changed on both sides, `editing` when someone is editing the page, `restricted` when the page or a page above it was restricted further at the source and that permission difference is not applied yet.",
     ).nullable(),
     editing: z
       .boolean()
@@ -803,6 +808,23 @@ export const changeEntrySchema = z
       .nullable()
       .describe(
         "A difference to the permissions at the source. Pagehall never changes permissions by itself.",
+      ),
+    held: z
+      .boolean()
+      .describe(
+        "Whether the change waits because the page or a page above it was restricted further at the source and that permission difference is not applied yet. Until then no source content of the page is stored.",
+      ),
+    heldFor: z
+      .object({
+        differenceId: uuid("ID of the permission difference to apply first."),
+        title: z.string().describe("Title of the page the difference restricts."),
+      })
+      .nullable()
+      .describe("The permission difference the change waits for, when the caller can see its page."),
+    decisions: z
+      .array(decisionSchema)
+      .describe(
+        "Decisions that can be taken now. While a conflict waits for a restriction, only `pagehall` is possible.",
       ),
     decision: decisionSchema.nullable(),
     decidedBy: changePersonSchema.nullable().describe("Who decided, or null."),
@@ -871,6 +893,11 @@ export const changeComparisonSchema = z
     kind: extensibleEnum(["page", "template"], "Whether a page or a space template is compared."),
     pagehall: comparisonSideSchema.describe("The current content in Pagehall."),
     source: comparisonSideSchema.describe("The content of the new export, converted as it would be applied."),
+    decisions: z
+      .array(decisionSchema)
+      .describe(
+        "Decisions that can be taken now. While the page waits for a restriction from the source, only `pagehall` is possible.",
+      ),
     decision: decisionSchema.nullable().describe("The decision taken for the conflict so far, or null."),
     diff: z
       .json()

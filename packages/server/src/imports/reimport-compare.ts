@@ -13,6 +13,7 @@ import {
   templateState,
 } from "./baselines.js";
 import { ImportFormatError } from "./errors.js";
+import { Narrowing, narrowsView } from "./narrowing.js";
 import { externalIdOf, personOf } from "./people.js";
 import { roleFor } from "./permissions.js";
 import type { ImportReader, ReadContext } from "./source.js";
@@ -69,6 +70,7 @@ export interface ComparisonCounts {
   newTemplates: number;
   updatedTemplates: number;
   permissions: number;
+  restricted: number;
 }
 
 export type PrincipalRef =
@@ -215,9 +217,11 @@ export class ReimportComparer {
       newTemplates: 0,
       updatedTemplates: 0,
       permissions: 0,
+      restricted: 0,
     };
     const seen = new Set<string>();
     const titles = new Map<string, string>();
+    const parents = new Map<string, string | null>();
     const restrictionChanges: { state: SourcePageState; baseline: PageBaseline; itemId: string }[] = [];
     for await (const states of sourcePageStates(run.reader, context)) {
       const targets = states.flatMap((state) => {
@@ -229,6 +233,7 @@ export class ReimportComparer {
       for (const state of states) {
         seen.add(state.sourceId);
         titles.set(state.sourceId, state.title);
+        parents.set(state.sourceId, state.parentId);
         const baseline = baselines.get(state.sourceId);
         if (!baseline) {
           rows.push({
@@ -352,7 +357,7 @@ export class ReimportComparer {
     const principal = { organizationId: run.organizationId, lineage };
     await this.#spacePermissions(run, context, principal, rows, counts);
     await this.#restrictions(restrictionChanges, principal, rows, counts);
-    this.#holdNarrowed(rows, counts);
+    await this.#holdNarrowed(run.spaceId, baselines, parents, rows, counts);
     await this.#database.transaction(async (tx) => {
       await tx.execute(sql`delete from import_changes where import_id = ${run.importId}`);
       for (let start = 0; start < rows.length; start += BATCH) {
@@ -377,25 +382,45 @@ export class ReimportComparer {
     return counts;
   }
 
-  #holdNarrowed(rows: ChangeRow[], counts: ComparisonCounts): void {
-    const narrowed = new Set(
-      rows.flatMap((row) =>
-        row.change === "permission" &&
-        row.itemId &&
-        row.details.restriction === "view" &&
-        (row.details.action === "restrict" || row.details.action === "unlistHolder")
-          ? [row.itemId]
-          : [],
+  async #holdNarrowed(
+    spaceId: string,
+    baselines: ReadonlyMap<string, PageBaseline>,
+    parents: ReadonlyMap<string, string | null>,
+    rows: ChangeRow[],
+    counts: ComparisonCounts,
+  ): Promise<void> {
+    const narrowing = await Narrowing.load(this.#database, {
+      spaceId,
+      pending: new Set(
+        rows.flatMap((row) =>
+          row.change === "permission" && row.itemId && narrowsView(row.details) ? [row.itemId] : [],
+        ),
       ),
-    );
+      sourceParents: parents,
+      sourceItems: new Map(
+        [...baselines.values()].flatMap((baseline) =>
+          baseline.targetId ? [[baseline.sourceId, baseline.targetId] as const] : [],
+        ),
+      ),
+    });
     for (const [index, row] of rows.entries()) {
-      if (row.kind !== "page" || !row.itemId || !narrowed.has(row.itemId)) continue;
+      if (row.kind !== "page") continue;
+      const causes = narrowing.causes({ sourceId: row.sourceId, itemId: row.itemId });
+      if (causes.length === 0) continue;
       if (row.change === "updated") {
-        rows[index] = { ...row, change: "conflict", details: { ...row.details, reason: "restricted" } };
+        rows[index] = {
+          ...row,
+          change: "conflict",
+          details: { ...row.details, reason: "restricted", heldBy: causes },
+        };
         counts.updated -= 1;
         counts.conflicts += 1;
       } else if (row.change === "conflict") {
-        rows[index] = { ...row, details: { ...row.details, restricted: true } };
+        rows[index] = { ...row, details: { ...row.details, restricted: true, heldBy: causes } };
+      } else if (row.change === "new" || row.change === "labels") {
+        rows[index] = { ...row, details: { ...row.details, restricted: true, heldBy: causes } };
+        counts[row.change] -= 1;
+        counts.restricted += 1;
       }
     }
   }

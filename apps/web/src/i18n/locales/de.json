@@ -1374,7 +1374,8 @@
     "restrictedParentInTrashAsk": "Diese Seite lag unter einer eingeschränkten Seite. Bitte Space- oder Organisationsadministratoren, zuerst die Seiten darüber wiederherzustellen.",
     "restrictedParentInTrashNamed": "„{title}“ liegt im Papierkorb und schränkt ein, wer diese Seite ansehen kann. Stelle die Seite zusammen mit den Seiten darüber wieder her, damit diese Einschränkung bleibt.",
     "restrictedParentInTrashNamedAsk": "„{title}“ liegt im Papierkorb und schränkt ein, wer diese Seite ansehen kann. Bitte Space- oder Organisationsadministratoren, sie zuerst wiederherzustellen.",
-    "moveChangesAccess": "Das Verschieben ändert, wer den Inhalt öffnen kann. Prüfe, wer Zugriff erhält und wer ihn verliert, und bestätige dann das Verschieben."
+    "moveChangesAccess": "Das Verschieben ändert, wer den Inhalt öffnen kann. Prüfe, wer Zugriff erhält und wer ihn verliert, und bestätige dann das Verschieben.",
+    "restrictionPending": "In Confluence dürfen weniger Personen diese Seite lesen, und diese Abweichung der Berechtigungen ist noch nicht übernommen. Übernimm sie zuerst im Tab „Berechtigungen“ oder behalte die Pagehall-Version."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -6796,7 +6797,7 @@
       "someone": "Jemand",
       "template": "Bereichsvorlage",
       "editing": "Wird bearbeitet",
-      "restricted": "In Confluence weiter eingeschränkt. Übernimm zuerst die Abweichung der Berechtigungen oder entscheide.",
+      "restricted": "In Confluence dürfen weniger Personen diese Seite lesen. Bis diese Abweichung der Berechtigungen übernommen ist, ist nur „Pagehall-Version behalten“ möglich, und es werden keine Inhalte aus Confluence gespeichert.",
       "sourceTitle": "In Confluence: {title}",
       "updates": {
         "newPages": "{count, plural, =0 {Keine neuen Seiten} one {# neue Seite} other {# neue Seiten}}",
@@ -6816,7 +6817,9 @@
         "updatedTemplates": "{count, plural, one {# Bereichsvorlage nur in Confluence geändert} other {# Bereichsvorlagen nur in Confluence geändert}}",
         "updatedTemplatesDescription": "Werden mit dem Inhalt aus Confluence aktualisiert.",
         "deletedHere": "{count, plural, one {# Seite in Pagehall gelöscht} other {# Seiten in Pagehall gelöscht}}",
-        "deletedHereDescription": "Werden nicht neu angelegt."
+        "deletedHereDescription": "Werden nicht neu angelegt.",
+        "restricted": "{count, plural, one {# neue Seite oder Label-Änderung wartet auf eine Einschränkung} other {# neue Seiten oder Label-Änderungen warten auf eine Einschränkung}}",
+        "restrictedDescription": "Eine Seite darüber wurde in Confluence weiter eingeschränkt. Sie werden hinzugefügt, sobald diese Abweichung der Berechtigungen übernommen ist und du die Änderungen erneut übernimmst."
       },
       "deletedHint": "Diese Seiten gibt es in Confluence nicht mehr. Entscheide, was in Pagehall mit ihnen passiert. Seiten im Papierkorb lassen sich von dort wiederherstellen.",
       "noDeleted": "In Confluence wurde nichts gelöscht",
@@ -6888,7 +6891,10 @@
         "withheldTitle": "Der neue Inhalt ist in Confluence eingeschränkt",
         "withheld": "In Confluence dürfen weniger Personen diesen Inhalt lesen als in Pagehall. Der neue Inhalt wird nur Personen gezeigt, die nach Übernahme der Einschränkungen weiter Zugriff haben. Sie werden genau wie in Confluence übernommen: Das Übernehmen gibt dir keinen Zugriff, und wenn Confluence dich nicht nennt, verlierst du ihn.",
         "openPermissions": "Berechtigungsabweichungen öffnen"
-      }
+      },
+      "restrictedBy": "Wartet auf die Einschränkung von „{title}“ aus Confluence. Bis sie übernommen ist, ist nur „Pagehall-Version behalten“ möglich, und es werden keine Inhalte aus Confluence gespeichert.",
+      "showDifference": "Abweichung der Berechtigungen anzeigen",
+      "selectionLimited": "Einige ausgewählte Seiten warten auf eine Einschränkung aus Confluence, daher wird nur „Pagehall-Version behalten“ angeboten."
     }
   }
 }

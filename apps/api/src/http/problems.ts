@@ -137,6 +137,7 @@ export const problems = {
   comparisonUnavailable: { status: 409, title: "The comparison is no longer available" },
   comparisonWithheld: { status: 403, title: "The new content is restricted at the source" },
   invalidDecision: { status: 400, title: "The decision does not fit the change" },
+  restrictionPending: { status: 409, title: "The restriction from the source is not applied yet" },
   holderNotInPagehall: { status: 409, title: "The person or group is not in Pagehall yet" },
   differenceResolved: { status: 409, title: "The difference no longer exists" },
   notRestricted: { status: 409, title: "The page has no restriction of this kind" },

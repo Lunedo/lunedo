@@ -97,6 +97,7 @@ export function ReimportComparisonScreen() {
                 organizationId={organizationId}
                 changeId={changeId}
                 decision={comparison.data.decision}
+                decisions={comparison.data.decisions}
                 title={comparison.data.pagehall.title}
               />
             ) : null}
@@ -139,12 +140,14 @@ function DecisionField({
   organizationId,
   changeId,
   decision,
+  decisions,
   title,
 }: {
   importId: string;
   organizationId: string;
   changeId: string;
   decision: ChangeDecision | null;
+  decisions: readonly ChangeDecision[];
   title: string;
 }) {
   const { t } = useTranslation();
@@ -162,13 +165,16 @@ function DecisionField({
     }
   };
   return (
-    <Field label={t("imports.reimport.columns.decision")}>
+    <Field
+      label={t("imports.reimport.columns.decision")}
+      hint={decisions.length < DECISIONS.length ? t("imports.reimport.restricted") : undefined}
+    >
       <div className="flex items-center gap-2">
         <Select
           value={decision ?? undefined}
           onValueChange={(value) => void decide(value === UNDECIDED ? null : (value as ChangeDecision))}
           options={[
-            ...DECISIONS.map((value) => ({
+            ...decisions.map((value) => ({
               value,
               label: translateKey(t, `imports.reimport.decisions.${value}`),
             })),

@@ -1,22 +1,24 @@
 import { type DocumentDiff, type DocumentJson, diffDocuments } from "@pagehall/editor-schema";
 import { uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
-import { type Principal, SYSTEM } from "../accounts/principal.js";
+import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
+import { holderCovers } from "../authorization/item-access.js";
 import type { AuthorizationService } from "../authorization/service.js";
-import type { AccessImpact } from "../authorization/space-access.js";
-import type { Database, Transaction } from "../database/database.js";
+import { type AccessImpact, accountRoleUnder, type SpaceGrantRow } from "../authorization/space-access.js";
+import type { Database, Executor, Transaction } from "../database/database.js";
 import type { JobQueue } from "../jobs/job-queue.js";
 import type { AccessChange, PageAccessImpact, PageAccessService } from "../sharing/page-access.js";
 import { actorIdOf } from "../spaces/common.js";
 import { migrated } from "../spaces/documents.js";
 import type { PermissionChange, SpacePermissionService } from "../spaces/permissions.js";
-import type { SpaceRole } from "../spaces/schema.js";
+import type { SpaceRole, SpaceVisibility } from "../spaces/schema.js";
 import type { VersionService } from "../spaces/versions.js";
 import { visibleItem } from "../spaces/visibility.js";
 import { deleteCredentials } from "./credentials.js";
 import { ImportError } from "./errors.js";
 import { importWorkJob } from "./jobs.js";
+import { heldBy, heldCondition, holdsChange, narrowsView } from "./narrowing.js";
 import type { ImportPipeline } from "./pipeline.js";
 import {
   type ChangeDecision,
@@ -81,6 +83,9 @@ export interface ChangeEntryView {
     readonly restriction: string | null;
     readonly applicable: boolean;
   } | null;
+  readonly held: boolean;
+  readonly heldFor: { readonly differenceId: string; readonly title: string } | null;
+  readonly decisions: readonly ChangeDecision[];
   readonly decision: ChangeDecision | null;
   readonly decidedBy: ChangePerson | null;
   readonly decidedAt: Date | null;
@@ -91,6 +96,7 @@ export interface ChangeComparison {
   readonly kind: "page" | "template";
   readonly pagehall: { readonly title: string; readonly version: number | null };
   readonly source: { readonly title: string; readonly version: number | null };
+  readonly decisions: readonly ChangeDecision[];
   readonly decision: ChangeDecision | null;
   readonly diff: DocumentDiff;
   readonly before: DocumentJson;
@@ -134,6 +140,9 @@ interface ChangeRowData {
   updated_by: string | null;
   updated_by_name: string | null;
   updated_at: Date | string | null;
+  held: boolean;
+  held_for_id: string | null;
+  held_for_title: string | null;
   [key: string]: unknown;
 }
 
@@ -143,12 +152,6 @@ function date(value: Date | string | null): Date | null {
 
 function text(value: unknown): string | null {
   return typeof value === "string" ? value : null;
-}
-
-class AccessProbe extends Error {
-  constructor(readonly allowed: boolean) {
-    super("The access probe is rolled back");
-  }
 }
 
 export class ReimportService {
@@ -371,12 +374,19 @@ export class ReimportService {
     importId: string,
     filter: { tab: ChangeTab; after?: string | undefined; limit: number },
   ): Promise<{ entries: ChangeEntryView[]; next: string | null }> {
-    await this.#readable(viewer, importId);
+    const reimport = await this.#readable(viewer, importId);
     const result = await this.#database.execute<ChangeRowData>(sql`
       select c.id, c.kind, c.change, c.item_id, c.target_id, c.title, t.title as item_title, s.key as space_key,
         c.details, c.decision, c.decided_by, da.name as decided_by_name, c.decided_at, c.applied_at,
-        d.updated_by, ua.name as updated_by_name, d.updated_at
+        d.updated_by, ua.name as updated_by_name, d.updated_at, ${heldCondition(sql`c`)} as held,
+        hf.id as held_for_id, hf.title as held_for_title
       from import_changes c
+      left join lateral (
+        select held.id, ht.title from import_changes held
+        join tree_items ht on ht.id = held.item_id join spaces hs on hs.id = ht.space_id
+        where ${holdsChange(sql`held`, sql`c`)}
+          and ${visibleItem(this.#authorization, viewer, sql`ht`, sql`hs`)}
+        order by held.id limit 1) hf on true
       left join tree_items t on t.id = c.item_id
       left join spaces s on s.id = t.space_id
       left join page_documents d on d.item_id = c.item_id
@@ -390,7 +400,19 @@ export class ReimportService {
     const rows = result.rows.slice(0, filter.limit);
     const places = await this.#places(viewer, importId, rows);
     const holders = await this.#holders(rows);
-    const entries = rows.map((row) => this.#entry(row, places, holders));
+    const withheld = new Set<string>();
+    for (const row of rows) {
+      if (!row.held) continue;
+      const hidden = await this.#withheld(viewer, {
+        importId,
+        organizationId: reimport.organization_id,
+        spaceId: reimport.target_space_id ?? "",
+        itemId: row.item_id,
+        heldBy: heldBy(row.details),
+      });
+      if (hidden) withheld.add(row.id);
+    }
+    const entries = rows.map((row) => this.#entry(row, places, holders, withheld.has(row.id)));
     return { entries, next: result.rows.length > filter.limit ? (rows.at(-1)?.id ?? null) : null };
   }
 
@@ -417,9 +439,10 @@ export class ReimportService {
       decision: ChangeDecision | null;
       applied: boolean;
       visible: boolean;
+      held: boolean;
     }>(sql`
       select c.kind, c.change, c.source_id, c.item_id, c.target_id, c.details, c.decision,
-        c.applied_at is not null as applied,
+        c.applied_at is not null as applied, ${heldCondition(sql`c`)} as held,
         ${this.#visible(viewer)} as visible
       from import_changes c where c.import_id = ${importId} and c.id = ${changeId}`);
     const change = found.rows[0];
@@ -441,13 +464,13 @@ export class ReimportService {
         ? await this.#currentPage(viewer, change.item_id)
         : await this.#currentTemplate(viewer, row.target_space_id, change.target_id);
     if (
-      await this.#withheld(
-        viewer,
+      await this.#withheld(viewer, {
         importId,
-        row.organization_id,
-        row.target_space_id,
-        kind === "page" ? change.item_id : null,
-      )
+        organizationId: row.organization_id,
+        spaceId: row.target_space_id,
+        itemId: kind === "page" ? change.item_id : null,
+        heldBy: heldBy(change.details),
+      })
     ) {
       throw new ImportError(
         "comparisonWithheld",
@@ -478,6 +501,7 @@ export class ReimportService {
       kind,
       pagehall: { title: pagehall.title, version: pagehall.version },
       source: { title: sourceTitle, version: typeof version === "number" ? version : null },
+      decisions: change.held ? ["pagehall"] : (DECISIONS.conflict ?? []),
       decision: change.decision,
       diff: diffDocuments(
         { title: pagehall.title, document: pagehall.document },
@@ -533,64 +557,142 @@ export class ReimportService {
 
   async #withheld(
     viewer: Principal,
-    importId: string,
-    organizationId: string,
-    spaceId: string,
-    itemId: string | null,
+    target: {
+      importId: string;
+      organizationId: string;
+      spaceId: string;
+      itemId: string | null;
+      heldBy: readonly string[];
+    },
   ): Promise<boolean> {
+    const { itemId, spaceId } = target;
+    const accountId = actorIdOf(viewer);
+    const visible = await this.#authorization.authorize(
+      viewer,
+      itemId ? "item.view" : "space.view",
+      itemId ? { type: "item", id: itemId } : { type: "space", id: spaceId },
+    );
+    if (!accountId || !visible) return true;
+    const facts = itemId ? await this.#authorization.itemFacts(accountId, itemId) : null;
+    const items = [...new Set([...(facts?.path ?? []), ...target.heldBy])];
     const pending = await this.#database.execute<{
       item_id: string | null;
       details: Record<string, unknown>;
     }>(sql`
       select item_id, details from import_changes
-      where import_id = ${importId} and change = 'permission' and applied_at is null
-        and (details ->> 'scope' = 'space' or (details ->> 'scope' = 'page' and details ->> 'restriction' = 'view'))
+      where import_id = ${target.importId} and change = 'permission' and applied_at is null
+        and (details ->> 'scope' = 'space' or (details ->> 'scope' = 'page' and details ->> 'restriction' = 'view'
+          and item_id = any(${sql.param(items)}::uuid[])))
       order by case details ->> 'action' when 'restrict' then 0 else 1 end, id`);
     const narrows = (details: Record<string, unknown>) =>
-      details.scope === "page"
-        ? details.action === "restrict" || details.action === "unlistHolder"
-        : details.action === "remove";
+      details.scope === "page" ? narrowsView(details) : details.action === "remove";
     if (!pending.rows.some((row) => narrows(row.details))) return false;
-    try {
-      await this.#database.transaction(async (tx) => {
-        for (const row of pending.rows) {
-          try {
-            await tx.transaction(async (step) => {
-              if (row.details.scope === "page") {
-                if (!row.item_id) throw new ImportError("changeNotFound", "The difference has no page.");
-                await this.#pageAccess.changeWithin(
-                  step,
-                  SYSTEM,
-                  row.item_id,
-                  await this.#pageChanges(step, organizationId, spaceId, row.details),
-                  { shareWithActor: false },
-                );
-              } else {
-                await this.#spacePermissions.apply(
-                  SYSTEM,
-                  spaceId,
-                  await this.#spaceChange(step, spaceId, row.details),
-                  { tx: step },
-                );
-              }
-            });
-          } catch (error) {
-            if (narrows(row.details)) throw error;
+    const space = await this.#database.execute<{
+      organization_id: string | null;
+      visibility: SpaceVisibility;
+    }>(sql`select organization_id, visibility from spaces where id = ${spaceId}`);
+    const grants = await this.#database.execute<SpaceGrantRow & Record<string, unknown>>(sql`
+      select principal_kind as "principalKind", principal_id as "principalId", role from space_permissions
+      where space_id = ${spaceId}`);
+    const proposed = [...grants.rows];
+    const restrictions = new Map<string, { restricted: boolean; holders: Map<string, PrincipalRef> }>();
+    const current = await this.#database.execute<{
+      item_id: string;
+      restricted: boolean;
+      holders: { kind: "account" | "group"; id: string }[];
+    }>(sql`
+      select x.item_id, exists (select 1 from page_restrictions r where r.item_id = x.item_id and r.kind = 'view')
+          as restricted,
+        coalesce((select jsonb_agg(jsonb_build_object('kind', h.principal_kind, 'id', h.principal_id))
+          from page_restriction_holders h where h.item_id = x.item_id and h.kind = 'view'), '[]'::jsonb) as holders
+      from unnest(${sql.param(items)}::uuid[]) as x(item_id)`);
+    for (const row of current.rows) {
+      restrictions.set(row.item_id, {
+        restricted: row.restricted,
+        holders: new Map(row.holders.map((holder) => [`${holder.kind}:${holder.id}`, holder])),
+      });
+    }
+    let spaceChanged = false;
+    for (const row of pending.rows) {
+      try {
+        if (row.details.scope === "space") {
+          this.#proposeSpaceChange(proposed, row.details);
+          spaceChanged = true;
+          continue;
+        }
+        const state = row.item_id ? restrictions.get(row.item_id) : undefined;
+        if (!state) throw new ImportError("changeNotFound", "The difference has no page.");
+        for (const change of await this.#pageChanges(
+          this.#database,
+          target.organizationId,
+          spaceId,
+          row.details,
+        )) {
+          if (change.action === "restrict") state.restricted = true;
+          if (change.action === "unrestrict") state.restricted = false;
+          if (change.action === "listHolder" || change.action === "unlistHolder") {
+            const key = `${change.holderKind}:${change.holderId}`;
+            if (change.action === "listHolder") {
+              state.holders.set(key, { kind: change.holderKind, id: change.holderId });
+            } else {
+              state.holders.delete(key);
+            }
           }
         }
-        const allowed = await this.#authorization.authorize(
-          viewer,
-          itemId ? "item.view" : "space.view",
-          itemId ? { type: "item", id: itemId } : { type: "space", id: spaceId },
-          { executor: tx },
-        );
-        throw new AccessProbe(allowed);
-      });
-    } catch (error) {
-      if (error instanceof AccessProbe) return !error.allowed;
-      return true;
+      } catch (error) {
+        if (narrows(row.details)) return true;
+        if (!(error instanceof ImportError)) throw error;
+      }
     }
-    return true;
+    const organization = space.rows[0]?.organization_id ?? null;
+    if (spaceChanged) {
+      const role = await accountRoleUnder(this.#database, accountId, {
+        organizationId: organization,
+        visibility: space.rows[0]?.visibility ?? "private",
+        grants: proposed,
+      });
+      const portal = (await this.#authorization.spaceRole(accountId, spaceId)).account?.type === "portal";
+      const shared = facts !== null && !portal && facts.sources.length > 0;
+      if (role === null && !shared) return true;
+    }
+    const restricted = [...restrictions.entries()].filter(([, state]) => state.restricted);
+    if (restricted.length === 0) return false;
+    const account = sql`${accountId}::uuid`;
+    const organizationId = sql`${organization}::uuid`;
+    const holders = restricted.flatMap(([id, state]) =>
+      [...state.holders.values()].map((holder) => ({ item_id: id, kind: holder.kind, id: holder.id })),
+    );
+    const listed = await this.#database.execute<{ item_id: string }>(sql`
+      select distinct rs.item_id from page_shares rs
+      where rs.item_id = any(${sql.param(restricted.map(([id]) => id))}::uuid[])
+        and ${holderCovers(sql`rs.principal_kind`, sql`rs.principal_id`, account, organizationId)}
+      union
+      select distinct h.item_id from jsonb_to_recordset(${JSON.stringify(holders)}::jsonb)
+        as h(item_id uuid, kind text, id uuid)
+      where ${holderCovers(sql`h.kind`, sql`h.id`, account, organizationId)}`);
+    const covered = new Set(listed.rows.map((row) => row.item_id));
+    return restricted.some(([id]) => !covered.has(id));
+  }
+
+  #proposeSpaceChange(grants: SpaceGrantRow[], details: Record<string, unknown>): void {
+    const principal = details.principal as PrincipalRef | null | undefined;
+    if (!principal) {
+      throw new ImportError(
+        "holderNotInPagehall",
+        "This person or group is not in Pagehall yet. Map them in the report of the import first.",
+      );
+    }
+    const index = grants.findIndex(
+      (grant) => grant.principalKind === principal.kind && grant.principalId === principal.id,
+    );
+    const role = text(details.role) as SpaceRole | null;
+    if (role === null) {
+      if (index >= 0) grants.splice(index, 1);
+      return;
+    }
+    const grant = { principalKind: principal.kind, principalId: principal.id, role };
+    if (index >= 0) grants[index] = grant;
+    else grants.push(grant);
   }
 
   async #places(
@@ -636,8 +738,10 @@ export class ReimportService {
     row: ChangeRowData,
     places: ReadonlyMap<string, { id: string; title: string }>,
     holders: ReadonlyMap<string, string>,
+    withheld: boolean,
   ): ChangeEntryView {
     const details = row.details;
+    const source = withheld ? {} : details;
     const principal = details.principal as PrincipalRef | null | undefined;
     const holderKind = text(details.holderKind) as ChangeHolder["kind"] | null;
     const permission =
@@ -672,7 +776,7 @@ export class ReimportService {
           ? { id: row.item_id, title: row.item_title, spaceKey: row.space_key ?? "" }
           : null,
       title: row.item_title ?? row.title,
-      sourceTitle: text(details.sourceTitle),
+      sourceTitle: text(source.sourceTitle),
       reason: row.change === "conflict" ? reason : null,
       editing: details.editing === true || reason === "editing",
       changedHere:
@@ -682,19 +786,30 @@ export class ReimportService {
               at: new Date(row.updated_at),
             }
           : null,
-      changedAtSource: text(details.sourceModifiedAt)
-        ? new Date(text(details.sourceModifiedAt) as string)
+      changedAtSource: text(source.sourceModifiedAt)
+        ? new Date(text(source.sourceModifiedAt) as string)
         : null,
       from: text(details.from) ? (places.get(text(details.from) as string) ?? null) : null,
       to: text(details.to) ? (places.get(text(details.to) as string) ?? null) : null,
       labels:
         row.change === "labels"
           ? {
-              added: (details.added as string[] | undefined) ?? [],
-              removed: (details.removed as string[] | undefined) ?? [],
+              added: (source.added as string[] | undefined) ?? [],
+              removed: (source.removed as string[] | undefined) ?? [],
             }
           : null,
       permission,
+      held: row.held,
+      heldFor:
+        row.held && row.held_for_id
+          ? { differenceId: row.held_for_id, title: row.held_for_title ?? "" }
+          : null,
+      decisions:
+        row.applied_at !== null
+          ? []
+          : row.change === "conflict" && row.held
+            ? ["pagehall"]
+            : (DECISIONS[row.change] ?? []),
       decision: row.decision,
       decidedBy: row.decided_by ? { id: row.decided_by, name: row.decided_by_name } : null,
       decidedAt: date(row.decided_at),
@@ -717,8 +832,15 @@ export class ReimportService {
           "Decisions can be made while the changes wait to be applied. Start a new re-import for a newer export.",
         );
       }
-      const found = await tx.execute<{ id: string; change: ChangeType; kind: string; applied: boolean }>(sql`
-        select c.id, c.change, c.kind, c.applied_at is not null as applied from import_changes c
+      const found = await tx.execute<{
+        id: string;
+        change: ChangeType;
+        kind: string;
+        applied: boolean;
+        held: boolean;
+      }>(sql`
+        select c.id, c.change, c.kind, c.applied_at is not null as applied, ${heldCondition(sql`c`)} as held
+        from import_changes c
         where c.import_id = ${importId} and c.id = any(${sql.param(ids)}::uuid[]) and ${this.#visible(actor)}
         order by c.id for update of c`);
       if (found.rows.length !== ids.length) {
@@ -734,6 +856,16 @@ export class ReimportService {
         const allowed = DECISIONS[entry.change] ?? [];
         if (allowed.length === 0 || (input.decision !== null && !allowed.includes(input.decision))) {
           throw new ImportError("invalidDecision", "This decision does not fit every chosen change.");
+        }
+        if (
+          entry.change === "conflict" &&
+          entry.held &&
+          (input.decision === "source" || input.decision === "both")
+        ) {
+          throw new ImportError(
+            "restrictionPending",
+            "Fewer people may read this page in Confluence, and that permission difference is not applied yet. Apply the difference in the permissions tab first, or keep the Pagehall version.",
+          );
         }
       }
       const actorId = actorIdOf(actor);
@@ -874,7 +1006,7 @@ export class ReimportService {
   }
 
   async #pageChanges(
-    tx: Transaction,
+    tx: Executor,
     organizationId: string,
     spaceId: string,
     details: Record<string, unknown>,

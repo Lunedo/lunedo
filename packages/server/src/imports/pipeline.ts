@@ -37,6 +37,7 @@ import {
   recordTitles,
   type SourcePageState,
   sourceHolders,
+  sourceParent,
   templateState,
   updateSourceSide,
 } from "./baselines.js";
@@ -53,6 +54,7 @@ import {
 } from "./confluence/storage.js";
 import { ImportFormatError } from "./errors.js";
 import type { ByteSource } from "./formats/bytes.js";
+import { heldBy, Narrowing, pendingNarrowing } from "./narrowing.js";
 import { type Directory, ensurePeople, personOf } from "./people.js";
 import { ensureGroups, groupKey, roleFor } from "./permissions.js";
 import { createQuarantineSpace } from "./quarantine.js";
@@ -491,6 +493,7 @@ export class ImportPipeline {
     const space = await this.#requireSpace(run.importId);
     const home = (await run.reader.space(context)).homePageId;
     const total = await run.staging.count("page");
+    const narrowing = await this.#narrowing(run);
     let done = 0;
     let batch: SourcePage[] = [];
     const flush = async () => {
@@ -541,7 +544,8 @@ export class ImportPipeline {
               nested &&
               (!parentId ||
                 !(await this.#inSpace(tx, parentId, space.spaceId)) ||
-                !(await run.reimport.editable(tx, [parentId])).has(parentId))
+                !(await run.reimport.editable(tx, [parentId])).has(parentId) ||
+                narrowing.holds({ sourceId: page.sourceId, parentItemId: parentId }))
             ) {
               continue;
             }
@@ -634,11 +638,19 @@ export class ImportPipeline {
     let done = 0;
     let total = 0;
     for await (const _ of run.reader.attachments(context)) total += 1;
+    const narrowing = await this.#narrowing(run);
     for await (const attachment of run.reader.attachments(context)) {
       done += 1;
       const itemId = (await this.#mapped(run.importId, "page", [attachment.pageId])).get(attachment.pageId);
       if (!itemId) continue;
-      if (run.reimport && !(await this.#writable(run, run.reimport, [itemId])).has(itemId)) continue;
+      if (
+        run.reimport &&
+        !(await this.#writable(run.reimport, narrowing, [{ sourceId: attachment.pageId, itemId }])).has(
+          itemId,
+        )
+      ) {
+        continue;
+      }
       const name = cleanFileName(attachment.fileName) ?? `attachment-${attachment.sourceId}`;
       const versions = await this.#mapped(
         run.importId,
@@ -1096,6 +1108,7 @@ export class ImportPipeline {
     const sourceSpace = await run.reader.space(context);
     const total = await run.staging.count("page");
     const plan = run.reimport ? await this.#plan(run.importId, "page") : null;
+    const narrowing = await this.#narrowing(run);
     let done = 0;
     let batch: SourcePage[] = [];
     const flush = async () => {
@@ -1103,7 +1116,7 @@ export class ImportPipeline {
       batch = [];
       const worked =
         plan && run.reimport
-          ? await this.#reimportContent(run, run.reimport, context, sourceSpace, pages, plan)
+          ? await this.#reimportContent(run, run.reimport, context, sourceSpace, pages, plan, narrowing)
           : await this.#contentBatch(run, context, sourceSpace.key, pages);
       done += pages.length;
       if (!worked) return;
@@ -1124,6 +1137,7 @@ export class ImportPipeline {
     sourceSpace: { key: string; homePageId: string | null },
     pages: readonly SourcePage[],
     plan: ReadonlyMap<string, ChangeEntry[]>,
+    narrowing: Narrowing,
   ): Promise<boolean> {
     const created = pages.filter((page) => plan.get(page.sourceId)?.some((entry) => entry.change === "new"));
     const states = new Map(
@@ -1151,19 +1165,36 @@ export class ImportPipeline {
         }
       },
     );
-    const updated = await this.#updateBatch(run, reimport, context, sourceSpace, pages, plan);
+    const updated = await this.#updateBatch(run, reimport, context, sourceSpace, pages, plan, narrowing);
     return added || updated;
   }
 
-  async #writable(run: PipelineRun, reimport: ReimportRun, itemIds: readonly string[]): Promise<Set<string>> {
-    const editable = await reimport.editable(this.#database, itemIds);
-    if (editable.size === 0) return editable;
-    const narrowed = await this.#database.execute<{ item_id: string }>(sql`
-      select distinct item_id from import_changes
-      where import_id = ${run.importId} and change = 'permission' and applied_at is null and item_id is not null
-        and details ->> 'restriction' = 'view' and details ->> 'action' in ('restrict', 'unlistHolder')
-        and item_id = any(${sql.param([...editable])}::uuid[])`);
-    for (const row of narrowed.rows) editable.delete(row.item_id);
+  async #narrowing(run: PipelineRun): Promise<Narrowing> {
+    if (!run.reimport) return Narrowing.none();
+    const pending = await pendingNarrowing(this.#database, run.importId);
+    if (pending.size === 0) return Narrowing.none();
+    const context: ReadContext = { staging: run.staging };
+    const home = (await run.reader.space(context)).homePageId;
+    const parents = new Map<string, string | null>();
+    for await (const page of run.reader.pages(context)) parents.set(page.sourceId, sourceParent(page, home));
+    return Narrowing.load(this.#database, {
+      spaceId: run.reimport.spaceId,
+      pending,
+      sourceParents: parents,
+      sourceItems: await this.#allMapped(run.importId, "page"),
+    });
+  }
+
+  async #writable(
+    reimport: ReimportRun,
+    narrowing: Narrowing,
+    pages: readonly { sourceId: string; itemId: string }[],
+  ): Promise<Set<string>> {
+    const editable = await reimport.editable(
+      this.#database,
+      pages.map((page) => page.itemId),
+    );
+    for (const page of pages) if (narrowing.holds(page)) editable.delete(page.itemId);
     return editable;
   }
 
@@ -1240,6 +1271,7 @@ export class ImportPipeline {
     sourceSpace: { key: string; homePageId: string | null },
     pages: readonly SourcePage[],
     plan: ReadonlyMap<string, ChangeEntry[]>,
+    narrowing: Narrowing,
   ): Promise<boolean> {
     const work = pages.flatMap((page) =>
       (plan.get(page.sourceId) ?? [])
@@ -1297,6 +1329,8 @@ export class ImportPipeline {
       const state = states.get(page.sourceId);
       const baseline = baselines.get(page.sourceId);
       if (!itemId || !state || !baseline || !editable.has(itemId)) continue;
+      const held = narrowing.holds({ sourceId: page.sourceId, itemId, heldBy: heldBy(entry.details) });
+      if (held && entry.decision !== "pagehall") continue;
       const threads = new Map<string, string>();
       const converted = converter.convert(page.sourceId, (ref) => {
         const commentId = markers.get(page.sourceId)?.get(ref);
@@ -1330,7 +1364,7 @@ export class ImportPipeline {
       const author = (page.modifierId ? modifiers.get(page.modifierId) : undefined) ?? run.importerId;
       await this.#database.transaction(async (tx) => {
         const current = await this.#lockChange(tx, entry.id);
-        if (!current) return;
+        if (!current || (held && current.decision !== "pagehall")) return;
         const exists = (await localPages(tx, [itemId])).get(itemId);
         if (!exists) {
           await this.#applied(tx, entry.id, reimport.actorId);
@@ -1673,13 +1707,14 @@ export class ImportPipeline {
     const context: ReadContext = { staging: run.staging };
     const sourceSpace = await run.reader.space(context);
     const total = await run.staging.count("page");
+    const narrowing = await this.#narrowing(run);
     let done = 0;
     let batch: SourcePage[] = [];
     const flush = async () => {
       const pages = batch;
       batch = [];
       done += pages.length;
-      const worked = await this.#commentBatch(run, context, sourceSpace.key, pages);
+      const worked = await this.#commentBatch(run, context, sourceSpace.key, pages, narrowing);
       if (!worked) return;
       await run.progress(done, total);
       await run.beat();
@@ -1696,6 +1731,7 @@ export class ImportPipeline {
     context: ReadContext,
     sourceKey: string,
     pages: readonly SourcePage[],
+    narrowing: Narrowing,
   ): Promise<boolean> {
     if (pages.length === 0) return false;
     const all = await run.reader.comments(
@@ -1722,7 +1758,16 @@ export class ImportPipeline {
       "page",
       unmapped.map((comment) => comment.pageId),
     );
-    const allowed = run.reimport ? await this.#writable(run, run.reimport, [...items.values()]) : null;
+    const allowed = run.reimport
+      ? await this.#writable(
+          run.reimport,
+          narrowing,
+          unmapped.flatMap((comment) => {
+            const itemId = items.get(comment.pageId);
+            return itemId ? [{ sourceId: comment.pageId, itemId }] : [];
+          }),
+        )
+      : null;
     const open = unmapped.filter((comment) => {
       const itemId = items.get(comment.pageId);
       return itemId !== undefined && (!allowed || allowed.has(itemId));
@@ -1853,6 +1898,7 @@ export class ImportPipeline {
   async #reactions(run: PipelineRun): Promise<void> {
     const context: ReadContext = { staging: run.staging };
     const total = await run.staging.count("like");
+    const narrowing = await this.#narrowing(run);
     let done = 0;
     let batch: { sourceId: string; contentId: string; personId: string | null; createdAt: string | null }[] =
       [];
@@ -1893,7 +1939,7 @@ export class ImportPipeline {
           if (!accountId) continue;
           const commentId = comments.get(like.contentId) ?? null;
           const itemId = commentId ? commentItems.get(commentId) : pages.get(like.contentId);
-          if (!itemId) continue;
+          if (!itemId || narrowing.holds({ sourceId: commentId ? null : like.contentId, itemId })) continue;
           await tx.execute(sql`
             insert into reactions (item_id, comment_id, account_id, emoji, created_at)
             values (${itemId}, ${commentId}, ${accountId}, ${THUMBS_UP}, coalesce(${like.createdAt}::timestamptz, now()))
@@ -2122,8 +2168,10 @@ export class ImportPipeline {
   async #labels(run: PipelineRun, reimport: ReimportRun): Promise<void> {
     const plan = await this.#plan(run.importId, "page");
     const entries = [...plan.values()].flat().filter((entry) => entry.change === "labels");
+    const narrowing = await this.#narrowing(run);
     for (const entry of entries) {
       const itemId = entry.targetId;
+      if (narrowing.holds({ sourceId: entry.sourceId, itemId, heldBy: heldBy(entry.details) })) continue;
       const added = (entry.details.added as string[] | undefined) ?? [];
       const removed = (entry.details.removed as string[] | undefined) ?? [];
       await this.#database.transaction(async (tx) => {

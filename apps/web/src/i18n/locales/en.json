@@ -1374,7 +1374,8 @@
     "restrictedParentInTrashAsk": "This page was below a restricted page. Ask a space or organization administrator to restore the pages above it first.",
     "restrictedParentInTrashNamed": "“{title}” is in the trash and restricts who can view this page. Restore the page together with the pages above it to keep that restriction.",
     "restrictedParentInTrashNamedAsk": "“{title}” is in the trash and restricts who can view this page. Ask a space or organization administrator to restore it first.",
-    "moveChangesAccess": "The move changes who can open the content. Check who gains and who loses access, then confirm the move."
+    "moveChangesAccess": "The move changes who can open the content. Check who gains and who loses access, then confirm the move.",
+    "restrictionPending": "Fewer people may read this page in Confluence, and that permission difference is not applied yet. Apply it in the permissions tab first, or keep the Pagehall version."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -6796,7 +6797,7 @@
       "someone": "Someone",
       "template": "Space template",
       "editing": "Being edited",
-      "restricted": "Restricted further in Confluence. Apply the permission difference first, or decide.",
+      "restricted": "Fewer people may read this page in Confluence. Until that permission difference is applied, only “Keep Pagehall version” is possible and no Confluence content is stored.",
       "sourceTitle": "In Confluence: {title}",
       "updates": {
         "newPages": "{count, plural, =0 {No new pages} one {# new page} other {# new pages}}",
@@ -6816,7 +6817,9 @@
         "updatedTemplates": "{count, plural, one {# space template changed only in Confluence} other {# space templates changed only in Confluence}}",
         "updatedTemplatesDescription": "Updated with the content from Confluence.",
         "deletedHere": "{count, plural, one {# page deleted in Pagehall} other {# pages deleted in Pagehall}}",
-        "deletedHereDescription": "Not created again."
+        "deletedHereDescription": "Not created again.",
+        "restricted": "{count, plural, one {# new page or label change waits for a restriction} other {# new pages or label changes wait for a restriction}}",
+        "restrictedDescription": "A page above them was restricted further in Confluence. They are added once that permission difference is applied and you apply the changes again."
       },
       "deletedHint": "These pages no longer exist in Confluence. Decide what happens to them in Pagehall. Pages moved to the trash can be restored from there.",
       "noDeleted": "Nothing was deleted in Confluence",
@@ -6888,7 +6891,10 @@
         "withheldTitle": "The new content is restricted in Confluence",
         "withheld": "Fewer people may read this content in Confluence than in Pagehall. Its new content is shown only to people who keep access once the restrictions are applied. They are applied exactly as in Confluence: applying them gives you no access, and you lose access if Confluence does not name you.",
         "openPermissions": "Open permission differences"
-      }
+      },
+      "restrictedBy": "Waits for the restriction of “{title}” from Confluence. Until it is applied, only “Keep Pagehall version” is possible and no Confluence content is stored.",
+      "showDifference": "Show the permission difference",
+      "selectionLimited": "Some selected pages wait for a restriction from Confluence, so only “Keep Pagehall version” is offered."
     }
   }
 }
