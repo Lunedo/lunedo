@@ -250,15 +250,15 @@ export async function lockSpaces(tx: Transaction, spaceIds: string[]): Promise<v
   }
 }
 
-async function broadlySharedPages(tx: Transaction, itemId: string, targetSpaceId: string): Promise<number> {
+async function broadlySharedPages(
+  tx: Transaction,
+  itemId: string,
+  sourceSpaceId: string,
+  targetSpaceId: string,
+): Promise<number> {
   const result = await tx.execute<{ pages: number }>(sql`
-    with recursive down as (
-      select id from tree_items where id = ${itemId}
-      union all
-      select t.id from tree_items t join down on t.parent_id = down.id
-    )
-    select count(*)::int as pages from down d
-    where (select confidential from spaces where id = ${targetSpaceId}) and (
+    select count(*)::int as pages from tree_items d
+    where d.space_id = ${sourceSpaceId} and ${itemId}::uuid = any(d.path) and (select confidential from spaces where id = ${targetSpaceId}) and (
       exists (select 1 from page_shares ps where ps.item_id = d.id and ps.principal_kind <> 'account')
       or exists (select 1 from share_links sl where sl.item_id = d.id and sl.revoked_at is null
         and (sl.scope <> 'people' or exists (select 1 from share_link_people lp
@@ -780,7 +780,7 @@ export class TreeService {
       if (overview.rows[0]) {
         throw new SpaceError("overviewPage", "The overview page of a space stays in its space");
       }
-      const broad = await broadlySharedPages(tx, itemId, targetSpaceId);
+      const broad = await broadlySharedPages(tx, itemId, sourceSpaceId, targetSpaceId);
       if (broad > 0) {
         throw new SpaceError(
           "confidentialSharing",
@@ -796,12 +796,13 @@ export class TreeService {
       where id = ${itemId}`);
     if (targetSpaceId !== sourceSpaceId) {
       await tx.execute(sql`
-        with recursive down as (
-          select id from tree_items where id = ${itemId}
-          union all
-          select t.id from tree_items t join down on t.parent_id = down.id
-        )
-        update tree_items set space_id = ${targetSpaceId}, updated_at = now() where id in (select id from down)`);
+        update tree_items set space_id = ${targetSpaceId}, updated_at = now()
+        where space_id = ${sourceSpaceId} and ${itemId}::uuid = any(path)`);
+      await tx.execute(sql`
+        update trash_entries e set space_id = ${targetSpaceId}
+        from tree_items r
+        where r.id = e.root_item_id and e.space_id = ${sourceSpaceId} and e.kind = 'items'
+          and ${itemId}::uuid = any(r.path)`);
       await signalSpaceChange(tx, { spaceId: targetSpaceId, kind: "tree", itemId });
     }
     await this.#activity.revealed(tx, await refreshReaderVisibility(tx, [itemId]));

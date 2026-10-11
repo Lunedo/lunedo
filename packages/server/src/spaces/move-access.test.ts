@@ -252,6 +252,53 @@ describe.skipIf(!baseUrl)("moving content", () => {
       );
       expect(placed.rows[0]?.space_id).toBe(wiki.id);
     });
+
+    it("is refused while an archived page below lists a group", async () => {
+      const { org, editor, wiki, as } = await setup();
+      const council = await confidential(org.id, editor);
+      const board = await group(org.id, [editor]);
+      const plan = await page(editor, wiki.id, "Plan");
+      const minutes = await page(editor, wiki.id, "Minutes", plan.id);
+      await test.services.pageAccess.change(as, minutes.id, [
+        { action: "restrict", kind: "view" },
+        { action: "listHolder", kind: "view", holderKind: "group", holderId: board },
+      ]);
+      await test.services.archive.archive(as, minutes.id);
+
+      await expect(
+        test.services.tree.move(as, plan.id, { spaceId: council.id, parentId: null }),
+      ).rejects.toMatchObject({ code: "confidentialSharing", details: { pages: 1 } });
+    });
+  });
+
+  it("takes archived pages and trash entries below the moved page into the other space", async () => {
+    const { org, editor, reader, wiki, hr, salaries, as } = await setup();
+    const other = await space(org.id, editor, {
+      grants: [{ principalKind: "account", principalId: reader, role: "reader" }],
+    });
+    const team = await page(editor, wiki.id, "Team", hr.id);
+    await test.services.archive.archive(as, salaries.id);
+    const entry = await test.services.trash.deleteItem(as, team.id);
+
+    const impact = await test.services.tree.moveImpact(as, hr.id, { spaceId: other.id, parentId: null });
+    await test.services.tree.move(as, hr.id, {
+      spaceId: other.id,
+      parentId: null,
+      confirmation: impact.confirmation ?? "",
+    });
+    const placed = await test.database.execute<{ id: string; space_id: string }>(
+      sql`select id, space_id from tree_items where id in (${salaries.id}, ${team.id})`,
+    );
+    expect(placed.rows.map((row) => row.space_id)).toEqual([other.id, other.id]);
+    expect((await test.services.trash.get(entry.id))?.spaceId).toBe(other.id);
+
+    expect(await test.services.archive.unarchive(as, salaries.id)).toEqual({
+      parentId: hr.id,
+      parentEntries: 0,
+    });
+    expect(await test.services.trash.restore(as, entry.id)).toMatchObject({ parentId: hr.id });
+    expect(await canView(reader, salaries.id)).toBe(false);
+    expect(await canView(reader, team.id)).toBe(false);
   });
 
   it("moves into another space when the new position is taken in the old space", async () => {

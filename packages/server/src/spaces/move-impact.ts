@@ -21,6 +21,8 @@ export async function representativeItems(executor: Executor, itemId: string): P
       select id, 0 as depth from tree_items where id = ${itemId}
       union all
       select t.id, down.depth + 1 from tree_items t join down on t.parent_id = down.id
+        or (t.parent_id is null and t.restore_parent_id = down.id and t.archived_root_id = t.id
+          and t.trash_entry_id is null)
     )
     select id from (
       select distinct on (signature) id, depth from (
