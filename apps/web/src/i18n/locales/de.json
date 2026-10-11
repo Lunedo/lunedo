@@ -2544,7 +2544,9 @@
       "withPagesBelow": "und die Seiten darunter",
       "restrictedPages": "{count, plural, one {# freigegebene eingeschränkte Seite, die du nicht lesen kannst} other {# freigegebene eingeschränkte Seiten, die du nicht lesen kannst}}",
       "why": "Warum?",
-      "confidentialSpaces": "{count, plural, one {Mitglied in # vertraulichen Space} other {Mitglied in # vertraulichen Spaces}}"
+      "confidentialSpaces": "{count, plural, one {Mitglied in # vertraulichen Space} other {Mitglied in # vertraulichen Spaces}}",
+      "inactive": "Ohne Wirkung",
+      "inactiveHint": "Die Mitgliedschaft in der Organisation ist beendet. Der Eintrag gilt wieder, wenn die Person erneut Mitglied wird."
     }
   },
   "members": {
@@ -5392,7 +5394,8 @@
       "inTrash": "Die Seite liegt im Papierkorb.",
       "accountInactive": "Das Konto ist nicht aktiv.",
       "noAccess": "Keine Rolle im Space, keine Freigabe und kein Link gibt Zugriff.",
-      "summaryNoneSpace": "{name} hat keinen Zugriff auf diesen Space."
+      "summaryNoneSpace": "{name} hat keinen Zugriff auf diesen Space.",
+      "inactive": "{reason}. Ohne Wirkung: Die Mitgliedschaft in der Organisation ist beendet."
     },
     "links": {
       "loadFailed": "die Freigabelinks",

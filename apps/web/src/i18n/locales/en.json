@@ -2544,7 +2544,9 @@
       "withPagesBelow": "and the pages below",
       "restrictedPages": "{count, plural, one {# shared restricted page you cannot read} other {# shared restricted pages you cannot read}}",
       "why": "Why?",
-      "confidentialSpaces": "{count, plural, one {Member of # confidential space} other {Member of # confidential spaces}}"
+      "confidentialSpaces": "{count, plural, one {Member of # confidential space} other {Member of # confidential spaces}}",
+      "inactive": "No effect",
+      "inactiveHint": "Their membership in the organization ended. The entry applies again if they become a member again."
     }
   },
   "members": {
@@ -5392,7 +5394,8 @@
       "inTrash": "The page is in the trash.",
       "accountInactive": "Their account is not active.",
       "noAccess": "No role in the space, share or link gives them access.",
-      "summaryNoneSpace": "{name} has no access to this space."
+      "summaryNoneSpace": "{name} has no access to this space.",
+      "inactive": "{reason}. No effect: their membership in the organization ended."
     },
     "links": {
       "loadFailed": "the share links",

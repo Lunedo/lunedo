@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
+import { organizationMembership } from "../authorization/space-access.js";
 import type { Database, Transaction } from "../database/database.js";
 import type { NotificationService } from "../notifications/service.js";
 import { actorIdOf, SpaceError } from "../spaces/common.js";
@@ -160,6 +161,7 @@ export class OneOnOneService {
         order by t.created_at limit 1) ms on true
       left join meetings m on m.series_id = ms.item_id and m.state = 'upcoming'
       where s.one_on_one and s.deleted_at is null and s.archived_at is null
+        and ${organizationMembership(sql`s.organization_id`, sql`${accountId}::uuid`)}
       order by m.starts_at nulls last, s.key
       limit 200`);
     const summaries: OneOnOneSummary[] = [];
@@ -168,7 +170,8 @@ export class OneOnOneService {
         select a.id, ${this.#people.visibleName(actor, sql`a`)} as name from space_permissions sp
         join accounts a on a.id = sp.principal_id
         where sp.space_id = ${row.space_id} and sp.principal_kind = 'account' and a.id <> ${accountId}
-          and a.state = 'active'
+          and a.state = 'active' and exists (select 1 from spaces ps where ps.id = sp.space_id
+            and ${organizationMembership(sql`ps.organization_id`, sql`a.id`)})
         order by lower(a.name), a.id`);
       summaries.push({
         spaceId: row.space_id,

@@ -4,7 +4,7 @@ import type { Executor } from "../database/database.js";
 import { currentRequestContext } from "../observability/request-context.js";
 import { spaceRoleRank } from "../spaces/roles.js";
 import { type SpaceRole, spaceRoles } from "../spaces/schema.js";
-import { spaceRoleConditionFor, tokenSpaceCondition } from "./space-access.js";
+import { organizationMembership, spaceRoleConditionFor, tokenSpaceCondition } from "./space-access.js";
 
 export interface ItemAccessOptions {
   editRestriction?: boolean;
@@ -14,18 +14,23 @@ function rolesFrom(minimum: SpaceRole): SpaceRole[] {
   return spaceRoles.filter((role) => spaceRoleRank(role) >= spaceRoleRank(minimum));
 }
 
-export function holderCovers(kind: SQL, id: SQL, account: SQL): SQL {
+export function holderMatches(kind: SQL, id: SQL, account: SQL): SQL {
   return sql`((${kind} = 'account' and ${id} = ${account})
     or (${kind} = 'group' and exists (select 1 from group_members gm
       where gm.group_id = ${id} and gm.account_id = ${account}
         and (gm.expires_at is null or gm.expires_at > now()))))`;
 }
 
-function shareCondition(account: SQL, item: SQL, minimum: SpaceRole): SQL {
-  return sql`exists (select 1 from page_shares ps
-    where ps.item_id = any(${item}.path) and (ps.item_id = ${item}.id or ps.include_descendants)
-      and ps.role = any(${sql.param(rolesFrom(minimum))}::space_role[])
-      and ${holderCovers(sql`ps.principal_kind`, sql`ps.principal_id`, account)})`;
+export function holderCovers(kind: SQL, id: SQL, account: SQL, organization: SQL): SQL {
+  return sql`(${holderMatches(kind, id, account)}
+    and (${kind} <> 'account' or ${organizationMembership(organization, account)}))`;
+}
+
+function shareCondition(account: SQL, item: SQL, space: SQL, minimum: SpaceRole): SQL {
+  return sql`exists (select 1 from page_shares pshare
+    where pshare.item_id = any(${item}.path) and (pshare.item_id = ${item}.id or pshare.include_descendants)
+      and pshare.role = any(${sql.param(rolesFrom(minimum))}::space_role[])
+      and ${holderCovers(sql`pshare.principal_kind`, sql`pshare.principal_id`, account, sql`${space}.organization_id`)})`;
 }
 
 export function linkScopeCondition(link: SQL, account: SQL, space: SQL): SQL {
@@ -36,7 +41,8 @@ export function linkScopeCondition(link: SQL, account: SQL, space: SQL): SQL {
       where lm.organization_id = ${space}.organization_id and lm.account_id = ${account} and lm.kind = 'member'
         and (lm.expires_at is null or lm.expires_at > now())))
     or (${link}.scope = 'people' and exists (select 1 from share_link_people lp
-      where lp.link_id = ${link}.id and ${holderCovers(sql`lp.principal_kind`, sql`lp.principal_id`, account)}))))`;
+      where lp.link_id = ${link}.id
+        and ${holderCovers(sql`lp.principal_kind`, sql`lp.principal_id`, account, sql`${space}.organization_id`)}))))`;
 }
 
 export function activeLinkCondition(link: SQL): SQL {
@@ -58,13 +64,13 @@ export function restrictionListedBy(restriction: SQL, covers: (kind: SQL, id: SQ
       and ${covers(sql`rh.principal_kind`, sql`rh.principal_id`)}))`;
 }
 
-export function restrictionListedCondition(restriction: SQL, account: SQL): SQL {
-  return restrictionListedBy(restriction, (kind, id) => holderCovers(kind, id, account));
+export function restrictionListedCondition(restriction: SQL, account: SQL, organization: SQL): SQL {
+  return restrictionListedBy(restriction, (kind, id) => holderCovers(kind, id, account, organization));
 }
 
-export function restrictionHasActiveHolder(restriction: SQL): SQL {
+export function restrictionHasActiveHolder(restriction: SQL, organization: SQL): SQL {
   const active = (kind: SQL, id: SQL) => sql`((${kind} = 'account' and exists (select 1 from accounts a
-      where a.id = ${id} and a.state = 'active'))
+      where a.id = ${id} and a.state = 'active' and ${organizationMembership(organization, sql`a.id`)}))
     or (${kind} = 'group' and exists (select 1 from group_members gm join accounts a on a.id = gm.account_id
       where gm.group_id = ${id} and a.state = 'active'
         and (gm.expires_at is null or gm.expires_at > now()))))`;
@@ -75,16 +81,16 @@ export function restrictionHasActiveHolder(restriction: SQL): SQL {
       and rh.kind = ${restriction}.kind and ${active(sql`rh.principal_kind`, sql`rh.principal_id`)}))`;
 }
 
-export function viewRestrictionCondition(account: SQL, item: SQL): SQL {
+export function viewRestrictionCondition(account: SQL, item: SQL, space: SQL): SQL {
   return sql`not exists (select 1 from page_restrictions r
     where r.item_id = any(${item}.path) and r.kind = 'view'
-      and not ${restrictionListedCondition(sql`r`, account)})`;
+      and not ${restrictionListedCondition(sql`r`, account, sql`${space}.organization_id`)})`;
 }
 
-function editRestrictionCondition(account: SQL, item: SQL): SQL {
+export function editRestrictionCondition(account: SQL, item: SQL, space: SQL): SQL {
   return sql`not exists (select 1 from page_restrictions r
     where r.item_id = ${item}.id and r.kind = 'edit'
-      and not ${restrictionListedCondition(sql`r`, account)})`;
+      and not ${restrictionListedCondition(sql`r`, account, sql`${space}.organization_id`)})`;
 }
 
 export function itemRoleCondition(
@@ -108,10 +114,13 @@ export function accountItemCondition(
   options: ItemAccessOptions = {},
 ): SQL {
   const active = sql`exists (select 1 from accounts ia where ia.id = ${account} and ia.state = 'active' and ia.type <> 'portal')`;
-  const sources = [spaceRoleConditionFor(account, space, minimum), shareCondition(account, item, minimum)];
+  const sources = [
+    spaceRoleConditionFor(account, space, minimum),
+    shareCondition(account, item, space, minimum),
+  ];
   if (minimum === "reader") sources.push(linkCondition(account, item, space));
-  const restrictions = [viewRestrictionCondition(account, item)];
-  if (options.editRestriction) restrictions.push(editRestrictionCondition(account, item));
+  const restrictions = [viewRestrictionCondition(account, item, space)];
+  if (options.editRestriction) restrictions.push(editRestrictionCondition(account, item, space));
   return sql`(${space}.deleted_at is null and ${active}
     and (${sql.join(sources, sql` or `)}) and ${sql.join(restrictions, sql` and `)})`;
 }
@@ -131,6 +140,7 @@ export interface ItemFacts {
   itemId: string;
   path: string[];
   sources: ItemGrantSource[];
+  inactiveSources: ItemGrantSource[];
   viewRestrictions: ViewRestriction[];
   editRestriction: { listed: boolean } | null;
 }
@@ -156,11 +166,18 @@ export async function itemFacts(
     `authorization:item:${accountId}:${itemId}`,
     async () => {
       const account = sql`${accountId}::uuid`;
-      const item = await executor.execute<{ path: string[]; space_id: string }>(
-        sql`select path, space_id from tree_items where id = ${itemId}`,
-      );
+      const item = await executor.execute<{
+        path: string[];
+        space_id: string;
+        organization_id: string | null;
+        in_organization: boolean;
+      }>(sql`
+        select t.path, t.space_id, s.organization_id,
+          ${organizationMembership(sql`s.organization_id`, account)} as in_organization
+        from tree_items t join spaces s on s.id = t.space_id where t.id = ${itemId}`);
       const row = item.rows[0];
       if (!row) return null;
+      const organization = sql`${row.organization_id}::uuid`;
       const path = row.path.length > 0 ? row.path : [itemId];
       const shares = await executor.execute<{
         id: string;
@@ -174,7 +191,7 @@ export async function itemFacts(
         from page_shares ps left join groups g on ps.principal_kind = 'group' and g.id = ps.principal_id
         where ps.item_id = any(${sql.param(path)}::uuid[])
           and (ps.item_id = ${itemId} or ps.include_descendants)
-          and ${holderCovers(sql`ps.principal_kind`, sql`ps.principal_id`, account)}
+          and ${holderMatches(sql`ps.principal_kind`, sql`ps.principal_id`, account)}
         order by ps.id`);
       const links = await executor.execute<{ id: string; scope: string }>(sql`
         select l.id, l.scope from share_link_accesses la join share_links l on l.id = la.link_id
@@ -187,28 +204,30 @@ export async function itemFacts(
         kind: "view" | "edit";
         listed: boolean;
       }>(sql`
-        select r.item_id, r.kind, ${restrictionListedCondition(sql`r`, account)} as listed
+        select r.item_id, r.kind, ${restrictionListedCondition(sql`r`, account, organization)} as listed
         from page_restrictions r
         where (r.kind = 'view' and r.item_id = any(${sql.param(path)}::uuid[])) or (r.kind = 'edit' and r.item_id = ${itemId})
         order by array_position(${sql.param(path)}::uuid[], r.item_id)`);
       const edit = restrictions.rows.find((restriction) => restriction.kind === "edit");
+      const shareSource = (share: (typeof shares.rows)[number]): ItemGrantSource => ({
+        type: "share",
+        role: share.role,
+        itemId: share.item_id,
+        inherited: share.item_id !== itemId,
+        shareId: share.id,
+        via:
+          share.principal_kind === "group"
+            ? { type: "group", groupId: share.principal_id, name: share.group_name ?? "" }
+            : { type: "account" },
+      });
+      const inert = (share: (typeof shares.rows)[number]) =>
+        share.principal_kind === "account" && !row.in_organization;
       return {
         itemId,
         path,
+        inactiveSources: shares.rows.filter(inert).map(shareSource),
         sources: [
-          ...shares.rows.map(
-            (share): ItemGrantSource => ({
-              type: "share",
-              role: share.role,
-              itemId: share.item_id,
-              inherited: share.item_id !== itemId,
-              shareId: share.id,
-              via:
-                share.principal_kind === "group"
-                  ? { type: "group", groupId: share.principal_id, name: share.group_name ?? "" }
-                  : { type: "account" },
-            }),
-          ),
+          ...shares.rows.filter((share) => !inert(share)).map(shareSource),
           ...links.rows.map(
             (link): ItemGrantSource => ({ type: "link", linkId: link.id, scope: link.scope }),
           ),

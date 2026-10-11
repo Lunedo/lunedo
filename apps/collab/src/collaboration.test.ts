@@ -360,6 +360,28 @@ describe.skipIf(!baseUrl)("collaboration server", () => {
     await waitFor(() => client.closeReasons.includes("permissionRevoked"), 3000);
   });
 
+  it("disconnects a person whose membership in the organization of the page ends", async () => {
+    const target = await page();
+    const runtime = cluster.runtimes[0] as ServerRuntime;
+    const home = await cluster.fixtures.organization();
+    const account = await cluster.fixtures.member(home.id);
+    await cluster.fixtures.join(target.org.id, account);
+    await runtime.services.spacePermissions.apply(accountPrincipal(target.admin), target.space.id, {
+      action: "grant",
+      principalKind: "account",
+      principalId: account,
+      role: "editor",
+    });
+    const client = open(first.url, target.itemId, { token: await signIn(runtime, account) });
+    await client.authenticated;
+    await cluster.runtimes[1]?.services.memberships.remove(
+      accountPrincipal(target.org.owner),
+      target.org.id,
+      account,
+    );
+    await waitFor(() => client.closeReasons.includes("permissionRevoked"), 3000);
+  });
+
   it("logs every recheck and revocation with page, account, node, reason, duration and result only", async () => {
     const target = await editor();
     await signalsDelivered();
