@@ -493,6 +493,7 @@ describe.skipIf(!databaseBaseUrl)("confidential spaces through the API", () => {
     });
     const preview = await admin.client.post(`/api/v1/items/${space.pageId}/move/preview`, {
       spaceId: open.json().id,
+      parentId: null,
     });
     expect(preview.statusCode, preview.body).toBe(200);
     expect(preview.json().leavesConfidential).toBe(true);

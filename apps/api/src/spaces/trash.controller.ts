@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Param, Post, Put, Req } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Param, Post, Put, Query, Req } from "@nestjs/common";
 import { ERASURE_REASON_MAX_LENGTH, type TrashEntry } from "@pagehall/server";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
@@ -9,6 +9,12 @@ import { ApiRoute } from "../http/api-route.js";
 import { notFound } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
 import { uuid } from "../http/schemas.js";
+import {
+  confidentialAdministrator,
+  parentEntriesSchema,
+  restorableInSpace,
+  withParentsQuery,
+} from "./restore-parents.js";
 import { exampleTrashEntry, trashEntrySchema } from "./schemas.js";
 
 const TAG = "Trash";
@@ -38,6 +44,7 @@ const restoreResultSchema = z
   .object({
     itemId: uuid("The restored item, or null for a space.").nullable(),
     parentId: uuid("Where the item went: its parent, or null for the top level.").nullable(),
+    parentEntries: parentEntriesSchema,
   })
   .describe("Where the restored content went.");
 
@@ -69,6 +76,9 @@ const archivedSchema = z
   .describe("The archive state of the space.");
 
 const entries = z.array(trashEntrySchema).describe("Trash entries.");
+
+const RESTRICTED_PARENT =
+  "When the former parent page is in the trash and the content would lose a view restriction it inherited, the restore is refused with `restrictedParentInTrash`; repeat it with `withParents=true` to restore the parent pages with it.";
 
 @Controller("api/v1")
 export class TrashController {
@@ -108,43 +118,40 @@ export class TrashController {
   async spaceTrash(@Param("spaceId") spaceId: string, @Req() request: FastifyRequest) {
     const actor = actorOf(request);
     const entries = await this.#services.trash.listSpace(actor, spaceId);
-    if (!(await this.#confidentialAdministrator(actor, spaceId))) return entries;
+    if (!(await confidentialAdministrator(this.#services, actor, spaceId))) return entries;
     return [...entries, ...(await this.#services.trash.listSpace(actor, spaceId, { secondStage: true }))];
-  }
-
-  async #confidentialAdministrator(actor: ReturnType<typeof actorOf>, spaceId: string): Promise<boolean> {
-    const found = await this.#services.spaces.get(spaceId);
-    if (!found?.confidential) return false;
-    return this.#services.authorization.authorize(actor, "space.manage", { type: "space", id: spaceId });
   }
 
   @Post("spaces/:spaceId/trash/:entryId/restore")
   @Permission("space.trash", space)
   @ApiRoute({
     summary: "Restore from the trash",
-    description:
-      "Puts a trash entry back at its old place, or at the top level of the space when that place no longer exists.",
+    description: `Puts a trash entry back at its old place, or at the top level of the space when that place no longer exists. ${RESTRICTED_PARENT}`,
     tags: [TAG],
     status: 200,
     params: spaceEntryParams,
+    query: withParentsQuery,
     response: {
       description: "Where it went.",
       schema: restoreResultSchema,
-      example: { itemId: exampleTrashEntry.itemId, parentId: null },
+      example: { itemId: exampleTrashEntry.itemId, parentId: null, parentEntries: 0 },
     },
+    errors: ["restrictedParentInTrash"],
   })
   async restoreInSpace(
     @Param("spaceId") spaceId: string,
     @Param("entryId") entryId: string,
+    @Query() query: z.output<typeof withParentsQuery>,
     @Req() request: FastifyRequest,
   ) {
-    const secondStage = await this.#confidentialAdministrator(actorOf(request), spaceId);
-    await this.#entryIn(
-      entryId,
-      (entry) => entry.spaceId === spaceId && entry.kind === "items" && (entry.stage === 1 || secondStage),
-    );
-    if (!(await this.#services.trash.accessible(actorOf(request), entryId))) throw notFound();
-    return this.#services.trash.restore(actorOf(request), entryId);
+    const actor = actorOf(request);
+    const restorable = restorableInSpace(this.#services, actor, spaceId);
+    const entry = await this.#services.trash.get(entryId);
+    if (!entry || !(await restorable(entry))) throw notFound();
+    return this.#services.trash.restore(actor, entryId, {
+      withParents: query.withParents === "true",
+      mayRestore: restorable,
+    });
   }
 
   @Post("spaces/:spaceId/trash/empty")
@@ -242,7 +249,7 @@ export class TrashController {
     response: {
       description: "The result.",
       schema: restoreResultSchema,
-      example: { itemId: null, parentId: null },
+      example: { itemId: null, parentId: null, parentEntries: 0 },
     },
   })
   async restoreDeletedSpace(@Param("entryId") entryId: string, @Req() request: FastifyRequest) {
@@ -289,27 +296,36 @@ export class TrashController {
   @Permission("organization.trash.manage", organization)
   @ApiRoute({
     summary: "Restore deleted content of an organization",
-    description:
-      "Restores a trash entry of either stage or a deleted space. Items return to their old place or the top level of their space. Confidential spaces are not reachable here; only their own space admins restore their content.",
+    description: `Restores a trash entry of either stage or a deleted space. Items return to their old place or the top level of their space. Confidential spaces are not reachable here; only their own space admins restore their content. ${RESTRICTED_PARENT}`,
     tags: [TAG],
     status: 200,
     params: organizationEntryParams,
+    query: withParentsQuery,
     response: {
       description: "Where it went.",
       schema: restoreResultSchema,
-      example: { itemId: null, parentId: null },
+      example: { itemId: null, parentId: null, parentEntries: 0 },
     },
+    errors: ["restrictedParentInTrash"],
   })
   async restoreInOrganization(
     @Param("organizationId") organizationId: string,
     @Param("entryId") entryId: string,
+    @Query() query: z.output<typeof withParentsQuery>,
     @Req() request: FastifyRequest,
   ) {
+    const inOrganization = async (entry: TrashEntry) => {
+      const located = await this.#services.trash.spaceOf(entry.id);
+      return located?.organizationId === organizationId && !located.confidential;
+    };
     await this.#entryIn(
       entryId,
       (_entry, owner, _personal, confidential) => owner === organizationId && !confidential,
     );
-    return this.#services.trash.restore(actorOf(request), entryId);
+    return this.#services.trash.restore(actorOf(request), entryId, {
+      withParents: query.withParents === "true",
+      mayRestore: inOrganization,
+    });
   }
 
   @Post("organizations/:organizationId/trash/:entryId/delete")
@@ -382,22 +398,35 @@ export class TrashController {
   @Permission("instance.personalSpaces.manage", { type: "instance" })
   @ApiRoute({
     summary: "Restore a deleted personal space",
-    description: "Restores a deleted personal space with its content.",
+    description: `Restores a deleted personal space with its content, or content of a personal space in the second stage of the trash. ${RESTRICTED_PARENT}`,
     tags: [TAG],
     status: 200,
     params: entryParams,
+    query: withParentsQuery,
     response: {
       description: "The result.",
       schema: restoreResultSchema,
-      example: { itemId: null, parentId: null },
+      example: { itemId: null, parentId: null, parentEntries: 0 },
     },
+    errors: ["restrictedParentInTrash"],
   })
-  async restorePersonal(@Param("entryId") entryId: string, @Req() request: FastifyRequest) {
+  async restorePersonal(
+    @Param("entryId") entryId: string,
+    @Query() query: z.output<typeof withParentsQuery>,
+    @Req() request: FastifyRequest,
+  ) {
+    const secondStage = async (entry: TrashEntry) => {
+      const located = await this.#services.trash.spaceOf(entry.id);
+      return located?.personal === true && entry.kind === "items" && entry.stage === 2;
+    };
     await this.#entryIn(
       entryId,
       (entry, _owner, personal) => personal && (entry.kind === "space" || entry.stage === 2),
     );
-    return this.#services.trash.restore(actorOf(request), entryId);
+    return this.#services.trash.restore(actorOf(request), entryId, {
+      withParents: query.withParents === "true",
+      mayRestore: secondStage,
+    });
   }
 
   @Post("instance/personal-spaces/trash/:entryId/delete")

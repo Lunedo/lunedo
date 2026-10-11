@@ -22,6 +22,7 @@ import { contentKeys, type TrashEntry, trashQuery } from "../content-queries.js"
 import { itemHref } from "../item-paths.js";
 import { spaceDisplayName } from "../space-badge.js";
 import { useSpace } from "../space-context.js";
+import { useRestoreFailure, withParentsQuery } from "./restore-with-parents.js";
 import { RestoreButton, TrashTable } from "./trash-table.js";
 
 export function TrashScreen() {
@@ -40,11 +41,13 @@ export function TrashScreen() {
     await queryClient.invalidateQueries({ queryKey: ["spaces", space.id, "children"] });
   };
 
-  const restore = async (entry: TrashEntry) => {
+  const restoreFailed = useRestoreFailure();
+
+  const restore = async (entry: TrashEntry, withParents = false) => {
     try {
       const result = await request(() =>
         api.POST("/api/v1/spaces/{spaceId}/trash/{entryId}/restore", {
-          params: { path: { spaceId: space.id, entryId: entry.id } },
+          params: { path: { spaceId: space.id, entryId: entry.id }, query: withParentsQuery(withParents) },
         }),
       );
       await refresh();
@@ -54,12 +57,17 @@ export function TrashScreen() {
           : null;
       toast({
         title: t("trash.restored", { title: entry.title }),
-        description: result.parentId ? t("trash.restoredAtPlace") : t("trash.restoredAtTop"),
+        description:
+          result.parentEntries > 0
+            ? t("trash.restoredWithParents")
+            : result.parentId
+              ? t("trash.restoredAtPlace")
+              : t("trash.restoredAtTop"),
         variant: "success",
         ...(href ? { action: { label: t("trash.open"), onSelect: () => void navigate({ to: href }) } } : {}),
       });
     } catch (error) {
-      toast({ title: t("trash.restoreFailed"), description: problemMessage(t, error), variant: "error" });
+      restoreFailed(t("trash.restoreFailed"), error, () => restore(entry, true));
     }
   };
 

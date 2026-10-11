@@ -1367,7 +1367,14 @@
     "comparisonWithheld": "Fewer people may read this content in Confluence. Apply the restrictions from the permission differences first.",
     "shareBeyondOwnAccess": "Your own role in the space does not give you this access to the page. Choose a lower role or ask a space admin.",
     "shareBeyondOwnAccessBelow": "Your own role in the space does not cover {count, plural, one {# page} other {# pages}} below. Share only this page, choose a lower role, or ask a space admin.",
-    "ownShare": "You cannot change access that you hold yourself or through one of your groups. Ask someone else who can share the page."
+    "ownShare": "You cannot change access that you hold yourself or through one of your groups. Ask someone else who can share the page.",
+    "confidentialSharing": "The content gives access to groups or through broad links. Remove these entries, then move it into the confidential space.",
+    "confidentialSharingPages": "{count, plural, one {# page gives} other {# pages give}} access to groups or through broad links. Remove the groups from their shares, links and restrictions and revoke the broad links, then move again.",
+    "restrictedParentInTrash": "This page was below a restricted page. Restore it together with the pages above it, or ask a space or organization administrator.",
+    "restrictedParentInTrashAsk": "This page was below a restricted page. Ask a space or organization administrator to restore the pages above it first.",
+    "restrictedParentInTrashNamed": "“{title}” is in the trash and restricts who can view this page. Restore the page together with the pages above it to keep that restriction.",
+    "restrictedParentInTrashNamedAsk": "“{title}” is in the trash and restricts who can view this page. Ask a space or organization administrator to restore it first.",
+    "moveChangesAccess": "The move changes who can open the content. Check who gains and who loses access, then confirm the move."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -4508,7 +4515,12 @@
     "submitToSpace": "Move to {space}",
     "moved": "{title} moved",
     "movedToSpace": "{title} moved to {space}",
-    "failed": "The item could not be moved"
+    "failed": "The item could not be moved",
+    "confirmTitle": "Move {title} and change access?",
+    "confirmDescription": "At the new place, other roles or page restrictions apply, so different people can open the content.",
+    "confirm": "Move and change access",
+    "accessChanged": "Who gains or loses access changed in the meantime. Check the list below and move again.",
+    "accessChangedAgain": "Who gains or loses access changed in the meantime. Check the list and confirm again."
   },
   "createItem": {
     "folderTitle": "New folder",
@@ -4667,6 +4679,8 @@
     "restored": "“{title}” restored",
     "restoredAtPlace": "It is back at its old place in the page tree.",
     "restoredAtTop": "Its old place no longer exists, so it is at the top level of the page tree.",
+    "restoreWithParents": "Restore with pages above",
+    "restoredWithParents": "It is back below the pages above it, which were restored from the trash with it, so it keeps its view restrictions.",
     "restoreFailed": "The item could not be restored",
     "open": "Open",
     "moveToTrash": "Move to trash",
@@ -4694,6 +4708,7 @@
     "deleteNowConsequences": "This cannot be undone:",
     "consequenceItems": "{count, plural, one {# item is deleted at once.} other {# items are deleted at once.}}",
     "consequenceSpace": "The whole space with all its pages is deleted at once.",
+    "consequenceBelow": "Trash entries of pages that were below it are deleted with it.",
     "consequenceVersions": "All versions, drafts, labels and links of it are removed.",
     "consequenceAudit": "The deletion and its reason are written to the audit log.",
     "reason": "Reason",

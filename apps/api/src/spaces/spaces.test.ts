@@ -427,6 +427,43 @@ describe.skipIf(!databaseBaseUrl)("spaces and pages through the API", () => {
     expect(found.json().map((item: { id: string }) => item.id)).toEqual([child.id]);
   });
 
+  it("refuses a drag and drop out of a restricted page until the change in access is confirmed", async () => {
+    const creator = await person();
+    const reader = await person();
+    const space = await createSpace(creator.client, [
+      { principalKind: "account", principalId: reader.id, role: "reader" },
+    ]);
+    const hr = await createPage(creator.client, space.id, "HR");
+    const salaries = await createPage(creator.client, space.id, "Salaries", hr.id);
+    const restricted = await creator.client.post(`/api/v1/pages/${hr.id}/access`, {
+      changes: [{ action: "restrict", kind: "view" }],
+    });
+    expect(restricted.statusCode, restricted.body).toBe(200);
+    expect((await reader.client.get(`/api/v1/items/${salaries.id}`)).statusCode).toBe(404);
+
+    const dropped = await creator.client.post(`/api/v1/items/${salaries.id}/move`, { parentId: null });
+    expect(dropped.statusCode, dropped.body).toBe(409);
+    expect(dropped.json()).toMatchObject({
+      code: "moveChangesAccess",
+      impact: { gaining: 1, changes: [{ accountId: reader.id, before: null, after: "reader" }] },
+    });
+    expect((await reader.client.get(`/api/v1/items/${salaries.id}`)).statusCode).toBe(404);
+
+    const confirmed = await creator.client.post(`/api/v1/items/${salaries.id}/move`, {
+      parentId: null,
+      confirmation: dropped.json().impact.confirmation,
+    });
+    expect(confirmed.statusCode, confirmed.body).toBe(200);
+    expect((await reader.client.get(`/api/v1/items/${salaries.id}`)).statusCode).toBe(200);
+
+    const preview = await creator.client.post(`/api/v1/items/${salaries.id}/move/preview`, {
+      parentId: hr.id,
+    });
+    expect(preview.json()).toMatchObject({ losing: 1, leavesConfidential: false });
+    const unchanged = await creator.client.post(`/api/v1/items/${hr.id}/move/preview`, { parentId: null });
+    expect(unchanged.json()).toMatchObject({ gaining: 0, losing: 0, confirmation: null });
+  });
+
   it("previews and changes permissions with the space admin rules", async () => {
     const creator = await person();
     const colleague = await person();

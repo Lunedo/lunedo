@@ -10,6 +10,7 @@ import { decodeCursor, encodeCursor } from "../http/pagination.js";
 import { notFound } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
 import { uuid } from "../http/schemas.js";
+import { parentEntriesSchema, restorableInSpace, withParentsQuery } from "./restore-parents.js";
 import {
   archivedItemSchema,
   backlinkSchema,
@@ -78,9 +79,12 @@ const convertSchema = z
   .describe("The kind to convert to.");
 
 const previewMoveSchema = z
-  .object({ spaceId: uuid("Target space.") })
+  .object({
+    spaceId: uuid("Target space. Leave it out to stay in the space.").optional(),
+    parentId: uuid("Parent item, or null for the root of the tree.").nullable(),
+  })
   .strict()
-  .describe("The space the item would move to.");
+  .describe("The place the item would move to.");
 
 const replaceSchema = z
   .object({ document: documentSchema })
@@ -300,22 +304,23 @@ export class ItemsController {
   @Post("items/:itemId/move/preview")
   @Permission("item.edit", item)
   @ApiRoute({
-    summary: "Preview a move to another space",
+    summary: "Preview a move",
     description:
-      "Shows who would gain or lose access to the item and its children if it moved to the space. Needs edit permission in both spaces. Nothing is changed.",
+      "Shows who would gain or lose access to the item and its children if it moved to the place, through roles in the space and through view restrictions it inherits there. When access changes, the answer carries a confirmation to send with the move. Needs edit permission in both spaces. Nothing is changed.",
     tags: [TAG],
     status: 200,
     params: itemParams,
     body: previewMoveSchema,
-    bodyExample: { spaceId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10" },
+    bodyExample: { spaceId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10", parentId: null },
     response: { description: "The change in access.", schema: moveImpactSchema, example: exampleMoveImpact },
+    errors: ["invalidPlacement", "moveIntoDescendant", "overviewPage", "confidentialSharing"],
   })
   async previewMove(
     @Param("itemId") itemId: string,
     @Body() body: z.output<typeof previewMoveSchema>,
     @Req() request: FastifyRequest,
   ) {
-    return this.#services.tree.moveImpact(actorOf(request), itemId, body.spaceId);
+    return this.#services.tree.moveImpact(actorOf(request), itemId, body);
   }
 
   @Post("items/:itemId/move")
@@ -323,14 +328,21 @@ export class ItemsController {
   @ApiRoute({
     summary: "Move an item",
     description:
-      "Moves an item with its children to another place, also in another space. Moving below the item itself or one of its descendants is refused. Moving to another space needs edit permission in both spaces; preview how access changes first.",
+      "Moves an item with its children to another place, also in another space. Moving below the item itself or one of its descendants is refused. Moving to another space needs edit permission in both spaces. When the move changes who can access the content, through roles or inherited view restrictions, it is refused with the change unless the request carries the confirmation of a preview of exactly that change.",
     tags: [TAG],
     status: 200,
     params: itemParams,
     body: moveItemSchema,
     bodyExample: { parentId: null, afterId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a41" },
     response: { description: "The moved item.", schema: treeItemSchema, example: exampleItem },
-    errors: ["invalidPlacement", "moveIntoDescendant", "itemMoved", "overviewPage"],
+    errors: [
+      "invalidPlacement",
+      "moveIntoDescendant",
+      "itemMoved",
+      "overviewPage",
+      "confidentialSharing",
+      "moveChangesAccess",
+    ],
   })
   async move(
     @Param("itemId") itemId: string,
@@ -638,21 +650,35 @@ export class ItemsController {
   @ApiRoute({
     summary: "Bring back an archived item",
     description:
-      "Returns an archived page or folder with its descendants to its old place in the page tree, or to the top level when that place no longer exists.",
+      "Returns an archived page or folder with its descendants to its old place in the page tree, or to the top level when that place no longer exists. When the former parent page is in the trash and the item would lose a view restriction it inherited, the request is refused with `restrictedParentInTrash`; repeat it with `withParents=true` to restore the parent pages from the trash with it.",
     tags: [TAG],
     status: 200,
     params: itemParams,
+    query: withParentsQuery,
     response: {
       description: "Where the item went.",
       schema: z
-        .object({ parentId: uuid("The new parent, or null for the top level.").nullable() })
+        .object({
+          parentId: uuid("The new parent, or null for the top level.").nullable(),
+          parentEntries: parentEntriesSchema,
+        })
         .describe("The place of the item."),
-      example: { parentId: null },
+      example: { parentId: null, parentEntries: 0 },
     },
-    errors: ["notArchived"],
+    errors: ["notArchived", "restrictedParentInTrash"],
   })
-  async unarchive(@Param("itemId") itemId: string, @Req() request: FastifyRequest) {
-    return this.#services.archive.unarchive(actorOf(request), itemId);
+  async unarchive(
+    @Param("itemId") itemId: string,
+    @Query() query: z.output<typeof withParentsQuery>,
+    @Req() request: FastifyRequest,
+  ) {
+    const actor = actorOf(request);
+    const item = await this.#services.tree.get(actor, itemId);
+    if (!item) throw notFound();
+    return this.#services.archive.unarchive(actor, itemId, {
+      withParents: query.withParents === "true",
+      mayRestore: restorableInSpace(this.#services, actor, item.spaceId),
+    });
   }
 
   @Get("spaces/:spaceId/archive")

@@ -337,7 +337,7 @@ describe("trash", () => {
       routes("admin", {
         [`GET /api/v1/spaces/${SPACE_ID}/trash`]: () => ({ body: [entry] }),
         [`POST /api/v1/spaces/${SPACE_ID}/trash/${ENTRY}/restore`]: () => ({
-          body: { itemId: VPN, parentId: null },
+          body: { itemId: VPN, parentId: null, parentEntries: 0 },
         }),
         [`POST /api/v1/spaces/${SPACE_ID}/trash/empty`]: () => ({ body: { entries: 1 } }),
       }),
@@ -353,6 +353,60 @@ describe("trash", () => {
     const dialog = await screen.findByRole("dialog");
     await userEvent.click(within(dialog).getByRole("button", { name: "Empty trash with 1 entry" }));
     await waitFor(() => expect(requests.some((request) => request.path.endsWith("/trash/empty"))).toBe(true));
+  });
+
+  it("offers to restore the pages above when a restricted parent page is in the trash", async () => {
+    const { requests } = mockApi(
+      routes("editor", {
+        [`GET /api/v1/spaces/${SPACE_ID}/trash`]: () => ({ body: [entry] }),
+        [`POST /api/v1/spaces/${SPACE_ID}/trash/${ENTRY}/restore`]: (request) =>
+          request.path.includes("withParents=true")
+            ? { body: { itemId: VPN, parentId: OVERVIEW, parentEntries: 1 } }
+            : problem(409, "restrictedParentInTrash", {
+                formerParent: { id: OVERVIEW, title: "Network" },
+                parentEntries: 1,
+              }),
+      }),
+    );
+    await renderAt("/spaces/ITOPS/trash");
+    const row = (await screen.findByText("Old VPN setup")).closest("tr") as HTMLElement;
+    await userEvent.click(within(row).getByRole("button", { name: "Restore" }));
+    expect(
+      await screen.findByText(
+        "“Network” is in the trash and restricts who can view this page. Restore the page together with the pages above it to keep that restriction.",
+      ),
+    ).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Restore with pages above" }));
+    expect(
+      await screen.findByText(
+        "It is back below the pages above it, which were restored from the trash with it, so it keeps its view restrictions.",
+      ),
+    ).toBeTruthy();
+    expect(
+      requests.filter((request) => request.path.includes("/restore")).map((request) => request.path),
+    ).toEqual([
+      `/api/v1/spaces/${SPACE_ID}/trash/${ENTRY}/restore`,
+      `/api/v1/spaces/${SPACE_ID}/trash/${ENTRY}/restore?withParents=true`,
+    ]);
+  });
+
+  it("tells people who cannot restore the pages above whom to ask, without naming the page", async () => {
+    mockApi(
+      routes("editor", {
+        [`GET /api/v1/spaces/${SPACE_ID}/trash`]: () => ({ body: [entry] }),
+        [`POST /api/v1/spaces/${SPACE_ID}/trash/${ENTRY}/restore`]: () =>
+          problem(409, "restrictedParentInTrash", { formerParent: null, parentEntries: 0 }),
+      }),
+    );
+    await renderAt("/spaces/ITOPS/trash");
+    const row = (await screen.findByText("Old VPN setup")).closest("tr") as HTMLElement;
+    await userEvent.click(within(row).getByRole("button", { name: "Restore" }));
+    expect(
+      await screen.findByText(
+        "This page was below a restricted page. Ask a space or organization administrator to restore the pages above it first.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Restore with pages above" })).toBeNull();
   });
 
   it("shows content kinds the client does not know yet without failing", async () => {

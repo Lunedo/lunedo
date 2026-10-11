@@ -20,6 +20,7 @@ import {
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { contentKeys } from "../content-queries.js";
 import { DeletedContent } from "../trash/deleted-content.js";
+import { withParentsQuery } from "../trash/restore-with-parents.js";
 import { DeletedConfidentialNotice } from "./confidential-spaces.js";
 import { Panel } from "./panel.js";
 
@@ -122,13 +123,17 @@ export function OrganizationContentScreen() {
             loading={trash.isPending}
             error={trash.error}
             onRetry={() => void trash.refetch()}
-            onRestore={async (entry) => {
-              await request(() =>
+            onRestore={async (entry, withParents) => {
+              const result = await request(() =>
                 api.POST("/api/v1/organizations/{organizationId}/trash/{entryId}/restore", {
-                  params: { path: { organizationId, entryId: entry.id } },
+                  params: {
+                    path: { organizationId, entryId: entry.id },
+                    query: withParentsQuery(withParents),
+                  },
                 }),
               );
               await refreshTrash();
+              return result;
             }}
             onDelete={async (entry, reason) => {
               await request(() =>

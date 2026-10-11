@@ -485,7 +485,8 @@ export function createAccountServices(options: {
   });
   const versions = new VersionService({ database, audit, documents, people, settings, activity });
   const trash = new TrashService({ database, audit, settings, people, activity, authorization });
-  const archive = new ArchiveService({ database, audit, authorization, activity });
+  const archive = new ArchiveService({ database, audit, authorization, activity, trash });
+  const signer = new ValueSigner({ database, encryption });
   const tree = new TreeService({
     database,
     authorization,
@@ -494,6 +495,7 @@ export function createAccountServices(options: {
     versions,
     settings,
     activity,
+    signer,
   });
   const templates = new TemplateService({ database, audit, settings, people, tree, documents });
   const reactions = new ReactionService({ database, settings, people });
@@ -509,7 +511,6 @@ export function createAccountServices(options: {
   const tasks = new TaskService({ database, authorization, settings, people });
   const blog = new BlogService({ database, authorization, versions, audit, people, notifications });
   const home = new HomeService({ database, authorization, settings, tasks, blog, people });
-  const signer = new ValueSigner({ database, encryption });
   const pageAccess = new PageAccessService({ database, authorization, audit, people, notifications });
   const shareLinks = new ShareLinkService({
     database,

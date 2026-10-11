@@ -20563,18 +20563,26 @@
                         }
                       ],
                       "description": "Where the item went: its parent, or null for the top level."
+                    },
+                    "parentEntries": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of trash entries of former parent pages restored with it, so it keeps the view restrictions it inherited."
                     }
                   },
                   "required": [
                     "itemId",
-                    "parentId"
+                    "parentId",
+                    "parentEntries"
                   ],
                   "additionalProperties": false,
                   "description": "Where the restored content went."
                 },
                 "example": {
                   "itemId": null,
-                  "parentId": null
+                  "parentId": null,
+                  "parentEntries": 0
                 }
               }
             }
@@ -98108,7 +98116,7 @@
       "post": {
         "operationId": "trash.restorePersonal",
         "summary": "Restore a deleted personal space",
-        "description": "Restores a deleted personal space with its content.\n\nRequires the permission `instance.personalSpaces.manage` on the instance.",
+        "description": "Restores a deleted personal space with its content, or content of a personal space in the second stage of the trash. When the former parent page is in the trash and the content would lose a view restriction it inherited, the restore is refused with `restrictedParentInTrash`; repeat it with `withParents=true` to restore the parent pages with it.\n\nRequires the permission `instance.personalSpaces.manage` on the instance.",
         "tags": [
           "Trash"
         ],
@@ -98133,6 +98141,19 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "withParents",
+            "in": "query",
+            "required": false,
+            "description": "`true` also restores the former parent pages from the trash when the content would otherwise lose a view restriction it inherited. It needs the right to restore each of them.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
             }
           }
         ],
@@ -98167,18 +98188,26 @@
                         }
                       ],
                       "description": "Where the item went: its parent, or null for the top level."
+                    },
+                    "parentEntries": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of trash entries of former parent pages restored with it, so it keeps the view restrictions it inherited."
                     }
                   },
                   "required": [
                     "itemId",
-                    "parentId"
+                    "parentId",
+                    "parentEntries"
                   ],
                   "additionalProperties": false,
                   "description": "Where the restored content went."
                 },
                 "example": {
                   "itemId": null,
-                  "parentId": null
+                  "parentId": null,
+                  "parentEntries": 0
                 }
               }
             }
@@ -98281,6 +98310,26 @@
                       "title": "Not found",
                       "status": 404,
                       "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`restrictedParentInTrash`: The content was below a restricted page that is in the trash.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "restrictedParentInTrash": {
+                    "value": {
+                      "type": "urn:pagehall:problem:restrictedParentInTrash",
+                      "title": "The content was below a restricted page that is in the trash",
+                      "status": 409,
+                      "code": "restrictedParentInTrash"
                     }
                   }
                 }
@@ -106339,7 +106388,7 @@
       "post": {
         "operationId": "items.move",
         "summary": "Move an item",
-        "description": "Moves an item with its children to another place, also in another space. Moving below the item itself or one of its descendants is refused. Moving to another space needs edit permission in both spaces; preview how access changes first.\n\nRequires the permission `item.edit` on the item in `itemId`.",
+        "description": "Moves an item with its children to another place, also in another space. Moving below the item itself or one of its descendants is refused. Moving to another space needs edit permission in both spaces. When the move changes who can access the content, through roles or inherited view restrictions, it is refused with the change unless the request carries the confirmation of a preview of exactly that change.\n\nRequires the permission `item.edit` on the item in `itemId`.",
         "tags": [
           "Pages"
         ],
@@ -106415,6 +106464,11 @@
                       }
                     ],
                     "description": "Place the item directly after this sibling. Without either, the item goes last."
+                  },
+                  "confirmation": {
+                    "description": "Confirmation from the preview of this move. Needed when the move changes who can access the content.",
+                    "type": "string",
+                    "maxLength": 200
                   }
                 },
                 "required": [
@@ -106822,19 +106876,35 @@
             }
           },
           "409": {
-            "description": "`itemMoved`: The item was moved at the same moment. `moveIntoDescendant`: An item cannot be moved below itself. `overviewPage`: The overview page of a space stays a page in its space.",
+            "description": "`confidentialSharing`: The content is shared too broadly for a confidential space. `itemMoved`: The item was moved at the same moment. `moveChangesAccess`: The move changes who can access the content. `moveIntoDescendant`: An item cannot be moved below itself. `overviewPage`: The overview page of a space stays a page in its space.",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 },
                 "examples": {
+                  "confidentialSharing": {
+                    "value": {
+                      "type": "urn:pagehall:problem:confidentialSharing",
+                      "title": "The content is shared too broadly for a confidential space",
+                      "status": 409,
+                      "code": "confidentialSharing"
+                    }
+                  },
                   "itemMoved": {
                     "value": {
                       "type": "urn:pagehall:problem:itemMoved",
                       "title": "The item was moved at the same moment",
                       "status": 409,
                       "code": "itemMoved"
+                    }
+                  },
+                  "moveChangesAccess": {
+                    "value": {
+                      "type": "urn:pagehall:problem:moveChangesAccess",
+                      "title": "The move changes who can access the content",
+                      "status": 409,
+                      "code": "moveChangesAccess"
                     }
                   },
                   "moveIntoDescendant": {
@@ -106883,8 +106953,8 @@
     "/api/v1/items/{itemId}/move/preview": {
       "post": {
         "operationId": "items.previewMove",
-        "summary": "Preview a move to another space",
-        "description": "Shows who would gain or lose access to the item and its children if it moved to the space. Needs edit permission in both spaces. Nothing is changed.\n\nRequires the permission `item.edit` on the item in `itemId`.",
+        "summary": "Preview a move",
+        "description": "Shows who would gain or lose access to the item and its children if it moved to the place, through roles in the space and through view restrictions it inherits there. When access changes, the answer carries a confirmation to send with the move. Needs edit permission in both spaces. Nothing is changed.\n\nRequires the permission `item.edit` on the item in `itemId`.",
         "tags": [
           "Pages"
         ],
@@ -106923,17 +106993,30 @@
                   "spaceId": {
                     "type": "string",
                     "format": "uuid",
-                    "description": "Target space."
+                    "description": "Target space. Leave it out to stay in the space."
+                  },
+                  "parentId": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Parent item, or null for the root of the tree."
                   }
                 },
                 "required": [
-                  "spaceId"
+                  "parentId"
                 ],
                 "additionalProperties": false,
-                "description": "The space the item would move to."
+                "description": "The place the item would move to."
               },
               "example": {
-                "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10"
+                "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
+                "parentId": null
               }
             }
           }
@@ -107045,6 +107128,13 @@
                     "leavesConfidential": {
                       "type": "boolean",
                       "description": "True when the content leaves a confidential space and loses its protection."
+                    },
+                    "confirmation": {
+                      "description": "Send this with the move to confirm exactly this change, or null when access does not change. Valid for one hour.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     }
                   },
                   "required": [
@@ -107055,7 +107145,8 @@
                     "unlisted",
                     "truncated",
                     "changes",
-                    "leavesConfidential"
+                    "leavesConfidential",
+                    "confirmation"
                   ],
                   "additionalProperties": false,
                   "description": "Who gains, loses or changes access through the move."
@@ -107075,13 +107166,14 @@
                       "after": "reader"
                     }
                   ],
-                  "leavesConfidential": false
+                  "leavesConfidential": false,
+                  "confirmation": "mbx2k1c0.Hq3l2bS8yq1m0e7pW9cJx4rT6uV5aZ2nD0gF1hK8sLw"
                 }
               }
             }
           },
           "400": {
-            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidPlacement`: The place in the page tree is not valid.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -107102,6 +107194,14 @@
                       "title": "The request is not valid",
                       "status": 400,
                       "code": "invalidInput"
+                    }
+                  },
+                  "invalidPlacement": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidPlacement",
+                      "title": "The place in the page tree is not valid",
+                      "status": 400,
+                      "code": "invalidPlacement"
                     }
                   }
                 }
@@ -107184,6 +107284,42 @@
               }
             }
           },
+          "409": {
+            "description": "`confidentialSharing`: The content is shared too broadly for a confidential space. `moveIntoDescendant`: An item cannot be moved below itself. `overviewPage`: The overview page of a space stays a page in its space.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "confidentialSharing": {
+                    "value": {
+                      "type": "urn:pagehall:problem:confidentialSharing",
+                      "title": "The content is shared too broadly for a confidential space",
+                      "status": 409,
+                      "code": "confidentialSharing"
+                    }
+                  },
+                  "moveIntoDescendant": {
+                    "value": {
+                      "type": "urn:pagehall:problem:moveIntoDescendant",
+                      "title": "An item cannot be moved below itself",
+                      "status": 409,
+                      "code": "moveIntoDescendant"
+                    }
+                  },
+                  "overviewPage": {
+                    "value": {
+                      "type": "urn:pagehall:problem:overviewPage",
+                      "title": "The overview page of a space stays a page in its space",
+                      "status": 409,
+                      "code": "overviewPage"
+                    }
+                  }
+                }
+              }
+            }
+          },
           "429": {
             "description": "`rateLimited`: Too many requests.",
             "content": {
@@ -107211,7 +107347,7 @@
       "post": {
         "operationId": "items.unarchive",
         "summary": "Bring back an archived item",
-        "description": "Returns an archived page or folder with its descendants to its old place in the page tree, or to the top level when that place no longer exists.\n\nRequires the permission `item.archive` on the item in `itemId`.",
+        "description": "Returns an archived page or folder with its descendants to its old place in the page tree, or to the top level when that place no longer exists. When the former parent page is in the trash and the item would lose a view restriction it inherited, the request is refused with `restrictedParentInTrash`; repeat it with `withParents=true` to restore the parent pages from the trash with it.\n\nRequires the permission `item.archive` on the item in `itemId`.",
         "tags": [
           "Pages"
         ],
@@ -107238,6 +107374,19 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "withParents",
+            "in": "query",
+            "required": false,
+            "description": "`true` also restores the former parent pages from the trash when the content would otherwise lose a view restriction it inherited. It needs the right to restore each of them.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
           }
         ],
         "responses": {
@@ -107259,16 +107408,24 @@
                         }
                       ],
                       "description": "The new parent, or null for the top level."
+                    },
+                    "parentEntries": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of trash entries of former parent pages restored with it, so it keeps the view restrictions it inherited."
                     }
                   },
                   "required": [
-                    "parentId"
+                    "parentId",
+                    "parentEntries"
                   ],
                   "additionalProperties": false,
                   "description": "The place of the item."
                 },
                 "example": {
-                  "parentId": null
+                  "parentId": null,
+                  "parentEntries": 0
                 }
               }
             }
@@ -107378,7 +107535,7 @@
             }
           },
           "409": {
-            "description": "`notArchived`: The item is not archived.",
+            "description": "`notArchived`: The item is not archived. `restrictedParentInTrash`: The content was below a restricted page that is in the trash.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -107391,6 +107548,14 @@
                       "title": "The item is not archived",
                       "status": 409,
                       "code": "notArchived"
+                    }
+                  },
+                  "restrictedParentInTrash": {
+                    "value": {
+                      "type": "urn:pagehall:problem:restrictedParentInTrash",
+                      "title": "The content was below a restricted page that is in the trash",
+                      "status": 409,
+                      "code": "restrictedParentInTrash"
                     }
                   }
                 }
@@ -109194,7 +109359,7 @@
       "put": {
         "operationId": "meetings.end",
         "summary": "End a meeting series or continue it",
-        "description": "Ending archives the series with its meetings and topics: read-only and without a next meeting. Continuing brings it back.\n\nRequires the permission `item.archive` on the item in `seriesId`.",
+        "description": "Ending archives the series with its meetings and topics: read-only and without a next meeting. Continuing brings it back; when its former parent page is in the trash and the series would lose a view restriction it inherited, continuing is refused with `restrictedParentInTrash` until that page is restored.\n\nRequires the permission `item.archive` on the item in `seriesId`.",
         "tags": [
           "Meetings"
         ],
@@ -109349,6 +109514,26 @@
                       "title": "Not found",
                       "status": 404,
                       "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`restrictedParentInTrash`: The content was below a restricted page that is in the trash.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "restrictedParentInTrash": {
+                    "value": {
+                      "type": "urn:pagehall:problem:restrictedParentInTrash",
+                      "title": "The content was below a restricted page that is in the trash",
+                      "status": 409,
+                      "code": "restrictedParentInTrash"
                     }
                   }
                 }
@@ -137708,7 +137893,7 @@
       "post": {
         "operationId": "trash.restoreInOrganization",
         "summary": "Restore deleted content of an organization",
-        "description": "Restores a trash entry of either stage or a deleted space. Items return to their old place or the top level of their space. Confidential spaces are not reachable here; only their own space admins restore their content.\n\nRequires the permission `organization.trash.manage` on the organization in `organizationId`.",
+        "description": "Restores a trash entry of either stage or a deleted space. Items return to their old place or the top level of their space. Confidential spaces are not reachable here; only their own space admins restore their content. When the former parent page is in the trash and the content would lose a view restriction it inherited, the restore is refused with `restrictedParentInTrash`; repeat it with `withParents=true` to restore the parent pages with it.\n\nRequires the permission `organization.trash.manage` on the organization in `organizationId`.",
         "tags": [
           "Trash"
         ],
@@ -137745,6 +137930,19 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "withParents",
+            "in": "query",
+            "required": false,
+            "description": "`true` also restores the former parent pages from the trash when the content would otherwise lose a view restriction it inherited. It needs the right to restore each of them.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
           }
         ],
         "responses": {
@@ -137778,18 +137976,26 @@
                         }
                       ],
                       "description": "Where the item went: its parent, or null for the top level."
+                    },
+                    "parentEntries": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of trash entries of former parent pages restored with it, so it keeps the view restrictions it inherited."
                     }
                   },
                   "required": [
                     "itemId",
-                    "parentId"
+                    "parentId",
+                    "parentEntries"
                   ],
                   "additionalProperties": false,
                   "description": "Where the restored content went."
                 },
                 "example": {
                   "itemId": null,
-                  "parentId": null
+                  "parentId": null,
+                  "parentEntries": 0
                 }
               }
             }
@@ -137892,6 +138098,26 @@
                       "title": "Not found",
                       "status": 404,
                       "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`restrictedParentInTrash`: The content was below a restricted page that is in the trash.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "restrictedParentInTrash": {
+                    "value": {
+                      "type": "urn:pagehall:problem:restrictedParentInTrash",
+                      "title": "The content was below a restricted page that is in the trash",
+                      "status": 409,
+                      "code": "restrictedParentInTrash"
                     }
                   }
                 }
@@ -172985,7 +173211,7 @@
       "post": {
         "operationId": "trash.restoreInSpace",
         "summary": "Restore from the trash",
-        "description": "Puts a trash entry back at its old place, or at the top level of the space when that place no longer exists.\n\nRequires the permission `space.trash` on the space in `spaceId`.",
+        "description": "Puts a trash entry back at its old place, or at the top level of the space when that place no longer exists. When the former parent page is in the trash and the content would lose a view restriction it inherited, the restore is refused with `restrictedParentInTrash`; repeat it with `withParents=true` to restore the parent pages with it.\n\nRequires the permission `space.trash` on the space in `spaceId`.",
         "tags": [
           "Trash"
         ],
@@ -173022,6 +173248,19 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "withParents",
+            "in": "query",
+            "required": false,
+            "description": "`true` also restores the former parent pages from the trash when the content would otherwise lose a view restriction it inherited. It needs the right to restore each of them.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
           }
         ],
         "responses": {
@@ -173055,18 +173294,26 @@
                         }
                       ],
                       "description": "Where the item went: its parent, or null for the top level."
+                    },
+                    "parentEntries": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of trash entries of former parent pages restored with it, so it keeps the view restrictions it inherited."
                     }
                   },
                   "required": [
                     "itemId",
-                    "parentId"
+                    "parentId",
+                    "parentEntries"
                   ],
                   "additionalProperties": false,
                   "description": "Where the restored content went."
                 },
                 "example": {
                   "itemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a41",
-                  "parentId": null
+                  "parentId": null,
+                  "parentEntries": 0
                 }
               }
             }
@@ -173169,6 +173416,26 @@
                       "title": "Not found",
                       "status": 404,
                       "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`restrictedParentInTrash`: The content was below a restricted page that is in the trash.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "restrictedParentInTrash": {
+                    "value": {
+                      "type": "urn:pagehall:problem:restrictedParentInTrash",
+                      "title": "The content was below a restricted page that is in the trash",
+                      "status": 409,
+                      "code": "restrictedParentInTrash"
                     }
                   }
                 }
@@ -177589,6 +177856,170 @@
           },
           "maxDays": {
             "description": "Longest allowed lifetime of a link for anyone in days, for `expiryTooLate`.",
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "pages": {
+            "description": "Number of pages that give access to groups or through broad links, for `confidentialSharing`.",
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "impact": {
+            "description": "Who gains and who loses access, with the confirmation to send, for `moveChangesAccess`.",
+            "type": "object",
+            "properties": {
+              "gaining": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Number of people who get access."
+              },
+              "losing": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Number of people who lose access."
+              },
+              "raised": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Number of people whose role rises."
+              },
+              "lowered": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Number of people whose role drops."
+              },
+              "unlisted": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Number of affected people the caller may not see; they are counted but not listed."
+              },
+              "truncated": {
+                "type": "boolean",
+                "description": "Whether `changes` lists only the first 100 people."
+              },
+              "changes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "accountId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the account."
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Name of the person."
+                    },
+                    "before": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "reader",
+                            "commenter",
+                            "editor",
+                            "admin"
+                          ],
+                          "description": "Space role: `reader` reads, `commenter` also comments, `editor` also creates, edits and moves content, `admin` also manages the space and its permissions."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Role before the change, or null for no access."
+                    },
+                    "after": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "reader",
+                            "commenter",
+                            "editor",
+                            "admin"
+                          ],
+                          "description": "Space role: `reader` reads, `commenter` also comments, `editor` also creates, edits and moves content, `admin` also manages the space and its permissions."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Role after the change, or null for no access."
+                    }
+                  },
+                  "required": [
+                    "accountId",
+                    "name",
+                    "before",
+                    "after"
+                  ],
+                  "additionalProperties": false,
+                  "description": "How the access of one person changes."
+                },
+                "description": "People whose access changes, ordered by name."
+              },
+              "leavesConfidential": {
+                "type": "boolean",
+                "description": "True when the content leaves a confidential space and loses its protection."
+              },
+              "confirmation": {
+                "description": "Send this with the move to confirm exactly this change, or null when access does not change. Valid for one hour.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "gaining",
+              "losing",
+              "raised",
+              "lowered",
+              "unlisted",
+              "truncated",
+              "changes",
+              "leavesConfidential",
+              "confirmation"
+            ],
+            "additionalProperties": false
+          },
+          "formerParent": {
+            "description": "The former parent page in the trash, for `restrictedParentInTrash`; null when the caller may not view it.",
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "ID of the former parent page."
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "Title of the former parent page."
+                  }
+                },
+                "required": [
+                  "id",
+                  "title"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "parentEntries": {
+            "description": "Number of trash entries of former parent pages the caller can restore together with the content, for `restrictedParentInTrash`; 0 when the caller cannot restore all of them.",
             "type": "integer",
             "minimum": -9007199254740991,
             "maximum": 9007199254740991

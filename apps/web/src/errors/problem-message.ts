@@ -5,6 +5,9 @@ import { translateKey } from "../i18n/translate.js";
 const KNOWN = new Set([
   "shareBeyondOwnAccess",
   "ownShare",
+  "confidentialSharing",
+  "moveChangesAccess",
+  "restrictedParentInTrash",
   "spaceNotImported",
   "importedBeforeReimports",
   "importNotAccepted",
@@ -232,6 +235,18 @@ export function problemMessage(t: TFunction, error: unknown): string {
   }
   if (error.code === "shareBeyondOwnAccess" && problem.uncoveredPages) {
     return t("problems.shareBeyondOwnAccessBelow", { count: problem.uncoveredPages });
+  }
+  if (error.code === "confidentialSharing" && problem.pages) {
+    return t("problems.confidentialSharingPages", { count: problem.pages });
+  }
+  if (error.code === "restrictedParentInTrash") {
+    const ask = !problem.parentEntries;
+    if (problem.formerParent) {
+      return t(ask ? "problems.restrictedParentInTrashNamedAsk" : "problems.restrictedParentInTrashNamed", {
+        title: problem.formerParent.title,
+      });
+    }
+    return t(ask ? "problems.restrictedParentInTrashAsk" : "problems.restrictedParentInTrash");
   }
   if (error.code === "expiryTooLate" && problem.maxDays) {
     return t("problems.linkExpiryTooLate", { days: problem.maxDays });

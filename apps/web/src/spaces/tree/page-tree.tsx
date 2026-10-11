@@ -30,6 +30,7 @@ import { problemMessage } from "../../errors/problem-message.js";
 import { isExternal, itemHref } from "../item-paths.js";
 import { type SpaceWithRole, spaceKeys, type TreeItem } from "../space-queries.js";
 import { useItemActions } from "./item-actions.js";
+import { MoveConfirmDialog, moveImpactOf, type PendingMove } from "./move-confirmation.js";
 
 const PAGE_SIZE = 200;
 const UNDO_SECONDS = 5;
@@ -39,6 +40,12 @@ type Zone = "before" | "after" | "inside";
 interface DropTarget {
   id: string;
   zone: Zone;
+}
+
+interface Placement {
+  parentId: string | null;
+  beforeId?: string;
+  afterId?: string;
 }
 
 interface Dragged {
@@ -147,12 +154,27 @@ export function PageTree({
     [queryClient, space.id],
   );
 
-  const move = useCallback(
-    async (itemId: string, placement: { parentId: string | null; beforeId?: string; afterId?: string }) =>
-      request(() =>
-        api.POST("/api/v1/items/{itemId}/move", { params: { path: { itemId } }, body: placement }),
-      ),
-    [],
+  const [pendingMove, setPendingMove] = useState<PendingMove | null>(null);
+
+  const attempt = useCallback(
+    (item: TreeItem, placement: Placement, done: () => Promise<void>, failed: string) => {
+      const run = (confirmation?: string) =>
+        request(() =>
+          api.POST("/api/v1/items/{itemId}/move", {
+            params: { path: { itemId: item.id } },
+            body: confirmation ? { ...placement, confirmation } : placement,
+          }),
+        ).then(done);
+      void run().catch((error: unknown) => {
+        const impact = moveImpactOf(error);
+        if (impact) {
+          setPendingMove({ title: item.title, impact, confirm: run });
+          return;
+        }
+        toast({ title: failed, description: problemMessage(t, error), variant: "error" });
+      });
+    },
+    [t, toast],
   );
 
   const drop = useCallback(
@@ -161,44 +183,35 @@ export function PageTree({
       dragged.current = null;
       setDropTarget(null);
       if (!source || source.item.id === target.id) return;
-      const placement =
+      const placement: Placement =
         zone === "inside"
           ? { parentId: target.id }
           : zone === "before"
             ? { parentId: target.parentId, beforeId: target.id }
             : { parentId: target.parentId, afterId: target.id };
-      const original = source.previousId
+      const original: Placement = source.previousId
         ? { parentId: source.item.parentId, afterId: source.previousId }
         : source.nextId
           ? { parentId: source.item.parentId, beforeId: source.nextId }
           : { parentId: source.item.parentId };
-      void move(source.item.id, placement)
-        .then(async () => {
+      attempt(
+        source.item,
+        placement,
+        async () => {
           if (zone === "inside") toggle(target.id, true);
           await refresh();
           toast({
             title: t("tree.moved", { title: source.item.title }),
             undo: {
               seconds: UNDO_SECONDS,
-              onUndo: () => {
-                void move(source.item.id, original)
-                  .then(refresh)
-                  .catch((error: unknown) =>
-                    toast({
-                      title: t("tree.undoFailed"),
-                      description: problemMessage(t, error),
-                      variant: "error",
-                    }),
-                  );
-              },
+              onUndo: () => attempt(source.item, original, refresh, t("tree.undoFailed")),
             },
           });
-        })
-        .catch((error: unknown) =>
-          toast({ title: t("tree.moveFailed"), description: problemMessage(t, error), variant: "error" }),
-        );
+        },
+        t("tree.moveFailed"),
+      );
     },
-    [move, refresh, t, toast, toggle],
+    [attempt, refresh, t, toast, toggle],
   );
 
   const state = useMemo<TreeState>(
@@ -277,6 +290,7 @@ export function PageTree({
       >
         {root.isSuccess ? <TreeLevel parentId={null} depth={1} /> : null}
       </div>
+      <MoveConfirmDialog pending={pendingMove} onChange={setPendingMove} />
     </TreeContext>
   );
 }

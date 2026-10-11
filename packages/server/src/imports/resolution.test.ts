@@ -234,6 +234,50 @@ describe.skipIf(!baseUrl)("Confluence imports: resolving people, groups and perm
       );
     });
 
+    it("never lists a mapped group on a page that moved into a confidential space", async () => {
+      const w = await world();
+      const result = await imported(w);
+      await test.services.imports.resolution.mapPeople(as(w.importer), result.id, [
+        { placeholderId: await placeholder(result.id, ALICE.accountId), accountId: w.alice },
+        { placeholderId: await placeholder(result.id, BOB.accountId), accountId: w.bob },
+      ]);
+      await accept(w, result.id);
+      const secret = await harness.target(result.id, "page", PEOPLE_PAGE.secret);
+      const council = await test.services.spaces.create(
+        as(w.alice),
+        w.organizationId,
+        {
+          name: `Council ${randomUUID().slice(0, 6)}`,
+          key: `C${randomUUID().replace(/-/g, "").slice(0, 7).toUpperCase()}`,
+          visibility: "private",
+          confidential: true,
+          grants: [],
+        },
+        test.services.spacePermissions.holders,
+      );
+      const impact = await test.services.tree.moveImpact(as(w.alice), secret, {
+        spaceId: council.id,
+        parentId: null,
+      });
+      await test.services.tree.move(as(w.alice), secret, {
+        spaceId: council.id,
+        parentId: null,
+        confirmation: impact.confirmation ?? "",
+      });
+
+      await test.services.imports.resolution.mapGroup(as(w.secondAdmin), result.id, "hr-team", {
+        groupId: w.hr,
+      });
+
+      const groups = await test.database.execute<{ count: number; pending: number }>(sql`
+        select (select count(*) from page_restriction_holders
+            where item_id = ${secret} and principal_kind = 'group')::int as count,
+          (select count(*) from import_grants where import_id = ${result.id} and item_id = ${secret}
+            and group_key is not null and applied_at is null)::int as pending`);
+      expect(groups.rows[0]).toEqual({ count: 0, pending: 1 });
+      expect(await allowed(w.hrMember, "item.view", secret)).toBe(false);
+    });
+
     it("lets a named person in once they get a role in the space, and keeps everyone else out", async () => {
       const w = await world();
       const result = await imported(w);

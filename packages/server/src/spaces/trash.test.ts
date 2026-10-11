@@ -99,6 +99,7 @@ describe.skipIf(!baseUrl)("trash and archive", () => {
       expect(await test.services.trash.restore(context.editor, entry.id)).toEqual({
         itemId: first.id,
         parentId: parent.id,
+        parentEntries: 0,
       });
       expect(await rootTitles(context, parent.id)).toEqual(["First", "Second"]);
 
@@ -107,6 +108,7 @@ describe.skipIf(!baseUrl)("trash and archive", () => {
       expect(await test.services.trash.restore(context.editor, again.id)).toEqual({
         itemId: first.id,
         parentId: null,
+        parentEntries: 0,
       });
       expect(await rootTitles(context)).toContain("First");
       expect(parentEntry.descendants).toBe(1);
@@ -546,7 +548,10 @@ describe.skipIf(!baseUrl)("trash and archive", () => {
       }
       expect(await allowed(context.editor, "item.archive", page.id)).toBe(true);
 
-      expect(await test.services.archive.unarchive(context.editor, page.id)).toEqual({ parentId: parent.id });
+      expect(await test.services.archive.unarchive(context.editor, page.id)).toEqual({
+        parentId: parent.id,
+        parentEntries: 0,
+      });
       expect(await rootTitles(context, parent.id)).toEqual(["Archived"]);
       expect(await allowed(context.editor, "item.edit", child.id)).toBe(true);
     });
@@ -556,8 +561,13 @@ describe.skipIf(!baseUrl)("trash and archive", () => {
       const parent = await item(context, "Gone parent");
       const page = await item(context, "Kept", parent.id);
       await test.services.archive.archive(context.editor, page.id);
+      const own = await test.services.trash.deleteItem(context.editor, page.id);
       await test.services.trash.deleteItem(context.editor, parent.id);
-      expect(await test.services.archive.unarchive(context.editor, page.id)).toEqual({ parentId: null });
+      await test.services.trash.restore(context.editor, own.id);
+      expect(await test.services.archive.unarchive(context.editor, page.id)).toEqual({
+        parentId: null,
+        parentEntries: 0,
+      });
       expect(await rootTitles(context)).toContain("Kept");
     });
 

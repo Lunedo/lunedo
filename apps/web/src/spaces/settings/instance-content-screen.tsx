@@ -17,6 +17,7 @@ import {
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { contentKeys } from "../content-queries.js";
 import { DeletedContent } from "../trash/deleted-content.js";
+import { withParentsQuery } from "../trash/restore-with-parents.js";
 import { Panel } from "./panel.js";
 
 export function InstanceContentScreen() {
@@ -97,13 +98,14 @@ export function InstanceContentScreen() {
             loading={trash.isPending}
             error={trash.error}
             onRetry={() => void trash.refetch()}
-            onRestore={async (entry) => {
-              await request(() =>
+            onRestore={async (entry, withParents) => {
+              const result = await request(() =>
                 api.POST("/api/v1/instance/personal-spaces/trash/{entryId}/restore", {
-                  params: { path: { entryId: entry.id } },
+                  params: { path: { entryId: entry.id }, query: withParentsQuery(withParents) },
                 }),
               );
               await refreshTrash();
+              return result;
             }}
             onDelete={async (entry, reason) => {
               await request(() =>

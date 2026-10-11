@@ -260,6 +260,7 @@ describe.skipIf(!databaseBaseUrl)("publish mode through the API", () => {
     ).toEqual({
       itemId: targetId,
       parentId: null,
+      parentEntries: 0,
     });
     expect((await editor.client.post(`/api/v1/items/${targetId}/archive`, {})).statusCode).toBe(204);
     const write = await editor.client.put(`/api/v1/pages/${targetId}/content`, {
@@ -273,7 +274,54 @@ describe.skipIf(!databaseBaseUrl)("publish mode through the API", () => {
     expect((await reader.client.get(`/api/v1/spaces/${spaceId}/archive`)).json()).toHaveLength(1);
     expect((await editor.client.post(`/api/v1/items/${targetId}/unarchive`, {})).json()).toEqual({
       parentId: null,
+      parentEntries: 0,
     });
+  });
+
+  it("restores a page below a restricted parent in the trash only together with that parent", async () => {
+    const { editor, reader, spaceId } = await setup();
+    const create = async (title: string, parentId: string | null) => {
+      const created = await editor.client.post(`/api/v1/spaces/${spaceId}/items`, {
+        kind: "page",
+        title,
+        parentId,
+        mode: "live",
+      });
+      expect(created.statusCode, created.body).toBe(201);
+      return created.json().id as string;
+    };
+    const hrId = await create("HR", null);
+    const restricted = await editor.client.post(`/api/v1/pages/${hrId}/access`, {
+      changes: [{ action: "restrict", kind: "view" }],
+    });
+    expect(restricted.statusCode, restricted.body).toBe(200);
+    const salariesId = await create("Salaries", hrId);
+    const own = (await editor.client.delete(`/api/v1/items/${salariesId}`)).json().id as string;
+    expect((await editor.client.delete(`/api/v1/items/${hrId}`)).statusCode).toBe(200);
+
+    const refused = await editor.client.post(`/api/v1/spaces/${spaceId}/trash/${own}/restore`, {});
+    expect(refused.statusCode).toBe(409);
+    expect(refused.json()).toMatchObject({
+      code: "restrictedParentInTrash",
+      formerParent: { id: hrId, title: "HR" },
+      parentEntries: 1,
+    });
+
+    const organizationTrash = await owner.post(
+      `/api/v1/organizations/${organizationId}/trash/${own}/restore`,
+      {},
+    );
+    expect(organizationTrash.statusCode).toBe(409);
+    expect(organizationTrash.json()).toMatchObject({ formerParent: null, parentEntries: 1 });
+    expect(organizationTrash.body).not.toContain("HR");
+
+    const restored = await editor.client.post(
+      `/api/v1/spaces/${spaceId}/trash/${own}/restore?withParents=true`,
+      {},
+    );
+    expect(restored.json()).toEqual({ itemId: salariesId, parentId: hrId, parentEntries: 1 });
+    expect((await editor.client.get(`/api/v1/spaces/${spaceId}/trash`)).json()).toEqual([]);
+    expect((await reader.client.get(`/api/v1/items/${salariesId}`)).statusCode).toBe(404);
   });
 
   it("offers the template gallery to editors and creates pages from templates", async () => {

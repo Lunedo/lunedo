@@ -589,6 +589,7 @@ export {
   type ItemDetails,
   type ItemLink,
   MAX_TREE_PAGE,
+  type MoveImpact,
   type Placement,
   type TreeItem,
 } from "./spaces/items.js";

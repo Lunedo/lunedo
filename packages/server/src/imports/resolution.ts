@@ -382,12 +382,15 @@ export class ImportResolutionService {
         insert into page_restriction_holders (item_id, kind, principal_kind, principal_id)
         select gr.item_id, gr.restriction::page_restriction_kind, 'group', ${groupId} from import_grants gr
         join page_restrictions r on r.item_id = gr.item_id and r.kind::text = gr.restriction
+        join tree_items t on t.id = gr.item_id join spaces s on s.id = t.space_id
         where gr.import_id = ${importId} and gr.group_key = ${key} and gr.item_id is not null
-          and gr.restriction is not null and gr.applied_at is null
+          and gr.restriction is not null and gr.applied_at is null and not s.confidential
         on conflict do nothing`);
       await tx.execute(sql`
-        update import_grants set applied_at = now()
-        where import_id = ${importId} and group_key = ${key} and item_id is not null and applied_at is null`);
+        update import_grants gr set applied_at = now()
+        from tree_items t join spaces s on s.id = t.space_id
+        where t.id = gr.item_id and gr.import_id = ${importId} and gr.group_key = ${key}
+          and gr.applied_at is null and not s.confidential`);
       await this.#audit.record(tx, {
         name: "import.groupMapped",
         actor,

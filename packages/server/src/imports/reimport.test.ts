@@ -700,6 +700,35 @@ describe.skipIf(!baseUrl)("Confluence re-imports", () => {
     expect(open.rows.map((row) => row.change)).toEqual(["updated"]);
   });
 
+  it("creates no new page below a parent that moved into another space", async () => {
+    const w = await world();
+    const target = await w.item(RE.target);
+    const elsewhere = await fixtures.space(w.organizationId, w.admin);
+    const impact = await test.services.tree.moveImpact(as(w.admin), target, {
+      spaceId: elsewhere.id,
+      parentId: null,
+    });
+    await test.services.tree.move(as(w.admin), target, {
+      spaceId: elsewhere.id,
+      parentId: null,
+      confirmation: impact.confirmation ?? "",
+    });
+    const reimport = await harness.reimported(reimportAfter(), {
+      organizationId: w.organizationId,
+      admin: w.admin,
+      spaceId: w.spaceId,
+    });
+    await harness.applyChanges(w.admin, reimport.id);
+    const crossing = await test.database.execute<{ count: number }>(sql`
+      select count(*)::int as count from tree_items c join tree_items p on p.id = c.parent_id
+      where c.space_id <> p.space_id and (c.space_id = ${w.spaceId} or c.space_id = ${elsewhere.id})`);
+    expect(crossing.rows[0]?.count).toBe(0);
+    const created = await test.database.execute<{ count: number }>(sql`
+      select count(*)::int as count from tree_items
+      where title = 'Created at the source' and (space_id = ${w.spaceId} or space_id = ${elsewhere.id})`);
+    expect(created.rows[0]?.count).toBe(0);
+  });
+
   it("holds the source version and new comments of a page restricted further at the source", async () => {
     const w = await world();
     const after = reimportAfter();

@@ -125,6 +125,24 @@ export function accountItemCondition(
     and (${sql.join(sources, sql` or `)}) and ${sql.join(restrictions, sql` and `)})`;
 }
 
+export const LEVEL_ROLES: readonly (SpaceRole | null)[] = [null, "reader", "commenter", "editor"];
+
+export function itemLevel(account: SQL, item: SQL, space: SQL): SQL {
+  const readable = sql`(${accountItemCondition(account, item, space, "reader")}
+    and (${item}.reader_visible or ${accountItemCondition(account, item, space, "editor")}))`;
+  return sql`case
+    when ${accountItemCondition(account, item, space, "editor", { editRestriction: true })} then 3
+    when ${accountItemCondition(account, item, space, "commenter")} and ${readable} then 2
+    when ${readable} then 1 else 0 end`;
+}
+
+export function permissionLevel(account: SQL, item: SQL, space: SQL): SQL {
+  return sql`case
+    when ${accountItemCondition(account, item, space, "editor", { editRestriction: true })} then 3
+    when ${accountItemCondition(account, item, space, "commenter")} then 2
+    when ${accountItemCondition(account, item, space, "reader")} then 1 else 0 end`;
+}
+
 export type ItemGrantSource =
   | { type: "share"; role: SpaceRole; itemId: string; inherited: boolean; via: ShareVia; shareId: string }
   | { type: "link"; linkId: string; scope: string };

@@ -171,10 +171,20 @@ export const moveImpactSchema = impactSchema
     leavesConfidential: z
       .boolean()
       .describe("True when the content leaves a confidential space and loses its protection."),
+    confirmation: z
+      .string()
+      .nullable()
+      .describe(
+        "Send this with the move to confirm exactly this change, or null when access does not change. Valid for one hour.",
+      ),
   })
   .describe("Who gains, loses or changes access through the move.");
 
-export const exampleMoveImpact = { ...exampleImpact, leavesConfidential: false };
+export const exampleMoveImpact = {
+  ...exampleImpact,
+  leavesConfidential: false,
+  confirmation: "mbx2k1c0.Hq3l2bS8yq1m0e7pW9cJx4rT6uV5aZ2nD0gF1hK8sLw",
+};
 
 export const permissionSchema = z
   .object({
@@ -425,6 +435,13 @@ export const moveItemSchema = z
   .object({
     spaceId: uuid("Target space. Leave it out to stay in the space.").optional(),
     ...placementShape,
+    confirmation: z
+      .string()
+      .max(200)
+      .optional()
+      .describe(
+        "Confirmation from the preview of this move. Needed when the move changes who can access the content.",
+      ),
   })
   .strict()
   .describe("Where the item goes. Moving to another space needs edit permission in both spaces.");
