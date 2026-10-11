@@ -88,7 +88,6 @@ function MoveForm({
     retry: false,
     throwOnError: false,
   });
-  const changesAccess = impact.data?.confirmation != null;
   const targetSpace = spaces.data?.items.find((entry) => entry.id === targetSpaceId) ?? space;
 
   const loadParents = async (query: string) => {
@@ -214,21 +213,19 @@ function MoveForm({
           ]}
         />
       </fieldset>
-      {crossSpace || changesAccess || impact.isError ? (
-        <section aria-label={t("move.accessChange")} className="flex flex-col gap-2">
-          <h3 className="font-semibold">{t("move.accessChange")}</h3>
-          {impact.isPending ? <Skeleton className="h-control-md w-full" /> : null}
-          {impact.isError ? (
-            <LoadError what={t("move.impactFailed")} error={impact.error} onRetry={() => impact.refetch()} />
-          ) : null}
-          {impact.data ? <ImpactSummary impact={impact.data} /> : null}
-          {impact.data?.leavesConfidential ? (
-            <Notice variant="warning" title={t("confidential.moveOutTitle")}>
-              {t("confidential.moveOut")}
-            </Notice>
-          ) : null}
-        </section>
-      ) : null}
+      <section aria-label={t("move.accessChange")} className="flex flex-col gap-2">
+        <h3 className="font-semibold">{t("move.accessChange")}</h3>
+        {impact.isPending ? <Skeleton className="h-control-md w-full" /> : null}
+        {impact.isError ? (
+          <LoadError what={t("move.impactFailed")} error={impact.error} onRetry={() => impact.refetch()} />
+        ) : null}
+        {impact.data ? <ImpactSummary impact={impact.data} /> : null}
+        {impact.data?.leavesConfidential ? (
+          <Notice variant="warning" title={t("confidential.moveOutTitle")}>
+            {t("confidential.moveOut")}
+          </Notice>
+        ) : null}
+      </section>
       <div className="flex justify-end gap-2">
         <Button variant="secondary" onClick={onDone}>
           {t("common.cancel")}
