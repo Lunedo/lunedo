@@ -29,6 +29,7 @@ import {
   Eye,
   FileInput,
   FileWarning,
+  RefreshCw,
 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -39,6 +40,7 @@ import { useFormat } from "../preferences/preferences-provider.js";
 import { SettingsPage } from "../screens/settings/settings-page.js";
 import { pagePath } from "../spaces/space-queries.js";
 import { AcceptDialog } from "./accept-dialog.js";
+import { ConfluenceLinkField } from "./confluence-link.js";
 import { errorText, importTitle, sourceLabel, stateBadge, stateLabel } from "./import-labels.js";
 import {
   discardImport,
@@ -54,6 +56,8 @@ import {
   stopImport,
   takeOverImport,
 } from "./imports-api.js";
+import { createReimport } from "./reimport-api.js";
+import { ReimportChanges } from "./reimport-changes.js";
 import { PeopleTab, PermissionsTab } from "./resolution-tabs.js";
 
 const route = getRouteApi("/app/settings/organizations/$organizationId/imports/$importId");
@@ -68,6 +72,24 @@ const PHASES = [
   "comments",
   "reactions",
   "permissions",
+  "baseline",
+  "finish",
+] as const;
+const REIMPORT_PHASES = [
+  "read",
+  "compare",
+  "lineage",
+  "people",
+  "pages",
+  "moves",
+  "attachments",
+  "templates",
+  "content",
+  "labels",
+  "comments",
+  "reactions",
+  "deletions",
+  "baseline",
   "finish",
 ] as const;
 const TABS = ["summary", "macros", "people", "comments", "attachments", "permissions"] as const;
@@ -97,14 +119,32 @@ export function ImportScreen() {
 function ImportDetail({ organizationId, entry }: { organizationId: string; entry: ImportView }) {
   const { t } = useTranslation();
   const format = useFormat();
-  const _navigate = useNavigate();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const failed = useFailureToast();
   const [dialog, setDialog] = useState<"accept" | "discard" | "stop" | null>(null);
   const [takingOver, setTakingOver] = useState(false);
-  const title = importTitle(t, entry);
-  const key = entry.quarantineSpace?.key ?? entry.spaceKey ?? "";
+  const reimport = entry.targetSpace;
+  const title = reimport ? t("imports.reimport.title") : importTitle(t, entry);
+  const key = entry.quarantineSpace?.key ?? reimport?.key ?? entry.spaceKey ?? "";
+  const [starting, setStarting] = useState(false);
+
+  const startReimport = async () => {
+    if (!entry.reimportSpaceId) return;
+    setStarting(true);
+    try {
+      const created = await createReimport(organizationId, entry.source, entry.reimportSpaceId);
+      await navigate({
+        to: "/settings/organizations/$organizationId/imports/$importId/setup",
+        params: { organizationId, importId: created.id },
+      });
+    } catch (error) {
+      failed(t("imports.reimport.startFailed"), error, () => void startReimport());
+    } finally {
+      setStarting(false);
+    }
+  };
   const running = entry.state === "running" || entry.state === "held";
   const deleting = entry.state === "stopping" || entry.state === "discarding";
   const reviewers = entry.reviewers.map((reviewer) => reviewer.name);
@@ -123,6 +163,13 @@ function ImportDetail({ organizationId, entry }: { organizationId: string; entry
   };
 
   const subtitle = () => {
+    if (reimport) {
+      return t("imports.reimport.subtitle", {
+        space: reimport.name,
+        source: sourceLabel(t, entry.source),
+        when: format.relative(entry.finishedAt ?? entry.updatedAt),
+      });
+    }
     if (entry.state === "review") {
       return reviewers.length > 0
         ? t("imports.detail.quarantineWithReviewers", { names: reviewers.join(", ") })
@@ -150,8 +197,22 @@ function ImportDetail({ organizationId, entry }: { organizationId: string; entry
       ]}
       actions={
         <>
-          <Badge variant={stateBadge(entry.state)}>{stateLabel(t, entry.state)}</Badge>
-          {entry.state === "review" && entry.quarantineSpace ? (
+          <Badge variant={stateBadge(entry.state)}>
+            {reimport && entry.state === "review"
+              ? t("imports.reimport.stateReview")
+              : stateLabel(t, entry.state)}
+          </Badge>
+          {reimport ? (
+            <Link
+              to="/spaces/$spaceKey"
+              params={{ spaceKey: reimport.key }}
+              className="inline-flex h-control-md items-center gap-2 rounded-md border border-control-border px-3 font-medium hover:bg-hover focus-visible:focus-ring"
+            >
+              <Icon icon={Eye} size="sm" />
+              {t("imports.reimport.openSpace")}
+            </Link>
+          ) : null}
+          {entry.state === "review" && entry.quarantineSpace && !reimport ? (
             <Link
               to="/spaces/$spaceKey"
               params={{ spaceKey: entry.quarantineSpace.key }}
@@ -161,7 +222,7 @@ function ImportDetail({ organizationId, entry }: { organizationId: string; entry
               {t("imports.detail.openSpace")}
             </Link>
           ) : null}
-          {entry.state === "review" && entry.canManage ? (
+          {entry.state === "review" && entry.canManage && !reimport ? (
             <Button variant="primary" onClick={() => setDialog("accept")}>
               {t("imports.detail.accept")}
             </Button>
@@ -188,8 +249,28 @@ function ImportDetail({ organizationId, entry }: { organizationId: string; entry
       ) : null}
       {entry.state === "failed" && entry.errorCode ? <FailedNotice code={entry.errorCode} /> : null}
       {running || deleting ? <Progress entry={entry} /> : null}
-      {entry.state === "review" || entry.state === "accepted" ? (
+      {reimport && ["review", "accepted", "superseded"].includes(entry.state) ? (
+        <ReimportChanges entry={entry} />
+      ) : null}
+      {!reimport && (entry.state === "review" || entry.state === "accepted") ? (
         <Report organizationId={organizationId} entry={entry} />
+      ) : null}
+      {entry.state === "accepted" || entry.state === "superseded" ? (
+        <Section title={t("imports.reimport.againTitle")} icon={RefreshCw}>
+          <div className="flex flex-col gap-4 p-4">
+            {entry.reimportSpaceId ? (
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <p className="min-w-0 text-sm text-text-muted sm:flex-1">
+                  {t("imports.reimport.againDescription")}
+                </p>
+                <Button variant="secondary" loading={starting} onClick={() => void startReimport()}>
+                  {t("imports.reimport.again")}
+                </Button>
+              </div>
+            ) : null}
+            <ConfluenceLinkField />
+          </div>
+        </Section>
       ) : null}
       {entry.tokenDeletedAt ? (
         <Notice variant="info" title={t("imports.detail.tokenDeletedTitle")}>
@@ -200,7 +281,7 @@ function ImportDetail({ organizationId, entry }: { organizationId: string; entry
           {t("imports.detail.tokenKept")}
         </Notice>
       ) : null}
-      {entry.state === "accepted" && entry.quarantineSpace ? (
+      {entry.state === "accepted" && entry.quarantineSpace && !reimport ? (
         <Notice variant="success" title={t("imports.detail.acceptedTitle")}>
           {t("imports.detail.accepted", { when: format.relative(entry.decidedAt ?? entry.updatedAt) })}
         </Notice>
@@ -221,7 +302,9 @@ function ImportDetail({ organizationId, entry }: { organizationId: string; entry
           {running ? (
             <DangerAction
               title={t("imports.detail.stop")}
-              description={t("imports.detail.stopDescription")}
+              description={t(
+                reimport ? "imports.reimport.stopDescription" : "imports.detail.stopDescription",
+              )}
               action={
                 <Button variant="danger" onClick={() => setDialog("stop")}>
                   {t("imports.detail.stop")}
@@ -230,11 +313,13 @@ function ImportDetail({ organizationId, entry }: { organizationId: string; entry
             />
           ) : (
             <DangerAction
-              title={t("imports.detail.discard")}
-              description={t("imports.detail.discardDescription")}
+              title={t(reimport ? "imports.reimport.discard" : "imports.detail.discard")}
+              description={t(
+                reimport ? "imports.reimport.discardDescription" : "imports.detail.discardDescription",
+              )}
               action={
                 <Button variant="danger" onClick={() => setDialog("discard")}>
-                  {t("imports.detail.discard")}
+                  {t(reimport ? "imports.reimport.discard" : "imports.detail.discard")}
                 </Button>
               }
             />
@@ -258,17 +343,27 @@ function ImportDetail({ organizationId, entry }: { organizationId: string; entry
             onOpenChange={(open) => {
               if (!open) setDialog(null);
             }}
-            title={t(dialog === "stop" ? "imports.detail.stopTitle" : "imports.detail.discardTitle")}
-            description={
-              dialog === "stop"
-                ? t("imports.detail.stopConfirm")
-                : t("imports.detail.discardConfirm", {
-                    name: title,
-                    pages: entry.counts.pages ?? 0,
-                    attachments: entry.counts.attachments ?? 0,
-                  })
+            title={
+              reimport && dialog === "discard"
+                ? t("imports.reimport.discardTitle")
+                : t(dialog === "stop" ? "imports.detail.stopTitle" : "imports.detail.discardTitle")
             }
-            confirmLabel={t(dialog === "stop" ? "imports.detail.stop" : "imports.detail.discard")}
+            description={
+              reimport
+                ? t(dialog === "stop" ? "imports.reimport.stopConfirm" : "imports.reimport.discardConfirm")
+                : dialog === "stop"
+                  ? t("imports.detail.stopConfirm")
+                  : t("imports.detail.discardConfirm", {
+                      name: title,
+                      pages: entry.counts.pages ?? 0,
+                      attachments: entry.counts.attachments ?? 0,
+                    })
+            }
+            confirmLabel={
+              reimport && dialog === "discard"
+                ? t("imports.reimport.discard")
+                : t(dialog === "stop" ? "imports.detail.stop" : "imports.detail.discard")
+            }
             cancelLabel={t(dialog === "stop" ? "imports.detail.keepRunning" : "imports.detail.keepImport")}
             destructive
             typedConfirmation={{
@@ -317,9 +412,14 @@ function Progress({ entry }: { entry: ImportView }) {
   const { t } = useTranslation();
   const format = useFormat();
   const deleting = entry.state === "stopping" || entry.state === "discarding";
-  const current = entry.phase === "done" ? PHASES.length : PHASES.indexOf((entry.phase ?? "space") as never);
+  const phases: readonly string[] = entry.targetSpace
+    ? entry.phase === "compare"
+      ? REIMPORT_PHASES.slice(0, 2)
+      : REIMPORT_PHASES.slice(2)
+    : PHASES;
+  const current = entry.phase === "done" ? phases.length : phases.indexOf(entry.phase ?? phases[0] ?? "");
   const fraction = entry.progress.total > 0 ? Math.min(1, entry.progress.done / entry.progress.total) : 0;
-  const overall = deleting ? 0 : Math.round(((Math.max(0, current) + fraction) / PHASES.length) * 100);
+  const overall = deleting ? 0 : Math.round(((Math.max(0, current) + fraction) / phases.length) * 100);
   return (
     <>
       {deleting ? (
@@ -347,7 +447,7 @@ function Progress({ entry }: { entry: ImportView }) {
       {deleting ? null : (
         <Section title={t("imports.detail.steps")}>
           <ol className="flex flex-col divide-y divide-border">
-            {PHASES.map((phase, position) => {
+            {phases.map((phase, position) => {
               const done = position < current;
               const active = position === current;
               return (
@@ -366,7 +466,7 @@ function Progress({ entry }: { entry: ImportView }) {
                     )}
                   </span>
                   <div className="flex min-w-0 flex-1 flex-col">
-                    <span className="font-medium">{t(`imports.phases.${phase}`)}</span>
+                    <span className="font-medium">{translateKey(t, `imports.phases.${phase}`)}</span>
                     {active && entry.progress.total > 0 ? (
                       <span className="text-sm text-text-muted tabular-nums">
                         {t("imports.detail.phaseProgress", {

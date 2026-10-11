@@ -14,19 +14,23 @@ export const IMPORT_DIR = path.join(STATE_DIR, "import");
 export const FOLDER_EXPORT = "space-export.zip";
 export const FOLDER_EXPORT_TEMPLATE = path.join(STATE_DIR, FOLDER_EXPORT);
 export const PEOPLE_EXPORT_TEMPLATE = path.join(STATE_DIR, "people-export.zip");
+export const REIMPORT_BEFORE_TEMPLATE = path.join(STATE_DIR, "reimport-before.zip");
+export const REIMPORT_AFTER_TEMPLATE = path.join(STATE_DIR, "reimport-after.zip");
 
 const WRITE_EXPORT = `
 const { writeFileSync } = await import("node:fs");
-const { createCsvExport, createXmlExport, peopleExport, syntheticExport } = await import("@pagehall/server/testing");
+const { createCsvExport, createXmlExport, peopleExport, reimportAfter, reimportBefore, syntheticExport } =
+  await import("@pagehall/server/testing");
 const [format, target, kind] = process.argv.slice(1);
-const model = kind === "people" ? peopleExport() : syntheticExport();
+const models = { people: peopleExport, reimportBefore, reimportAfter };
+const model = (models[kind] ?? syntheticExport)();
 writeFileSync(target, format === "csv" ? createCsvExport(model) : createXmlExport(model));
 `;
 
 export async function writeSyntheticExport(
   format: "xml" | "csv",
   target: string,
-  kind: "synthetic" | "people" = "synthetic",
+  kind: "synthetic" | "people" | "reimportBefore" | "reimportAfter" = "synthetic",
 ): Promise<void> {
   await run(process.execPath, ["--input-type=module", "-e", WRITE_EXPORT, format, target, kind], {
     cwd: serverRoot,
@@ -77,6 +81,16 @@ export async function updateImportRow(importId: string, sql: string, values: unk
   await client.connect();
   try {
     await client.query(sql, [importId, ...values]);
+  } finally {
+    await client.end();
+  }
+}
+
+export async function runSql(sql: string, values: unknown[] = []): Promise<void> {
+  const client = new pg.Client({ connectionString: readState().databaseUrl });
+  await client.connect();
+  try {
+    await client.query(sql, values);
   } finally {
     await client.end();
   }

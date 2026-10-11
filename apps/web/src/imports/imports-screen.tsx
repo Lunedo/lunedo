@@ -16,7 +16,45 @@ import { createImport, folderQuery, type ImportView, importsQuery } from "./impo
 
 const route = getRouteApi("/app/settings/organizations/$organizationId/imports");
 
+function changes(entry: ImportView): number {
+  const counts = entry.counts;
+  return (
+    (counts.new ?? 0) +
+    (counts.updated ?? 0) +
+    (counts.conflicts ?? 0) +
+    (counts.deleted ?? 0) +
+    (counts.moved ?? 0) +
+    (counts.movedHere ?? 0) +
+    (counts.labels ?? 0)
+  );
+}
+
+function reimportDetail(t: TFunction, format: Formatter, entry: ImportView): string {
+  const source = sourceLabel(t, entry.source);
+  switch (entry.state) {
+    case "running":
+      return t(entry.phase === "compare" ? "imports.list.comparing" : "imports.list.applying", { source });
+    case "review":
+      return t("imports.list.reimportReview", {
+        source,
+        when: format.relative(entry.finishedAt ?? entry.updatedAt),
+        count: changes(entry),
+        open: (entry.counts.conflicts ?? 0) + (entry.counts.deleted ?? 0),
+      });
+    case "accepted":
+      return t("imports.list.reimportApplied", { source, when: format.relative(entry.updatedAt) });
+    case "superseded":
+      return t("imports.list.superseded", {
+        source,
+        when: format.relative(entry.decidedAt ?? entry.updatedAt),
+      });
+    default:
+      return detail(t, format, { ...entry, targetSpace: null });
+  }
+}
+
 function detail(t: TFunction, format: Formatter, entry: ImportView): string {
+  if (entry.targetSpace) return reimportDetail(t, format, entry);
   const source = sourceLabel(t, entry.source);
   switch (entry.state) {
     case "running":
@@ -90,6 +128,7 @@ export function ImportsScreen() {
     if (entry.state === "running" || entry.state === "stopping" || entry.state === "discarding")
       return t("imports.list.showProgress");
     if (entry.state === "held" && entry.canTakeOver) return t("imports.list.takeOverAction");
+    if (entry.state === "review" && entry.targetSpace) return t("imports.list.reviewChanges");
     if (entry.state === "review") return t("imports.list.openReport");
     return t("imports.list.open");
   };
@@ -137,7 +176,11 @@ export function ImportsScreen() {
               <ListRow
                 key={entry.id}
                 icon={FileInput}
-                title={importTitle(t, entry)}
+                title={
+                  entry.targetSpace
+                    ? t("imports.list.reimportTitle", { space: entry.targetSpace.name })
+                    : importTitle(t, entry)
+                }
                 description={detail(t, format, entry)}
                 actions={
                   <>

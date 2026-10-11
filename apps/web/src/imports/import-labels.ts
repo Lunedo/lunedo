@@ -17,6 +17,7 @@ const STATE_BADGES: Record<string, BadgeVariant> = {
   discarded: "neutral",
   stopped: "neutral",
   failed: "danger",
+  superseded: "neutral",
 };
 
 export function stateBadge(state: ImportState): BadgeVariant {

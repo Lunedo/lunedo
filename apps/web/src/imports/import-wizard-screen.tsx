@@ -47,6 +47,7 @@ import { UploadField } from "./upload-field.js";
 
 const route = getRouteApi("/app/settings/organizations/$organizationId/imports/$importId/setup");
 const STEPS = ["source", "people", "space", "check"] as const;
+const REIMPORT_STEPS = ["source", "people", "check"] as const;
 const SAVE_DELAY_MS = 600;
 const KEY_PATTERN = /^[A-Z0-9]{2,10}$/;
 
@@ -111,8 +112,10 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
   const search = route.useSearch();
   const state = useOrganizationState();
   const organization = state.organizations.find((candidate) => candidate.id === organizationId) ?? null;
-  const index = Math.max(0, Math.min(STEPS.length - 1, search.step ?? entry.draftStep));
-  const step = STEPS[index] ?? "source";
+  const reimport = entry.targetSpace;
+  const stepNames: readonly (typeof STEPS)[number][] = reimport ? REIMPORT_STEPS : STEPS;
+  const index = Math.max(0, Math.min(stepNames.length - 1, search.step ?? entry.draftStep));
+  const step = stepNames[index] ?? "source";
   const [form, setForm] = useState<Form>(() => formOf(entry));
   const [saveError, setSaveError] = useState<unknown>(null);
   const [saving, setSaving] = useState(false);
@@ -166,7 +169,7 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
 
   useEffect(() => {
     const text = JSON.stringify(form);
-    if (text === saved.current) return;
+    if (text === saved.current || reimport) return;
     const timer = setTimeout(() => {
       patch(formBody(form))
         .then(() => {
@@ -175,13 +178,13 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
         .catch(() => undefined);
     }, SAVE_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [form, patch]);
+  }, [form, patch, reimport]);
 
   const goTo = (next: number) => {
     void navigate({ to: ".", search: { step: next } });
     const text = JSON.stringify(form);
     const body: ImportUpdate =
-      text === saved.current || !isEditable(entry.state)
+      text === saved.current || !isEditable(entry.state) || reimport
         ? { draftStep: next }
         : { draftStep: next, ...formBody(form) };
     patch(body)
@@ -231,7 +234,7 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
         return;
       }
       setErrors({});
-      goTo(2);
+      goTo(index + 1);
       return;
     }
     if (step === "space") {
@@ -258,7 +261,7 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
         focusFirstInvalidSoon();
         return;
       }
-      if (!(await validateSpace())) {
+      if (!reimport && !(await validateSpace())) {
         goTo(2);
         focusFirstInvalidSoon();
         return;
@@ -267,13 +270,15 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
         setErrors({ start: t("imports.wizard.check.notReady") });
         return;
       }
-      await patch({
-        spaceName: form.spaceName.trim(),
-        spaceKey: form.spaceKey,
-        archived: form.archived,
-        history: form.history,
-        sourceUrl: form.sourceUrl.trim() || null,
-      });
+      if (!reimport) {
+        await patch({
+          spaceName: form.spaceName.trim(),
+          spaceKey: form.spaceKey,
+          archived: form.archived,
+          history: form.history,
+          sourceUrl: form.sourceUrl.trim() || null,
+        });
+      }
       await startImport(entry.id);
       await queryClient.invalidateQueries({ queryKey: importKeys.all });
       await navigate({
@@ -289,7 +294,7 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
 
   const steps = (
     <ol className="flex flex-wrap gap-x-4 gap-y-2" aria-label={t("imports.wizard.steps")}>
-      {STEPS.map((name, position) => (
+      {stepNames.map((name, position) => (
         <li
           key={name}
           aria-current={position === index ? "step" : undefined}
@@ -317,12 +322,24 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
   return (
     <SettingsPage
       title={t(`imports.wizard.stepNames.${step}`)}
-      description={t("imports.wizard.progress", { step: index + 1, total: STEPS.length })}
+      description={
+        reimport
+          ? t("imports.reimport.wizardProgress", {
+              step: index + 1,
+              total: stepNames.length,
+              space: reimport.name,
+            })
+          : t("imports.wizard.progress", { step: index + 1, total: stepNames.length })
+      }
       icon={FileInput}
       organizationId={organizationId}
       breadcrumbs={[
         { label: t("imports.title"), href: `/settings/organizations/${organizationId}/imports` },
-        { label: importTitle(t, entry) },
+        {
+          label: reimport
+            ? t("imports.reimport.wizardTitle", { space: reimport.name })
+            : importTitle(t, entry),
+        },
       ]}
       actions={
         <Button
@@ -379,7 +396,8 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
           errors={errors}
         />
       ) : null}
-      {step === "check" ? <CheckStep entry={entry} form={form} /> : null}
+      {step === "check" && reimport ? <ReimportCheck entry={entry} space={reimport.name} /> : null}
+      {step === "check" && !reimport ? <CheckStep entry={entry} form={form} /> : null}
       {errors.start ? (
         <ErrorState title={t("imports.wizard.check.startFailed")} cause={errors.start} />
       ) : null}
@@ -392,7 +410,7 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
         <span className="flex-1" />
         {step === "check" ? (
           <Button variant="primary" loading={starting} onClick={() => void start()}>
-            {t("imports.wizard.check.start")}
+            {reimport ? t("imports.reimport.compare") : t("imports.wizard.check.start")}
           </Button>
         ) : (
           <Button variant="primary" onClick={() => void next()}>
@@ -778,6 +796,37 @@ function SpaceStep({
           </Field>
         </div>
       </Section>
+    </>
+  );
+}
+
+function ReimportCheck({ entry, space }: { entry: ImportView; space: string }) {
+  const { t } = useTranslation();
+  const format = useFormat();
+  if (entry.state === "analyzing") return <Reading entry={entry} />;
+  const found = entry.found;
+  if (!found) return <Notice variant="warning">{t("imports.wizard.check.notRead")}</Notice>;
+  return (
+    <>
+      <p className="text-sm text-text-muted">{t("imports.reimport.checkIntro", { space })}</p>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        {(
+          [
+            [found.pages, "imports.wizard.check.pages"],
+            [found.blogPosts, "imports.wizard.check.blogPosts"],
+            [found.comments, "imports.wizard.check.comments"],
+            [found.people, "imports.wizard.check.peopleCount"],
+          ] as const
+        ).map(([value, key]) => (
+          <div key={key} className="flex flex-col gap-1 rounded-md border border-border p-4">
+            <span className="text-xl font-semibold tabular-nums">{format.number(value)}</span>
+            <span className="text-sm text-text-muted">{t(key, { count: value })}</span>
+          </div>
+        ))}
+      </div>
+      <Notice variant="info" title={t("imports.reimport.checkNoticeTitle")}>
+        {t("imports.reimport.checkNotice")}
+      </Notice>
     </>
   );
 }

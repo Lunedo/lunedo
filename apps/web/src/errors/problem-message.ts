@@ -3,6 +3,20 @@ import { ApiError } from "../api/request.js";
 import { translateKey } from "../i18n/translate.js";
 
 const KNOWN = new Set([
+  "spaceNotImported",
+  "importedBeforeReimports",
+  "importNotAccepted",
+  "reimportRunning",
+  "reimportApplying",
+  "reimportNotInReview",
+  "changesUnavailable",
+  "changeNotFound",
+  "changeApplied",
+  "invalidDecision",
+  "holderNotInPagehall",
+  "differenceResolved",
+  "notRestricted",
+  "reimportSpaceFixed",
   "importStarted",
   "importNotReady",
   "importNotRunning",

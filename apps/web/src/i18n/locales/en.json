@@ -1084,7 +1084,10 @@
     "changeLanguage": "Change language",
     "signOut": "Sign out",
     "goSpaces": "Go to spaces",
-    "openPersonalSpace": "Open my personal space"
+    "openPersonalSpace": "Open my personal space",
+    "confluenceLink": "Old Confluence link",
+    "openConfluenceLink": "Open the page imported from this link",
+    "confluenceLinkFailed": "The Confluence link could not be opened"
   },
   "shortcuts": {
     "title": "Keyboard shortcuts",
@@ -1344,7 +1347,21 @@
     "invalidSourceUrl": "Enter the address of the Confluence site starting with https://.",
     "invalidReviewer": "Reviewers must be active members of the organization. Choose someone else.",
     "tooManyReviewers": "An import can have up to 50 reviewers. Remove some first.",
-    "uploadTooLarge": "The file is larger than uploads allow. Ask the person who runs the server to place it in the import folder."
+    "uploadTooLarge": "The file is larger than uploads allow. Ask the person who runs the server to place it in the import folder.",
+    "spaceNotImported": "Re-imports go only into spaces that an import created. Choose such a space.",
+    "importedBeforeReimports": "This space was imported before re-imports were possible. Import the export into a new space instead.",
+    "importNotAccepted": "Accept or discard the first import before importing again.",
+    "reimportRunning": "Another re-import of this space is running. Start this one when it is done.",
+    "reimportApplying": "Pagehall is applying the changes; this cannot be stopped. Wait until it is done.",
+    "reimportNotInReview": "These changes no longer wait to be applied. Reload the page.",
+    "changesUnavailable": "The changes are listed once Pagehall has compared the export. Wait a moment and reload.",
+    "changeNotFound": "Some of the chosen changes no longer exist. Reload the list.",
+    "changeApplied": "Some of the chosen changes were applied already. Reload the list.",
+    "invalidDecision": "This decision does not fit every chosen change. Choose changes of one kind.",
+    "holderNotInPagehall": "This person or group is not in Pagehall yet. Map them in the report of the first import.",
+    "differenceResolved": "Pagehall already matches Confluence here. Reload the list.",
+    "notRestricted": "The page is not restricted this way. Apply the restriction first.",
+    "reimportSpaceFixed": "A re-import goes into the space of the earlier import; its space settings cannot change."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -4781,7 +4798,9 @@
       "published": "Published",
       "session": "Editing session",
       "restored": "Restored from version {number}",
-      "modeChanged": "Editing mode changed"
+      "modeChanged": "Editing mode changed",
+      "imported": "From Confluence",
+      "importedNotApplied": "From Confluence, not applied"
     },
     "draftChanges": "{count, plural, one {# change, not published} other {# changes, not published}}",
     "compare": "Compare",
@@ -5992,7 +6011,8 @@
       "discarding": "Discarding",
       "discarded": "Discarded",
       "stopped": "Stopped",
-      "failed": "Failed"
+      "failed": "Failed",
+      "superseded": "Replaced"
     },
     "sources": {
       "confluence-xml": {
@@ -6015,7 +6035,13 @@
       "comments": "Comments and inline comments",
       "reactions": "Likes",
       "permissions": "Permissions",
-      "templates": "Space templates"
+      "templates": "Space templates",
+      "compare": "Compare with the space",
+      "lineage": "Earlier imports",
+      "moves": "Moves",
+      "labels": "Labels",
+      "deletions": "Deleted pages",
+      "baseline": "Record what was imported"
     },
     "list": {
       "title": "Imports",
@@ -6038,7 +6064,14 @@
       "failed": "{source} · failed {when}",
       "largeTitle": "Large exports",
       "largeFolder": "Exports above {size} cannot be uploaded from the browser. Ask the instance administrators to raise the upload limit, or to place the file in this organization's import folder on the server; you can then choose it in a new import.",
-      "largeNoFolder": "Exports above {size} cannot be uploaded from the browser. Ask the instance administrators to raise the upload limit, or to turn on the import folder and place the file in this organization's import folder on the server."
+      "largeNoFolder": "Exports above {size} cannot be uploaded from the browser. Ask the instance administrators to raise the upload limit, or to turn on the import folder and place the file in this organization's import folder on the server.",
+      "comparing": "{source} · comparing with the space",
+      "applying": "{source} · applying the changes",
+      "reimportReview": "{source} · compared {when} · {count, plural, one {# change} other {# changes}} found, {open} waiting for a decision",
+      "reimportApplied": "{source} · all changes applied {when}",
+      "superseded": "{source} · replaced by a newer re-import {when}",
+      "reviewChanges": "Review changes",
+      "reimportTitle": "Re-import into {space}"
     },
     "wizard": {
       "title": "New import",
@@ -6146,7 +6179,8 @@
         "historyCurrent": "Current state only · {count, plural, one {# earlier version} other {# earlier versions}} left out",
         "extras": "{likes, plural, one {# like becomes a 👍 reaction} other {# likes become 👍 reactions}}. {watchers, plural, one {# watcher is} other {# watchers are}} only counted.",
         "permissionsTitle": "Permissions",
-        "permissionsDescription": "Taken over as far as they map to Pagehall roles and marked for review in the report. Anonymous access is not taken over."
+        "permissionsDescription": "Taken over as far as they map to Pagehall roles and marked for review in the report. Anonymous access is not taken over.",
+        "peopleCount": "{count, plural, one {person} other {people}}"
       }
     },
     "upload": {
@@ -6496,6 +6530,11 @@
         "what": "The import stopped after several attempts",
         "cause": "An unexpected problem occurred again and again.",
         "action": "Discard the import and start it again. If it fails again, ask the person who runs the server to check the logs."
+      },
+      "foreignSpace": {
+        "what": "This export is from another Confluence space",
+        "cause": "A re-import only accepts an export of the Confluence space this space was imported from.",
+        "action": "Choose an export of the same Confluence space, or start a new import into a new space."
       }
     },
     "quarantine": {
@@ -6645,6 +6684,169 @@
       "noRole": "none",
       "keepUnmapped": "Keep unmapped",
       "chooseGroupFirst": "Choose a group first, or create one with this name."
+    },
+    "links": {
+      "label": "Paste an old Confluence link",
+      "hint": "Links with a page ID, Data Center addresses with /display/ and short links with /x/ open the imported page.",
+      "placeholder": "https://wiki.example.org/display/OPS/Backup+rotation",
+      "open": "Open page",
+      "invalid": "This is not a Confluence page link. Paste the full address of a Confluence page.",
+      "notFound": "No page you can open was imported from this link. Check the link, or ask someone who has access to the page.",
+      "failed": "The link could not be checked: {cause}",
+      "redirecting": "Opening the imported page",
+      "notFoundTitle": "This Confluence page is not here",
+      "notFoundDescription": "No page you can open was imported from this Confluence link. It may not be imported yet, or you need access to it. Ask the person who shared the link.",
+      "failedTitle": "The Confluence link could not be opened",
+      "failedDescription": "Pagehall could not check the link. Reload the page to try again.",
+      "home": "Go to the start page"
+    },
+    "reimport": {
+      "title": "Changes since the last import",
+      "subtitle": "Re-import into {space} · {source} · compared {when}",
+      "againTitle": "Import a newer export",
+      "againDescription": "Import a newer export of the same Confluence space. Pagehall lists what changed and changes nothing until you apply it.",
+      "again": "Re-import a newer export",
+      "startFailed": "The re-import could not be started",
+      "wizardTitle": "Re-import into {space}",
+      "wizardProgress": "Re-import into {space} · step {step} of {total}",
+      "compare": "Compare with the space",
+      "checkIntro": "Pagehall compares this export with what was imported into {space} before.",
+      "checkNoticeTitle": "Nothing changes yet",
+      "checkNotice": "The comparison only lists the changes. You decide about conflicts and deleted pages, and nothing is written until you apply the changes. Permissions are never changed by a re-import.",
+      "applying": "Applying the changes. You can leave this page.",
+      "applyFailed": "The changes could not be applied",
+      "loadFailed": "The changes could not be loaded",
+      "doneTitle": "All changes are applied",
+      "done": "Applied {when}. Import a newer export to bring later changes from Confluence.",
+      "supersededTitle": "A newer re-import replaced this one",
+      "superseded": "Open conflicts and deletions of this re-import were evaluated again with the newer export.",
+      "hiddenTitle": "Some changes are not shown",
+      "hidden": "{count, plural, one {# change concerns a page you cannot open.} other {# changes concern pages you cannot open.}} Someone with access to those pages decides about them.",
+      "tabsLabel": "Changes",
+      "tabs": {
+        "conflicts": "Changed on both sides",
+        "updates": "New and updated",
+        "deleted": "Deleted at the source",
+        "moved": "Moved",
+        "permissions": "Permissions"
+      },
+      "waiting": "{conflicts, plural, =0 {} one {# conflict} other {# conflicts}}{conflicts, select, 0 {} other {{deletions, select, 0 {} other { and }}}}{deletions, plural, =0 {} one {# deleted page} other {# deleted pages}} still need a decision. You can apply the rest now and decide later.",
+      "allDecided": "Everything is decided.",
+      "apply": "Apply changes",
+      "bulkLabel": "Decide for the selected changes",
+      "selected": "{count, plural, one {# selected} other {# selected}}",
+      "decisions": {
+        "pagehall": "Keep Pagehall version",
+        "source": "Take Confluence version",
+        "both": "Keep both",
+        "trash": "Move to the trash",
+        "keep": "Keep in Pagehall",
+        "later": "Decide later"
+      },
+      "applied": "Applied",
+      "undecided": "Not decided",
+      "decide": "Decide…",
+      "decisionFor": "Decision for {title}",
+      "saved": "Saved",
+      "decideFailed": "The decision could not be saved",
+      "conflictsHint": "These pages were changed in Pagehall and in Confluence since the last import, or someone is editing them. Nothing is overwritten until you decide. “Keep both” keeps the Pagehall version and adds the Confluence version to the history, where you can compare them.",
+      "noConflicts": "Nothing was changed on both sides",
+      "noConflictsDescription": "Pages changed only in Confluence are updated as a new version.",
+      "selectAll": "Select all",
+      "select": "Select {title}",
+      "columns": {
+        "page": "Page",
+        "changedHere": "Changed in Pagehall",
+        "changedAtSource": "Changed in Confluence",
+        "decision": "Decision",
+        "lastChange": "Last changed in Pagehall",
+        "move": "Moved in Confluence",
+        "outcome": "In Pagehall",
+        "where": "Where",
+        "difference": "Difference to Confluence",
+        "action": "Action"
+      },
+      "changedBy": "{name}, {when}",
+      "someone": "Someone",
+      "template": "Space template",
+      "editing": "Being edited",
+      "restricted": "Restricted further in Confluence. Apply the permission difference first, or decide.",
+      "sourceTitle": "In Confluence: {title}",
+      "updates": {
+        "newPages": "{count, plural, =0 {No new pages} one {# new page} other {# new pages}}",
+        "newPagesDescription": "Created where they are in Confluence, with their restrictions.",
+        "updatedPages": "{count, plural, =0 {No pages changed only in Confluence} one {# page changed only in Confluence} other {# pages changed only in Confluence}}",
+        "updatedPagesDescription": "Updated as a new version. The earlier version stays in the history.",
+        "unchanged": "{count, plural, =0 {No unchanged pages} one {# page unchanged} other {# pages unchanged}}",
+        "unchangedDescription": "Skipped.",
+        "labels": "{count, plural, one {Labels changed on # page} other {Labels changed on # pages}}",
+        "labelsDescription": "Added labels are added. A removed label is removed only if nobody touched it in Pagehall.",
+        "newComments": "{count, plural, one {# new comment} other {# new comments}}",
+        "newCommentsDescription": "Added to their pages without notifying anyone.",
+        "newAttachments": "{count, plural, one {# new attachment version} other {# new attachment versions}}",
+        "newAttachmentsDescription": "New files are added, new versions of existing files become versions.",
+        "newTemplates": "{count, plural, one {# new space template} other {# new space templates}}",
+        "newTemplatesDescription": "Added to the templates of the space.",
+        "updatedTemplates": "{count, plural, one {# space template changed only in Confluence} other {# space templates changed only in Confluence}}",
+        "updatedTemplatesDescription": "Updated with the content from Confluence.",
+        "deletedHere": "{count, plural, one {# page deleted in Pagehall} other {# pages deleted in Pagehall}}",
+        "deletedHereDescription": "Not created again."
+      },
+      "deletedHint": "These pages no longer exist in Confluence. Decide what happens to them in Pagehall. Pages moved to the trash can be restored from there.",
+      "noDeleted": "Nothing was deleted in Confluence",
+      "noDeletedDescription": "Pages deleted in Confluence are listed here, and nothing happens to them without a decision.",
+      "notChangedHere": "Not changed since the import",
+      "goneTitle": "Comments and attachments deleted in Confluence",
+      "goneDescription": "They stay in Pagehall. Delete them there if they are no longer needed.",
+      "goneComment": "A comment on {title}",
+      "goneAttachment": "The attachment {name}",
+      "noMoves": "Nothing was moved",
+      "noMovesDescription": "Pages moved in Confluence follow in Pagehall, unless someone moved them here.",
+      "topLevel": "Top level",
+      "movedTo": "moved to",
+      "stays": "Stays, because it was moved in Pagehall",
+      "follows": "Follows Confluence",
+      "permissionsHint": "Pagehall never changes permissions by itself. These permissions changed in Confluence since the last import. Apply each one after checking who gains or loses access.",
+      "noPermissions": "No permission differences",
+      "noPermissionsDescription": "The permissions in Confluence did not change since the last import, or Pagehall already matches them.",
+      "wholeSpace": "Whole space",
+      "permissions": {
+        "members": "All members of the organization",
+        "none": "no access",
+        "space": "{holder}: {role} in Confluence, {current} in Pagehall",
+        "restrict": {
+          "view": "Restricted for viewing in Confluence",
+          "edit": "Restricted for editing in Confluence"
+        },
+        "unrestrict": {
+          "view": "No longer restricted for viewing in Confluence",
+          "edit": "No longer restricted for editing in Confluence"
+        },
+        "list": {
+          "view": "{holder} may view it in Confluence",
+          "edit": "{holder} may edit it in Confluence"
+        },
+        "unlist": {
+          "view": "{holder} may no longer view it in Confluence",
+          "edit": "{holder} may no longer edit it in Confluence"
+        },
+        "apply": "Apply…",
+        "notInPagehall": "Not in Pagehall yet. Map this person or group in the report of the first import.",
+        "confirmTitle": "Apply this permission difference?",
+        "confirm": "Apply difference",
+        "cancel": "Cancel",
+        "applied": "Permission difference applied",
+        "failed": "The permission difference could not be applied",
+        "impactFailed": "Pagehall could not show who gains or loses access"
+      },
+      "stateReview": "Changes ready",
+      "openSpace": "Open space",
+      "stopDescription": "Stops comparing the export. Nothing in the space has changed.",
+      "stopConfirm": "Pagehall stops comparing the export. Nothing in the space has changed, and you can start a re-import again at any time.",
+      "discard": "Discard re-import",
+      "discardTitle": "Discard this re-import?",
+      "discardDescription": "Discards the list of changes and the decisions not applied yet. Changes already applied stay, and pages are not touched.",
+      "discardConfirm": "The list of changes and the decisions not applied yet are discarded. Changes already applied stay. You can import the export again later."
     }
   }
 }
