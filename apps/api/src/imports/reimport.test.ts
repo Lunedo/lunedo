@@ -31,6 +31,8 @@ interface Change {
   change: string;
   item: { id: string } | null;
   permission: { scope: string; action: string; applicable: boolean } | null;
+  held: boolean;
+  decisions: string[];
 }
 
 describe.skipIf(!databaseBaseUrl)("re-imports and old Confluence links through the API", () => {
@@ -263,6 +265,42 @@ describe.skipIf(!databaseBaseUrl)("re-imports and old Confluence links through t
     expect(
       (await outsider.client.get(`/api/v1/imports/${id}/changes/${conflict?.id}/compare`)).statusCode,
     ).toBe(404);
+  });
+
+  it("accepts only keeping the Pagehall version while a restriction from the source waits", async () => {
+    const { importId, spaceId } = await acceptedSpace();
+    const target = await test.runtime.pool.query<{ target_id: string }>(
+      "select target_id from import_items where import_id = $1 and kind = 'page' and source_id = $2",
+      [importId, RE.sourceOnly],
+    );
+    const pageId = target.rows[0]?.target_id ?? "";
+    const after = reimportAfter();
+    const id = await analyzed(
+      {
+        ...after,
+        restrictions: [
+          ...(after.restrictions ?? []),
+          { id: "3967", contentId: RE.sourceOnly, kind: "View", group: "finance" },
+        ],
+      },
+      spaceId,
+    );
+    await started(id);
+    const conflict = (await changes(owner, id, "conflicts")).find((entry) => entry.item?.id === pageId);
+    expect(conflict).toMatchObject({ held: true, decisions: ["pagehall"] });
+    for (const decision of ["source", "both"]) {
+      const refused = await owner.put(`/api/v1/imports/${id}/changes/decisions`, {
+        ids: [conflict?.id],
+        decision,
+      });
+      expect(refused.statusCode).toBe(409);
+      expect(refused.json()).toMatchObject({ code: "restrictionPending" });
+    }
+    const kept = await owner.put(`/api/v1/imports/${id}/changes/decisions`, {
+      ids: [conflict?.id],
+      decision: "pagehall",
+    });
+    expect(kept.json()).toEqual({ decided: 1 });
   });
 
   it("refuses an export of another Confluence space", async () => {

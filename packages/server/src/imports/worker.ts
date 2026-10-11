@@ -23,6 +23,7 @@ import type { ImportFolder } from "./folder.js";
 import type { ByteSource } from "./formats/bytes.js";
 import { FILE_RETENTION_DAYS } from "./imports.js";
 import { importWorkJob } from "./jobs.js";
+import { heldCondition } from "./narrowing.js";
 import { type ImportPipeline, type PipelinePhase, pipelinePhases, reimportPhases } from "./pipeline.js";
 import { purgeQuarantineSpace } from "./quarantine.js";
 import { ReimportComparer } from "./reimport-compare.js";
@@ -534,8 +535,9 @@ export class ImportWorker {
           )
           .reduce((sum, entry) => sum + entry.count, 0);
       const open = await tx.execute<{ count: number }>(sql`
-        select count(*)::int as count from import_changes
-        where import_id = ${row.id} and applied_at is null and change in ('conflict', 'deleted')`);
+        select count(*)::int as count from import_changes c
+        where c.import_id = ${row.id} and c.applied_at is null
+          and (c.change in ('conflict', 'deleted') or (c.change in ('new', 'labels') and ${heldCondition(sql`c`)}))`);
       const waiting = open.rows[0]?.count ?? 0;
       await tx.execute(sql`
         update imports set state = ${waiting > 0 ? "review" : "accepted"}, phase = null,

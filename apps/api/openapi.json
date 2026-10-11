@@ -27662,7 +27662,7 @@
                             ]
                           },
                           "sourceTitle": {
-                            "description": "Title at the source, for changed pages.",
+                            "description": "Title at the source, for changed pages. Null for a change that waits for a restriction when the caller would lose access once it is applied.",
                             "type": [
                               "string",
                               "null"
@@ -27682,7 +27682,7 @@
                                 "type": "null"
                               }
                             ],
-                            "description": "Why it is a conflict: `both` when it was changed on both sides, `editing` when someone is editing the page, `restricted` when the page was restricted further at the source and that permission difference is not applied yet. New values can be added in later versions; handle unknown values."
+                            "description": "Why it is a conflict: `both` when it was changed on both sides, `editing` when someone is editing the page, `restricted` when the page or a page above it was restricted further at the source and that permission difference is not applied yet. New values can be added in later versions; handle unknown values."
                           },
                           "editing": {
                             "type": "boolean",
@@ -27966,6 +27966,52 @@
                             ],
                             "description": "A difference to the permissions at the source. Pagehall never changes permissions by itself."
                           },
+                          "held": {
+                            "type": "boolean",
+                            "description": "Whether the change waits because the page or a page above it was restricted further at the source and that permission difference is not applied yet. Until then no source content of the page is stored."
+                          },
+                          "heldFor": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "differenceId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the permission difference to apply first."
+                                  },
+                                  "title": {
+                                    "type": "string",
+                                    "description": "Title of the page the difference restricts."
+                                  }
+                                },
+                                "required": [
+                                  "differenceId",
+                                  "title"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The permission difference the change waits for, when the caller can see its page."
+                          },
+                          "decisions": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "description": "Decision: for a conflict `pagehall` keeps the Pagehall version, `source` takes the source version as a new version, `both` keeps the Pagehall version and adds the source version to the history, marked as not applied; for a page deleted at the source `trash` moves it to the trash and `keep` keeps it. New values can be added in later versions; handle unknown values.",
+                              "x-extensible-enum": [
+                                "pagehall",
+                                "source",
+                                "both",
+                                "trash",
+                                "keep"
+                              ]
+                            },
+                            "description": "Decisions that can be taken now. While a conflict waits for a restriction, only `pagehall` is possible."
+                          },
                           "decision": {
                             "anyOf": [
                               {
@@ -28055,6 +28101,9 @@
                           "to",
                           "labels",
                           "permission",
+                          "held",
+                          "heldFor",
+                          "decisions",
                           "decision",
                           "decidedBy",
                           "decidedAt",
@@ -28107,6 +28156,13 @@
                       "to": null,
                       "labels": null,
                       "permission": null,
+                      "held": false,
+                      "heldFor": null,
+                      "decisions": [
+                        "pagehall",
+                        "source",
+                        "both"
+                      ],
                       "decision": null,
                       "decidedBy": null,
                       "decidedAt": null,
@@ -28606,6 +28662,21 @@
                       "additionalProperties": false,
                       "description": "The content of the new export, converted as it would be applied."
                     },
+                    "decisions": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "description": "Decision: for a conflict `pagehall` keeps the Pagehall version, `source` takes the source version as a new version, `both` keeps the Pagehall version and adds the source version to the history, marked as not applied; for a page deleted at the source `trash` moves it to the trash and `keep` keeps it. New values can be added in later versions; handle unknown values.",
+                        "x-extensible-enum": [
+                          "pagehall",
+                          "source",
+                          "both",
+                          "trash",
+                          "keep"
+                        ]
+                      },
+                      "description": "Decisions that can be taken now. While the page waits for a restriction from the source, only `pagehall` is possible."
+                    },
                     "decision": {
                       "anyOf": [
                         {
@@ -28736,6 +28807,7 @@
                     "kind",
                     "pagehall",
                     "source",
+                    "decisions",
                     "decision",
                     "diff",
                     "before",
@@ -28755,6 +28827,11 @@
                     "title": "Release plan",
                     "version": 7
                   },
+                  "decisions": [
+                    "pagehall",
+                    "source",
+                    "both"
+                  ],
                   "decision": null,
                   "diff": {
                     "title": null,
@@ -29561,7 +29638,7 @@
       "put": {
         "operationId": "imports.decide",
         "summary": "Decide changes of a re-import",
-        "description": "Records one decision for up to 500 conflicts or pages deleted at the source. Nothing changes until the changes are applied; a decision can be taken back until then.\n\nRequires the permission `import.resolve` on the import in `importId`.",
+        "description": "Records one decision for up to 500 conflicts or pages deleted at the source. Nothing changes until the changes are applied; a decision can be taken back until then. While a conflict waits for a restriction applied at the source, only `pagehall` is accepted for it.\n\nRequires the permission `import.resolve` on the import in `importId`.",
         "tags": [
           "Imports"
         ],
@@ -29792,7 +29869,7 @@
             }
           },
           "409": {
-            "description": "`changeApplied`: The change was applied already. `reimportNotInReview`: The changes do not wait to be applied.",
+            "description": "`changeApplied`: The change was applied already. `reimportNotInReview`: The changes do not wait to be applied. `restrictionPending`: The restriction from the source is not applied yet.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -29813,6 +29890,14 @@
                       "title": "The changes do not wait to be applied",
                       "status": 409,
                       "code": "reimportNotInReview"
+                    }
+                  },
+                  "restrictionPending": {
+                    "value": {
+                      "type": "urn:pagehall:problem:restrictionPending",
+                      "title": "The restriction from the source is not applied yet",
+                      "status": 409,
+                      "code": "restrictionPending"
                     }
                   }
                 }
@@ -29938,7 +30023,7 @@
                         "minimum": -9007199254740991,
                         "maximum": 9007199254740991
                       },
-                      "description": "What the comparison found: `new`, `updated`, `unchanged`, `conflicts`, `deleted`, `moved`, `movedHere`, `labels`, `deletedHere`, `newComments`, `goneComments`, `newAttachmentVersions`, `goneAttachments`, `newTemplates`, `updatedTemplates` and `permissions`."
+                      "description": "What the comparison found: `new`, `updated`, `unchanged`, `conflicts`, `deleted`, `moved`, `movedHere`, `labels`, `deletedHere`, `newComments`, `goneComments`, `newAttachmentVersions`, `goneAttachments`, `newTemplates`, `updatedTemplates`, `permissions` and `restricted` (new pages and label changes that wait until a restriction of a page above them is applied)."
                     },
                     "open": {
                       "type": "integer",

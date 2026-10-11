@@ -132,6 +132,9 @@ const exampleChange = {
   to: null,
   labels: null,
   permission: null,
+  held: false,
+  heldFor: null,
+  decisions: ["pagehall", "source", "both"],
   decision: null,
   decidedBy: null,
   decidedAt: null,
@@ -1058,7 +1061,7 @@ export class ImportsController {
   @ApiRoute({
     summary: "Decide changes of a re-import",
     description:
-      "Records one decision for up to 500 conflicts or pages deleted at the source. Nothing changes until the changes are applied; a decision can be taken back until then.",
+      "Records one decision for up to 500 conflicts or pages deleted at the source. Nothing changes until the changes are applied; a decision can be taken back until then. While a conflict waits for a restriction applied at the source, only `pagehall` is accepted for it.",
     tags: [TAG],
     params: importParams,
     body: decisionsSchema,
@@ -1068,7 +1071,13 @@ export class ImportsController {
       schema: decidedSchema,
       example: { decided: 1 },
     },
-    errors: ["changeNotFound", "changeApplied", "invalidDecision", "reimportNotInReview"],
+    errors: [
+      "changeNotFound",
+      "changeApplied",
+      "invalidDecision",
+      "restrictionPending",
+      "reimportNotInReview",
+    ],
   })
   async decide(
     @Param("importId") importId: string,
@@ -1113,6 +1122,7 @@ export class ImportsController {
         kind: "page",
         pagehall: { title: "Release plan", version: null },
         source: { title: "Release plan", version: 7 },
+        decisions: ["pagehall", "source", "both"],
         decision: null,
         diff: { title: null, blocks: [], changes: 0 },
         before: { type: "doc", content: [] },
