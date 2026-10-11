@@ -6864,7 +6864,7 @@
         "sourceVersion": "Confluence, Version {number}",
         "failed": "Der Vergleich konnte nicht geladen werden",
         "withheldTitle": "Der neue Inhalt ist in Confluence eingeschränkt",
-        "withheld": "In Confluence dürfen weniger Personen diesen Inhalt lesen als in Pagehall. Der neue Inhalt wird nur Personen gezeigt, die nach Übernahme der Einschränkungen weiter Zugriff haben. Übernimm sie zuerst bei den Berechtigungsabweichungen.",
+        "withheld": "In Confluence dürfen weniger Personen diesen Inhalt lesen als in Pagehall. Der neue Inhalt wird nur Personen gezeigt, die nach Übernahme der Einschränkungen weiter Zugriff haben. Sie werden genau wie in Confluence übernommen: Das Übernehmen gibt dir keinen Zugriff, und wenn Confluence dich nicht nennt, verlierst du ihn.",
         "openPermissions": "Berechtigungsabweichungen öffnen"
       }
     }

@@ -7,7 +7,7 @@ import type { AuthorizationService } from "../authorization/service.js";
 import type { AccessImpact } from "../authorization/space-access.js";
 import type { Database, Transaction } from "../database/database.js";
 import type { JobQueue } from "../jobs/job-queue.js";
-import type { PageAccessImpact, PageAccessService } from "../sharing/page-access.js";
+import type { AccessChange, PageAccessImpact, PageAccessService } from "../sharing/page-access.js";
 import { actorIdOf } from "../spaces/common.js";
 import { migrated } from "../spaces/documents.js";
 import type { PermissionChange, SpacePermissionService } from "../spaces/permissions.js";
@@ -23,6 +23,7 @@ import {
   type ChangeType,
   lineageImports,
   type PrincipalRef,
+  resolvePrincipal,
 } from "./reimport-compare.js";
 import { FILE_RETENTION_DAYS } from "./settings.js";
 import { signalImportChange } from "./signals.js";
@@ -440,7 +441,13 @@ export class ReimportService {
         ? await this.#currentPage(viewer, change.item_id)
         : await this.#currentTemplate(viewer, row.target_space_id, change.target_id);
     if (
-      await this.#withheld(viewer, importId, row.target_space_id, kind === "page" ? change.item_id : null)
+      await this.#withheld(
+        viewer,
+        importId,
+        row.organization_id,
+        row.target_space_id,
+        kind === "page" ? change.item_id : null,
+      )
     ) {
       throw new ImportError(
         "comparisonWithheld",
@@ -527,6 +534,7 @@ export class ReimportService {
   async #withheld(
     viewer: Principal,
     importId: string,
+    organizationId: string,
     spaceId: string,
     itemId: string | null,
   ): Promise<boolean> {
@@ -550,9 +558,13 @@ export class ReimportService {
             await tx.transaction(async (step) => {
               if (row.details.scope === "page") {
                 if (!row.item_id) throw new ImportError("changeNotFound", "The difference has no page.");
-                await this.#pageAccess.changeWithin(step, SYSTEM, row.item_id, [
-                  this.#pageChange(row.details),
-                ]);
+                await this.#pageAccess.changeWithin(
+                  step,
+                  SYSTEM,
+                  row.item_id,
+                  await this.#pageChanges(step, organizationId, spaceId, row.details),
+                  { shareWithActor: false },
+                );
               } else {
                 await this.#spacePermissions.apply(
                   SYSTEM,
@@ -861,6 +873,41 @@ export class ReimportService {
     };
   }
 
+  async #pageChanges(
+    tx: Transaction,
+    organizationId: string,
+    spaceId: string,
+    details: Record<string, unknown>,
+  ): Promise<AccessChange[]> {
+    const change = this.#pageChange(details);
+    if (change.action !== "restrict") return [change];
+    const restrictions = details.restrictions as { holders?: readonly string[] } | undefined;
+    const lineage = await lineageImports(tx, spaceId);
+    const holders: AccessChange[] = [];
+    for (const entry of restrictions?.holders ?? []) {
+      const [kind, holderKind, ...rest] = entry.split(":");
+      if (kind !== change.kind) continue;
+      const id = rest.join(":");
+      const resolved = await resolvePrincipal(
+        tx,
+        { organizationId, lineage },
+        {
+          kind: holderKind === "person" ? "account" : "group",
+          personId: holderKind === "person" ? id : null,
+          group: holderKind === "group" ? id : null,
+        },
+      );
+      if (!resolved || resolved.kind === "organizationMembers") continue;
+      holders.push({
+        action: "listHolder",
+        kind: change.kind,
+        holderKind: resolved.kind,
+        holderId: resolved.id,
+      });
+    }
+    return [change, ...holders];
+  }
+
   async preview(
     actor: Principal,
     importId: string,
@@ -870,7 +917,11 @@ export class ReimportService {
       const found = await this.#difference(tx, actor, importId, changeId);
       if (found.applied) throw new ImportError("changeApplied", "The difference was applied already.");
       return found.details.scope === "page"
-        ? { scope: "page" as const, itemId: found.itemId, change: this.#pageChange(found.details) }
+        ? {
+            scope: "page" as const,
+            itemId: found.itemId,
+            changes: await this.#pageChanges(tx, found.row.organization_id, found.spaceId, found.details),
+          }
         : {
             scope: "space" as const,
             spaceId: found.spaceId,
@@ -880,7 +931,10 @@ export class ReimportService {
     if (target.scope === "page") {
       if (!target.itemId)
         throw new ImportError("changeNotFound", "The difference does not exist. Reload the list.");
-      return { space: null, page: await this.#pageAccess.preview(actor, target.itemId, [target.change]) };
+      return {
+        space: null,
+        page: await this.#pageAccess.preview(actor, target.itemId, target.changes, { shareWithActor: false }),
+      };
     }
     await this.#authorization.require(actor, "space.manage", { type: "space", id: target.spaceId });
     return { space: await this.#spacePermissions.preview(actor, target.spaceId, target.change), page: null };
@@ -894,7 +948,17 @@ export class ReimportService {
       if (found.details.scope === "page") {
         if (!found.itemId)
           throw new ImportError("changeNotFound", "The difference does not exist. Reload the list.");
-        await this.#pageAccess.changeWithin(tx, actor, found.itemId, [this.#pageChange(found.details)]);
+        const changes = await this.#pageChanges(tx, found.row.organization_id, found.spaceId, found.details);
+        await this.#pageAccess.changeWithin(tx, actor, found.itemId, changes, { shareWithActor: false });
+        const listed = changes.flatMap((entry) => (entry.action === "listHolder" ? [entry.holderId] : []));
+        if (listed.length > 0) {
+          await tx.execute(sql`
+            update import_changes set applied_at = now(), applied_by = ${actorIdOf(actor)}
+            where import_id = ${importId} and item_id = ${found.itemId} and change = 'permission'
+              and applied_at is null and details ->> 'scope' = 'page' and details ->> 'action' = 'listHolder'
+              and details ->> 'restriction' = ${text(found.details.restriction) ?? "view"}
+              and details -> 'principal' ->> 'id' = any(${sql.param(listed)}::text[])`);
+        }
       } else {
         await this.#authorization.require(
           actor,

@@ -6864,7 +6864,7 @@
         "sourceVersion": "Confluence, version {number}",
         "failed": "The comparison could not be loaded",
         "withheldTitle": "The new content is restricted in Confluence",
-        "withheld": "Fewer people may read this content in Confluence than in Pagehall. Its new content is shown only to people who keep access once the restrictions are applied. Apply them from the permission differences first.",
+        "withheld": "Fewer people may read this content in Confluence than in Pagehall. Its new content is shown only to people who keep access once the restrictions are applied. They are applied exactly as in Confluence: applying them gives you no access, and you lose access if Confluence does not name you.",
         "openPermissions": "Open permission differences"
       }
     }

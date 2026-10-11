@@ -8,6 +8,7 @@ import { createTestServices, type TestServices } from "../testing/services.js";
 import { spaceFixtures } from "../testing/spaces.js";
 import { tinyLinkCode } from "./links.js";
 import type { ChangeTab } from "./reimport.js";
+import type { SyntheticExport } from "./testing/confluence-export.js";
 import { ALICE, BOB, CAROL } from "./testing/fixture.js";
 import { importHarness } from "./testing/harness.js";
 import { foreignExport, RE, RE_COMMENT, reimportAfter, reimportBefore } from "./testing/reimport-fixture.js";
@@ -830,12 +831,14 @@ describe.skipIf(!baseUrl)("Confluence re-imports", () => {
 
   it("shows the source of a page restricted further at the source only to people who keep access", async () => {
     const w = await world();
+    await test.database.execute(sql`
+      insert into group_members (group_id, account_id) values (${w.readers}, ${w.otherAdmin})`);
     const after = reimportAfter();
     const narrowed = {
       ...after,
       restrictions: [
         ...(after.restrictions ?? []),
-        { id: "3961", contentId: RE.sourceOnly, kind: "View" as const, userKey: ALICE.key },
+        { id: "3961", contentId: RE.sourceOnly, kind: "View" as const, group: "readers" },
       ],
     };
     const reimport = await harness.reimported(narrowed, {
@@ -847,38 +850,92 @@ describe.skipIf(!baseUrl)("Confluence re-imports", () => {
     const item = await w.item(RE.sourceOnly);
     const conflict = await idOf(w.admin, reimport.id, "conflicts", item);
     const before = await untouched(w, reimport.id, item);
-    for (const viewer of [w.admin, w.otherAdmin]) {
-      const refused = await reimports
-        .compare(as(viewer), reimport.id, conflict)
-        .catch((error: unknown) => error);
-      expect(refused).toMatchObject({ code: "comparisonWithheld" });
-      expect(JSON.stringify(refused)).not.toContain("New text from the source");
-    }
+    const refused = await reimports
+      .compare(as(w.admin), reimport.id, conflict)
+      .catch((error: unknown) => error);
+    expect(refused).toMatchObject({ code: "comparisonWithheld" });
+    expect(JSON.stringify(refused)).not.toContain("New text from the source");
+    const early = await reimports.compare(as(w.otherAdmin), reimport.id, conflict);
+    expect(JSON.stringify(early.after)).toContain("New text from the source");
     expect(await untouched(w, reimport.id, item)).toEqual(before);
 
     const restriction = (await changes(w.admin, reimport.id, "permissions")).find(
       (entry) => entry.item?.id === item && entry.permission?.action === "restrict",
     );
     await reimports.applyDifference(as(w.admin), reimport.id, restriction?.id ?? "");
-    const comparison = await reimports.compare(as(w.admin), reimport.id, conflict);
+    const comparison = await reimports.compare(as(w.otherAdmin), reimport.id, conflict);
     expect(JSON.stringify(comparison.after)).toContain("New text from the source");
     expect(comparison.source.title).toBe("Source only, renamed");
     expect(comparison.diff.title).toEqual({ before: "Source only", after: "Source only, renamed" });
-    await expect(reimports.compare(as(w.otherAdmin), reimport.id, conflict)).rejects.toMatchObject({
+    await expect(reimports.compare(as(w.admin), reimport.id, conflict)).rejects.toMatchObject({
       code: "changeNotFound",
     });
   });
 
-  it("withholds the source when a parent page is restricted further at the source", async () => {
+  it("applies a restriction exactly as in Confluence without giving the person who applies it access", async () => {
     const w = await world();
-    await editLocally(w);
     const after = reimportAfter();
     const reimport = await harness.reimported(
       {
         ...after,
         restrictions: [
           ...(after.restrictions ?? []),
-          { id: "3962", contentId: RE.home, kind: "View" as const, userKey: ALICE.key },
+          { id: "3963", contentId: RE.sourceOnly, kind: "View" as const, userKey: ALICE.key },
+        ],
+      },
+      { organizationId: w.organizationId, admin: w.admin, spaceId: w.spaceId },
+    );
+    const item = await w.item(RE.sourceOnly);
+    const authorization = test.services.authorization;
+    expect(await authorization.authorize(as(w.admin), "space.manage", { type: "space", id: w.spaceId })).toBe(
+      true,
+    );
+    const permissions = await changes(w.admin, reimport.id, "permissions");
+    const restriction = permissions.find(
+      (entry) => entry.item?.id === item && entry.permission?.action === "restrict",
+    );
+    const holder = permissions.find(
+      (entry) => entry.item?.id === item && entry.permission?.action === "listHolder",
+    );
+    expect(holder).toBeDefined();
+
+    const preview = await test.services.imports.reimports.preview(
+      as(w.admin),
+      reimport.id,
+      restriction?.id ?? "",
+    );
+    expect(JSON.stringify(preview.page)).toContain(w.admin);
+    await test.services.imports.reimports.applyDifference(as(w.admin), reimport.id, restriction?.id ?? "");
+
+    expect(await authorization.authorize(as(w.admin), "item.view", { type: "item", id: item })).toBe(false);
+    const shares = await test.database.execute(sql`select 1 from page_shares where item_id = ${item}`);
+    expect(shares.rows).toHaveLength(0);
+    const holders = await test.database.execute<{ id: string }>(sql`
+      select x.external_id as id from page_restriction_holders h
+      join account_external_ids x on x.account_id = h.principal_id
+      where h.item_id = ${item} and h.kind = 'view'`);
+    expect(holders.rows.map((row) => row.id)).toEqual([ALICE.accountId]);
+    const applied = await test.database.execute<{ applied: boolean }>(sql`
+      select applied_at is not null as applied from import_changes where id = ${holder?.id ?? ""}`);
+    expect(applied.rows[0]?.applied).toBe(true);
+  });
+
+  it("withholds the source when a parent page is restricted further at the source", async () => {
+    const below = (data: SyntheticExport): SyntheticExport => ({
+      ...data,
+      pages: data.pages.map((entry) =>
+        entry.id === RE.keepHere ? { ...entry, parentId: RE.target } : entry,
+      ),
+    });
+    const w = await world(below(reimportBefore()));
+    await editLocally(w);
+    const after = below(reimportAfter());
+    const reimport = await harness.reimported(
+      {
+        ...after,
+        restrictions: [
+          ...(after.restrictions ?? []),
+          { id: "3962", contentId: RE.target, kind: "View" as const, userKey: ALICE.key },
         ],
       },
       { organizationId: w.organizationId, admin: w.admin, spaceId: w.spaceId },
