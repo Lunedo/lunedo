@@ -1370,6 +1370,10 @@
     "ownShare": "Du kannst keinen Zugriff ändern, den du selbst oder über eine deiner Gruppen hast. Bitte jemand anderen, der die Seite freigeben kann.",
     "confidentialSharing": "Der Inhalt gibt Gruppen oder über breite Links Zugriff. Entferne diese Einträge und verschiebe ihn dann in den vertraulichen Space.",
     "confidentialSharingPages": "{count, plural, one {# Seite gibt} other {# Seiten geben}} Gruppen oder über breite Links Zugriff. Entferne die Gruppen aus Freigaben, Links und Beschränkungen und widerrufe die breiten Links, dann verschiebe erneut.",
+    "restrictedParentInTrash": "Diese Seite lag unter einer eingeschränkten Seite. Stelle sie zusammen mit den Seiten darüber wieder her oder frage Space- oder Organisationsadministratoren.",
+    "restrictedParentInTrashAsk": "Diese Seite lag unter einer eingeschränkten Seite. Bitte Space- oder Organisationsadministratoren, zuerst die Seiten darüber wiederherzustellen.",
+    "restrictedParentInTrashNamed": "„{title}“ liegt im Papierkorb und schränkt ein, wer diese Seite ansehen kann. Stelle die Seite zusammen mit den Seiten darüber wieder her, damit diese Einschränkung bleibt.",
+    "restrictedParentInTrashNamedAsk": "„{title}“ liegt im Papierkorb und schränkt ein, wer diese Seite ansehen kann. Bitte Space- oder Organisationsadministratoren, sie zuerst wiederherzustellen.",
     "moveChangesAccess": "Das Verschieben ändert, wer den Inhalt öffnen kann. Prüfe, wer Zugriff erhält und wer ihn verliert, und bestätige dann das Verschieben."
   },
   "access": {
@@ -4675,6 +4679,8 @@
     "restored": "„{title}“ wiederhergestellt",
     "restoredAtPlace": "Der Eintrag steht wieder an seinem alten Platz im Seitenbaum.",
     "restoredAtTop": "Sein alter Platz existiert nicht mehr, daher steht er auf der obersten Ebene des Seitenbaums.",
+    "restoreWithParents": "Mit Seiten darüber wiederherstellen",
+    "restoredWithParents": "Sie steht wieder unter den Seiten darüber, die mit ihr aus dem Papierkorb geholt wurden. So bleiben ihre Ansichtsbeschränkungen erhalten.",
     "restoreFailed": "Der Eintrag konnte nicht wiederhergestellt werden",
     "open": "Öffnen",
     "moveToTrash": "In den Papierkorb",
@@ -4702,6 +4708,7 @@
     "deleteNowConsequences": "Das kann nicht rückgängig gemacht werden:",
     "consequenceItems": "{count, plural, one {# Eintrag wird sofort gelöscht.} other {# Einträge werden sofort gelöscht.}}",
     "consequenceSpace": "Der ganze Space mit allen Seiten wird sofort gelöscht.",
+    "consequenceBelow": "Papierkorb-Einträge von Seiten, die darunter lagen, werden mit gelöscht.",
     "consequenceVersions": "Alle Versionen, Entwürfe, Labels und Links davon werden entfernt.",
     "consequenceAudit": "Die Löschung und ihr Grund werden im Audit-Log festgehalten.",
     "reason": "Grund",

@@ -10,6 +10,7 @@ import { decodeCursor, encodeCursor } from "../http/pagination.js";
 import { notFound } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
 import { uuid } from "../http/schemas.js";
+import { parentEntriesSchema, restorableInSpace, withParentsQuery } from "./restore-parents.js";
 import {
   archivedItemSchema,
   backlinkSchema,
@@ -649,21 +650,35 @@ export class ItemsController {
   @ApiRoute({
     summary: "Bring back an archived item",
     description:
-      "Returns an archived page or folder with its descendants to its old place in the page tree, or to the top level when that place no longer exists.",
+      "Returns an archived page or folder with its descendants to its old place in the page tree, or to the top level when that place no longer exists. When the former parent page is in the trash and the item would lose a view restriction it inherited, the request is refused with `restrictedParentInTrash`; repeat it with `withParents=true` to restore the parent pages from the trash with it.",
     tags: [TAG],
     status: 200,
     params: itemParams,
+    query: withParentsQuery,
     response: {
       description: "Where the item went.",
       schema: z
-        .object({ parentId: uuid("The new parent, or null for the top level.").nullable() })
+        .object({
+          parentId: uuid("The new parent, or null for the top level.").nullable(),
+          parentEntries: parentEntriesSchema,
+        })
         .describe("The place of the item."),
-      example: { parentId: null },
+      example: { parentId: null, parentEntries: 0 },
     },
-    errors: ["notArchived"],
+    errors: ["notArchived", "restrictedParentInTrash"],
   })
-  async unarchive(@Param("itemId") itemId: string, @Req() request: FastifyRequest) {
-    return this.#services.archive.unarchive(actorOf(request), itemId);
+  async unarchive(
+    @Param("itemId") itemId: string,
+    @Query() query: z.output<typeof withParentsQuery>,
+    @Req() request: FastifyRequest,
+  ) {
+    const actor = actorOf(request);
+    const item = await this.#services.tree.get(actor, itemId);
+    if (!item) throw notFound();
+    return this.#services.archive.unarchive(actor, itemId, {
+      withParents: query.withParents === "true",
+      mayRestore: restorableInSpace(this.#services, actor, item.spaceId),
+    });
   }
 
   @Get("spaces/:spaceId/archive")

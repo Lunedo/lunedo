@@ -16,6 +16,7 @@ import { useTranslation } from "react-i18next";
 import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import type { TrashEntry } from "../content-queries.js";
+import { useRestoreFailure } from "./restore-with-parents.js";
 import { TrashTable } from "./trash-table.js";
 
 const REASON_MAX = 500;
@@ -33,13 +34,24 @@ export function DeletedContent({
   loading: boolean;
   error: unknown;
   onRetry: () => void;
-  onRestore: (entry: TrashEntry) => Promise<unknown>;
+  onRestore: (entry: TrashEntry, withParents: boolean) => Promise<{ parentEntries: number }>;
   onDelete: (entry: TrashEntry, reason: string) => Promise<unknown>;
   showSpace?: boolean;
 }) {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const restoreFailed = useRestoreFailure();
   const [deleting, setDeleting] = useState<TrashEntry | null>(null);
+  const restore = (entry: TrashEntry, withParents: boolean): Promise<unknown> =>
+    onRestore(entry, withParents).then(
+      (result) =>
+        toast({
+          title: t("trash.restored", { title: entry.title }),
+          ...(result.parentEntries > 0 ? { description: t("trash.restoredWithParents") } : {}),
+          variant: "success",
+        }),
+      (failure: unknown) => restoreFailed(t("trash.restoreFailed"), failure, () => restore(entry, true)),
+    );
   if (error) return <LoadError what={t("trash.loadFailed")} error={error} onRetry={onRetry} />;
   return (
     <>
@@ -58,23 +70,7 @@ export function DeletedContent({
         }
         actions={(entry) => (
           <span className="flex justify-end gap-2">
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() =>
-                void onRestore(entry)
-                  .then(() =>
-                    toast({ title: t("trash.restored", { title: entry.title }), variant: "success" }),
-                  )
-                  .catch((failure: unknown) =>
-                    toast({
-                      title: t("trash.restoreFailed"),
-                      description: problemMessage(t, failure),
-                      variant: "error",
-                    }),
-                  )
-              }
-            >
+            <Button size="sm" variant="secondary" onClick={() => void restore(entry, false)}>
               {t("trash.restore")}
             </Button>
             <Menu
@@ -166,6 +162,7 @@ function DeleteNowForm({
               ? t("trash.consequenceSpace")
               : t("trash.consequenceItems", { count: entry.descendants + 1 })}
           </li>
+          {entry.kind === "items" ? <li>{t("trash.consequenceBelow")}</li> : null}
           <li>{t("trash.consequenceVersions")}</li>
           <li>{t("trash.consequenceAudit")}</li>
         </ul>

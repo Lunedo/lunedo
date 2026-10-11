@@ -181,9 +181,10 @@ export class MeetingsController {
   @ApiRoute({
     summary: "End a meeting series or continue it",
     description:
-      "Ending archives the series with its meetings and topics: read-only and without a next meeting. Continuing brings it back.",
+      "Ending archives the series with its meetings and topics: read-only and without a next meeting. Continuing brings it back; when its former parent page is in the trash and the series would lose a view restriction it inherited, continuing is refused with `restrictedParentInTrash` until that page is restored.",
     tags: [TAG],
     params: seriesParams,
+    errors: ["restrictedParentInTrash"],
     body: ended,
     bodyExample: { ended: true },
   })

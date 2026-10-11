@@ -1,6 +1,7 @@
 import { HttpException } from "@nestjs/common";
 import { z } from "zod";
 import { moveImpactSchema } from "../spaces/schemas.js";
+import { uuid } from "./schemas.js";
 
 export const PROBLEM_TYPE_PREFIX = "urn:pagehall:problem:";
 
@@ -197,6 +198,10 @@ export const problems = {
   moveIntoDescendant: { status: 409, title: "An item cannot be moved below itself" },
   itemMoved: { status: 409, title: "The item was moved at the same moment" },
   moveChangesAccess: { status: 409, title: "The move changes who can access the content" },
+  restrictedParentInTrash: {
+    status: 409,
+    title: "The content was below a restricted page that is in the trash",
+  },
   overviewPage: { status: 409, title: "The overview page of a space stays a page in its space" },
   tooManyLabels: { status: 409, title: "The page has too many labels" },
   tooManyComments: { status: 409, title: "The page has too many comments" },
@@ -376,6 +381,23 @@ export const problemSchema = z
     impact: moveImpactSchema
       .optional()
       .describe("Who gains and who loses access, with the confirmation to send, for `moveChangesAccess`."),
+    formerParent: z
+      .object({
+        id: uuid("ID of the former parent page."),
+        title: z.string().describe("Title of the former parent page."),
+      })
+      .nullable()
+      .optional()
+      .describe(
+        "The former parent page in the trash, for `restrictedParentInTrash`; null when the caller may not view it.",
+      ),
+    parentEntries: z
+      .number()
+      .int()
+      .optional()
+      .describe(
+        "Number of trash entries of former parent pages the caller can restore together with the content, for `restrictedParentInTrash`; 0 when the caller cannot restore all of them.",
+      ),
     problems: z
       .array(
         z

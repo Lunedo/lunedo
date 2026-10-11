@@ -7,6 +7,7 @@ import { request } from "../api/request.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { itemHref } from "./item-paths.js";
 import type { SpaceWithRole, TreeItem } from "./space-queries.js";
+import { useRestoreFailure, withParentsQuery } from "./trash/restore-with-parents.js";
 
 type Item = Pick<TreeItem, "id" | "title" | "kind" | "spaceId">;
 
@@ -69,12 +70,32 @@ export function useArchiveItem() {
   const { t } = useTranslation();
   const { toast } = useToast();
   const refresh = useContentRefresh();
-  const unarchive = async (item: Item) => {
+  const restoreFailed = useRestoreFailure();
+  const unarchive = async (item: Item, withParents = false) => {
     const result = await request(() =>
-      api.POST("/api/v1/items/{itemId}/unarchive", { params: { path: { itemId: item.id } } }),
+      api.POST("/api/v1/items/{itemId}/unarchive", {
+        params: { path: { itemId: item.id }, query: withParentsQuery(withParents) },
+      }),
     );
     await refresh(item);
     return result;
+  };
+  const bringBack = async (item: Item, withParents: boolean) => {
+    try {
+      const result = await unarchive(item, withParents);
+      toast({
+        title: t("archive.unarchived", { title: item.title }),
+        description:
+          result.parentEntries > 0
+            ? t("trash.restoredWithParents")
+            : result.parentId
+              ? t("archive.backAtPlace")
+              : t("archive.backAtTop"),
+        variant: "success",
+      });
+    } catch (error) {
+      restoreFailed(t("archive.unarchiveFailed"), error, () => bringBack(item, true));
+    }
   };
   return {
     archive: async (item: Item) => {
@@ -101,22 +122,7 @@ export function useArchiveItem() {
         toast({ title: t("archive.archiveFailed"), description: problemMessage(t, error), variant: "error" });
       }
     },
-    unarchive: async (item: Item) => {
-      try {
-        const result = await unarchive(item);
-        toast({
-          title: t("archive.unarchived", { title: item.title }),
-          description: result.parentId ? t("archive.backAtPlace") : t("archive.backAtTop"),
-          variant: "success",
-        });
-      } catch (error) {
-        toast({
-          title: t("archive.unarchiveFailed"),
-          description: problemMessage(t, error),
-          variant: "error",
-        });
-      }
-    },
+    unarchive: (item: Item) => bringBack(item, false),
   };
 }
 

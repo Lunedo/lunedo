@@ -8,7 +8,7 @@ import { actorIdOf, auditScopeOf, SpaceError } from "./common.js";
 import { lockSpaces } from "./items.js";
 import type { TreeItemKind } from "./schema.js";
 import { signalSpaceChange } from "./signals.js";
-import { placeBack } from "./trash.js";
+import { placeBack, type ReturnOptions, type TrashService } from "./trash.js";
 import { refreshReaderVisibility, visibleItem } from "./visibility.js";
 
 export interface ArchivedItem {
@@ -25,13 +25,16 @@ export class ArchiveService {
   readonly #audit: AuditLog;
   readonly #authorization: AuthorizationService;
   readonly #activity: ContentActivity;
+  readonly #trash: TrashService;
 
   constructor(options: {
     database: Database;
     audit: AuditLog;
     authorization: AuthorizationService;
     activity: ContentActivity;
+    trash: TrashService;
   }) {
+    this.#trash = options.trash;
     this.#database = options.database;
     this.#audit = options.audit;
     this.#authorization = options.authorization;
@@ -118,7 +121,11 @@ export class ArchiveService {
     });
   }
 
-  async unarchive(actor: Principal, itemId: string): Promise<{ parentId: string | null }> {
+  async unarchive(
+    actor: Principal,
+    itemId: string,
+    options: ReturnOptions = {},
+  ): Promise<{ parentId: string | null; parentEntries: number }> {
     return this.#database.transaction(async (tx) => {
       const located = await tx.execute<{ space_id: string }>(
         sql`select space_id from tree_items where id = ${itemId}`,
@@ -142,6 +149,14 @@ export class ArchiveService {
       if (!row || row.trash_entry_id || row.archived_root_id !== itemId) {
         throw new SpaceError("notArchived", "Only an archived page or folder can be brought back");
       }
+      const parentEntries = await this.#trash.returnBelowParents(
+        tx,
+        actor,
+        spaceId,
+        itemId,
+        row.restore_parent_id,
+        options,
+      );
       const parentId = await placeBack(tx, spaceId, itemId, row.restore_parent_id, row.restore_position);
       await tx.execute(
         sql`update tree_items set archived_at = null, archived_by = null where id = ${itemId}`,
@@ -156,7 +171,7 @@ export class ArchiveService {
       });
       await signalSpaceChange(tx, { spaceId, kind: "tree", itemId });
       await signalSpaceChange(tx, { spaceId, kind: "access", itemId });
-      return { parentId };
+      return { parentId, parentEntries };
     });
   }
 

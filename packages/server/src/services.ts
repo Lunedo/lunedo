@@ -485,7 +485,7 @@ export function createAccountServices(options: {
   });
   const versions = new VersionService({ database, audit, documents, people, settings, activity });
   const trash = new TrashService({ database, audit, settings, people, activity, authorization });
-  const archive = new ArchiveService({ database, audit, authorization, activity });
+  const archive = new ArchiveService({ database, audit, authorization, activity, trash });
   const signer = new ValueSigner({ database, encryption });
   const tree = new TreeService({
     database,

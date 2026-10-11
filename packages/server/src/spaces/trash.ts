@@ -61,6 +61,11 @@ const ENTRY_COLUMNS = sql`e.id, e.space_id, s.key as space_key, s.name as space_
   s.personal_of is not null as personal, s.confidential, e.kind, e.root_item_id, e.item_kind, e.title, e.descendants, e.stage,
   e.purging, e.deleted_at, e.deleted_by, e.stage_two_at`;
 
+export interface ReturnOptions {
+  withParents?: boolean;
+  mayRestore?: (entry: TrashEntry) => Promise<boolean>;
+}
+
 export interface PurgeOptions {
   signal?: AbortSignal;
   batchSize?: number;
@@ -262,7 +267,9 @@ export class TrashService {
       with recursive down as (
         select id from tree_items where id = ${itemId}
         union all
-        select t.id from tree_items t join down on t.parent_id = down.id where t.trash_entry_id is null
+        select t.id from tree_items t join down on t.parent_id = down.id
+          or (t.parent_id is null and t.restore_parent_id = down.id and t.archived_root_id = t.id)
+        where t.trash_entry_id is null
       )
       select id from down`);
     const ids = subtree.rows.map((entry) => entry.id);
@@ -305,7 +312,8 @@ export class TrashService {
   async restore(
     actor: Principal,
     entryId: string,
-  ): Promise<{ itemId: string | null; parentId: string | null }> {
+    options: ReturnOptions = {},
+  ): Promise<{ itemId: string | null; parentId: string | null; parentEntries: number }> {
     return this.#database.transaction(async (tx) => {
       const located = await this.#entry(tx, entryId);
       if (!located) throw new SpaceError("trashEntryNotFound", "The trash entry does not exist");
@@ -313,7 +321,6 @@ export class TrashService {
       const entry = await this.#entry(tx, entryId, true);
       if (!entry || entry.purging)
         throw new SpaceError("trashEntryNotFound", "The trash entry does not exist");
-      const scope = auditScopeOf({ organizationId: entry.organization_id });
       if (entry.kind === "space") {
         await tx.execute(
           sql`update spaces set deleted_at = null, updated_at = now() where id = ${entry.space_id}`,
@@ -324,57 +331,122 @@ export class TrashService {
           actor,
           targetId: entry.space_id,
           fields: { name: entry.space_name, key: entry.space_key, personal: entry.personal },
-          scope,
+          scope: auditScopeOf({ organizationId: entry.organization_id }),
         });
         await signalSpaceChange(tx, { spaceId: entry.space_id, kind: "space", itemId: null });
         await signalSpaceChange(tx, { spaceId: entry.space_id, kind: "access", itemId: null });
-        return { itemId: null, parentId: null };
+        return { itemId: null, parentId: null, parentEntries: 0 };
       }
-      const rootId = entry.root_item_id;
-      if (!rootId) throw new SpaceError("trashEntryNotFound", "The trash entry does not exist");
-      const root = await tx.execute<{
-        restore_parent_id: string | null;
-        restore_position: string | null;
-        archived_root_id: string | null;
-      }>(
-        sql`select restore_parent_id, restore_position, archived_root_id from tree_items where id = ${rootId}`,
-      );
-      const rootRow = root.rows[0];
-      if (!rootRow) throw new SpaceError("trashEntryNotFound", "The trash entry does not exist");
-      await tx.execute(
-        sql`update tree_items set trash_entry_id = null where trash_entry_id = ${entryId} and id <> ${rootId}`,
-      );
-      let parentId: string | null = null;
-      if (rootRow.archived_root_id !== rootId) {
-        parentId = await placeBack(
-          tx,
-          entry.space_id,
-          rootId,
-          rootRow.restore_parent_id,
-          rootRow.restore_position,
-        );
-      }
-      await tx.execute(sql`update tree_items set trash_entry_id = null where id = ${rootId}`);
-      await this.#activity.revealed(tx, await refreshReaderVisibility(tx, [rootId]));
-      await tx.execute(sql`delete from trash_entries where id = ${entryId}`);
-      await this.#audit.record(tx, {
-        name: "trash.itemsRestored",
-        actor,
-        targetId: entryId,
-        fields: {
-          spaceId: entry.space_id,
-          title: entry.title,
-          kind: "items",
-          itemKind: entry.item_kind,
-          descendants: Number(entry.descendants),
-          stage: entry.stage,
-          parentId,
-        },
-        scope,
-      });
-      await signalSpaceChange(tx, { spaceId: entry.space_id, kind: "tree", itemId: rootId });
-      return { itemId: rootId, parentId };
+      return this.#restoreItems(tx, actor, entry, options);
     });
+  }
+
+  async #restoreItems(
+    tx: Transaction,
+    actor: Principal,
+    entry: EntryRow,
+    options: ReturnOptions,
+  ): Promise<{ itemId: string; parentId: string | null; parentEntries: number }> {
+    const rootId = entry.root_item_id;
+    if (!rootId) throw new SpaceError("trashEntryNotFound", "The trash entry does not exist");
+    const root = await tx.execute<{
+      restore_parent_id: string | null;
+      restore_position: string | null;
+      archived_root_id: string | null;
+    }>(
+      sql`select restore_parent_id, restore_position, archived_root_id from tree_items where id = ${rootId}`,
+    );
+    const rootRow = root.rows[0];
+    if (!rootRow) throw new SpaceError("trashEntryNotFound", "The trash entry does not exist");
+    const placed = rootRow.archived_root_id !== rootId;
+    const parentEntries = placed
+      ? await this.returnBelowParents(tx, actor, entry.space_id, rootId, rootRow.restore_parent_id, options)
+      : 0;
+    await tx.execute(
+      sql`update tree_items set trash_entry_id = null where trash_entry_id = ${entry.id} and id <> ${rootId}`,
+    );
+    const parentId = placed
+      ? await placeBack(tx, entry.space_id, rootId, rootRow.restore_parent_id, rootRow.restore_position)
+      : null;
+    await tx.execute(sql`update tree_items set trash_entry_id = null where id = ${rootId}`);
+    await this.#activity.revealed(tx, await refreshReaderVisibility(tx, [rootId]));
+    await tx.execute(sql`delete from trash_entries where id = ${entry.id}`);
+    await this.#audit.record(tx, {
+      name: "trash.itemsRestored",
+      actor,
+      targetId: entry.id,
+      fields: {
+        spaceId: entry.space_id,
+        title: entry.title,
+        kind: "items",
+        itemKind: entry.item_kind,
+        descendants: Number(entry.descendants),
+        stage: entry.stage,
+        parentId,
+      },
+      scope: auditScopeOf({ organizationId: entry.organization_id }),
+    });
+    await signalSpaceChange(tx, { spaceId: entry.space_id, kind: "tree", itemId: rootId });
+    return { itemId: rootId, parentId, parentEntries };
+  }
+
+  async returnBelowParents(
+    tx: Transaction,
+    actor: Principal,
+    spaceId: string,
+    itemId: string,
+    parentId: string | null,
+    options: ReturnOptions,
+  ): Promise<number> {
+    if (await parentAvailable(tx, spaceId, parentId)) return 0;
+    if (!(await losesViewRestriction(tx, itemId))) return 0;
+    const chain = await parentChain(tx, spaceId, parentId);
+    const restorable =
+      chain.complete && chain.entries.length > 0 && (await this.#mayRestoreAll(chain.entries, options));
+    if (!options.withParents || !restorable) {
+      throw await this.#restrictedParent(tx, actor, parentId, restorable ? chain.entries.length : 0);
+    }
+    for (const parentEntryId of [...chain.entries].reverse()) {
+      const parentEntry = await this.#entry(tx, parentEntryId, true);
+      if (!parentEntry || parentEntry.purging || parentEntry.kind !== "items") {
+        throw await this.#restrictedParent(tx, actor, parentId, 0);
+      }
+      await this.#restoreItems(tx, actor, parentEntry, {});
+    }
+    return chain.entries.length;
+  }
+
+  async #mayRestoreAll(entryIds: string[], options: ReturnOptions): Promise<boolean> {
+    const check = options.mayRestore;
+    if (!check) return false;
+    for (const entryId of entryIds) {
+      const entry = await this.get(entryId);
+      if (!entry || !(await check(entry))) return false;
+    }
+    return true;
+  }
+
+  async #restrictedParent(
+    tx: Transaction,
+    actor: Principal,
+    parentId: string | null,
+    parentEntries: number,
+  ): Promise<SpaceError> {
+    const visible = parentId
+      ? await tx.execute<{ title: string }>(sql`
+          select p.title from tree_items p join spaces s on s.id = p.space_id
+          where p.id = ${parentId} and ${this.#authorization.itemFilter(actor, sql`p`, sql`s`)}`)
+      : null;
+    const title = visible?.rows[0]?.title;
+    const formerParent = parentId && title !== undefined ? { id: parentId, title } : null;
+    const message = formerParent
+      ? parentEntries > 0
+        ? `"${formerParent.title}" is in the trash and restricts who can view this page. Restore the page together with its parent pages to keep that restriction.`
+        : `"${formerParent.title}" is in the trash and restricts who can view this page. Ask a space or organization administrator to restore it first.`
+      : parentEntries > 0
+        ? "This page was below a restricted page. Restore it together with its parent pages, or ask a space or organization administrator."
+        : "This page was below a restricted page. Ask a space or organization administrator to restore its parent pages first.";
+    return new SpaceError("restrictedParentInTrash", message, { formerParent, parentEntries });
   }
 
   async empty(actor: Principal, spaceId: string): Promise<number> {
@@ -556,10 +628,14 @@ export class TrashService {
         where e.id = ${entryId} for update of e skip locked`);
       const row = locked.rows[0];
       if (!row) return null;
-      if (!row.purging) await tx.execute(sql`update trash_entries set purging = true where id = ${entryId}`);
-      return row;
+      const below = row.kind === "items" ? await entriesBelow(tx, entryId) : [];
+      await tx.execute(sql`
+        update trash_entries set purging = true
+        where id = any(${sql.param([entryId, ...below])}::uuid[]) and not purging`);
+      return { ...row, below };
     });
     if (!start) return false;
+    for (const below of start.below) await this.#purge(below, options, true);
     const batch = options.batchSize ?? PURGE_BATCH;
     const scope =
       start.kind === "space" ? sql`space_id = ${start.space_id}` : sql`trash_entry_id = ${entryId}`;
@@ -614,6 +690,80 @@ export class TrashService {
     });
     return true;
   }
+}
+
+async function entriesBelow(tx: Transaction, entryId: string): Promise<string[]> {
+  const found = await tx.execute<{ id: string }>(sql`
+    with recursive below(id, depth) as (
+      select ${entryId}::uuid, 0
+      union all
+      select c.id, b.depth + 1 from below b
+        join tree_items p on p.trash_entry_id = b.id
+        join tree_items r on r.restore_parent_id = p.id and r.parent_id is null
+        join trash_entries c on c.id = r.trash_entry_id and c.root_item_id = r.id and c.id <> b.id
+      where b.depth < 1000
+    )
+    select id from below where id <> ${entryId} group by id order by max(depth) desc, id`);
+  return found.rows.map((row) => row.id);
+}
+
+async function parentAvailable(tx: Transaction, spaceId: string, parentId: string | null): Promise<boolean> {
+  if (!parentId) return true;
+  const found = await tx.execute<{ id: string }>(sql`
+    select id from tree_items
+    where id = ${parentId} and space_id = ${spaceId} and trash_entry_id is null and kind <> 'link'`);
+  return found.rows.length > 0;
+}
+
+async function losesViewRestriction(tx: Transaction, itemId: string): Promise<boolean> {
+  const found = await tx.execute<{ loses: boolean }>(sql`
+    select exists (
+      select 1 from tree_items t join page_restrictions r
+        on r.kind = 'view' and r.item_id = any(t.path[1:cardinality(t.path) - 1])
+      where t.id = ${itemId}
+    ) as loses`);
+  return found.rows[0]?.loses === true;
+}
+
+async function parentChain(
+  tx: Transaction,
+  spaceId: string,
+  parentId: string | null,
+): Promise<{ entries: string[]; complete: boolean }> {
+  const entries: string[] = [];
+  let current = parentId;
+  while (current) {
+    const found = await tx.execute<{
+      space_id: string;
+      kind: TreeItemKind;
+      trash_entry_id: string | null;
+      entry_kind: TrashEntryKind | null;
+      purging: boolean | null;
+      root_item_id: string | null;
+      archived_root_id: string | null;
+      restore_parent_id: string | null;
+    }>(sql`
+      select t.space_id, t.kind, t.trash_entry_id, e.kind as entry_kind, e.purging, e.root_item_id,
+        r.archived_root_id, r.restore_parent_id
+      from tree_items t left join trash_entries e on e.id = t.trash_entry_id
+        left join tree_items r on r.id = e.root_item_id
+      where t.id = ${current}`);
+    const row = found.rows[0];
+    if (!row || row.space_id !== spaceId || row.kind === "link") return { entries, complete: false };
+    if (!row.trash_entry_id) return { entries, complete: true };
+    if (
+      row.entry_kind !== "items" ||
+      row.purging ||
+      !row.root_item_id ||
+      entries.includes(row.trash_entry_id)
+    ) {
+      return { entries, complete: false };
+    }
+    entries.push(row.trash_entry_id);
+    if (row.archived_root_id === row.root_item_id) return { entries, complete: true };
+    current = row.restore_parent_id;
+  }
+  return { entries, complete: true };
 }
 
 export async function placeBack(
