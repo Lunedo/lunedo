@@ -111005,13 +111005,23 @@
                       "description": "ID of the meeting page."
                     },
                     "seriesId": {
-                      "type": "string",
-                      "format": "uuid",
-                      "description": "The series."
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The series, or null when the caller cannot read it."
                     },
                     "seriesTitle": {
-                      "type": "string",
-                      "description": "Name of the series."
+                      "description": "Name of the series, or null when the caller cannot read it.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "title": {
                       "type": "string",
@@ -111062,8 +111072,11 @@
                       "description": "Duration in minutes."
                     },
                     "timeZone": {
-                      "type": "string",
-                      "description": "Time zone of the series."
+                      "description": "Time zone of the series, or null when the caller cannot read the series.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "closedAt": {
                       "anyOf": [
@@ -111117,11 +111130,14 @@
                           "type": "null"
                         }
                       ],
-                      "description": "The meeting created when this one was closed or skipped."
+                      "description": "The meeting created when this one was closed or skipped, or null when the caller cannot read the series."
                     },
                     "rhythm": {
-                      "type": "boolean",
-                      "description": "Whether the series has a fixed rhythm; without one, closing asks for the next date."
+                      "description": "Whether the series has a fixed rhythm; without one, closing asks for the next date. Null when the caller cannot read the series.",
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
                     },
                     "attendees": {
                       "type": "array",
@@ -111157,8 +111173,11 @@
                             "description": "Attendance, or null when not recorded. New values can be added in later versions; handle unknown values."
                           },
                           "member": {
-                            "type": "boolean",
-                            "description": "Whether the person is a member of the series."
+                            "description": "Whether the person is a member of the series, or null when the caller cannot read it.",
+                            "type": [
+                              "boolean",
+                              "null"
+                            ]
                           },
                           "canRead": {
                             "type": "boolean",
@@ -113756,13 +113775,23 @@
                         "description": "Duration in minutes."
                       },
                       "seriesId": {
-                        "type": "string",
-                        "format": "uuid",
-                        "description": "The series."
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The series, or null when the caller cannot read it."
                       },
                       "seriesTitle": {
-                        "type": "string",
-                        "description": "Name of the series."
+                        "description": "Name of the series, or null when the caller cannot read it.",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
                       },
                       "spaceId": {
                         "type": "string",

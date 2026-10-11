@@ -40,12 +40,12 @@ import { type Attendee, type Meeting, meetingKeys, meetingQuery, seriesPath } fr
 
 const ATTENDANCE = ["present", "excused", "absent"] as const;
 
-function targetOf(meeting: Meeting): MeetingTarget {
+function targetOf(meeting: Meeting, fallbackTimeZone: string): MeetingTarget {
   return {
     id: meeting.id,
     title: meeting.title,
-    timeZone: meeting.timeZone,
-    rhythm: meeting.rhythm,
+    timeZone: meeting.timeZone ?? fallbackTimeZone,
+    rhythm: meeting.rhythm ?? false,
     startsAt: meeting.startsAt,
   };
 }
@@ -78,7 +78,7 @@ export function MeetingHeader({
     );
   }
   const data = meeting.data;
-  const target = targetOf(data);
+  const target = targetOf(data, format.settings.timeZone);
   const end = data.startsAt
     ? new Date(new Date(data.startsAt).getTime() + data.durationMinutes * 60_000)
     : null;
@@ -91,13 +91,15 @@ export function MeetingHeader({
     >
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex min-w-0 flex-1 basis-field flex-col gap-1">
-          <Link
-            to={seriesPath(spaceKey, data.seriesId)}
-            className="inline-flex items-center gap-1 text-sm text-accent hover:underline focus-visible:focus-ring"
-          >
-            <Repeat aria-hidden className="size-icon" />
-            {data.seriesTitle}
-          </Link>
+          {data.seriesId && data.seriesTitle ? (
+            <Link
+              to={seriesPath(spaceKey, data.seriesId)}
+              className="inline-flex items-center gap-1 text-sm text-accent hover:underline focus-visible:focus-ring"
+            >
+              <Repeat aria-hidden className="size-icon" />
+              {data.seriesTitle}
+            </Link>
+          ) : null}
           <p className="flex items-center gap-2 font-medium">
             <CalendarClock aria-hidden className="size-icon text-text-muted" />
             {data.startsAt && end

@@ -106,25 +106,25 @@ export interface MeetingAttendee {
   id: string;
   name: string | null;
   attendance: Attendance | null;
-  member: boolean;
+  member: boolean | null;
   canRead: boolean;
 }
 
 export interface MeetingDetails {
   id: string;
-  seriesId: string;
-  seriesTitle: string;
+  seriesId: string | null;
+  seriesTitle: string | null;
   title: string;
   state: MeetingState;
   current: boolean;
   startsAt: Date | null;
   recurrenceId: Date | null;
   durationMinutes: number;
-  timeZone: string;
+  timeZone: string | null;
   closedAt: Date | null;
   closedBy: { id: string; name: string | null } | null;
   nextMeetingId: string | null;
-  rhythm: boolean;
+  rhythm: boolean | null;
   attendees: MeetingAttendee[];
   calendarUid: string | null;
 }
@@ -134,8 +134,8 @@ export interface UpcomingMeeting {
   title: string;
   startsAt: Date | null;
   durationMinutes: number;
-  seriesId: string;
-  seriesTitle: string;
+  seriesId: string | null;
+  seriesTitle: string | null;
   spaceId: string;
   spaceKey: string;
   oneOnOne: boolean;
@@ -730,6 +730,10 @@ export class MeetingService {
   async meeting(viewer: Principal, meetingId: string): Promise<MeetingDetails> {
     const meeting = await this.#meeting(this.#database, meetingId);
     const series = await this.#series(this.#database, meeting.series_id);
+    const seriesVisible = await this.#authorization.authorize(viewer, "item.view", {
+      type: "item",
+      id: series.item_id,
+    });
     const attendees = await this.#database.execute<{
       account_id: string;
       name: string | null;
@@ -747,7 +751,7 @@ export class MeetingService {
         id: row.account_id,
         name: row.name,
         attendance: row.attendance,
-        member: row.member,
+        member: seriesVisible ? row.member : null,
         canRead: await this.#authorization.authorize(accountPrincipal(row.account_id), "item.view", {
           type: "item",
           id: meetingId,
@@ -759,21 +763,23 @@ export class MeetingService {
       : new Map();
     return {
       id: meeting.item_id,
-      seriesId: meeting.series_id,
-      seriesTitle: series.title,
+      seriesId: seriesVisible ? meeting.series_id : null,
+      seriesTitle: seriesVisible ? series.title : null,
       title: meeting.title,
       state: meeting.state,
-      current: !series.archived && (meeting.state === "upcoming" || meeting.state === "reopened"),
+      current:
+        (!seriesVisible || !series.archived) &&
+        (meeting.state === "upcoming" || meeting.state === "reopened"),
       startsAt: toDate(meeting.starts_at),
       recurrenceId: toDate(meeting.recurrence_id),
       durationMinutes: meeting.duration_minutes,
-      timeZone: series.time_zone,
+      timeZone: seriesVisible ? series.time_zone : null,
       closedAt: toDate(meeting.closed_at),
       closedBy: meeting.closed_by
         ? { id: meeting.closed_by, name: closer.get(meeting.closed_by) ?? null }
         : null,
-      nextMeetingId: meeting.next_meeting_id,
-      rhythm: series.recurrence !== null,
+      nextMeetingId: seriesVisible ? meeting.next_meeting_id : null,
+      rhythm: seriesVisible ? series.recurrence !== null : null,
       attendees: list,
       calendarUid: meeting.calendar_uid,
     };
@@ -1101,11 +1107,13 @@ export class MeetingService {
       duration_minutes: number;
       series_id: string;
       series_title: string;
+      series_visible: boolean;
       space_id: string;
       key: string;
       one_on_one: boolean;
     }>(sql`
       select m.item_id, t.title, m.starts_at, m.duration_minutes, m.series_id, st.title as series_title,
+        ${visibleItem(this.#authorization, viewer, sql`st`, sql`s`)} as series_visible,
         s.id as space_id, s.key, s.one_on_one
       from meetings m join tree_items t on t.id = m.item_id join tree_items st on st.id = m.series_id
       join spaces s on s.id = t.space_id
@@ -1119,8 +1127,8 @@ export class MeetingService {
       title: row.title,
       startsAt: toDate(row.starts_at),
       durationMinutes: row.duration_minutes,
-      seriesId: row.series_id,
-      seriesTitle: row.series_title,
+      seriesId: row.series_visible ? row.series_id : null,
+      seriesTitle: row.series_visible ? row.series_title : null,
       spaceId: row.space_id,
       spaceKey: row.key,
       oneOnOne: row.one_on_one,
