@@ -1,3 +1,4 @@
+export { tinyLinkCode } from "../imports/links.js";
 export {
   createCsvExport,
   createXmlExport,
@@ -13,7 +14,6 @@ export {
   peopleExport,
   syntheticExport,
 } from "../imports/testing/fixture.js";
-export { tinyLinkCode } from "../imports/links.js";
 export {
   foreignExport,
   RE,
