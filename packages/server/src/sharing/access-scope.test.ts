@@ -5,6 +5,7 @@ import { accountPrincipal } from "../accounts/principal.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { spaceFixtures } from "../testing/spaces.js";
+import { readText } from "../testing/streams.js";
 
 const baseUrl = testDatabaseBaseUrl();
 
@@ -158,10 +159,8 @@ describe.skipIf(!baseUrl)("access scope", () => {
         ["space", "editor", "membershipEnded"],
         ["share", "editor", "membershipEnded"],
       ]);
-      const csv = await test.services.accessExplanations.overviewCsv(
-        accountPrincipal(other.owner),
-        other.id,
-        dave,
+      const csv = await readText(
+        await test.services.accessExplanations.overviewCsv(accountPrincipal(other.owner), other.id, dave),
       );
       expect(csv).toContain("inactive: membership ended");
     });

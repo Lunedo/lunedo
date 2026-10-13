@@ -1325,7 +1325,7 @@ export const auditCatalog = {
   "access.overviewExported": event({
     actor: ["account"],
     target: "organization",
-    fields: z.object({ accountId: z.uuid().nullable(), rows: z.number().int().nonnegative() }),
+    fields: z.object({ accountId: z.uuid().nullable(), people: z.number().int().nonnegative() }),
     visibility: "organization",
   }),
   "page.updateRejected": event({

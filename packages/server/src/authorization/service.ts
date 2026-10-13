@@ -26,6 +26,7 @@ import {
   type Via,
 } from "./facts.js";
 import {
+  holderMatches,
   type ItemAccessOptions,
   type ItemFacts,
   itemFacts,
@@ -33,7 +34,7 @@ import {
   type ShareVia,
 } from "./item-access.js";
 import type { AuthorizationRegistry, RegisteredAction, Resource, RestrictionDenial } from "./registry.js";
-import { spaceRoleCondition, tokenSpaceCondition } from "./space-access.js";
+import { spaceRoleCondition, spaceRoleConditionFor, tokenSpaceCondition } from "./space-access.js";
 
 export type Grant =
   | { kind: "system" }
@@ -170,7 +171,7 @@ export class AuthorizationService {
     if (principal.type === "system") return decision([{ kind: "system" }], []);
     if (principal.type === "anonymous") return decision([], ["anonymous"]);
     const executor = options.executor ?? this.#database;
-    const fresh = options.fresh ?? false;
+    const fresh = options.fresh ?? executor !== this.#database;
     const accountId = principal.id;
 
     if (action.scope === "instance") {
@@ -523,9 +524,8 @@ export class AuthorizationService {
     itemId: string,
     options: { executor?: Executor; fresh?: boolean } = {},
   ): Promise<ItemFacts | null> {
-    return itemFacts(options.executor ?? this.#database, accountId, itemId, {
-      fresh: options.fresh ?? false,
-    });
+    const executor = options.executor ?? this.#database;
+    return itemFacts(executor, accountId, itemId, { fresh: options.fresh ?? executor !== this.#database });
   }
 
   itemFilter(
@@ -551,9 +551,21 @@ export class AuthorizationService {
     spaceId: string,
     options: { executor?: Executor; fresh?: boolean } = {},
   ): Promise<SpaceFacts> {
-    return spaceFacts(options.executor ?? this.#database, accountId, spaceId, {
-      fresh: options.fresh ?? false,
-    });
+    const executor = options.executor ?? this.#database;
+    return spaceFacts(executor, accountId, spaceId, { fresh: options.fresh ?? executor !== this.#database });
+  }
+
+  async spaceAudience(accountIds: readonly string[], spaceId: string): Promise<Set<string>> {
+    if (accountIds.length === 0) return new Set();
+    const result = await this.#database.execute<{ id: string }>(sql`
+      select a.id from accounts a join spaces s on s.id = ${spaceId}
+      where a.id = any(${sql.param([...accountIds])}::uuid[]) and a.state = 'active' and (
+        ${spaceRoleConditionFor(sql`a.id`, sql`s`, "reader")}
+        or exists (select 1 from page_shares ps join tree_items t on t.id = ps.item_id
+          where t.space_id = s.id and ${holderMatches(sql`ps.principal_kind`, sql`ps.principal_id`, sql`a.id`)})
+        or exists (select 1 from share_link_accesses la join share_links l on l.id = la.link_id
+          join tree_items t on t.id = l.item_id where t.space_id = s.id and la.account_id = a.id))`);
+    return new Set(result.rows.map((row) => row.id));
   }
 
   spaceFilter(principal: Principal, space: SQL, minimum: SpaceRole = "reader"): SQL {

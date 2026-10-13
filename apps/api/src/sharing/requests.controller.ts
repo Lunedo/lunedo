@@ -1,3 +1,4 @@
+import { Readable } from "node:stream";
 import { Body, Controller, Get, Inject, Param, Post, Query, Req, Res } from "@nestjs/common";
 import { ACCESS_REQUEST_MESSAGE_MAX_LENGTH } from "@pagehall/server";
 import type { FastifyReply, FastifyRequest } from "fastify";
@@ -327,7 +328,7 @@ export class AccessRequestsController {
     reply.header("content-type", "text/csv; charset=utf-8");
     reply.header("content-disposition", 'attachment; filename="permission-overview.csv"');
     reply.header("cache-control", "no-store");
-    return csv;
+    return Readable.from(csv);
   }
 
   @Get("spaces/:spaceId/storage")

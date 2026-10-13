@@ -34,6 +34,7 @@ export { FakeLdapDirectory, type FakeLdapEntry } from "./fakes/ldap-directory.js
 export { createFakeSamlIdp, type FakeSamlIdp } from "./fakes/saml-idp.js";
 export { CapturingTransport, deliverPendingMail, testJobContext } from "./jobs.js";
 export { type CaughtMail, Mailpit, testMailpitSmtpPort, testMailpitUrl } from "./mailpit.js";
+export { countQueries, type QueryCount } from "./queries.js";
 export { testRedisUrl } from "./redis.js";
 export { createTestServices, type TestServices } from "./services.js";
 export { spaceFixtures } from "./spaces.js";
