@@ -170,7 +170,7 @@ export class AuthorizationService {
     if (principal.type === "system") return decision([{ kind: "system" }], []);
     if (principal.type === "anonymous") return decision([], ["anonymous"]);
     const executor = options.executor ?? this.#database;
-    const fresh = options.fresh ?? false;
+    const fresh = options.fresh ?? executor !== this.#database;
     const accountId = principal.id;
 
     if (action.scope === "instance") {
@@ -523,9 +523,8 @@ export class AuthorizationService {
     itemId: string,
     options: { executor?: Executor; fresh?: boolean } = {},
   ): Promise<ItemFacts | null> {
-    return itemFacts(options.executor ?? this.#database, accountId, itemId, {
-      fresh: options.fresh ?? false,
-    });
+    const executor = options.executor ?? this.#database;
+    return itemFacts(executor, accountId, itemId, { fresh: options.fresh ?? executor !== this.#database });
   }
 
   itemFilter(
@@ -551,9 +550,8 @@ export class AuthorizationService {
     spaceId: string,
     options: { executor?: Executor; fresh?: boolean } = {},
   ): Promise<SpaceFacts> {
-    return spaceFacts(options.executor ?? this.#database, accountId, spaceId, {
-      fresh: options.fresh ?? false,
-    });
+    const executor = options.executor ?? this.#database;
+    return spaceFacts(executor, accountId, spaceId, { fresh: options.fresh ?? executor !== this.#database });
   }
 
   spaceFilter(principal: Principal, space: SQL, minimum: SpaceRole = "reader"): SQL {
