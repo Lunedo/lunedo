@@ -321,6 +321,7 @@ export function AuditDetails({ item, context }: { item: AuditItem; context: Audi
         </DetailRow>
         <DetailRow label={t("audit.scope")}>{scopeLabel(t, item)}</DetailRow>
       </dl>
+      {item.peopleHidden ? <p className="text-text-muted text-sm">{t("audit.peopleHidden")}</p> : null}
       <section aria-labelledby={`changes-${item.id}`} className="flex flex-col gap-2">
         <h3 id={`changes-${item.id}`} className="font-semibold">
           {t("audit.changes")}

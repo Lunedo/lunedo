@@ -8027,6 +8027,10 @@
                               "type": "string"
                             },
                             "description": "Anonymized accounts the event refers to, shown as former users with their ID."
+                          },
+                          "peopleHidden": {
+                            "type": "boolean",
+                            "description": "Whether the people involved are left out because the event concerns a confidential space the reader is not a member of. The actor, referenced accounts and their names are then empty."
                           }
                         },
                         "required": [
@@ -8051,7 +8055,8 @@
                           "scope",
                           "changes",
                           "references",
-                          "formerAccounts"
+                          "formerAccounts",
+                          "peopleHidden"
                         ],
                         "additionalProperties": false,
                         "description": "An entry of the audit log."
@@ -8133,7 +8138,8 @@
                       "references": {
                         "01929b1f-0a6d-7a51-827e-6f5a4b3c8d9e": "Editors"
                       },
-                      "formerAccounts": []
+                      "formerAccounts": [],
+                      "peopleHidden": false
                     }
                   ],
                   "nextCursor": null
@@ -42847,6 +42853,10 @@
                               "type": "string"
                             },
                             "description": "Anonymized accounts the event refers to, shown as former users with their ID."
+                          },
+                          "peopleHidden": {
+                            "type": "boolean",
+                            "description": "Whether the people involved are left out because the event concerns a confidential space the reader is not a member of. The actor, referenced accounts and their names are then empty."
                           }
                         },
                         "required": [
@@ -42871,7 +42881,8 @@
                           "scope",
                           "changes",
                           "references",
-                          "formerAccounts"
+                          "formerAccounts",
+                          "peopleHidden"
                         ],
                         "additionalProperties": false,
                         "description": "An entry of the audit log."
@@ -42953,7 +42964,8 @@
                       "references": {
                         "01929b1f-0a6d-7a51-827e-6f5a4b3c8d9e": "Editors"
                       },
-                      "formerAccounts": []
+                      "formerAccounts": [],
+                      "peopleHidden": false
                     }
                   ],
                   "nextCursor": null
@@ -118065,6 +118077,10 @@
                               "type": "string"
                             },
                             "description": "Anonymized accounts the event refers to, shown as former users with their ID."
+                          },
+                          "peopleHidden": {
+                            "type": "boolean",
+                            "description": "Whether the people involved are left out because the event concerns a confidential space the reader is not a member of. The actor, referenced accounts and their names are then empty."
                           }
                         },
                         "required": [
@@ -118089,7 +118105,8 @@
                           "scope",
                           "changes",
                           "references",
-                          "formerAccounts"
+                          "formerAccounts",
+                          "peopleHidden"
                         ],
                         "additionalProperties": false,
                         "description": "An entry of the audit log."
@@ -118171,7 +118188,8 @@
                       "references": {
                         "01929b1f-0a6d-7a51-827e-6f5a4b3c8d9e": "Editors"
                       },
-                      "formerAccounts": []
+                      "formerAccounts": [],
+                      "peopleHidden": false
                     }
                   ],
                   "nextCursor": null

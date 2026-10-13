@@ -7,6 +7,7 @@ export {
 } from "../accounts/schema.js";
 export {
   auditChains,
+  auditConfidentialEvents,
   auditEvents,
   auditScopeType,
   auditSubjectKeys,

@@ -3291,6 +3291,8 @@
     "scope": "Wo",
     "showDetails": "Details zu {action} anzeigen",
     "deletedAccount": "Gelöschtes Konto",
+    "hiddenActor": "Verborgen (vertraulicher Space)",
+    "peopleHidden": "Die beteiligten Personen werden nicht angezeigt, weil dieses Ereignis einen vertraulichen Space betrifft, in dem du kein Mitglied bist.",
     "deletedOrganization": "Gelöschte Organisation",
     "instanceScope": "Instanz",
     "locked": "Gesperrt",

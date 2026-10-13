@@ -3291,6 +3291,8 @@
     "scope": "Where",
     "showDetails": "Show details of {action}",
     "deletedAccount": "Deleted account",
+    "hiddenActor": "Hidden (confidential space)",
+    "peopleHidden": "The people involved are not shown because this event concerns a confidential space you are not a member of.",
     "deletedOrganization": "Deleted organization",
     "instanceScope": "Instance",
     "locked": "Locked",
