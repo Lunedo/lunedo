@@ -102,6 +102,7 @@ export const imports = pgTable(
     fileKind: text(),
     uploadId: uuid().references(() => importUploads.id, { onDelete: "set null" }),
     folderFile: text(),
+    folderKey: text(),
     spaceName: text(),
     spaceKey: text(),
     archived: boolean().notNull().default(false),

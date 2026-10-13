@@ -43,7 +43,7 @@ The master keys and the backup keys are needed to read encrypted data and backup
 | `PAGEHALL_DATABASE_URL` | required | yes | PostgreSQL connection URL, `postgres://user:password@host:5432/database`. |
 | `PAGEHALL_DATABASE_POOL_SIZE` | `10` | | Maximum database connections per process. |
 | `PAGEHALL_FILES_DIR` | `/var/lib/pagehall/files` | | Directory of the file store. |
-| `PAGEHALL_IMPORT_DIR` | `/data/import` | | Import folder for large exports. Each organization has a subfolder named after its slug, for example `/data/import/acme`; its administrators can import files placed directly inside it. Symbolic links, further subfolders and files at the top level are ignored. Mount it read-only. |
+| `PAGEHALL_IMPORT_DIR` | `/data/import` | | Import folder for large exports. Each organization has a subfolder named after its ID, for example `/data/import/0c9d6a3e-5f2b-4c1a-9e8d-7b6a5c4d3e2f`, shown with a copy button in the import wizard; its administrators can import files placed directly inside it. Symbolic links, further subfolders and files at the top level are ignored. Mount it read-only. |
 | `PAGEHALL_FILE_STORAGE` | `local` | | Where attachments are stored: `local` in the file store directory, or `s3` in S3-compatible object storage. Attachments are encrypted in both cases. |
 | `PAGEHALL_S3_BUCKET` | none | | Bucket for attachments; required when the file storage is `s3`. |
 | `PAGEHALL_S3_ENDPOINT` | none | | Address of the S3-compatible service, for example `https://minio.example.org`. Leave it out for Amazon S3. |

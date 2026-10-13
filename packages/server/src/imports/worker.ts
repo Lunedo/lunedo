@@ -66,7 +66,7 @@ interface WorkRow {
   file_kind: "upload" | "folder" | null;
   upload_id: string | null;
   folder_file: string | null;
-  organization_slug: string;
+  folder_key: string | null;
   space_name: string | null;
   space_key: string | null;
   source_url: string | null;
@@ -110,8 +110,7 @@ export class ImportWorker {
 
   async #load(importId: string): Promise<WorkRow | null> {
     const result = await this.#database.execute<WorkRow>(sql`
-      select i.*, o.slug as organization_slug from imports i join organizations o on o.id = i.organization_id
-      where i.id = ${importId}`);
+      select * from imports where id = ${importId}`);
     return result.rows[0] ?? null;
   }
 
@@ -190,7 +189,13 @@ export class ImportWorker {
   async #source(row: WorkRow): Promise<ByteSource> {
     if (row.file_kind === "upload" && row.upload_id) return this.#options.uploads.source(row.upload_id);
     if (row.file_kind === "folder" && row.folder_file) {
-      const file = await this.#options.folder.open(row.organization_slug, row.folder_file);
+      if (row.folder_key !== row.organization_id) {
+        throw new ImportFormatError(
+          "fileChanged",
+          "The file in the import folder changed after it was read.",
+        );
+      }
+      const file = await this.#options.folder.open(row.folder_key, row.folder_file);
       const expected = row.found?.file as { size?: number; modifiedAt?: string } | undefined;
       if (expected && (expected.size !== file.size || expected.modifiedAt !== file.modifiedAt)) {
         await file.close();

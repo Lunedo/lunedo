@@ -15,7 +15,7 @@ import { sweepAppearances } from "../support/sweeps.js";
 const headers = (page: Page) => ({ "X-Pagehall-Request": "1", origin: new URL(page.url()).origin });
 
 async function analyzed(page: Page, organizationId: string, template: string, spaceId?: string) {
-  await placeFolderExport(organizationId, template);
+  placeFolderExport(organizationId, template);
   const created = (await callApi(page, "POST", `/api/v1/organizations/${organizationId}/imports`, {
     source: "confluence-xml",
     ...(spaceId ? { spaceId } : {}),

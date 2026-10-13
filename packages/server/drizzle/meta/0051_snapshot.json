@@ -1,5 +1,5 @@
 {
-  "id": "96a86d3a-f659-405f-bbf3-69d9ecc95fe6",
+  "id": "b172474b-51ba-484f-93c4-1d51c73976e5",
   "prevId": "69e4230c-2f62-426b-ae8b-c14f80f686e3",
   "version": "7",
   "dialect": "postgresql",
@@ -6363,6 +6363,12 @@
         },
         "folder_file": {
           "name": "folder_file",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "folder_key": {
+          "name": "folder_key",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -15944,7 +15950,6 @@
       "schema": "public",
       "values": [
         "pending",
-        "stored",
         "ready",
         "orphaned"
       ]

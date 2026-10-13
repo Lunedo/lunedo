@@ -1,6 +1,6 @@
 import { ImportFormatError } from "../errors.js";
 import type { ByteSource } from "../formats/bytes.js";
-import { parseXml } from "../formats/xml.js";
+import { DEFAULT_XML_LIMITS, parseXml } from "../formats/xml.js";
 import type { ScanContext } from "../source.js";
 import {
   COMMENT_PROPERTIES,
@@ -34,44 +34,107 @@ export function unescapeNestedCdata(body: string): string {
   return body.includes("]] ") ? body.replace(NESTED_CDATA_END, "]]$1") : body;
 }
 
-const WANTED = new Set([
-  "Space",
-  "Page",
-  "BlogPost",
-  "Comment",
-  "ContentProperty",
-  "LikeEntity",
-  "Notification",
-  "SpacePermission",
-  "ContentPermissionSet",
-  "ContentPermission",
-  "BodyContent",
-  "Attachment",
-  "Label",
-  "Labelling",
-  "ConfluenceUserImpl",
-  "PageTemplate",
+interface Kept {
+  readonly properties: ReadonlySet<string>;
+  readonly references: ReadonlySet<string>;
+}
+
+function kept(properties: string[], references: string[]): Kept {
+  return { properties: new Set(properties), references: new Set(references) };
+}
+
+const CONTENT = ["contentStatus", "title", "version", "position", "creationDate", "lastModificationDate"];
+const CONTENT_REFERENCES = ["originalVersion", "creator", "lastModifier", "parent", "space"];
+
+const WANTED = new Map<string, Kept>([
+  ["Space", kept(["key", "name"], ["homePage"])],
+  ["Page", kept(CONTENT, CONTENT_REFERENCES)],
+  ["BlogPost", kept(CONTENT, CONTENT_REFERENCES)],
+  [
+    "Comment",
+    kept(
+      ["contentStatus", "creationDate", "lastModificationDate"],
+      ["originalVersion", "containerContent", "parent", "creator"],
+    ),
+  ],
+  ["ContentProperty", kept(["name", "stringValue", "longValue", "dateValue"], ["content"])],
+  ["LikeEntity", kept(["liked", "creationDate"], ["content", "user"])],
+  ["Notification", kept([], [])],
+  [
+    "SpacePermission",
+    kept(["active", "group", "spaceId", "type", "allUsersSubject"], ["space", "userSubject"]),
+  ],
+  ["ContentPermissionSet", kept(["type"], ["owningContent"])],
+  ["ContentPermission", kept(["groupName", "type"], ["owningSet", "userSubject"])],
+  ["BodyContent", kept(["bodyType", "body"], ["content"])],
+  [
+    "Attachment",
+    kept(
+      ["contentStatus", "title", "version", "creationDate"],
+      ["containerContent", "originalVersion", "creator"],
+    ),
+  ],
+  ["Label", kept(["name", "namespace"], [])],
+  ["Labelling", kept([], ["content", "label"])],
+  [
+    "PageTemplate",
+    kept(
+      ["bodyType", "name", "description", "content", "creationDate", "lastModificationDate"],
+      ["space", "originalVersion", "creator"],
+    ),
+  ],
+  ["ConfluenceUserImpl", kept(["atlassianAccountId"], [])],
 ]);
 const PROGRESS_STEP = 500;
 
+export interface XmlObjectLimits {
+  readonly maxObjectBytes: number;
+  readonly maxSpaces: number;
+}
+
+export const DEFAULT_OBJECT_LIMITS: XmlObjectLimits = {
+  maxObjectBytes: DEFAULT_XML_LIMITS.maxElementBytes + 1024 * 1024,
+  maxSpaces: 1000,
+};
+
 class ObjectReader {
   object: XmlObject | null = null;
-  #property: { name: string; reference: boolean; text: string } | null = null;
+  #kept: Kept | null = null;
+  #bytes = 0;
+  #property: { name: string; reference: boolean; kept: boolean; text: string } | null = null;
   #idTarget: "object" | "reference" | "element" | null = null;
   #idText = "";
   #collection = false;
 
-  constructor(private readonly onObject: (object: XmlObject) => void) {}
+  constructor(
+    private readonly onObject: (object: XmlObject) => void,
+    private readonly maxObjectBytes: number,
+  ) {}
+
+  #count(bytes: number): void {
+    this.#bytes += bytes;
+    if (this.#bytes > this.maxObjectBytes) {
+      throw new ImportFormatError("xmlElementTooLarge", "An object in the export is larger than the limit.");
+    }
+  }
 
   open(name: string, attributes: Readonly<Record<string, string>>, depth: number): void {
     if (depth === 2 && name === "object") {
-      const className = attributes.class ?? "";
-      this.object = WANTED.has(className)
-        ? { className, id: "", properties: new Map(), references: new Map(), elements: [] }
+      this.#kept = WANTED.get(attributes.class ?? "") ?? null;
+      this.#bytes = 0;
+      this.object = this.#kept
+        ? {
+            className: attributes.class ?? "",
+            id: "",
+            properties: new Map(),
+            references: new Map(),
+            elements: [],
+          }
         : null;
       return;
     }
-    if (!this.object) return;
+    if (!this.object || !this.#kept) return;
+    for (const [key, value] of Object.entries(attributes)) this.#count(key.length + value.length);
     if (depth === 3 && name === "id") {
       this.#idTarget = "object";
       this.#idText = "";
@@ -87,10 +150,13 @@ class ObjectReader {
       return;
     }
     if (depth === 3 && name === "property") {
-      this.#property = { name: attributes.name ?? "", reference: attributes.class !== undefined, text: "" };
+      const property = attributes.name ?? "";
+      const reference = attributes.class !== undefined;
+      const wanted = reference ? this.#kept.references : this.#kept.properties;
+      this.#property = { name: property, reference, kept: wanted.has(property), text: "" };
       return;
     }
-    if (depth === 4 && name === "id" && this.#property?.reference) {
+    if (depth === 4 && name === "id" && this.#property?.reference && this.#property.kept) {
       this.#idTarget = "reference";
       this.#idText = "";
     }
@@ -98,8 +164,9 @@ class ObjectReader {
 
   text(text: string): void {
     if (!this.object) return;
+    this.#count(text.length);
     if (this.#idTarget) this.#idText += text;
-    else if (this.#property && !this.#property.reference) this.#property.text += text;
+    else if (this.#property?.kept && !this.#property.reference) this.#property.text += text;
   }
 
   close(name: string, depth: number): void {
@@ -126,12 +193,15 @@ class ObjectReader {
       return;
     }
     if (name === "property" && depth === 3 && this.#property) {
-      if (!this.#property.reference) object.properties.set(this.#property.name, this.#property.text);
+      if (this.#property.kept && !this.#property.reference) {
+        object.properties.set(this.#property.name, this.#property.text);
+      }
       this.#property = null;
       return;
     }
     if (name === "object" && depth === 2) {
       this.object = null;
+      this.#kept = null;
       this.onObject(object);
     }
   }
@@ -139,6 +209,10 @@ class ObjectReader {
 
 export class ConfluenceXmlReader extends StagedConfluenceReader {
   readonly source = "confluence-xml" as const;
+
+  constructor(private readonly limits: XmlObjectLimits = DEFAULT_OBJECT_LIMITS) {
+    super();
+  }
 
   async scan(file: ByteSource, context: ScanContext): Promise<void> {
     const scanned = await scanArchive(file, context);
@@ -154,10 +228,20 @@ export class ConfluenceXmlReader extends StagedConfluenceReader {
     let objects = 0;
     let pending: XmlObject[] = [];
     let bytes = 0;
-    const spaces: XmlObject[] = [];
+    let spaces = 0;
+    let firstSpace: XmlObject | undefined;
+    let namedSpace: XmlObject | undefined;
     const handle = async (object: XmlObject) => {
       if (object.className === "Space") {
-        spaces.push(object);
+        spaces += 1;
+        if (spaces > this.limits.maxSpaces) {
+          throw new ImportFormatError(
+            "xmlElementTooLarge",
+            "The export contains more spaces than the limit.",
+          );
+        }
+        firstSpace ??= object;
+        if (object.properties.get("key")?.trim() === spaceKey) namedSpace ??= object;
         return;
       }
       await this.#stage(object, context);
@@ -165,7 +249,7 @@ export class ConfluenceXmlReader extends StagedConfluenceReader {
     const reader = new ObjectReader((object) => {
       objects += 1;
       if (objects > skip || object.className === "Space") pending.push(object);
-    });
+    }, this.limits.maxObjectBytes);
     const stream = await scanned.archive.openAt(location);
     async function* source(): AsyncGenerator<Buffer> {
       for await (const chunk of stream as AsyncIterable<Buffer>) {
@@ -200,9 +284,7 @@ export class ConfluenceXmlReader extends StagedConfluenceReader {
       },
     );
     await flushObjects();
-    const space =
-      spaces.find((candidate) => candidate.properties.get("key")?.trim() === spaceKey) ??
-      (spaces.length === 1 ? spaces[0] : undefined);
+    const space = namedSpace ?? (spaces === 1 ? firstSpace : undefined);
     if (!space) throw new ImportFormatError("notConfluenceExport", "The export contains no space.");
     await context.staging.put({
       kind: kinds.space,
