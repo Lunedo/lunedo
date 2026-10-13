@@ -466,6 +466,7 @@ export class SamlAdapter implements IdentityProviderAdapter {
       }
       const userPrincipalName = first(attributes, ENTRA_SAML_CLAIMS.userPrincipalName);
       const overage = attributes.has(ENTRA_SAML_CLAIMS.groupsLink);
+      const groupsMissing = !overage && !attributes.has(ENTRA_SAML_CLAIMS.groups);
       return {
         subject: `${tenant}:${objectId}`,
         email:
@@ -478,6 +479,7 @@ export class SamlAdapter implements IdentityProviderAdapter {
               id: id.toLowerCase(),
               name: null,
             })),
+        groupsClaimMissing: groupsMissing,
       };
     }
     let subject: string | null;
@@ -491,8 +493,9 @@ export class SamlAdapter implements IdentityProviderAdapter {
       subject = value ? (guidFromBase64(value) ?? value.toLowerCase()) : null;
     }
     if (!subject) throw new ProviderResponseError("The assertion has no identifier");
-    const groups = config.attributes.groups
-      ? (attributes.get(config.attributes.groups) ?? []).map((id) => ({
+    const groupsAttribute = config.attributes.groups;
+    const groups = groupsAttribute
+      ? (attributes.get(groupsAttribute) ?? []).map((id) => ({
           id,
           name: config.groupValues === "names" ? id : null,
         }))
@@ -503,6 +506,7 @@ export class SamlAdapter implements IdentityProviderAdapter {
       signInName: first(attributes, config.attributes.signInName),
       displayName: first(attributes, config.attributes.displayName),
       groups,
+      ...(groupsAttribute ? { groupsClaimMissing: !attributes.has(groupsAttribute) } : {}),
     };
   }
 

@@ -482,6 +482,11 @@ export const auditEntrySchema = z
     formerAccounts: z
       .array(z.string())
       .describe("Anonymized accounts the event refers to, shown as former users with their ID."),
+    peopleHidden: z
+      .boolean()
+      .describe(
+        "Whether the people involved are left out because the event concerns a confidential space the reader is not a member of. The actor, referenced accounts and their names are then empty.",
+      ),
   })
   .describe("An entry of the audit log.");
 
@@ -512,6 +517,7 @@ export const exampleAuditEntry = {
   ],
   references: { [exampleGroup.id]: "Editors" },
   formerAccounts: [],
+  peopleHidden: false,
 };
 
 export const decisionSchema = z

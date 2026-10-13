@@ -210,7 +210,7 @@ describe.skipIf(!databaseUrl)("AuditLog", () => {
     await expect(database.delete(auditEvents).where(ofScope)).rejects.toMatchObject({
       cause: expect.objectContaining({ message: expect.stringContaining("append-only") }),
     });
-    await expect(database.execute(sql`truncate audit_events`)).rejects.toMatchObject({
+    await expect(database.execute(sql`truncate audit_events cascade`)).rejects.toMatchObject({
       cause: expect.objectContaining({ message: expect.stringContaining("append-only") }),
     });
     await expect(

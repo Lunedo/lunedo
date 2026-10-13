@@ -901,7 +901,7 @@ describe("the sign-in settings of the instance", () => {
     });
     await renderPath("/settings/instance/sign-in-providers");
     expect(await screen.findByText(/sends no groups since/)).toBeTruthy();
-    expect(screen.getByText(/Check the groups claim setting of the provider/)).toBeTruthy();
+    expect(screen.getByText(/Check the groups setting of the provider/)).toBeTruthy();
   });
 
   it("lets only the instance owner choose who is told about an emergency sign-in", async () => {

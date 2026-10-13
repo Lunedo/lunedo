@@ -17,6 +17,7 @@ export interface AuditPresentation {
   changes: AuditChange[];
   references: Record<string, string>;
   formerAccounts: string[];
+  peopleHidden: boolean;
 }
 
 export interface PresentableAuditEntry {
@@ -30,6 +31,7 @@ export interface PresentableAuditEntry {
   fields: unknown;
   labels: unknown;
   formerSubjects?: string[];
+  peopleHidden?: boolean;
 }
 
 const HIDDEN_FIELDS = new Set(["sessionId", "credentialId", "scopeId", "previous", "level", "action"]);
@@ -134,5 +136,6 @@ export function presentAuditEntry(entry: PresentableAuditEntry): AuditPresentati
     changes: changeKind === "setting" ? settingChanges(fields) : fieldChanges(fields),
     references: labels.references ?? {},
     formerAccounts: [...former],
+    peopleHidden: entry.peopleHidden ?? false,
   };
 }

@@ -550,7 +550,7 @@ const providerBase = {
     .datetime()
     .nullable()
     .describe(
-      "Since when sign-ins through the provider carry no groups claim although they did before, or null. Pagehall then treats the person as having no groups.",
+      "Since when sign-ins through the provider carry no groups claim or attribute although they did before, or null. Pagehall then treats the person as having no groups.",
     ),
   warnings: z
     .array(
