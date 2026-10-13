@@ -134,6 +134,7 @@ import { ConfidentialSpaceService } from "./spaces/confidential.js";
 import { PageDocumentService } from "./spaces/documents.js";
 import { TreeService } from "./spaces/items.js";
 import {
+  applyTrashRetention,
   LIVE_VERSIONS_SCHEDULE,
   liveVersionsJob,
   TRASH_RETENTION_SCHEDULE,
@@ -484,7 +485,7 @@ export function createAccountServices(options: {
     origin: options.nodeId ?? uuidv7(),
   });
   const versions = new VersionService({ database, audit, documents, people, settings, activity });
-  const trash = new TrashService({ database, audit, settings, people, activity, authorization });
+  const trash = new TrashService({ database, audit, settings, people, activity, authorization, logger });
   const archive = new ArchiveService({ database, audit, authorization, activity, trash });
   const signer = new ValueSigner({ database, encryption });
   const tree = new TreeService({
@@ -803,14 +804,7 @@ export async function workAccountJobs(
     const removed = await applyAuditRetention({ audit: services.audit, settings });
     if (removed > 0) job.logger.info({ removed }, "Old audit events removed");
   });
-  await jobs.work(trashRetentionJob, async (job) => {
-    const result = await services.trash.applyRetention({ signal: job.signal });
-    const drafts = await services.versions.removeExpiredDrafts();
-    const files = result.purged > 0 ? await services.files.deleteOrphaned() : 0;
-    if (result.moved + result.purged + drafts > 0) {
-      job.logger.info({ ...result, drafts, files }, "Trash retention applied");
-    }
-  });
+  await jobs.work(trashRetentionJob, (job) => applyTrashRetention(services, job));
   await jobs.work(importWorkJob, services.importWorker.work, { concurrency: 2 });
   await jobs.work(importWatchdogJob, async () => {
     await services.importWorker.watchdog();

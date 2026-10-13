@@ -5,6 +5,7 @@ import type { AuditLog } from "../audit/audit-log.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { ContentActivity } from "../collaboration/content.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
+import type { Logger } from "../logging/logger.js";
 import type { SettingsService } from "../settings/service.js";
 import { actorIdOf, auditScopeOf, SpaceError } from "./common.js";
 import { formerAdministratorCondition } from "./former-administrators.js";
@@ -71,6 +72,12 @@ export interface PurgeOptions {
   batchSize?: number;
 }
 
+export interface RetentionResult {
+  moved: number;
+  purged: number;
+  failed: number;
+}
+
 function cleanReason(reason: string): string {
   const value = reason.replace(/\s+/g, " ").trim();
   if (value.length === 0 || value.length > ERASURE_REASON_MAX_LENGTH) {
@@ -80,6 +87,16 @@ function cleanReason(reason: string): string {
     );
   }
   return value;
+}
+
+function failureOf(error: unknown): { error: string; code?: string; constraint?: string } {
+  const cause = (error as { cause?: unknown }).cause ?? error;
+  const details = cause as { code?: unknown; constraint?: unknown };
+  return {
+    error: error instanceof Error ? error.name : typeof error,
+    ...(typeof details.code === "string" ? { code: details.code } : {}),
+    ...(typeof details.constraint === "string" ? { constraint: details.constraint } : {}),
+  };
 }
 
 function chainOf(row: { organization_id: string | null; space_id: string }) {
@@ -93,6 +110,7 @@ export class TrashService {
   readonly #people: PeopleService;
   readonly #activity: ContentActivity;
   readonly #authorization: AuthorizationService;
+  readonly #logger: Logger;
 
   constructor(options: {
     database: Database;
@@ -101,8 +119,10 @@ export class TrashService {
     people: PeopleService;
     activity: ContentActivity;
     authorization: AuthorizationService;
+    logger: Logger;
   }) {
     this.#authorization = options.authorization;
+    this.#logger = options.logger;
     this.#database = options.database;
     this.#audit = options.audit;
     this.#settings = options.settings;
@@ -289,6 +309,11 @@ export class TrashService {
       await tx.execute(sql`
         update tree_items set restore_parent_id = parent_id, restore_position = position, parent_id = null
         where id = ${itemId}`);
+    }
+    if (row.archived_root_id && row.archived_root_id !== itemId) {
+      await tx.execute(sql`
+        update tree_items set archived_root_id = null, archived_at = null
+        where id = any(${sql.param(ids)}::uuid[]) and archived_root_id = ${row.archived_root_id}`);
     }
     await this.#audit.record(tx, {
       name: "trash.itemsDeleted",
@@ -568,30 +593,41 @@ export class TrashService {
     await this.#purge(entryId, {}, false);
   }
 
-  async applyRetention(options: PurgeOptions = {}): Promise<{ moved: number; purged: number }> {
-    let moved = 0;
-    let purged = 0;
+  async applyRetention(options: PurgeOptions = {}): Promise<RetentionResult> {
+    const result: RetentionResult = { moved: 0, purged: 0, failed: 0 };
+    const attempt = async (row: EntryRow, step: () => Promise<boolean>, counted: "moved" | "purged") => {
+      options.signal?.throwIfAborted();
+      try {
+        if (await step()) result[counted] += 1;
+      } catch (error) {
+        if (options.signal?.aborted) throw error;
+        result.failed += 1;
+        this.#logger.warn(
+          { entryId: row.id, spaceId: row.space_id, ...failureOf(error) },
+          "A trash entry could not be processed and is retried in the next run",
+        );
+      }
+    };
     const firstStage = await this.#database.execute<EntryRow>(sql`
       select ${ENTRY_COLUMNS} from trash_entries e join spaces s on s.id = e.space_id
       where e.stage = 1 and not e.purging order by e.deleted_at limit 1000`);
     for (const row of firstStage.rows) {
       const periods = await this.#periods(row);
       if (new Date(row.deleted_at).getTime() + periods.first * DAY_MS > Date.now()) continue;
-      if (await this.#moveToStageTwo(row.id)) moved += 1;
+      await attempt(row, () => this.#moveToStageTwo(row.id), "moved");
     }
     const candidates = await this.#database.execute<EntryRow>(sql`
       select ${ENTRY_COLUMNS} from trash_entries e join spaces s on s.id = e.space_id
       where e.stage = 2 or e.purging order by e.stage_two_at nulls first limit 1000`);
     for (const row of candidates.rows) {
-      options.signal?.throwIfAborted();
       if (!row.purging) {
         const periods = await this.#periods(row);
         const start = row.stage_two_at ? new Date(row.stage_two_at).getTime() : Date.now();
         if (start + periods.second * DAY_MS > Date.now()) continue;
       }
-      if (await this.#purge(row.id, options, true)) purged += 1;
+      await attempt(row, () => this.#purge(row.id, options, true), "purged");
     }
-    return { moved, purged };
+    return result;
   }
 
   async #moveToStageTwo(entryId: string): Promise<boolean> {
