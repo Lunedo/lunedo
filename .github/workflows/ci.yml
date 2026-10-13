@@ -2,7 +2,7 @@ name: CI
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [main]
   schedule:
@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}${{ (github.event.action == 'labeled' || github.event.action == 'unlabeled') && '-label' || '' }}${{ github.event_name == 'schedule' && '-stress' || '' }}
+  group: ci-${{ github.event.pull_request.number || github.ref }}${{ github.event_name == 'schedule' && '-stress' || '' }}
   cancel-in-progress: true
 
 env:
@@ -28,7 +28,7 @@ env:
 jobs:
   scope:
     name: Scope
-    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository || !contains(vars.RUNNER_LABELS, 'self-hosted')) && ((github.event.action != 'labeled' && github.event.action != 'unlabeled') || github.event.label.name == 'breaking-api-change')
+    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository || !contains(vars.RUNNER_LABELS, 'self-hosted'))
     runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 5
     outputs:
@@ -459,6 +459,9 @@ jobs:
   quick-checks:
     name: Quick checks
     needs: [scope, browsers-first]
+    permissions:
+      contents: read
+      pull-requests: read
     if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository || !contains(vars.RUNNER_LABELS, 'self-hosted'))
     runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 10
@@ -480,9 +483,10 @@ jobs:
         if: ${{ !cancelled() && github.event_name == 'pull_request' }}
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          ALLOW_BREAKING: ${{ contains(github.event.pull_request.labels.*.name, 'breaking-api-change') }}
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          if [ "$ALLOW_BREAKING" = "true" ]; then
+          if gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json labels --jq '.labels[].name' | grep -qx 'breaking-api-change'; then
             node scripts/check-api-compatibility.ts "$BASE_SHA" --allow-breaking
           else
             node scripts/check-api-compatibility.ts "$BASE_SHA"
@@ -537,7 +541,7 @@ jobs:
   result:
     name: CI result
     needs: [scope, browsers-first, checks, unit, backup, e2e, identity-providers, quick-checks]
-    if: always() && ((github.event.action != 'labeled' && github.event.action != 'unlabeled') || github.event.label.name == 'breaking-api-change')
+    if: always()
     runs-on: ${{ fromJSON((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && contains(vars.RUNNER_LABELS, 'self-hosted')) && '"ubuntu-24.04"' || vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 5
     steps:

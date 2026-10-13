@@ -1,0 +1,40 @@
+name: Breaking API label
+
+on:
+  pull_request:
+    types: [labeled, unlabeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: api-label-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  rerun:
+    name: Run CI again for the breaking-api-change label
+    if: github.event.label.name == 'breaking-api-change'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Run the latest CI run of this commit again
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          run_id=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --event pull_request --branch "$BRANCH" --json databaseId,headSha --jq "map(select(.headSha == \"$HEAD_SHA\")) | .[0].databaseId")
+          if [ -z "$run_id" ]; then
+            echo "::error title=No CI run found::There is no CI run for commit $HEAD_SHA. Push a commit or reopen the pull request to start one."
+            exit 1
+          fi
+          status=$(gh run view "$run_id" --repo "$GITHUB_REPOSITORY" --json status --jq .status)
+          if [ "$status" != "completed" ]; then
+            gh run cancel "$run_id" --repo "$GITHUB_REPOSITORY"
+            gh run watch "$run_id" --repo "$GITHUB_REPOSITORY" >/dev/null || true
+          fi
+          gh run rerun "$run_id" --repo "$GITHUB_REPOSITORY"

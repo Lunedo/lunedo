@@ -1,62 +1,96 @@
 version: 2
 
-updates:
-  - package-ecosystem: npm
-    directory: /
+multi-ecosystem-groups:
+  minor-and-patch:
     schedule:
-      interval: weekly
-      day: monday
-    cooldown:
-      default-days: 3
+      interval: monthly
+    labels: []
     commit-message:
       prefix: build
       include: scope
-    groups:
-      all-updates:
-        patterns: ["*"]
+  major:
+    schedule:
+      interval: monthly
+    labels: []
+    commit-message:
+      prefix: build
+      include: scope
+
+updates:
+  - package-ecosystem: npm
+    directory: /
+    patterns: ["*"]
+    update-types: [minor, patch]
+    multi-ecosystem-group: minor-and-patch
+    labels: []
+    cooldown:
+      default-days: 3
     ignore:
-      # Node.js follows the active LTS line; major upgrades are a deliberate decision.
       - dependency-name: "@types/node"
         update-types: [version-update:semver-major]
 
   - package-ecosystem: github-actions
     directory: /
-    schedule:
-      interval: weekly
-      day: monday
-    commit-message:
-      prefix: ci
-    groups:
-      all-updates:
-        patterns: ["*"]
+    patterns: ["*"]
+    update-types: [minor, patch]
+    multi-ecosystem-group: minor-and-patch
+    labels: []
 
   - package-ecosystem: docker
     directory: /docker
-    schedule:
-      interval: weekly
-      day: monday
-    commit-message:
-      prefix: build
-      include: scope
-    groups:
-      all-updates:
-        patterns: ["*"]
+    patterns: ["*"]
+    update-types: [minor, patch]
+    multi-ecosystem-group: minor-and-patch
+    labels: []
     ignore:
       - dependency-name: node
         update-types: [version-update:semver-major]
 
   - package-ecosystem: docker-compose
     directory: /docker
-    schedule:
-      interval: weekly
-      day: monday
-    commit-message:
-      prefix: build
-      include: scope
-    groups:
-      all-updates:
-        patterns: ["*"]
+    patterns: ["*"]
+    update-types: [minor, patch]
+    multi-ecosystem-group: minor-and-patch
+    labels: []
     ignore:
-      # PostgreSQL major upgrades go through the backup tool.
+      - dependency-name: postgres
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: npm
+    directory: /
+    patterns: ["*"]
+    update-types: [major]
+    multi-ecosystem-group: major
+    labels: []
+    cooldown:
+      default-days: 3
+    ignore:
+      - dependency-name: "@types/node"
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: github-actions
+    directory: /
+    patterns: ["*"]
+    update-types: [major]
+    multi-ecosystem-group: major
+    labels: []
+
+  - package-ecosystem: docker
+    directory: /docker
+    patterns: ["*"]
+    update-types: [major]
+    multi-ecosystem-group: major
+    labels: []
+    ignore:
+      - dependency-name: node
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: docker-compose
+    directory: /docker
+    patterns: ["*"]
+    update-types: [major]
+    multi-ecosystem-group: major
+    labels: []
+    ignore:
       - dependency-name: postgres
         update-types: [version-update:semver-major]
