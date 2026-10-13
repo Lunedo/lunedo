@@ -8,8 +8,10 @@ import {
   createServerRuntime,
   type NotifyInput,
   type ServerRuntime,
+  SPACE_CHANGES_CHANNEL,
   signalRun,
 } from "@pagehall/server";
+import { countQueries } from "@pagehall/server/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { apiContextOf } from "../context.js";
 import {
@@ -23,6 +25,7 @@ import {
 } from "../testing/accounts.js";
 import { type AuthTestApp, createAuthTestApp, databaseBaseUrl, TestClient } from "../testing/auth-app.js";
 import { createTestApp } from "../testing/create-test-app.js";
+import { COALESCE_MS } from "./space-signals.js";
 
 const SESSION_COOKIE = "__Host-pagehall-session";
 
@@ -527,6 +530,159 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
       await second?.close();
       await secondRuntime.close();
     }
+  });
+
+  describe("space signals on a node with many streams", () => {
+    type SpaceEvent = { spaceId: string; kind: string; itemId: string | null };
+    let secondRuntime: ServerRuntime;
+    let second: NestFastifyApplication;
+    let port: number;
+    const responses: IncomingMessage[] = [];
+
+    beforeAll(async () => {
+      secondRuntime = await createServerRuntime({ role: "api", env: test.env });
+      second = await createTestApp(apiContextOf(secondRuntime));
+      await second.listen(0, "127.0.0.1");
+      port = (second.getHttpServer().address() as AddressInfo).port;
+    });
+
+    afterAll(async () => {
+      for (const response of responses) response.destroy();
+      await second?.close();
+      await secondRuntime?.close();
+    });
+
+    async function follow(client: TestClient) {
+      const received = { connected: false, spaces: [] as SpaceEvent[] };
+      const response = await new Promise<IncomingMessage>((resolve, reject) => {
+        get(
+          `http://127.0.0.1:${port}/api/v1/notifications/stream`,
+          { headers: { cookie: `${SESSION_COOKIE}=${client.cookies.get(SESSION_COOKIE)}` } },
+          resolve,
+        ).on("error", reject);
+      });
+      responses.push(response);
+      response.setEncoding("utf8");
+      response.on("data", (chunk: string) => {
+        if (chunk.includes("event: notifications")) received.connected = true;
+        for (const match of chunk.matchAll(/event: spaces\ndata: (\{.*\})\n\n/g)) {
+          received.spaces.push(JSON.parse(match[1] ?? "{}"));
+        }
+      });
+      await expect.poll(() => received.connected, { timeout: 5000 }).toBe(true);
+      return received;
+    }
+
+    async function person(name: string) {
+      const created = await createAccount(test, `${name}-${randomUUID().slice(0, 8)}@pagehall.test`);
+      return { id: created.id, client: await signedInClient(test, created.email, created.password) };
+    }
+
+    async function liveSpace(name: string, readers: string[]) {
+      const key = `L${randomUUID().replace(/-/g, "").slice(0, 7).toUpperCase()}`;
+      const created = await owner.post(`/api/v1/organizations/${organizationId}/spaces`, {
+        name: `${name} ${key}`,
+        key,
+        visibility: "private",
+        grants: readers.map((id) => ({ principalKind: "account", principalId: id, role: "reader" })),
+      });
+      expect(created.statusCode, created.body).toBe(201);
+      const spaceId = created.json().id as string;
+      const page = await owner.post(`/api/v1/spaces/${spaceId}/items`, {
+        kind: "page",
+        title: "Live page",
+        parentId: null,
+        mode: "live",
+      });
+      return { spaceId, pageId: page.json().id as string };
+    }
+
+    function signal(event: SpaceEvent) {
+      return test.runtime.pool.query("select pg_notify($1, $2)", [
+        SPACE_CHANGES_CHANNEL,
+        JSON.stringify(event),
+      ]);
+    }
+
+    const settle = () => new Promise((resolve) => setTimeout(resolve, 500));
+
+    async function queriesFor(event: SpaceEvent, viewer: { spaces: SpaceEvent[] }) {
+      await settle();
+      const queries = countQueries(secondRuntime.pool);
+      try {
+        await signal(event);
+        await expect.poll(() => viewer.spaces, { timeout: 5000 }).toContainEqual(event);
+        await settle();
+        return queries.count;
+      } finally {
+        queries.stop();
+      }
+    }
+
+    it("costs as many queries per signal with many streams that cannot see the space as with one", async () => {
+      const viewer = await person("live-viewer");
+      const first = await liveSpace("First", [viewer.id]);
+      const later = await liveSpace("Later", [viewer.id]);
+      const viewerEvents = await follow(viewer.client);
+      const blind = [await follow((await person("live-blind")).client)];
+      const one = await queriesFor(
+        { spaceId: first.spaceId, kind: "page", itemId: first.pageId },
+        viewerEvents,
+      );
+      for (let index = 0; index < 6; index += 1)
+        blind.push(await follow((await person("live-blind")).client));
+      const many = await queriesFor(
+        { spaceId: later.spaceId, kind: "page", itemId: later.pageId },
+        viewerEvents,
+      );
+      expect(many).toBe(one);
+      for (const events of blind) expect(events.spaces).toEqual([]);
+    });
+
+    it("stops sending the signals of a space to a stream whose access was taken away", async () => {
+      const viewer = await person("live-revoked");
+      const { spaceId, pageId } = await liveSpace("Revoked", [viewer.id]);
+      const viewerEvents = await follow(viewer.client);
+      const ownerEvents = await follow(owner);
+      const before = { spaceId, kind: "page", itemId: pageId };
+      await signal(before);
+      await expect.poll(() => viewerEvents.spaces, { timeout: 5000 }).toContainEqual(before);
+      const permissions = (await owner.get(`/api/v1/spaces/${spaceId}/permissions`)).json() as {
+        id: string;
+        principalId: string | null;
+      }[];
+      const permission = permissions.find((entry) => entry.principalId === viewer.id);
+      const removed = await owner.post(`/api/v1/spaces/${spaceId}/permissions`, {
+        action: "remove",
+        permissionId: permission?.id,
+      });
+      expect(removed.statusCode, removed.body).toBeLessThan(300);
+      const after = await owner.post(`/api/v1/spaces/${spaceId}/items`, {
+        kind: "page",
+        title: "After",
+        parentId: null,
+        mode: "live",
+      });
+      const changed = { spaceId, kind: "page", itemId: after.json().id as string };
+      await signal(changed);
+      await expect.poll(() => ownerEvents.spaces, { timeout: 5000 }).toContainEqual(changed);
+      await settle();
+      expect(viewerEvents.spaces.filter((event) => event.spaceId === spaceId)).toEqual([before]);
+    });
+
+    it("sends one page signal per item at the start and one at the end of a burst", async () => {
+      const viewer = await person("live-burst");
+      const { spaceId, pageId } = await liveSpace("Burst", [viewer.id]);
+      const viewerEvents = await follow(viewer.client);
+      const stored = { spaceId, kind: "page", itemId: pageId };
+      for (let index = 0; index < 5; index += 1) {
+        await signal(stored);
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+      await expect.poll(() => viewerEvents.spaces, { timeout: 5000 }).toContainEqual(stored);
+      await new Promise((resolve) => setTimeout(resolve, COALESCE_MS + 1000));
+      expect(viewerEvents.spaces.filter((event) => event.itemId === pageId)).toEqual([stored, stored]);
+    });
   });
 
   it("tells a client of another node about settings whose value for it changed", async () => {

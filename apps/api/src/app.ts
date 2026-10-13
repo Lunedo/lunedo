@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NestFactory } from "@nestjs/core";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
-import { ANONYMOUS, enterRequestContext, type Logger } from "@pagehall/server";
+import { ANONYMOUS, enterRequestContext, type Logger, type RequestContext } from "@pagehall/server";
 import { type FastifyRequest, LogController } from "fastify";
 import { AppModule } from "./app.module.js";
 import type { ApiContext } from "./context.js";
@@ -72,16 +72,25 @@ export async function configureApp(app: NestFastifyApplication, context: ApiCont
   fastify.addContentTypeParser("application/octet-stream", (_request, payload, done) => done(null, payload));
   fastify.addContentTypeParser("text/csv", (_request, payload, done) => done(null, payload));
 
+  const requestContexts = new WeakMap<FastifyRequest, RequestContext>();
+  const endRequestCache = (request: FastifyRequest) => {
+    const requestContext = requestContexts.get(request);
+    if (requestContext) requestContext.cache = undefined;
+  };
   fastify.addHook("onRequest", async (request, reply) => {
     const userAgent = request.headers["user-agent"];
-    enterRequestContext({
+    const requestContext: RequestContext = {
       requestId: request.id,
       clientIp: request.ip,
       ...(userAgent ? { userAgent } : {}),
       actor: ANONYMOUS,
-    });
+      cache: new Map(),
+    };
+    requestContexts.set(request, requestContext);
+    enterRequestContext(requestContext);
     reply.header("x-request-id", request.id);
   });
+  fastify.addHook("onRequestAbort", async (request) => endRequestCache(request));
   fastify.addHook("onRequest", async (request, reply) => {
     if (bearerToken(request) !== undefined) {
       if (readCookie(request, COOKIES.session) !== undefined) {
@@ -105,6 +114,7 @@ export async function configureApp(app: NestFastifyApplication, context: ApiCont
     );
   });
   fastify.addHook("onResponse", async (request, reply) => {
+    endRequestCache(request);
     const path = request.url.split("?")[0] ?? "";
     const route = request.routeOptions.url ?? "unmatched";
     context.metrics.observeHttpRequest(request.method, route, reply.statusCode, reply.elapsedTime / 1000);
