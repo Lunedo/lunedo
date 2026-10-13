@@ -105,7 +105,7 @@ test("an administrator imports a CSV export from the import folder and discards 
 }) => {
   test.slow();
   const key = `C${unique()}`.slice(0, 10);
-  const folder = await placeFolderExport(organization.id);
+  const folder = placeFolderExport(organization.id);
   await page.goto(`/settings/organizations/${organization.id}/imports`);
   await expect(page.getByRole("textbox", { name: "Import folder of this organization" })).toHaveValue(folder);
   await page.getByRole("button", { name: "New import" }).first().click();

@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { accountAttemptLimitSetting, clientAttemptLimitSetting, maxUploadSetting } from "@pagehall/server";
@@ -44,6 +44,12 @@ describe.skipIf(!databaseBaseUrl)("imports through the API", () => {
     return result.rows[0]?.slug ?? "";
   }
 
+  async function folderNames(id: string): Promise<string[]> {
+    const listing = await owner.get(`/api/v1/organizations/${id}/import-folder`);
+    expect(listing.statusCode, listing.body).toBe(200);
+    return (listing.json() as { files: { name: string }[] }).files.map((file) => file.name);
+  }
+
   beforeAll(async () => {
     writeFileSync(path.join(importDir, "top-level.zip"), createXmlExport(syntheticExport()));
     test = await createAuthTestApp({ ...configuredSetupEnv, PAGEHALL_IMPORT_DIR: importDir });
@@ -54,7 +60,7 @@ describe.skipIf(!databaseBaseUrl)("imports through the API", () => {
     await owner.post("/api/v1/auth/sign-in", OWNER);
     await addTotp(owner);
     organizationId = await firstOrganizationId(test);
-    const own = path.join(importDir, await slugOf(organizationId));
+    const own = path.join(importDir, organizationId);
     mkdirSync(path.join(own, "nested"), { recursive: true });
     writeFileSync(path.join(own, "space-export.zip"), createXmlExport(syntheticExport()));
     writeFileSync(path.join(own, "nested", "hidden.zip"), "x");
@@ -287,7 +293,7 @@ describe.skipIf(!databaseBaseUrl)("imports through the API", () => {
     const listing = await owner.get(`/api/v1/organizations/${organizationId}/import-folder`);
     expect(listing.statusCode, listing.body).toBe(200);
     expect(listing.json()).toMatchObject({
-      path: path.join(importDir, await slugOf(organizationId)),
+      path: path.join(importDir, organizationId),
       files: [{ name: "space-export.zip" }],
     });
     expect((listing.json() as { files: unknown[] }).files).toHaveLength(1);
@@ -309,30 +315,92 @@ describe.skipIf(!databaseBaseUrl)("imports through the API", () => {
     });
   });
 
-  it("keeps the import folders of organizations apart and follows a changed slug", async () => {
+  it("keeps the import folders of organizations apart by their IDs", async () => {
     const created = await owner.post("/api/v1/organizations", { name: `Imports elsewhere ${counter}` });
     expect(created.statusCode, created.body).toBe(201);
     const otherId = (created.json() as { id: string }).id;
-    const otherSlug = await slugOf(otherId);
-    mkdirSync(path.join(importDir, otherSlug));
-    writeFileSync(path.join(importDir, otherSlug, "other-export.zip"), createXmlExport(syntheticExport()));
-    const names = async (id: string) =>
-      (
-        (await owner.get(`/api/v1/organizations/${id}/import-folder`)).json() as { files: { name: string }[] }
-      ).files.map((file) => file.name);
-    expect(await names(otherId)).toEqual(["other-export.zip"]);
-    expect(await names(organizationId)).toEqual(["space-export.zip"]);
+    mkdirSync(path.join(importDir, otherId));
+    writeFileSync(path.join(importDir, otherId, "other-export.zip"), createXmlExport(syntheticExport()));
+    mkdirSync(path.join(importDir, await slugOf(otherId)));
+    writeFileSync(path.join(importDir, await slugOf(otherId), "slug-export.zip"), "x");
+    expect(await folderNames(otherId)).toEqual(["other-export.zip"]);
+    expect(await folderNames(organizationId)).toEqual(["space-export.zip"]);
     const draft = (
       await owner.post(`/api/v1/organizations/${organizationId}/imports`, { source: "confluence-xml" })
     ).json() as { id: string };
-    for (const name of ["other-export.zip", `../${otherSlug}/other-export.zip`]) {
+    for (const name of ["other-export.zip", `../${otherId}/other-export.zip`, "slug-export.zip"]) {
       const refused = await owner.patch(`/api/v1/imports/${draft.id}`, { file: { kind: "folder", name } });
       expect(refused.json(), name).toMatchObject({ code: "importFileUnavailable" });
     }
-    const renamed = await owner.patch(`/api/v1/organizations/${otherId}`, { slug: `${otherSlug}-renamed` });
-    expect(renamed.statusCode, renamed.body).toBe(200);
-    const listing = (await owner.get(`/api/v1/organizations/${otherId}/import-folder`)).json();
-    expect(listing).toMatchObject({ path: path.join(importDir, `${otherSlug}-renamed`), files: [] });
+  });
+
+  it("lists nothing of another organization after taking over its slug", async () => {
+    const organization = async (name: string) => {
+      const created = await owner.post("/api/v1/organizations", { name });
+      expect(created.statusCode, created.body).toBe(201);
+      return (created.json() as { id: string }).id;
+    };
+    const previousId = await organization(`Previous owner ${randomUUID()}`);
+    const nextId = await organization(`Next owner ${randomUUID()}`);
+    const slug = await slugOf(previousId);
+    for (const folder of [previousId, slug]) {
+      mkdirSync(path.join(importDir, folder));
+      writeFileSync(path.join(importDir, folder, "previous-export.zip"), createXmlExport(syntheticExport()));
+    }
+    expect(await folderNames(previousId)).toEqual(["previous-export.zip"]);
+    const released = await owner.patch(`/api/v1/organizations/${previousId}`, { slug: `${slug}-old` });
+    expect(released.statusCode, released.body).toBe(200);
+    const taken = await owner.patch(`/api/v1/organizations/${nextId}`, { slug });
+    expect(taken.statusCode, taken.body).toBe(200);
+    const listing = (await owner.get(`/api/v1/organizations/${nextId}/import-folder`)).json();
+    expect(listing).toMatchObject({ path: path.join(importDir, nextId), files: [] });
+    expect(await folderNames(previousId)).toEqual(["previous-export.zip"]);
+    const draft = (
+      await owner.post(`/api/v1/organizations/${nextId}/imports`, { source: "confluence-xml" })
+    ).json() as { id: string };
+    const refused = await owner.patch(`/api/v1/imports/${draft.id}`, {
+      file: { kind: "folder", name: "previous-export.zip" },
+    });
+    expect(refused.json()).toMatchObject({ code: "importFileUnavailable" });
+  });
+
+  async function folderImport(name: string) {
+    const own = path.join(importDir, organizationId);
+    writeFileSync(path.join(own, name), createXmlExport(syntheticExport()));
+    const id = (
+      (
+        await owner.post(`/api/v1/organizations/${organizationId}/imports`, { source: "confluence-xml" })
+      ).json() as { id: string }
+    ).id;
+    await owner.patch(`/api/v1/imports/${id}`, { file: { kind: "folder", name } });
+    await work(id);
+    const named = await owner.patch(`/api/v1/imports/${id}`, { spaceName: `Folder ${name}` });
+    expect(named.json()).toMatchObject({ state: "ready" });
+    const people = await owner.put(`/api/v1/imports/${id}/people-source`, { kind: "skip", confirmed: true });
+    expect(people.statusCode, people.body).toBe(200);
+    return { id, file: path.join(own, name) };
+  }
+
+  it("fails with fileChanged when the chosen file changes before the import reads it", async () => {
+    const { id, file } = await folderImport(`changed-${randomUUID()}.zip`);
+    appendFileSync(file, "changed");
+    expect((await owner.post(`/api/v1/imports/${id}/start`)).statusCode).toBe(200);
+    await work(id);
+    expect((await owner.get(`/api/v1/imports/${id}`)).json()).toMatchObject({
+      state: "failed",
+      errorCode: "fileChanged",
+    });
+  });
+
+  it("opens a chosen file only from the folder stored with the import", async () => {
+    const { id } = await folderImport(`stored-${randomUUID()}.zip`);
+    await test.runtime.pool.query("update imports set folder_key = null where id = $1", [id]);
+    expect((await owner.post(`/api/v1/imports/${id}/start`)).statusCode).toBe(200);
+    await work(id);
+    expect((await owner.get(`/api/v1/imports/${id}`)).json()).toMatchObject({
+      state: "failed",
+      errorCode: "fileChanged",
+    });
   });
 
   it("lets the importer resolve people, groups and permissions, and never returns the token", async () => {

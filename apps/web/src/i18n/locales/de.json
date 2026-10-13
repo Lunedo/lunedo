@@ -2102,7 +2102,7 @@
       },
       "imports_folderEnabled": {
         "label": "Import-Ordner",
-        "description": "Die Organisations-Administration kann Exporte importieren, die im Unterordner ihrer Organisation im Import-Ordner liegen; er heißt wie der Kurzname der Organisation. Dateien auf oberster Ebene oder im Unterordner einer anderen Organisation werden nie angeboten."
+        "description": "Die Organisations-Administration kann Exporte importieren, die im Unterordner ihrer Organisation im Import-Ordner liegen; er trägt die ID der Organisation. Dateien auf oberster Ebene oder im Unterordner einer anderen Organisation werden nie angeboten."
       },
       "imports_atlassianHosts": {
         "label": "Weitere Atlassian-Sites",
@@ -6499,7 +6499,7 @@
       },
       "xmlElementTooLarge": {
         "what": "Der Export enthält einen zu großen Eintrag",
-        "cause": "Ein Eintrag ist größer als die Grenze für Importe.",
+        "cause": "Ein Eintrag, etwa eine Seite mit all ihren Feldern, ist größer als die Grenze für Importe, oder der Export enthält mehr Spaces als die Grenze. Ein Space-Export enthält einen Space.",
         "action": "Exportiere den Space erneut. Ist eine einzelne Seite so groß, kürze sie zuerst in Confluence."
       },
       "csvFieldTooLarge": {
@@ -6570,7 +6570,7 @@
     },
     "folder": {
       "path": "Import-Ordner dieser Organisation",
-      "pathHint": "Pagehall bietet nur Dateien an, die direkt in diesem Ordner liegen. Der Ordner heißt wie der Kurzname der Organisation; ändert sich der Kurzname, ändert sich auch der Pfad."
+      "pathHint": "Pagehall bietet nur Dateien an, die direkt in diesem Ordner liegen. Der Ordner trägt die ID der Organisation und bleibt gleich, wenn sich der Kurzname ändert. Kopiere den Pfad und gib ihn an die Person weiter, die den Server betreibt."
     },
     "people": {
       "intro": "Confluence-Exporte nennen Personen nur mit einer Atlassian-ID, ohne Namen oder E-Mail-Adresse. Pagehall braucht eine dieser Quellen, um zu erkennen, wer was geschrieben hat. Personen werden nur per E-Mail-Adresse Konten zugeordnet.",

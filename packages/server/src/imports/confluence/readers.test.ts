@@ -20,6 +20,7 @@ import {
   peopleExport,
   syntheticExport,
 } from "../testing/fixture.js";
+import { createZip } from "../testing/zip-writer.js";
 import { ConfluenceCsvReader } from "./csv-reader.js";
 import { ConfluenceXmlReader, unescapeNestedCdata } from "./xml-reader.js";
 
@@ -153,6 +154,60 @@ describe.skipIf(!baseUrl)("Confluence export readers", () => {
       { pageId: PAGE.alpha, name: "important" },
       { pageId: PAGE.beta, name: "howto" },
     ]);
+  });
+
+  function rawXmlExport(objects: string[]): Buffer {
+    const space = (id: string, key: string) =>
+      `<object class="Space" package="com.atlassian.confluence"><id name="id">${id}</id><property name="key">${key}</property><property name="name">Space ${key}</property></object>`;
+    return createZip([
+      { name: "exportDescriptor.properties", data: "exportType=space\nspaceKey=RAW\n" },
+      {
+        name: "entities.xml",
+        data: `<hibernate-generic>${space("7001", "RAW")}${objects.join("")}</hibernate-generic>`,
+        deflate: true,
+      },
+    ]);
+  }
+
+  function page(id: string, properties: string[]): string {
+    return `<object class="Page" package="com.atlassian.confluence"><id name="id">${id}</id><property name="title">Page ${id}</property>${properties.join("")}</object>`;
+  }
+
+  it("refuses an object whose properties together exceed the object limit", async () => {
+    const filler = "x".repeat(900);
+    const spread = Array.from(
+      { length: 50 },
+      (_, index) => `<property name="extra${index}">${filler}</property>`,
+    );
+    const limits = { maxObjectBytes: 10_000, maxSpaces: 10 };
+    await expect(
+      read(new ConfluenceXmlReader(limits), rawXmlExport([page("7101", spread)])),
+    ).rejects.toMatchObject({
+      code: "xmlElementTooLarge",
+    });
+    const repeated = Array.from({ length: 50 }, () => `<property name="title">${filler}</property>`);
+    await expect(
+      read(new ConfluenceXmlReader(limits), rawXmlExport([page("7102", repeated)])),
+    ).rejects.toMatchObject({ code: "xmlElementTooLarge" });
+    const result = await read(
+      new ConfluenceXmlReader(limits),
+      rawXmlExport([page("7103", spread.slice(0, 5)), page("7104", spread.slice(0, 5))]),
+    );
+    expect(result.pages.map((entry) => entry.title)).toEqual(["Page 7103", "Page 7104"]);
+  });
+
+  it("refuses an export with more spaces than the limit", async () => {
+    const spaces = Array.from(
+      { length: 3 },
+      (_, index) =>
+        `<object class="Space" package="com.atlassian.confluence"><id name="id">${7201 + index}</id><property name="key">OTHER${index}</property></object>`,
+    );
+    const limits = { maxObjectBytes: 10_000, maxSpaces: 3 };
+    await expect(read(new ConfluenceXmlReader(limits), rawXmlExport(spaces))).rejects.toMatchObject({
+      code: "xmlElementTooLarge",
+    });
+    const result = await read(new ConfluenceXmlReader(limits), rawXmlExport(spaces.slice(0, 2)));
+    expect(result.pages).toEqual([]);
   });
 
   it("refuses an export of the other format with a clear code", async () => {

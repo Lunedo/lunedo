@@ -2102,7 +2102,7 @@
       },
       "imports_folderEnabled": {
         "label": "Import folder",
-        "description": "Organization administrators can import exports placed in their organization's subfolder of the import folder, named after the organization's short name. Files at the top level or in another organization's subfolder are never offered."
+        "description": "Organization administrators can import exports placed in their organization's subfolder of the import folder, named after the organization's ID. Files at the top level or in another organization's subfolder are never offered."
       },
       "imports_atlassianHosts": {
         "label": "Further Atlassian sites",
@@ -6499,7 +6499,7 @@
       },
       "xmlElementTooLarge": {
         "what": "The export contains an entry that is too large",
-        "cause": "One entry is larger than the limit for imports.",
+        "cause": "One entry, such as a page with all its fields, is larger than the limit for imports, or the export contains more spaces than the limit. A space export contains one space.",
         "action": "Export the space again. If a single page is that large, shorten it in Confluence first."
       },
       "csvFieldTooLarge": {
@@ -6570,7 +6570,7 @@
     },
     "folder": {
       "path": "Import folder of this organization",
-      "pathHint": "Pagehall offers only files directly inside this folder. The folder is named after the organization's short name; when the short name changes, the path changes too."
+      "pathHint": "Pagehall offers only files directly inside this folder. The folder is named after the organization's ID and stays the same when the short name changes. Copy the path and pass it to the person who runs the server."
     },
     "people": {
       "intro": "Confluence exports name people only by an Atlassian ID, without name or e-mail address. Pagehall needs one of these sources to recognize who wrote what. People are matched to accounts by e-mail address only.",

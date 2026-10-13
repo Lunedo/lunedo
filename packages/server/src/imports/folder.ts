@@ -13,7 +13,7 @@ export interface FolderFile {
 
 const MAX_LISTED = 500;
 const NAME = /^[^/\\\0]{1,255}$/;
-const SLUG = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/;
+const KEY = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 function notAvailable(): ImportError {
   return new ImportError("importFolderUnavailable", "The import folder does not exist or cannot be read.");
@@ -34,24 +34,24 @@ export function isSafeFolderName(name: string): boolean {
   return NAME.test(name) && name !== "." && name !== ".." && !name.startsWith(".");
 }
 
-export function isSafeFolderSlug(slug: string): boolean {
-  return SLUG.test(slug);
+export function isSafeFolderKey(key: string): boolean {
+  return KEY.test(key);
 }
 
 export class ImportFolder {
   constructor(readonly root: string) {}
 
-  pathFor(slug: string): string {
-    if (!isSafeFolderSlug(slug)) throw notAvailable();
-    return path.join(this.root, slug);
+  pathFor(key: string): string {
+    if (!isSafeFolderKey(key)) throw notAvailable();
+    return path.join(this.root, key);
   }
 
-  async #directory(slug: string): Promise<string | null> {
-    if (!isSafeFolderSlug(slug)) throw notAvailable();
+  async #directory(key: string): Promise<string | null> {
+    if (!isSafeFolderKey(key)) throw notAvailable();
     const root = await realpath(this.root).catch(() => {
       throw notAvailable();
     });
-    const directory = path.join(root, slug);
+    const directory = path.join(root, key);
     if (path.dirname(directory) !== root) throw notAvailable();
     let stats: import("node:fs").Stats;
     try {
@@ -64,8 +64,8 @@ export class ImportFolder {
     return directory;
   }
 
-  async list(slug: string): Promise<FolderFile[]> {
-    const directory = await this.#directory(slug);
+  async list(key: string): Promise<FolderFile[]> {
+    const directory = await this.#directory(key);
     if (directory === null) return [];
     let entries: Dirent[];
     try {
@@ -86,9 +86,9 @@ export class ImportFolder {
     return files.sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  async open(slug: string, name: string): Promise<ByteSource & { readonly modifiedAt: string }> {
+  async open(key: string, name: string): Promise<ByteSource & { readonly modifiedAt: string }> {
     if (!isSafeFolderName(name)) throw fileMissing();
-    const directory = await this.#directory(slug);
+    const directory = await this.#directory(key);
     if (directory === null) throw fileMissing();
     const target = path.join(directory, name);
     if (path.dirname(target) !== directory) throw fileMissing();
