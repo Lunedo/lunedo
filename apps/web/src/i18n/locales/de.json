@@ -6499,7 +6499,7 @@
       },
       "xmlElementTooLarge": {
         "what": "Der Export enthält einen zu großen Eintrag",
-        "cause": "Ein Eintrag ist größer als die Grenze für Importe.",
+        "cause": "Ein Eintrag, etwa eine Seite mit all ihren Feldern, ist größer als die Grenze für Importe, oder der Export enthält mehr Spaces als die Grenze. Ein Space-Export enthält einen Space.",
         "action": "Exportiere den Space erneut. Ist eine einzelne Seite so groß, kürze sie zuerst in Confluence."
       },
       "csvFieldTooLarge": {

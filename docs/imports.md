@@ -155,7 +155,7 @@ Uploaded files are deleted 7 days after an import was accepted, discarded or sto
 Exports are treated as untrusted input:
 
 - ZIP archives are limited in total size, entry count, entry size and compression ratio. Entries with unsafe names and symbolic links are refused; duplicate names keep the first entry and are reported.
-- XML is read as a stream without DTDs or entities, with limits on depth and element size.
+- XML is read as a stream without DTDs or entities, with limits on depth, element size, the size of each object with all its fields, and the number of spaces. Only the fields Pagehall imports are kept in memory.
 - CSV is read as a stream with limits on field size, row size and field count. Cells that start like a spreadsheet formula are escaped in the CSV report.
 - Converted content is validated against the editor schema. Content that does not fit becomes an unsupported-macro block.
 - Files from the export never leave the quarantined space, and the only accounts an import creates are placeholders.
