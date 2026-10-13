@@ -13,6 +13,7 @@ import {
   encryptedChunkOffset,
   encryptedChunkSize,
   masterStreamKeys,
+  rewrapStreamHeader,
   STREAM_HEADER_LENGTH,
   streamMasterKeyVersion,
 } from "../crypto/stream.js";
@@ -38,6 +39,8 @@ export interface StoredFile {
 }
 
 const CONTENT_DIGEST_PURPOSE = "file-content";
+
+const COMPLETE = sql`state <> 'pending'`;
 
 class Inspector extends Transform {
   readonly #limit: number;
@@ -122,6 +125,7 @@ export class FileService {
       chunkSize: DEFAULT_CHUNK_SIZE,
       associatedData: associatedData(id),
     });
+    let keyVersion: number;
     try {
       let failure: Error | null = null;
       const encrypted = chain(body, inspector, encrypt, (error) => {
@@ -131,6 +135,7 @@ export class FileService {
         throw failure ?? error;
       });
       if (failure) throw failure;
+      keyVersion = await this.#rewrapIfOutdated(key, version);
     } catch (error) {
       await this.#discard(id, key);
       throw error;
@@ -140,9 +145,21 @@ export class FileService {
     const digest = inspector.digest();
     await this.#database.execute(sql`
       update stored_files set size = ${inspector.size}, content_digest = ${digest},
-        content_type = ${type.contentType}, state = 'ready', updated_at = now()
+        content_type = ${type.contentType}, master_key_version = ${keyVersion}, state = 'ready', updated_at = now()
       where id = ${id}`);
     return { id, size: inspector.size, digest: digest.toString("hex"), type };
+  }
+
+  async #rewrapIfOutdated(key: string, version: number): Promise<number> {
+    const current = this.#keyRing.ring.currentVersion;
+    if (version === current) return version;
+    const header = await this.#readHead(key);
+    const used = streamMasterKeyVersion(header);
+    if (used === undefined) throw new Error("The stored file has no valid encryption header");
+    if (used === current) return used;
+    const rewrapped = rewrapStreamHeader(header, this.#keys());
+    await this.#store.replaceHead(key, rewrapped);
+    return streamMasterKeyVersion(rewrapped) ?? current;
   }
 
   async reuse(tx: Executor, file: StoredFile, spaceId: string): Promise<string> {
@@ -287,7 +304,7 @@ export function fileStreamOwner(store: FileStore): EncryptedStreamOwner {
     versions: async (context) => {
       const result = await context.database.execute<{ version: number; count: string }>(sql`
         select master_key_version as version, count(*) as count from stored_files
-        where master_key_version is not null group by master_key_version`);
+        where master_key_version is not null and ${COMPLETE} group by master_key_version`);
       return Object.fromEntries(result.rows.map((row) => [Number(row.version), Number(row.count)]));
     },
     async *streams(context, targetVersion) {
@@ -295,7 +312,7 @@ export function fileStreamOwner(store: FileStore): EncryptedStreamOwner {
       for (;;) {
         const rows = await context.database.execute<{ id: string; storage_key: string }>(sql`
           select id, storage_key from stored_files
-          where state = 'ready' and id > ${after}
+          where ${COMPLETE} and id > ${after}
             and master_key_version is distinct from ${targetVersion ?? null}
           order by id limit 100`);
         if (rows.rows.length === 0) return;

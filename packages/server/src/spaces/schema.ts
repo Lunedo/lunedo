@@ -171,7 +171,7 @@ export const treeItems = pgTable(
     readerVisible: boolean().notNull().default(true),
     path: uuid().array().notNull().default(sql`'{}'::uuid[]`),
     trashEntryId: uuid().references((): AnyPgColumn => trashEntries.id),
-    archivedRootId: uuid().references((): AnyPgColumn => treeItems.id),
+    archivedRootId: uuid().references((): AnyPgColumn => treeItems.id, { onDelete: "set null" }),
     archivedAt: timestampColumn(),
     archivedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
     restoreParentId: uuid(),

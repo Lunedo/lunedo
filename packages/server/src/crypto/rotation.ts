@@ -111,21 +111,26 @@ export class KeyRotation {
     }
 
     const keys = masterStreamKeys(() => ring);
-    const streams = this.#streams;
-    for (const owner of streams?.owners() ?? []) {
-      for await (const stream of owner.streams((streams as EncryptedStreams).context, targetVersion)) {
-        if (job.signal.aborted) throw new Error("Key rotation interrupted");
-        const header = await stream.readHeader();
-        const version = streamMasterKeyVersion(header);
-        if (version === undefined || version === targetVersion) continue;
-        await stream.writeHeader(rewrapStreamHeader(header, keys));
-        done += 1;
-        await this.#database
-          .update(keyRotations)
-          .set({ rewrapped: sql`${keyRotations.rewrapped} + 1` })
-          .where(eq(keyRotations.id, rotationId));
-        await job.reportProgress(done, Math.max(total, done));
+    const rewrapStreams = async (registered: EncryptedStreams) => {
+      for (const owner of registered.owners()) {
+        for await (const stream of owner.streams(registered.context, targetVersion)) {
+          if (job.signal.aborted) throw new Error("Key rotation interrupted");
+          const header = await stream.readHeader();
+          const version = streamMasterKeyVersion(header);
+          if (version === undefined || version === targetVersion) continue;
+          await stream.writeHeader(rewrapStreamHeader(header, keys));
+          done += 1;
+          await this.#database
+            .update(keyRotations)
+            .set({ rewrapped: sql`${keyRotations.rewrapped} + 1` })
+            .where(eq(keyRotations.id, rotationId));
+          await job.reportProgress(done, Math.max(total, done));
+        }
       }
+    };
+    if (this.#streams) {
+      await rewrapStreams(this.#streams);
+      await rewrapStreams(this.#streams);
     }
 
     const remaining = await this.#countOutdated(targetVersion);
