@@ -182,7 +182,7 @@ describe("the notification panel", () => {
     await userEvent.click(screen.getByRole("button", { name: "Notifications, 4 unread" }));
     const panel = screen.getByRole("complementary", { name: "Notifications" });
     expect(
-      await within(panel).findByText("The guest access of Gina Guest to Platform Team ends on 10/08/2026."),
+      await within(panel).findByText("The guest access of Gina Guest to Platform Team ends on 8 Oct 2026."),
     ).toBeTruthy();
     expect(within(panel).getByText(/3 times/)).toBeTruthy();
     expect(

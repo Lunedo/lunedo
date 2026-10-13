@@ -12,7 +12,7 @@ export type Density = (typeof densities)[number];
 export const fonts = ["default", "readable"] as const;
 export type Font = (typeof fonts)[number];
 
-export const dateFormats = ["DD.MM.YYYY", "DD/MM/YYYY", "MM/DD/YYYY", "YYYY-MM-DD"] as const;
+export const dateFormats = ["D MMM YYYY", "DD.MM.YYYY", "DD/MM/YYYY", "MM/DD/YYYY", "YYYY-MM-DD"] as const;
 export type DateFormat = (typeof dateFormats)[number];
 
 export const timeFormats = ["24h", "12h"] as const;
@@ -41,21 +41,21 @@ export const formatsSchema = z
   .strict();
 
 export const defaultFormats: Formats = {
-  dateFormat: "MM/DD/YYYY",
+  dateFormat: "D MMM YYYY",
   timeFormat: "12h",
   numberFormat: "en-US",
   firstDayOfWeek: "sunday",
 };
 
 const GERMAN_FORMATS: Formats = {
-  dateFormat: "DD.MM.YYYY",
+  dateFormat: "D MMM YYYY",
   timeFormat: "24h",
   numberFormat: "de-DE",
   firstDayOfWeek: "monday",
 };
 
 const INTERNATIONAL_ENGLISH_FORMATS: Formats = {
-  dateFormat: "DD/MM/YYYY",
+  dateFormat: "D MMM YYYY",
   timeFormat: "24h",
   numberFormat: "en-US",
   firstDayOfWeek: "monday",
@@ -89,15 +89,35 @@ export function dateParts(date: Date, timeZone: string): DateParts {
   return { day: part("day"), month: part("month"), year: part("year") };
 }
 
-const DATE_PATTERNS: Record<DateFormat, (parts: DateParts) => string> = {
+const NUMERIC_PATTERNS: Record<Exclude<DateFormat, "D MMM YYYY">, (parts: DateParts) => string> = {
   "DD.MM.YYYY": ({ day, month, year }) => `${day}.${month}.${year}`,
   "DD/MM/YYYY": ({ day, month, year }) => `${day}/${month}/${year}`,
   "MM/DD/YYYY": ({ day, month, year }) => `${month}/${day}/${year}`,
   "YYYY-MM-DD": ({ day, month, year }) => `${year}-${month}-${day}`,
 };
 
-export function formatDate(date: Date, format: DateFormat, timeZone: string): string {
-  return DATE_PATTERNS[format](dateParts(date, timeZone));
+function spelledOutDate(date: Date, timeZone: string, language: string): string {
+  if (language === "de") {
+    return new Intl.DateTimeFormat("de", {
+      timeZone,
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    }).format(date);
+  }
+  const parts = new Intl.DateTimeFormat(language, {
+    timeZone,
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).formatToParts(date);
+  const part = (type: string) => parts.find((entry) => entry.type === type)?.value ?? "";
+  return `${part("day")} ${part("month")} ${part("year")}`;
+}
+
+export function formatDate(date: Date, format: DateFormat, timeZone: string, language = "en"): string {
+  if (format === "D MMM YYYY") return spelledOutDate(date, timeZone, language);
+  return NUMERIC_PATTERNS[format](dateParts(date, timeZone));
 }
 
 export const accentColors = ["petrol", "blue", "violet", "amber", "red", "green", "gray"] as const;

@@ -22,6 +22,16 @@ describe("createFormatter", () => {
     );
   });
 
+  it("spells the month out so that day and month cannot be mixed up", () => {
+    const english = createFormatter({ ...base, dateFormat: "D MMM YYYY", timeFormat: "24h" });
+    expect(english.date("2026-10-07T09:30:00.000Z")).toBe("7 Oct 2026");
+    expect(english.dateTime("2026-10-07T07:30:00.000Z")).toBe("7 Oct 2026, 09:30");
+    expect(english.date("2026-09-06T10:00:00.000Z")).toBe("6 Sep 2026");
+    const german = createFormatter({ ...base, language: "de", dateFormat: "D MMM YYYY", timeFormat: "24h" });
+    expect(german.date("2026-10-07T09:30:00.000Z")).toBe("7. Okt. 2026");
+    expect(german.dateTime("2026-10-07T07:30:00.000Z")).toBe("7. Okt. 2026, 09:30");
+  });
+
   it("keeps every format when the language changes", () => {
     const german = createFormatter({ ...base, language: "de" });
     expect(german.date(moment)).toBe("10/01/2026");
@@ -50,7 +60,10 @@ describe("createFormatter", () => {
 
   it("names byte sizes", () => {
     expect(createFormatter(base).bytes(212 * 1024 ** 3)).toBe("212 GB");
-    expect(createFormatter(base).bytes(512)).toBe("512 byte");
+    expect(createFormatter(base).bytes(512)).toBe("512 bytes");
+    expect(createFormatter(base).bytes(70)).toBe("70 bytes");
+    expect(createFormatter(base).bytes(1)).toBe("1 byte");
+    expect(createFormatter({ ...base, language: "de", numberFormat: "de-DE" }).bytes(70)).toBe("70 Byte");
   });
 
   it("uses the chosen first day of the week", () => {

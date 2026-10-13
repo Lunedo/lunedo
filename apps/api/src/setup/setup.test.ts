@@ -178,7 +178,7 @@ describe.skipIf(!databaseBaseUrl)("setup through the API", () => {
         )
       ).rows;
     expect(await formats()).toEqual([
-      { key: "locale.dateFormat", value: "DD.MM.YYYY" },
+      { key: "locale.dateFormat", value: "D MMM YYYY" },
       { key: "locale.firstDayOfWeek", value: "monday" },
       { key: "locale.numberFormat", value: "de-DE" },
       { key: "locale.timeFormat", value: "24h" },
@@ -188,7 +188,7 @@ describe.skipIf(!databaseBaseUrl)("setup through the API", () => {
         .json()
         .steps.find((step: { id: string }) => step.id === "organization").details.formats,
     ).toEqual({
-      dateFormat: "DD.MM.YYYY",
+      dateFormat: "D MMM YYYY",
       timeFormat: "24h",
       numberFormat: "de-DE",
       firstDayOfWeek: "monday",
