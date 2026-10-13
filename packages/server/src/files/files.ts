@@ -145,7 +145,7 @@ export class FileService {
     const digest = inspector.digest();
     await this.#database.execute(sql`
       update stored_files set size = ${inspector.size}, content_digest = ${digest},
-        content_type = ${type.contentType}, master_key_version = ${keyVersion}, state = 'ready', updated_at = now()
+        content_type = ${type.contentType}, master_key_version = ${keyVersion}, state = 'stored', updated_at = now()
       where id = ${id}`);
     return { id, size: inspector.size, digest: digest.toString("hex"), type };
   }
@@ -174,12 +174,21 @@ export class FileService {
       order by f.id limit 1
       for update of f`);
     const used = result.rows[0]?.id ?? file.id;
-    await tx.execute(sql`
+    const claimed = await tx.execute(sql`
       update stored_files
       set state = case when id = ${used} then 'ready'::stored_file_state else 'orphaned'::stored_file_state end,
         updated_at = now()
-      where id = ${file.id}`);
+      where id = ${file.id} and state = 'stored'
+      returning id`);
+    if (claimed.rows.length === 0) throw new Error("The uploaded file was removed before it was saved");
     return used;
+  }
+
+  async commit(tx: Executor, fileId: string): Promise<void> {
+    const claimed = await tx.execute(sql`
+      update stored_files set state = 'ready', updated_at = now() where id = ${fileId} and state = 'stored'
+      returning id`);
+    if (claimed.rows.length === 0) throw new Error("The uploaded file was removed before it was saved");
   }
 
   async #discard(id: string, key: string): Promise<void> {
@@ -265,7 +274,7 @@ export class FileService {
   async deleteOrphaned(limit = 200): Promise<number> {
     const result = await this.#database.execute<{ id: string; storage_key: string }>(sql`
       select id, storage_key from stored_files
-      where state = 'orphaned' or (state = 'pending' and updated_at < now() - interval '1 day')
+      where state = 'orphaned' or (state in ('pending', 'stored') and updated_at < now() - interval '1 day')
       order by updated_at limit ${limit}`);
     await this.#database.execute(sql`
       update stored_files f set state = 'ready', updated_at = now()
@@ -273,8 +282,8 @@ export class FileService {
     let removed = 0;
     for (const row of result.rows) {
       const claimed = await this.#database.execute(sql`
-        update stored_files set updated_at = now() where id = ${row.id}
-          and (state = 'orphaned' or state = 'pending')
+        update stored_files set state = 'orphaned', updated_at = now() where id = ${row.id}
+          and (state = 'orphaned' or (state in ('pending', 'stored') and updated_at < now() - interval '1 day'))
           and not exists (select 1 from attachment_versions v where v.file_id = ${row.id})
         returning id`);
       if (claimed.rows.length === 0) continue;

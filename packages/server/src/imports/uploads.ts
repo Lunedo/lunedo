@@ -176,6 +176,7 @@ export class UploadService {
       await tx.execute(
         sql`delete from import_upload_parts where upload_id = ${uploadId} and number = ${number}`,
       );
+      await this.#files.commit(tx, stored.id);
       await tx.execute(sql`
         insert into import_upload_parts (upload_id, number, file_id, size, sha256)
         values (${uploadId}, ${number}, ${stored.id}, ${stored.size}, ${digest})`);

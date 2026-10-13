@@ -135,7 +135,9 @@ describe.skipIf(!baseUrl)("key rotation of stored files", () => {
           content,
           finish: async () => {
             body.end(content.subarray(1000));
-            return writing;
+            const stored = await writing;
+            await files.commit(test.database, stored.id);
+            return stored;
           },
         };
       }

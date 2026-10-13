@@ -113,6 +113,7 @@ describe.skipIf(!baseUrl)("the encrypted file store", () => {
   async function roundTrips(files: FileService) {
     const content = randomBytes(300_000);
     const stored = await files.write(Readable.from([content]), { name: "data.bin", maxBytes: 1_000_000 });
+    await files.commit(test.database, stored.id);
     expect(stored.size).toBe(content.length);
     expect(await buffer(await files.read(stored.id))).toEqual(content);
     for (const [start, end] of [
@@ -173,6 +174,8 @@ describe.skipIf(!baseUrl)("the encrypted file store", () => {
       name: "b.txt",
       maxBytes: 100,
     });
+    await files.commit(test.database, first.id);
+    await files.commit(test.database, second.id);
     const keys = await test.database.execute<{ id: string; storage_key: string }>(
       sql`select id, storage_key from stored_files where id in (${first.id}, ${second.id})`,
     );
@@ -196,6 +199,7 @@ describe.skipIf(!baseUrl)("the encrypted file store", () => {
     const files = service(store);
     const content = Buffer.from("rotation content");
     const stored = await files.write(Readable.from([content]), { name: "a.txt", maxBytes: 100 });
+    await files.commit(test.database, stored.id);
     const owner = fileStreamOwner(store);
     const context = { database: test.database, filesDir: dir };
     const counts = await masterKeyVersionsInUse({

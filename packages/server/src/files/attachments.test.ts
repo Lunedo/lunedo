@@ -1,6 +1,8 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { Readable } from "node:stream";
 import { buffer } from "node:stream/consumers";
+import { uuidv7 } from "@pagehall/shared";
+import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { accountPrincipal, type Principal } from "../accounts/principal.js";
 import { SettingAboveMaximumError, SettingLockedError } from "../settings/service.js";
@@ -81,6 +83,17 @@ describe.skipIf(!baseUrl)("attachments", () => {
     const content = await test.services.attachments.content(attachmentId, number);
     if (!content) throw new Error("missing");
     return (await buffer(await test.services.files.read(content.fileId))).toString();
+  }
+
+  async function waitForLockWait() {
+    for (let attempt = 0; attempt < 200; attempt += 1) {
+      const waiting = await test.pool.query<{ count: string }>(
+        "select count(*) as count from pg_stat_activity where datname = current_database() and wait_event_type = 'Lock'",
+      );
+      if (Number(waiting.rows[0]?.count) > 0) return;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    throw new Error("No session waited for a lock");
   }
 
   it("lists name, type and size and keeps a new version for the same name", async () => {
@@ -474,5 +487,69 @@ describe.skipIf(!baseUrl)("attachments", () => {
     await test.services.files.deleteOrphaned();
     const rows = await test.pool.query("select 1 from stored_files where id = $1", [content?.fileId]);
     expect(rows.rows).toEqual([]);
+  });
+
+  it("remove a stored upload whose attachment was never saved, for example after a crash", async () => {
+    const stored = await test.services.files.write(Readable.from([randomBytes(100)]), {
+      name: "lost.bin",
+      maxBytes: 1000,
+    });
+    await test.pool.query("update stored_files set updated_at = now() - interval '2 days' where id = $1", [
+      stored.id,
+    ]);
+    await test.services.files.deleteOrphaned(10_000);
+    const rows = await test.pool.query("select 1 from stored_files where id = $1", [stored.id]);
+    expect(rows.rows).toEqual([]);
+    await expect(test.services.files.commit(test.database, stored.id)).rejects.toThrow(
+      "The uploaded file was removed before it was saved",
+    );
+  });
+
+  it("keep a deduplicated file ready when the last other version using it is deleted at the same moment", async () => {
+    const context = await setup();
+    const content = randomBytes(2000);
+    const first = await upload(context, "first.bin", content);
+    const firstVersion = await test.services.attachments.content(first.id);
+    const stored = await test.services.files.write(Readable.from([content]), {
+      name: "second.bin",
+      maxBytes: 10_000,
+    });
+    let deleting: Promise<unknown> | undefined;
+    await test.database.transaction(async (tx) => {
+      const fileId = await test.services.files.reuse(tx, stored, context.space.id);
+      expect(fileId).toBe(firstVersion?.fileId);
+      const attachmentId = uuidv7();
+      await tx.execute(sql`
+        insert into attachments (id, item_id, name, name_key)
+        values (${attachmentId}, ${context.page.id}, 'second.bin', 'second.bin')`);
+      await tx.execute(sql`
+        insert into attachment_versions (id, attachment_id, number, file_id, name)
+        values (${uuidv7()}, ${attachmentId}, 1, ${fileId}, 'second.bin')`);
+      deleting = test.pool.query("delete from attachment_versions where id = $1", [firstVersion?.versionId]);
+      await waitForLockWait();
+    });
+    await deleting;
+    const state = await test.pool.query<{ state: string }>("select state from stored_files where id = $1", [
+      firstVersion?.fileId,
+    ]);
+    expect(state.rows[0]?.state).toBe("ready");
+  });
+
+  it("answer bringing back a deleted attachment while a file of the same name is uploaded with nameTaken", async () => {
+    const context = await setup();
+    const file = await upload(context, "notes.txt", "old");
+    await test.services.attachments.delete(context.editor, file.id);
+    let restoring: Promise<unknown> | undefined;
+    await test.database.transaction(async (tx) => {
+      await tx.execute(sql`select id from tree_items where id = ${context.page.id} for update`);
+      await tx.execute(sql`
+        insert into attachments (id, item_id, name, name_key)
+        values (${uuidv7()}, ${context.page.id}, 'notes.txt', 'notes.txt')`);
+      restoring = test.services.attachments
+        .undelete(context.editor, file.id)
+        .catch((error: unknown) => error);
+      await waitForLockWait();
+    });
+    expect(await restoring).toMatchObject({ name: "AttachmentError", code: "nameTaken" });
   });
 });

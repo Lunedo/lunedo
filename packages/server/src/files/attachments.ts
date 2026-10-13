@@ -412,6 +412,12 @@ export class AttachmentService {
 
   async undelete(actor: Principal, attachmentId: string): Promise<Attachment> {
     await this.#database.transaction(async (tx) => {
+      const owner = await tx.execute<{ item_id: string }>(
+        sql`select item_id from attachments where id = ${attachmentId}`,
+      );
+      const ownerId = owner.rows[0]?.item_id;
+      if (!ownerId) throw new AttachmentError("attachmentNotFound", "The file does not exist");
+      await tx.execute(sql`select id from tree_items where id = ${ownerId} for update`);
       const row = await tx.execute<{ item_id: string; name_key: string }>(sql`
         select item_id, name_key from attachments where id = ${attachmentId} and deleted_at is not null for update`);
       const attachment = row.rows[0];

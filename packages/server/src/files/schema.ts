@@ -19,7 +19,7 @@ import { treeItems } from "../spaces/schema.js";
 
 const timestampColumn = () => timestamp({ withTimezone: true, mode: "date" });
 
-export const storedFileStates = ["pending", "ready", "orphaned"] as const;
+export const storedFileStates = ["pending", "stored", "ready", "orphaned"] as const;
 export type StoredFileState = (typeof storedFileStates)[number];
 export const storedFileState = pgEnum("stored_file_state", storedFileStates);
 
