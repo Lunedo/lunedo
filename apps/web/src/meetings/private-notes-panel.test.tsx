@@ -64,6 +64,27 @@ describe("private notes", () => {
     });
   });
 
+  it("take the focus into the note when the panel opens, so typing writes the note", async () => {
+    mockApi({
+      [`GET /api/v1/meetings/${MEETING}/private-notes`]: () => ({
+        body: {
+          meetingId: MEETING,
+          document: { type: "doc", content: [paragraph("Mine")] },
+          schemaVersion: 4,
+          revision: 0,
+          updatedAt: null,
+        },
+      }),
+    });
+    await renderWithProviders(
+      <PreferencesProvider>
+        <PrivateNotesPanel meetingId={MEETING} canCopy={false} onClose={() => undefined} />
+      </PreferencesProvider>,
+    );
+    const note = await screen.findByRole("textbox", { name: "Private notes" });
+    await waitFor(() => expect(document.activeElement).toBe(note));
+  });
+
   it("offer no copy without edit access to the meeting", async () => {
     mockApi({
       [`GET /api/v1/meetings/${MEETING}/private-notes`]: () => ({

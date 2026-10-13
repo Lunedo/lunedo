@@ -3,6 +3,7 @@ import {
   Checkbox,
   ErrorState,
   Field,
+  FieldError,
   focusFirstInvalidSoon,
   Input,
   Notice,
@@ -24,11 +25,13 @@ export function PeopleStep({
   choice,
   onChoice,
   error,
+  attempt,
 }: {
   entry: ImportView;
   choice: PeopleChoice;
   onChoice: (choice: PeopleChoice) => void;
   error: string | undefined;
+  attempt: number;
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -58,14 +61,11 @@ export function PeopleStep({
               description: t(`imports.people.${value}.description`),
             }))}
           />
-          {error ? (
-            <p role="alert" className="text-sm text-danger" data-invalid="">
-              {error}
-            </p>
-          ) : null}
-          {choice === "token" ? <TokenForm entry={entry} onSaved={store} /> : null}
+          {error ? <FieldError>{error}</FieldError> : null}
+          {choice === "token" ? <TokenForm entry={entry} onSaved={store} attempt={attempt} /> : null}
           {choice === "list" ? (
             <UserListField
+              invalid={Boolean(error)}
               result={listResult}
               onRead={async (text) => {
                 store(await setUserList(entry.id, text));
@@ -86,6 +86,7 @@ export function PeopleStep({
                     .finally(() => setSkipping(false));
                 }}
                 label={t("imports.people.skip.confirm")}
+                {...(error ? { error: t("imports.people.skip.missing") } : {})}
               />
               {skipError ? (
                 <ErrorState title={t("imports.people.saveFailed")} cause={problemMessage(t, skipError)} />
@@ -98,22 +99,43 @@ export function PeopleStep({
   );
 }
 
-function TokenForm({ entry, onSaved }: { entry: ImportView; onSaved: (entry: ImportView) => void }) {
+type TokenProblems = { site?: string; email?: string; token?: string };
+
+function TokenForm({
+  entry,
+  onSaved,
+  attempt,
+}: {
+  entry: ImportView;
+  onSaved: (entry: ImportView) => void;
+  attempt: number;
+}) {
   const { t } = useTranslation();
   const connected = entry.peopleSource?.kind === "token" ? entry.peopleSource : null;
   const [editing, setEditing] = useState(connected === null);
   const [site, setSite] = useState(connected?.site ?? "");
   const [email, setEmail] = useState(connected?.email ?? "");
   const [token, setToken] = useState("");
-  const [errors, setErrors] = useState<{ site?: string; email?: string; token?: string }>({});
+  const [errors, setErrors] = useState<TokenProblems>({});
   const [failure, setFailure] = useState<unknown>(null);
   const [checking, setChecking] = useState(false);
+  const [seenAttempt, setSeenAttempt] = useState(attempt);
 
-  const check = async () => {
-    const next: typeof errors = {};
+  const problems = (): TokenProblems => {
+    const next: TokenProblems = {};
     if (!site.trim()) next.site = t("imports.people.token.siteRequired");
     if (!/^[^\s@]+@[^\s@]+$/.test(email.trim())) next.email = t("imports.people.token.emailInvalid");
     if (!token.trim()) next.token = t("imports.people.token.tokenRequired");
+    return next;
+  };
+
+  if (seenAttempt !== attempt) {
+    setSeenAttempt(attempt);
+    if (editing) setErrors(problems());
+  }
+
+  const check = async () => {
+    const next = problems();
     setErrors(next);
     setFailure(null);
     if (Object.keys(next).length > 0) {

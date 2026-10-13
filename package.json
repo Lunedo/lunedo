@@ -9,7 +9,7 @@
     "node": ">=24.20 <25"
   },
   "scripts": {
-    "dev": "docker compose -f docker/compose.dev.yml up --build",
+    "dev": "node scripts/dev.ts",
     "dev:down": "docker compose -f docker/compose.dev.yml --profile idp down",
     "dev:idp": "docker compose -f docker/compose.dev.yml --profile idp up --detach --wait keycloak authentik-server authentik-worker openldap",
     "dev:reset": "node scripts/reset-dev.ts",

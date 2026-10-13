@@ -29,11 +29,11 @@ describe("the organization step", () => {
       }),
     });
     await renderStep();
-    expect(screen.getByRole("combobox", { name: "Date format" }).textContent).toContain("DD/MM/YYYY");
+    expect(screen.getByRole("combobox", { name: "Date format" }).textContent).toContain("D MMM YYYY");
 
     await userEvent.click(screen.getByRole("combobox", { name: "Default language" }));
     await userEvent.click(await screen.findByRole("option", { name: "Deutsch" }));
-    expect(screen.getByRole("combobox", { name: "Date format" }).textContent).toContain("DD/MM/YYYY");
+    expect(screen.getByRole("combobox", { name: "Date format" }).textContent).toContain("D MMM YYYY");
 
     await userEvent.click(screen.getByRole("combobox", { name: "Date format" }));
     await userEvent.click(await screen.findByRole("option", { name: /^YYYY-MM-DD/ }));

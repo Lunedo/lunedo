@@ -21,14 +21,15 @@ export function keyName(event: KeyPress, apple = isApplePlatform()): string {
 
 export function isTypingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
-  if (target.isContentEditable) return true;
+  if (target.isContentEditable || target.closest("[contenteditable]:not([contenteditable='false'])"))
+    return true;
   const tag = target.tagName;
   if (tag === "TEXTAREA" || tag === "SELECT") return true;
   if (tag === "INPUT") {
     const type = (target as HTMLInputElement).type;
     return !["checkbox", "radio", "button", "submit", "reset", "range"].includes(type);
   }
-  return target.getAttribute("role") === "combobox";
+  return ["combobox", "textbox", "searchbox"].includes(target.getAttribute("role") ?? "");
 }
 
 export interface SequenceMatcher {

@@ -45,6 +45,15 @@ describe("keyboard", () => {
     expect(isTypingTarget(textarea)).toBe(true);
     expect(isTypingTarget(checkbox)).toBe(false);
     expect(isTypingTarget(document.body)).toBe(false);
+    const editor = document.createElement("div");
+    editor.setAttribute("contenteditable", "true");
+    const paragraph = document.createElement("p");
+    editor.append(paragraph);
+    const textbox = document.createElement("div");
+    textbox.setAttribute("role", "textbox");
+    expect(isTypingTarget(editor)).toBe(true);
+    expect(isTypingTarget(paragraph)).toBe(true);
+    expect(isTypingTarget(textbox)).toBe(true);
   });
 
   it("shows keys in the platform's notation", () => {

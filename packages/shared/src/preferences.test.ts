@@ -17,7 +17,7 @@ describe("formats", () => {
 
   it("propose formats from the language and the time zone", () => {
     expect(proposeFormats("de", "Europe/Vienna")).toEqual({
-      dateFormat: "DD.MM.YYYY",
+      dateFormat: "D MMM YYYY",
       timeFormat: "24h",
       numberFormat: "de-DE",
       firstDayOfWeek: "monday",
@@ -25,7 +25,7 @@ describe("formats", () => {
     expect(proposeFormats("de", "Europe/Zurich").numberFormat).toBe("de-CH");
     expect(proposeFormats("en", "America/New_York")).toEqual(defaultFormats);
     expect(proposeFormats("en", "Europe/London")).toEqual({
-      dateFormat: "DD/MM/YYYY",
+      dateFormat: "D MMM YYYY",
       timeFormat: "24h",
       numberFormat: "en-US",
       firstDayOfWeek: "monday",
@@ -38,5 +38,7 @@ describe("formats", () => {
     expect(formatDate(instant, "MM/DD/YYYY", "UTC")).toBe("09/30/2026");
     expect(formatDate(instant, "YYYY-MM-DD", "Europe/Vienna")).toBe("2026-10-01");
     expect(formatDate(instant, "DD/MM/YYYY", "Europe/Vienna")).toBe("01/10/2026");
+    expect(formatDate(instant, "D MMM YYYY", "Europe/Vienna")).toBe("1 Oct 2026");
+    expect(formatDate(instant, "D MMM YYYY", "UTC", "de")).toBe("30. Sept. 2026");
   });
 });

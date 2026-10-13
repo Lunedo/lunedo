@@ -72,11 +72,14 @@ export function PageLabels({ pageId }: { pageId: string }) {
     <div className="flex flex-wrap items-center gap-2">
       <ul aria-label={t("labels.title")} className="flex flex-wrap items-center gap-2">
         {current.map((label) => (
-          <li key={label} className="inline-flex items-center rounded-full bg-surface-sunken text-sm">
+          <li
+            key={label}
+            className="relative inline-flex h-control-sm items-center rounded-full bg-surface-sunken text-sm"
+          >
             <Link
               to="/spaces/$spaceKey/labels/$label"
               params={{ spaceKey: space.key, label }}
-              className="inline-flex min-h-hit items-center gap-1 rounded-full ps-3 pe-2 hover:underline focus-visible:focus-ring"
+              className="relative inline-flex h-full items-center gap-1 rounded-full ps-3 pe-2 after:absolute after:top-1/2 after:left-0 after:h-hit after:w-full after:-translate-y-1/2 hover:underline focus-visible:focus-ring"
             >
               <Tag aria-hidden="true" className="size-icon-sm text-text-muted" />
               {label}
@@ -85,7 +88,7 @@ export function PageLabels({ pageId }: { pageId: string }) {
               <button
                 type="button"
                 aria-label={t("labels.remove", { label })}
-                className="inline-flex size-hit items-center justify-center rounded-full text-text-muted hover:bg-hover focus-visible:focus-ring"
+                className="relative inline-flex size-control-sm items-center justify-center rounded-full text-text-muted after:absolute after:top-1/2 after:left-1/2 after:size-hit after:-translate-x-1/2 after:-translate-y-1/2 hover:bg-hover focus-visible:focus-ring"
                 onClick={() => void remove(label)}
               >
                 <X aria-hidden="true" className="size-icon-sm" />

@@ -565,6 +565,9 @@ export const trashEntrySchema = z
     deletedBy: actorSchema.nullable().describe("Who deleted it."),
     stageTwoAt: timestamp("When the entry reached stage 2, or null.").nullable(),
     removedAt: timestamp("When the entry will be deleted permanently, by the current retention settings."),
+    formerParentEntryId: uuid(
+      "The trash entry of the page or folder this item was below, when that one is in the same trash list; restoring with `withParents=true` restores both. Null otherwise.",
+    ).nullable(),
   })
   .describe("An entry of the trash.");
 
@@ -583,6 +586,7 @@ export const exampleTrashEntry = {
   deletedBy: { id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20", name: "Lukas Hofer" },
   stageTwoAt: null,
   removedAt: "2027-02-14T10:00:00.000Z",
+  formerParentEntryId: null,
 };
 
 export const archivedItemSchema = z

@@ -182,13 +182,27 @@ describe.skipIf(!baseUrl)("Confluence imports", () => {
     expect(ready.found).toMatchObject({
       pages: 8,
       attachments: 3,
-      people: 2,
+      people: 3,
       macroKinds: 8,
       spaceKey: "SYN",
     });
     expect(ready.spaceName).toBe("Synthetic space");
     expect(ready.spaceKey).toBe("SYN");
   });
+
+  it.each(["xml", "csv"] as const)(
+    "counts the people at the check step the way the report counts them afterwards (%s)",
+    async (format) => {
+      const id = await prepared(syntheticExport(), { format, key: `CNT${format.toUpperCase()}` });
+      const before = await test.services.imports.get(as(admin), id);
+      expect(before.found?.people).toBe(3);
+      await test.services.imports.start(as(admin), id);
+      await drive(id);
+      const after = await test.services.imports.get(as(admin), id);
+      expect(after.counts.people).toBe(before.found?.people);
+      expect((after.counts.people ?? 0) - (after.counts.peopleMatched ?? 0)).toBe(3);
+    },
+  );
 
   it("reports an export of the other format at the file step", async () => {
     const imports = test.services.imports;

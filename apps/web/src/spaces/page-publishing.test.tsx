@@ -1,85 +1,60 @@
 import { screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { createRef } from "react";
 import { describe, expect, it } from "vitest";
-import type { SaveState } from "../editor/index.js";
 import { renderWithProviders } from "../testing/render.js";
-import { PublishButton } from "./page-publishing.js";
-import type { ItemDetails } from "./space-queries.js";
+import type { Draft } from "./content-queries.js";
+import { DraftBanner, DraftStatusLine } from "./page-publishing.js";
 
-const page = (ancestors: ItemDetails["ancestors"]): ItemDetails => ({
-  id: "01929b1e-0000-7000-8000-0000000000b2",
-  spaceId: "01929b1e-0000-7000-8000-0000000000a1",
-  parentId: ancestors.at(-1)?.id ?? null,
-  kind: "page",
-  title: "VPN access",
-  description: "",
-  width: "fixed",
-  mode: "publish",
-  published: false,
-  archived: false,
-  position: "a0",
-  hasChildren: false,
-  viewRestriction: "none",
-  editRestricted: false,
-  link: null,
-  creatorId: null,
-  ownerId: null,
-  createdAt: "2026-10-05T08:00:00.000Z",
-  updatedAt: "2026-10-05T08:00:00.000Z",
-  contentUpdatedAt: "2026-10-05T08:00:00.000Z",
-  spaceKey: "ITOPS",
-  spaceName: "IT Operations",
-  spaceAccess: true,
-  ancestors,
-});
-
-async function openPublish(ancestors: ItemDetails["ancestors"], language = "en") {
-  const saveState = createRef<SaveState>() as { current: SaveState };
-  saveState.current = "saved";
-  await renderWithProviders(
-    <PublishButton page={page(ancestors)} draft={undefined} saveState={saveState} />,
-    language,
-  );
-  await userEvent.click(
-    screen.getByRole("button", { name: language === "de" ? "Veröffentlichen" : "Publish" }),
-  );
+function draft(names: string[], overrides: Partial<Draft> = {}): Draft {
+  return {
+    hasChanges: true,
+    changes: 4,
+    basedOn: 2,
+    contributors: names.map((name, index) => ({ id: `0192a000-0000-7000-8000-00000000000${index}`, name })),
+    ...overrides,
+  } as Draft;
 }
 
-describe("publishing below an unpublished page", () => {
-  it("names the unpublished ancestors and says that only this page is published", async () => {
-    await openPublish([
-      { id: "01929b1e-0000-7000-8000-0000000000c1", kind: "folder", title: "Network", published: true },
-      { id: "01929b1e-0000-7000-8000-0000000000c2", kind: "page", title: "Remote work", published: false },
-    ]);
-    expect(await screen.findByText("Readers will not see this page yet")).toBeTruthy();
-    expect(
-      screen.getByText(
-        "It sits below “Remote work”, which is not published. Readers see this page once that page is published. Publishing here publishes only this page.",
-      ),
-    ).toBeTruthy();
-  });
-
-  it("names every unpublished ancestor in German", async () => {
-    await openPublish(
-      [
-        { id: "01929b1e-0000-7000-8000-0000000000c1", kind: "page", title: "Handbuch", published: false },
-        { id: "01929b1e-0000-7000-8000-0000000000c2", kind: "page", title: "Remote", published: false },
-      ],
+describe("the draft banner", () => {
+  it("uses the verb that fits one or several people in German", async () => {
+    await renderWithProviders(
+      <DraftBanner draft={draft(["Olivia Owner", "Bea Berger"])} onOpen={() => undefined} />,
       "de",
     );
     expect(
-      await screen.findByText(
-        "Sie liegt unter „Handbuch“, „Remote“, die noch nicht veröffentlicht sind. Leser sehen diese Seite, sobald diese Seiten veröffentlicht sind. Hier wird nur diese Seite veröffentlicht.",
+      screen.getByText(
+        "Olivia Owner und Bea Berger haben an einem Entwurf mit 4 unveröffentlichten Änderungen gearbeitet. Du siehst die veröffentlichte Version.",
       ),
     ).toBeTruthy();
   });
 
-  it("shows no notice when every ancestor is published", async () => {
-    await openPublish([
-      { id: "01929b1e-0000-7000-8000-0000000000c1", kind: "page", title: "Handbook", published: true },
-    ]);
-    expect(await screen.findByText("Until it is published, only editors see this page.")).toBeTruthy();
-    expect(screen.queryByText("Readers will not see this page yet")).toBeNull();
+  it("keeps the singular for one person and one change in German", async () => {
+    await renderWithProviders(
+      <DraftBanner draft={draft(["Olivia Owner"], { changes: 1 })} onOpen={() => undefined} />,
+      "de",
+    );
+    expect(
+      screen.getByText(
+        "Olivia Owner hat an einem Entwurf mit 1 unveröffentlichten Änderung gearbeitet. Du siehst die veröffentlichte Version.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("names several people in English", async () => {
+    await renderWithProviders(
+      <DraftBanner draft={draft(["Olivia Owner", "Bea Berger"])} onOpen={() => undefined} />,
+    );
+    expect(
+      screen.getByText(
+        "Olivia Owner and Bea Berger worked on a draft with 4 unpublished changes. You see the published version.",
+      ),
+    ).toBeTruthy();
+  });
+});
+
+describe("the draft status line", () => {
+  it("keeps the separator at the end of the line before it instead of at the start of the next", async () => {
+    await renderWithProviders(<DraftStatusLine draft={draft(["Olivia Owner"])} />);
+    const line = screen.getByRole("status");
+    expect(line.textContent).toContain("since version 2 · Readers see version 2");
   });
 });

@@ -1,8 +1,9 @@
 import type { LucideIcon } from "lucide-react";
 import { DropdownMenu, Popover as PopoverPrimitive, Tabs as TabsPrimitive } from "radix-ui";
-import type { ReactNode } from "react";
+import { type ReactNode, useRef } from "react";
 import { classNames } from "./class-names.js";
 import { Icon } from "./icon.js";
+import { rememberMenuOpener } from "./return-focus.js";
 import { ScrollArea } from "./scroll-area.js";
 
 type Side = "top" | "right" | "bottom" | "left";
@@ -72,9 +73,12 @@ export interface MenuProps {
 }
 
 export function Menu({ trigger, items, align = "end", side = "bottom" }: MenuProps) {
+  const opener = useRef<HTMLButtonElement>(null);
   return (
     <DropdownMenu.Root>
-      <DropdownMenu.Trigger asChild>{trigger}</DropdownMenu.Trigger>
+      <DropdownMenu.Trigger asChild ref={opener}>
+        {trigger}
+      </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content
           align={align}
@@ -101,7 +105,10 @@ export function Menu({ trigger, items, align = "end", side = "bottom" }: MenuPro
             return (
               <DropdownMenu.Item
                 key={item.label}
-                onSelect={item.onSelect}
+                onSelect={() => {
+                  rememberMenuOpener(opener.current);
+                  item.onSelect();
+                }}
                 {...(item.disabled !== undefined ? { disabled: item.disabled } : {})}
                 className={classNames(
                   "flex h-row cursor-default items-center gap-2 rounded-sm px-2 outline-none select-none data-disabled:cursor-not-allowed data-disabled:text-text-muted data-highlighted:bg-hover",

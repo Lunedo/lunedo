@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
 import { LoadError } from "../errors/failure.js";
+import { yearInZone } from "../format/zoned.js";
 import { translateKey } from "../i18n/translate.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { itemSlug } from "../spaces/item-paths.js";
@@ -20,8 +21,7 @@ const STATE_BADGE = {
 } as const;
 
 function yearOf(meeting: MeetingSummary, timeZone: string): string {
-  if (!meeting.startsAt) return "";
-  return new Intl.DateTimeFormat("en", { year: "numeric", timeZone }).format(new Date(meeting.startsAt));
+  return meeting.startsAt ? yearInZone(new Date(meeting.startsAt), timeZone) : "";
 }
 
 export function MeetingsList({ seriesId, spaceKey }: { seriesId: string; spaceKey: string }) {

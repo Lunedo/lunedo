@@ -14,6 +14,10 @@ const fetchCompare = (pageId: string, from: VersionSide, to: VersionSide) =>
       params: { path: { pageId }, query: { from: String(from), to: String(to) } as never },
     }),
   );
+const fetchVersion = (pageId: string, number: number) =>
+  request(() =>
+    api.GET("/api/v1/pages/{pageId}/versions/{number}", { params: { path: { pageId, number } } }),
+  );
 const fetchDiscarded = (pageId: string) =>
   request(() => api.GET("/api/v1/pages/{pageId}/discarded-drafts", { params: { path: { pageId } } }));
 const fetchTrash = (spaceId: string) =>
@@ -64,6 +68,13 @@ export function versionsQuery(pageId: string) {
   return queryOptions({
     queryKey: contentKeys.versions(pageId),
     queryFn: () => fetchVersions(pageId),
+  });
+}
+
+export function versionQuery(pageId: string, number: number) {
+  return queryOptions({
+    queryKey: contentKeys.version(pageId, number),
+    queryFn: () => fetchVersion(pageId, number),
   });
 }
 

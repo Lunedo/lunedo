@@ -43,6 +43,17 @@ export function reportFilters(attrs: Record<string, unknown>): TaskReportFilters
   };
 }
 
+export function hasActiveFilters(filters: TaskReportFilters): boolean {
+  return (
+    filters.pageIds.length > 0 ||
+    filters.labels.length > 0 ||
+    filters.assignee !== null ||
+    filters.assignedToViewer ||
+    filters.due !== "any" ||
+    filters.status !== "open"
+  );
+}
+
 export function reportQuery(filters: TaskReportFilters): TaskQuery {
   return {
     status: filters.status,
@@ -177,8 +188,16 @@ export function TaskReport({
       <TaskTable
         query={reportQuery(filters)}
         showAssignee={!filters.assignedToViewer && !filters.assignee}
-        emptyTitle={t("tasks.report.emptyTitle")}
-        emptyDescription={t("tasks.report.emptyDescription")}
+        emptyTitle={
+          hasActiveFilters(filters) ? t("tasks.report.emptyTitle") : t("tasks.report.firstUseTitle")
+        }
+        emptyDescription={
+          hasActiveFilters(filters)
+            ? t("tasks.report.emptyDescription")
+            : filters.seriesId
+              ? t("tasks.report.firstUseSeriesDescription")
+              : t("tasks.report.firstUseDescription")
+        }
       />
     </section>
   );

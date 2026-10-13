@@ -1,7 +1,9 @@
 const FOCUSABLE = "input, textarea, select, button, [tabindex]";
 
 export function focusFirstInvalid(root: ParentNode = document): boolean {
-  const invalid = root.querySelector<HTMLElement>('[aria-invalid="true"]');
+  const invalid =
+    root.querySelector<HTMLElement>('[aria-invalid="true"]') ??
+    root.querySelector<HTMLElement>("[data-field-error]");
   if (!invalid) return false;
   const target = invalid.matches(FOCUSABLE) ? invalid : invalid.querySelector<HTMLElement>(FOCUSABLE);
   (target ?? invalid).focus();

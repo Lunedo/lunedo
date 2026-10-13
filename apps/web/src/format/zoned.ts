@@ -53,3 +53,47 @@ export function instantToZoned(instant: string | Date, timeZone: string): { date
     time: `${value("hour")}:${value("minute")}`,
   };
 }
+
+export function localDateInZone(instant: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(instant);
+}
+
+export function localTimeInZone(instant: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(instant);
+}
+
+export function instantInZone(date: string, time: string, timeZone: string): Date {
+  const guess = new Date(`${date}T${time}:00Z`);
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const local = `${localDateInZone(guess, timeZone)}T${localTimeInZone(guess, timeZone)}`;
+    const offset = new Date(`${local}:00Z`).getTime() - guess.getTime();
+    const candidate = new Date(new Date(`${date}T${time}:00Z`).getTime() - offset);
+    if (candidate.getTime() === guess.getTime()) return candidate;
+    guess.setTime(candidate.getTime());
+  }
+  return guess;
+}
+
+export function weekdayLabel(index: number, language: string, width: "long" | "short"): string {
+  const monday = new Date(Date.UTC(2024, 0, 1, 12));
+  const date = new Date(monday.getTime() + index * 86_400_000);
+  return new Intl.DateTimeFormat(language, { weekday: width, timeZone: "UTC" }).format(date);
+}
+
+export function yearInZone(instant: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat("en", { year: "numeric", timeZone }).format(instant);
+}
+
+export function dayInZone(instant: Date, timeZone: string): string {
+  return localDateInZone(instant, timeZone);
+}

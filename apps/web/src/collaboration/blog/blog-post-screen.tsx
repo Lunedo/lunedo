@@ -40,6 +40,7 @@ import { AttachmentsSection, PageDropZone } from "../../files/attachments-sectio
 import { CoverEditor, CoverImage } from "../../files/cover.js";
 import { AttachmentPreviewProvider } from "../../files/preview-host.js";
 import { UploadsProvider } from "../../files/uploads.js";
+import { instantToZoned, zonedToInstant } from "../../format/zoned.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { useDocumentTitle } from "../../screens/settings/settings-page.js";
 import { useDeleteItem } from "../../spaces/content-actions.js";
@@ -58,7 +59,6 @@ import { type BlogPost, blogPostQuery, collaborationKeys } from "../queries.js";
 import { PageReactions } from "../reaction-bar.js";
 import { PostBadges, PostMeta } from "./blog-list.js";
 import { HeldNotice } from "./held-notice.js";
-import { instantToZoned, zonedToInstant } from "./schedule.js";
 
 const route = getRouteApi("/app/spaces/$spaceKey/blog/$itemId/{-$slug}");
 

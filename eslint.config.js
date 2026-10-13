@@ -25,4 +25,23 @@ export default defineConfig(
       "@typescript-eslint/no-misused-promises": "error",
     },
   },
+  {
+    files: ["apps/web/src/**/*.{ts,tsx}"],
+    ignores: ["apps/web/src/format/**", "**/*.test.{ts,tsx}"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "MemberExpression[property.name=/^toLocale(Date|Time)?String$/]",
+          message:
+            "Format dates and times with the formatter from useFormat() so that every screen reads alike.",
+        },
+        {
+          selector: "MemberExpression[object.name='Intl'][property.name='DateTimeFormat']",
+          message:
+            "Format dates and times with the formatter from useFormat(), or add a helper to apps/web/src/format.",
+        },
+      ],
+    },
+  },
 );

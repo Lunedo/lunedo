@@ -23,6 +23,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client.js";
 import { type Preference, preferencesQuery, queryKeys, sessionQuery } from "../api/queries.js";
 import { request } from "../api/request.js";
+import { browserTimeZone } from "../format/time-zones.js";
 import { isLanguage, type Language } from "../i18n/index.js";
 
 export interface PreferenceValues {
@@ -70,7 +71,7 @@ function oneOf<T extends string | number>(values: readonly T[], value: unknown, 
 export function defaultPreferences(language: Language): PreferenceValues {
   return {
     language,
-    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+    timeZone: browserTimeZone(),
     ...defaultFormats,
     colorMode: "system",
     highContrast: false,

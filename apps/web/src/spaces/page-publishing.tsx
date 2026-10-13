@@ -143,8 +143,10 @@ export function DraftStatusLine({ draft }: { draft: Draft | undefined }) {
   const { t } = useTranslation();
   if (!draft) return null;
   return (
-    <p className="flex flex-wrap items-center gap-2 text-sm text-text-muted" role="status">
-      <Badge variant="warning">{t("versions.draftBadge")}</Badge>
+    <p className="text-sm text-text-muted" role="status">
+      <span className="me-2 inline-block align-middle">
+        <Badge variant="warning">{t("versions.draftBadge")}</Badge>
+      </span>
       <span>
         {draft.basedOn === null
           ? t("versions.notPublishedYet")
@@ -152,17 +154,18 @@ export function DraftStatusLine({ draft }: { draft: Draft | undefined }) {
             ? t("versions.changesSince", { count: draft.changes ?? 0, version: draft.basedOn })
             : t("versions.noChangesSince", { version: draft.basedOn })}
       </span>
-      {draft.basedOn !== null ? (
-        <span>· {t("versions.readersSee", { version: draft.basedOn })}</span>
-      ) : (
-        <span>· {t("versions.onlyEditorsSee")}</span>
-      )}
+      <span aria-hidden="true">{" ·"}</span>{" "}
+      <span>
+        {draft.basedOn !== null
+          ? t("versions.readersSee", { version: draft.basedOn })
+          : t("versions.onlyEditorsSee")}
+      </span>
     </p>
   );
 }
 
 export function DraftBanner({ draft, onOpen }: { draft: Draft | undefined; onOpen: () => void }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   if (!draft?.hasChanges) return null;
   const names = draft.contributors
     .map((person) => person.name)
@@ -179,7 +182,11 @@ export function DraftBanner({ draft, onOpen }: { draft: Draft | undefined; onOpe
       {draft.basedOn === null
         ? t("versions.unpublishedBanner")
         : names.length > 0
-          ? t("versions.draftBannerBy", { names: names.join(", "), count: draft.changes ?? 0 })
+          ? t("versions.draftBannerBy", {
+              names: new Intl.ListFormat(i18n.language, { type: "conjunction" }).format(names),
+              people: names.length,
+              count: draft.changes ?? 0,
+            })
           : t("versions.draftBanner", { count: draft.changes ?? 0 })}
     </Notice>
   );

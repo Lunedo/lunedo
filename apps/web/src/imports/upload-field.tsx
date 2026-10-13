@@ -20,7 +20,9 @@ export function UploadField({
   folder,
   onLinked,
   onComplete,
+  invalid = false,
 }: {
+  invalid?: boolean;
   organizationId: string;
   current: ImportView["file"];
   maxBytes: number;
@@ -104,7 +106,7 @@ export function UploadField({
         }}
         className={classNames(
           "flex cursor-pointer flex-wrap items-center gap-3 rounded-md border-2 border-dashed bg-surface-sunken p-4 focus-within:focus-ring",
-          dragging ? "border-accent bg-accent-soft" : "border-border",
+          dragging ? "border-accent bg-accent-soft" : invalid ? "border-danger" : "border-border",
         )}
       >
         <Icon icon={Upload} className="text-text-muted" />
@@ -121,6 +123,7 @@ export function UploadField({
           type="file"
           accept=".zip,application/zip"
           aria-describedby={hintId}
+          {...(invalid ? { "aria-invalid": true } : {})}
           className="sr-only"
           onChange={(event) => {
             choose(event.target.files);
