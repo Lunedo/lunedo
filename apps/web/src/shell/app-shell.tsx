@@ -17,6 +17,7 @@ import { CommandPaletteHost } from "./command-palette.js";
 import { railItems, type ShellContext, type Shortcut, shortcuts } from "./extensions.js";
 import { Heron } from "./heron.js";
 import { createSequenceMatcher, isTypingTarget, keyName } from "./keyboard.js";
+import { useNavigationFocus } from "./navigation-focus.js";
 import { useRegistry } from "./registry.js";
 import { type ShellState, ShellStateContext } from "./shell.js";
 import { OrganizationProvider, useOrganizationState } from "./shell-context.js";
@@ -81,6 +82,7 @@ function ShellFrame() {
   );
 
   useGlobalShortcuts(state, registeredShortcuts);
+  useNavigationFocus();
   useNotificationStream(true);
 
   return (

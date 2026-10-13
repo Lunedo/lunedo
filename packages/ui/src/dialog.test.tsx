@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { Button } from "./button.js";
 import { ConfirmDialog, Dialog, Drawer } from "./dialog.js";
 import { Input } from "./field.js";
+import { Menu } from "./overlays.js";
 import { renderUi } from "./testing/render.js";
 
 function DialogProbe({ onOpenChange }: { onOpenChange?: (open: boolean) => void }) {
@@ -153,5 +154,151 @@ describe("dialog width", () => {
       </Dialog>,
     );
     expect(screen.getByRole("dialog", { name: "Create role" }).className).toContain("min-w-0");
+  });
+});
+
+describe("initial focus", () => {
+  const closeButton = () => screen.getByRole("button", { name: "Close" });
+
+  it("goes to the first field and never to the close button", async () => {
+    renderUi(
+      <Dialog
+        open
+        onOpenChange={() => undefined}
+        title="Add a running topic"
+        footer={<Button>Add topic</Button>}
+      >
+        <Input aria-label="Title" />
+        <Input aria-label="Notes" />
+      </Dialog>,
+    );
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText("Title")));
+    expect(document.activeElement).not.toBe(closeButton());
+  });
+
+  it("goes to the first control of the content when there is no field", async () => {
+    renderUi(
+      <Dialog open onOpenChange={() => undefined} title="Restore version 1?">
+        <Button>Keep current page</Button>
+        <Button>Restore version 1</Button>
+      </Dialog>,
+    );
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole("button", { name: "Keep current page" })),
+    );
+  });
+
+  it("goes to the dialog itself when it holds nothing to operate", async () => {
+    renderUi(
+      <Dialog open onOpenChange={() => undefined} title="Notice">
+        <p>Nothing to do here.</p>
+      </Dialog>,
+    );
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("dialog", { name: "Notice" })));
+    expect(document.activeElement).not.toBe(closeButton());
+  });
+
+  it("goes to the safe action of a destructive confirmation and to the field of a typed one", async () => {
+    const { unmount } = renderUi(
+      <ConfirmDialog
+        open
+        onOpenChange={() => undefined}
+        title="Remove Anna?"
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        destructive
+        onConfirm={() => undefined}
+      />,
+    );
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: "Cancel" })));
+    unmount();
+    renderUi(
+      <ConfirmDialog
+        open
+        onOpenChange={() => undefined}
+        title="Delete Editors?"
+        confirmLabel="Delete group"
+        cancelLabel="Keep group"
+        destructive
+        typedConfirmation={{ value: "Editors", label: "Type Editors", mismatch: "No match." }}
+        onConfirm={() => undefined}
+      />,
+    );
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText("Type Editors")));
+  });
+
+  it("goes into the content of a drawer instead of its close button", async () => {
+    renderUi(
+      <Drawer open onOpenChange={() => undefined} title="Preview" side="right" size="panel">
+        <a href="/file">Download</a>
+      </Drawer>,
+    );
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("link", { name: "Download" })));
+  });
+});
+
+describe("returning focus", () => {
+  function MenuProbe({ onOpened }: { onOpened?: () => void }) {
+    const [open, setOpen] = useState(false);
+    return (
+      <>
+        <Menu
+          trigger={<Button>More actions</Button>}
+          items={[
+            {
+              label: "Move…",
+              onSelect: () => {
+                setOpen(true);
+                onOpened?.();
+              },
+            },
+          ]}
+        />
+        <Dialog open={open} onOpenChange={setOpen} title="Move page">
+          <Input aria-label="Place below" />
+        </Dialog>
+      </>
+    );
+  }
+
+  it("goes back to the menu button when the dialog was opened from a menu", async () => {
+    renderUi(<MenuProbe />);
+    const trigger = screen.getByRole("button", { name: "More actions" });
+    trigger.focus();
+    await userEvent.keyboard("{Enter}");
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Move…" }));
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText("Place below")));
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+  });
+
+  it("goes to the main heading when the opening element no longer exists", async () => {
+    function Probe() {
+      const [open, setOpen] = useState(false);
+      const [gone, setGone] = useState(false);
+      return (
+        <main>
+          <h1>Platform Team</h1>
+          {gone ? null : <Button onClick={() => setOpen(true)}>Move to trash</Button>}
+          <Dialog open={open} onOpenChange={setOpen} title="Move to trash?">
+            <Button
+              onClick={() => {
+                setGone(true);
+                setOpen(false);
+              }}
+            >
+              Confirm
+            </Button>
+          </Dialog>
+        </main>
+      );
+    }
+    renderUi(<Probe />);
+    await userEvent.click(screen.getByRole("button", { name: "Move to trash" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Confirm" }));
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Platform Team" })),
+    );
   });
 });

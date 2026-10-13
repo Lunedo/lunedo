@@ -87,6 +87,7 @@ export {
   controlClassName,
   Field,
   type FieldControlProps,
+  FieldError,
   type FieldProps,
   Input,
   type InputProps,
@@ -130,6 +131,7 @@ export {
   type RailLinkProps,
   type RailProps,
 } from "./rail.js";
+export { focusMainHeading, mainHeading } from "./return-focus.js";
 export {
   ScrollArea,
   type ScrollAreaProps,

@@ -46,6 +46,15 @@ export interface FieldProps {
   children: ReactNode;
 }
 
+export function FieldError({ id, children }: { id?: string; children: ReactNode }) {
+  return (
+    <p id={id} role="alert" tabIndex={-1} data-field-error="" className="text-sm text-danger">
+      <Icon icon={CircleAlert} size="sm" className="mr-1 inline align-text-bottom" />
+      {children}
+    </p>
+  );
+}
+
 export function Field({ label, hint, error, required = false, id, labelAction, children }: FieldProps) {
   const generated = useId();
   const controlId = id ?? `field-${generated}`;
