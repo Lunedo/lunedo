@@ -14,8 +14,8 @@ concurrency:
 jobs:
   rerun:
     name: Run CI again for the breaking-api-change label
-    if: github.event.label.name == 'breaking-api-change'
-    runs-on: ubuntu-24.04
+    if: github.event.label.name == 'breaking-api-change' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 60
     permissions:
       actions: write
