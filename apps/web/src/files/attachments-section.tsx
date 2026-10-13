@@ -1,4 +1,4 @@
-import { Button, IconButton, Menu, Skeleton, useToast } from "@pagehall/ui";
+import { Badge, Button, IconButton, Menu, Skeleton, useToast } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Download,
@@ -165,6 +165,21 @@ export function AttachmentsSection({ pageId, canEdit }: { pageId: string; canEdi
   const preview = useAttachmentPreview();
   const pending = (uploads?.items ?? []).filter((item) => item.state !== "done");
 
+  const undelete = (attachment: Attachment) =>
+    request(() =>
+      api.POST("/api/v1/pages/{pageId}/attachments/{attachmentId}/restore", {
+        params: { path: { pageId, attachmentId: attachment.id } },
+      }),
+    )
+      .then(() => queryClient.invalidateQueries({ queryKey: attachmentKeys.list(pageId) }))
+      .catch((error: unknown) =>
+        toast({
+          title: t("files.restoreFailed"),
+          description: problemMessage(t, error),
+          variant: "error",
+        }),
+      );
+
   const remove = async (attachment: Attachment) => {
     try {
       await request(() =>
@@ -176,20 +191,7 @@ export function AttachmentsSection({ pageId, canEdit }: { pageId: string; canEdi
       toast({
         title: t("files.deleted", { name: attachment.name }),
         undo: {
-          onUndo: () =>
-            void request(() =>
-              api.POST("/api/v1/pages/{pageId}/attachments/{attachmentId}/restore", {
-                params: { path: { pageId, attachmentId: attachment.id } },
-              }),
-            )
-              .then(() => queryClient.invalidateQueries({ queryKey: attachmentKeys.list(pageId) }))
-              .catch((error: unknown) =>
-                toast({
-                  title: t("files.restoreFailed"),
-                  description: problemMessage(t, error),
-                  variant: "error",
-                }),
-              ),
+          onUndo: () => void undelete(attachment),
         },
       });
     } catch (error) {
@@ -265,8 +267,19 @@ export function AttachmentsSection({ pageId, canEdit }: { pageId: string; canEdi
                 >
                   <Icon aria-hidden="true" className="size-icon-lg shrink-0 text-text-muted" />
                   <span className="flex min-w-0 flex-col">
-                    <span className="truncate font-medium" title={attachment.name}>
-                      {attachment.name}
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="truncate font-medium" title={attachment.name}>
+                        {attachment.name}
+                      </span>
+                      {attachment.draft ? (
+                        <Badge variant="warning">
+                          {attachment.draft === "added"
+                            ? t("files.draftAdded")
+                            : attachment.draft === "deleted"
+                              ? t("files.draftDeleted")
+                              : t("files.draftChanged")}
+                        </Badge>
+                      ) : null}
                     </span>
                     <span className="truncate text-sm text-text-muted">
                       {t("files.rowMeta", {
@@ -295,17 +308,25 @@ export function AttachmentsSection({ pageId, canEdit }: { pageId: string; canEdi
                         globalThis.location.assign(contentUrl(attachment.id, { download: true }));
                       },
                     },
-                    ...(canEdit
+                    ...(canEdit && attachment.draft === "deleted"
                       ? [
-                          { type: "separator" as const },
                           {
-                            label: t("files.delete"),
-                            icon: Trash2,
-                            danger: true,
-                            onSelect: () => void remove(attachment),
+                            label: t("files.undelete"),
+                            icon: RotateCcw,
+                            onSelect: () => void undelete(attachment),
                           },
                         ]
-                      : []),
+                      : canEdit
+                        ? [
+                            { type: "separator" as const },
+                            {
+                              label: t("files.delete"),
+                              icon: Trash2,
+                              danger: true,
+                              onSelect: () => void remove(attachment),
+                            },
+                          ]
+                        : []),
                   ]}
                 />
               </li>

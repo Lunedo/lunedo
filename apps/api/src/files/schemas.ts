@@ -34,6 +34,10 @@ export const attachmentSchema = z
     inline: z.boolean().describe("Whether browsers may show the file directly: images, video and audio."),
     version: z.number().int().describe("Number of the current version."),
     versions: z.number().int().describe("Number of stored versions."),
+    draft: extensibleEnum(
+      ["added", "changed", "deleted"],
+      "Only for people who can edit the page: `added` when readers do not see the file until the next publication, `changed` when readers still see an earlier version, `deleted` when the file was deleted in the draft and readers still see it until the next publication; restore it to keep it. Null when readers see this version.",
+    ).nullable(),
     uploadedBy: person.nullable().describe("Who uploaded the current version."),
     uploadedAt: timestamp("When the current version was uploaded."),
     createdAt: timestamp("When the file was first attached."),
@@ -82,6 +86,7 @@ export const exampleAttachment = {
   inline: true,
   version: 2,
   versions: 2,
+  draft: null,
   uploadedBy: { id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20", name: "Anna Berger" },
   uploadedAt: "2026-10-01T09:30:00.000Z",
   createdAt: "2026-09-28T14:02:00.000Z",

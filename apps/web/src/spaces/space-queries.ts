@@ -169,11 +169,13 @@ export function spacesChanged(queryClient: QueryClient, events: SpaceChangeEvent
       add(["items", event.itemId, "draft"]);
       add(["items", event.itemId, "compare"]);
       add(["items", event.itemId, "discarded"]);
+      add(["items", event.itemId, "attachments"]);
     }
     if (event.kind === "page" && event.itemId) {
       add(["items", event.itemId, "draft"]);
       add(["items", event.itemId, "versions"]);
       add(["items", event.itemId, "compare"]);
+      add(["items", event.itemId, "attachments"]);
       add(spaceKeys.content(event.itemId));
       add(spaceKeys.labels(event.itemId));
       add(spaceKeys.backlinks(event.itemId));

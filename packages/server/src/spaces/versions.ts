@@ -12,6 +12,12 @@ import { type Principal, SYSTEM } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import { type ContentActivity, syncCommentAnchors } from "../collaboration/content.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
+import {
+  attachmentDraftChanges,
+  discardAttachments,
+  publishAttachments,
+  restoreDiscardedAttachments,
+} from "../files/publication.js";
 import type { SettingsService } from "../settings/service.js";
 import { actorIdOf, auditScopeOf, SpaceError } from "./common.js";
 import {
@@ -93,11 +99,15 @@ interface LockedPage {
   versionedRevision: number;
   draftTitle: string | null;
   latest: number | null;
+  attachmentChanges: number;
 }
 
 function hasDraftChanges(page: LockedPage): boolean {
   return (
-    page.publishedVersionId === null || page.revision > page.versionedRevision || page.draftTitle !== null
+    page.publishedVersionId === null ||
+    page.revision > page.versionedRevision ||
+    page.draftTitle !== null ||
+    page.attachmentChanges > 0
   );
 }
 
@@ -175,6 +185,7 @@ export class VersionService {
       versionedRevision: Number(row.versioned_revision),
       draftTitle: row.draft_title,
       latest: row.latest === null ? null : Number(row.latest),
+      attachmentChanges: await attachmentDraftChanges(tx, itemId),
     };
   }
 
@@ -225,6 +236,7 @@ export class VersionService {
       update tree_items set title = ${title}, published_version_id = ${id}, content_updated_at = now(),
         updated_at = now()
       where id = ${page.itemId}`);
+    await publishAttachments(tx, page.itemId);
     await tx.execute(sql`
       update blog_posts set published_at = coalesce(published_at, now()), scheduled_at = null, scheduled_by = null,
         scheduled_time_zone = null, held_at = null, updated_at = now()
@@ -239,6 +251,7 @@ export class VersionService {
       draftTitle: null,
       title,
       latest: number,
+      attachmentChanges: 0,
     });
     return number;
   }
@@ -443,6 +456,8 @@ export class VersionService {
       const published = await this.#versionDocument(tx, itemId, page.publishedNumber);
       if (!published) throw new SpaceError("itemNotFound", "The published version does not exist");
       const discardedDraftId = await this.#saveDraft(tx, page, actor, "discarded");
+      await discardAttachments(tx, itemId, discardedDraftId, actorIdOf(actor));
+      await signalSpaceChange(tx, { spaceId: page.spaceId, kind: "draft", itemId });
       await this.#replaceContent(tx, page, actor, published.document);
       await tx.execute(sql`
         update page_documents set versioned_revision = revision, draft_title = null where item_id = ${itemId}`);
@@ -470,11 +485,14 @@ export class VersionService {
         throw new SpaceError("notPublishMode", "Only pages in publish mode have a draft");
       }
       if (hasDraftChanges(page) && page.publishedNumber !== null) {
-        await this.#saveDraft(tx, page, actor, "replaced");
+        const replaced = await this.#saveDraft(tx, page, actor, "replaced");
+        await discardAttachments(tx, itemId, replaced, actorIdOf(actor));
       }
+      await restoreDiscardedAttachments(tx, itemId, discardedDraftId, actorIdOf(actor));
       await this.#replaceContent(tx, page, actor, migrated(discarded.document, discarded.schema_version));
       await this.#setDraftTitle(tx, page, discarded.title);
       await tx.execute(sql`delete from discarded_drafts where id = ${discardedDraftId}`);
+      await signalSpaceChange(tx, { spaceId: page.spaceId, kind: "draft", itemId });
     });
   }
 
@@ -551,6 +569,7 @@ export class VersionService {
           await this.#createVersion(tx, page, { reason: "modeChanged", actorId: actorIdOf(actor) });
       }
       await tx.execute(sql`update tree_items set mode = ${mode}, updated_at = now() where id = ${itemId}`);
+      await publishAttachments(tx, itemId);
       const revealed = await refreshReaderVisibility(tx, [itemId]);
       await this.#activity.readerContentChanged(
         tx,
@@ -592,7 +611,8 @@ export class VersionService {
       return number;
     }
     if (page.mode === "publish" && hasDraftChanges(page) && page.publishedNumber !== null) {
-      await this.#saveDraft(tx, page, SYSTEM, "replaced");
+      const replaced = await this.#saveDraft(tx, page, SYSTEM, "replaced");
+      await discardAttachments(tx, page.itemId, replaced, null);
     }
     await this.#replaceContent(tx, page, SYSTEM, input.document, false);
     page.draftTitle = input.title;
@@ -717,17 +737,23 @@ export class VersionService {
             document: migrated(row.published_document, row.published_schema),
           }
         : null;
+    const attachmentChanges = await attachmentDraftChanges(this.#database, itemId);
     const hasChanges =
       row.published_version_id === null ||
       Number(row.revision) > Number(row.versioned_revision) ||
-      row.draft_title !== null;
+      row.draft_title !== null ||
+      attachmentChanges > 0;
     return {
       title,
       document,
       revision: Number(row.revision),
       updatedAt: new Date(row.updated_at),
       hasChanges,
-      changes: published ? (hasChanges ? diffDocuments(published, { title, document }).changes : 0) : null,
+      changes: published
+        ? hasChanges
+          ? diffDocuments(published, { title, document }).changes + attachmentChanges
+          : 0
+        : null,
       basedOn: row.published_number === null ? null : Number(row.published_number),
       contributors: contributors.map((id) => ({ id, name: names.get(id) ?? null })),
     };

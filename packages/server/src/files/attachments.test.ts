@@ -1,6 +1,8 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { Readable } from "node:stream";
 import { buffer } from "node:stream/consumers";
+import { uuidv7 } from "@pagehall/shared";
+import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { accountPrincipal, type Principal } from "../accounts/principal.js";
 import { SettingAboveMaximumError, SettingLockedError } from "../settings/service.js";
@@ -78,9 +80,20 @@ describe.skipIf(!baseUrl)("attachments", () => {
   }
 
   async function read(attachmentId: string, number?: number) {
-    const content = await test.services.attachments.content(attachmentId, number);
+    const content = await test.services.attachments.content(attachmentId, "draft", number);
     if (!content) throw new Error("missing");
     return (await buffer(await test.services.files.read(content.fileId))).toString();
+  }
+
+  async function waitForLockWait() {
+    for (let attempt = 0; attempt < 200; attempt += 1) {
+      const waiting = await test.pool.query<{ count: string }>(
+        "select count(*) as count from pg_stat_activity where datname = current_database() and wait_event_type = 'Lock'",
+      );
+      if (Number(waiting.rows[0]?.count) > 0) return;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    throw new Error("No session waited for a lock");
   }
 
   it("lists name, type and size and keeps a new version for the same name", async () => {
@@ -92,7 +105,7 @@ describe.skipIf(!baseUrl)("attachments", () => {
     expect(second).toMatchObject({ version: 2, versions: 2, name: "PLAN.txt" });
     const image = await upload(context, "logo.png", PNG);
     expect(image).toMatchObject({ contentType: "image/png", preview: "image", inline: true });
-    const listed = await test.services.attachments.list(context.reader, context.page.id);
+    const listed = await test.services.attachments.list(context.reader, context.page.id, "published");
     expect(listed.map((attachment) => attachment.name)).toEqual(["logo.png", "PLAN.txt"]);
     expect(await read(first.id, 1)).toBe("version one");
   });
@@ -104,7 +117,7 @@ describe.skipIf(!baseUrl)("attachments", () => {
     const restored = await test.services.attachments.restoreVersion(context.editor, first.id, 1);
     expect(restored.version).toBe(3);
     expect(await read(first.id)).toBe("one");
-    const versions = await test.services.attachments.versions(context.editor, first.id);
+    const versions = await test.services.attachments.versions(context.editor, first.id, "draft");
     expect(versions.map((version) => [version.number, version.restoredFrom])).toEqual([
       [3, 1],
       [2, null],
@@ -113,7 +126,7 @@ describe.skipIf(!baseUrl)("attachments", () => {
   });
 
   async function versionNumbers(context: Context, attachmentId: string) {
-    return (await test.services.attachments.versions(context.editor, attachmentId)).map(
+    return (await test.services.attachments.versions(context.editor, attachmentId, "draft")).map(
       (version) => version.number,
     );
   }
@@ -253,8 +266,8 @@ describe.skipIf(!baseUrl)("attachments", () => {
       [[first.id, second.id]],
     );
     expect(Number(used.rows[0]?.count)).toBe(1);
-    const firstContent = await test.services.attachments.content(first.id);
-    const secondContent = await test.services.attachments.content(second.id);
+    const firstContent = await test.services.attachments.content(first.id, "draft");
+    const secondContent = await test.services.attachments.content(second.id, "draft");
     expect(secondContent?.fileId).toBe(firstContent?.fileId);
     const row = await test.pool.query<{ content_digest: Buffer }>(
       "select content_digest from stored_files where id = $1",
@@ -290,8 +303,8 @@ describe.skipIf(!baseUrl)("attachments", () => {
       name: "secret.bin",
       body: Readable.from([content]),
     });
-    expect((await test.services.attachments.content(there.id))?.fileId).not.toBe(
-      (await test.services.attachments.content(here.id))?.fileId,
+    expect((await test.services.attachments.content(there.id, "draft"))?.fileId).not.toBe(
+      (await test.services.attachments.content(here.id, "draft"))?.fileId,
     );
   });
 
@@ -337,15 +350,15 @@ describe.skipIf(!baseUrl)("attachments", () => {
     const context = await setup();
     const text = await upload(context, "data.txt", "a,b\n1,2\n");
     const table = await upload(context, "data.csv", "a,b\n1,2\n");
-    expect((await test.services.attachments.content(text.id))?.fileId).not.toBe(
-      (await test.services.attachments.content(table.id))?.fileId,
+    expect((await test.services.attachments.content(text.id, "draft"))?.fileId).not.toBe(
+      (await test.services.attachments.content(table.id, "draft"))?.fileId,
     );
   });
 
   it("returns a still used file to ready instead of removing it", async () => {
     const context = await setup();
     const file = await upload(context, "kept.txt", "still here");
-    const content = await test.services.attachments.content(file.id);
+    const content = await test.services.attachments.content(file.id, "draft");
     await test.pool.query("update stored_files set state = 'orphaned' where id = $1", [content?.fileId]);
     await test.services.files.deleteOrphaned();
     const row = await test.pool.query<{ state: string }>("select state from stored_files where id = $1", [
@@ -361,7 +374,7 @@ describe.skipIf(!baseUrl)("attachments", () => {
     const first = await upload(context, "log.txt", `1 ${randomUUID()}`);
     await upload(context, "log.txt", `2 ${randomUUID()}`);
     await upload(context, "log.txt", `3 ${randomUUID()}`);
-    const versions = await test.services.attachments.versions(context.editor, first.id);
+    const versions = await test.services.attachments.versions(context.editor, first.id, "draft");
     expect(versions.map((version) => version.number)).toEqual([3, 2]);
     expect(await test.services.files.deleteOrphaned()).toBeGreaterThanOrEqual(1);
     expect(await read(first.id)).toMatch(/^3 /);
@@ -390,11 +403,13 @@ describe.skipIf(!baseUrl)("attachments", () => {
     const context = await setup();
     const file = await upload(context, "notes.txt", "x");
     await test.services.attachments.delete(context.editor, file.id);
-    expect(await test.services.attachments.list(context.editor, context.page.id)).toEqual([]);
+    expect(await test.services.attachments.list(context.editor, context.page.id, "draft")).toEqual([]);
     expect(await can(context.editor, "attachment.view", file.id)).toBe(false);
     await test.services.attachments.undelete(context.editor, file.id);
     expect(
-      (await test.services.attachments.list(context.editor, context.page.id)).map((entry) => entry.id),
+      (await test.services.attachments.list(context.editor, context.page.id, "draft")).map(
+        (entry) => entry.id,
+      ),
     ).toEqual([file.id]);
   });
 
@@ -464,7 +479,7 @@ describe.skipIf(!baseUrl)("attachments", () => {
   it("are removed with their files when the page is deleted for good", async () => {
     const context = await setup();
     const file = await upload(context, "plan.txt", randomUUID());
-    const content = await test.services.attachments.content(file.id);
+    const content = await test.services.attachments.content(file.id, "draft");
     const entry = await test.services.trash.deleteItem(context.editor, context.page.id);
     await test.services.trash.deleteImmediately(
       accountPrincipal(context.org.owner),
@@ -474,5 +489,69 @@ describe.skipIf(!baseUrl)("attachments", () => {
     await test.services.files.deleteOrphaned();
     const rows = await test.pool.query("select 1 from stored_files where id = $1", [content?.fileId]);
     expect(rows.rows).toEqual([]);
+  });
+
+  it("remove a stored upload whose attachment was never saved, for example after a crash", async () => {
+    const stored = await test.services.files.write(Readable.from([randomBytes(100)]), {
+      name: "lost.bin",
+      maxBytes: 1000,
+    });
+    await test.pool.query("update stored_files set updated_at = now() - interval '2 days' where id = $1", [
+      stored.id,
+    ]);
+    await test.services.files.deleteOrphaned(10_000);
+    const rows = await test.pool.query("select 1 from stored_files where id = $1", [stored.id]);
+    expect(rows.rows).toEqual([]);
+    await expect(test.services.files.commit(test.database, stored.id)).rejects.toThrow(
+      "The uploaded file was removed before it was saved",
+    );
+  });
+
+  it("keep a deduplicated file ready when the last other version using it is deleted at the same moment", async () => {
+    const context = await setup();
+    const content = randomBytes(2000);
+    const first = await upload(context, "first.bin", content);
+    const firstVersion = await test.services.attachments.content(first.id, "draft");
+    const stored = await test.services.files.write(Readable.from([content]), {
+      name: "second.bin",
+      maxBytes: 10_000,
+    });
+    let deleting: Promise<unknown> | undefined;
+    await test.database.transaction(async (tx) => {
+      const fileId = await test.services.files.reuse(tx, stored, context.space.id);
+      expect(fileId).toBe(firstVersion?.fileId);
+      const attachmentId = uuidv7();
+      await tx.execute(sql`
+        insert into attachments (id, item_id, name, name_key)
+        values (${attachmentId}, ${context.page.id}, 'second.bin', 'second.bin')`);
+      await tx.execute(sql`
+        insert into attachment_versions (id, attachment_id, number, file_id, name)
+        values (${uuidv7()}, ${attachmentId}, 1, ${fileId}, 'second.bin')`);
+      deleting = test.pool.query("delete from attachment_versions where id = $1", [firstVersion?.versionId]);
+      await waitForLockWait();
+    });
+    await deleting;
+    const state = await test.pool.query<{ state: string }>("select state from stored_files where id = $1", [
+      firstVersion?.fileId,
+    ]);
+    expect(state.rows[0]?.state).toBe("ready");
+  });
+
+  it("answer bringing back a deleted attachment while a file of the same name is uploaded with nameTaken", async () => {
+    const context = await setup();
+    const file = await upload(context, "notes.txt", "old");
+    await test.services.attachments.delete(context.editor, file.id);
+    let restoring: Promise<unknown> | undefined;
+    await test.database.transaction(async (tx) => {
+      await tx.execute(sql`select id from tree_items where id = ${context.page.id} for update`);
+      await tx.execute(sql`
+        insert into attachments (id, item_id, name, name_key)
+        values (${uuidv7()}, ${context.page.id}, 'notes.txt', 'notes.txt')`);
+      restoring = test.services.attachments
+        .undelete(context.editor, file.id)
+        .catch((error: unknown) => error);
+      await waitForLockWait();
+    });
+    expect(await restoring).toMatchObject({ name: "AttachmentError", code: "nameTaken" });
   });
 });

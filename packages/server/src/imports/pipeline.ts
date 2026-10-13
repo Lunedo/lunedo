@@ -726,11 +726,14 @@ export class ImportPipeline {
               where attachment_id = ${attachmentId}`);
             const versionId = uuidv7();
             await tx.execute(sql`
-              insert into attachment_versions (id, attachment_id, number, file_id, name, uploaded_by, created_at)
+              insert into attachment_versions (id, attachment_id, number, file_id, name, uploaded_by, created_at,
+                published_at)
               values (${versionId}, ${attachmentId}, ${Number(next.rows[0]?.number ?? 1)}, ${fileId}, ${name},
-                ${uploader}, coalesce(${version.createdAt}::timestamptz, now()))`);
+                ${uploader}, coalesce(${version.createdAt}::timestamptz, now()), now())`);
             await tx.execute(sql`
-              update attachments set current_version_id = ${versionId}, updated_at = now() where id = ${attachmentId}`);
+              update attachments set current_version_id = ${versionId}, published_version_id = ${versionId},
+                updated_at = now()
+              where id = ${attachmentId}`);
             await this.#map(tx, run.importId, "attachmentVersion", version.sourceId, versionId);
             await this.#map(
               tx,

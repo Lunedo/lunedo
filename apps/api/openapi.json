@@ -8606,7 +8606,7 @@
       "get": {
         "operationId": "attachments.get",
         "summary": "Get an attachment",
-        "description": "Returns the attachment with its current version.\n\nRequires the permission `attachment.view` on the attachment in `attachmentId`.",
+        "description": "Returns the attachment with its current version: the draft state for people who can edit the page, the published state for everyone else.\n\nRequires the permission `attachment.view` on the attachment in `attachmentId`.",
         "tags": [
           "Attachments"
         ],
@@ -8701,6 +8701,22 @@
                       "maximum": 9007199254740991,
                       "description": "Number of stored versions."
                     },
+                    "draft": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "x-extensible-enum": [
+                            "added",
+                            "changed",
+                            "deleted"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Only for people who can edit the page: `added` when readers do not see the file until the next publication, `changed` when readers still see an earlier version, `deleted` when the file was deleted in the draft and readers still see it until the next publication; restore it to keep it. Null when readers see this version. New values can be added in later versions; handle unknown values."
+                    },
                     "uploadedBy": {
                       "anyOf": [
                         {
@@ -8753,6 +8769,7 @@
                     "inline",
                     "version",
                     "versions",
+                    "draft",
                     "uploadedBy",
                     "uploadedAt",
                     "createdAt"
@@ -8770,6 +8787,7 @@
                   "inline": true,
                   "version": 2,
                   "versions": 2,
+                  "draft": null,
                   "uploadedBy": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                     "name": "Anna Berger"
@@ -8903,7 +8921,7 @@
       "get": {
         "operationId": "attachments.content",
         "summary": "Download an attachment",
-        "description": "Sends the bytes of the current or a given version. Images, video and audio are sent inline unless `download` is set; every other type always as a download.\n\nRequires the permission `attachment.view` on the attachment in `attachmentId`.",
+        "description": "Sends the bytes of the current or a given version. People who cannot edit the page get the published version and can ask only for published versions. Images, video and audio are sent inline unless `download` is set; every other type always as a download.\n\nRequires the permission `attachment.view` on the attachment in `attachmentId`.",
         "tags": [
           "Attachments"
         ],
@@ -9298,7 +9316,7 @@
       "get": {
         "operationId": "attachments.versions",
         "summary": "List the versions of an attachment",
-        "description": "Lists the stored versions, newest first. When a new version is added and more versions than configured exist, the oldest version not marked to keep is removed.\n\nRequires the permission `attachment.view` on the attachment in `attachmentId`.",
+        "description": "Lists the stored versions, newest first. People who cannot edit the page see only versions that were published. When a new version is added and more versions than configured exist, the oldest version not marked to keep is removed.\n\nRequires the permission `attachment.view` on the attachment in `attachmentId`.",
         "tags": [
           "Attachments"
         ],
@@ -10001,6 +10019,22 @@
                       "maximum": 9007199254740991,
                       "description": "Number of stored versions."
                     },
+                    "draft": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "x-extensible-enum": [
+                            "added",
+                            "changed",
+                            "deleted"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Only for people who can edit the page: `added` when readers do not see the file until the next publication, `changed` when readers still see an earlier version, `deleted` when the file was deleted in the draft and readers still see it until the next publication; restore it to keep it. Null when readers see this version. New values can be added in later versions; handle unknown values."
+                    },
                     "uploadedBy": {
                       "anyOf": [
                         {
@@ -10053,6 +10087,7 @@
                     "inline",
                     "version",
                     "versions",
+                    "draft",
                     "uploadedBy",
                     "uploadedAt",
                     "createdAt"
@@ -10070,6 +10105,7 @@
                   "inline": true,
                   "version": 2,
                   "versions": 2,
+                  "draft": null,
                   "uploadedBy": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                     "name": "Anna Berger"
@@ -141893,7 +141929,7 @@
       "get": {
         "operationId": "attachments.list",
         "summary": "List the attachments of a page",
-        "description": "Lists the files attached to a page or blog post with their current version, ordered by name.\n\nRequires the permission `item.view` on the item in `pageId`.",
+        "description": "Lists the files attached to a page or blog post with their current version, ordered by name. People who can edit the page get the draft state, with attachments that readers do not see yet marked in `draft`; everyone else gets the attachments of the published version.\n\nRequires the permission `item.view` on the item in `pageId`.",
         "tags": [
           "Attachments"
         ],
@@ -141990,6 +142026,22 @@
                         "maximum": 9007199254740991,
                         "description": "Number of stored versions."
                       },
+                      "draft": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "x-extensible-enum": [
+                              "added",
+                              "changed",
+                              "deleted"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Only for people who can edit the page: `added` when readers do not see the file until the next publication, `changed` when readers still see an earlier version, `deleted` when the file was deleted in the draft and readers still see it until the next publication; restore it to keep it. Null when readers see this version. New values can be added in later versions; handle unknown values."
+                      },
                       "uploadedBy": {
                         "anyOf": [
                           {
@@ -142042,6 +142094,7 @@
                       "inline",
                       "version",
                       "versions",
+                      "draft",
                       "uploadedBy",
                       "uploadedAt",
                       "createdAt"
@@ -142062,6 +142115,7 @@
                     "inline": true,
                     "version": 2,
                     "versions": 2,
+                    "draft": null,
                     "uploadedBy": {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                       "name": "Anna Berger"
@@ -142312,6 +142366,22 @@
                       "maximum": 9007199254740991,
                       "description": "Number of stored versions."
                     },
+                    "draft": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "x-extensible-enum": [
+                            "added",
+                            "changed",
+                            "deleted"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Only for people who can edit the page: `added` when readers do not see the file until the next publication, `changed` when readers still see an earlier version, `deleted` when the file was deleted in the draft and readers still see it until the next publication; restore it to keep it. Null when readers see this version. New values can be added in later versions; handle unknown values."
+                    },
                     "uploadedBy": {
                       "anyOf": [
                         {
@@ -142364,6 +142434,7 @@
                     "inline",
                     "version",
                     "versions",
+                    "draft",
                     "uploadedBy",
                     "uploadedAt",
                     "createdAt"
@@ -142381,6 +142452,7 @@
                   "inline": true,
                   "version": 2,
                   "versions": 2,
+                  "draft": null,
                   "uploadedBy": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                     "name": "Anna Berger"
@@ -142578,7 +142650,7 @@
       "post": {
         "operationId": "attachments.undelete",
         "summary": "Bring back a deleted attachment",
-        "description": "Undoes the deletion of an attachment of this page.\n\nRequires the permission `item.edit` on the item in `pageId`.",
+        "description": "Undoes the deletion of an attachment of this page, also of one deleted in the draft that readers still see until the next publication.\n\nRequires the permission `item.edit` on the item in `pageId`.",
         "tags": [
           "Attachments"
         ],
@@ -142683,6 +142755,22 @@
                       "maximum": 9007199254740991,
                       "description": "Number of stored versions."
                     },
+                    "draft": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "x-extensible-enum": [
+                            "added",
+                            "changed",
+                            "deleted"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Only for people who can edit the page: `added` when readers do not see the file until the next publication, `changed` when readers still see an earlier version, `deleted` when the file was deleted in the draft and readers still see it until the next publication; restore it to keep it. Null when readers see this version. New values can be added in later versions; handle unknown values."
+                    },
                     "uploadedBy": {
                       "anyOf": [
                         {
@@ -142735,6 +142823,7 @@
                     "inline",
                     "version",
                     "versions",
+                    "draft",
                     "uploadedBy",
                     "uploadedAt",
                     "createdAt"
@@ -142752,6 +142841,7 @@
                   "inline": true,
                   "version": 2,
                   "versions": 2,
+                  "draft": null,
                   "uploadedBy": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                     "name": "Anna Berger"
@@ -157512,6 +157602,22 @@
                             "maximum": 9007199254740991,
                             "description": "Number of stored versions."
                           },
+                          "draft": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "x-extensible-enum": [
+                                  "added",
+                                  "changed",
+                                  "deleted"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Only for people who can edit the page: `added` when readers do not see the file until the next publication, `changed` when readers still see an earlier version, `deleted` when the file was deleted in the draft and readers still see it until the next publication; restore it to keep it. Null when readers see this version. New values can be added in later versions; handle unknown values."
+                          },
                           "uploadedBy": {
                             "anyOf": [
                               {
@@ -157564,6 +157670,7 @@
                           "inline",
                           "version",
                           "versions",
+                          "draft",
                           "uploadedBy",
                           "uploadedAt",
                           "createdAt"
@@ -157613,6 +157720,7 @@
                       "inline": true,
                       "version": 2,
                       "versions": 2,
+                      "draft": null,
                       "uploadedBy": {
                         "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                         "name": "Anna Berger"

@@ -260,6 +260,7 @@ export const discardedDrafts = pgTable(
     schemaVersion: integer().notNull(),
     reason: discardReason().notNull(),
     contributors: uuid().array().notNull().default(sql`'{}'::uuid[]`),
+    attachments: jsonb().notNull().default(sql`'[]'::jsonb`),
     discardedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
     discardedAt: timestampColumn().notNull().defaultNow(),
     expiresAt: timestampColumn().notNull(),

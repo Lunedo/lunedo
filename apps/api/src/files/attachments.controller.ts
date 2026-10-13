@@ -1,6 +1,11 @@
 import type { Readable } from "node:stream";
 import { Body, Controller, Delete, Get, Inject, Param, Post, Put, Query, Req, Res } from "@nestjs/common";
-import { accountPrincipal, FILE_NAME_MAX_LENGTH } from "@pagehall/server";
+import {
+  type AttachmentView,
+  accountPrincipal,
+  FILE_NAME_MAX_LENGTH,
+  type Principal,
+} from "@pagehall/server";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { InternalRoute, Permission, PublicRoute } from "../access/route-access.js";
@@ -93,18 +98,30 @@ export class AttachmentsController {
     return servicesOf(this.context);
   }
 
+  async #view(
+    actor: Principal,
+    action: "item.edit" | "attachment.edit",
+    id: string,
+  ): Promise<AttachmentView> {
+    const type = action === "item.edit" ? "item" : "attachment";
+    return (await this.#services.authorization.authorize(actor, action, { type, id }))
+      ? "draft"
+      : "published";
+  }
+
   @Get("pages/:pageId/attachments")
   @Permission("item.view", page)
   @ApiRoute({
     summary: "List the attachments of a page",
     description:
-      "Lists the files attached to a page or blog post with their current version, ordered by name.",
+      "Lists the files attached to a page or blog post with their current version, ordered by name. People who can edit the page get the draft state, with attachments that readers do not see yet marked in `draft`; everyone else gets the attachments of the published version.",
     tags: [TAG],
     params: pageParams,
     response: { description: "The attachments.", schema: attachmentListSchema, example: [exampleAttachment] },
   })
   async list(@Param("pageId") pageId: string, @Req() request: FastifyRequest) {
-    return this.#services.attachments.list(actorOf(request), pageId);
+    const actor = actorOf(request);
+    return this.#services.attachments.list(actor, pageId, await this.#view(actor, "item.edit", pageId));
   }
 
   @Post("pages/:pageId/attachments")
@@ -146,13 +163,19 @@ export class AttachmentsController {
   @Permission("attachment.view", attachment)
   @ApiRoute({
     summary: "Get an attachment",
-    description: "Returns the attachment with its current version.",
+    description:
+      "Returns the attachment with its current version: the draft state for people who can edit the page, the published state for everyone else.",
     tags: [TAG],
     params: attachmentParams,
     response: { description: "The attachment.", schema: attachmentSchema, example: exampleAttachment },
   })
   async get(@Param("attachmentId") attachmentId: string, @Req() request: FastifyRequest) {
-    const found = await this.#services.attachments.get(actorOf(request), attachmentId);
+    const actor = actorOf(request);
+    const found = await this.#services.attachments.get(
+      actor,
+      attachmentId,
+      await this.#view(actor, "attachment.edit", attachmentId),
+    );
     if (!found) throw notFound();
     return found;
   }
@@ -162,7 +185,7 @@ export class AttachmentsController {
   @ApiRoute({
     summary: "List the versions of an attachment",
     description:
-      "Lists the stored versions, newest first. When a new version is added and more versions than configured exist, the oldest version not marked to keep is removed.",
+      "Lists the stored versions, newest first. People who cannot edit the page see only versions that were published. When a new version is added and more versions than configured exist, the oldest version not marked to keep is removed.",
     tags: [TAG],
     params: attachmentParams,
     response: {
@@ -172,7 +195,12 @@ export class AttachmentsController {
     },
   })
   async versions(@Param("attachmentId") attachmentId: string, @Req() request: FastifyRequest) {
-    return this.#services.attachments.versions(actorOf(request), attachmentId);
+    const actor = actorOf(request);
+    return this.#services.attachments.versions(
+      actor,
+      attachmentId,
+      await this.#view(actor, "attachment.edit", attachmentId),
+    );
   }
 
   @Post("attachments/:attachmentId/versions/:number/restore")
@@ -238,7 +266,8 @@ export class AttachmentsController {
   @Permission("item.edit", page)
   @ApiRoute({
     summary: "Bring back a deleted attachment",
-    description: "Undoes the deletion of an attachment of this page.",
+    description:
+      "Undoes the deletion of an attachment of this page, also of one deleted in the draft that readers still see until the next publication.",
     tags: [TAG],
     params: restoreParams,
     status: 200,
@@ -259,7 +288,7 @@ export class AttachmentsController {
   @ApiRoute({
     summary: "Download an attachment",
     description:
-      "Sends the bytes of the current or a given version. Images, video and audio are sent inline unless `download` is set; every other type always as a download.",
+      "Sends the bytes of the current or a given version. People who cannot edit the page get the published version and can ask only for published versions. Images, video and audio are sent inline unless `download` is set; every other type always as a download.",
     tags: [TAG],
     params: attachmentParams,
     query: contentQuery,
@@ -272,7 +301,8 @@ export class AttachmentsController {
     @Req() request: FastifyRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
   ) {
-    const content = await this.#services.attachments.content(attachmentId, query.version);
+    const view = await this.#view(actorOf(request), "attachment.edit", attachmentId);
+    const content = await this.#services.attachments.content(attachmentId, view, query.version);
     if (!content) throw new ProblemException("versionNotFound", "This version does not exist");
     return sendAttachment(request, reply, this.#services.files, content, {
       inline: !query.download,
@@ -299,9 +329,10 @@ export class AttachmentsController {
     @Query() query: z.output<typeof linkQuery>,
     @Req() request: FastifyRequest,
   ) {
-    const content = await this.#services.attachments.content(attachmentId, query.version);
-    if (!content) throw new ProblemException("versionNotFound", "This version does not exist");
     const actor = actorOf(request);
+    const view = await this.#view(actor, "attachment.edit", attachmentId);
+    const content = await this.#services.attachments.content(attachmentId, view, query.version);
+    if (!content) throw new ProblemException("versionNotFound", "This version does not exist");
     const expiresAt = new Date(Date.now() + LINK_MINUTES * 60_000);
     const signature = await this.#services.signer.sign(
       "file",
@@ -346,7 +377,8 @@ export class AttachmentsController {
       },
     );
     if (!allowed) throw notFound();
-    const content = await this.#services.attachments.content(attachmentId, Number(version));
+    const view = await this.#view(accountPrincipal(accountId), "attachment.edit", attachmentId);
+    const content = await this.#services.attachments.content(attachmentId, view, Number(version));
     if (!content) throw notFound();
     return sendAttachment(request, reply, this.#services.files, content, {
       inline: true,

@@ -22,9 +22,12 @@ function clamp(value: number): number {
 }
 
 export function CoverImage({ cover, alt, className }: { cover: Cover; alt: string; className?: string }) {
+  const [failed, setFailed] = useState<string | null>(null);
+  if (failed === cover.attachmentId) return null;
   return (
     <img
       src={contentUrl(cover.attachmentId)}
+      onError={() => setFailed(cover.attachmentId)}
       alt={alt}
       className={`object-cover ${className ?? ""}`}
       style={{ objectPosition: `${cover.focusX * 100}% ${cover.focusY * 100}%` }}
