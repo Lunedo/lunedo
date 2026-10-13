@@ -1,7 +1,7 @@
 import { type SQL, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
-import { holderCovers, holderMatches, restrictionListedBy } from "../authorization/item-access.js";
+import { holderCovers, restrictionListedBy } from "../authorization/item-access.js";
 import type { AuthorizationService, Decision, Grant } from "../authorization/service.js";
 import { organizationMembership } from "../authorization/space-access.js";
 import type { Database, Executor } from "../database/database.js";
@@ -98,6 +98,222 @@ function csvCell(value: string | number | null): string {
   const text = value === null ? "" : String(value);
   const safe = /^[=+\-@\t\r]/.test(text) ? `'${text}` : text;
   return /[",\n\r]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
+}
+
+const OVERVIEW_BATCH = 500;
+const OVERVIEW_COLUMNS = ["person", "email", "kind", "space", "page", "role", "pages", "reason"];
+
+interface SpaceRoleRow {
+  account_id: string;
+  space_id: string;
+  role: SpaceRole;
+  via: "account" | "group" | "organizationMembers" | "instanceUsers" | "organization" | "instance";
+  group_id: string | null;
+  group_name: string | null;
+  active: boolean;
+  [key: string]: unknown;
+}
+
+interface ShareRow {
+  account_id: string;
+  space_id: string;
+  space_name: string;
+  space_key: string;
+  item_id: string;
+  title: string;
+  readable: boolean;
+  role: SpaceRole;
+  principal_kind: HolderKind;
+  principal_id: string;
+  group_name: string | null;
+  include_descendants: boolean;
+  active: boolean;
+  [key: string]: unknown;
+}
+
+interface LinkRow {
+  account_id: string;
+  space_id: string;
+  space_name: string;
+  space_key: string;
+  item_id: string;
+  title: string;
+  readable: boolean;
+  link_id: string;
+  scope: string;
+  active: boolean;
+  [key: string]: unknown;
+}
+
+function byAccount<T extends { account_id: string }>(rows: T[]): Map<string, T[]> {
+  const grouped = new Map<string, T[]>();
+  for (const row of rows) {
+    const list = grouped.get(row.account_id);
+    if (list) list.push(row);
+    else grouped.set(row.account_id, [row]);
+  }
+  return grouped;
+}
+
+function spaceReasonVia(row: SpaceRoleRow): SpaceReasonVia {
+  switch (row.via) {
+    case "group":
+      return { type: "group", groupId: row.group_id ?? "", name: row.group_name ?? "" };
+    case "organization":
+    case "instance":
+      return { type: "visibility", visibility: row.via };
+    default:
+      return { type: row.via };
+  }
+}
+
+function spaceEntries(
+  spaces: { id: string; name: string; key: string }[],
+  rows: SpaceRoleRow[],
+): PersonAccessEntry[] {
+  const bySpace = new Map<string, SpaceRoleRow[]>();
+  for (const row of rows) {
+    const list = bySpace.get(row.space_id);
+    if (list) list.push(row);
+    else bySpace.set(row.space_id, [row]);
+  }
+  return spaces.flatMap((space) => {
+    const held = bySpace.get(space.id) ?? [];
+    const active = held.filter((row) => row.active);
+    const inactive = held.filter((row) => !row.active);
+    if (held.length === 0) return [];
+    const role = highestSpaceRole(active.map((row) => row.role));
+    return [
+      {
+        kind: "space" as const,
+        spaceId: space.id,
+        spaceName: space.name,
+        spaceKey: space.key,
+        itemId: null,
+        itemTitle: null,
+        role: role ?? highestSpaceRole(inactive.map((row) => row.role)),
+        count: 1,
+        reasons: [
+          ...active.map(
+            (row): AccessReason => ({ type: "spaceRole", role: row.role, via: spaceReasonVia(row) }),
+          ),
+          ...inactive.map(
+            (row): AccessReason => ({
+              type: "spaceRole",
+              role: row.role,
+              via: spaceReasonVia(row),
+              inactive: "membershipEnded",
+            }),
+          ),
+        ],
+        inactive: role ? null : ("membershipEnded" as const),
+      },
+    ];
+  });
+}
+
+function pageEntries(shares: ShareRow[], links: LinkRow[]): PersonAccessEntry[] {
+  const entries: PersonAccessEntry[] = [];
+  const hidden = new Map<string, PersonAccessEntry>();
+  const countHidden = (row: { space_id: string; space_name: string; space_key: string }) => {
+    const summary = hidden.get(row.space_id) ?? {
+      kind: "restrictedPages" as const,
+      spaceId: row.space_id,
+      spaceName: row.space_name,
+      spaceKey: row.space_key,
+      itemId: null,
+      itemTitle: null,
+      role: null,
+      count: 0,
+      reasons: [],
+      inactive: null,
+    };
+    summary.count += 1;
+    hidden.set(row.space_id, summary);
+  };
+  for (const row of shares) {
+    if (!row.readable) {
+      countHidden(row);
+      continue;
+    }
+    entries.push({
+      kind: "share",
+      spaceId: row.space_id,
+      spaceName: row.space_name,
+      spaceKey: row.space_key,
+      itemId: row.item_id,
+      itemTitle: row.title,
+      role: row.role,
+      count: row.include_descendants ? 2 : 1,
+      reasons: [
+        {
+          type: "share",
+          role: row.role,
+          via:
+            row.principal_kind === "group"
+              ? { type: "group", groupId: row.principal_id, name: row.group_name ?? "" }
+              : { type: "account" },
+          itemId: row.item_id,
+          itemTitle: row.title,
+          inherited: false,
+          ...(row.active ? {} : { inactive: "membershipEnded" as const }),
+        },
+      ],
+      inactive: row.active ? null : "membershipEnded",
+    });
+  }
+  for (const row of links) {
+    if (!row.readable) {
+      countHidden(row);
+      continue;
+    }
+    entries.push({
+      kind: "link",
+      spaceId: row.space_id,
+      spaceName: row.space_name,
+      spaceKey: row.space_key,
+      itemId: row.item_id,
+      itemTitle: row.title,
+      role: "reader",
+      count: 1,
+      reasons: [
+        {
+          type: "link",
+          linkId: row.link_id,
+          scope: row.scope,
+          ...(row.active ? {} : { inactive: "membershipEnded" as const }),
+        },
+      ],
+      inactive: row.active ? null : "membershipEnded",
+    });
+  }
+  return [...entries, ...hidden.values()];
+}
+
+function overviewLines(access: PersonAccess): string {
+  const rows = access.entries.map((entry) => [
+    access.name,
+    access.email,
+    entry.kind,
+    entry.spaceName,
+    entry.itemTitle,
+    entry.role,
+    entry.count,
+    entry.reasons.map((reason) => describeReason(reason)).join("; "),
+  ]);
+  if (access.confidentialSpaceCount > 0) {
+    rows.push([
+      access.name,
+      access.email,
+      "confidentialSpaces",
+      "",
+      "",
+      "",
+      access.confidentialSpaceCount,
+      "",
+    ]);
+  }
+  return rows.map((row) => `${row.map(csvCell).join(",")}\r\n`).join("");
 }
 
 export class AccessExplanationService {
@@ -292,195 +508,138 @@ export class AccessExplanationService {
     accountId: string,
     options: { organizationId: string | null; spaceIds?: string[] | undefined },
   ): Promise<PersonAccess> {
-    const account = await this.#database.execute<{
+    const [access] = await this.#accessOf(viewer, [accountId], options);
+    if (!access) throw new SpaceError("personNotFound", "The person does not exist");
+    return access;
+  }
+
+  async #accessOf(
+    viewer: Principal,
+    accountIds: readonly string[],
+    options: { organizationId: string | null; spaceIds?: string[] | undefined },
+  ): Promise<PersonAccess[]> {
+    const ids = () => sql`${sql.param([...accountIds])}::uuid[]`;
+    const people = await this.#database.execute<{
       id: string;
       name: string | null;
       email: string | null;
     }>(sql`
       select a.id, ${this.#people.visibleName(viewer, sql`a`)} as name,
         case when ${this.#people.colleagueCondition(viewer, sql`a.id`)} then a.email end as email
-      from accounts a where a.id = ${accountId}`);
-    const person = account.rows[0];
-    if (!person || !(await this.#people.canSee(viewer, accountId))) {
-      throw new SpaceError("personNotFound", "The person does not exist");
-    }
+      from accounts a
+      where a.id = any(${ids()}) and a.state in ('active', 'invited')
+        and ${this.#people.visibleCondition(viewer, sql`a.id`)}`);
+    if (people.rows.length === 0) return [];
     const limit = options.spaceIds ? sql`s.id = any(${sql.param(options.spaceIds)}::uuid[])` : sql`true`;
     const base = sql`${this.#spaceScope(options.organizationId)} and ${limit} and s.deleted_at is null and s.personal_of is null
       and (not s.quarantined or ${this.#authorization.spaceFilter(viewer, sql`s`)})`;
     const scope = sql`${base} and (not s.confidential or ${this.#authorization.spaceFilter(viewer, sql`s`)})`;
-    const confidential = await this.#database.execute<{ count: string }>(sql`
-      select count(*) as count from spaces s
+    const confidential = await this.#database.execute<{ account_id: string; count: string }>(sql`
+      select sp.principal_id as account_id, count(distinct s.id) as count
+      from spaces s join space_permissions sp on sp.space_id = s.id
       where ${base} and s.confidential and not ${this.#authorization.spaceFilter(viewer, sql`s`)}
-        and exists (select 1 from space_permissions sp where sp.space_id = s.id
-          and sp.principal_kind = 'account' and sp.principal_id = ${accountId})`);
+        and sp.principal_kind = 'account' and sp.principal_id = any(${ids()})
+      group by sp.principal_id`);
     const spaces = await this.#database.execute<{ id: string; name: string; key: string }>(sql`
       select s.id, s.name, s.key from spaces s where ${scope} order by lower(s.name), s.id limit 2000`);
-    const entries: PersonAccessEntry[] = [];
-    for (const space of spaces.rows) {
-      const facts = await this.#authorization.spaceRole(accountId, space.id, { fresh: true });
-      const inactive = facts.inactiveSources.map(
-        (source): AccessReason => ({
-          type: "spaceRole",
-          role: source.role,
-          via: source.via,
-          inactive: "membershipEnded",
-        }),
-      );
-      if (facts.role || inactive.length > 0) {
-        entries.push({
-          kind: "space",
-          spaceId: space.id,
-          spaceName: space.name,
-          spaceKey: space.key,
-          itemId: null,
-          itemTitle: null,
-          role: facts.role ?? highestSpaceRole(facts.inactiveSources.map((source) => source.role)),
-          count: 1,
-          reasons: [
-            ...facts.sources.map(
-              (source): AccessReason => ({ type: "spaceRole", role: source.role, via: source.via }),
-            ),
-            ...inactive,
+    const roles = await this.#database.execute<SpaceRoleRow>(sql`
+      with acc as (select a.id, a.type from accounts a where a.id = any(${ids()}) and a.state = 'active'),
+      sc as (select s.id, s.organization_id, s.visibility from spaces s
+        where s.id = any(${sql.param(spaces.rows.map((space) => space.id))}::uuid[])),
+      member as (select m.account_id, m.organization_id from memberships m join acc on acc.id = m.account_id
+        where m.kind = 'member' and (m.expires_at is null or m.expires_at > now())),
+      held as (
+        select acc.id as account_id, sc.id as space_id, sp.id as permission_id, sp.role::text as role,
+          'account' as via, null::uuid as group_id,
+          ${organizationMembership(sql`sc.organization_id`, sql`acc.id`)} as active
+        from acc join space_permissions sp on sp.principal_kind = 'account' and sp.principal_id = acc.id
+        join sc on sc.id = sp.space_id
+        union all
+        select acc.id, sc.id, sp.id, sp.role::text, 'group', sp.principal_id, true
+        from acc join group_members gm on gm.account_id = acc.id and (gm.expires_at is null or gm.expires_at > now())
+        join space_permissions sp on sp.principal_kind = 'group' and sp.principal_id = gm.group_id
+        join sc on sc.id = sp.space_id
+        union all
+        select member.account_id, sc.id, sp.id, sp.role::text, 'organizationMembers', null, true
+        from member join sc on sc.organization_id = member.organization_id
+        join space_permissions sp on sp.space_id = sc.id and sp.principal_kind = 'organizationMembers'
+        union all
+        select acc.id, sc.id, sp.id, sp.role::text, 'instanceUsers', null, true
+        from acc join space_permissions sp on sp.principal_kind = 'instanceUsers'
+        join sc on sc.id = sp.space_id
+        where acc.type = 'standard'
+        union all
+        select member.account_id, sc.id, null, 'reader', 'organization', null, true
+        from member join sc on sc.organization_id = member.organization_id and sc.visibility = 'organization'
+        union all
+        select acc.id, sc.id, null, 'reader', 'instance', null, true
+        from acc join sc on sc.visibility = 'instance'
+        where acc.type = 'standard'
+      )
+      select h.account_id, h.space_id, h.role, h.via, h.group_id, g.name as group_name, h.active
+      from held h left join groups g on g.id = h.group_id
+      order by h.account_id, h.space_id, h.permission_id is null, h.permission_id`);
+    const shares = await this.#database.execute<ShareRow>(sql`
+      with holder as (
+        select ps.id as share_id, ps.principal_id as account_id from page_shares ps
+        where ps.principal_kind = 'account' and ps.principal_id = any(${ids()})
+        union all
+        select ps.id, gm.account_id from page_shares ps join group_members gm on gm.group_id = ps.principal_id
+        where ps.principal_kind = 'group' and gm.account_id = any(${ids()})
+          and (gm.expires_at is null or gm.expires_at > now())
+      ), ranked as (
+        select h.account_id, s.id as space_id, s.name as space_name, s.key as space_key, t.id as item_id, t.title,
+          ${this.#authorization.itemFilter(viewer, sql`t`, sql`s`)} as readable,
+          ps.role, ps.principal_kind, ps.principal_id, g.name as group_name, ps.include_descendants,
+          ${holderCovers(sql`ps.principal_kind`, sql`ps.principal_id`, sql`h.account_id`, sql`s.organization_id`)} as active,
+          row_number() over (partition by h.account_id order by lower(s.name), lower(t.title), t.id, ps.id) as position
+        from holder h join page_shares ps on ps.id = h.share_id
+        join tree_items t on t.id = ps.item_id join spaces s on s.id = t.space_id
+        left join groups g on ps.principal_kind = 'group' and g.id = ps.principal_id
+        where ${scope} and t.trash_entry_id is null
+      )
+      select * from ranked where position <= 5000 order by account_id, position`);
+    const links = await this.#database.execute<LinkRow>(sql`
+      with ranked as (
+        select la.account_id, s.id as space_id, s.name as space_name, s.key as space_key, t.id as item_id, t.title,
+          ${this.#authorization.itemFilter(viewer, sql`t`, sql`s`)} as readable, l.id as link_id, l.scope::text as scope,
+          (l.scope not in ('people', 'organization')
+            or ${organizationMembership(sql`s.organization_id`, sql`la.account_id`)}) as active,
+          row_number() over (partition by la.account_id order by lower(s.name), lower(t.title), l.id) as position
+        from share_link_accesses la join share_links l on l.id = la.link_id
+        join tree_items t on t.id = l.item_id join spaces s on s.id = t.space_id
+        where la.account_id = any(${ids()}) and ${scope} and l.revoked_at is null
+          and (l.expires_at is null or l.expires_at > now()) and t.trash_entry_id is null
+      )
+      select * from ranked where position <= 5000 order by account_id, position`);
+    const confidentialCounts = new Map(confidential.rows.map((row) => [row.account_id, Number(row.count)]));
+    const rolesOf = byAccount(roles.rows);
+    const sharesOf = byAccount(shares.rows);
+    const linksOf = byAccount(links.rows);
+    const visible = new Map(people.rows.map((person) => [person.id, person]));
+    return accountIds.flatMap((accountId) => {
+      const person = visible.get(accountId);
+      if (!person) return [];
+      return [
+        {
+          accountId,
+          name: person.name,
+          email: person.email,
+          entries: [
+            ...spaceEntries(spaces.rows, rolesOf.get(accountId) ?? []),
+            ...pageEntries(sharesOf.get(accountId) ?? [], linksOf.get(accountId) ?? []),
           ],
-          inactive: facts.role ? null : "membershipEnded",
-        });
-      }
-    }
-    const accountRef = sql`${accountId}::uuid`;
-    const shares = await this.#database.execute<{
-      space_id: string;
-      space_name: string;
-      space_key: string;
-      item_id: string;
-      title: string;
-      readable: boolean;
-      role: SpaceRole;
-      principal_kind: HolderKind;
-      principal_id: string;
-      group_name: string | null;
-      include_descendants: boolean;
-      active: boolean;
-    }>(sql`
-      select s.id as space_id, s.name as space_name, s.key as space_key, t.id as item_id, t.title,
-        ${this.#authorization.itemFilter(viewer, sql`t`, sql`s`)} as readable,
-        ps.role, ps.principal_kind, ps.principal_id, g.name as group_name, ps.include_descendants,
-        ${holderCovers(sql`ps.principal_kind`, sql`ps.principal_id`, accountRef, sql`s.organization_id`)} as active
-      from page_shares ps join tree_items t on t.id = ps.item_id join spaces s on s.id = t.space_id
-      left join groups g on ps.principal_kind = 'group' and g.id = ps.principal_id
-      where ${scope} and t.trash_entry_id is null and ${holderMatches(sql`ps.principal_kind`, sql`ps.principal_id`, accountRef)}
-      order by lower(s.name), lower(t.title), t.id limit 5000`);
-    const hidden = new Map<string, PersonAccessEntry>();
-    for (const row of shares.rows) {
-      const reason: AccessReason = {
-        type: "share",
-        role: row.role,
-        via:
-          row.principal_kind === "group"
-            ? { type: "group", groupId: row.principal_id, name: row.group_name ?? "" }
-            : { type: "account" },
-        itemId: row.item_id,
-        itemTitle: row.readable ? row.title : null,
-        inherited: false,
-        ...(row.active ? {} : { inactive: "membershipEnded" as const }),
-      };
-      if (row.readable) {
-        entries.push({
-          kind: "share",
-          spaceId: row.space_id,
-          spaceName: row.space_name,
-          spaceKey: row.space_key,
-          itemId: row.item_id,
-          itemTitle: row.title,
-          role: row.role,
-          count: row.include_descendants ? 2 : 1,
-          reasons: [reason],
-          inactive: row.active ? null : "membershipEnded",
-        });
-        continue;
-      }
-      const summary = hidden.get(row.space_id) ?? {
-        kind: "restrictedPages" as const,
-        spaceId: row.space_id,
-        spaceName: row.space_name,
-        spaceKey: row.space_key,
-        itemId: null,
-        itemTitle: null,
-        role: null,
-        count: 0,
-        reasons: [],
-        inactive: null,
-      };
-      summary.count += 1;
-      hidden.set(row.space_id, summary);
-    }
-    const links = await this.#database.execute<{
-      space_id: string;
-      space_name: string;
-      space_key: string;
-      item_id: string;
-      title: string;
-      readable: boolean;
-      link_id: string;
-      scope: string;
-      active: boolean;
-    }>(sql`
-      select s.id as space_id, s.name as space_name, s.key as space_key, t.id as item_id, t.title,
-        ${this.#authorization.itemFilter(viewer, sql`t`, sql`s`)} as readable, l.id as link_id, l.scope::text as scope,
-        (l.scope not in ('people', 'organization') or ${organizationMembership(sql`s.organization_id`, accountRef)}) as active
-      from share_link_accesses la join share_links l on l.id = la.link_id
-      join tree_items t on t.id = l.item_id join spaces s on s.id = t.space_id
-      where la.account_id = ${accountId} and ${scope} and l.revoked_at is null
-        and (l.expires_at is null or l.expires_at > now()) and t.trash_entry_id is null
-      order by lower(s.name), lower(t.title) limit 5000`);
-    for (const row of links.rows) {
-      if (!row.readable) {
-        const summary = hidden.get(row.space_id) ?? {
-          kind: "restrictedPages" as const,
-          spaceId: row.space_id,
-          spaceName: row.space_name,
-          spaceKey: row.space_key,
-          itemId: null,
-          itemTitle: null,
-          role: null,
-          count: 0,
-          reasons: [],
-          inactive: null,
-        };
-        summary.count += 1;
-        hidden.set(row.space_id, summary);
-        continue;
-      }
-      entries.push({
-        kind: "link",
-        spaceId: row.space_id,
-        spaceName: row.space_name,
-        spaceKey: row.space_key,
-        itemId: row.item_id,
-        itemTitle: row.title,
-        role: "reader",
-        count: 1,
-        reasons: [
-          {
-            type: "link",
-            linkId: row.link_id,
-            scope: row.scope,
-            ...(row.active ? {} : { inactive: "membershipEnded" as const }),
-          },
-        ],
-        inactive: row.active ? null : "membershipEnded",
-      });
-    }
-    entries.push(...hidden.values());
-    return {
-      accountId,
-      name: person.name,
-      email: person.email,
-      entries,
-      confidentialSpaceCount: Number(confidential.rows[0]?.count ?? 0),
-    };
+          confidentialSpaceCount: confidentialCounts.get(accountId) ?? 0,
+        },
+      ];
+    });
   }
 
-  async overviewCsv(viewer: Principal, organizationId: string, accountId: string | null): Promise<string> {
+  async overviewCsv(
+    viewer: Principal,
+    organizationId: string,
+    accountId: string | null,
+  ): Promise<AsyncIterable<string>> {
     const accounts = accountId
       ? [accountId]
       : (
@@ -489,45 +648,25 @@ export class AccessExplanationService {
             where m.organization_id = ${organizationId} and a.state = 'active'
             order by lower(a.name), a.id limit 10000`)
         ).rows.map((row) => row.account_id);
-    const lines = [
-      ["person", "email", "kind", "space", "page", "role", "pages", "reason"].map(csvCell).join(","),
-    ];
-    for (const id of accounts) {
-      const access = await this.personAccess(viewer, id, { organizationId });
-      for (const entry of access.entries) {
-        lines.push(
-          [
-            access.name,
-            access.email,
-            entry.kind,
-            entry.spaceName,
-            entry.itemTitle,
-            entry.role,
-            entry.count,
-            entry.reasons.map((reason) => describeReason(reason)).join("; "),
-          ]
-            .map(csvCell)
-            .join(","),
-        );
-      }
-      if (access.confidentialSpaceCount > 0) {
-        lines.push(
-          [access.name, access.email, "confidentialSpaces", "", "", "", access.confidentialSpaceCount, ""]
-            .map(csvCell)
-            .join(","),
-        );
-      }
-    }
-    await this.#database.transaction(async (tx) => {
-      await this.#audit.record(tx, {
-        name: "access.overviewExported",
-        actor: viewer,
-        targetId: organizationId,
-        fields: { accountId, rows: lines.length - 1 },
-        scope: { type: "organization", id: organizationId },
-      });
+    const accessOf = (batch: string[]) => this.#accessOf(viewer, batch, { organizationId });
+    const first = await accessOf(accounts.slice(0, OVERVIEW_BATCH));
+    if (accountId && first.length === 0) throw new SpaceError("personNotFound", "The person does not exist");
+    await this.#audit.recordAlone({
+      name: "access.overviewExported",
+      actor: viewer,
+      targetId: organizationId,
+      fields: { accountId, people: accounts.length },
+      scope: { type: "organization", id: organizationId },
     });
-    return `${lines.join("\r\n")}\r\n`;
+    return {
+      async *[Symbol.asyncIterator]() {
+        yield `${OVERVIEW_COLUMNS.map(csvCell).join(",")}\r\n`;
+        for (let start = 0; start < accounts.length; start += OVERVIEW_BATCH) {
+          const batch = start === 0 ? first : await accessOf(accounts.slice(start, start + OVERVIEW_BATCH));
+          for (const access of batch) yield overviewLines(access);
+        }
+      },
+    };
   }
 
   async giveAccessEffect(

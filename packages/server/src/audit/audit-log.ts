@@ -16,7 +16,7 @@ import {
 } from "./catalog.js";
 import { type AuditLabels, resolveAuditLabels } from "./labels.js";
 import { AuditSealer, PersonalDataMissingKeyError, type SealedParts } from "./personal-data.js";
-import { auditChains, auditEvents } from "./schema.js";
+import { auditChains, auditConfidentialEvents, auditEvents } from "./schema.js";
 
 export interface AuditScope {
   type: "instance" | "organization";
@@ -142,23 +142,25 @@ const CONTENT_FIELDS = ["name", "title", "fileName", "note", "description"] as c
 const CONTENT_SETTINGS = new Set(["name", "description"]);
 const CONTENT_TARGETS = new Set<AuditTargetType>(["space", "page"]);
 
-async function concernsConfidentialSpace(
+async function confidentialSpacesOf(
   tx: Transaction,
   targetType: AuditTargetType,
   targetId: string | null,
   fields: Record<string, unknown>,
-): Promise<boolean> {
+): Promise<string[]> {
   const ids = [
     ...(CONTENT_TARGETS.has(targetType) ? [targetId] : []),
     fields.spaceId,
     fields.itemId,
     fields.pageId,
   ].filter((id): id is string => typeof id === "string" && UUID.test(id));
-  if (ids.length === 0) return false;
-  const result = await tx.execute<{ confidential: boolean }>(sql`
-    select exists (select 1 from spaces s where s.confidential and (s.id = any(${sql.param(ids)}::uuid[])
-      or s.id in (select space_id from tree_items where id = any(${sql.param(ids)}::uuid[])))) as confidential`);
-  return result.rows[0]?.confidential === true;
+  if (ids.length === 0) return [];
+  const result = await tx.execute<{ id: string }>(sql`
+    select s.id from spaces s where s.confidential and (s.id = any(${sql.param(ids)}::uuid[])
+      or s.id in (select space_id from tree_items where id = any(${sql.param(ids)}::uuid[])))
+    union select distinct space_id from audit_confidential_events
+      where space_id = any(${sql.param(ids)}::uuid[])`);
+  return result.rows.map((row) => row.id);
 }
 
 function withoutContent(fields: Record<string, unknown>): Record<string, unknown> {
@@ -193,7 +195,8 @@ export class AuditLog {
   async record<TName extends AuditEventName>(tx: Transaction, input: AuditEventInput<TName>): Promise<void> {
     const definition = auditCatalog[input.name];
     const parsed = definition.fields.strict().parse(input.fields) as Record<string, unknown>;
-    const confidential = await concernsConfidentialSpace(tx, definition.target, input.targetId, parsed);
+    const confidentialSpaces = await confidentialSpacesOf(tx, definition.target, input.targetId, parsed);
+    const confidential = confidentialSpaces.length > 0;
     const fields: unknown = confidential ? withoutContent(parsed) : parsed;
     const context = currentRequestContext();
     const actor = input.actor ?? context?.actor ?? SYSTEM;
@@ -259,12 +262,20 @@ export class AuditLog {
       previousHash: head.lastHash ?? GENESIS_HASH,
     };
     const hash = hashAuditEntry(content);
-    await tx.insert(auditEvents).values({
-      ...content,
-      scopeType: scope.type,
-      actorType: actor.type,
-      hash,
-    });
+    const [inserted] = await tx
+      .insert(auditEvents)
+      .values({
+        ...content,
+        scopeType: scope.type,
+        actorType: actor.type,
+        hash,
+      })
+      .returning({ id: auditEvents.id });
+    if (inserted && confidential) {
+      await tx
+        .insert(auditConfidentialEvents)
+        .values(confidentialSpaces.map((spaceId) => ({ eventId: inserted.id, spaceId })));
+    }
     await tx
       .update(auditChains)
       .set({ lastSequence: content.sequence, lastHash: hash, updatedAt: new Date() })

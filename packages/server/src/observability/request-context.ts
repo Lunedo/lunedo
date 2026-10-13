@@ -23,3 +23,7 @@ export function enterRequestContext(context: RequestContext): void {
 export function currentRequestContext(): RequestContext | undefined {
   return storage.getStore();
 }
+
+export function clearRequestCache(): void {
+  storage.getStore()?.cache?.clear();
+}

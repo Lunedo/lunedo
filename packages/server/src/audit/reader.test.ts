@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import { ForbiddenError } from "../authorization/service.js";
@@ -144,18 +145,23 @@ describe.skipIf(!baseUrl)("audit reader", () => {
     const org = await organization();
     const actor = accountPrincipal(org.owner);
     const scope = { type: "organization" as const, id: org.id };
-    await test.database.transaction((tx) =>
-      test.services.audit.recordMany(
-        tx,
-        Array.from({ length: 1203 }, (_, index) => ({
-          name: "group.created" as const,
-          actor,
-          targetId: randomUUID(),
-          fields: { name: `Group ${index}` },
-          scope,
-        })),
-      ),
-    );
+    await test.database.transaction(async (tx) => {
+      const head = await tx.execute<{ last: number }>(sql`
+        select last_sequence::int as last from audit_chains
+        where scope_type = 'organization' and scope_id = ${org.id} for update`);
+      const start = head.rows[0]?.last ?? 0;
+      await tx.execute(sql`
+        insert into audit_events (id, scope_type, scope_id, sequence, name, actor_type, actor_id,
+          target_type, target_id, fields, occurred_at, previous_hash, hash)
+        select gen_random_uuid(), 'organization', ${org.id}, ${start} + n, 'group.created', 'account',
+          ${org.owner}, 'group', gen_random_uuid()::text, jsonb_build_object('name', 'Group ' || n),
+          date_trunc('milliseconds', now()),
+          decode(md5(n::text), 'hex'), decode(md5(n::text), 'hex')
+        from generate_series(1, 1203) as n`);
+      await tx.execute(sql`
+        update audit_chains set last_sequence = ${start} + 1203
+        where scope_type = 'organization' and scope_id = ${org.id}`);
+    });
     const exported = await collect(
       await test.services.auditReader.export(actor, { scope, name: "group.created" }),
     );

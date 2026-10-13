@@ -5,6 +5,7 @@ import { ANONYMOUS, accountPrincipal, type Principal, SYSTEM } from "../accounts
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { spaceFixtures } from "../testing/spaces.js";
+import { readText } from "../testing/streams.js";
 import { anyoneLinkMaxDaysSetting, anyoneLinksSetting, shareLinksSetting } from "./settings.js";
 
 const baseUrl = testDatabaseBaseUrl();
@@ -560,10 +561,8 @@ describe.skipIf(!baseUrl)("sharing", () => {
         organizationId: context.org.id,
       });
       expect(own.entries.map((entry) => [entry.kind, entry.itemTitle])).toEqual([["share", "Launch plan"]]);
-      const csv = await test.services.accessExplanations.overviewCsv(
-        admin,
-        context.org.id,
-        context.outsiderId,
+      const csv = await readText(
+        await test.services.accessExplanations.overviewCsv(admin, context.org.id, context.outsiderId),
       );
       expect(csv.split("\r\n")[0]).toBe("person,email,kind,space,page,role,pages,reason");
       expect(csv).not.toContain("Launch plan");

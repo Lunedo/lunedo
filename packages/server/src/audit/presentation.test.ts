@@ -42,6 +42,7 @@ describe("presentAuditEntry", () => {
       changes: [{ property: "value", old: "violet", new: "blue" }],
       references: {},
       formerAccounts: [],
+      peopleHidden: false,
     });
   });
 
