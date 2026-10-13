@@ -79,9 +79,8 @@ export function CreateSeriesDialog({
 
   const create = async () => {
     const next: ScheduleErrors & { name?: string } = validateSchedule(t, schedule);
-    if (name.trim().length === 0 || name.trim().length > NAME_MAX) {
-      next.name = t("meetings.create.nameInvalid", { max: NAME_MAX });
-    }
+    if (name.trim().length === 0) next.name = t("meetings.create.nameRequired", { max: NAME_MAX });
+    else if (name.trim().length > NAME_MAX) next.name = t("meetings.create.nameInvalid", { max: NAME_MAX });
     setErrors(next);
     if (Object.keys(next).length > 0) {
       if (next.name) nameInput.current?.focus();

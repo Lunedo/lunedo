@@ -1,4 +1,13 @@
-import { Button, IconButton, Menu, type MenuItem, Notice, PageHeader, Skeleton } from "@pagehall/ui";
+import {
+  Button,
+  EmptyState,
+  IconButton,
+  Menu,
+  type MenuItem,
+  Notice,
+  PageHeader,
+  Skeleton,
+} from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
 import {
@@ -7,6 +16,7 @@ import {
   ArrowRightLeft,
   Check,
   FileCheck,
+  FilePen,
   FilePlus,
   FileText,
   History,
@@ -27,6 +37,7 @@ import { api } from "../api/client.js";
 import { ApiError, request } from "../api/request.js";
 import { StarButton, useContentCollaboration } from "../collaboration/content-collaboration.js";
 import { PageReactions } from "../collaboration/reaction-bar.js";
+import { isEmptyDocument } from "../editor/empty-document.js";
 import { PageReadView, type ReadViewCollaboration } from "../editor/read-view.js";
 import { CollaborationProblemNotice } from "../editor/save-indicator.js";
 import type { SaveState } from "../editor/save-state.js";
@@ -156,6 +167,7 @@ function PageArticle({
   const editing = writable && search.edit === true;
   const meeting = page.ancestors.at(-1)?.kind === "meetingSeries";
   const [notesOpen, setNotesOpen] = useState(meeting && search.notes === true);
+  const notesToggle = useRef<HTMLButtonElement>(null);
   const publishMode = page.mode === "publish";
   const draft = useQuery({ ...draftQuery(page.id), enabled: writable && publishMode, throwOnError: false });
   const saveState = useRef<SaveState>("saved");
@@ -332,6 +344,7 @@ function PageArticle({
               {collaboration.commentsButton}
               {meeting ? (
                 <IconButton
+                  ref={notesToggle}
                   label={t("meetings.notes.toggle")}
                   icon={NotebookPen}
                   aria-pressed={notesOpen}
@@ -395,8 +408,17 @@ function PageArticle({
               {...collaboration.editor}
             />
           </Suspense>
-        ) : writable && publishMode && !page.published ? null : (
-          <PageContent pageId={page.id} publishMode={publishMode} collaboration={collaboration.readView} />
+        ) : writable && publishMode && !page.published ? (
+          draft.data?.hasChanges === false ? (
+            <EmptyPage onEdit={() => setEditing(true)} />
+          ) : null
+        ) : (
+          <PageContent
+            pageId={page.id}
+            publishMode={publishMode}
+            collaboration={collaboration.readView}
+            {...(writable ? { onEdit: () => setEditing(true) } : {})}
+          />
         )}
         <AttachmentsSection pageId={page.id} canEdit={writable} />
         <PageReactions itemId={page.id} canReact={!page.archived && !space.archived} />
@@ -417,7 +439,14 @@ function PageArticle({
       </article>
       {notesOpen ? (
         <div className="fixed inset-0 z-40 flex bg-surface md:sticky md:top-0 md:inset-auto md:z-auto md:h-dvh md:self-start">
-          <PrivateNotesPanel meetingId={page.id} canCopy={writable} onClose={() => setNotesOpen(false)} />
+          <PrivateNotesPanel
+            meetingId={page.id}
+            canCopy={writable}
+            onClose={() => {
+              setNotesOpen(false);
+              notesToggle.current?.focus();
+            }}
+          />
         </div>
       ) : (
         collaboration.panel
@@ -432,14 +461,36 @@ export function useLostEditPermission(mayEdit: boolean, editRequested: boolean):
   return held && !mayEdit && editRequested;
 }
 
+function EmptyPage({ onEdit }: { onEdit?: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <EmptyState
+      icon={FilePen}
+      title={t("page.emptyTitle")}
+      description={onEdit ? t("page.emptyDescription") : t("page.emptyReadOnly")}
+      {...(onEdit
+        ? {
+            action: (
+              <Button variant="primary" icon={Pencil} onClick={onEdit}>
+                {t("page.startWriting")}
+              </Button>
+            ),
+          }
+        : {})}
+    />
+  );
+}
+
 export function PageContent({
   pageId,
   publishMode,
   collaboration,
+  onEdit,
 }: {
   pageId: string;
   publishMode: boolean;
   collaboration: ReadViewCollaboration;
+  onEdit?: () => void;
 }) {
   const { t } = useTranslation();
   const format = useFormat();
@@ -451,6 +502,9 @@ export function PageContent({
     );
   }
   const version = content.data.version;
+  if (isEmptyDocument(content.data.document)) {
+    return <EmptyPage {...(onEdit ? { onEdit } : {})} />;
+  }
   return (
     <>
       {publishMode && version !== null ? (

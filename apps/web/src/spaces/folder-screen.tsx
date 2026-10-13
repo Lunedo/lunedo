@@ -14,11 +14,12 @@ import {
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
-import { AutoSaveTextField } from "../components/auto-save.js";
+
 import { LoadError } from "../errors/failure.js";
 import { preferenceKeys, useUpdatePreference } from "../preferences/preferences.js";
 import { usePreferences } from "../preferences/preferences-provider.js";
 import { useDocumentTitle } from "../screens/settings/settings-page.js";
+import { FolderDescription } from "./folder-description.js";
 import { InlineTitle } from "./inline-title.js";
 import { itemHref, itemSlug } from "./item-paths.js";
 import { Redirect } from "./redirect.js";
@@ -127,13 +128,7 @@ export function FolderScreen() {
         }
       />
       {canEdit ? (
-        <AutoSaveTextField
-          label={t("folder.description")}
-          hint={t("createItem.descriptionHint")}
-          value={folder.description}
-          multiline
-          onSave={(description) => save({ description })}
-        />
+        <FolderDescription value={folder.description} onSave={(description) => save({ description })} />
       ) : folder.description ? (
         <p className="text-text-muted">{folder.description}</p>
       ) : null}

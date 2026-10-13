@@ -301,6 +301,18 @@ describe("the attachments of a page", () => {
     expect(await screen.findByText("Version 1 is current again")).toBeTruthy();
   });
 
+  it("keeps the summary and the download away from the edge of the preview panel", async () => {
+    routes();
+    await renderSection(false);
+    await userEvent.click(await screen.findByRole("button", { name: /^Rack.png/ }));
+    const drawer = await screen.findByRole("dialog", { name: "Rack.png" });
+    const summary = await within(drawer).findByText(/Image/);
+    const download = within(drawer).getByRole("link", { name: "Download" });
+    const padded = drawer.querySelector(".p-4");
+    expect(padded?.contains(summary)).toBe(true);
+    expect(padded?.contains(download)).toBe(true);
+  });
+
   it("marks a version to keep and shows which versions are kept", async () => {
     ({ requests } = routes({
       [`PUT /api/v1/attachments/${REPORT}/versions/2/keep`]: () => ({ body: {} }),

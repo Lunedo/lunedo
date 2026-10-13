@@ -4,6 +4,7 @@ import {
   ConfirmDialog,
   EmptyState,
   Field,
+  Notice,
   PageHeader,
   SegmentedControl,
   Select,
@@ -18,6 +19,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { request } from "../../api/request.js";
+import { PageReadView } from "../../editor/read-view.js";
 import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { translateKey } from "../../i18n/translate.js";
@@ -32,6 +34,7 @@ import {
   draftQuery,
   type PageVersion,
   type VersionSide,
+  versionQuery,
   versionsQuery,
 } from "../content-queries.js";
 import { itemSlug } from "../item-paths.js";
@@ -89,7 +92,7 @@ function VersionHistory({ page }: { page: ItemDetails }) {
     if (side === null) return null;
     if (side === "draft") return draft.data?.basedOn ?? null;
     const index = list.findIndex((version) => version.number === side);
-    return list[index + 1]?.number ?? side;
+    return list[index + 1]?.number ?? null;
   };
   const from = sideOf(search.from) ?? previousOf(to);
   const view: View = search.view === "sideBySide" ? "sideBySide" : "inline";
@@ -167,6 +170,7 @@ function VersionHistory({ page }: { page: ItemDetails }) {
               <Field label={t("versions.compare")}>
                 <Select
                   value={from === null ? undefined : String(from)}
+                  placeholder={t("versions.noEarlierVersion")}
                   onValueChange={(value) => select({ from: sideOf(value) ?? null })}
                   options={options}
                 />
@@ -190,6 +194,8 @@ function VersionHistory({ page }: { page: ItemDetails }) {
             </div>
             {from !== null && to !== null ? (
               <Comparison pageId={page.id} from={from} to={to} view={view} />
+            ) : typeof to === "number" ? (
+              <FirstVersion pageId={page.id} number={to} />
             ) : null}
           </div>
           <VersionList
@@ -244,6 +250,25 @@ function Comparison({
       beforeLabel={sideLabel(t, from)}
       afterLabel={sideLabel(t, to)}
     />
+  );
+}
+
+function FirstVersion({ pageId, number }: { pageId: string; number: number }) {
+  const { t } = useTranslation();
+  const version = useQuery(versionQuery(pageId, number));
+  if (version.isPending) return <Skeleton className="h-field w-full" />;
+  if (version.isError) {
+    return (
+      <LoadError what={t("versions.compareFailed")} error={version.error} onRetry={() => version.refetch()} />
+    );
+  }
+  return (
+    <section aria-label={t("versions.firstVersionTitle")} className="flex flex-col gap-3">
+      <Notice variant="info" title={t("versions.firstVersionTitle")}>
+        {t("versions.firstVersionDescription")}
+      </Notice>
+      <PageReadView pageId={pageId} document={version.data.document} references={version.data.references} />
+    </section>
   );
 }
 

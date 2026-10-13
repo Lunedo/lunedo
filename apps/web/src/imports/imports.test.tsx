@@ -203,6 +203,25 @@ describe("import wizard", () => {
     expect(screen.getByText("The import folder is empty")).toBeTruthy();
   });
 
+  it("marks the missing file at the field and moves the focus to it", async () => {
+    setup(
+      {
+        [`GET /api/v1/imports/${IMPORT_ID}`]: () => ({
+          body: importView({ state: "draft", file: null, found: null }),
+        }),
+        [`PATCH /api/v1/imports/${IMPORT_ID}`]: () => ({ body: importView({ state: "draft", file: null }) }),
+      },
+      ["organization.imports.manage"],
+    );
+    await open(`/settings/organizations/${ORGANIZATION.id}/imports/${IMPORT_ID}/setup?step=0`);
+    await userEvent.click(await screen.findByRole("button", { name: "Continue" }));
+    const message = await screen.findByText("Choose the export file, and wait until the upload is finished.");
+    expect(message.closest("[role='alert']")).toBeTruthy();
+    const input = screen.getByLabelText(/Drop the export here/);
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+    await waitFor(() => expect(document.activeElement).toBe(input));
+  });
+
   it("refuses a file above the upload limit before anything is sent", async () => {
     const api = setup(
       {
@@ -439,6 +458,15 @@ describe("people in the import wizard", () => {
     expect(
       await screen.findByText("Check and save the API token first, or choose another way."),
     ).toBeTruthy();
+    const site = screen.getByLabelText("Confluence site");
+    for (const field of [
+      site,
+      screen.getByLabelText("Your Atlassian e-mail address"),
+      screen.getByLabelText("API token"),
+    ]) {
+      expect(field.getAttribute("aria-invalid")).toBe("true");
+    }
+    await waitFor(() => expect(document.activeElement).toBe(site));
     await userEvent.type(screen.getByLabelText("Confluence site"), "example.atlassian.net");
     await userEvent.type(screen.getByLabelText("Your Atlassian e-mail address"), "olivia@example.org");
     await userEvent.click(screen.getByRole("button", { name: "Check and save token" }));
@@ -475,8 +503,11 @@ describe("people in the import wizard", () => {
     await open(`/settings/organizations/${ORGANIZATION.id}/imports/${IMPORT_ID}/setup?step=1`);
     await userEvent.click(await screen.findByRole("radio", { name: /Skip for now/ }));
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
-    expect(await screen.findByText("Confirm that every author becomes a placeholder.")).toBeTruthy();
-    await userEvent.click(screen.getByRole("checkbox", { name: /every author becomes a placeholder/ }));
+    expect(await screen.findAllByText("Confirm that every author becomes a placeholder.")).toBeTruthy();
+    const confirmation = screen.getByRole("checkbox", { name: /every author becomes a placeholder/ });
+    expect(confirmation.getAttribute("aria-invalid")).toBe("true");
+    await waitFor(() => expect(document.activeElement).toBe(confirmation));
+    await userEvent.click(confirmation);
     await waitFor(() =>
       expect(api.requests.find((request) => request.path.endsWith("/people-source"))?.body).toEqual({
         kind: "skip",

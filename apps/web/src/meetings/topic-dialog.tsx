@@ -40,7 +40,11 @@ export function TopicDialog({
   const create = async () => {
     const value = title.trim();
     if (value.length === 0 || value.length > TITLE_MAX) {
-      setError(t("meetings.topics.titleInvalid", { max: TITLE_MAX }));
+      setError(
+        value.length === 0
+          ? t("meetings.topics.titleRequired", { max: TITLE_MAX })
+          : t("meetings.topics.titleInvalid", { max: TITLE_MAX }),
+      );
       titleInput.current?.focus();
       return;
     }
