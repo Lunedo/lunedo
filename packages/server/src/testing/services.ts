@@ -5,7 +5,7 @@ import path from "node:path";
 import { AuditLog, auditSettingChanges } from "../audit/audit-log.js";
 import { Secret } from "../config/secret.js";
 import { Encryption } from "../crypto/envelope.js";
-import { EnvKeyProvider } from "../crypto/key-provider.js";
+import { EnvKeyProvider, type KeyProvider } from "../crypto/key-provider.js";
 import { formatKeyEntry, parseKeyRing } from "../crypto/key-ring.js";
 import { KeyRingHolder } from "../crypto/key-ring-holder.js";
 import { createDatabase, type Database } from "../database/database.js";
@@ -20,6 +20,7 @@ import { CapturingTransport } from "./jobs.js";
 
 export interface TestServices {
   encryption: Encryption;
+  keyRing: KeyRingHolder;
   url: string;
   pool: DatabasePool;
   database: Database;
@@ -36,6 +37,7 @@ export async function createTestServices(
     configuredInstanceUrl?: string;
     directoryConnector?: DirectoryConnector;
     masterKey?: Buffer;
+    keyProvider?: KeyProvider;
     atlassianFetch?: typeof fetch;
     beforeMigrations?: (url: string) => Promise<unknown>;
   } = {},
@@ -49,10 +51,11 @@ export async function createTestServices(
   await runMigrations(pool, { logger });
   const database = createDatabase(pool);
   const keyRing = new KeyRingHolder(
-    new EnvKeyProvider(new Secret(formatKeyEntry(1, options.masterKey ?? randomBytes(32)))),
+    options.keyProvider ??
+      new EnvKeyProvider(new Secret(formatKeyEntry(1, options.masterKey ?? randomBytes(32)))),
     logger,
   );
-  await keyRing.reload();
+  await keyRing.reload({ create: true });
   const encryption = new Encryption(() => keyRing.ring);
   const audit = new AuditLog({ database, encryption });
   const settings = new SettingsService({ database, logger, onChange: auditSettingChanges(audit) });
@@ -85,6 +88,7 @@ export async function createTestServices(
     services,
     mail,
     encryption,
+    keyRing,
     anotherNode: build,
     async close() {
       await pool.end();
