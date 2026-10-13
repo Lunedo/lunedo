@@ -310,7 +310,8 @@ export function parseCaCertificates(pem: string): { pem: string; info: Certifica
 }
 
 function groupsClaimNameOf(config: OidcConfig | SamlConfig | LdapConfig): string | null {
-  return "claims" in config ? config.claims.groups : null;
+  if ("claims" in config) return config.claims.groups;
+  return "metadata" in config && "attributes" in config ? config.attributes.groups : null;
 }
 
 function warningsOf(credentials: CredentialSummary[], now: Date): ProviderWarning[] {
@@ -581,6 +582,7 @@ export class IdentityProviderService {
         const stored = metadata.find((entry) => entry.providerId === row.id);
         const warnings = this.#credentialWarnings("saml", config, own, now);
         if (stored?.refreshFailedAt) warnings.push("metadataRefreshFailed");
+        if (row.groupsClaimMissingSince) warnings.push("groupsClaimMissing");
         const paths = samlPaths(row.id);
         return {
           ...base,

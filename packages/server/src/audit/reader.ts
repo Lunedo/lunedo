@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, lt, or, type SQL, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lt, not, or, type SQL, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import { ForbiddenError } from "../authorization/service.js";
@@ -23,6 +23,7 @@ export interface AuditEntry {
   clientIp: string | null;
   userAgent: string | null;
   formerSubjects: string[];
+  peopleHidden: boolean;
 }
 
 export interface AuditFilter {
@@ -41,6 +42,53 @@ export interface AuditCursor {
 }
 
 const EXPORT_BATCH = 500;
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const KEPT_REFERENCES = new Set([
+  "spaceId",
+  "itemId",
+  "pageId",
+  "parentId",
+  "attachmentId",
+  "commentId",
+  "discardedDraftId",
+  "importId",
+  "organizationId",
+]);
+
+type StoredEntry = Omit<AuditEntry, "formerSubjects" | "peopleHidden"> & { sealed: unknown };
+type Row = StoredEntry & { hidden: boolean };
+
+function namesSomeone(value: unknown): boolean {
+  if (typeof value === "string") return UUID.test(value);
+  return Array.isArray(value) && value.some(namesSomeone);
+}
+
+function withoutPeople(row: StoredEntry): StoredEntry {
+  const fields =
+    row.fields !== null && typeof row.fields === "object" && !Array.isArray(row.fields)
+      ? Object.fromEntries(
+          Object.entries(row.fields as Record<string, unknown>).filter(
+            ([key, value]) => KEPT_REFERENCES.has(key) || !namesSomeone(value),
+          ),
+        )
+      : row.fields;
+  const labels = (row.labels ?? {}) as { scope?: unknown; target?: unknown };
+  const kept = {
+    ...(labels.scope !== undefined ? { scope: labels.scope } : {}),
+    ...(labels.target !== undefined ? { target: labels.target } : {}),
+  };
+  return {
+    ...row,
+    actorId: null,
+    fields,
+    labels: Object.keys(kept).length > 0 ? kept : null,
+    sealed: null,
+    requestId: null,
+    clientIp: null,
+    userAgent: null,
+  };
+}
 
 export const ACCOUNT_SECURITY_EVENTS = [
   "auth.signedIn",
@@ -92,27 +140,35 @@ export class AuditReader {
     this.#audit = options.audit;
   }
 
-  async #requireRead(actor: Principal, scope: AuditScope | undefined): Promise<void> {
-    if (await this.#authorization.authorize(actor, "instance.audit.view", { type: "instance" })) return;
+  async #requireRead(actor: Principal, scope: AuditScope | undefined): Promise<Principal | null> {
+    if (await this.#authorization.authorize(actor, "instance.audit.view", { type: "instance" })) return null;
     if (scope?.type === "organization") {
       await this.#authorization.require(actor, "organization.audit.view", {
         type: "organization",
         id: scope.id,
       });
-      return;
+      return actor;
     }
     throw new ForbiddenError(
       await this.#authorization.explain(actor, "instance.audit.view", { type: "instance" }),
     );
   }
 
-  #where(filter: AuditFilter, cursor: AuditCursor | undefined): SQL | undefined {
+  #hidden(viewer: Principal | null): SQL<boolean> {
+    if (!viewer) return sql<boolean>`false`;
+    return sql<boolean>`exists (select 1 from audit_confidential_events ace
+      where ace.event_id = ${auditEvents.id} and not exists (select 1 from spaces s
+        where s.id = ace.space_id and ${this.#authorization.spaceFilter(viewer, sql`s`)}))`;
+  }
+
+  #where(filter: AuditFilter, cursor: AuditCursor | undefined, viewer: Principal | null): SQL | undefined {
+    const hidden = this.#hidden(viewer);
     return and(
       filter.scope ? eq(auditEvents.scopeType, filter.scope.type) : undefined,
       filter.scope ? eq(auditEvents.scopeId, filter.scope.id) : undefined,
       filter.from ? gte(auditEvents.occurredAt, filter.from) : undefined,
       filter.to ? lt(auditEvents.occurredAt, filter.to) : undefined,
-      filter.actorId ? eq(auditEvents.actorId, filter.actorId) : undefined,
+      filter.actorId ? and(eq(auditEvents.actorId, filter.actorId), not(hidden)) : undefined,
       filter.targetType ? eq(auditEvents.targetType, filter.targetType) : undefined,
       filter.targetId ? eq(auditEvents.targetId, filter.targetId) : undefined,
       filter.name ? eq(auditEvents.name, filter.name) : undefined,
@@ -125,8 +181,12 @@ export class AuditReader {
     );
   }
 
-  async #readable(rows: (Omit<AuditEntry, "formerSubjects"> & { sealed: unknown })[]): Promise<AuditEntry[]> {
-    const prepared = rows.map((row) => ({ ...row, formerSubjects: [] as string[] }));
+  async #readable(rows: Row[]): Promise<AuditEntry[]> {
+    const prepared = rows.map(({ hidden, ...row }) => ({
+      ...(hidden ? withoutPeople(row) : row),
+      formerSubjects: [] as string[],
+      peopleHidden: hidden,
+    }));
     const sealer = this.#audit?.sealer;
     const unsealed = sealer
       ? await sealer.unseal(this.#database, prepared)
@@ -137,11 +197,16 @@ export class AuditReader {
     return unsealed.map(({ sealed: _sealed, ...entry }) => entry);
   }
 
-  async #page(filter: AuditFilter, cursor: AuditCursor | undefined, limit: number): Promise<AuditEntry[]> {
+  async #page(
+    filter: AuditFilter,
+    cursor: AuditCursor | undefined,
+    limit: number,
+    viewer: Principal | null,
+  ): Promise<AuditEntry[]> {
     const rows = await this.#database
-      .select(columns)
+      .select({ ...columns, hidden: this.#hidden(viewer) })
       .from(auditEvents)
-      .where(this.#where(filter, cursor))
+      .where(this.#where(filter, cursor, viewer))
       .orderBy(desc(auditEvents.occurredAt), desc(auditEvents.id))
       .limit(limit);
     return this.#readable(rows);
@@ -152,9 +217,9 @@ export class AuditReader {
     filter: AuditFilter,
     options: { limit?: number; cursor?: AuditCursor } = {},
   ): Promise<{ items: AuditEntry[]; next: AuditCursor | null }> {
-    await this.#requireRead(actor, filter.scope);
+    const viewer = await this.#requireRead(actor, filter.scope);
     const limit = Math.min(Math.max(options.limit ?? 50, 1), 1000);
-    const rows = await this.#page(filter, options.cursor, limit + 1);
+    const rows = await this.#page(filter, options.cursor, limit + 1, viewer);
     const items = rows.slice(0, limit);
     const last = items.at(-1);
     return { items, next: rows.length > limit && last ? { occurredAt: last.occurredAt, id: last.id } : null };
@@ -194,13 +259,13 @@ export class AuditReader {
       )
       .orderBy(desc(auditEvents.occurredAt), desc(auditEvents.id))
       .limit(limit + 1);
-    const items = await this.#readable(rows.slice(0, limit));
+    const items = await this.#readable(rows.slice(0, limit).map((row) => ({ ...row, hidden: false })));
     const last = items.at(-1);
     return { items, next: rows.length > limit && last ? { occurredAt: last.occurredAt, id: last.id } : null };
   }
 
   async export(actor: Principal, filter: AuditFilter): Promise<AsyncIterable<AuditEntry>> {
-    await this.#requireRead(actor, filter.scope);
+    const viewer = await this.#requireRead(actor, filter.scope);
     if (actor.type === "account" && this.#audit) {
       const scope = filter.scope ?? INSTANCE_AUDIT_SCOPE;
       await this.#audit.recordAlone({
@@ -220,7 +285,7 @@ export class AuditReader {
         scope,
       });
     }
-    const page = (cursor: AuditCursor | undefined) => this.#page(filter, cursor, EXPORT_BATCH);
+    const page = (cursor: AuditCursor | undefined) => this.#page(filter, cursor, EXPORT_BATCH, viewer);
     return {
       async *[Symbol.asyncIterator]() {
         let cursor: AuditCursor | undefined;

@@ -5,6 +5,7 @@ import { runWithRequestContext } from "../observability/request-context.js";
 import { LastOwnerError } from "../organizations/memberships.js";
 import { OrganizationError } from "../organizations/organizations.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
+import { countQueries } from "../testing/queries.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { ForbiddenError } from "./service.js";
 
@@ -428,23 +429,69 @@ describe.skipIf(!baseUrl)("authorization rules", () => {
     expect(events.rows[2]?.fields).toEqual({ reason: "expired" });
   });
 
-  it("applies changes on the next request, not within a cached request", async () => {
+  it("applies changes of other requests on the next request, not within a cached request", async () => {
     const org = await organization();
     const person = await member(org.id);
     const cache = new Map<string, unknown>();
     await runWithRequestContext({ requestId: "first", cache }, async () => {
       expect(await allowed(person, "organization.settings.manage", org.id)).toBe(false);
+      await runWithRequestContext({ requestId: "other" }, () =>
+        test.services.roles.assign(SYSTEM, {
+          scope: "organization",
+          organizationId: org.id,
+          role: { builtIn: "administrator" },
+          principal: { kind: "account", id: person },
+        }),
+      );
+      expect(await allowed(person, "organization.settings.manage", org.id)).toBe(false);
+    });
+    await runWithRequestContext({ requestId: "second", cache: new Map() }, async () => {
+      expect(await allowed(person, "organization.settings.manage", org.id)).toBe(true);
+    });
+  });
+
+  it("reuses facts within a request and loads them again after a write of the same request", async () => {
+    const org = await organization();
+    const person = await member(org.id);
+    await runWithRequestContext({ requestId: "writes", cache: new Map() }, async () => {
+      expect(await allowed(person, "organization.settings.manage", org.id)).toBe(false);
+      const reads = countQueries(test.pool);
+      expect(await allowed(person, "organization.settings.manage", org.id)).toBe(false);
+      expect(reads.stop()).toBe(1);
       await test.services.roles.assign(SYSTEM, {
         scope: "organization",
         organizationId: org.id,
         role: { builtIn: "administrator" },
         principal: { kind: "account", id: person },
       });
-      expect(await allowed(person, "organization.settings.manage", org.id)).toBe(false);
-    });
-    await runWithRequestContext({ requestId: "second", cache: new Map() }, async () => {
       expect(await allowed(person, "organization.settings.manage", org.id)).toBe(true);
     });
+  });
+
+  it("checks inside a transaction without the cache of the request", async () => {
+    const org = await organization();
+    const person = await member(org.id);
+    await runWithRequestContext({ requestId: "transaction", cache: new Map() }, () =>
+      test.database.transaction(async (tx) => {
+        const check = () =>
+          test.services.authorization.authorize(
+            accountPrincipal(person),
+            "organization.settings.manage",
+            { type: "organization", id: org.id },
+            { executor: tx },
+          );
+        expect(await check()).toBe(false);
+        await runWithRequestContext({ requestId: "other" }, () =>
+          test.services.roles.assign(SYSTEM, {
+            scope: "organization",
+            organizationId: org.id,
+            role: { builtIn: "administrator" },
+            principal: { kind: "account", id: person },
+          }),
+        );
+        expect(await check()).toBe(true);
+      }),
+    );
   });
 
   it("explains which role and assignment grant a permission", async () => {

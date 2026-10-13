@@ -32,6 +32,7 @@ function signIn(id: string, occurredAt: string, name = "auth.signedIn"): AuditIt
     changes: [],
     references: {},
     formerAccounts: [],
+    peopleHidden: false,
   } as AuditItem;
 }
 

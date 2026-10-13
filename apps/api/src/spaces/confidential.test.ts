@@ -1,7 +1,12 @@
 import { get, type IncomingMessage } from "node:http";
 import type { AddressInfo } from "node:net";
 import type { NestFastifyApplication } from "@nestjs/platform-fastify";
-import { createServerRuntime, membersCreateConfidentialSpacesSetting } from "@pagehall/server";
+import {
+  accountAttemptLimitSetting,
+  clientAttemptLimitSetting,
+  createServerRuntime,
+  membersCreateConfidentialSpacesSetting,
+} from "@pagehall/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { apiContextOf } from "../context.js";
 import {
@@ -42,6 +47,8 @@ describe.skipIf(!databaseBaseUrl)("confidential spaces through the API", () => {
   beforeAll(async () => {
     test = await createAuthTestApp(configuredSetupEnv);
     await completeConfiguredSetup(test);
+    await test.runtime.settings.set(clientAttemptLimitSetting, {}, "instance", 10_000);
+    await test.runtime.settings.set(accountAttemptLimitSetting, {}, "instance", 1000);
     owner = new TestClient(test.app);
     await owner.post("/api/v1/auth/sign-in", OWNER);
     await addTotp(owner);
@@ -334,6 +341,57 @@ describe.skipIf(!databaseBaseUrl)("confidential spaces through the API", () => {
     const exported = await owner.get(`/api/v1/organizations/${organizationId}/audit-events/export`);
     expectHidden(exported.body, space, "export");
     expect(exported.body).toContain("space.created");
+  });
+
+  it("keep their members out of the organization audit log, its filters and its export", async () => {
+    const admin = await person();
+    const colleague = await person();
+    const space = await confidentialSpace(admin, [{ person: colleague, role: "editor" }]);
+    const organizationAdministrator = await person();
+    const assigned = await owner.post(`/api/v1/organizations/${organizationId}/role-assignments`, {
+      role: { builtIn: "administrator" },
+      principal: { kind: "account", id: organizationAdministrator.id },
+    });
+    expect(assigned.statusCode, assigned.body).toBe(201);
+    await addTotp(organizationAdministrator.client);
+    const reader = organizationAdministrator.client;
+    const names = await Promise.all(
+      [admin, colleague].map(
+        async (member) => (await member.client.get("/api/v1/auth/session")).json().account.name as string,
+      ),
+    );
+    const people = [admin.id, colleague.id, admin.email, colleague.email, ...names];
+    const about = (entry: { targetId: string | null; fields: Record<string, unknown> }) =>
+      entry.targetId === space.id || entry.targetId === space.pageId || entry.fields.spaceId === space.id;
+    const base = `/api/v1/organizations/${organizationId}/audit-events`;
+
+    const listed = await reader.get(`${base}?limit=200`);
+    expect(listed.statusCode, listed.body).toBe(200);
+    const entries = (listed.json().items as Parameters<typeof about>[0][]).filter(about);
+    expect(entries.length).toBeGreaterThanOrEqual(2);
+    expect(entries.every((entry) => (entry as { peopleHidden?: boolean }).peopleHidden)).toBe(true);
+    for (const person of people) expect(JSON.stringify(entries)).not.toContain(person);
+
+    const byPerson = await reader.get(`${base}?limit=200&actorId=${admin.id}`);
+    expect(byPerson.statusCode, byPerson.body).toBe(200);
+    expect((byPerson.json().items as Parameters<typeof about>[0][]).filter(about)).toEqual([]);
+
+    const exported = await reader.get(`${base}/export`);
+    expect(exported.statusCode).toBe(200);
+    const rows = exported.body.split("\r\n").filter((row) => row.includes(space.id));
+    expect(rows.length).toBeGreaterThanOrEqual(2);
+    for (const person of people) expect(rows.join("\n")).not.toContain(person);
+    const exportedByPerson = await reader.get(`${base}/export?actorId=${admin.id}`);
+    expect(exportedByPerson.body).not.toContain(space.id);
+
+    const full = await instanceAdministrator.client.get(
+      `/api/v1/instance/audit-events?limit=200&actorId=${admin.id}`,
+    );
+    expect(full.statusCode, full.body).toBe(200);
+    const created = (full.json().items as { name: string; targetId: string; actorId: string }[]).find(
+      (entry) => entry.name === "space.created" && entry.targetId === space.id,
+    );
+    expect(created?.actorId).toBe(admin.id);
   });
 
   it("send administrators no notification about their content", async () => {

@@ -40,6 +40,7 @@ export function formerUser(t: TFunction, id: string): string {
 
 export function actorLabel(t: TFunction, item: AuditItem): string {
   if (item.actor.name) return item.actor.name;
+  if (item.peopleHidden && item.actor.type === "account") return t("audit.hiddenActor");
   if (item.actor.former && item.actor.id) return formerUser(t, item.actor.id);
   if (item.actor.type === "account") return t("audit.deletedAccount");
   return translateKey(t, `audit.actorTypes.${item.actor.type}`);

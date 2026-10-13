@@ -2,8 +2,11 @@ import { Body, Controller, Get, Inject, Param, Post, Query, Req, Res } from "@ne
 import {
   type AuditChangeSignal,
   accountPrincipal,
+  currentRequestContext,
   type ImportChangeSignal,
   type NotificationCursor,
+  type RequestContext,
+  runWithRequestContext,
   type SettingChangeSignal,
   type SpaceChangeSignal,
   type SyncRunSignal,
@@ -18,6 +21,7 @@ import { ApiRoute } from "../http/api-route.js";
 import { decodeCursor, encodeCursor, pageQuery, pageSchema } from "../http/pagination.js";
 import { notFound } from "../http/problems.js";
 import { sessionOf } from "../http/request.js";
+import { SpaceSignals } from "./space-signals.js";
 
 const TAG = "Notifications";
 
@@ -95,6 +99,8 @@ const markedSchema = z.object({ marked: z.number().int() });
 @Controller("api/v1/notifications")
 @InternalRoute()
 export class NotificationsController {
+  #spaceSignals: SpaceSignals | undefined;
+
   constructor(@Inject(API_CONTEXT) private readonly context: ApiContext) {}
 
   get #notifications() {
@@ -171,49 +177,55 @@ export class NotificationsController {
     const hub = this.context.notificationHub;
     if (!hub) throw notFound();
     const services = servicesOf(this.context);
+    this.#spaceSignals ??= new SpaceSignals(hub, (accountIds, spaceId) =>
+      services.authorization.spaceAudience(accountIds, spaceId),
+    );
+    const spaceSignals = this.#spaceSignals;
     const session = sessionOf(request);
     const logger = this.context.logger;
+    const streamContext = currentRequestContext();
+    if (streamContext) streamContext.cache = undefined;
+    const taskContext: RequestContext = { ...(streamContext ?? { requestId: request.id }) };
     let closed = false;
     let queue = Promise.resolve();
+    const enqueue = (task: () => Promise<void>, failure: string) => {
+      queue = queue
+        .then(() => runWithRequestContext({ ...taskContext, cache: new Map() }, task))
+        .catch((error: unknown) => logger.warn({ err: error }, failure));
+    };
     const raw = reply.raw;
     const send = () => {
-      queue = queue
-        .then(async () => {
-          if (closed) return;
-          const unreadCount = await services.notifications.unreadCount(session.accountId);
-          if (!closed) raw.write(`event: notifications\ndata: ${JSON.stringify({ unreadCount })}\n\n`);
-        })
-        .catch((error: unknown) => logger.warn({ err: error }, "Sending a notification event failed"));
+      enqueue(async () => {
+        if (closed) return;
+        const unreadCount = await services.notifications.unreadCount(session.accountId);
+        if (!closed) raw.write(`event: notifications\ndata: ${JSON.stringify({ unreadCount })}\n\n`);
+      }, "Sending a notification event failed");
     };
     const sendSetting = (signal: SettingChangeSignal) => {
-      queue = queue
-        .then(async () => {
-          if (closed || !(await this.context.settings?.affects(session.accountId, signal))) return;
-          const data = {
-            key: signal.key,
-            level: signal.level,
-            organizationId: signal.level === "organization" ? signal.id : null,
-          };
-          if (!closed) raw.write(`event: settings\ndata: ${JSON.stringify(data)}\n\n`);
-        })
-        .catch((error: unknown) => logger.warn({ err: error }, "Sending a settings event failed"));
+      enqueue(async () => {
+        if (closed || !(await this.context.settings?.affects(session.accountId, signal))) return;
+        const data = {
+          key: signal.key,
+          level: signal.level,
+          organizationId: signal.level === "organization" ? signal.id : null,
+        };
+        if (!closed) raw.write(`event: settings\ndata: ${JSON.stringify(data)}\n\n`);
+      }, "Sending a settings event failed");
     };
     const sendSyncRun = (signal: SyncRunSignal) => {
-      queue = queue
-        .then(async () => {
-          if (closed) return;
-          const decision = await services.authorization.explain(
-            accountPrincipal(session.accountId),
-            "instance.signIn.view",
-            { type: "instance" },
-          );
-          if (!decision.allowed || closed) return;
-          raw.write(`event: syncRuns
+      enqueue(async () => {
+        if (closed) return;
+        const decision = await services.authorization.explain(
+          accountPrincipal(session.accountId),
+          "instance.signIn.view",
+          { type: "instance" },
+        );
+        if (!decision.allowed || closed) return;
+        raw.write(`event: syncRuns
 data: ${JSON.stringify(signal)}
 
 `);
-        })
-        .catch((error: unknown) => logger.warn({ err: error }, "Sending a sync run event failed"));
+      }, "Sending a sync run event failed");
     };
     const pendingChanges = new Set<string>();
     const mayFollow = async (signal: AuditChangeSignal): Promise<boolean> => {
@@ -250,92 +262,86 @@ data: ${JSON.stringify(signal)}
       const data = JSON.stringify(signal);
       if (pendingChanges.has(data)) return;
       pendingChanges.add(data);
-      queue = queue
-        .then(async () => {
-          pendingChanges.delete(data);
-          if (closed || !(await mayFollow(signal)) || closed) return;
-          raw.write(`event: changes\ndata: ${data}\n\n`);
-        })
-        .catch((error: unknown) => logger.warn({ err: error }, "Sending a change event failed"));
+      enqueue(async () => {
+        pendingChanges.delete(data);
+        if (closed || !(await mayFollow(signal)) || closed) return;
+        raw.write(`event: changes\ndata: ${data}\n\n`);
+      }, "Sending a change event failed");
     };
     const pendingSpaces = new Set<string>();
     const sendSpace = (signal: SpaceChangeSignal) => {
       const data = JSON.stringify(signal);
       if (pendingSpaces.has(data)) return;
       pendingSpaces.add(data);
-      queue = queue
-        .then(async () => {
-          pendingSpaces.delete(data);
-          if (closed) return;
-          if (signal.kind === "access") spaceDecisions.delete(`space.edit:${signal.spaceId}`);
-          const mayInSpace = async (action: "space.view" | "space.edit"): Promise<boolean> => {
-            const cacheKey = `${action}:${signal.spaceId}`;
-            const cached = spaceDecisions.get(cacheKey);
-            if (cached && signal.kind !== "access" && Date.now() - cached.at < SPACE_DECISION_MS) {
-              return cached.allowed;
-            }
-            const allowed = (
-              await services.authorization.explain(accountPrincipal(session.accountId), action, {
-                type: "space",
-                id: signal.spaceId,
-              })
-            ).allowed;
-            spaceDecisions.set(cacheKey, { allowed, at: Date.now() });
-            return allowed;
-          };
-          const mayOnItem = async (action: "item.view" | "item.edit", itemId: string): Promise<boolean> =>
-            (
-              await services.authorization.explain(accountPrincipal(session.accountId), action, {
-                type: "item",
-                id: itemId,
-              })
-            ).allowed;
-          const spaceVisible = await mayInSpace("space.view");
-          let forwarded = signal;
-          if (signal.itemId) {
-            if (!(await mayOnItem("item.view", signal.itemId))) {
-              if (!spaceVisible || signal.kind === "page" || signal.kind === "draft") return;
-              forwarded = { ...signal, itemId: null };
-            } else if (
-              signal.kind === "draft" &&
-              !(await mayInSpace("space.edit")) &&
-              !(await mayOnItem("item.edit", signal.itemId))
-            ) {
-              return;
-            }
-          } else if (!spaceVisible || (signal.kind === "draft" && !(await mayInSpace("space.edit")))) {
+      enqueue(async () => {
+        pendingSpaces.delete(data);
+        if (closed || !(await spaceSignals.reaches(signal.spaceId, session.accountId))) return;
+        if (signal.kind === "access") spaceDecisions.delete(`space.edit:${signal.spaceId}`);
+        const mayInSpace = async (action: "space.view" | "space.edit"): Promise<boolean> => {
+          const cacheKey = `${action}:${signal.spaceId}`;
+          const cached = spaceDecisions.get(cacheKey);
+          if (cached && signal.kind !== "access" && Date.now() - cached.at < SPACE_DECISION_MS) {
+            return cached.allowed;
+          }
+          const allowed = (
+            await services.authorization.explain(accountPrincipal(session.accountId), action, {
+              type: "space",
+              id: signal.spaceId,
+            })
+          ).allowed;
+          spaceDecisions.set(cacheKey, { allowed, at: Date.now() });
+          return allowed;
+        };
+        const mayOnItem = async (action: "item.view" | "item.edit", itemId: string): Promise<boolean> =>
+          (
+            await services.authorization.explain(accountPrincipal(session.accountId), action, {
+              type: "item",
+              id: itemId,
+            })
+          ).allowed;
+        const spaceVisible = await mayInSpace("space.view");
+        let forwarded = signal;
+        if (signal.itemId) {
+          if (!(await mayOnItem("item.view", signal.itemId))) {
+            if (!spaceVisible || signal.kind === "page" || signal.kind === "draft") return;
+            forwarded = { ...signal, itemId: null };
+          } else if (
+            signal.kind === "draft" &&
+            !(await mayInSpace("space.edit")) &&
+            !(await mayOnItem("item.edit", signal.itemId))
+          ) {
             return;
           }
-          if (!closed) raw.write(`event: spaces\ndata: ${JSON.stringify(forwarded)}\n\n`);
-        })
-        .catch((error: unknown) => logger.warn({ err: error }, "Sending a space event failed"));
+        } else if (!spaceVisible || (signal.kind === "draft" && !(await mayInSpace("space.edit")))) {
+          return;
+        }
+        if (!closed) raw.write(`event: spaces\ndata: ${JSON.stringify(forwarded)}\n\n`);
+      }, "Sending a space event failed");
     };
     const pendingImports = new Set<string>();
     const sendImport = (signal: ImportChangeSignal) => {
       if (pendingImports.has(signal.importId)) return;
       pendingImports.add(signal.importId);
-      queue = queue
-        .then(async () => {
-          pendingImports.delete(signal.importId);
-          if (closed) return;
-          const principal = accountPrincipal(session.accountId);
-          const resource = { type: "import", id: signal.importId };
-          const allowed =
-            (await services.authorization.explain(principal, "import.view", resource)).allowed ||
-            (await services.authorization.explain(principal, "import.takeOver", resource)).allowed;
-          if (!allowed || closed) return;
-          raw.write(`event: imports
+      enqueue(async () => {
+        pendingImports.delete(signal.importId);
+        if (closed) return;
+        const principal = accountPrincipal(session.accountId);
+        const resource = { type: "import", id: signal.importId };
+        const allowed =
+          (await services.authorization.explain(principal, "import.view", resource)).allowed ||
+          (await services.authorization.explain(principal, "import.takeOver", resource)).allowed;
+        if (!allowed || closed) return;
+        raw.write(`event: imports
 data: ${JSON.stringify(signal)}
 
 `);
-        })
-        .catch((error: unknown) => logger.warn({ err: error }, "Sending an import event failed"));
+      }, "Sending an import event failed");
     };
     const unsubscribe = await hub.subscribe(session.accountId, send);
     const unsubscribeSettings = await hub.subscribeSettings(sendSetting);
     const unsubscribeSyncRuns = await hub.subscribeSyncRuns(sendSyncRun);
     const unsubscribeChanges = await hub.subscribeChanges(sendChange);
-    const unsubscribeSpaces = await hub.subscribeSpaces(sendSpace);
+    const unsubscribeSpaces = await spaceSignals.join(session.accountId, sendSpace);
     const unsubscribeImports = await hub.subscribeImports(sendImport);
     const heartbeat = setInterval(() => {
       services.sessions.isActive(session.id).then(

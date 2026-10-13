@@ -62,6 +62,17 @@ export const auditEvents = pgTable(
   ],
 );
 
+export const auditConfidentialEvents = pgTable(
+  "audit_confidential_events",
+  {
+    eventId: uuid()
+      .notNull()
+      .references(() => auditEvents.id, { onDelete: "cascade" }),
+    spaceId: uuid().notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.eventId, table.spaceId] }), index().on(table.spaceId)],
+);
+
 export const auditSubjectKeys = pgTable(
   "audit_subject_keys",
   {

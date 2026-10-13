@@ -35,6 +35,7 @@ function event(patch: Partial<AuditItem>): AuditItem {
     changes: [{ property: "value", old: "violet", new: "blue" }],
     references: {},
     formerAccounts: [],
+    peopleHidden: false,
     ...patch,
   } as AuditItem;
 }
@@ -118,6 +119,36 @@ describe("the audit log", () => {
     });
     const table = await renderLog();
     expect(await within(table).findByText(`Former user ${GONE.slice(0, 8)}`)).toBeTruthy();
+    expect(within(table).queryByText("Deleted account")).toBeNull();
+  });
+
+  it("names the actor as hidden when the event concerns a confidential space", async () => {
+    mockApi({
+      "GET /api/v1/auth/session": () => problem(401, "notSignedIn"),
+      "GET /api/v1/instance/audit-events": () => ({
+        body: {
+          items: [
+            {
+              ...ROLE_ASSIGNED,
+              actorId: null,
+              actor: { type: "account", id: null, name: null, former: false },
+              changes: [{ property: "role", old: null, new: "editor" }],
+              references: {},
+              peopleHidden: true,
+            },
+          ],
+          nextCursor: null,
+        },
+      }),
+    });
+    const table = await renderLog();
+    await userEvent.click(await within(table).findByText("Hidden (confidential space)"));
+    const panel = await screen.findByRole("dialog", { name: "Role given" });
+    expect(
+      within(panel).getByText(
+        "The people involved are not shown because this event concerns a confidential space you are not a member of.",
+      ),
+    ).toBeTruthy();
     expect(within(table).queryByText("Deleted account")).toBeNull();
   });
 

@@ -379,6 +379,13 @@
       "when": 1791911270189,
       "tag": "0053_draft_attachments",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1791915941793,
+      "tag": "0054_audit_confidential_events",
+      "breakpoints": true
     }
   ]
 }
