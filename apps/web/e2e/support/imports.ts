@@ -51,26 +51,8 @@ export async function importState(importId: string): Promise<string> {
   }
 }
 
-export async function organizationImportFolder(organizationId: string): Promise<string> {
-  const client = new pg.Client({ connectionString: readState().databaseUrl });
-  await client.connect();
-  try {
-    const result = await client.query<{ slug: string }>("select slug from organizations where id = $1", [
-      organizationId,
-    ]);
-    const slug = result.rows[0]?.slug;
-    if (!slug) throw new Error(`No organization ${organizationId}`);
-    return path.join(IMPORT_DIR, slug);
-  } finally {
-    await client.end();
-  }
-}
-
-export async function placeFolderExport(
-  organizationId: string,
-  template: string = FOLDER_EXPORT_TEMPLATE,
-): Promise<string> {
-  const directory = await organizationImportFolder(organizationId);
+export function placeFolderExport(organizationId: string, template: string = FOLDER_EXPORT_TEMPLATE): string {
+  const directory = path.join(IMPORT_DIR, organizationId);
   mkdirSync(directory, { recursive: true });
   copyFileSync(template, path.join(directory, FOLDER_EXPORT));
   return directory;

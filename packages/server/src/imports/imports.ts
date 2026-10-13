@@ -176,6 +176,7 @@ type ImportRow = Record<string, unknown> & {
   upload_size: string | number | null;
   upload_complete: boolean | null;
   folder_file: string | null;
+  folder_key: string | null;
   space_name: string | null;
   space_key: string | null;
   archived: boolean;
@@ -536,16 +537,20 @@ export class ImportService {
         changes.push(sql`draft_step = ${Math.max(0, Math.min(10, input.draftStep))}`);
       if (input.file !== undefined) {
         if (input.file === null) {
-          changes.push(sql`file_kind = null, upload_id = null, folder_file = null`);
+          changes.push(sql`file_kind = null, upload_id = null, folder_file = null, folder_key = null`);
         } else if (input.file.kind === "upload") {
           const upload = await this.#uploads.get(actor, input.file.uploadId);
           if (upload.organizationId !== row.organization_id) {
             throw new ImportError("uploadNotFound", "The upload does not exist.");
           }
-          changes.push(sql`file_kind = 'upload', upload_id = ${upload.id}, folder_file = null`);
+          changes.push(
+            sql`file_kind = 'upload', upload_id = ${upload.id}, folder_file = null, folder_key = null`,
+          );
         } else {
-          await this.#requireFolderFile(tx, row.organization_id, input.file.name);
-          changes.push(sql`file_kind = 'folder', upload_id = null, folder_file = ${input.file.name}`);
+          const file = await this.#requireFolderFile(tx, row.organization_id, input.file.name);
+          changes.push(
+            sql`file_kind = 'folder', upload_id = null, folder_file = ${file.name}, folder_key = ${file.key}`,
+          );
         }
         fileChanged = true;
       }
@@ -589,17 +594,21 @@ export class ImportService {
     return this.get(actor, importId);
   }
 
-  async #organizationSlug(executor: Executor, organizationId: string): Promise<string> {
-    const result = await executor.execute<{ slug: string }>(
-      sql`select slug from organizations where id = ${organizationId}`,
+  async #folderKey(executor: Executor, organizationId: string): Promise<string> {
+    const result = await executor.execute<{ id: string }>(
+      sql`select id from organizations where id = ${organizationId}`,
     );
-    const slug = result.rows[0]?.slug;
-    if (slug === undefined)
+    const key = result.rows[0]?.id;
+    if (key === undefined)
       throw new ImportError("importFolderUnavailable", "The organization does not exist.");
-    return slug;
+    return key;
   }
 
-  async #requireFolderFile(executor: Executor, organizationId: string, name: string): Promise<FolderFile> {
+  async #requireFolderFile(
+    executor: Executor,
+    organizationId: string,
+    name: string,
+  ): Promise<FolderFile & { readonly key: string }> {
     if (!(await this.#settings.get(importFolderSetting, {}))) {
       throw new ImportError(
         "importFolderDisabled",
@@ -608,10 +617,10 @@ export class ImportService {
     }
     if (!isSafeFolderName(name))
       throw new ImportError("importFileUnavailable", "The file is not in the import folder.");
-    const slug = await this.#organizationSlug(executor, organizationId);
-    const file = (await this.#folder.list(slug)).find((candidate) => candidate.name === name);
+    const key = await this.#folderKey(executor, organizationId);
+    const file = (await this.#folder.list(key)).find((candidate) => candidate.name === name);
     if (!file) throw new ImportError("importFileUnavailable", "The file is not in the import folder.");
-    return file;
+    return { ...file, key };
   }
 
   async listFolder(
@@ -623,11 +632,11 @@ export class ImportService {
       id: organizationId,
     });
     const maxUploadBytes = await this.#uploads.maxBytes();
-    const slug = await this.#organizationSlug(this.#database, organizationId);
-    const folderPath = this.#folder.pathFor(slug);
+    const key = await this.#folderKey(this.#database, organizationId);
+    const folderPath = this.#folder.pathFor(key);
     if (!(await this.#settings.get(importFolderSetting, {})))
       return { enabled: false, path: folderPath, files: [], maxUploadBytes };
-    return { enabled: true, path: folderPath, files: await this.#folder.list(slug), maxUploadBytes };
+    return { enabled: true, path: folderPath, files: await this.#folder.list(key), maxUploadBytes };
   }
 
   async setPeopleSource(actor: Principal, importId: string, input: PeopleSourceInput): Promise<ImportView> {

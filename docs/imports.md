@@ -136,13 +136,17 @@ The instance setting for the largest export to upload defaults to 2 GB. Instance
 
 ### Import folder on the server
 
-This is the fallback for the person who runs the server. Each organization has its own subfolder of the import folder (`PAGEHALL_IMPORT_DIR`, default `/data/import`), named after the organization's short name in addresses (its slug):
+This is the fallback for the person who runs the server. Each organization has its own subfolder of the import folder (`PAGEHALL_IMPORT_DIR`, default `/data/import`), named after the organization's ID:
 
 ```
-/data/import/<organization slug>/export.zip
+/data/import/<organization ID>/export.zip
 ```
 
-The import wizard and the organization's import settings show the exact path. Pagehall offers only regular files directly inside the organization's subfolder; symbolic links, hidden files and further subfolders are ignored. An organization never sees files of another organization's subfolder or files at the top level. When the slug changes, the old subfolder is no longer read and the interface shows the new path; move the files there. Mount the folder read-only. Instance administrators can turn the import folder off.
+for example `/data/import/0c9d6a3e-5f2b-4c1a-9e8d-7b6a5c4d3e2f/export.zip`. The ID never changes and is never given to another organization, so changing the organization's short name needs no file move, and a short name taken over from another organization never shows that organization's files. Folders named after short names are not read.
+
+The import wizard and the organization's import settings show the exact path with a button to copy it, so an organization administrator can pass it to the person who runs the server. Pagehall offers only regular files directly inside the organization's subfolder; symbolic links, hidden files and further subfolders are ignored. An organization never sees files of another organization's subfolder or files at the top level. Mount the folder read-only. Instance administrators can turn the import folder off.
+
+When a file is chosen, the import keeps the folder it was chosen from and reads the file only from there. If the file is replaced or changed after Pagehall analyzed it, the import fails with "The file in the import folder changed after it was read"; choose the file again in a new import.
 
 Uploaded files are deleted 7 days after an import was accepted, discarded or stopped. Files in the import folder are never changed or deleted by Pagehall.
 

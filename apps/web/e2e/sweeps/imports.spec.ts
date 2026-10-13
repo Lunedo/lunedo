@@ -12,7 +12,7 @@ import { unique } from "../support/people.js";
 import { sweepAppearances } from "../support/sweeps.js";
 
 async function prepared(page: Page, organizationId: string, reviewer: { id: string; name: string } | null) {
-  await placeFolderExport(organizationId, PEOPLE_EXPORT_TEMPLATE);
+  placeFolderExport(organizationId, PEOPLE_EXPORT_TEMPLATE);
   const created = (await callApi(page, "POST", `/api/v1/organizations/${organizationId}/imports`, {
     source: "confluence-csv",
   })) as { id: string };
