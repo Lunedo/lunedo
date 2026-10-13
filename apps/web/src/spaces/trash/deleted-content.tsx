@@ -16,6 +16,7 @@ import { useTranslation } from "react-i18next";
 import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import type { TrashEntry } from "../content-queries.js";
+import { useRestoreChoice } from "./restore-choice.js";
 import { useRestoreFailure } from "./restore-with-parents.js";
 import { TrashTable } from "./trash-table.js";
 
@@ -52,9 +53,11 @@ export function DeletedContent({
         }),
       (failure: unknown) => restoreFailed(t("trash.restoreFailed"), failure, () => restore(entry, true)),
     );
+  const choice = useRestoreChoice(entries, restore);
   if (error) return <LoadError what={t("trash.loadFailed")} error={error} onRetry={onRetry} />;
   return (
     <>
+      {choice.dialog}
       <TrashTable
         entries={entries}
         caption={t("trash.deletedContent")}
@@ -70,7 +73,7 @@ export function DeletedContent({
         }
         actions={(entry) => (
           <span className="flex justify-end gap-2">
-            <Button size="sm" variant="secondary" onClick={() => void restore(entry, false)}>
+            <Button size="sm" variant="secondary" onClick={() => choice.start(entry)}>
               {t("trash.restore")}
             </Button>
             <Menu

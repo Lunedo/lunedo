@@ -22,6 +22,7 @@ import { contentKeys, type TrashEntry, trashQuery } from "../content-queries.js"
 import { itemHref } from "../item-paths.js";
 import { spaceDisplayName } from "../space-badge.js";
 import { useSpace } from "../space-context.js";
+import { formerParentOf, useRestoreChoice } from "./restore-choice.js";
 import { useRestoreFailure, withParentsQuery } from "./restore-with-parents.js";
 import { RestoreButton, TrashTable } from "./trash-table.js";
 
@@ -62,7 +63,11 @@ export function TrashScreen() {
             ? t("trash.restoredWithParents")
             : result.parentId
               ? t("trash.restoredAtPlace")
-              : t("trash.restoredAtTop"),
+              : entry.formerParentEntryId
+                ? t("trash.restoredParentInTrash", {
+                    parent: formerParentOf(entry, trash.data)?.title ?? "",
+                  })
+                : t("trash.restoredAtTop"),
         variant: "success",
         ...(href ? { action: { label: t("trash.open"), onSelect: () => void navigate({ to: href }) } } : {}),
       });
@@ -72,6 +77,7 @@ export function TrashScreen() {
   };
 
   const entries = trash.data ?? [];
+  const choice = useRestoreChoice(trash.data, restore);
   return (
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 pt-6 pb-12 md:px-8">
       <PageHeader
@@ -97,7 +103,7 @@ export function TrashScreen() {
             />
           }
           actions={(entry) => (
-            <RestoreButton label={t("trash.restore")} onClick={() => void restore(entry)} />
+            <RestoreButton label={t("trash.restore")} onClick={() => choice.start(entry)} />
           )}
         />
       )}
@@ -114,6 +120,7 @@ export function TrashScreen() {
           />
         </DangerZone>
       ) : null}
+      {choice.dialog}
       <ConfirmDialog
         open={emptying}
         onOpenChange={setEmptying}

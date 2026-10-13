@@ -20440,6 +20440,18 @@
                         "type": "string",
                         "format": "date-time",
                         "description": "When the entry will be deleted permanently, by the current retention settings. ISO 8601 timestamp in UTC."
+                      },
+                      "formerParentEntryId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The trash entry of the page or folder this item was below, when that one is in the same trash list; restoring with `withParents=true` restores both. Null otherwise."
                       }
                     },
                     "required": [
@@ -20456,7 +20468,8 @@
                       "deletedAt",
                       "deletedBy",
                       "stageTwoAt",
-                      "removedAt"
+                      "removedAt",
+                      "formerParentEntryId"
                     ],
                     "additionalProperties": false,
                     "description": "An entry of the trash."
@@ -20481,7 +20494,8 @@
                       "name": "Lukas Hofer"
                     },
                     "stageTwoAt": null,
-                    "removedAt": "2027-02-14T10:00:00.000Z"
+                    "removedAt": "2027-02-14T10:00:00.000Z",
+                    "formerParentEntryId": null
                   }
                 ]
               }
@@ -97401,6 +97415,18 @@
                       "type": "string",
                       "format": "date-time",
                       "description": "When the entry will be deleted permanently, by the current retention settings. ISO 8601 timestamp in UTC."
+                    },
+                    "formerParentEntryId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The trash entry of the page or folder this item was below, when that one is in the same trash list; restoring with `withParents=true` restores both. Null otherwise."
                     }
                   },
                   "required": [
@@ -97417,7 +97443,8 @@
                     "deletedAt",
                     "deletedBy",
                     "stageTwoAt",
-                    "removedAt"
+                    "removedAt",
+                    "formerParentEntryId"
                   ],
                   "additionalProperties": false,
                   "description": "An entry of the trash."
@@ -97439,7 +97466,8 @@
                     "name": "Lukas Hofer"
                   },
                   "stageTwoAt": null,
-                  "removedAt": "2027-02-14T10:00:00.000Z"
+                  "removedAt": "2027-02-14T10:00:00.000Z",
+                  "formerParentEntryId": null
                 }
               }
             }
@@ -97942,6 +97970,18 @@
                         "type": "string",
                         "format": "date-time",
                         "description": "When the entry will be deleted permanently, by the current retention settings. ISO 8601 timestamp in UTC."
+                      },
+                      "formerParentEntryId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The trash entry of the page or folder this item was below, when that one is in the same trash list; restoring with `withParents=true` restores both. Null otherwise."
                       }
                     },
                     "required": [
@@ -97958,7 +97998,8 @@
                       "deletedAt",
                       "deletedBy",
                       "stageTwoAt",
-                      "removedAt"
+                      "removedAt",
+                      "formerParentEntryId"
                     ],
                     "additionalProperties": false,
                     "description": "An entry of the trash."
@@ -98237,7 +98278,7 @@
       "post": {
         "operationId": "trash.restorePersonal",
         "summary": "Restore a deleted personal space",
-        "description": "Restores a deleted personal space with its content, or content of a personal space in the second stage of the trash. When the former parent page is in the trash and the content would lose a view restriction it inherited, the restore is refused with `restrictedParentInTrash`; repeat it with `withParents=true` to restore the parent pages with it.\n\nRequires the permission `instance.personalSpaces.manage` on the instance.",
+        "description": "Restores a deleted personal space with its content, or content of a personal space in the second stage of the trash. When the former parent page is in the trash and the content would lose a view restriction it inherited, the restore is refused with `restrictedParentInTrash`; repeat it with `withParents=true` to restore the parent pages with it. `withParents=true` also restores a former parent page that is in the trash without a restriction, so the content returns below it.\n\nRequires the permission `instance.personalSpaces.manage` on the instance.",
         "tags": [
           "Trash"
         ],
@@ -104657,6 +104698,18 @@
                       "type": "string",
                       "format": "date-time",
                       "description": "When the entry will be deleted permanently, by the current retention settings. ISO 8601 timestamp in UTC."
+                    },
+                    "formerParentEntryId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The trash entry of the page or folder this item was below, when that one is in the same trash list; restoring with `withParents=true` restores both. Null otherwise."
                     }
                   },
                   "required": [
@@ -104673,7 +104726,8 @@
                     "deletedAt",
                     "deletedBy",
                     "stageTwoAt",
-                    "removedAt"
+                    "removedAt",
+                    "formerParentEntryId"
                   ],
                   "additionalProperties": false,
                   "description": "An entry of the trash."
@@ -104695,7 +104749,8 @@
                     "name": "Lukas Hofer"
                   },
                   "stageTwoAt": null,
-                  "removedAt": "2027-02-14T10:00:00.000Z"
+                  "removedAt": "2027-02-14T10:00:00.000Z",
+                  "formerParentEntryId": null
                 }
               }
             }
@@ -137660,6 +137715,18 @@
                         "type": "string",
                         "format": "date-time",
                         "description": "When the entry will be deleted permanently, by the current retention settings. ISO 8601 timestamp in UTC."
+                      },
+                      "formerParentEntryId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The trash entry of the page or folder this item was below, when that one is in the same trash list; restoring with `withParents=true` restores both. Null otherwise."
                       }
                     },
                     "required": [
@@ -137676,7 +137743,8 @@
                       "deletedAt",
                       "deletedBy",
                       "stageTwoAt",
-                      "removedAt"
+                      "removedAt",
+                      "formerParentEntryId"
                     ],
                     "additionalProperties": false,
                     "description": "An entry of the trash."
@@ -137701,7 +137769,8 @@
                       "name": "Lukas Hofer"
                     },
                     "stageTwoAt": null,
-                    "removedAt": "2027-02-14T10:00:00.000Z"
+                    "removedAt": "2027-02-14T10:00:00.000Z",
+                    "formerParentEntryId": null
                   }
                 ]
               }
@@ -138014,7 +138083,7 @@
       "post": {
         "operationId": "trash.restoreInOrganization",
         "summary": "Restore deleted content of an organization",
-        "description": "Restores a trash entry of either stage or a deleted space. Items return to their old place or the top level of their space. Confidential spaces are not reachable here; only their own space admins restore their content. When the former parent page is in the trash and the content would lose a view restriction it inherited, the restore is refused with `restrictedParentInTrash`; repeat it with `withParents=true` to restore the parent pages with it.\n\nRequires the permission `organization.trash.manage` on the organization in `organizationId`.",
+        "description": "Restores a trash entry of either stage or a deleted space. Items return to their old place or the top level of their space. Confidential spaces are not reachable here; only their own space admins restore their content. When the former parent page is in the trash and the content would lose a view restriction it inherited, the restore is refused with `restrictedParentInTrash`; repeat it with `withParents=true` to restore the parent pages with it. `withParents=true` also restores a former parent page that is in the trash without a restriction, so the content returns below it.\n\nRequires the permission `organization.trash.manage` on the organization in `organizationId`.",
         "tags": [
           "Trash"
         ],
@@ -156777,6 +156846,7 @@
                                           "dateFormat": {
                                             "type": "string",
                                             "enum": [
+                                              "D MMM YYYY",
                                               "DD.MM.YYYY",
                                               "DD/MM/YYYY",
                                               "MM/DD/YYYY",
@@ -162554,6 +162624,18 @@
                       "type": "string",
                       "format": "date-time",
                       "description": "When the entry will be deleted permanently, by the current retention settings. ISO 8601 timestamp in UTC."
+                    },
+                    "formerParentEntryId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The trash entry of the page or folder this item was below, when that one is in the same trash list; restoring with `withParents=true` restores both. Null otherwise."
                     }
                   },
                   "required": [
@@ -162570,7 +162652,8 @@
                     "deletedAt",
                     "deletedBy",
                     "stageTwoAt",
-                    "removedAt"
+                    "removedAt",
+                    "formerParentEntryId"
                   ],
                   "additionalProperties": false,
                   "description": "An entry of the trash."
@@ -162592,7 +162675,8 @@
                     "name": "Lukas Hofer"
                   },
                   "stageTwoAt": null,
-                  "removedAt": "2027-02-14T10:00:00.000Z"
+                  "removedAt": "2027-02-14T10:00:00.000Z",
+                  "formerParentEntryId": null
                 }
               }
             }
@@ -173234,6 +173318,18 @@
                         "type": "string",
                         "format": "date-time",
                         "description": "When the entry will be deleted permanently, by the current retention settings. ISO 8601 timestamp in UTC."
+                      },
+                      "formerParentEntryId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The trash entry of the page or folder this item was below, when that one is in the same trash list; restoring with `withParents=true` restores both. Null otherwise."
                       }
                     },
                     "required": [
@@ -173250,7 +173346,8 @@
                       "deletedAt",
                       "deletedBy",
                       "stageTwoAt",
-                      "removedAt"
+                      "removedAt",
+                      "formerParentEntryId"
                     ],
                     "additionalProperties": false,
                     "description": "An entry of the trash."
@@ -173275,7 +173372,8 @@
                       "name": "Lukas Hofer"
                     },
                     "stageTwoAt": null,
-                    "removedAt": "2027-02-14T10:00:00.000Z"
+                    "removedAt": "2027-02-14T10:00:00.000Z",
+                    "formerParentEntryId": null
                   }
                 ]
               }
@@ -173404,7 +173502,7 @@
       "post": {
         "operationId": "trash.restoreInSpace",
         "summary": "Restore from the trash",
-        "description": "Puts a trash entry back at its old place, or at the top level of the space when that place no longer exists. When the former parent page is in the trash and the content would lose a view restriction it inherited, the restore is refused with `restrictedParentInTrash`; repeat it with `withParents=true` to restore the parent pages with it.\n\nRequires the permission `space.trash` on the space in `spaceId`.",
+        "description": "Puts a trash entry back at its old place, or at the top level of the space when that place no longer exists. When the former parent page is in the trash and the content would lose a view restriction it inherited, the restore is refused with `restrictedParentInTrash`; repeat it with `withParents=true` to restore the parent pages with it. `withParents=true` also restores a former parent page that is in the trash without a restriction, so the content returns below it.\n\nRequires the permission `space.trash` on the space in `spaceId`.",
         "tags": [
           "Trash"
         ],
