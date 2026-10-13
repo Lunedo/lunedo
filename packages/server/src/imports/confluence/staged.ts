@@ -26,6 +26,7 @@ import type {
   SourceVersion,
 } from "../source.js";
 import type { StagingStore } from "../staging.js";
+import { parseStorage, storageReferences } from "./storage.js";
 
 export const STORAGE_BODY_TYPE = "2";
 
@@ -306,8 +307,7 @@ export abstract class StagedConfluenceReader implements ImportReader {
         attachmentBytes += file.get(latest.file)?.data.size ?? 0;
       }
     }
-    let people = 0;
-    for await (const _person of this.people(context)) people += 1;
+    const people = await this.#everyone(context);
     const blogPosts = await context.staging.count(kinds.page, { field: "type", value: "blogPost" });
     return {
       pages: (await context.staging.count(kinds.page)) - blogPosts,
@@ -322,6 +322,39 @@ export abstract class StagedConfluenceReader implements ImportReader {
       spaceKey: space.key,
       spaceName: space.name,
     };
+  }
+
+  async #everyone(context: ReadContext): Promise<number> {
+    const ids = new Set<string>();
+    for await (const person of this.people(context)) ids.add(person.sourceId);
+    const referenced = await context.staging.distinctValues(
+      [
+        kinds.page,
+        kinds.version,
+        kinds.attachment,
+        kinds.comment,
+        kinds.like,
+        kinds.spacePermission,
+        kinds.restriction,
+      ],
+      ["creatorKey", "modifierKey", "authorKey", "userKey"],
+    );
+    const known = await context.staging.get<StagedUser>(kinds.user, [...referenced]);
+    for (const key of referenced) {
+      if (known.has(key)) continue;
+      const id = personId(null, key);
+      if (id) ids.add(id);
+    }
+    for await (const record of context.staging.iterate<StagedBody>(kinds.body)) {
+      const mentions = await parseStorage(record.data.body).then(
+        (root) => storageReferences(root).people,
+        () => [],
+      );
+      for (const person of await this.resolvePeople(context, mentions)) {
+        if (person) ids.add(person.sourceId);
+      }
+    }
+    return ids.size;
   }
 
   async *people(context: ReadContext): AsyncGenerator<SourcePerson> {
