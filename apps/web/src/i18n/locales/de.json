@@ -1014,7 +1014,7 @@
     },
     "groupsClaimMissing": {
       "title": "{provider} sendet seit {since} keine Gruppen",
-      "description": "Anmeldungen über diesen Anbieter enthalten keinen Gruppen-Claim. Pagehall behandelt deshalb alle als Personen ohne Gruppen und entzieht den Zugriff und die Rollen, die aus Gruppen stammen. Prüfe die Einstellung des Gruppen-Claims, in Pagehall und beim Anbieter. Der Hinweis verschwindet mit der nächsten Anmeldung, die den Claim enthält."
+      "description": "Anmeldungen über diesen Anbieter enthalten keinen Gruppen-Claim und kein Gruppen-Attribut. Pagehall behandelt deshalb alle als Personen ohne Gruppen und entzieht den Zugriff und die Rollen, die aus Gruppen stammen. Prüfe die Gruppen-Einstellung des Anbieters, in Pagehall und beim Anbieter. Der Hinweis verschwindet mit der nächsten Anmeldung, die Gruppen enthält."
     },
     "insecureProviders": {
       "title": "Identitätsanbieter werden nicht streng geprüft",
@@ -3072,7 +3072,7 @@
         "emergencySignIn": "Notfallanmeldung",
         "signInRefused": "Anmeldung über Anbieter abgelehnt",
         "providerSignedOut": "Vom Anbieter abgemeldet",
-        "groupsClaimMissing": "Anbieter sendete keinen Gruppen-Claim",
+        "groupsClaimMissing": "Anbieter sendete keine Gruppen",
         "signedIn": "Angemeldet",
         "signInFailed": "Anmeldung fehlgeschlagen",
         "lockedOut": "Gesperrt",

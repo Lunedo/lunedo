@@ -215,7 +215,7 @@ test.describe("sign-in through SAML (Keycloak)", () => {
     await context.close();
   });
 
-  test("grants organization access through a SAML group and removes it when the person leaves the group", async ({
+  test("grants organization access through a SAML group and removes it when the person leaves their last group", async ({
     browser,
   }) => {
     const created = await freshPage(browser);
@@ -241,7 +241,6 @@ test.describe("sign-in through SAML (Keycloak)", () => {
       false,
     );
     await owner.close();
-    await keycloak.addToGroup(user.username, "admins");
     await keycloak.addToGroup(user.username, "engineering");
 
     const first = await freshPage(browser);
@@ -255,6 +254,13 @@ test.describe("sign-in through SAML (Keycloak)", () => {
     expect(await organizationIds(second.context)).not.toContain(organizationId);
     expect(await organizationIds(second.context)).toContain(homeId);
     await second.context.close();
+
+    const checker = await ownerApi(browser);
+    const provider = await checker.request.get(`/api/v1/instance/identity-providers/${providerId}`);
+    expect(provider.status(), await provider.text()).toBe(200);
+    const { warnings } = (await provider.json()) as { warnings: string[] };
+    expect(warnings).toContain("groupsClaimMissing");
+    await checker.close();
   });
 });
 

@@ -19,6 +19,7 @@ import {
 } from "../testing/fakes/microsoft-graph.js";
 import { createFakeSamlIdp, type FakeSamlIdp } from "../testing/fakes/saml-idp.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
+import { spaceFixtures } from "../testing/spaces.js";
 import { samlEntityId, samlPaths } from "./saml.js";
 import type { CallbackResult } from "./sign-in.js";
 
@@ -32,6 +33,7 @@ describe.skipIf(!baseUrl)("signing in through a SAML provider", () => {
   let metadataUrl: string;
   let metadataAvailable = true;
   let metadataPrefix = "";
+  const { organization } = spaceFixtures(() => test);
 
   beforeAll(async () => {
     test = await createTestServices(baseUrl ?? "");
@@ -56,7 +58,7 @@ describe.skipIf(!baseUrl)("signing in through a SAML provider", () => {
     await test?.close();
   });
 
-  async function provider(options: { idpInitiated?: boolean; fromUrl?: boolean } = {}) {
+  async function provider(options: { idpInitiated?: boolean; fromUrl?: boolean; groups?: string } = {}) {
     const domain = `${randomUUID().slice(0, 8)}.example.org`;
     const { provider: created } = await test.services.identityProviders.create(SYSTEM, {
       type: "saml",
@@ -67,7 +69,7 @@ describe.skipIf(!baseUrl)("signing in through a SAML provider", () => {
         idpInitiated: options.idpInitiated ?? false,
         domains: [domain],
         accountCreation: { enabled: true, requiredGroups: [] },
-        attributes: { email: "email", displayName: "name", groups: null },
+        attributes: { email: "email", displayName: "name", groups: options.groups ?? null },
       },
       metadataXml: options.fromUrl ? null : idp.metadata(),
     });
@@ -89,7 +91,12 @@ describe.skipIf(!baseUrl)("signing in through a SAML provider", () => {
     providerId: string,
     person: { nameId: string; email: string },
     purpose: "signIn" | "reauthentication" = "signIn",
-    extra: { sessionId?: string; accountId?: string; authnInstant?: Date } = {},
+    extra: {
+      sessionId?: string;
+      accountId?: string;
+      authnInstant?: Date;
+      attributes?: Record<string, string[]>;
+    } = {},
   ): Promise<CallbackResult> {
     const started = await test.services.providerSignIn.start({
       providerId,
@@ -101,7 +108,7 @@ describe.skipIf(!baseUrl)("signing in through a SAML provider", () => {
     const samlResponse = await idp.response({
       ...target(providerId),
       nameId: person.nameId,
-      attributes: { email: [person.email] },
+      attributes: { email: [person.email], ...extra.attributes },
       requestId: requestIdOf(started.url),
       ...(extra.authnInstant ? { authnInstant: extra.authnInstant } : {}),
     });
@@ -521,5 +528,137 @@ describe.skipIf(!baseUrl)("signing in through a SAML provider", () => {
     const ready = await test.services.identityProviders.get(created.id);
     expect(ready.warnings).not.toContain("noGraphCredential");
     expect(ready.capabilities.directorySync).toBe(true);
+  });
+
+  describe("a provider that leaves out the groups attribute", () => {
+    async function mappedProvider() {
+      const org = await organization();
+      const { id, domain } = await provider({ groups: "groups" });
+      await test.services.mappingRules.create(SYSTEM, id, {
+        target: "organization",
+        group: { id: "staff", name: "staff" },
+        organizationId: org.id,
+        role: null,
+        synchronizedGroup: false,
+        homeOrganization: false,
+      });
+      return { id, domain, org: org.id };
+    }
+
+    async function memberOf(org: string, result: CallbackResult): Promise<boolean> {
+      if (result.kind !== "signedIn") throw new Error(`Signed in expected, got ${result.kind}`);
+      const rows = await test.pool.query(
+        "select 1 from memberships where organization_id = $1 and account_id = $2",
+        [org, result.signedIn.session.accountId],
+      );
+      return rows.rowCount === 1;
+    }
+
+    async function missingEvents(id: string): Promise<number> {
+      const rows = await test.pool.query(
+        "select 1 from audit_events where name = 'auth.groupsClaimMissing' and target_id = $1",
+        [id],
+      );
+      return rows.rowCount ?? 0;
+    }
+
+    it("treats a person in no group as having no groups, records it and warns once groups were seen", async () => {
+      const { id, domain, org } = await mappedProvider();
+      const person = { nameId: randomUUID(), email: `p.${randomUUID().slice(0, 8)}@${domain}` };
+      const staff = { attributes: { groups: ["staff"] } };
+      expect(await memberOf(org, await signIn(id, person, "signIn", staff))).toBe(true);
+      expect(await missingEvents(id)).toBe(0);
+      expect((await test.services.identityProviders.get(id)).warnings).not.toContain("groupsClaimMissing");
+
+      expect(await memberOf(org, await signIn(id, person))).toBe(false);
+      expect(await missingEvents(id)).toBe(1);
+      const warned = await test.services.identityProviders.get(id);
+      expect(warned.warnings).toContain("groupsClaimMissing");
+      expect(warned.groupsClaimMissingSince).toBeInstanceOf(Date);
+
+      expect(await memberOf(org, await signIn(id, person, "signIn", staff))).toBe(true);
+      const cleared = await test.services.identityProviders.get(id);
+      expect(cleared.warnings).not.toContain("groupsClaimMissing");
+      expect(cleared.groupsClaimMissingSince).toBeNull();
+    });
+
+    it("treats an empty groups attribute as no groups without a warning", async () => {
+      const { id, domain, org } = await mappedProvider();
+      const person = { nameId: randomUUID(), email: `e.${randomUUID().slice(0, 8)}@${domain}` };
+      await signIn(id, person, "signIn", { attributes: { groups: ["staff"] } });
+      const result = await signIn(id, person, "signIn", { attributes: { groups: [""] } });
+      expect(await memberOf(org, result)).toBe(false);
+      expect(await missingEvents(id)).toBe(0);
+      expect((await test.services.identityProviders.get(id)).warnings).not.toContain("groupsClaimMissing");
+    });
+
+    it("tracks nothing while no groups attribute is configured", async () => {
+      const { id, domain } = await provider();
+      await signIn(id, { nameId: randomUUID(), email: `n.${randomUUID().slice(0, 8)}@${domain}` });
+      expect(await missingEvents(id)).toBe(0);
+    });
+
+    it("forgets what it saw when the groups attribute setting changes", async () => {
+      const { id, domain } = await mappedProvider();
+      const person = { nameId: randomUUID(), email: `c.${randomUUID().slice(0, 8)}@${domain}` };
+      await signIn(id, person, "signIn", { attributes: { groups: ["staff"] } });
+      await signIn(id, person);
+      expect((await test.services.identityProviders.get(id)).warnings).toContain("groupsClaimMissing");
+      const current = (await test.services.identityProviders.get(id)).config;
+      if (!("attributes" in current)) throw new Error("A provider with an attributes setting is expected");
+      await test.services.identityProviders.update(SYSTEM, id, {
+        config: { ...current, attributes: { ...current.attributes, groups: "memberOf" } },
+      });
+      const updated = await test.services.identityProviders.get(id);
+      expect(updated.warnings).not.toContain("groupsClaimMissing");
+      expect(updated.groupsClaimMissingSince).toBeNull();
+    });
+
+    it("applies the same rule to Entra ID and keeps the groups unknown when they are too many", async () => {
+      const org = await organization();
+      const domain = `${randomUUID().slice(0, 8)}.example.org`;
+      const tenantId = randomUUID();
+      const { provider: created } = await test.services.identityProviders.create(SYSTEM, {
+        type: "saml",
+        name: "Entra SAML groups",
+        config: {
+          preset: "entraId",
+          tenantId,
+          metadata: { source: "file" },
+          domains: [domain],
+          accountCreation: { enabled: true, requiredGroups: [] },
+        },
+        metadataXml: idp.metadata(),
+      });
+      const group = randomUUID();
+      await test.services.mappingRules.create(SYSTEM, created.id, {
+        target: "organization",
+        group: { id: group, name: "Staff" },
+        organizationId: org.id,
+        role: null,
+        synchronizedGroup: false,
+        homeOrganization: false,
+      });
+      const objectId = randomUUID();
+      const person = { nameId: randomUUID(), email: `o.${objectId.slice(0, 8)}@${domain}` };
+      const entra = (extra: Record<string, string[]>) => ({
+        attributes: {
+          [ENTRA_SAML_CLAIMS.tenantId]: [tenantId],
+          [ENTRA_SAML_CLAIMS.objectId]: [objectId],
+          [ENTRA_SAML_CLAIMS.email]: [person.email],
+          ...extra,
+        },
+      });
+      const grouped = entra({ [ENTRA_SAML_CLAIMS.groups]: [group] });
+      expect(await memberOf(org.id, await signIn(created.id, person, "signIn", grouped))).toBe(true);
+      const overage = entra({ [ENTRA_SAML_CLAIMS.groupsLink]: ["https://graph.microsoft.com/v1.0/groups"] });
+      expect(await memberOf(org.id, await signIn(created.id, person, "signIn", overage))).toBe(true);
+      expect(await missingEvents(created.id)).toBe(0);
+      expect(await memberOf(org.id, await signIn(created.id, person, "signIn", entra({})))).toBe(false);
+      expect(await missingEvents(created.id)).toBe(1);
+      expect((await test.services.identityProviders.get(created.id)).warnings).toContain(
+        "groupsClaimMissing",
+      );
+    });
   });
 });

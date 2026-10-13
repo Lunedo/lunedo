@@ -1014,7 +1014,7 @@
     },
     "groupsClaimMissing": {
       "title": "{provider} sends no groups since {since}",
-      "description": "Sign-ins through this provider carry no groups claim, so Pagehall treats everyone as having no groups and removes the access and roles that came from groups. Check the groups claim setting of the provider, in Pagehall and at the provider. The banner disappears with the next sign-in that carries the claim."
+      "description": "Sign-ins through this provider carry no groups claim or attribute, so Pagehall treats everyone as having no groups and removes the access and roles that came from groups. Check the groups setting of the provider, in Pagehall and at the provider. The banner disappears with the next sign-in that carries groups."
     },
     "insecureProviders": {
       "title": "Identity providers are not checked strictly",
@@ -3072,7 +3072,7 @@
         "emergencySignIn": "Emergency sign-in",
         "signInRefused": "Sign-in through a provider refused",
         "providerSignedOut": "Signed out by the provider",
-        "groupsClaimMissing": "Provider sent no groups claim",
+        "groupsClaimMissing": "Provider sent no groups",
         "signedIn": "Signed in",
         "signInFailed": "Sign-in failed",
         "lockedOut": "Locked out",

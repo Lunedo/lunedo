@@ -120,6 +120,7 @@ describe("SAML sign-in", () => {
       signInName: null,
       displayName: null,
       groups: [{ id: "staff", name: "staff" }],
+      groupsClaimMissing: false,
     });
     expect(result.assertion?.id).toMatch(/^_/);
     expect(result.authTime).toBeGreaterThan(0);
