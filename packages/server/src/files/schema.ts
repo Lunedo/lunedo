@@ -15,7 +15,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { accounts } from "../accounts/schema.js";
 import { bytes, primaryId, timestamps } from "../database/columns.js";
-import { treeItems } from "../spaces/schema.js";
+import { discardedDrafts, treeItems } from "../spaces/schema.js";
 
 const timestampColumn = () => timestamp({ withTimezone: true, mode: "date" });
 
@@ -53,6 +53,8 @@ export const attachments = pgTable(
     name: text().notNull(),
     nameKey: text().notNull(),
     currentVersionId: uuid().references((): AnyPgColumn => attachmentVersions.id, { onDelete: "set null" }),
+    publishedVersionId: uuid().references((): AnyPgColumn => attachmentVersions.id, { onDelete: "set null" }),
+    discardedDraftId: uuid().references(() => discardedDrafts.id, { onDelete: "cascade" }),
     createdBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
     deletedAt: timestampColumn(),
     deletedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
@@ -64,6 +66,8 @@ export const attachments = pgTable(
       .where(sql`${table.deletedAt} is null`),
     index().on(table.itemId),
     index().on(table.currentVersionId),
+    index().on(table.publishedVersionId),
+    index().on(table.discardedDraftId),
     index().on(table.createdBy),
     index().on(table.deletedBy),
     check("attachments_name_length", sql`length(${table.name}) between 1 and 255`),
@@ -84,6 +88,7 @@ export const attachmentVersions = pgTable(
     name: text().notNull(),
     restoredFrom: integer(),
     kept: boolean().notNull().default(false),
+    publishedAt: timestampColumn(),
     uploadedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
     ...timestamps(),
   },

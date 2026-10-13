@@ -365,6 +365,13 @@
       "when": 1791911268549,
       "tag": "0051_stored_uploads",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1791911270189,
+      "tag": "0052_draft_attachments",
+      "breakpoints": true
     }
   ]
 }

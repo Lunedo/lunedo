@@ -428,7 +428,7 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
 
   const attachmentItem = async (executor: Executor, id: string): Promise<string | null> => {
     const result = await executor.execute<{ item_id: string }>(
-      sql`select item_id from attachments where id = ${id} and deleted_at is null`,
+      sql`select item_id from attachments where id = ${id} and (deleted_at is null or published_version_id is not null)`,
     );
     return result.rows[0]?.item_id ?? null;
   };
@@ -444,7 +444,7 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
     spaceOf: async (executor, id) => {
       const result = await executor.execute<{ space_id: string }>(sql`
         select t.space_id from attachments a join tree_items t on t.id = a.item_id
-        where a.id = ${id} and a.deleted_at is null`);
+        where a.id = ${id} and (a.deleted_at is null or a.published_version_id is not null)`);
       return result.rows[0]?.space_id ?? null;
     },
     itemOf: attachmentItem,
@@ -453,11 +453,15 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
       "attachment.edit": { scope: "space", spaceRole: "editor", restriction: "writable" },
     },
     restrictions: {
-      readable: viaItem(async (executor, itemId) => {
-        const state = await itemState(executor, itemId);
+      readable: async (executor, id) => {
+        const result = await executor.execute<{ item_id: string; published: boolean }>(sql`
+          select item_id, published_version_id is not null as published from attachments
+          where id = ${id} and (deleted_at is null or published_version_id is not null)`);
+        const row = result.rows[0];
+        const state = row ? await itemState(executor, row.item_id) : null;
         if (!state || state.trashed) return { denial: "inTrash" };
-        return state.unpublished ? { denial: "unpublished", unless: "editor" } : null;
-      }),
+        return state.unpublished || !row?.published ? { denial: "unpublished", unless: "editor" } : null;
+      },
       writable: viaItem(async (executor, itemId) => {
         const state = await itemState(executor, itemId);
         if (!state || state.trashed) return { denial: "inTrash" };

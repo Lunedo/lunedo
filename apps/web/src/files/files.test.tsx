@@ -152,6 +152,18 @@ describe("the attachments of a page", () => {
     expect(screen.queryByRole("button", { name: "Upload files" })).toBeNull();
   });
 
+  it("marks files that readers do not see yet as new or changed in the draft", async () => {
+    list = [
+      attachment(REPORT, "Report.pdf", { draft: "changed" }),
+      attachment(PHOTO, "Rack.png", { draft: "added" }),
+    ];
+    await renderSection(true);
+    expect((await screen.findByRole("button", { name: /^Report\.pdf/ })).textContent).toContain(
+      "Changed in draft",
+    );
+    expect(screen.getByRole("button", { name: /^Rack\.png/ }).textContent).toContain("New in draft");
+  });
+
   it("hides the section from readers when the page has no files", async () => {
     list = [];
     await renderSection(false);

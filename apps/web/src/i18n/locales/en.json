@@ -5221,6 +5221,8 @@
     "retry": "Retry",
     "uploadFailed": "{name} was not uploaded: {reason}",
     "rowMeta": "{type} · {size} · version {version} · {date}",
+    "draftAdded": "New in draft",
+    "draftChanged": "Changed in draft",
     "summary": "{type} · {size} · version {version}",
     "typeWithExtension": "{kind} ({extension})",
     "actions": "Actions for {name}",

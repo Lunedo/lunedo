@@ -242,6 +242,7 @@ export {
   AttachmentError,
   AttachmentService,
   type AttachmentVersion,
+  type AttachmentView,
   previewOf,
 } from "./files/attachments.js";
 export { FileService, FileTooLargeError, fileStreamOwner } from "./files/files.js";

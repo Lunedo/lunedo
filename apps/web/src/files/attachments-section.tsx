@@ -1,4 +1,4 @@
-import { Button, IconButton, Menu, Skeleton, useToast } from "@pagehall/ui";
+import { Badge, Button, IconButton, Menu, Skeleton, useToast } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Download,
@@ -265,8 +265,15 @@ export function AttachmentsSection({ pageId, canEdit }: { pageId: string; canEdi
                 >
                   <Icon aria-hidden="true" className="size-icon-lg shrink-0 text-text-muted" />
                   <span className="flex min-w-0 flex-col">
-                    <span className="truncate font-medium" title={attachment.name}>
-                      {attachment.name}
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="truncate font-medium" title={attachment.name}>
+                        {attachment.name}
+                      </span>
+                      {attachment.draft ? (
+                        <Badge variant="warning">
+                          {attachment.draft === "added" ? t("files.draftAdded") : t("files.draftChanged")}
+                        </Badge>
+                      ) : null}
                     </span>
                     <span className="truncate text-sm text-text-muted">
                       {t("files.rowMeta", {

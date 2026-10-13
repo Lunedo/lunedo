@@ -11,12 +11,17 @@ import type { PeopleService } from "../spaces/people.js";
 import { signalSpaceChange } from "../spaces/signals.js";
 import { type FileService, FileTooLargeError } from "./files.js";
 import { cleanFileName, fileNameKey } from "./names.js";
+import { publishAttachments } from "./publication.js";
 import { keepVersionsSetting, MEGABYTE, maxFileSizeSetting } from "./settings.js";
 import type { PreviewKind } from "./sniff.js";
 
 export class AttachmentError extends SpaceError {
   override name = "AttachmentError";
 }
+
+export type AttachmentView = "draft" | "published";
+
+export type AttachmentDraftChange = "added" | "changed";
 
 export interface AttachmentVersion {
   id: string;
@@ -40,6 +45,7 @@ export interface Attachment {
   inline: boolean;
   version: number;
   versions: number;
+  draft: AttachmentDraftChange | null;
   uploadedBy: { id: string; name: string | null } | null;
   uploadedAt: Date;
   createdAt: Date;
@@ -104,6 +110,7 @@ interface AttachmentRow {
   content_type: string;
   number: number;
   versions: string | number;
+  draft: AttachmentDraftChange | null;
   uploaded_by: string | null;
   uploaded_at: Date | string;
   created_at: Date | string;
@@ -137,13 +144,26 @@ export class AttachmentService {
     return this.#files;
   }
 
-  #select() {
+  #select(view: AttachmentView) {
+    if (view === "published") {
+      return sql`
+        select a.id, a.item_id, v.name, f.size, f.content_type, v.number,
+          (select count(*) from attachment_versions av
+            where av.attachment_id = a.id and av.published_at is not null) as versions,
+          null as draft, v.uploaded_by, v.created_at as uploaded_at, a.created_at
+        from attachments a join attachment_versions v on v.id = a.published_version_id
+        join stored_files f on f.id = v.file_id
+        where true`;
+    }
     return sql`
-      select a.id, a.item_id, a.name, f.size, f.content_type, v.number,
+      select a.id, a.item_id, v.name, f.size, f.content_type, v.number,
         (select count(*) from attachment_versions av where av.attachment_id = a.id) as versions,
+        case when a.published_version_id is null then 'added'
+          when a.published_version_id <> a.current_version_id then 'changed' end as draft,
         v.uploaded_by, v.created_at as uploaded_at, a.created_at
       from attachments a join attachment_versions v on v.id = a.current_version_id
-      join stored_files f on f.id = v.file_id`;
+      join stored_files f on f.id = v.file_id
+      where a.deleted_at is null`;
   }
 
   async #toAttachments(viewer: Principal, rows: AttachmentRow[]): Promise<Attachment[]> {
@@ -160,26 +180,28 @@ export class AttachmentService {
       ...previewOf(row.content_type, row.name),
       version: row.number,
       versions: Number(row.versions),
+      draft: row.draft,
       uploadedBy: row.uploaded_by ? { id: row.uploaded_by, name: names.get(row.uploaded_by) ?? null } : null,
       uploadedAt: new Date(row.uploaded_at),
       createdAt: new Date(row.created_at),
     }));
   }
 
-  async list(viewer: Principal, itemId: string): Promise<Attachment[]> {
+  async list(viewer: Principal, itemId: string, view: AttachmentView): Promise<Attachment[]> {
     const result = await this.#database.execute<AttachmentRow>(sql`
-      ${this.#select()} where a.item_id = ${itemId} and a.deleted_at is null
-      order by lower(a.name), a.id limit ${MAX_ATTACHMENTS_LISTED}`);
+      ${this.#select(view)} and a.item_id = ${itemId}
+      order by lower(v.name), a.id limit ${MAX_ATTACHMENTS_LISTED}`);
     return this.#toAttachments(viewer, result.rows);
   }
 
   async get(
     viewer: Principal,
     attachmentId: string,
+    view: AttachmentView,
     executor: Executor = this.#database,
   ): Promise<Attachment | null> {
     const result = await executor.execute<AttachmentRow>(sql`
-      ${this.#select()} where a.id = ${attachmentId} and a.deleted_at is null`);
+      ${this.#select(view)} and a.id = ${attachmentId}`);
     const rows = await this.#toAttachments(viewer, result.rows);
     return rows[0] ?? null;
   }
@@ -189,8 +211,9 @@ export class AttachmentService {
       space_id: string;
       organization_id: string | null;
       kind: string;
+      mode: string;
     }>(sql`
-      select t.space_id, s.organization_id, t.kind from tree_items t join spaces s on s.id = t.space_id
+      select t.space_id, s.organization_id, t.kind, t.mode from tree_items t join spaces s on s.id = t.space_id
       where t.id = ${itemId}`);
     const row = result.rows[0];
     if (!row) throw new AttachmentError("itemNotFound", "The page does not exist");
@@ -198,6 +221,19 @@ export class AttachmentService {
       throw new AttachmentError("invalidItem", "Files can be attached to pages and blog posts");
     }
     return row;
+  }
+
+  async #changed(
+    tx: Transaction,
+    itemId: string,
+    location: { space_id: string; mode: string },
+  ): Promise<void> {
+    if (location.mode === "live") await publishAttachments(tx, itemId);
+    await signalSpaceChange(tx, {
+      spaceId: location.space_id,
+      kind: location.mode === "live" ? "page" : "draft",
+      itemId,
+    });
   }
 
   async maxBytes(itemId: string): Promise<number> {
@@ -235,11 +271,11 @@ export class AttachmentService {
         }
         const fileId = await this.#files.reuse(tx, stored, location.space_id);
         await this.#addVersion(tx, actor, id, fileId, name, null);
+        await this.#changed(tx, itemId, location);
         await this.#prune(tx, id, location);
-        await signalSpaceChange(tx, { spaceId: location.space_id, kind: "page", itemId });
         return id;
       });
-      const attachment = await this.get(actor, attachmentId);
+      const attachment = await this.get(actor, attachmentId, "draft");
       if (!attachment) throw new Error("The attachment was not stored");
       return attachment;
     } catch (error) {
@@ -289,6 +325,7 @@ export class AttachmentService {
       delete from attachment_versions v
       where v.attachment_id = ${attachmentId} and not v.kept
         and v.id <> (select current_version_id from attachments where id = ${attachmentId})
+        and v.id is distinct from (select published_version_id from attachments where id = ${attachmentId})
         and v.number not in (select number from attachment_versions
           where attachment_id = ${attachmentId} and not kept
           order by number desc limit ${keep})`);
@@ -332,14 +369,18 @@ export class AttachmentService {
       });
       await signalSpaceChange(tx, { spaceId: location.space_id, kind: "page", itemId: row.item_id });
     });
-    const version = (await this.versions(actor, attachmentId)).find(
+    const version = (await this.versions(actor, attachmentId, "draft")).find(
       (candidate) => candidate.number === number,
     );
     if (!version) throw new AttachmentError("versionNotFound", "This version does not exist anymore");
     return version;
   }
 
-  async versions(viewer: Principal, attachmentId: string): Promise<AttachmentVersion[]> {
+  async versions(
+    viewer: Principal,
+    attachmentId: string,
+    view: AttachmentView,
+  ): Promise<AttachmentVersion[]> {
     const result = await this.#database.execute<{
       id: string;
       number: number;
@@ -354,7 +395,14 @@ export class AttachmentService {
       select v.id, v.number, v.name, f.size, f.content_type, v.restored_from, v.kept, v.uploaded_by,
         v.created_at
       from attachment_versions v join stored_files f on f.id = v.file_id
-      where v.attachment_id = ${attachmentId} order by v.number desc limit 500`);
+      where v.attachment_id = ${attachmentId}
+        ${
+          view === "published"
+            ? sql`and v.published_at is not null
+                and exists (select 1 from attachments a where a.id = v.attachment_id and a.published_version_id is not null)`
+            : sql``
+        }
+      order by v.number desc limit 500`);
     const names = await this.#people.visibleNames(
       viewer,
       result.rows.map((row) => row.uploaded_by).filter((id): id is string => id !== null),
@@ -387,10 +435,10 @@ export class AttachmentService {
       );
       await this.#addVersion(tx, actor, attachmentId, row.file_id, current.rows[0]?.name ?? row.name, number);
       const location = await this.#location(tx, itemId);
+      await this.#changed(tx, itemId, location);
       await this.#prune(tx, attachmentId, location);
-      await signalSpaceChange(tx, { spaceId: location.space_id, kind: "page", itemId });
     });
-    const restored = await this.get(actor, attachmentId);
+    const restored = await this.get(actor, attachmentId, "draft");
     if (!restored) throw new AttachmentError("attachmentNotFound", "The file does not exist");
     return restored;
   }
@@ -406,7 +454,7 @@ export class AttachmentService {
         sql`update blog_posts set cover_attachment_id = null where cover_attachment_id = ${attachmentId}`,
       );
       const location = await this.#location(tx, itemId);
-      await signalSpaceChange(tx, { spaceId: location.space_id, kind: "page", itemId });
+      await this.#changed(tx, itemId, location);
     });
   }
 
@@ -432,11 +480,12 @@ export class AttachmentService {
         );
       }
       await tx.execute(sql`
-        update attachments set deleted_at = null, deleted_by = null, updated_at = now() where id = ${attachmentId}`);
+        update attachments set deleted_at = null, deleted_by = null, discarded_draft_id = null, updated_at = now()
+        where id = ${attachmentId}`);
       const location = await this.#location(tx, attachment.item_id);
-      await signalSpaceChange(tx, { spaceId: location.space_id, kind: "page", itemId: attachment.item_id });
+      await this.#changed(tx, attachment.item_id, location);
     });
-    const restored = await this.get(actor, attachmentId);
+    const restored = await this.get(actor, attachmentId, "draft");
     if (!restored) throw new AttachmentError("attachmentNotFound", "The file does not exist");
     return restored;
   }
@@ -448,7 +497,19 @@ export class AttachmentService {
     return result.rows[0]?.item_id ?? null;
   }
 
-  async content(attachmentId: string, number?: number): Promise<AttachmentContent | null> {
+  async content(
+    attachmentId: string,
+    view: AttachmentView,
+    number?: number,
+  ): Promise<AttachmentContent | null> {
+    const version =
+      view === "published"
+        ? number === undefined
+          ? sql`v.id = a.published_version_id`
+          : sql`v.number = ${number} and v.published_at is not null and a.published_version_id is not null`
+        : number === undefined
+          ? sql`v.id = a.current_version_id`
+          : sql`v.number = ${number}`;
     const result = await this.#database.execute<{
       id: string;
       file_id: string;
@@ -459,10 +520,9 @@ export class AttachmentService {
       version_id: string;
     }>(sql`
       select a.id, v.file_id, v.name, f.size, f.content_type, v.number, v.id as version_id
-      from attachments a join attachment_versions v
-        on v.attachment_id = a.id and ${number === undefined ? sql`v.id = a.current_version_id` : sql`v.number = ${number}`}
+      from attachments a join attachment_versions v on v.attachment_id = a.id and ${version}
       join stored_files f on f.id = v.file_id and f.state <> 'pending'
-      where a.id = ${attachmentId} and a.deleted_at is null`);
+      where a.id = ${attachmentId} ${view === "draft" ? sql`and a.deleted_at is null` : sql``}`);
     const row = result.rows[0];
     if (!row) return null;
     return {

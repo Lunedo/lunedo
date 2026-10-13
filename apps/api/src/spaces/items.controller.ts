@@ -422,7 +422,7 @@ export class ItemsController {
     const listings = {
       childPages: await this.#services.documents.childPages(actor, pageId, snapshot.document),
       attachments: containsBlock(snapshot.document, "attachmentList")
-        ? (await this.#services.attachments.list(actor, pageId)).map(({ id, name, size }) => ({
+        ? (await this.#services.attachments.list(actor, pageId, "published")).map(({ id, name, size }) => ({
             id,
             name,
             size,

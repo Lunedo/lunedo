@@ -299,7 +299,7 @@ export class ShareLinksController {
       title: readable.title,
       document: readable.document,
       updatedAt: readable.updatedAt,
-      attachments: await this.#services.attachments.list(ANONYMOUS, itemId),
+      attachments: await this.#services.attachments.list(ANONYMOUS, itemId, "published"),
     };
   }
 
@@ -329,9 +329,9 @@ export class ShareLinksController {
     @Res({ passthrough: true }) reply: FastifyReply,
   ) {
     const itemId = await this.#services.shareLinks.resolveAnonymous(token, this.#unlock(request), request.ip);
-    const found = await this.#services.attachments.get(ANONYMOUS, attachmentId);
+    const found = await this.#services.attachments.get(ANONYMOUS, attachmentId, "published");
     if (!found || found.itemId !== itemId) throw notFound();
-    const content = await this.#services.attachments.content(attachmentId, query.version);
+    const content = await this.#services.attachments.content(attachmentId, "published", query.version);
     if (!content) throw notFound();
     reply.header("referrer-policy", "no-referrer");
     return sendAttachment(request, reply, this.#services.files, content, {
