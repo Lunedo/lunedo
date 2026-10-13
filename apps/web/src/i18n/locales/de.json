@@ -5223,6 +5223,8 @@
     "rowMeta": "{type} · {size} · Version {version} · {date}",
     "draftAdded": "Neu im Entwurf",
     "draftChanged": "Im Entwurf geändert",
+    "draftDeleted": "Im Entwurf gelöscht",
+    "undelete": "Datei wiederherstellen",
     "summary": "{type} · {size} · Version {version}",
     "typeWithExtension": "{kind} ({extension})",
     "actions": "Aktionen für {name}",

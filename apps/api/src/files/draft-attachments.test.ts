@@ -113,6 +113,12 @@ describe.skipIf(!databaseBaseUrl)("attachments of a draft through the API", () =
     return (response.json() as Listed[]).map((attachment) => attachment.name);
   }
 
+  async function drafted(pageId: string) {
+    const response = await owner.get(`/api/v1/pages/${pageId}/attachments`);
+    expect(response.statusCode, response.body).toBe(200);
+    return (response.json() as Listed[]).map((attachment) => [attachment.name, attachment.draft]);
+  }
+
   async function linkNames(context: Context) {
     const response = await context.visitor.get(`/api/v1/share-links/${context.token}/page`);
     expect(response.statusCode, response.body).toBe(200);
@@ -207,17 +213,38 @@ describe.skipIf(!databaseBaseUrl)("attachments of a draft through the API", () =
     const file = await upload(context.pageId, "contacts.txt", "phone list");
     await publish(context.pageId);
     expect((await owner.delete(`/api/v1/attachments/${file.id}`)).statusCode).toBe(204);
-    expect(await names(owner, context.pageId)).toEqual([]);
+    expect(await drafted(context.pageId)).toEqual([["contacts.txt", "deleted"]]);
+    expect(await download(owner, file.id)).toBe("phone list");
     expect(await seenByAll(context)).toEqual(everyone(["contacts.txt"]));
     expect(await download(context.reader, file.id)).toBe("phone list");
     expect(await download(context.guest, file.id)).toBe("phone list");
     expect(await linkDownload(context, file.id)).toBe("phone list");
 
     await publish(context.pageId);
+    expect(await drafted(context.pageId)).toEqual([]);
     expect(await seenByAll(context)).toEqual(everyone([]));
     expect(await download(context.reader, file.id)).toBe(404);
     expect(await download(context.guest, file.id)).toBe(404);
     expect(await linkDownload(context, file.id)).toBe(404);
+  });
+
+  it("let editors restore a file deleted in the draft while readers keep seeing it", async () => {
+    const context = await setup("publish");
+    const file = await upload(context.pageId, "contacts.txt", "phone list");
+    await publish(context.pageId);
+    expect((await owner.delete(`/api/v1/attachments/${file.id}`)).statusCode).toBe(204);
+    expect(await drafted(context.pageId)).toEqual([["contacts.txt", "deleted"]]);
+    expect(await seenByAll(context)).toEqual(everyone(["contacts.txt"]));
+
+    const restored = await owner.post(`/api/v1/pages/${context.pageId}/attachments/${file.id}/restore`, {});
+    expect(restored.statusCode, restored.body).toBe(200);
+    expect(await drafted(context.pageId)).toEqual([["contacts.txt", null]]);
+    expect((await test.runtime.services.versions.draft(context.pageId)).hasChanges).toBe(false);
+    expect(await seenByAll(context)).toEqual(everyone(["contacts.txt"]));
+
+    await publish(context.pageId);
+    expect(await seenByAll(context)).toEqual(everyone(["contacts.txt"]));
+    expect(await download(context.reader, file.id)).toBe("phone list");
   });
 
   it("discard attachments added only for a discarded draft and bring back what the draft changed", async () => {
@@ -247,7 +274,11 @@ describe.skipIf(!databaseBaseUrl)("attachments of a draft through the API", () =
       {},
     );
     expect(restored.statusCode, restored.body).toBe(204);
-    expect(await names(owner, context.pageId)).toEqual(["added.txt", "kept.txt"]);
+    expect(await drafted(context.pageId)).toEqual([
+      ["added.txt", "added"],
+      ["kept.txt", "changed"],
+      ["removed.txt", "deleted"],
+    ]);
     expect(await download(owner, kept.id)).toBe("v2");
     expect(await seenByAll(context)).toEqual(everyone(["kept.txt", "removed.txt"]));
   });

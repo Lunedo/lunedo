@@ -164,6 +164,31 @@ describe("the attachments of a page", () => {
     expect(screen.getByRole("button", { name: /^Rack\.png/ }).textContent).toContain("New in draft");
   });
 
+  it("keeps files deleted in the draft listed for editors and restores them", async () => {
+    const restored: string[] = [];
+    list = [attachment(REPORT, "Report.pdf", { draft: "deleted" })];
+    ({ requests } = routes({
+      [`POST /api/v1/pages/${PAGE}/attachments/${REPORT}/restore`]: () => {
+        restored.push(REPORT);
+        list = [attachment(REPORT, "Report.pdf")];
+        return { status: 204 };
+      },
+    }));
+    await renderSection(true);
+    expect((await screen.findByRole("button", { name: /^Report\.pdf/ })).textContent).toContain(
+      "Deleted in draft",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Actions for Report.pdf" }));
+    expect(screen.queryByRole("menuitem", { name: "Delete file" })).toBeNull();
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Restore file" }));
+    await waitFor(() => expect(restored).toEqual([REPORT]));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /^Report\.pdf/ }).textContent).not.toContain(
+        "Deleted in draft",
+      ),
+    );
+  });
+
   it("hides the section from readers when the page has no files", async () => {
     list = [];
     await renderSection(false);

@@ -266,7 +266,8 @@ export class AttachmentsController {
   @Permission("item.edit", page)
   @ApiRoute({
     summary: "Bring back a deleted attachment",
-    description: "Undoes the deletion of an attachment of this page.",
+    description:
+      "Undoes the deletion of an attachment of this page, also of one deleted in the draft that readers still see until the next publication.",
     tags: [TAG],
     params: restoreParams,
     status: 200,

@@ -5223,6 +5223,8 @@
     "rowMeta": "{type} · {size} · version {version} · {date}",
     "draftAdded": "New in draft",
     "draftChanged": "Changed in draft",
+    "draftDeleted": "Deleted in draft",
+    "undelete": "Restore file",
     "summary": "{type} · {size} · version {version}",
     "typeWithExtension": "{kind} ({extension})",
     "actions": "Actions for {name}",

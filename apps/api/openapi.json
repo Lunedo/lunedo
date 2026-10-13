@@ -8707,14 +8707,15 @@
                           "type": "string",
                           "x-extensible-enum": [
                             "added",
-                            "changed"
+                            "changed",
+                            "deleted"
                           ]
                         },
                         {
                           "type": "null"
                         }
                       ],
-                      "description": "Only for people who can edit the page: `added` when readers do not see the file until the next publication, `changed` when readers still see an earlier version. Null when readers see this version. New values can be added in later versions; handle unknown values."
+                      "description": "Only for people who can edit the page: `added` when readers do not see the file until the next publication, `changed` when readers still see an earlier version, `deleted` when the file was deleted in the draft and readers still see it until the next publication; restore it to keep it. Null when readers see this version. New values can be added in later versions; handle unknown values."
                     },
                     "uploadedBy": {
                       "anyOf": [
@@ -10024,14 +10025,15 @@
                           "type": "string",
                           "x-extensible-enum": [
                             "added",
-                            "changed"
+                            "changed",
+                            "deleted"
                           ]
                         },
                         {
                           "type": "null"
                         }
                       ],
-                      "description": "Only for people who can edit the page: `added` when readers do not see the file until the next publication, `changed` when readers still see an earlier version. Null when readers see this version. New values can be added in later versions; handle unknown values."
+                      "description": "Only for people who can edit the page: `added` when readers do not see the file until the next publication, `changed` when readers still see an earlier version, `deleted` when the file was deleted in the draft and readers still see it until the next publication; restore it to keep it. Null when readers see this version. New values can be added in later versions; handle unknown values."
                     },
                     "uploadedBy": {
                       "anyOf": [
@@ -142030,14 +142032,15 @@
                             "type": "string",
                             "x-extensible-enum": [
                               "added",
-                              "changed"
+                              "changed",
+                              "deleted"
                             ]
                           },
                           {
                             "type": "null"
                           }
                         ],
-                        "description": "Only for people who can edit the page: `added` when readers do not see the file until the next publication, `changed` when readers still see an earlier version. Null when readers see this version. New values can be added in later versions; handle unknown values."
+                        "description": "Only for people who can edit the page: `added` when readers do not see the file until the next publication, `changed` when readers still see an earlier version, `deleted` when the file was deleted in the draft and readers still see it until the next publication; restore it to keep it. Null when readers see this version. New values can be added in later versions; handle unknown values."
                       },
                       "uploadedBy": {
                         "anyOf": [
@@ -142369,14 +142372,15 @@
                           "type": "string",
                           "x-extensible-enum": [
                             "added",
-                            "changed"
+                            "changed",
+                            "deleted"
                           ]
                         },
                         {
                           "type": "null"
                         }
                       ],
-                      "description": "Only for people who can edit the page: `added` when readers do not see the file until the next publication, `changed` when readers still see an earlier version. Null when readers see this version. New values can be added in later versions; handle unknown values."
+                      "description": "Only for people who can edit the page: `added` when readers do not see the file until the next publication, `changed` when readers still see an earlier version, `deleted` when the file was deleted in the draft and readers still see it until the next publication; restore it to keep it. Null when readers see this version. New values can be added in later versions; handle unknown values."
                     },
                     "uploadedBy": {
                       "anyOf": [
@@ -142646,7 +142650,7 @@
       "post": {
         "operationId": "attachments.undelete",
         "summary": "Bring back a deleted attachment",
-        "description": "Undoes the deletion of an attachment of this page.\n\nRequires the permission `item.edit` on the item in `pageId`.",
+        "description": "Undoes the deletion of an attachment of this page, also of one deleted in the draft that readers still see until the next publication.\n\nRequires the permission `item.edit` on the item in `pageId`.",
         "tags": [
           "Attachments"
         ],
@@ -142757,14 +142761,15 @@
                           "type": "string",
                           "x-extensible-enum": [
                             "added",
-                            "changed"
+                            "changed",
+                            "deleted"
                           ]
                         },
                         {
                           "type": "null"
                         }
                       ],
-                      "description": "Only for people who can edit the page: `added` when readers do not see the file until the next publication, `changed` when readers still see an earlier version. Null when readers see this version. New values can be added in later versions; handle unknown values."
+                      "description": "Only for people who can edit the page: `added` when readers do not see the file until the next publication, `changed` when readers still see an earlier version, `deleted` when the file was deleted in the draft and readers still see it until the next publication; restore it to keep it. Null when readers see this version. New values can be added in later versions; handle unknown values."
                     },
                     "uploadedBy": {
                       "anyOf": [
@@ -157603,14 +157608,15 @@
                                 "type": "string",
                                 "x-extensible-enum": [
                                   "added",
-                                  "changed"
+                                  "changed",
+                                  "deleted"
                                 ]
                               },
                               {
                                 "type": "null"
                               }
                             ],
-                            "description": "Only for people who can edit the page: `added` when readers do not see the file until the next publication, `changed` when readers still see an earlier version. Null when readers see this version. New values can be added in later versions; handle unknown values."
+                            "description": "Only for people who can edit the page: `added` when readers do not see the file until the next publication, `changed` when readers still see an earlier version, `deleted` when the file was deleted in the draft and readers still see it until the next publication; restore it to keep it. Null when readers see this version. New values can be added in later versions; handle unknown values."
                           },
                           "uploadedBy": {
                             "anyOf": [

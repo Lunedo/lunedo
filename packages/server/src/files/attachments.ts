@@ -21,7 +21,7 @@ export class AttachmentError extends SpaceError {
 
 export type AttachmentView = "draft" | "published";
 
-export type AttachmentDraftChange = "added" | "changed";
+export type AttachmentDraftChange = "added" | "changed" | "deleted";
 
 export interface AttachmentVersion {
   id: string;
@@ -118,6 +118,7 @@ interface AttachmentRow {
 }
 
 const MAX_ATTACHMENTS_LISTED = 1000;
+const IN_DRAFT = sql`(a.deleted_at is null or a.published_version_id is not null)`;
 
 export class AttachmentService {
   readonly #database: Database;
@@ -158,12 +159,13 @@ export class AttachmentService {
     return sql`
       select a.id, a.item_id, v.name, f.size, f.content_type, v.number,
         (select count(*) from attachment_versions av where av.attachment_id = a.id) as versions,
-        case when a.published_version_id is null then 'added'
+        case when a.deleted_at is not null then 'deleted'
+          when a.published_version_id is null then 'added'
           when a.published_version_id <> a.current_version_id then 'changed' end as draft,
         v.uploaded_by, v.created_at as uploaded_at, a.created_at
       from attachments a join attachment_versions v on v.id = a.current_version_id
       join stored_files f on f.id = v.file_id
-      where a.deleted_at is null`;
+      where ${IN_DRAFT}`;
   }
 
   async #toAttachments(viewer: Principal, rows: AttachmentRow[]): Promise<Attachment[]> {
@@ -522,7 +524,7 @@ export class AttachmentService {
       select a.id, v.file_id, v.name, f.size, f.content_type, v.number, v.id as version_id
       from attachments a join attachment_versions v on v.attachment_id = a.id and ${version}
       join stored_files f on f.id = v.file_id and f.state <> 'pending'
-      where a.id = ${attachmentId} ${view === "draft" ? sql`and a.deleted_at is null` : sql``}`);
+      where a.id = ${attachmentId} ${view === "draft" ? sql`and ${IN_DRAFT}` : sql``}`);
     const row = result.rows[0];
     if (!row) return null;
     return {

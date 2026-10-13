@@ -35,8 +35,8 @@ export const attachmentSchema = z
     version: z.number().int().describe("Number of the current version."),
     versions: z.number().int().describe("Number of stored versions."),
     draft: extensibleEnum(
-      ["added", "changed"],
-      "Only for people who can edit the page: `added` when readers do not see the file until the next publication, `changed` when readers still see an earlier version. Null when readers see this version.",
+      ["added", "changed", "deleted"],
+      "Only for people who can edit the page: `added` when readers do not see the file until the next publication, `changed` when readers still see an earlier version, `deleted` when the file was deleted in the draft and readers still see it until the next publication; restore it to keep it. Null when readers see this version.",
     ).nullable(),
     uploadedBy: person.nullable().describe("Who uploaded the current version."),
     uploadedAt: timestamp("When the current version was uploaded."),
