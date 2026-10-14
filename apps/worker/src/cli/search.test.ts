@@ -54,7 +54,9 @@ describe.skipIf(!baseUrl)("pagehall search rebuild and status", () => {
     ]);
 
     const rebuild = await lines(rebuildSearchIndex);
-    expect(rebuild[0]).toBe("Rebuilding the search index: 1 pages and blog posts are queued for the worker.");
+    expect(rebuild[0]).toBe(
+      "Rebuilding the search index: 1 pages, blog posts and running topics are queued for the worker.",
+    );
     expect(await lines(searchIndexStatus)).toEqual([
       "The search index is being built: 0 of 1 pages done.",
       "Pages waiting for an update: 1.",

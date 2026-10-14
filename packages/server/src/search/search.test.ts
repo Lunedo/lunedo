@@ -306,6 +306,7 @@ describe.skipIf(!baseUrl)("search", () => {
       replaceItem: adapter.replaceItem.bind(adapter),
       removeItem: adapter.removeItem.bind(adapter),
       updateAccess: adapter.updateAccess.bind(adapter),
+      updateContextAccess: adapter.updateContextAccess.bind(adapter),
       indexedItemsOfSpace: adapter.indexedItemsOfSpace.bind(adapter),
       search: (executor, request) => {
         requests.push(request);

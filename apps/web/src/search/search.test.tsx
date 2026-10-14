@@ -4,7 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App, createQueryClient } from "../app.js";
 import { initI18n } from "../i18n/index.js";
 import { mockApi, type RecordedRequest } from "../testing/render.js";
+import { filtersOf } from "./search-api.js";
 import { fromSearchParams, noFilters, toSearchParams } from "./search-params.js";
+import { hitHref, hitPath, hitTitle, typeLabel } from "./search-results.js";
 
 const ORGANIZATION = "01929b1e-6f2a-7c3d-8e9f-0a1b2c3d4e5f";
 const SPACE = "01929b1e-0000-7000-8000-000000000010";
@@ -184,6 +186,77 @@ describe("search parameters in the address", () => {
   });
 });
 
+describe("results of attachments, running topics and decisions", () => {
+  const TOPIC = "01929b1e-0000-7000-8000-000000000020";
+  const SERIES = "01929b1e-0000-7000-8000-000000000021";
+  const MEETING = "01929b1e-0000-7000-8000-000000000022";
+  const FILE = "01929b1e-0000-7000-8000-000000000023";
+  const base = { ...hit(ids(1), "Gateway"), attachment: null, topic: null, series: null, itemType: "page" };
+
+  it("open the file on its page, the topic in its series and the meeting when the topic is hidden", async () => {
+    const i18n = await initI18n(["en"]);
+    const t = i18n.t.bind(i18n);
+    const file = {
+      ...base,
+      type: "attachment",
+      id: FILE,
+      heading: "handbook.docx",
+      attachment: { id: FILE, name: "handbook.docx", contentType: "application/pdf", size: 10 },
+    };
+    expect(hitHref(file)).toBe(`/spaces/OPS/pages/${ids(1)}/gateway?attachment=${FILE}`);
+    expect(hitHref({ ...file, itemType: "blogPost" })).toBe(
+      `/spaces/OPS/blog/${ids(1)}/gateway?attachment=${FILE}`,
+    );
+    expect(hitTitle(t, file)).toBe("handbook.docx on “Gateway”");
+    expect(typeLabel(t, "attachment")).toBe("Attachment");
+
+    const topic = {
+      ...base,
+      type: "topic",
+      id: TOPIC,
+      itemId: TOPIC,
+      itemType: "topic",
+      title: "Rollout",
+      topic: { id: TOPIC, title: "Rollout" },
+      series: { id: SERIES, title: "Jour fixe" },
+    };
+    expect(hitHref(topic)).toBe(`/spaces/OPS/topics/${TOPIC}`);
+    expect(hitPath(t, topic)).toEqual(["Operations", "Jour fixe"]);
+    expect(hitTitle(t, { ...topic, id: ids(5) })).toBe("Comment on “Rollout”");
+    expect(hitHref({ ...topic, space: null, sharedWithYou: true })).toBeNull();
+    expect(typeLabel(t, "topic")).toBe("Running topic");
+
+    const decision = { ...base, type: "decision", id: ids(6), itemId: MEETING, title: "Jour fixe · 18 Mar" };
+    expect(hitHref({ ...decision, topic: { id: TOPIC, title: "Rollout" } })).toBe(
+      `/spaces/OPS/topics/${TOPIC}`,
+    );
+    expect(hitHref(decision)).toBe(`/spaces/OPS/pages/${MEETING}/jour-fixe-18-mar`);
+    expect(hitHref({ ...decision, space: null, sharedWithYou: true })).toBe(
+      `/shared/${MEETING}/jour-fixe-18-mar`,
+    );
+    expect(hitTitle(t, decision)).toBe("Decision in “Jour fixe · 18 Mar”");
+    expect(typeLabel(t, "decision")).toBe("Decision");
+  });
+
+  it("keep the new types in the address and in saved searches", () => {
+    const filters = { ...noFilters, types: ["attachment" as const, "topic" as const, "decision" as const] };
+    expect(fromSearchParams(toSearchParams("rollout", filters)).filters.types).toEqual(filters.types);
+    expect(
+      filtersOf({
+        spaceIds: [],
+        types: ["attachment", "topic", "decision", "folder"],
+        labels: [],
+        authorIds: [],
+        statusIds: [],
+        languages: [],
+        updated: null,
+        includeArchived: false,
+        sort: "relevance",
+      }).types,
+    ).toEqual(["attachment", "topic", "decision"]);
+  });
+});
+
 describe("quick search", () => {
   beforeEach(() => {
     vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
@@ -210,7 +283,7 @@ describe("quick search", () => {
     expect(await within(dialog).findByRole("option", { name: "tls certificate" })).toBeTruthy();
     expect(within(dialog).getByRole("option", { name: /Network overview/ })).toBeTruthy();
     expect(within(dialog).getByRole("combobox").getAttribute("placeholder")).toBe(
-      "Search pages, blog posts, comments, people and spaces",
+      "Search pages, files, topics, people and spaces",
     );
     await userEvent.click(within(dialog).getByRole("option", { name: "Clear recent searches" }));
     await waitFor(() =>

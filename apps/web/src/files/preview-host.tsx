@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { createContext, type ReactNode, useContext, useMemo, useState } from "react";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
@@ -10,8 +11,27 @@ interface PreviewHost {
 
 const PreviewHostContext = createContext<PreviewHost | null>(null);
 
-export function AttachmentPreviewProvider({ canEdit, children }: { canEdit: boolean; children: ReactNode }) {
-  const [attachmentId, setAttachmentId] = useState<string | null>(null);
+export function AttachmentPreviewProvider({
+  canEdit,
+  requested,
+  children,
+}: {
+  canEdit: boolean;
+  requested?: string | undefined;
+  children: ReactNode;
+}) {
+  const navigate = useNavigate();
+  const [attachmentId, setAttachmentId] = useState<string | null>(requested ?? null);
+  const close = () => {
+    setAttachmentId(null);
+    if (requested) {
+      void navigate({
+        to: ".",
+        search: (previous: Record<string, unknown>) => ({ ...previous, attachment: undefined }),
+        replace: true,
+      });
+    }
+  };
   const attachment = useQuery({
     queryKey: ["attachments", attachmentId],
     queryFn: () =>
@@ -33,7 +53,7 @@ export function AttachmentPreviewProvider({ canEdit, children }: { canEdit: bool
         error={attachment.isError ? attachment.error : null}
         onRetry={() => void attachment.refetch()}
         canEdit={canEdit}
-        onClose={() => setAttachmentId(null)}
+        onClose={close}
       />
     </PreviewHostContext.Provider>
   );

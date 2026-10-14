@@ -1,5 +1,5 @@
 import { expect, test } from "../support/fixtures.js";
-import { searchWorld } from "../support/search.js";
+import { meetingAndFileHits, searchWorld } from "../support/search.js";
 
 test("searches from a space, opens a result, filters and saves the search", async ({
   page,
@@ -94,6 +94,55 @@ test("offers ways out when nothing is found and keeps the filters in the address
   expect(new URL(page.url()).searchParams.get("spaces")).toBeNull();
   await page.goBack();
   await expect(page.getByText(`No results for “${world.word} -contractors” in Security`)).toBeVisible();
+});
+
+test("finds attachments, running topics and decisions and opens each where it lives", async ({
+  page,
+  organization,
+}) => {
+  const world = await searchWorld(page, organization);
+  const hits = await meetingAndFileHits(page, organization, world);
+  await page.goto(`/search?q=${hits.word}`);
+  const results = page.getByRole("region", { name: "Results" });
+  const fileLink = results.getByRole("link", { name: `${hits.fileName} on “Restart the VPN gateway”` });
+  const topicLink = results.getByRole("link", { name: hits.topicTitle });
+  const decisionLink = results.getByRole("link", { name: /^Decision in “Network jour fixe/ });
+  await expect(fileLink).toBeVisible();
+  await expect(topicLink).toBeVisible();
+  await expect(decisionLink).toBeVisible();
+
+  const filters = page.getByRole("complementary", { name: "Filters" });
+  await filters.getByRole("checkbox", { name: /Running topic/ }).click();
+  await expect(topicLink).toBeVisible();
+  await expect(fileLink).toHaveCount(0);
+  await page.getByRole("button", { name: "Save search" }).click();
+  const save = page.getByRole("dialog", { name: "Save this search" });
+  await save.getByLabel("Name").fill("Gateway topics");
+  await save.getByRole("button", { name: "Save search" }).click();
+  await page.goto("/search");
+  await filters.getByRole("link", { name: "Gateway topics" }).click();
+  await expect(filters.getByRole("checkbox", { name: /Running topic/ })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+  await expect(topicLink).toBeVisible();
+  await topicLink.click();
+  await expect(page.getByRole("heading", { name: hits.topicTitle, level: 1 })).toBeVisible();
+  expect(new URL(page.url()).pathname).toBe(hits.topicPath);
+
+  await page.goto(`/search?q=${hits.word}`);
+  await decisionLink.click();
+  await expect(page.getByRole("heading", { name: hits.topicTitle, level: 1 })).toBeVisible();
+
+  await page.goto(`/search?q=${hits.word}`);
+  await fileLink.click();
+  const drawer = page.getByRole("dialog", { name: hits.fileName });
+  await expect(drawer).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(drawer).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Restart the VPN gateway", level: 1 })).toBeVisible();
+  expect(new URL(page.url()).pathname).toContain(world.gatewayPath);
+  expect(new URL(page.url()).searchParams.get("attachment")).toBeNull();
 });
 
 test("the command palette matches letters in order and remembers recent commands", async ({ page }) => {

@@ -13,7 +13,9 @@ async function withIndexer<T>(databaseUrl: string, use: (indexer: SearchIndexer)
 
 export async function rebuildSearchIndex(databaseUrl: string, write: (line: string) => void): Promise<void> {
   const queued = await withIndexer(databaseUrl, (indexer) => indexer.requestRebuild());
-  write(`Rebuilding the search index: ${queued} pages and blog posts are queued for the worker.`);
+  write(
+    `Rebuilding the search index: ${queued} pages, blog posts and running topics are queued for the worker.`,
+  );
   write("Search keeps answering meanwhile and tells people that results may be incomplete.");
   write('Run "pagehall search status" to follow the progress.');
 }

@@ -1,6 +1,6 @@
 import { expect, test } from "../support/fixtures.js";
 import { callApi } from "../support/helpers.js";
-import { searchWorld } from "../support/search.js";
+import { meetingAndFileHits, searchWorld } from "../support/search.js";
 import { sweepAppearances } from "../support/sweeps.js";
 
 test("search screens pass the accessibility check in English and German, light and dark, wide and narrow", async ({
@@ -36,6 +36,12 @@ test("search screens pass the accessibility check in English and German, light a
   await sweepAppearances(page, "search-page", async () => {
     await page.goto(`/search?q=${world.word}&labels=runbook`);
     await expect(page.getByRole("link", { name: "Restart the VPN gateway" })).toBeVisible();
+  });
+  const hits = await meetingAndFileHits(page, organization, world);
+  await sweepAppearances(page, "search-new-types", async () => {
+    await page.goto(`/search?q=${hits.word}`);
+    await expect(page.getByRole("link", { name: hits.topicTitle })).toBeVisible();
+    await expect(page.getByRole("link", { name: new RegExp(hits.fileName) })).toBeVisible();
   });
   await sweepAppearances(page, "search-first-use", async () => {
     await page.goto("/search");

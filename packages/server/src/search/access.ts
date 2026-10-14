@@ -110,21 +110,35 @@ export async function loadViewer(
 }
 
 export function storedAccessCondition(viewer: SearchViewer, chunk: SQL): SQL {
-  return sql`(((${chunk}.organization_id is not null and ${chunk}.readers && ${sql.param(viewer.tokens)}::text[])
-      or (${chunk}.organization_id is null and ${chunk}.readers && ${sql.param(viewer.personalTokens)}::text[]))
-    and ${chunk}.restrictions <@ ${sql.param(viewer.listedRestrictions)}::uuid[])`;
+  const granted = (
+    readers: SQL,
+  ) => sql`((${chunk}.organization_id is not null and ${readers} && ${sql.param(viewer.tokens)}::text[])
+      or (${chunk}.organization_id is null and ${readers} && ${sql.param(viewer.personalTokens)}::text[]))`;
+  const listed = sql`${sql.param(viewer.listedRestrictions)}::uuid[]`;
+  return sql`(${granted(sql`${chunk}.readers`)} and ${chunk}.restrictions <@ ${listed}
+    and (${chunk}.context_item_id is null or (${granted(sql`${chunk}.context_readers`)}
+      and ${chunk}.context_restrictions <@ ${listed})))`;
 }
 
 export function liveAccessCondition(viewer: SearchViewer, chunk: SQL, item: SQL, space: SQL): SQL {
   const account = sql`${viewer.accountId}::uuid`;
-  const granted = (minimum: ReadLevel) => {
-    const sources = [spaceRoleConditionFor(account, space, minimum)];
-    if (!viewer.portal) sources.push(shareCondition(account, item, space, minimum));
-    return sql`((${sql.join(sources, sql` or `)}) and ${viewRestrictionCondition(account, item, space)})`;
+  const readable = (target: SQL, targetSpace: SQL) => {
+    const granted = (minimum: ReadLevel) => {
+      const sources = [spaceRoleConditionFor(account, targetSpace, minimum)];
+      if (!viewer.portal) sources.push(shareCondition(account, target, targetSpace, minimum));
+      return sql`((${sql.join(sources, sql` or `)}) and ${viewRestrictionCondition(account, target, targetSpace)})`;
+    };
+    return sql`((${target}.reader_visible and ${granted("reader")}) or ${granted("editor")})`;
   };
   const commentVisible = sql`(${chunk}.source <> 'comment' or exists (select 1 from comments cm
     join comments cr on cr.id = coalesce(cm.parent_id, cm.id)
     where cm.id = ${chunk}.source_id and cm.item_id = ${item}.id and cm.deleted_at is null
       and (cr.quote is null or cr.quote_public)))`;
-  return sql`(${commentVisible} and ((${item}.reader_visible and ${granted("reader")}) or ${granted("editor")}))`;
+  const contextVisible = sql`(${chunk}.context_item_id is null or exists (select 1 from tree_items ct
+    join spaces cs on cs.id = ct.space_id
+    where ct.id = ${chunk}.context_item_id and ct.trash_entry_id is null and cs.deleted_at is null
+      and (ct.mode = 'live' or ct.published_version_id is not null)
+      and not exists (select 1 from meetings cm where cm.item_id = ct.id and cm.state = 'skipped')
+      and ${readable(sql`ct`, sql`cs`)}))`;
+  return sql`(${commentVisible} and ${contextVisible} and ${readable(item, space)})`;
 }
