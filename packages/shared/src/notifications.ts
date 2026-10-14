@@ -209,7 +209,6 @@ export const contentNotificationParamSchemas = {
     itemKind: contentKind,
     spaceKey: z.string(),
     ownerId: idSchema,
-    ownerName: z.string(),
   }),
   "page.statusChanged": z.object({
     itemTitle: z.string(),

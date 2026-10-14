@@ -385,7 +385,7 @@ export class ContentActivity {
   async ownerChanged(
     tx: Transaction,
     itemId: string,
-    input: { actorId: string | null; ownerId: string; ownerName: string },
+    input: { actorId: string | null; ownerId: string },
   ): Promise<void> {
     await this.#watches.watchAutomatically(tx, [input.ownerId], itemId);
     const item = await this.#facts(tx, itemId);
@@ -407,7 +407,6 @@ export class ContentActivity {
         itemKind: item.kind,
         spaceKey: item.spaceKey,
         ownerId: input.ownerId,
-        ownerName: input.ownerName,
       },
     });
   }

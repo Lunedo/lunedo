@@ -228,12 +228,7 @@ export class OwnershipService {
         scope: auditScopeOf({ organizationId: item.organization_id }),
       });
       await signalSpaceChange(tx, { spaceId: item.space_id, kind: "tree", itemId });
-      const names = await this.#people.names([ownerId], tx);
-      await this.#activity.ownerChanged(tx, itemId, {
-        actorId: actorIdOf(actor),
-        ownerId,
-        ownerName: names.get(ownerId) ?? "",
-      });
+      await this.#activity.ownerChanged(tx, itemId, { actorId: actorIdOf(actor), ownerId });
     });
   }
 

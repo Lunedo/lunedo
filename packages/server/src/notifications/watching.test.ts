@@ -281,7 +281,12 @@ describe.skipIf(!baseUrl)("watching", () => {
       await test.services.ownership.transfer(context.editor, page.id, context.secondEditorId);
       expect(await notificationsOf(context.secondEditorId, "ownership.transferred")).toHaveLength(1);
       const [transfer] = await notificationsOf(context.readerId, "ownership.transferred");
-      expect(transfer?.params).toMatchObject({ ownerId: context.secondEditorId, ownerName: "Second editor" });
+      expect(transfer?.params).toEqual({
+        itemTitle: page.title,
+        itemKind: "page",
+        spaceKey: context.space.key,
+        ownerId: context.secondEditorId,
+      });
       expect(await notificationsOf(context.editorId, "ownership.transferred")).toEqual([]);
     });
 
