@@ -2,7 +2,7 @@ import { keepPreviousData, queryOptions, useMutation, useQuery, useQueryClient }
 import { api } from "../api/client.js";
 import type { paths } from "../api/generated/schema.js";
 import { request } from "../api/request.js";
-import { apiFilters, noFilters, type SearchFilters } from "./search-params.js";
+import { apiFilters, noFilters, type SearchFilters, searchTypes } from "./search-params.js";
 
 type Json<T> = T extends { content: { "application/json": infer Body } } ? Body : never;
 type Ok<Path extends keyof paths, Method extends "get" | "post" | "patch"> = Json<
@@ -219,7 +219,7 @@ export function filtersOf(stored: SavedSearch["filters"]): SearchFilters {
   return {
     spaceIds: stored.spaceIds,
     types: stored.types.filter((type): type is SearchFilters["types"][number] =>
-      ["page", "blogPost", "comment"].includes(type),
+      (searchTypes as readonly string[]).includes(type),
     ),
     labels: stored.labels,
     authorIds: stored.authorIds,

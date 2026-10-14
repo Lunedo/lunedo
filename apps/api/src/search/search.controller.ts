@@ -6,6 +6,7 @@ import {
   SEARCH_PAGE_LIMIT,
   type SearchResponse,
   searchContentTypes,
+  searchItemTypes,
   searchSorts,
   searchUpdatedRanges,
 } from "@pagehall/server";
@@ -131,6 +132,10 @@ const resultSchema = z
     ),
     itemId: uuid(
       "ID of the page, blog post or running topic the result belongs to; for a decision, the meeting it was recorded in.",
+    ),
+    itemType: extensibleEnum(
+      searchItemTypes,
+      "What `itemId` is: `page`, `blogPost` or `topic` (a running topic), so that clients open the right screen.",
     ),
     title: z
       .string()
@@ -272,6 +277,7 @@ const exampleResponse = {
       type: "page",
       id: "01929b1e-7c1a-7000-8000-000000000020",
       itemId: "01929b1e-7c1a-7000-8000-000000000020",
+      itemType: "page",
       title: "VPN access",
       heading: "Setup",
       anchor: "setup",

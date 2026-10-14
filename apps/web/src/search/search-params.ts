@@ -1,7 +1,7 @@
 import { contentLanguages } from "@pagehall/shared";
 import { z } from "zod";
 
-export const searchTypes = ["page", "blogPost", "comment"] as const;
+export const searchTypes = ["page", "blogPost", "comment", "attachment", "topic", "decision"] as const;
 export type SearchType = (typeof searchTypes)[number];
 export const updatedRanges = ["week", "month", "year"] as const;
 export type UpdatedRange = (typeof updatedRanges)[number];

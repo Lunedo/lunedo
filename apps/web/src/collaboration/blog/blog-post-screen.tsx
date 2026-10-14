@@ -264,7 +264,7 @@ function BlogPostView({ item, post }: { item: ItemDetails; post: BlogPost }) {
   const writable = canEdit && !space.archived;
   return (
     <UploadsProvider pageId={item.id}>
-      <AttachmentPreviewProvider canEdit={writable}>
+      <AttachmentPreviewProvider canEdit={writable} requested={search.attachment}>
         <PageDropZone enabled={writable} title={item.title}>
           <BlogPostArticle item={item} post={post} lostEdit={lostEdit} />
         </PageDropZone>

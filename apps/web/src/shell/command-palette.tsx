@@ -236,11 +236,12 @@ function Palette({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
     const pageItems = (current?.results ?? [])
       .filter((hit) => hit.type !== "comment")
       .slice(0, PAGES)
-      .map<CommandItem>((hit) => {
+      .flatMap<CommandItem>((hit) => {
         const href = hitHref(hit);
+        if (!href) return [];
         const title = hitTitle(t, hit);
         const match = fuzzyMatch(typed, title);
-        return {
+        const item: CommandItem = {
           id: `page:${hit.id}`,
           label: title,
           ...(match ? { labelContent: <Highlighted parts={highlightParts(title, match.ranges)} /> } : {}),
@@ -251,6 +252,7 @@ function Palette({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
             void navigate({ href });
           },
         };
+        return [item];
       });
     if (typed.length >= MIN_PAGE_QUERY && organizationId) {
       const all = router.buildLocation({ to: "/search", search: toSearchParams(typed, noFilters) }).href;

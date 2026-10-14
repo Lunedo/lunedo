@@ -137,6 +137,7 @@ describe.skipIf(!baseUrl)("search over meetings", () => {
       type: "topic",
       id: context.topicId,
       itemId: context.topicId,
+      itemType: "topic",
       topic,
       series,
       attachment: null,

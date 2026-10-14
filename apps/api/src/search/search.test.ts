@@ -134,6 +134,7 @@ describe.skipIf(!databaseBaseUrl)("search through the API", () => {
         type: "attachment",
         id: attachment.id,
         itemId: pageId,
+        itemType: "page",
         heading: "printer-manual.txt",
         attachment: {
           id: attachment.id,

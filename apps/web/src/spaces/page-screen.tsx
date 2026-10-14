@@ -143,7 +143,7 @@ function PageView({ page }: { page: ItemDetails }) {
   const lostEdit = useLostEditPermission(mayEdit, search.edit === true);
   return (
     <UploadsProvider pageId={page.id}>
-      <AttachmentPreviewProvider canEdit={writable}>
+      <AttachmentPreviewProvider canEdit={writable} requested={search.attachment}>
         <PageDropZone enabled={writable} title={page.title}>
           <PageArticle page={page} sharing={sharing} lostEdit={lostEdit} />
         </PageDropZone>

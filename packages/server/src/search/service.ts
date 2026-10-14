@@ -78,10 +78,14 @@ export interface SearchAttachment {
   size: number;
 }
 
+export const searchItemTypes = ["page", "blogPost", "topic"] as const;
+export type SearchItemType = (typeof searchItemTypes)[number];
+
 export interface SearchHit {
   type: SearchContentType;
   id: string;
   itemId: string;
+  itemType: SearchItemType;
   title: string;
   heading: string;
   anchor: string | null;
@@ -372,6 +376,14 @@ export class SearchService {
     spaces: Map<string, SearchSpace>,
   ): Promise<SearchHit[]> {
     if (hits.length === 0) return [];
+    const kinds = await this.#database.execute<{ id: string; kind: string }>(sql`
+      select id, kind from tree_items where id = any(${sql.param([...new Set(hits.map((hit) => hit.itemId))])}::uuid[])`);
+    const itemTypes = new Map(
+      kinds.rows.map((row): [string, SearchItemType] => [
+        row.id,
+        row.kind === "meetingTopic" ? "topic" : row.kind === "blogPost" ? "blogPost" : "page",
+      ]),
+    );
     const inSpaces = hits.filter((hit) => spaces.has(hit.spaceId)).map((hit) => hit.itemId);
     const paths = new Map<string, { id: string; title: string }[]>();
     if (inSpaces.length > 0) {
@@ -396,6 +408,7 @@ export class SearchService {
         type: hit.contentType,
         id: hit.sourceId,
         itemId: hit.itemId,
+        itemType: itemTypes.get(hit.itemId) ?? "page",
         title: hit.title,
         heading: hit.heading,
         anchor: hit.anchor,

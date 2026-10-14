@@ -135185,6 +135185,15 @@
                             "format": "uuid",
                             "description": "ID of the page, blog post or running topic the result belongs to; for a decision, the meeting it was recorded in."
                           },
+                          "itemType": {
+                            "type": "string",
+                            "description": "What `itemId` is: `page`, `blogPost` or `topic` (a running topic), so that clients open the right screen. New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
+                              "page",
+                              "blogPost",
+                              "topic"
+                            ]
+                          },
                           "title": {
                             "type": "string",
                             "description": "Title of the page, blog post or running topic; for a comment or attachment, of its page; for a decision, of its meeting."
@@ -135494,6 +135503,7 @@
                           "type",
                           "id",
                           "itemId",
+                          "itemType",
                           "title",
                           "heading",
                           "anchor",
@@ -135854,6 +135864,7 @@
                       "type": "page",
                       "id": "01929b1e-7c1a-7000-8000-000000000020",
                       "itemId": "01929b1e-7c1a-7000-8000-000000000020",
+                      "itemType": "page",
                       "title": "VPN access",
                       "heading": "Setup",
                       "anchor": "setup",
@@ -136319,7 +136330,7 @@
                             "type": "array",
                             "items": {
                               "type": "string",
-                              "description": "A type: `page`, `blogPost` or `comment`. New values can be added in later versions; handle unknown values.",
+                              "description": "A type: `page`, `blogPost`, `comment`, `attachment`, `topic` or `decision`. New values can be added in later versions; handle unknown values.",
                               "x-extensible-enum": [
                                 "page",
                                 "blogPost",
@@ -136656,7 +136667,7 @@
                             "topic",
                             "decision"
                           ],
-                          "description": "A type: `page`, `blogPost` or `comment`."
+                          "description": "A type: `page`, `blogPost`, `comment`, `attachment`, `topic` or `decision`."
                         }
                       },
                       "labels": {
@@ -137148,7 +137159,7 @@
                             "type": "array",
                             "items": {
                               "type": "string",
-                              "description": "A type: `page`, `blogPost` or `comment`. New values can be added in later versions; handle unknown values.",
+                              "description": "A type: `page`, `blogPost`, `comment`, `attachment`, `topic` or `decision`. New values can be added in later versions; handle unknown values.",
                               "x-extensible-enum": [
                                 "page",
                                 "blogPost",
@@ -137500,7 +137511,7 @@
                             "topic",
                             "decision"
                           ],
-                          "description": "A type: `page`, `blogPost` or `comment`."
+                          "description": "A type: `page`, `blogPost`, `comment`, `attachment`, `topic` or `decision`."
                         }
                       },
                       "labels": {
@@ -137654,7 +137665,7 @@
                           "type": "array",
                           "items": {
                             "type": "string",
-                            "description": "A type: `page`, `blogPost` or `comment`. New values can be added in later versions; handle unknown values.",
+                            "description": "A type: `page`, `blogPost`, `comment`, `attachment`, `topic` or `decision`. New values can be added in later versions; handle unknown values.",
                             "x-extensible-enum": [
                               "page",
                               "blogPost",
@@ -138214,7 +138225,7 @@
                             "topic",
                             "decision"
                           ],
-                          "description": "A type: `page`, `blogPost` or `comment`."
+                          "description": "A type: `page`, `blogPost`, `comment`, `attachment`, `topic` or `decision`."
                         }
                       },
                       "labels": {
@@ -138347,7 +138358,7 @@
                           "type": "array",
                           "items": {
                             "type": "string",
-                            "description": "A type: `page`, `blogPost` or `comment`. New values can be added in later versions; handle unknown values.",
+                            "description": "A type: `page`, `blogPost`, `comment`, `attachment`, `topic` or `decision`. New values can be added in later versions; handle unknown values.",
                             "x-extensible-enum": [
                               "page",
                               "blogPost",

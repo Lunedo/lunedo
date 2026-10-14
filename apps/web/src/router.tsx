@@ -257,7 +257,10 @@ const sharedPageRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/shared/$itemId/{-$slug}",
   params: { parse: (params) => ({ ...params, itemId: z.uuid().parse(params.itemId) }) },
-  validateSearch: z.object({ edit: z.boolean().optional().catch(undefined) }),
+  validateSearch: z.object({
+    attachment: z.uuid().optional().catch(undefined),
+    edit: z.boolean().optional().catch(undefined),
+  }),
   component: lazyRouteComponent(() => import("./sharing/shared-page-screen.js"), "SharedPageScreen"),
 });
 
@@ -274,6 +277,7 @@ const spaceIndexRoute = createRoute({
 });
 
 const itemSearch = z.object({
+  attachment: z.uuid().optional().catch(undefined),
   edit: z.boolean().optional().catch(undefined),
   notes: z.boolean().optional().catch(undefined),
 });
