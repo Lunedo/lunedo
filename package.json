@@ -26,6 +26,7 @@
     "lint:fix": "biome check --write .",
     "references:check": "node scripts/check-private-references.ts",
     "patches:check": "node scripts/check-patches.ts",
+    "playwright-image:check": "node scripts/check-playwright-image.ts",
     "i18n:check": "node scripts/check-i18n.ts",
     "verify": "node scripts/verify.ts"
   },
