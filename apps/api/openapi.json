@@ -135644,6 +135644,13 @@
                       ],
                       "description": "Number of results per filter value, or null in quick search."
                     },
+                    "suggestion": {
+                      "description": "The search text with misspelled words replaced by similar words from content the caller can read, or null when there is nothing to correct. Always null in quick search.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "index": {
                       "type": "object",
                       "properties": {
@@ -135664,6 +135671,7 @@
                     "total",
                     "nextCursor",
                     "facets",
+                    "suggestion",
                     "index"
                   ],
                   "additionalProperties": false,
@@ -135758,6 +135766,7 @@
                       }
                     ]
                   },
+                  "suggestion": null,
                   "index": {
                     "building": false
                   }

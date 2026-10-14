@@ -96,6 +96,7 @@ export interface SearchResponse {
   total: number;
   nextCursor: SearchCursor | null;
   facets: SearchFacets | null;
+  suggestion: string | null;
   index: { building: boolean };
 }
 
@@ -128,6 +129,25 @@ export function excerptParts(raw: string): ExcerptPart[] {
   return parts
     .map((part) => ({ ...part, text: part.text.replaceAll(EXCERPT_START, "").replaceAll(EXCERPT_END, "") }))
     .filter((part) => part.text.length > 0);
+}
+
+export function correctedQuery(text: string, corrections: ReadonlyMap<string, string>): string | null {
+  if (corrections.size === 0) return null;
+  let changed = false;
+  const corrected = text
+    .split('"')
+    .map((segment, index) =>
+      index % 2 === 1
+        ? segment
+        : segment.replace(/(?<=^|\s)\p{L}+(?=\s|$)/gu, (word) => {
+            const replacement = corrections.get(word.toLowerCase());
+            if (!replacement) return word;
+            changed = true;
+            return replacement;
+          }),
+    )
+    .join('"');
+  return changed ? corrected : null;
 }
 
 export class SearchService {
@@ -167,6 +187,7 @@ export class SearchService {
       total: 0,
       nextCursor: null,
       facets: quick ? null : emptyFacets(),
+      suggestion: null,
       index,
     };
     const viewer = await loadViewer(this.#database, principal, organizationId);
@@ -188,6 +209,7 @@ export class SearchService {
       firstSpaceId:
         quick && request.currentSpaceId && spaces.has(request.currentSpaceId) ? request.currentSpaceId : null,
       facets: !quick,
+      suggest: !quick,
     });
     const hits = await this.#describe(principal, result.hits, spaces);
     const last = hits[hits.length - 1];
@@ -196,6 +218,7 @@ export class SearchService {
       total: result.total,
       nextCursor: result.hasMore && last && !quick ? last.cursor : null,
       facets: result.facets ? await this.#facets(principal, result.facets, spaces) : null,
+      suggestion: correctedQuery(request.query, result.corrections),
       index,
     };
   }

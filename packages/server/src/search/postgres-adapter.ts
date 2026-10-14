@@ -25,6 +25,12 @@ interface QueryParts {
   match: SQL;
   score: SQL;
   excerpt: SQL;
+  corrections: Map<string, string>;
+}
+
+interface Expansions {
+  alternatives: Map<string, string[]>;
+  corrections: Map<string, string>;
 }
 
 function prefixWord(text: string): string {
@@ -109,25 +115,17 @@ export class PostgresSearchAdapter implements SearchAdapter {
 
   async search(executor: Executor, request: AdapterSearch): Promise<AdapterResult> {
     const { viewer, filters } = request;
-    const organization = sql`${viewer.organizationId}::uuid`;
     const parts = await this.#queryParts(executor, request);
     if (parts === "nothing")
-      return { hits: [], total: 0, hasMore: false, facets: request.facets ? emptyFacets() : null };
+      return {
+        hits: [],
+        total: 0,
+        hasMore: false,
+        facets: request.facets ? emptyFacets() : null,
+        corrections: new Map(),
+      };
 
-    const conditions: SQL[] = [
-      request.viewer.personalTokens.length > 0
-        ? sql`(c.organization_id = ${organization} or c.organization_id is null)`
-        : sql`c.organization_id = ${organization}`,
-      request.viewer.personalTokens.length > 0
-        ? sql`(s.organization_id = ${organization} or s.organization_id is null)`
-        : sql`s.organization_id = ${organization}`,
-      sql`s.deleted_at is null`,
-      sql`t.trash_entry_id is null`,
-      parts.match,
-      sql`((p.space_id is null and c.space_id = t.space_id and ${storedAccessCondition(viewer, sql`c`)})
-        or ((p.space_id is not null or c.space_id <> t.space_id)
-          and ${liveAccessCondition(viewer, sql`c`, sql`t`, sql`s`)}))`,
-    ];
+    const conditions: SQL[] = [...visibleChunkConditions(viewer), parts.match];
     if (!filters.includeArchived) conditions.push(sql`not c.archived`);
     if (filters.spaceIds) conditions.push(sql`t.space_id = any(${sql.param(filters.spaceIds)}::uuid[])`);
     if (filters.contentTypes.length > 0) {
@@ -205,6 +203,7 @@ export class PostgresSearchAdapter implements SearchAdapter {
       total: Number(row?.total ?? 0),
       hasMore: hits.length > request.limit,
       facets: row?.facets ?? null,
+      corrections: parts.corrections,
     };
   }
 
@@ -212,15 +211,15 @@ export class PostgresSearchAdapter implements SearchAdapter {
     const { query } = request;
     const plainExcerpt = sql`left(bc.body, 240)`;
     if (query.clauses.length === 0 && query.excluded.length === 0) {
-      return { match: sql`true`, score: sql`0`, excerpt: plainExcerpt };
+      return { match: sql`true`, score: sql`0`, excerpt: plainExcerpt, corrections: new Map() };
     }
     const configs = await this.#configs(executor, request.viewer);
     if (configs.length === 0) return "nothing";
-    const expansions = await this.#expansions(executor, request.viewer.organizationId, query);
     const prefix = request.prefixLastTerm ? lastTerm(query) : null;
+    const expansions = await this.#expansions(executor, request.viewer, configs, query, prefix);
     const perConfig = configs.map((config) => ({
       config,
-      full: tsquery(sql`${config}::regconfig`, query, expansions, prefix),
+      full: tsquery(sql`${config}::regconfig`, query, expansions.alternatives, prefix),
       exact: tsquery(sql`${config}::regconfig`, query, new Map(), prefix),
     }));
     const byConfig = (column: SQL, expression: (entry: (typeof perConfig)[number]) => SQL) =>
@@ -242,6 +241,7 @@ export class PostgresSearchAdapter implements SearchAdapter {
         sql`bc.config`,
         (entry) => sql`ts_headline(${entry.config}::regconfig, bc.body, ${entry.full}, ${EXCERPT_OPTIONS})`,
       )}, ''), ${plainExcerpt})`,
+      corrections: request.suggest ? expansions.corrections : new Map(),
     };
   }
 
@@ -266,26 +266,66 @@ export class PostgresSearchAdapter implements SearchAdapter {
 
   async #expansions(
     executor: Executor,
-    organizationId: string,
+    viewer: SearchViewer,
+    configs: string[],
     query: ParsedQuery,
-  ): Promise<Map<string, string[]>> {
+    prefix: QueryAtom | null,
+  ): Promise<Expansions> {
     const terms = [
       ...new Set(
         query.clauses
           .flat()
-          .filter((atom) => atom.kind === "term")
+          .filter((atom) => atom.kind === "term" && atom !== prefix)
           .map((atom) => atom.text.toLowerCase())
           .filter((term) => term.length >= MIN_TYPO_LENGTH && /^\p{L}+$/u.test(term)),
       ),
     ];
-    if (terms.length === 0) return new Map();
-    const result = await executor.execute<{ term: string; words: string[] }>(sql`
-      select q.term, array(select w.word from search_terms w
-        where w.organization_id = ${organizationId} and w.word % q.term and w.word <> q.term and similarity(w.word, q.term) >= ${TYPO_SIMILARITY}
-        order by similarity(w.word, q.term) desc, w.word limit ${TYPO_ALTERNATIVES}) as words
+    if (terms.length === 0) return { alternatives: new Map(), corrections: new Map() };
+    const visibleWord = (word: SQL) => sql`exists (select 1 from search_chunks c
+      join tree_items t on t.id = c.item_id
+      join spaces s on s.id = t.space_id
+      left join search_pending_spaces p on p.space_id = c.space_id
+      where ${sql.join(visibleChunkConditions(viewer), sql` and `)} and (${sql.join(
+        configs.map(
+          (config) =>
+            sql`(c.config = ${config} and c.document @@ plainto_tsquery(${config}::regconfig, ${word}))`,
+        ),
+        sql` or `,
+      )}))`;
+    const result = await executor.execute<{ term: string; known: boolean; words: string[] }>(sql`
+      select q.term, ${visibleWord(sql`q.term`)} as known,
+        array(select w.word from search_terms w
+          where w.organization_id = ${viewer.organizationId} and w.word % q.term and w.word <> q.term
+            and similarity(w.word, q.term) >= ${TYPO_SIMILARITY} and ${visibleWord(sql`w.word`)}
+          order by similarity(w.word, q.term) desc, w.word limit ${TYPO_ALTERNATIVES}) as words
       from unnest(${sql.param(terms)}::text[]) as q(term)`);
-    return new Map(result.rows.map((row) => [row.term, row.words]));
+    const alternatives = new Map<string, string[]>();
+    const corrections = new Map<string, string>();
+    for (const row of result.rows) {
+      alternatives.set(row.term, row.words);
+      const best = row.words[0];
+      if (!row.known && best) corrections.set(row.term, best);
+    }
+    return { alternatives, corrections };
   }
+}
+
+function visibleChunkConditions(viewer: SearchViewer): SQL[] {
+  const organization = sql`${viewer.organizationId}::uuid`;
+  const personal = viewer.personalTokens.length > 0;
+  return [
+    personal
+      ? sql`(c.organization_id = ${organization} or c.organization_id is null)`
+      : sql`c.organization_id = ${organization}`,
+    personal
+      ? sql`(s.organization_id = ${organization} or s.organization_id is null)`
+      : sql`s.organization_id = ${organization}`,
+    sql`s.deleted_at is null`,
+    sql`t.trash_entry_id is null`,
+    sql`((p.space_id is null and c.space_id = t.space_id and ${storedAccessCondition(viewer, sql`c`)})
+      or ((p.space_id is not null or c.space_id <> t.space_id)
+        and ${liveAccessCondition(viewer, sql`c`, sql`t`, sql`s`)}))`,
+  ];
 }
 
 function atomQuery(config: SQL, atom: QueryAtom, expansions: Map<string, string[]>, prefix: boolean): SQL {

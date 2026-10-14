@@ -7,6 +7,7 @@ import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { spaceFixtures } from "../testing/spaces.js";
 import { searchRequest } from "./search.testing.js";
+import { correctedQuery } from "./service.js";
 
 const baseUrl = testDatabaseBaseUrl();
 
@@ -251,6 +252,41 @@ describe.skipIf(!baseUrl)("search", () => {
       [unique],
     );
     expect(rows.rows.map((row) => row.organization_id)).toEqual([elsewhere.id]);
+  });
+
+  it("corrects typos only with words of content the person can read and suggests only those", async () => {
+    const w = await world();
+    for (const word of ["cartrigea", "cartrigeb", "cartrigec"]) {
+      await test.services.tree.create(w.author, w.hidden.id, {
+        kind: "page",
+        title: "Hidden draft",
+        mode: "live",
+        placement: { parentId: null },
+        document: doc(paragraph(`${w.word} ${word} confidential`)),
+      });
+    }
+    await drain();
+    expect(await ids(w.other, w.org.id, `${w.word} cartrige`)).toEqual([w.gamma]);
+    expect((await find(w.other, w.org.id, `${w.word} cartrige`)).suggestion).toBe(`${w.word} cartridge`);
+    expect((await find(w.author, w.org.id, `${w.word} cartrige`)).suggestion).toBe(`${w.word} cartrigea`);
+
+    const hiddenWord = await find(w.other, w.org.id, "confidentail");
+    const unknownWord = await find(w.other, w.org.id, "qwertzuiop");
+    expect({ ...hiddenWord, index: null }).toEqual({ ...unknownWord, index: null });
+    expect(hiddenWord).toMatchObject({ results: [], total: 0, suggestion: null });
+    expect((await find(w.author, w.org.id, "confidentail")).suggestion).toBe("confidential");
+
+    expect((await find(w.other, w.org.id, `${w.word} printer`)).suggestion).toBeNull();
+    expect((await find(w.other, w.org.id, `${w.word} cartrige`, { mode: "quick" })).suggestion).toBeNull();
+  });
+
+  it("builds the suggested search text from the corrected words only", () => {
+    const corrections = new Map([["cartrige", "cartridge"]]);
+    expect(correctedQuery('Cartrige "cartrige ink" -cartrige label:cartrige', corrections)).toBe(
+      'cartridge "cartrige ink" -cartrige label:cartrige',
+    );
+    expect(correctedQuery("printer", corrections)).toBeNull();
+    expect(correctedQuery("cartrige", new Map())).toBeNull();
   });
 
   it("filters by page status and follows changes of status, values and the space setting", async () => {
