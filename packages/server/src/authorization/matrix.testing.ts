@@ -131,6 +131,7 @@ type Rule =
   | "importer"
   | "importResolver"
   | "heldForAdministrator"
+  | "ownerOrOrganizationAdministrator"
   | "self";
 
 interface Expectation {
@@ -238,6 +239,7 @@ const EXPECTED: Record<string, Expectation> = {
   "item.pin": { scope: "space" },
   "item.approveSchedule": { scope: "space" },
   "item.share": { scope: "space" },
+  "item.transferOwnership": { scope: "space", rule: "ownerOrOrganizationAdministrator" },
   "comment.view": { scope: "space" },
   "comment.reply": { scope: "space" },
   "comment.resolve": { scope: "space" },
@@ -279,6 +281,7 @@ function expectedAllowed(held: Held, actionName: string): boolean {
     importer: () => false,
     importResolver: () => false,
     heldForAdministrator: () => false,
+    ownerOrOrganizationAdministrator: () => false,
   };
   if (expectation.rule && rules[expectation.rule]()) return true;
   if (expectation.scope === "space") return false;

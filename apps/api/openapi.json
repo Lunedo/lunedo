@@ -73,6 +73,10 @@
       "description": "Organizations, their domains and break-glass access."
     },
     {
+      "name": "Ownership and status",
+      "description": ""
+    },
+    {
       "name": "Page access",
       "description": ""
     },
@@ -104354,7 +104358,69 @@
                             "type": "null"
                           }
                         ],
-                        "description": "Account responsible for the item, or null."
+                        "description": "Owner of the item, or null. The owner stays set when the person leaves; `owner.active` in the item details says whether the item has an active owner."
+                      },
+                      "status": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "ID of the status value."
+                              },
+                              "builtIn": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "x-extensible-enum": [
+                                      "roughDraft",
+                                      "inProgress",
+                                      "readyForReview",
+                                      "verified"
+                                    ]
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Which default value this is, or null for a value a space admin added. Clients show the translated name of a default value unless `name` is set. New values can be added in later versions; handle unknown values."
+                              },
+                              "name": {
+                                "description": "Name set by a space admin, or null to show the default name.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "color": {
+                                "type": "string",
+                                "enum": [
+                                  "neutral",
+                                  "accent",
+                                  "info",
+                                  "success",
+                                  "warning",
+                                  "danger"
+                                ],
+                                "description": "Color of the status: `neutral`, `accent`, `info`, `success`, `warning` or `danger`."
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "builtIn",
+                              "name",
+                              "color"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A page status."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Status of a page, or null when it has none or page status is turned off in the space."
                       },
                       "createdAt": {
                         "type": "string",
@@ -104398,6 +104464,7 @@
                       "link",
                       "creatorId",
                       "ownerId",
+                      "status",
                       "createdAt",
                       "updatedAt",
                       "contentUpdatedAt",
@@ -104428,6 +104495,12 @@
                     "link": null,
                     "creatorId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                     "ownerId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                    "status": {
+                      "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
+                      "builtIn": "verified",
+                      "name": null,
+                      "color": "success"
+                    },
                     "createdAt": "2026-10-05T08:00:00.000Z",
                     "updatedAt": "2026-10-05T08:00:00.000Z",
                     "contentUpdatedAt": "2026-10-05T08:00:00.000Z",
@@ -105156,7 +105229,69 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Account responsible for the item, or null."
+                      "description": "Owner of the item, or null. The owner stays set when the person leaves; `owner.active` in the item details says whether the item has an active owner."
+                    },
+                    "status": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the status value."
+                            },
+                            "builtIn": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "x-extensible-enum": [
+                                    "roughDraft",
+                                    "inProgress",
+                                    "readyForReview",
+                                    "verified"
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Which default value this is, or null for a value a space admin added. Clients show the translated name of a default value unless `name` is set. New values can be added in later versions; handle unknown values."
+                            },
+                            "name": {
+                              "description": "Name set by a space admin, or null to show the default name.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "color": {
+                              "type": "string",
+                              "enum": [
+                                "neutral",
+                                "accent",
+                                "info",
+                                "success",
+                                "warning",
+                                "danger"
+                              ],
+                              "description": "Color of the status: `neutral`, `accent`, `info`, `success`, `warning` or `danger`."
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "builtIn",
+                            "name",
+                            "color"
+                          ],
+                          "additionalProperties": false,
+                          "description": "A page status."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Status of a page, or null when it has none or page status is turned off in the space."
                     },
                     "createdAt": {
                       "type": "string",
@@ -105226,6 +105361,53 @@
                         "description": "An ancestor."
                       },
                       "description": "Ancestors from the root down to the parent."
+                    },
+                    "owner": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the owner."
+                            },
+                            "name": {
+                              "description": "Name of the owner, or null when the caller may not see the person.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "email": {
+                              "description": "E-mail address of the owner, or null when the caller may not see it.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "active": {
+                              "type": "boolean",
+                              "description": "Whether the owner can still act: false when the account is deactivated or its membership in the organization ended."
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "email",
+                            "active"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Owner of the item, or null when it has none."
+                    },
+                    "ownershipTransferable": {
+                      "type": "boolean",
+                      "description": "Whether the caller may give the item a new owner."
                     }
                   },
                   "required": [
@@ -105246,13 +105428,16 @@
                     "link",
                     "creatorId",
                     "ownerId",
+                    "status",
                     "createdAt",
                     "updatedAt",
                     "contentUpdatedAt",
                     "spaceKey",
                     "spaceName",
                     "spaceAccess",
-                    "ancestors"
+                    "ancestors",
+                    "owner",
+                    "ownershipTransferable"
                   ],
                   "additionalProperties": false,
                   "description": "An item with its place in the tree."
@@ -105275,13 +105460,26 @@
                   "link": null,
                   "creatorId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                   "ownerId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                  "status": {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
+                    "builtIn": "verified",
+                    "name": null,
+                    "color": "success"
+                  },
                   "createdAt": "2026-10-05T08:00:00.000Z",
                   "updatedAt": "2026-10-05T08:00:00.000Z",
                   "contentUpdatedAt": "2026-10-05T08:00:00.000Z",
                   "spaceKey": "ITOPS",
                   "spaceName": "IT Operations",
                   "spaceAccess": true,
-                  "ancestors": []
+                  "ancestors": [],
+                  "owner": {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                    "name": "Anna Weber",
+                    "email": "anna.weber@example.org",
+                    "active": true
+                  },
+                  "ownershipTransferable": true
                 }
               }
             }
@@ -105682,7 +105880,69 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Account responsible for the item, or null."
+                      "description": "Owner of the item, or null. The owner stays set when the person leaves; `owner.active` in the item details says whether the item has an active owner."
+                    },
+                    "status": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the status value."
+                            },
+                            "builtIn": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "x-extensible-enum": [
+                                    "roughDraft",
+                                    "inProgress",
+                                    "readyForReview",
+                                    "verified"
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Which default value this is, or null for a value a space admin added. Clients show the translated name of a default value unless `name` is set. New values can be added in later versions; handle unknown values."
+                            },
+                            "name": {
+                              "description": "Name set by a space admin, or null to show the default name.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "color": {
+                              "type": "string",
+                              "enum": [
+                                "neutral",
+                                "accent",
+                                "info",
+                                "success",
+                                "warning",
+                                "danger"
+                              ],
+                              "description": "Color of the status: `neutral`, `accent`, `info`, `success`, `warning` or `danger`."
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "builtIn",
+                            "name",
+                            "color"
+                          ],
+                          "additionalProperties": false,
+                          "description": "A page status."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Status of a page, or null when it has none or page status is turned off in the space."
                     },
                     "createdAt": {
                       "type": "string",
@@ -105718,6 +105978,7 @@
                     "link",
                     "creatorId",
                     "ownerId",
+                    "status",
                     "createdAt",
                     "updatedAt",
                     "contentUpdatedAt"
@@ -105743,6 +106004,12 @@
                   "link": null,
                   "creatorId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                   "ownerId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                  "status": {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
+                    "builtIn": "verified",
+                    "name": null,
+                    "color": "success"
+                  },
                   "createdAt": "2026-10-05T08:00:00.000Z",
                   "updatedAt": "2026-10-05T08:00:00.000Z",
                   "contentUpdatedAt": "2026-10-05T08:00:00.000Z"
@@ -105838,6 +106105,443 @@
                       "code": "csrfRejected"
                     }
                   },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/{itemId}/activity": {
+      "get": {
+        "operationId": "ownership.activity",
+        "summary": "List status and owner changes of an item",
+        "description": "Returns who changed the status or the owner of the item and when, newest first.\n\nRequires the permission `item.view` on the item in `itemId`.",
+        "tags": [
+          "Ownership and status"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.view",
+          "resource": "item",
+          "parameter": "itemId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the page, folder, link, blog post or meeting series.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The changes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "const": "status",
+                            "description": "The status changed."
+                          },
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the entry."
+                          },
+                          "status": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "format": "uuid"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ],
+                                    "description": "ID of the status value, or null when it was removed since."
+                                  },
+                                  "builtIn": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "x-extensible-enum": [
+                                          "roughDraft",
+                                          "inProgress",
+                                          "readyForReview",
+                                          "verified"
+                                        ]
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ],
+                                    "description": "Which default value this is, or null for a value a space admin added. Clients show the translated name of a default value unless `name` is set. New values can be added in later versions; handle unknown values."
+                                  },
+                                  "name": {
+                                    "description": "Name set by a space admin, or null to show the default name.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "color": {
+                                    "type": "string",
+                                    "enum": [
+                                      "neutral",
+                                      "accent",
+                                      "info",
+                                      "success",
+                                      "warning",
+                                      "danger"
+                                    ],
+                                    "description": "Color of the status: `neutral`, `accent`, `info`, `success`, `warning` or `danger`."
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "builtIn",
+                                  "name",
+                                  "color"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The new status, or null when it was removed."
+                          },
+                          "actor": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the person."
+                                  },
+                                  "name": {
+                                    "description": "Name of the person, or null when the caller may not see the person.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ],
+                                "additionalProperties": false,
+                                "description": "A person."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Who changed it, or null for an import."
+                          },
+                          "at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "When it changed. ISO 8601 timestamp in UTC."
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "id",
+                          "status",
+                          "actor",
+                          "at"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A status change."
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "const": "owner",
+                            "description": "The owner changed."
+                          },
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the entry."
+                          },
+                          "previousOwner": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the person."
+                                  },
+                                  "name": {
+                                    "description": "Name of the person, or null when the caller may not see the person.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ],
+                                "additionalProperties": false,
+                                "description": "A person."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The owner before, or null."
+                          },
+                          "owner": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the person."
+                                  },
+                                  "name": {
+                                    "description": "Name of the person, or null when the caller may not see the person.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ],
+                                "additionalProperties": false,
+                                "description": "A person."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The new owner."
+                          },
+                          "actor": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the person."
+                                  },
+                                  "name": {
+                                    "description": "Name of the person, or null when the caller may not see the person.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ],
+                                "additionalProperties": false,
+                                "description": "A person."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Who changed it."
+                          },
+                          "at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "When it changed. ISO 8601 timestamp in UTC."
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "id",
+                          "previousOwner",
+                          "owner",
+                          "actor",
+                          "at"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A change of owner."
+                      }
+                    ],
+                    "description": "An entry of the activity."
+                  },
+                  "description": "Status and owner changes of the item, newest first."
+                },
+                "example": [
+                  {
+                    "type": "status",
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a70",
+                    "status": {
+                      "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
+                      "builtIn": "verified",
+                      "name": null,
+                      "color": "success"
+                    },
+                    "actor": {
+                      "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                      "name": "Anna Weber"
+                    },
+                    "at": "2026-10-05T08:00:00.000Z"
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
                   "forbidden": {
                     "value": {
                       "type": "urn:pagehall:problem:forbidden",
@@ -106349,7 +107053,69 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Account responsible for the item, or null."
+                      "description": "Owner of the item, or null. The owner stays set when the person leaves; `owner.active` in the item details says whether the item has an active owner."
+                    },
+                    "status": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the status value."
+                            },
+                            "builtIn": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "x-extensible-enum": [
+                                    "roughDraft",
+                                    "inProgress",
+                                    "readyForReview",
+                                    "verified"
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Which default value this is, or null for a value a space admin added. Clients show the translated name of a default value unless `name` is set. New values can be added in later versions; handle unknown values."
+                            },
+                            "name": {
+                              "description": "Name set by a space admin, or null to show the default name.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "color": {
+                              "type": "string",
+                              "enum": [
+                                "neutral",
+                                "accent",
+                                "info",
+                                "success",
+                                "warning",
+                                "danger"
+                              ],
+                              "description": "Color of the status: `neutral`, `accent`, `info`, `success`, `warning` or `danger`."
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "builtIn",
+                            "name",
+                            "color"
+                          ],
+                          "additionalProperties": false,
+                          "description": "A page status."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Status of a page, or null when it has none or page status is turned off in the space."
                     },
                     "createdAt": {
                       "type": "string",
@@ -106385,6 +107151,7 @@
                     "link",
                     "creatorId",
                     "ownerId",
+                    "status",
                     "createdAt",
                     "updatedAt",
                     "contentUpdatedAt"
@@ -106410,6 +107177,12 @@
                   "link": null,
                   "creatorId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                   "ownerId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                  "status": {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
+                    "builtIn": "verified",
+                    "name": null,
+                    "color": "success"
+                  },
                   "createdAt": "2026-10-05T08:00:00.000Z",
                   "updatedAt": "2026-10-05T08:00:00.000Z",
                   "contentUpdatedAt": "2026-10-05T08:00:00.000Z"
@@ -106883,7 +107656,69 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Account responsible for the item, or null."
+                      "description": "Owner of the item, or null. The owner stays set when the person leaves; `owner.active` in the item details says whether the item has an active owner."
+                    },
+                    "status": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the status value."
+                            },
+                            "builtIn": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "x-extensible-enum": [
+                                    "roughDraft",
+                                    "inProgress",
+                                    "readyForReview",
+                                    "verified"
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Which default value this is, or null for a value a space admin added. Clients show the translated name of a default value unless `name` is set. New values can be added in later versions; handle unknown values."
+                            },
+                            "name": {
+                              "description": "Name set by a space admin, or null to show the default name.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "color": {
+                              "type": "string",
+                              "enum": [
+                                "neutral",
+                                "accent",
+                                "info",
+                                "success",
+                                "warning",
+                                "danger"
+                              ],
+                              "description": "Color of the status: `neutral`, `accent`, `info`, `success`, `warning` or `danger`."
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "builtIn",
+                            "name",
+                            "color"
+                          ],
+                          "additionalProperties": false,
+                          "description": "A page status."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Status of a page, or null when it has none or page status is turned off in the space."
                     },
                     "createdAt": {
                       "type": "string",
@@ -106919,6 +107754,7 @@
                     "link",
                     "creatorId",
                     "ownerId",
+                    "status",
                     "createdAt",
                     "updatedAt",
                     "contentUpdatedAt"
@@ -106944,6 +107780,12 @@
                   "link": null,
                   "creatorId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                   "ownerId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                  "status": {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
+                    "builtIn": "verified",
+                    "name": null,
+                    "color": "success"
+                  },
                   "createdAt": "2026-10-05T08:00:00.000Z",
                   "updatedAt": "2026-10-05T08:00:00.000Z",
                   "contentUpdatedAt": "2026-10-05T08:00:00.000Z"
@@ -107502,6 +108344,737 @@
                       "title": "The overview page of a space stays a page in its space",
                       "status": 409,
                       "code": "overviewPage"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/{itemId}/owner": {
+      "put": {
+        "operationId": "ownership.transfer",
+        "summary": "Give an item a new owner",
+        "description": "Makes the person the owner of the item. The owner, space admins and, outside confidential spaces, organization admins who can read the space may do this. The new owner needs edit access to the item. Archived items, items in the trash and meeting topics keep their owner.\n\nRequires the permission `item.transferOwnership` on the item in `itemId`.",
+        "tags": [
+          "Ownership and status"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.transferOwnership",
+          "resource": "item",
+          "parameter": "itemId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the page, folder, link, blog post or meeting series.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ownerId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "The new owner. The person needs edit access to the item."
+                  }
+                },
+                "required": [
+                  "ownerId"
+                ],
+                "additionalProperties": false,
+                "description": "The new owner."
+              },
+              "example": {
+                "ownerId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Done. The response has no body."
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidOwner`: The owner is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidOwner": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidOwner",
+                      "title": "The owner is not valid",
+                      "status": 400,
+                      "code": "invalidOwner"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`ownershipNotTransferable`: The owner of this item cannot be changed here.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ownershipNotTransferable": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ownershipNotTransferable",
+                      "title": "The owner of this item cannot be changed here",
+                      "status": 409,
+                      "code": "ownershipNotTransferable"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/{itemId}/owner-candidates": {
+      "get": {
+        "operationId": "ownership.candidates",
+        "summary": "Find people who can become the owner",
+        "description": "Lists active people the caller can see who have edit access to the item now, by name. The current owner is left out.\n\nRequires the permission `item.transferOwnership` on the item in `itemId`.",
+        "tags": [
+          "Ownership and status"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.transferOwnership",
+          "resource": "item",
+          "parameter": "itemId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the page, folder, link, blog post or meeting series.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "description": "Part of the name or e-mail address.",
+            "schema": {
+              "default": "",
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Up to 20 people.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID of the person."
+                      },
+                      "name": {
+                        "type": "string",
+                        "description": "Name of the person."
+                      },
+                      "email": {
+                        "description": "E-mail address, or null when the caller may not see it.",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "email"
+                    ],
+                    "additionalProperties": false,
+                    "description": "A person who can become the owner."
+                  },
+                  "description": "The people."
+                },
+                "example": [
+                  {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                    "name": "Anna Weber",
+                    "email": "anna.weber@example.org"
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/{itemId}/status": {
+      "put": {
+        "operationId": "ownership.setStatus",
+        "summary": "Set or remove the status of a page",
+        "description": "Sets the status of a page to a value of its space, or removes it. The status is not part of the content or its versions; the change appears in the page's activity.\n\nRequires the permission `item.edit` on the item in `itemId`.",
+        "tags": [
+          "Ownership and status"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.edit",
+          "resource": "item",
+          "parameter": "itemId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the page, folder, link, blog post or meeting series.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "statusId": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "A status value of the item's space, or null to remove the status."
+                  }
+                },
+                "required": [
+                  "statusId"
+                ],
+                "additionalProperties": false,
+                "description": "The new status."
+              },
+              "example": {
+                "statusId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The status now, or null.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "ID of the status value."
+                        },
+                        "builtIn": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "x-extensible-enum": [
+                                "roughDraft",
+                                "inProgress",
+                                "readyForReview",
+                                "verified"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Which default value this is, or null for a value a space admin added. Clients show the translated name of a default value unless `name` is set. New values can be added in later versions; handle unknown values."
+                        },
+                        "name": {
+                          "description": "Name set by a space admin, or null to show the default name.",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "color": {
+                          "type": "string",
+                          "enum": [
+                            "neutral",
+                            "accent",
+                            "info",
+                            "success",
+                            "warning",
+                            "danger"
+                          ],
+                          "description": "Color of the status: `neutral`, `accent`, `info`, `success`, `warning` or `danger`."
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "builtIn",
+                        "name",
+                        "color"
+                      ],
+                      "additionalProperties": false,
+                      "description": "A page status."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "The status, or null."
+                },
+                "example": {
+                  "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
+                  "builtIn": "verified",
+                  "name": null,
+                  "color": "success"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidStatus`: The status is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidStatus": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidStatus",
+                      "title": "The status is not valid",
+                      "status": 400,
+                      "code": "invalidStatus"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found. `statusNotFound`: The status does not exist anymore.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  },
+                  "statusNotFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:statusNotFound",
+                      "title": "The status does not exist anymore",
+                      "status": 404,
+                      "code": "statusNotFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`statusDisabled`: Page status is turned off in this space.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "statusDisabled": {
+                    "value": {
+                      "type": "urn:pagehall:problem:statusDisabled",
+                      "title": "Page status is turned off in this space",
+                      "status": 409,
+                      "code": "statusDisabled"
                     }
                   }
                 }
@@ -138534,6 +140107,315 @@
         }
       }
     },
+    "/api/v1/organizations/{organizationId}/unowned-items": {
+      "get": {
+        "operationId": "ownership.organizationUnowned",
+        "summary": "List items without an owner in an organization",
+        "description": "Lists items without an active owner in the spaces of the organization that the caller can read, without confidential spaces. `hidden` counts items the caller cannot open.\n\nRequires the permission `organization.spaces.view` on the organization in `organizationId`.",
+        "tags": [
+          "Ownership and status"
+        ],
+        "x-pagehall-permission": {
+          "action": "organization.spaces.view",
+          "resource": "organization",
+          "parameter": "organizationId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the organization.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Cursor from `nextCursor` of the previous page.",
+            "schema": {
+              "type": "string",
+              "maxLength": 2000
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The items.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the item."
+                          },
+                          "spaceId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "Space of the item."
+                          },
+                          "spaceKey": {
+                            "type": "string",
+                            "description": "Key of the space."
+                          },
+                          "spaceName": {
+                            "type": "string",
+                            "description": "Name of the space."
+                          },
+                          "kind": {
+                            "type": "string",
+                            "description": "Kind of the item. New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
+                              "page",
+                              "folder",
+                              "link",
+                              "blogPost",
+                              "meetingSeries",
+                              "meetingTopic"
+                            ]
+                          },
+                          "title": {
+                            "type": "string",
+                            "description": "Title of the item."
+                          },
+                          "formerOwner": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the person."
+                                  },
+                                  "name": {
+                                    "description": "Name of the person, or null when the caller may not see the person.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ],
+                                "additionalProperties": false,
+                                "description": "A person."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The owner who left, or null when the item never had one."
+                          },
+                          "reason": {
+                            "type": "string",
+                            "enum": [
+                              "none",
+                              "deactivated",
+                              "membershipEnded"
+                            ],
+                            "description": "Why the item has no owner: `none` (never had one), `deactivated` (the account was deactivated) or `membershipEnded` (the person is no longer a member of the organization)."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "spaceId",
+                          "spaceKey",
+                          "spaceName",
+                          "kind",
+                          "title",
+                          "formerOwner",
+                          "reason"
+                        ],
+                        "additionalProperties": false,
+                        "description": "An item without an active owner."
+                      },
+                      "description": "Items, by title, up to 100 per page."
+                    },
+                    "hidden": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of further items without an owner that the caller cannot open, for example restricted pages. Remove their restriction or ask someone who can open them."
+                    },
+                    "nextCursor": {
+                      "description": "Cursor for the next page, or null on the last page.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "hidden",
+                    "nextCursor"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Items without an active owner."
+                },
+                "example": {
+                  "items": [
+                    {
+                      "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                      "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a30",
+                      "spaceKey": "ITOPS",
+                      "spaceName": "IT Operations",
+                      "kind": "page",
+                      "title": "Restart the VPN gateway",
+                      "formerOwner": {
+                        "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                        "name": "Anna Weber"
+                      },
+                      "reason": "deactivated"
+                    }
+                  ],
+                  "hidden": 0,
+                  "nextCursor": null
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/pages/{pageId}/access": {
       "get": {
         "operationId": "pageAccess.get",
@@ -164661,7 +166543,69 @@
                                 "type": "null"
                               }
                             ],
-                            "description": "Account responsible for the item, or null."
+                            "description": "Owner of the item, or null. The owner stays set when the person leaves; `owner.active` in the item details says whether the item has an active owner."
+                          },
+                          "status": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the status value."
+                                  },
+                                  "builtIn": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "x-extensible-enum": [
+                                          "roughDraft",
+                                          "inProgress",
+                                          "readyForReview",
+                                          "verified"
+                                        ]
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ],
+                                    "description": "Which default value this is, or null for a value a space admin added. Clients show the translated name of a default value unless `name` is set. New values can be added in later versions; handle unknown values."
+                                  },
+                                  "name": {
+                                    "description": "Name set by a space admin, or null to show the default name.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "color": {
+                                    "type": "string",
+                                    "enum": [
+                                      "neutral",
+                                      "accent",
+                                      "info",
+                                      "success",
+                                      "warning",
+                                      "danger"
+                                    ],
+                                    "description": "Color of the status: `neutral`, `accent`, `info`, `success`, `warning` or `danger`."
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "builtIn",
+                                  "name",
+                                  "color"
+                                ],
+                                "additionalProperties": false,
+                                "description": "A page status."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Status of a page, or null when it has none or page status is turned off in the space."
                           },
                           "createdAt": {
                             "type": "string",
@@ -164697,6 +166641,7 @@
                           "link",
                           "creatorId",
                           "ownerId",
+                          "status",
                           "createdAt",
                           "updatedAt",
                           "contentUpdatedAt"
@@ -164741,6 +166686,12 @@
                       "link": null,
                       "creatorId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                       "ownerId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                      "status": {
+                        "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
+                        "builtIn": "verified",
+                        "name": null,
+                        "color": "success"
+                      },
                       "createdAt": "2026-10-05T08:00:00.000Z",
                       "updatedAt": "2026-10-05T08:00:00.000Z",
                       "contentUpdatedAt": "2026-10-05T08:00:00.000Z"
@@ -165263,7 +167214,69 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Account responsible for the item, or null."
+                      "description": "Owner of the item, or null. The owner stays set when the person leaves; `owner.active` in the item details says whether the item has an active owner."
+                    },
+                    "status": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the status value."
+                            },
+                            "builtIn": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "x-extensible-enum": [
+                                    "roughDraft",
+                                    "inProgress",
+                                    "readyForReview",
+                                    "verified"
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Which default value this is, or null for a value a space admin added. Clients show the translated name of a default value unless `name` is set. New values can be added in later versions; handle unknown values."
+                            },
+                            "name": {
+                              "description": "Name set by a space admin, or null to show the default name.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "color": {
+                              "type": "string",
+                              "enum": [
+                                "neutral",
+                                "accent",
+                                "info",
+                                "success",
+                                "warning",
+                                "danger"
+                              ],
+                              "description": "Color of the status: `neutral`, `accent`, `info`, `success`, `warning` or `danger`."
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "builtIn",
+                            "name",
+                            "color"
+                          ],
+                          "additionalProperties": false,
+                          "description": "A page status."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Status of a page, or null when it has none or page status is turned off in the space."
                     },
                     "createdAt": {
                       "type": "string",
@@ -165299,6 +167312,7 @@
                     "link",
                     "creatorId",
                     "ownerId",
+                    "status",
                     "createdAt",
                     "updatedAt",
                     "contentUpdatedAt"
@@ -165324,6 +167338,12 @@
                   "link": null,
                   "creatorId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                   "ownerId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                  "status": {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
+                    "builtIn": "verified",
+                    "name": null,
+                    "color": "success"
+                  },
                   "createdAt": "2026-10-05T08:00:00.000Z",
                   "updatedAt": "2026-10-05T08:00:00.000Z",
                   "contentUpdatedAt": "2026-10-05T08:00:00.000Z"
@@ -167732,6 +169752,1409 @@
                       "title": "The space is not a one-on-one",
                       "status": 409,
                       "code": "notOneOnOne"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/spaces/{spaceId}/page-statuses": {
+      "get": {
+        "operationId": "ownership.statuses",
+        "summary": "List the page status values of a space",
+        "description": "Returns whether page status is turned on and the values editors can choose, in order.\n\nRequires the permission `space.view` on the space in `spaceId`.",
+        "tags": [
+          "Ownership and status"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.view",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the space.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The values.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "Whether page status is turned on in the space."
+                    },
+                    "values": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the status value."
+                          },
+                          "builtIn": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "x-extensible-enum": [
+                                  "roughDraft",
+                                  "inProgress",
+                                  "readyForReview",
+                                  "verified"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Which default value this is, or null for a value a space admin added. Clients show the translated name of a default value unless `name` is set. New values can be added in later versions; handle unknown values."
+                          },
+                          "name": {
+                            "description": "Name set by a space admin, or null to show the default name.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "color": {
+                            "type": "string",
+                            "enum": [
+                              "neutral",
+                              "accent",
+                              "info",
+                              "success",
+                              "warning",
+                              "danger"
+                            ],
+                            "description": "Color of the status: `neutral`, `accent`, `info`, `success`, `warning` or `danger`."
+                          },
+                          "position": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Place in the list, starting at 0."
+                          },
+                          "pages": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Number of pages with this status, without pages in the trash."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "builtIn",
+                          "name",
+                          "color",
+                          "position",
+                          "pages"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A status value of a space."
+                      },
+                      "description": "Values in their order."
+                    }
+                  },
+                  "required": [
+                    "enabled",
+                    "values"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The page status values of a space."
+                },
+                "example": {
+                  "enabled": true,
+                  "values": [
+                    {
+                      "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
+                      "builtIn": "verified",
+                      "name": null,
+                      "color": "success",
+                      "position": 3,
+                      "pages": 12
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "ownership.addStatus",
+        "summary": "Add a page status value",
+        "description": "Adds a value at the end of the list. A space can have up to 20 values.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
+        "tags": [
+          "Ownership and status"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.manage",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the space.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "description": "Name, 1 to 40 characters, unique in the space."
+                  },
+                  "color": {
+                    "type": "string",
+                    "enum": [
+                      "neutral",
+                      "accent",
+                      "info",
+                      "success",
+                      "warning",
+                      "danger"
+                    ],
+                    "description": "Color of the status: `neutral`, `accent`, `info`, `success`, `warning` or `danger`."
+                  }
+                },
+                "required": [
+                  "name",
+                  "color"
+                ],
+                "additionalProperties": false,
+                "description": "A new status value."
+              },
+              "example": {
+                "name": "Outdated",
+                "color": "danger"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The new value.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the status value."
+                    },
+                    "builtIn": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "x-extensible-enum": [
+                            "roughDraft",
+                            "inProgress",
+                            "readyForReview",
+                            "verified"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Which default value this is, or null for a value a space admin added. Clients show the translated name of a default value unless `name` is set. New values can be added in later versions; handle unknown values."
+                    },
+                    "name": {
+                      "description": "Name set by a space admin, or null to show the default name.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "color": {
+                      "type": "string",
+                      "enum": [
+                        "neutral",
+                        "accent",
+                        "info",
+                        "success",
+                        "warning",
+                        "danger"
+                      ],
+                      "description": "Color of the status: `neutral`, `accent`, `info`, `success`, `warning` or `danger`."
+                    },
+                    "position": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Place in the list, starting at 0."
+                    },
+                    "pages": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of pages with this status, without pages in the trash."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "builtIn",
+                    "name",
+                    "color",
+                    "position",
+                    "pages"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A status value of a space."
+                },
+                "example": {
+                  "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
+                  "builtIn": "verified",
+                  "name": null,
+                  "color": "success",
+                  "position": 3,
+                  "pages": 12
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidStatus`: The status is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidStatus": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidStatus",
+                      "title": "The status is not valid",
+                      "status": 400,
+                      "code": "invalidStatus"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`statusExists`: A status with this name exists already. `tooManyStatusValues`: The space has too many status values.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "statusExists": {
+                    "value": {
+                      "type": "urn:pagehall:problem:statusExists",
+                      "title": "A status with this name exists already",
+                      "status": 409,
+                      "code": "statusExists"
+                    }
+                  },
+                  "tooManyStatusValues": {
+                    "value": {
+                      "type": "urn:pagehall:problem:tooManyStatusValues",
+                      "title": "The space has too many status values",
+                      "status": 409,
+                      "code": "tooManyStatusValues"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/spaces/{spaceId}/page-statuses/{statusId}": {
+      "delete": {
+        "operationId": "ownership.removeStatus",
+        "summary": "Remove a page status value",
+        "description": "Removes the value. Pages with it lose their status. Send the number of affected pages you confirmed; when it no longer matches, nothing is removed.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
+        "tags": [
+          "Ownership and status"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.manage",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the space.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "statusId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the status value.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "pages",
+            "in": "query",
+            "required": false,
+            "description": "Number of pages that lose the status, as shown to the person who confirmed. When it differs, nothing is removed and the answer `statusInUse` names the current number.",
+            "schema": {
+              "default": 0,
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Done. The response has no body."
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found. `statusNotFound`: The status does not exist anymore.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  },
+                  "statusNotFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:statusNotFound",
+                      "title": "The status does not exist anymore",
+                      "status": 404,
+                      "code": "statusNotFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`statusInUse`: Pages use this status.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "statusInUse": {
+                    "value": {
+                      "type": "urn:pagehall:problem:statusInUse",
+                      "title": "Pages use this status",
+                      "status": 409,
+                      "code": "statusInUse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "ownership.updateStatus",
+        "summary": "Change a page status value",
+        "description": "Renames a value or changes its color. Pages with the value show the change at once.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
+        "tags": [
+          "Ownership and status"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.manage",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the space.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "statusId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the status value.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "description": "Name, 1 to 40 characters, unique in the space."
+                  },
+                  "color": {
+                    "type": "string",
+                    "enum": [
+                      "neutral",
+                      "accent",
+                      "info",
+                      "success",
+                      "warning",
+                      "danger"
+                    ],
+                    "description": "Color of the status: `neutral`, `accent`, `info`, `success`, `warning` or `danger`."
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Changes to a status value. Renaming a default value replaces its translated name."
+              },
+              "example": {
+                "name": "Approved"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The changed value.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the status value."
+                    },
+                    "builtIn": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "x-extensible-enum": [
+                            "roughDraft",
+                            "inProgress",
+                            "readyForReview",
+                            "verified"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Which default value this is, or null for a value a space admin added. Clients show the translated name of a default value unless `name` is set. New values can be added in later versions; handle unknown values."
+                    },
+                    "name": {
+                      "description": "Name set by a space admin, or null to show the default name.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "color": {
+                      "type": "string",
+                      "enum": [
+                        "neutral",
+                        "accent",
+                        "info",
+                        "success",
+                        "warning",
+                        "danger"
+                      ],
+                      "description": "Color of the status: `neutral`, `accent`, `info`, `success`, `warning` or `danger`."
+                    },
+                    "position": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Place in the list, starting at 0."
+                    },
+                    "pages": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of pages with this status, without pages in the trash."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "builtIn",
+                    "name",
+                    "color",
+                    "position",
+                    "pages"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A status value of a space."
+                },
+                "example": {
+                  "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
+                  "builtIn": "verified",
+                  "name": null,
+                  "color": "success",
+                  "position": 3,
+                  "pages": 12
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidStatus`: The status is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidStatus": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidStatus",
+                      "title": "The status is not valid",
+                      "status": 400,
+                      "code": "invalidStatus"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found. `statusNotFound`: The status does not exist anymore.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  },
+                  "statusNotFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:statusNotFound",
+                      "title": "The status does not exist anymore",
+                      "status": 404,
+                      "code": "statusNotFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`statusExists`: A status with this name exists already.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "statusExists": {
+                    "value": {
+                      "type": "urn:pagehall:problem:statusExists",
+                      "title": "A status with this name exists already",
+                      "status": 409,
+                      "code": "statusExists"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/spaces/{spaceId}/page-statuses/order": {
+      "put": {
+        "operationId": "ownership.reorder",
+        "summary": "Reorder the page status values",
+        "description": "Sets the order in which editors see the values.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
+        "tags": [
+          "Ownership and status"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.manage",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the space.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ids": {
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of a status value."
+                    },
+                    "description": "Every status value of the space exactly once, in the new order."
+                  }
+                },
+                "required": [
+                  "ids"
+                ],
+                "additionalProperties": false,
+                "description": "The new order."
+              },
+              "example": {
+                "ids": [
+                  "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The values in their new order.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID of the status value."
+                      },
+                      "builtIn": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "x-extensible-enum": [
+                              "roughDraft",
+                              "inProgress",
+                              "readyForReview",
+                              "verified"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Which default value this is, or null for a value a space admin added. Clients show the translated name of a default value unless `name` is set. New values can be added in later versions; handle unknown values."
+                      },
+                      "name": {
+                        "description": "Name set by a space admin, or null to show the default name.",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "color": {
+                        "type": "string",
+                        "enum": [
+                          "neutral",
+                          "accent",
+                          "info",
+                          "success",
+                          "warning",
+                          "danger"
+                        ],
+                        "description": "Color of the status: `neutral`, `accent`, `info`, `success`, `warning` or `danger`."
+                      },
+                      "position": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991,
+                        "description": "Place in the list, starting at 0."
+                      },
+                      "pages": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991,
+                        "description": "Number of pages with this status, without pages in the trash."
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "builtIn",
+                      "name",
+                      "color",
+                      "position",
+                      "pages"
+                    ],
+                    "additionalProperties": false,
+                    "description": "A status value of a space."
+                  },
+                  "description": "The values."
+                },
+                "example": [
+                  {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
+                    "builtIn": "verified",
+                    "name": null,
+                    "color": "success",
+                    "position": 3,
+                    "pages": 12
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidStatus`: The status is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidStatus": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidStatus",
+                      "title": "The status is not valid",
+                      "status": 400,
+                      "code": "invalidStatus"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
                     }
                   }
                 }
@@ -173961,6 +177384,315 @@
         }
       }
     },
+    "/api/v1/spaces/{spaceId}/unowned-items": {
+      "get": {
+        "operationId": "ownership.spaceUnowned",
+        "summary": "List items without an owner in a space",
+        "description": "Lists items of the space whose owner was deactivated or left the organization, and items that never had an owner. Only items the caller can open are listed; `hidden` counts the others. Giving an item a new owner removes it from the list; a returning owner is owner again unless someone else was given the item.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
+        "tags": [
+          "Ownership and status"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.manage",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the space.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Cursor from `nextCursor` of the previous page.",
+            "schema": {
+              "type": "string",
+              "maxLength": 2000
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The items.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the item."
+                          },
+                          "spaceId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "Space of the item."
+                          },
+                          "spaceKey": {
+                            "type": "string",
+                            "description": "Key of the space."
+                          },
+                          "spaceName": {
+                            "type": "string",
+                            "description": "Name of the space."
+                          },
+                          "kind": {
+                            "type": "string",
+                            "description": "Kind of the item. New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
+                              "page",
+                              "folder",
+                              "link",
+                              "blogPost",
+                              "meetingSeries",
+                              "meetingTopic"
+                            ]
+                          },
+                          "title": {
+                            "type": "string",
+                            "description": "Title of the item."
+                          },
+                          "formerOwner": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the person."
+                                  },
+                                  "name": {
+                                    "description": "Name of the person, or null when the caller may not see the person.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ],
+                                "additionalProperties": false,
+                                "description": "A person."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The owner who left, or null when the item never had one."
+                          },
+                          "reason": {
+                            "type": "string",
+                            "enum": [
+                              "none",
+                              "deactivated",
+                              "membershipEnded"
+                            ],
+                            "description": "Why the item has no owner: `none` (never had one), `deactivated` (the account was deactivated) or `membershipEnded` (the person is no longer a member of the organization)."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "spaceId",
+                          "spaceKey",
+                          "spaceName",
+                          "kind",
+                          "title",
+                          "formerOwner",
+                          "reason"
+                        ],
+                        "additionalProperties": false,
+                        "description": "An item without an active owner."
+                      },
+                      "description": "Items, by title, up to 100 per page."
+                    },
+                    "hidden": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of further items without an owner that the caller cannot open, for example restricted pages. Remove their restriction or ask someone who can open them."
+                    },
+                    "nextCursor": {
+                      "description": "Cursor for the next page, or null on the last page.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "hidden",
+                    "nextCursor"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Items without an active owner."
+                },
+                "example": {
+                  "items": [
+                    {
+                      "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                      "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a30",
+                      "spaceKey": "ITOPS",
+                      "spaceName": "IT Operations",
+                      "kind": "page",
+                      "title": "Restart the VPN gateway",
+                      "formerOwner": {
+                        "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                        "name": "Anna Weber"
+                      },
+                      "reason": "deactivated"
+                    }
+                  ],
+                  "hidden": 0,
+                  "nextCursor": null
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/spaces/{spaceId}/visibility": {
       "put": {
         "operationId": "spaces.changeVisibility",
@@ -178170,7 +181902,7 @@
             "maximum": 9007199254740991
           },
           "pages": {
-            "description": "Number of pages that give access to groups or through broad links, for `confidentialSharing`.",
+            "description": "Number of pages that give access to groups or through broad links, for `confidentialSharing`; number of pages that would lose the status, for `statusInUse`.",
             "type": "integer",
             "minimum": -9007199254740991,
             "maximum": 9007199254740991

@@ -272,6 +272,13 @@ export class ItemsController {
         spaceName: "IT Operations",
         spaceAccess: true,
         ancestors: [],
+        owner: {
+          id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+          name: "Anna Weber",
+          email: "anna.weber@example.org",
+          active: true,
+        },
+        ownershipTransferable: true,
       },
     },
   })

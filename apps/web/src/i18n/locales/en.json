@@ -2340,6 +2340,9 @@
       "page": {
         "shared": "{actor} shared {itemTitle} with you: {role, select, editor {you can edit it} commenter {you can read and comment} other {you can read it}}{includeDescendants, select, true { together with its pages} other {}}."
       },
+      "ownership": {
+        "orphaned": "{items, plural, one {# item} other {# items}} in {spaceName} no longer {items, plural, one {has} other {have}} an owner, because the owner left. Assign new owners in the space settings."
+      },
       "restriction": {
         "orphaned": "Nobody on the access list of the restricted page {itemTitle} in {spaceName} has an active account anymore. Review the restriction in the space settings."
       },
@@ -3205,7 +3208,8 @@
         "archived": "Space archived",
         "unarchived": "Space brought back from the archive",
         "confidentialAdministratorAppointed": "Space admin of a confidential space appointed",
-        "confidentialDeleted": "Confidential space deleted"
+        "confidentialDeleted": "Confidential space deleted",
+        "pageStatusValuesChanged": "Page status values changed"
       },
       "page": {
         "updateRejected": "Page change rejected",
@@ -3217,6 +3221,7 @@
         "unarchived": "Page brought back from the archive",
         "restrictionSet": "Page restricted",
         "restrictionRemoved": "Page restriction removed",
+        "ownerTransferred": "Owner changed",
         "shared": "Page shared",
         "shareChanged": "Page access changed",
         "unshared": "Page access removed",

@@ -61,6 +61,13 @@ export const trashEntryKinds = ["items", "space"] as const;
 export type TrashEntryKind = (typeof trashEntryKinds)[number];
 export const trashEntryKind = pgEnum("trash_entry_kind", trashEntryKinds);
 
+export const pageStatusColors = ["neutral", "accent", "info", "success", "warning", "danger"] as const;
+export type PageStatusColor = (typeof pageStatusColors)[number];
+export const pageStatusColor = pgEnum("page_status_color", pageStatusColors);
+
+export const builtInPageStatuses = ["roughDraft", "inProgress", "readyForReview", "verified"] as const;
+export type BuiltInPageStatus = (typeof builtInPageStatuses)[number];
+
 export const discardReasons = ["discarded", "replaced"] as const;
 export type DiscardReason = (typeof discardReasons)[number];
 export const discardReason = pgEnum("discard_reason", discardReasons);
@@ -178,6 +185,9 @@ export const treeItems = pgTable(
     restorePosition: binaryOrderedText(),
     creatorId: uuid().references(() => accounts.id, { onDelete: "set null" }),
     ownerId: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    statusId: uuid().references((): AnyPgColumn => pageStatusValues.id, { onDelete: "set null" }),
+    statusChangedAt: timestampColumn(),
+    statusChangedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
     contentUpdatedAt: timestampColumn().notNull().defaultNow(),
     ...timestamps(),
   },
@@ -194,6 +204,8 @@ export const treeItems = pgTable(
     index().on(table.linkItemId),
     index().on(table.creatorId),
     index().on(table.ownerId),
+    index().on(table.statusId),
+    index().on(table.statusChangedBy),
     index().on(table.publishedVersionId),
     index().on(table.trashEntryId),
     index().on(table.archivedRootId),
@@ -203,6 +215,76 @@ export const treeItems = pgTable(
       sql`(${table.kind} = 'link') = (${table.linkItemId} is not null or ${table.linkUrl} is not null)`,
     ),
     check("tree_items_not_own_parent", sql`${table.parentId} is distinct from ${table.id}`),
+  ],
+);
+
+export const pageStatusValues = pgTable(
+  "page_status_values",
+  {
+    id: primaryId(),
+    spaceId: uuid()
+      .notNull()
+      .references((): AnyPgColumn => spaces.id, { onDelete: "cascade" }),
+    builtIn: text(),
+    name: text(),
+    color: pageStatusColor().notNull(),
+    position: integer().notNull(),
+    ...timestamps(),
+  },
+  (table) => [
+    index().on(table.spaceId, table.position),
+    check("page_status_values_named", sql`${table.builtIn} is not null or ${table.name} is not null`),
+    check(
+      "page_status_values_built_in",
+      sql`${table.builtIn} is null or ${table.builtIn} in ('roughDraft', 'inProgress', 'readyForReview', 'verified')`,
+    ),
+    check(
+      "page_status_values_name_length",
+      sql`${table.name} is null or length(${table.name}) between 1 and 40`,
+    ),
+  ],
+);
+
+export const pageStatusChanges = pgTable(
+  "page_status_changes",
+  {
+    id: primaryId(),
+    itemId: uuid()
+      .notNull()
+      .references((): AnyPgColumn => treeItems.id, { onDelete: "cascade" }),
+    statusId: uuid().references((): AnyPgColumn => pageStatusValues.id, { onDelete: "set null" }),
+    builtIn: text(),
+    name: text(),
+    color: pageStatusColor(),
+    actorId: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    changedAt: timestampColumn().notNull().defaultNow(),
+  },
+  (table) => [
+    index().on(table.itemId, table.changedAt),
+    index().on(table.statusId),
+    index().on(table.actorId),
+    index().on(table.changedAt),
+  ],
+);
+
+export const itemOwnershipChanges = pgTable(
+  "item_ownership_changes",
+  {
+    id: primaryId(),
+    itemId: uuid()
+      .notNull()
+      .references((): AnyPgColumn => treeItems.id, { onDelete: "cascade" }),
+    previousOwnerId: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    ownerId: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    actorId: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    changedAt: timestampColumn().notNull().defaultNow(),
+  },
+  (table) => [
+    index().on(table.itemId, table.changedAt),
+    index().on(table.previousOwnerId),
+    index().on(table.ownerId),
+    index().on(table.actorId),
+    index().on(table.changedAt),
   ],
 );
 

@@ -2340,6 +2340,9 @@
       "page": {
         "shared": "{actor} hat {itemTitle} für dich freigegeben: {role, select, editor {du kannst die Seite bearbeiten} commenter {du kannst sie lesen und kommentieren} other {du kannst sie lesen}}{includeDescendants, select, true { mitsamt ihren Unterseiten} other {}}."
       },
+      "ownership": {
+        "orphaned": "{items, plural, one {# Inhalt} other {# Inhalte}} in {spaceName} {items, plural, one {hat} other {haben}} keinen Besitzer mehr, weil der Besitzer gegangen ist. Weise in den Space-Einstellungen neue Besitzer zu."
+      },
       "restriction": {
         "orphaned": "Niemand auf der Zugriffsliste der beschränkten Seite {itemTitle} in {spaceName} hat noch ein aktives Konto. Prüfe die Beschränkung in den Space-Einstellungen."
       },
@@ -3205,6 +3208,7 @@
         "archived": "Space archiviert",
         "unarchived": "Space aus dem Archiv geholt",
         "confidentialAdministratorAppointed": "Space-Admin eines vertraulichen Space ernannt",
+        "pageStatusValuesChanged": "Werte für den Seitenstatus geändert",
         "confidentialDeleted": "Vertraulicher Space gelöscht"
       },
       "page": {
@@ -3217,6 +3221,7 @@
         "unarchived": "Seite aus dem Archiv geholt",
         "restrictionSet": "Seite beschränkt",
         "restrictionRemoved": "Seitenbeschränkung aufgehoben",
+        "ownerTransferred": "Besitzer geändert",
         "shared": "Seite freigegeben",
         "shareChanged": "Seitenzugriff geändert",
         "unshared": "Seitenzugriff entfernt",

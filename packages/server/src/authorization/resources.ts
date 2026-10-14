@@ -295,6 +295,33 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
       "item.pin": { scope: "space", spaceRole: "admin", restriction: "interactive" },
       "item.approveSchedule": { scope: "space", spaceRole: "admin", restriction: "writable" },
       "item.share": { scope: "space", spaceRole: "editor", restriction: "readable" },
+      "item.transferOwnership": {
+        scope: "space",
+        spaceRole: "admin",
+        rule: "ownerOrOrganizationAdministrator",
+        restriction: "writable",
+      },
+    },
+    rules: {
+      ownerOrOrganizationAdministrator: async (context) => {
+        const id = context.resource.id;
+        if (!id || !UUID.test(id)) return false;
+        const result = await context.executor.execute<{
+          owner_id: string | null;
+          space_id: string;
+          organization_id: string | null;
+          confidential: boolean;
+        }>(sql`
+          select t.owner_id, t.space_id, s.organization_id, s.confidential
+          from tree_items t join spaces s on s.id = t.space_id where t.id = ${id.toLowerCase()}`);
+        const row = result.rows[0];
+        if (!row) return false;
+        if (row.owner_id === context.accountId) return true;
+        if (row.confidential || !row.organization_id) return false;
+        const organization = await context.organizationFacts(row.organization_id);
+        if (!organization.roles.some((role) => grantsLevel(role.areas.spaces, "manage"))) return false;
+        return (await context.spaceFacts(row.space_id)).role !== null;
+      },
     },
     restrictions: {
       readable: async (executor, id) => {
