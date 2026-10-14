@@ -46,7 +46,7 @@ export interface SearchFilters {
   contentTypes: SearchContentType[];
   labels: string[];
   authorIds: string[] | null;
-  statuses: string[];
+  statusIds: string[];
   includeArchived: boolean;
   updatedAfter: Date | null;
   updatedBefore: Date | null;

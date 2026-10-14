@@ -17,6 +17,7 @@ import { ApiRoute } from "../http/api-route.js";
 import { decodeCursor, encodeCursor } from "../http/pagination.js";
 import { actorOf } from "../http/request.js";
 import { extensibleEnum, inputTimestamp, organizationIdParams, timestamp, uuid } from "../http/schemas.js";
+import { examplePageStatus, pageStatusSchema } from "../spaces/schemas.js";
 
 const TAG = "Search";
 const organization = { type: "organization", param: "organizationId" } as const;
@@ -41,7 +42,7 @@ const searchQuery = z
       .max(MAX_QUERY_LENGTH)
       .default("")
       .describe(
-        'The search text. Words must all match. `"exact phrase"` matches the words in this order, `-word` excludes a word, `OR` between two words matches either. The operators `space:KEY`, `label:name`, `author:name`, `status:value` and `type:page|blog|comment` filter like the parameters; quote values with spaces.',
+        'The search text. Words must all match. `"exact phrase"` matches the words in this order, `-word` excludes a word, `OR` between two words matches either. The operators `space:KEY`, `label:name`, `author:name`, `status:name` (default values also by their English name, such as `status:verified`) and `type:page|blog|comment` filter like the parameters; quote values with spaces.',
       ),
     mode: z
       .enum(["full", "quick"])
@@ -54,7 +55,7 @@ const searchQuery = z
     types: list(z.enum(searchContentTypes), "Only results of these types: `page`, `blogPost` or `comment`."),
     labels: list(z.string().max(100), "Only pages with at least one of these labels."),
     authorIds: list(uuid("ID of an author."), "Only results by these authors."),
-    statuses: list(z.string().max(100), "Only pages with one of these statuses."),
+    statusIds: list(uuid("ID of a status value."), "Only pages with one of these status values."),
     includeArchived: z
       .enum(["true", "false"])
       .default("false")
@@ -127,7 +128,9 @@ const resultSchema = z
       )
       .describe("Parent pages the caller can read, from the top. Empty for shared pages."),
     labels: z.array(z.string()).describe("Labels of the page."),
-    status: z.string().nullable().describe("Status of the page, or null."),
+    status: pageStatusSchema
+      .nullable()
+      .describe("Status of the page, or null when it has none or page status is turned off in the space."),
     author: z
       .object({ id: uuid("ID of the author."), name: z.string().describe("Name of the author.") })
       .nullable()
@@ -177,7 +180,13 @@ const responseSchema = z
               .describe("An author."),
           )
           .describe("Authors with their number of results."),
-        statuses: facetSchema(z.string().describe("The status."), "Status"),
+        statuses: z
+          .array(
+            pageStatusSchema
+              .extend({ count: z.number().int().describe("Number of results.") })
+              .describe("A status value."),
+          )
+          .describe("Status values with their number of results."),
       })
       .nullable()
       .describe("Number of results per filter value, or null in quick search."),
@@ -209,7 +218,7 @@ const exampleResponse = {
       sharedWithYou: false,
       path: [],
       labels: ["vpn"],
-      status: null,
+      status: examplePageStatus,
       author: { id: "01929b1e-7c1a-7000-8000-000000000001", name: "Ada Lovelace" },
       archived: false,
       updatedAt: "2026-10-14T08:30:00.000Z",
@@ -222,7 +231,7 @@ const exampleResponse = {
     spaces: [{ id: "01929b1e-7c1a-7000-8000-000000000010", key: "ITOPS", name: "IT Operations", count: 1 }],
     labels: [{ value: "vpn", count: 1 }],
     authors: [{ id: "01929b1e-7c1a-7000-8000-000000000001", name: "Ada Lovelace", count: 1 }],
-    statuses: [],
+    statuses: [{ ...examplePageStatus, count: 1 }],
   },
   index: { building: false },
 };
@@ -249,7 +258,13 @@ function toApi(response: SearchResponse): z.output<typeof responseSchema> {
             name: facet.name,
             count: facet.count,
           })),
-          statuses: response.facets.statuses,
+          statuses: response.facets.statuses.map((facet) => ({
+            id: facet.value,
+            builtIn: facet.builtIn,
+            name: facet.name,
+            color: facet.color,
+            count: facet.count,
+          })),
         }
       : null,
     index: { building: response.index.building },
@@ -285,7 +300,7 @@ export class SearchController {
       contentTypes: query.types ?? [],
       labels: query.labels ?? [],
       authorIds: query.authorIds ?? [],
-      statuses: query.statuses ?? [],
+      statusIds: query.statusIds ?? [],
       includeArchived: query.includeArchived,
       updatedAfter: query.updatedAfter ?? null,
       updatedBefore: query.updatedBefore ?? null,

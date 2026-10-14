@@ -1,6 +1,7 @@
 import type { DocumentJson, NodeJson } from "@pagehall/editor-schema";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accountPrincipal, type Principal } from "../accounts/principal.js";
+import { pageStatusEnabledSetting } from "../spaces/settings.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { spaceFixtures } from "../testing/spaces.js";
@@ -248,6 +249,65 @@ describe.skipIf(!baseUrl)("search", () => {
       [unique],
     );
     expect(rows.rows.map((row) => row.organization_id)).toEqual([elsewhere.id]);
+  });
+
+  it("filters by page status and follows changes of status, values and the space setting", async () => {
+    const w = await world();
+    const statuses = test.services.pageStatus;
+    const [, inProgress, , verified] = await statuses.values(w.shared.id);
+    const [, , , secondVerified] = await statuses.values(w.second.id);
+    await statuses.set(w.author, w.alpha, verified?.id ?? "");
+    await statuses.set(w.author, w.beta, inProgress?.id ?? "");
+    await statuses.set(w.author, w.gamma, secondVerified?.id ?? "");
+    await drain();
+    expect(await ids(w.other, w.org.id, `${w.word} status:verified`)).toEqual([w.alpha, w.gamma].sort());
+    expect(await ids(w.other, w.org.id, `${w.word} status:"in progress"`)).toEqual([w.beta]);
+    expect(await ids(w.other, w.org.id, w.word, { statusIds: [verified?.id] })).toEqual([w.alpha]);
+    expect(await ids(w.other, w.org.id, `${w.word} status:unknown`)).toEqual([]);
+    const all = await find(w.other, w.org.id, w.word);
+    expect(all.results.find((hit) => hit.itemId === w.alpha)?.status).toEqual({
+      id: verified?.id,
+      builtIn: "verified",
+      name: null,
+      color: "success",
+    });
+    expect(all.facets?.statuses.map((facet) => [facet.builtIn, facet.count]).sort()).toEqual([
+      ["inProgress", 1],
+      ["verified", 1],
+      ["verified", 1],
+    ]);
+
+    await statuses.set(w.author, w.beta, verified?.id ?? "");
+    await drain();
+    expect(await ids(w.other, w.org.id, `${w.word} status:verified`)).toEqual(
+      [w.alpha, w.beta, w.gamma].sort(),
+    );
+
+    await statuses.update(w.author, w.shared.id, verified?.id ?? "", { name: "Approved" });
+    await drain();
+    expect(await ids(w.other, w.org.id, `${w.word} status:approved`)).toEqual([w.alpha, w.beta].sort());
+    expect(await ids(w.other, w.org.id, `${w.word} status:verified`)).toEqual([w.gamma]);
+    const renamed = await find(w.other, w.org.id, w.word, { statusIds: [verified?.id] });
+    expect(renamed.results.map((hit) => hit.status?.name)).toEqual(["Approved", "Approved"]);
+
+    await statuses.remove(w.author, w.shared.id, verified?.id ?? "", 2);
+    await drain();
+    expect(await ids(w.other, w.org.id, w.word, { statusIds: [verified?.id] })).toEqual([]);
+    const stored = await test.pool.query<{ status: string | null }>(
+      "select status from search_chunks where item_id = any($1::uuid[])",
+      [[w.alpha, w.beta]],
+    );
+    expect(stored.rows.every((row) => row.status === null)).toBe(true);
+
+    await test.settings.set(pageStatusEnabledSetting, { space: w.second.id }, "space", false);
+    const hidden = await find(w.other, w.org.id, w.word, { spaceIds: [w.second.id] });
+    expect(hidden.results.map((hit) => hit.status)).toEqual([null]);
+    expect(hidden.facets?.statuses).toEqual([]);
+    await drain();
+    expect(await ids(w.other, w.org.id, w.word, { statusIds: [secondVerified?.id] })).toEqual([]);
+    await test.settings.set(pageStatusEnabledSetting, { space: w.second.id }, "space", true);
+    await drain();
+    expect(await ids(w.other, w.org.id, w.word, { statusIds: [secondVerified?.id] })).toEqual([w.gamma]);
   });
 
   it("finds nothing for an API token without access to spaces or for another organization", async () => {

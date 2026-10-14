@@ -4,6 +4,7 @@ import type { Principal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database } from "../database/database.js";
 import type { PeopleService } from "../spaces/people.js";
+import { type PageStatus, pageStatusEnabledCondition } from "../spaces/status.js";
 import { visibleItem } from "../spaces/visibility.js";
 import { loadViewer } from "./access.js";
 import {
@@ -41,7 +42,7 @@ export interface SearchRequest {
   contentTypes: SearchContentType[];
   labels: string[];
   authorIds: string[];
-  statuses: string[];
+  statusIds: string[];
   includeArchived: boolean;
   updatedAfter: Date | null;
   updatedBefore: Date | null;
@@ -74,7 +75,7 @@ export interface SearchHit {
   sharedWithYou: boolean;
   path: { id: string; title: string }[];
   labels: string[];
-  status: string | null;
+  status: PageStatus | null;
   author: { id: string; name: string } | null;
   archived: boolean;
   updatedAt: string;
@@ -86,7 +87,7 @@ export interface SearchFacets {
   spaces: (FacetCount<string | null> & { key: string | null; name: string | null })[];
   labels: FacetCount<string>[];
   authors: (FacetCount<string> & { name: string })[];
-  statuses: FacetCount<string>[];
+  statuses: (FacetCount<string> & Omit<PageStatus, "id">)[];
 }
 
 export interface SearchResponse {
@@ -171,7 +172,7 @@ export class SearchService {
     if (!viewer) return empty;
     const query = parseQuery(request.query);
     const spaces = await this.#visibleSpaces(principal, organizationId);
-    const filters = await this.#filters(principal, request, query.operators, spaces);
+    const filters = await this.#filters(principal, organizationId, request, query.operators, spaces);
     if (!filters) return empty;
     const limit = Math.min(Math.max(request.limit, 1), SEARCH_PAGE_LIMIT);
     const result = await this.#adapter.search(this.#database, {
@@ -207,6 +208,7 @@ export class SearchService {
 
   async #filters(
     principal: Principal,
+    organizationId: string,
     request: SearchRequest,
     operators: ReturnType<typeof parseQuery>["operators"],
     spaces: Map<string, SearchSpace>,
@@ -246,18 +248,43 @@ export class SearchService {
       ];
     }
 
+    const statusRequested = request.statusIds.length > 0 || operators.status.length > 0;
+    const statusIds = [
+      ...new Set([...request.statusIds, ...(await this.#statusesNamed(organizationId, operators.status))]),
+    ];
+    if (statusRequested && statusIds.length === 0) return null;
+
     return {
       spaceIds: spaceRequested ? spaceIds : null,
       contentTypes: types,
       labels,
       authorIds,
-      statuses: [
-        ...new Set([...request.statuses, ...operators.status].map((status) => status.toLowerCase())),
-      ],
+      statusIds,
       includeArchived: request.includeArchived,
       updatedAfter: request.updatedAfter,
       updatedBefore: request.updatedBefore,
     };
+  }
+
+  async #statusesNamed(organizationId: string, names: readonly string[]): Promise<string[]> {
+    if (names.length === 0) return [];
+    const exact = names.map((name) => name.trim().toLowerCase());
+    const builtIn = names.map((name) => name.toLowerCase().replace(/[^a-z]/g, ""));
+    const result = await this.#database.execute<{ id: string }>(sql`
+      select sv.id from page_status_values sv join spaces s on s.id = sv.space_id
+      where s.organization_id = ${organizationId} and ${pageStatusEnabledCondition(sql`s`)}
+        and (lower(sv.name) = any(${sql.param(exact)}::text[])
+          or (sv.name is null and lower(sv.built_in) = any(${sql.param(builtIn)}::text[])))`);
+    return result.rows.map((row) => row.id);
+  }
+
+  async #statuses(ids: readonly string[]): Promise<Map<string, PageStatus>> {
+    if (ids.length === 0) return new Map();
+    const result = await this.#database.execute<PageStatus & Record<string, unknown>>(sql`
+      select sv.id, sv.built_in as "builtIn", sv.name, sv.color
+      from page_status_values sv join spaces s on s.id = sv.space_id
+      where sv.id = any(${sql.param([...new Set(ids)])}::uuid[]) and ${pageStatusEnabledCondition(sql`s`)}`);
+    return new Map(result.rows.map((row) => [row.id, row]));
   }
 
   async #authorsNamed(principal: Principal, names: readonly string[]): Promise<string[]> {
@@ -296,6 +323,7 @@ export class SearchService {
       principal,
       hits.flatMap((hit) => (hit.authorId ? [hit.authorId] : [])),
     );
+    const statuses = await this.#statuses(hits.flatMap((hit) => (hit.status ? [hit.status] : [])));
     return hits.map((hit) => {
       const space = spaces.get(hit.spaceId) ?? null;
       const authorName = hit.authorId ? authors.get(hit.authorId) : undefined;
@@ -311,7 +339,7 @@ export class SearchService {
         sharedWithYou: space === null,
         path: space ? (paths.get(hit.itemId) ?? []) : [],
         labels: hit.labels,
-        status: hit.status,
+        status: (hit.status && statuses.get(hit.status)) || null,
         author: hit.authorId && authorName ? { id: hit.authorId, name: authorName } : null,
         archived: hit.archived,
         updatedAt: new Date(hit.contentUpdatedAt).toISOString(),
@@ -329,6 +357,7 @@ export class SearchService {
       principal,
       facets.authors.map((author) => author.value),
     );
+    const statuses = await this.#statuses(facets.statuses.map((facet) => facet.value));
     return {
       contentTypes: facets.contentTypes,
       spaces: facets.spaces.map((facet) => {
@@ -345,7 +374,10 @@ export class SearchService {
         const name = names.get(author.value);
         return name ? [{ ...author, name }] : [];
       }),
-      statuses: facets.statuses,
+      statuses: facets.statuses.flatMap((facet) => {
+        const status = statuses.get(facet.value);
+        return status ? [{ ...facet, builtIn: status.builtIn, name: status.name, color: status.color }] : [];
+      }),
     };
   }
 }

@@ -133998,7 +133998,7 @@
             "name": "q",
             "in": "query",
             "required": false,
-            "description": "The search text. Words must all match. `\"exact phrase\"` matches the words in this order, `-word` excludes a word, `OR` between two words matches either. The operators `space:KEY`, `label:name`, `author:name`, `status:value` and `type:page|blog|comment` filter like the parameters; quote values with spaces.",
+            "description": "The search text. Words must all match. `\"exact phrase\"` matches the words in this order, `-word` excludes a word, `OR` between two words matches either. The operators `space:KEY`, `label:name`, `author:name`, `status:name` (default values also by their English name, such as `status:verified`) and `type:page|blog|comment` filter like the parameters; quote values with spaces.",
             "schema": {
               "default": "",
               "type": "string",
@@ -134070,10 +134070,10 @@
             }
           },
           {
-            "name": "statuses",
+            "name": "statusIds",
             "in": "query",
             "required": false,
-            "description": "Only pages with one of these statuses. Up to 20 values, separated by commas.",
+            "description": "Only pages with one of these status values. Up to 20 values, separated by commas.",
             "schema": {
               "type": "string",
               "maxLength": 2000
@@ -134288,11 +134288,66 @@
                             "description": "Labels of the page."
                           },
                           "status": {
-                            "description": "Status of the page, or null.",
-                            "type": [
-                              "string",
-                              "null"
-                            ]
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the status value."
+                                  },
+                                  "builtIn": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "x-extensible-enum": [
+                                          "roughDraft",
+                                          "inProgress",
+                                          "readyForReview",
+                                          "verified"
+                                        ]
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ],
+                                    "description": "Which default value this is, or null for a value a space admin added. Clients show the translated name of a default value unless `name` is set. New values can be added in later versions; handle unknown values."
+                                  },
+                                  "name": {
+                                    "description": "Name set by a space admin, or null to show the default name.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "color": {
+                                    "type": "string",
+                                    "enum": [
+                                      "neutral",
+                                      "accent",
+                                      "info",
+                                      "success",
+                                      "warning",
+                                      "danger"
+                                    ],
+                                    "description": "Color of the status: `neutral`, `accent`, `info`, `success`, `warning` or `danger`."
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "builtIn",
+                                  "name",
+                                  "color"
+                                ],
+                                "additionalProperties": false,
+                                "description": "A page status."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Status of the page, or null when it has none or page status is turned off in the space."
                           },
                           "author": {
                             "anyOf": [
@@ -134512,9 +134567,46 @@
                               "items": {
                                 "type": "object",
                                 "properties": {
-                                  "value": {
+                                  "id": {
                                     "type": "string",
-                                    "description": "The status."
+                                    "format": "uuid",
+                                    "description": "ID of the status value."
+                                  },
+                                  "builtIn": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "x-extensible-enum": [
+                                          "roughDraft",
+                                          "inProgress",
+                                          "readyForReview",
+                                          "verified"
+                                        ]
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ],
+                                    "description": "Which default value this is, or null for a value a space admin added. Clients show the translated name of a default value unless `name` is set. New values can be added in later versions; handle unknown values."
+                                  },
+                                  "name": {
+                                    "description": "Name set by a space admin, or null to show the default name.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "color": {
+                                    "type": "string",
+                                    "enum": [
+                                      "neutral",
+                                      "accent",
+                                      "info",
+                                      "success",
+                                      "warning",
+                                      "danger"
+                                    ],
+                                    "description": "Color of the status: `neutral`, `accent`, `info`, `success`, `warning` or `danger`."
                                   },
                                   "count": {
                                     "type": "integer",
@@ -134524,13 +134616,16 @@
                                   }
                                 },
                                 "required": [
-                                  "value",
+                                  "id",
+                                  "builtIn",
+                                  "name",
+                                  "color",
                                   "count"
                                 ],
                                 "additionalProperties": false,
-                                "description": "Status"
+                                "description": "A status value."
                               },
-                              "description": "Statuss with their number of results."
+                              "description": "Status values with their number of results."
                             }
                           },
                           "required": [
@@ -134606,7 +134701,12 @@
                       "labels": [
                         "vpn"
                       ],
-                      "status": null,
+                      "status": {
+                        "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
+                        "builtIn": "verified",
+                        "name": null,
+                        "color": "success"
+                      },
                       "author": {
                         "id": "01929b1e-7c1a-7000-8000-000000000001",
                         "name": "Ada Lovelace"
@@ -134645,7 +134745,15 @@
                         "count": 1
                       }
                     ],
-                    "statuses": []
+                    "statuses": [
+                      {
+                        "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
+                        "builtIn": "verified",
+                        "name": null,
+                        "color": "success",
+                        "count": 1
+                      }
+                    ]
                   },
                   "index": {
                     "building": false

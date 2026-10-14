@@ -129,8 +129,8 @@ export class PostgresSearchAdapter implements SearchAdapter {
     }
     if (filters.labels.length > 0) conditions.push(sql`c.labels && ${sql.param(filters.labels)}::text[]`);
     if (filters.authorIds) conditions.push(sql`c.author_id = any(${sql.param(filters.authorIds)}::uuid[])`);
-    if (filters.statuses.length > 0)
-      conditions.push(sql`c.status = any(${sql.param(filters.statuses)}::text[])`);
+    if (filters.statusIds.length > 0)
+      conditions.push(sql`c.status = any(${sql.param(filters.statusIds)}::text[])`);
     if (filters.updatedAfter)
       conditions.push(sql`c.content_updated_at >= ${filters.updatedAfter.toISOString()}`);
     if (filters.updatedBefore)

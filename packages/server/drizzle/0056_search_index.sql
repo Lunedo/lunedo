@@ -110,13 +110,14 @@ END $$;--> statement-breakpoint
 CREATE TRIGGER "search_tree_items_inserted" AFTER INSERT ON "tree_items"
   FOR EACH ROW EXECUTE FUNCTION "search_tree_items_changed"();--> statement-breakpoint
 CREATE TRIGGER "search_tree_items_updated" AFTER UPDATE OF "title", "kind", "mode", "published_version_id",
-  "reader_visible", "path", "space_id", "trash_entry_id", "archived_root_id", "content_language", "creator_id" ON "tree_items"
+  "reader_visible", "path", "space_id", "trash_entry_id", "archived_root_id", "content_language", "creator_id", "status_id" ON "tree_items"
   FOR EACH ROW WHEN (OLD."title" IS DISTINCT FROM NEW."title" OR OLD."kind" IS DISTINCT FROM NEW."kind"
     OR OLD."mode" IS DISTINCT FROM NEW."mode" OR OLD."published_version_id" IS DISTINCT FROM NEW."published_version_id"
     OR OLD."reader_visible" IS DISTINCT FROM NEW."reader_visible" OR OLD."path" IS DISTINCT FROM NEW."path"
     OR OLD."space_id" IS DISTINCT FROM NEW."space_id" OR OLD."trash_entry_id" IS DISTINCT FROM NEW."trash_entry_id"
     OR OLD."archived_root_id" IS DISTINCT FROM NEW."archived_root_id"
-    OR OLD."content_language" IS DISTINCT FROM NEW."content_language" OR OLD."creator_id" IS DISTINCT FROM NEW."creator_id")
+    OR OLD."content_language" IS DISTINCT FROM NEW."content_language" OR OLD."creator_id" IS DISTINCT FROM NEW."creator_id"
+    OR OLD."status_id" IS DISTINCT FROM NEW."status_id")
   EXECUTE FUNCTION "search_tree_items_changed"();--> statement-breakpoint
 CREATE FUNCTION "search_space_changed"() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
@@ -195,7 +196,7 @@ BEGIN
 END $$;--> statement-breakpoint
 CREATE TRIGGER "search_page_documents_changed" AFTER INSERT OR UPDATE OF "snapshot" ON "page_documents"
   FOR EACH ROW EXECUTE FUNCTION "search_live_document_changed"();--> statement-breakpoint
-CREATE FUNCTION "search_language_changed"() RETURNS trigger LANGUAGE plpgsql AS $$
+CREATE FUNCTION "search_setting_changed"() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE
   "changed" "setting_values";
 BEGIN
@@ -204,7 +205,7 @@ BEGIN
   ELSE
     "changed" := NEW;
   END IF;
-  IF "changed"."key" NOT IN ('content.language', 'locale.language') THEN
+  IF "changed"."key" NOT IN ('content.language', 'locale.language', 'pages.status') THEN
     RETURN NULL;
   END IF;
   INSERT INTO "search_pending_items" ("item_id")
@@ -219,7 +220,7 @@ BEGIN
   RETURN NULL;
 END $$;--> statement-breakpoint
 CREATE TRIGGER "search_setting_values_changed" AFTER INSERT OR UPDATE OR DELETE ON "setting_values"
-  FOR EACH ROW EXECUTE FUNCTION "search_language_changed"();--> statement-breakpoint
+  FOR EACH ROW EXECUTE FUNCTION "search_setting_changed"();--> statement-breakpoint
 INSERT INTO "search_index_state" ("id", "building_since", "build_total")
 SELECT 1, now(), count(*) FROM "tree_items" WHERE "kind"::text IN ('page', 'blogPost') AND "trash_entry_id" IS NULL;--> statement-breakpoint
 INSERT INTO "search_pending_items" ("item_id")

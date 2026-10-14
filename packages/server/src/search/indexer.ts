@@ -3,6 +3,7 @@ import { type ContentLanguage, OTHER_CONTENT_LANGUAGE } from "@pagehall/shared";
 import { type SQL, sql } from "drizzle-orm";
 import type { Database, Executor } from "../database/database.js";
 import type { Logger } from "../logging/logger.js";
+import { pageStatusEnabledCondition } from "../spaces/status.js";
 import { readerTokens, restrictionIds } from "./access.js";
 import type { IndexedChunk, IndexedItem, ItemAccess, SearchAdapter } from "./adapter.js";
 import { documentChunks, textChunks } from "./chunks.js";
@@ -244,6 +245,7 @@ export class SearchIndexer {
       live_document: DocumentJson | null;
       live_schema: number | null;
       live_changed_at: Date | string | null;
+      status_id: string | null;
     }>(sql`
       select t.id, t.kind, t.mode, t.title, t.space_id, s.organization_id, t.creator_id, t.created_at,
         t.content_updated_at, t.content_language, ${indexable(sql`t`, sql`s`)} as indexable,
@@ -254,8 +256,9 @@ export class SearchIndexer {
         ${organizationLanguage(sql`s.organization_id`)} as organization_language,
         v.title as version_title, v.document as version_document, v.schema_version as version_schema,
         v.created_at as version_created_at, d.snapshot as live_document, d.schema_version as live_schema,
-        d.changed_at as live_changed_at
+        d.changed_at as live_changed_at, sv.id as status_id
       from tree_items t join spaces s on s.id = t.space_id
+      left join page_status_values sv on sv.id = t.status_id and ${pageStatusEnabledCondition(sql`s`)}
       left join page_versions v on v.id = t.published_version_id and t.mode = 'publish'
       left join page_documents d on d.item_id = t.id and t.mode = 'live'
       where t.id = ${itemId}`);
@@ -325,7 +328,7 @@ export class SearchIndexer {
       restrictions: row.restrictions,
       archived: row.archived,
       labels: row.labels,
-      status: null,
+      status: row.status_id,
       language,
       config: await this.#configs.configFor(language),
       chunks,

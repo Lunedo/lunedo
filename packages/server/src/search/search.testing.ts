@@ -8,7 +8,7 @@ export function searchRequest(query: string, overrides: Partial<SearchRequest> =
     contentTypes: [],
     labels: [],
     authorIds: [],
-    statuses: [],
+    statusIds: [],
     includeArchived: false,
     updatedAfter: null,
     updatedBefore: null,
