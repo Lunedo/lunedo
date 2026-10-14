@@ -14,10 +14,12 @@ import {
   LockKeyhole,
   Mail,
   Palette,
+  Search,
   Settings,
   ShieldAlert,
   ShieldCheck,
   SlidersHorizontal,
+  TextSearch,
   Trash2,
   User,
   UserRound,
@@ -62,6 +64,7 @@ navigationItems.register(
     icon: Palette,
     labelKey: "navigation.preferences",
     to: "/settings/preferences",
+    shortcut: ["G", "P"],
   },
   {
     id: "account.security",
@@ -70,6 +73,7 @@ navigationItems.register(
     icon: LockKeyhole,
     labelKey: "navigation.security",
     to: "/settings/security",
+    shortcut: ["G", "S"],
   },
   {
     id: "account.notifications",
@@ -96,6 +100,7 @@ navigationItems.register(
     labelKey: "navigation.members",
     to: `${ORGANIZATION}/members`,
     permission: "organization.members.view",
+    shortcut: ["G", "M"],
   },
   {
     id: "organization.groups",
@@ -213,6 +218,7 @@ navigationItems.register(
     labelKey: "navigation.auditLog",
     to: `${ORGANIZATION}/audit-log`,
     permission: "organization.audit.view",
+    shortcut: ["G", "A"],
   },
   {
     id: "instance.general",
@@ -335,6 +341,23 @@ navigationItems.register(
 
 commands.register(
   {
+    id: "commands.search",
+    group: "actions",
+    labelKey: "commands.search",
+    icon: Search,
+    shortcut: ["/"],
+    keywords: ["find", "suchen"],
+    run: (context) => context.openSearch(),
+  },
+  {
+    id: "commands.searchPage",
+    group: "navigation",
+    labelKey: "commands.openSearchPage",
+    icon: TextSearch,
+    keywords: ["filters", "saved searches", "Filter", "gespeicherte Suchen"],
+    run: (context) => context.navigate("/search"),
+  },
+  {
     id: "commands.spaces",
     group: "navigation",
     labelKey: "commands.goSpaces",
@@ -416,7 +439,7 @@ shortcuts.register(
     keys: ["/"],
     group: "general",
     labelKey: "shortcuts.search",
-    run: (context) => context.openCommandPalette(),
+    run: (context) => context.openSearch(),
   },
   {
     id: "shortcuts.help",

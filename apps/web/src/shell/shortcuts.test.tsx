@@ -18,6 +18,7 @@ function recordingContext(
     can: () => true,
     navigate: (to, params) => navigated.push({ to, params }),
     openCommandPalette: () => undefined,
+    openSearch: () => undefined,
     openShortcuts: () => undefined,
     toggleNotifications: () => undefined,
     toggleSidebar: () => undefined,

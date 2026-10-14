@@ -11,6 +11,7 @@ import { z } from "zod";
 import { instanceInfoQuery, sessionQuery } from "./api/queries.js";
 import { NotFoundScreen, RouteErrorScreen, ScreenErrorScreen } from "./errors/route-error.js";
 import { RootLayout } from "./root-layout.js";
+import { searchPageSearch } from "./search/search-params.js";
 import { safeRedirect } from "./session/redirect.js";
 
 export interface RouterContext {
@@ -185,6 +186,13 @@ const forYouRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/home",
   component: lazyRouteComponent(() => import("./collaboration/home-screen.js"), "HomeScreen"),
+});
+
+const searchRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/search",
+  validateSearch: searchPageSearch,
+  component: lazyRouteComponent(() => import("./search/search-screen.js"), "SearchScreen"),
 });
 
 const myTasksRoute = createRoute({
@@ -747,6 +755,7 @@ const routeTree = rootRoute.addChildren([
   appRoute.addChildren([
     homeRoute,
     forYouRoute,
+    searchRoute,
     myTasksRoute,
     blogRoute,
     spacesRoute,
