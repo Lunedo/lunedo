@@ -2,15 +2,30 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { copyFileSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { BREAKING_API_LABEL, contextFromEnvironment, pullRequestLabels } from "./github-api.ts";
 
 const OASDIFF = "tufin/oasdiff@sha256:0286f138545a39010525df6c1bea67ffafacb384ef800effffa63bbd04718ce5";
 const DESCRIPTION = "apps/api/openapi.json";
 
 const base = process.argv[2];
-const allowBreaking = process.argv.includes("--allow-breaking");
-if (!base) {
-  console.error("Usage: node scripts/check-api-compatibility.ts <base revision> [--allow-breaking]");
+const pullRequestFlag = process.argv.indexOf("--pr");
+const pullRequest = pullRequestFlag < 0 ? undefined : Number(process.argv[pullRequestFlag + 1]);
+if (!base || (pullRequest !== undefined && !Number.isInteger(pullRequest))) {
+  console.error(
+    "Usage: node scripts/check-api-compatibility.ts <base revision> [--allow-breaking | --pr <number>]",
+  );
   process.exit(2);
+}
+let allowBreaking = process.argv.includes("--allow-breaking");
+if (pullRequest !== undefined) {
+  try {
+    allowBreaking = (await pullRequestLabels(contextFromEnvironment(process.env), pullRequest)).includes(
+      BREAKING_API_LABEL,
+    );
+  } catch (error) {
+    console.error(`Could not read the labels of pull request ${pullRequest}: ${(error as Error).message}`);
+    process.exit(1);
+  }
 }
 
 let previous: string;
