@@ -407,6 +407,13 @@
       "when": 1791989101043,
       "tag": "0057_exports",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1791994906991,
+      "tag": "0058_search_attachments_meetings",
+      "breakpoints": true
     }
   ]
 }

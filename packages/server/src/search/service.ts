@@ -1,5 +1,5 @@
 import { cleanLabel } from "@pagehall/editor-schema";
-import { sql } from "drizzle-orm";
+import { type SQL, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database } from "../database/database.js";
@@ -64,6 +64,18 @@ export interface SearchSpace {
   personal: boolean;
 }
 
+export interface SearchReference {
+  id: string;
+  title: string;
+}
+
+export interface SearchAttachment {
+  id: string;
+  name: string;
+  contentType: string;
+  size: number;
+}
+
 export interface SearchHit {
   type: SearchContentType;
   id: string;
@@ -79,6 +91,9 @@ export interface SearchHit {
   status: PageStatus | null;
   author: { id: string; name: string } | null;
   archived: boolean;
+  attachment: SearchAttachment | null;
+  topic: SearchReference | null;
+  series: SearchReference | null;
   updatedAt: string;
   cursor: SearchCursor;
 }
@@ -109,6 +124,14 @@ const TYPE_ALIASES: Record<string, SearchContentType> = {
   post: "blogPost",
   comment: "comment",
   comments: "comment",
+  attachment: "attachment",
+  attachments: "attachment",
+  file: "attachment",
+  files: "attachment",
+  topic: "topic",
+  topics: "topic",
+  decision: "decision",
+  decisions: "decision",
 };
 
 export function excerptParts(raw: string): ExcerptPart[] {
@@ -360,6 +383,7 @@ export class SearchService {
       hits.flatMap((hit) => (hit.authorId ? [hit.authorId] : [])),
     );
     const statuses = await this.#statuses(hits.flatMap((hit) => (hit.status ? [hit.status] : [])));
+    const meetings = await this.#meetingContext(principal, hits);
     return hits.map((hit) => {
       const space = spaces.get(hit.spaceId) ?? null;
       const authorName = hit.authorId ? authors.get(hit.authorId) : undefined;
@@ -378,10 +402,44 @@ export class SearchService {
         status: (hit.status && statuses.get(hit.status)) || null,
         author: hit.authorId && authorName ? { id: hit.authorId, name: authorName } : null,
         archived: hit.archived,
+        attachment: hit.attachment ? { id: hit.sourceId, ...hit.attachment } : null,
+        topic:
+          hit.contentType === "topic"
+            ? { id: hit.itemId, title: hit.title }
+            : (meetings.get(hit.sourceId)?.topic ?? null),
+        series: meetings.get(hit.sourceId)?.series ?? null,
         updatedAt: new Date(hit.contentUpdatedAt).toISOString(),
         cursor: { score: hit.score, updatedAt: hit.contentUpdatedAt, sourceId: hit.sourceId },
       };
     });
+  }
+
+  async #meetingContext(
+    principal: Principal,
+    hits: AdapterHit[],
+  ): Promise<Map<string, { topic: SearchReference | null; series: SearchReference | null }>> {
+    const related = hits.filter((hit) => hit.contentType === "topic" || hit.contentType === "decision");
+    if (related.length === 0) return new Map();
+    const visible = (item: SQL, space: SQL) => visibleItem(this.#authorization, principal, item, space);
+    const result = await this.#database.execute<{
+      id: string;
+      topic: SearchReference | null;
+      series: SearchReference | null;
+    }>(sql`
+      select h.id,
+        (select jsonb_build_object('id', tt.id, 'title', tt.title) from tree_items tt
+          join spaces ts on ts.id = tt.space_id
+          where tt.id = d.topic_id and tt.kind = 'meetingTopic' and ${visible(sql`tt`, sql`ts`)}) as topic,
+        (select jsonb_build_object('id', st.id, 'title', st.title) from tree_items st
+          join spaces ss on ss.id = st.space_id
+          where st.id = coalesce(mt.series_id, m.series_id) and ${visible(sql`st`, sql`ss`)}) as series
+      from unnest(${sql.param(related.map((hit) => hit.sourceId))}::uuid[],
+        ${sql.param(related.map((hit) => hit.contentType))}::text[],
+        ${sql.param(related.map((hit) => hit.itemId))}::uuid[]) as h(id, type, item_id)
+      left join meeting_topics mt on h.type = 'topic' and mt.item_id = h.item_id
+      left join decisions d on h.type = 'decision' and d.id = h.id
+      left join meetings m on m.item_id = d.item_id`);
+    return new Map(result.rows.map((row) => [row.id, { topic: row.topic, series: row.series }]));
   }
 
   async #facets(

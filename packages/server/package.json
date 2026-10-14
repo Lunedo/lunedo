@@ -51,6 +51,7 @@
     "nodemailer": "^10.0.16",
     "openid-client": "^6.8.8",
     "otpauth": "^9.5.2",
+    "pdfjs-dist": "^6.4.299",
     "pg": "^8.23.1",
     "pg-boss": "^12.37.1",
     "pino": "^10.4.0",

@@ -134957,7 +134957,7 @@
       "get": {
         "operationId": "search.search",
         "summary": "Search the content of an organization",
-        "description": "Searches pages, blog posts and comments of all spaces of the organization the caller can read, for the search page and for search while typing. Results, counts and excerpts only ever include content the caller can read; pages shared with the caller show no space or path. Drafts are never searched. Unknown filter values and values of things the caller cannot see give the same empty answer.\n\nRequires the permission `organization.search` on the organization in `organizationId`.",
+        "description": "Searches pages, blog posts, comments, attachments, running topics and decisions of all spaces of the organization the caller can read, for the search page and for search while typing. The text of PDF, Word and Excel attachments is searched, file names of all attachments. Results, counts and excerpts only ever include content the caller can read; pages shared with the caller show no space or path. Drafts, attachments added only in a draft and private meeting notes are never searched. Unknown filter values and values of things the caller cannot see give the same empty answer.\n\nRequires the permission `organization.search` on the organization in `organizationId`.",
         "tags": [
           "Search"
         ],
@@ -134989,7 +134989,7 @@
             "name": "q",
             "in": "query",
             "required": false,
-            "description": "The search text. Words must all match. `\"exact phrase\"` matches the words in this order, `-word` excludes a word, `OR` between two words matches either. The operators `space:KEY`, `label:name`, `author:name`, `status:name` (default values also by their English name, such as `status:verified`) and `type:page|blog|comment` filter like the parameters; quote values with spaces.",
+            "description": "The search text. Words must all match. `\"exact phrase\"` matches the words in this order, `-word` excludes a word, `OR` between two words matches either. The operators `space:KEY`, `label:name`, `author:name`, `status:name` (default values also by their English name, such as `status:verified`) and `type:page|blog|comment|attachment|topic|decision` filter like the parameters; quote values with spaces.",
             "schema": {
               "default": "",
               "type": "string",
@@ -135034,7 +135034,7 @@
             "name": "types",
             "in": "query",
             "required": false,
-            "description": "Only results of these types: `page`, `blogPost` or `comment`. Up to 20 values, separated by commas.",
+            "description": "Only results of these types: `page`, `blogPost`, `comment`, `attachment`, `topic` or `decision`. Up to 20 values, separated by commas.",
             "schema": {
               "type": "string",
               "maxLength": 2000
@@ -135155,30 +135155,33 @@
                         "properties": {
                           "type": {
                             "type": "string",
-                            "description": "`page`, `blogPost` or `comment`. New values can be added in later versions; handle unknown values.",
+                            "description": "`page`, `blogPost`, `comment`, `attachment`, `topic` (a running topic, its updates or a comment on it) or `decision`. New values can be added in later versions; handle unknown values.",
                             "x-extensible-enum": [
                               "page",
                               "blogPost",
-                              "comment"
+                              "comment",
+                              "attachment",
+                              "topic",
+                              "decision"
                             ]
                           },
                           "id": {
                             "type": "string",
                             "format": "uuid",
-                            "description": "ID of the page, blog post or comment."
+                            "description": "ID of the page, blog post, comment, attachment, running topic or decision; for a comment on a running topic, of the comment."
                           },
                           "itemId": {
                             "type": "string",
                             "format": "uuid",
-                            "description": "ID of the page or blog post; for a comment, the page it belongs to."
+                            "description": "ID of the page, blog post or running topic the result belongs to; for a decision, the meeting it was recorded in."
                           },
                           "title": {
                             "type": "string",
-                            "description": "Title of the page or blog post; for a comment, of its page."
+                            "description": "Title of the page, blog post or running topic; for a comment or attachment, of its page; for a decision, of its meeting."
                           },
                           "heading": {
                             "type": "string",
-                            "description": "Heading of the section that matched, or an empty string."
+                            "description": "Heading of the section that matched, the file name of an attachment, the meeting of a topic update, or an empty string."
                           },
                           "anchor": {
                             "description": "Anchor of that heading on the page, or null.",
@@ -135376,6 +135379,101 @@
                             "type": "boolean",
                             "description": "Whether the page is archived."
                           },
+                          "attachment": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the attachment."
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "description": "File name."
+                                  },
+                                  "contentType": {
+                                    "type": "string",
+                                    "description": "Media type of the file."
+                                  },
+                                  "size": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991,
+                                    "description": "Size in bytes."
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name",
+                                  "contentType",
+                                  "size"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "For an attachment, the file on its page; null otherwise."
+                          },
+                          "topic": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the running topic."
+                                  },
+                                  "title": {
+                                    "type": "string",
+                                    "description": "Title of the running topic."
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "title"
+                                ],
+                                "additionalProperties": false,
+                                "description": "The running topic."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "For a topic, the running topic; for a decision, the topic it closed when the caller can read it; null otherwise."
+                          },
+                          "series": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the meeting series."
+                                  },
+                                  "title": {
+                                    "type": "string",
+                                    "description": "Title of the meeting series."
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "title"
+                                ],
+                                "additionalProperties": false,
+                                "description": "The meeting series."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "For a topic or decision, its meeting series when the caller can read it; null otherwise."
+                          },
                           "updatedAt": {
                             "type": "string",
                             "format": "date-time",
@@ -135397,6 +135495,9 @@
                           "status",
                           "author",
                           "archived",
+                          "attachment",
+                          "topic",
+                          "series",
                           "updatedAt"
                         ],
                         "additionalProperties": false,
@@ -135433,7 +135534,10 @@
                                     "x-extensible-enum": [
                                       "page",
                                       "blogPost",
-                                      "comment"
+                                      "comment",
+                                      "attachment",
+                                      "topic",
+                                      "decision"
                                     ]
                                   },
                                   "count": {
@@ -135722,6 +135826,9 @@
                         "name": "Ada Lovelace"
                       },
                       "archived": false,
+                      "attachment": null,
+                      "topic": null,
+                      "series": null,
                       "updatedAt": "2026-10-14T08:30:00.000Z"
                     }
                   ],

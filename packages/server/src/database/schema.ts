@@ -138,6 +138,8 @@ export {
 export { organizationDomains, organizationLogos, organizations } from "../organizations/schema.js";
 export {
   searchChunks,
+  searchFileTextState,
+  searchFileTexts,
   searchIndexState,
   searchPendingItems,
   searchPendingSpaces,

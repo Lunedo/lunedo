@@ -1,4 +1,10 @@
-import { accountAttemptLimitSetting, clientAttemptLimitSetting, SYSTEM } from "@pagehall/server";
+import { Readable } from "node:stream";
+import {
+  accountAttemptLimitSetting,
+  accountPrincipal,
+  clientAttemptLimitSetting,
+  SYSTEM,
+} from "@pagehall/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -110,6 +116,39 @@ describe.skipIf(!databaseBaseUrl)("search through the API", () => {
       `/api/v1/organizations/${organizationId}/search?q=${word}&cursor=nope`,
     );
     expect(broken.statusCode).toBe(400);
+  });
+
+  it("returns attachments with their file and accepts the new types as filters", async () => {
+    const { editor, reader, word, pageId } = await setup();
+    const attachment = await test.runtime.services.attachments.upload(accountPrincipal(editor.id), pageId, {
+      name: "printer-manual.txt",
+      body: Readable.from([Buffer.from("Manual")]),
+    });
+    await test.runtime.services.search.indexer.drain();
+    const response = await reader.client.get(
+      `/api/v1/organizations/${organizationId}/search?q=manual&types=attachment,topic,decision`,
+    );
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json().results).toEqual([
+      expect.objectContaining({
+        type: "attachment",
+        id: attachment.id,
+        itemId: pageId,
+        heading: "printer-manual.txt",
+        attachment: {
+          id: attachment.id,
+          name: "printer-manual.txt",
+          contentType: attachment.contentType,
+          size: 6,
+        },
+        topic: null,
+        series: null,
+      }),
+    ]);
+    const typed = await reader.client.get(
+      `/api/v1/organizations/${organizationId}/search?q=${encodeURIComponent(`type:attachment printer ${word}`)}`,
+    );
+    expect(typed.json().total).toBe(0);
   });
 
   it("refuses people outside the organization", async () => {

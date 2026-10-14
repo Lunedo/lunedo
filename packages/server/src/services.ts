@@ -488,14 +488,6 @@ export function createAccountServices(options: {
     jobs,
   });
   const people = new PeopleService({ database, authorization });
-  const searchAdapter = new PostgresSearchAdapter();
-  const search = new SearchService({
-    database,
-    authorization,
-    people,
-    adapter: searchAdapter,
-    indexer: new SearchIndexer({ database, adapter: searchAdapter }),
-  });
   const spaces = new SpaceService({ database, audit, authorization, settings, people });
   const spacePermissions = new SpacePermissionService({
     database,
@@ -582,6 +574,14 @@ export function createAccountServices(options: {
     signer,
   });
   const attachments = new AttachmentService({ database, files, settings, people, audit });
+  const searchAdapter = new PostgresSearchAdapter();
+  const search = new SearchService({
+    database,
+    authorization,
+    people,
+    adapter: searchAdapter,
+    indexer: new SearchIndexer({ database, adapter: searchAdapter, files }),
+  });
   const guestShares = new GuestShareService({
     database,
     authorization,

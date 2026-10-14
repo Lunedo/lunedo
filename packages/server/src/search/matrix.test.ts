@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-import type { DocumentJson } from "@pagehall/editor-schema";
+import { Readable } from "node:stream";
+import type { DocumentJson, NodeJson } from "@pagehall/editor-schema";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accountPrincipal, type Principal, SYSTEM } from "../accounts/principal.js";
 import type { PrincipalKind } from "../organizations/access-schema.js";
@@ -9,6 +10,7 @@ import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { spaceFixtures } from "../testing/spaces.js";
 import type { SearchContentType } from "./adapter.js";
+import { pdfFile } from "./extraction/files.testing.js";
 import { searchRequest } from "./search.testing.js";
 import type { SearchCursor } from "./service.js";
 
@@ -38,6 +40,8 @@ const roles: SpaceRole[] = ["reader", "commenter", "editor", "admin"];
 const shareRoles: SpaceRole[] = ["reader", "commenter", "editor"];
 const GENERATED_SPACES = 18;
 const WORD = "matrixword";
+const UPDATE_WORD = "matrixupdate";
+const PRIVATE_WORD = "matrixprivate";
 
 function random(seed: number): () => number {
   let state = seed;
@@ -53,6 +57,16 @@ function body(text: string): DocumentJson {
   return { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text }] }] };
 }
 
+function writeUpdate(document: DocumentJson, topicId: string, value: string): DocumentJson {
+  const visit = (node: NodeJson): NodeJson => {
+    if (node.type === "topicUpdate" && node.attrs?.topicId === topicId) {
+      return { ...node, content: [{ type: "paragraph", content: [{ type: "text", text: value }] }] };
+    }
+    return node.content ? { ...node, content: node.content.map(visit) } : node;
+  };
+  return visit(document) as DocumentJson;
+}
+
 interface Holder {
   kind: PrincipalKind;
   id: string | null;
@@ -60,11 +74,15 @@ interface Holder {
 
 interface World {
   organizationId: string;
+  ownerId: string;
   ids: Record<Person, string>;
   items: string[];
   withWord: string[];
   comments: string[];
   hiddenComments: string[];
+  attachments: string[];
+  topics: { id: string; meetingId: string; commentId: string }[];
+  decisions: { id: string; meetingId: string }[];
 }
 
 describe.skipIf(!baseUrl)("search access matrix", () => {
@@ -159,6 +177,46 @@ describe.skipIf(!baseUrl)("search access matrix", () => {
     const items: string[] = [];
     const comments: string[] = [];
     const hiddenComments: string[] = [];
+    const attachments: string[] = [];
+    const topics: World["topics"] = [];
+    const decisions: World["decisions"] = [];
+    const file = pdfFile([[`${WORD} attachment text`]]);
+    const upload = async (itemId: string, name: string) =>
+      (await test.services.attachments.upload(owner, itemId, { name, body: Readable.from([file]) })).id;
+
+    const meetings = async (spaceId: string, parentId: string | null) => {
+      const seriesId = await test.services.meetings.createSeries(owner, spaceId, {
+        name: `Series ${randomUUID().slice(0, 6)}`,
+        parentId,
+        members: [org.owner],
+        templateId: "builtin:team-meeting",
+        rhythm: { frequency: "weekly", interval: 1, weekdays: ["MO"] },
+        startsOn: "2030-03-18",
+        startTime: "09:30",
+        timeZone: "Europe/Vienna",
+        durationMinutes: 30,
+      });
+      const meetingId = (await test.services.meetings.details(owner, seriesId)).upcoming?.id ?? "";
+      const topicId = await test.services.topics.create(owner, seriesId, { title: `${WORD} topic` });
+      const snapshot = await test.services.documents.snapshot(meetingId);
+      if (!snapshot) throw new Error("The meeting has no content");
+      await test.services.documents.replace(
+        owner,
+        meetingId,
+        writeUpdate(snapshot.document, topicId, UPDATE_WORD),
+      );
+      const commentId = await test.services.comments.create(owner, topicId, {
+        body: body(`${WORD} topic comment`),
+      });
+      const decision = await test.services.topics.closeAsDecision(owner, topicId, {
+        statement: `${WORD} decided`,
+      });
+      await test.services.privateNotes.save(owner, meetingId, { document: body(PRIVATE_WORD), revision: 0 });
+      items.push(meetingId);
+      topics.push({ id: topicId, meetingId, commentId });
+      decisions.push({ id: decision.decisionId, meetingId });
+      return [seriesId, meetingId, topicId];
+    };
 
     const page = async (
       spaceId: string,
@@ -194,7 +252,12 @@ describe.skipIf(!baseUrl)("search access matrix", () => {
       return id;
     };
 
-    const fill = async (spaceId: string, index: number, holders: Holder[] = itemHolders) => {
+    const fill = async (
+      spaceId: string,
+      index: number,
+      holders: Holder[] = itemHolders,
+      options: { meetings?: boolean } = { meetings: true },
+    ) => {
       const root = await page(spaceId, null, "publish", true);
       const child = await page(spaceId, root, "live", false);
       const grandchild = await page(spaceId, child, "live", false);
@@ -204,7 +267,18 @@ describe.skipIf(!baseUrl)("search access matrix", () => {
       const secondChild = await page(spaceId, second, "publish", true);
       const tree = [root, child, grandchild, draft, belowDraft, second, secondChild];
       items.push(...tree);
-      for (const itemId of tree) {
+      const published = await upload(root, "published.pdf");
+      const removedAtPublication = await upload(root, "removed.pdf");
+      const removedInDraft = await upload(root, "removed-in-draft.pdf");
+      await test.services.versions.publish(owner, root);
+      await test.services.attachments.delete(owner, removedAtPublication);
+      await test.services.versions.publish(owner, root);
+      const draftOnly = await upload(root, "draft-only.pdf");
+      await test.services.attachments.delete(owner, removedInDraft);
+      attachments.push(published, removedAtPublication, removedInDraft, draftOnly);
+      attachments.push(await upload(child, "live.pdf"), await upload(belowDraft, "below-draft.pdf"));
+      const meetingItems = options.meetings ? await meetings(spaceId, index % 3 === 0 ? draft : null) : [];
+      for (const itemId of [...tree, ...meetingItems]) {
         if (next() < 0.3) {
           await query("insert into page_restrictions (item_id, kind) values ($1, 'view')", [itemId]);
           const count = 1 + Math.floor(next() * 2);
@@ -291,7 +365,7 @@ describe.skipIf(!baseUrl)("search access matrix", () => {
           [randomUUID(), personal, holder.kind, holder.id, pick(roles)],
         );
       }
-      await fill(personal, index);
+      await fill(personal, index, itemHolders, { meetings: false });
     }
 
     const deleted = await fixtures.space(org.id, org.owner, {
@@ -318,11 +392,15 @@ describe.skipIf(!baseUrl)("search access matrix", () => {
     expect(all.rows.length).toBeGreaterThan(items.length);
     return {
       organizationId: org.id,
+      ownerId: org.owner,
       ids,
       items: all.rows.map((row) => row.id),
       withWord: items,
       comments,
       hiddenComments,
+      attachments,
+      topics,
+      decisions,
     };
   }
 
@@ -389,13 +467,59 @@ describe.skipIf(!baseUrl)("search access matrix", () => {
       [world.items],
     );
     const expectedPages = pages.filter((id) => indexable.rows.some((row) => row.id === id));
-    expect(await found(person, "", ["page"])).toEqual(expectedPages);
-    expect(await found(person, WORD, ["page"])).toEqual(
+    expect(await found(person, "", ["page"]), "pages").toEqual(expectedPages);
+    expect(await found(person, WORD, ["page"]), "pages with word").toEqual(
       expectedPages.filter((id) => world.withWord.includes(id)),
     );
     const expectedComments = await allowed(person, "comment.view", "comment", world.comments);
-    expect(await found(person, "", ["comment"])).toEqual(expectedComments);
-    visibleCounts.set(person, expectedPages.length + expectedComments.length);
+    expect(await found(person, "", ["comment"]), "comments").toEqual(expectedComments);
+
+    const viewable = await allowed(person, "attachment.view", "attachment", world.attachments);
+    const publishedAttachments = await query(
+      `select a.id from attachments a join tree_items t on t.id = a.item_id
+       where a.id = any($1::uuid[]) and a.published_version_id is not null
+         and (t.mode = 'live' or t.published_version_id is not null)`,
+      [viewable],
+    );
+    const expectedAttachments = publishedAttachments.rows.map((row) => row.id as string).sort();
+    expect(await found(person, "", ["attachment"]), "attachments").toEqual(expectedAttachments);
+    expect(await found(person, WORD, ["attachment"]), "attachments with word").toEqual(expectedAttachments);
+
+    const topics = await allowed(
+      person,
+      "item.view",
+      "item",
+      world.topics.map((topic) => topic.id),
+    );
+    const topicComments = await allowed(
+      person,
+      "comment.view",
+      "comment",
+      world.topics.filter((topic) => topics.includes(topic.id)).map((topic) => topic.commentId),
+    );
+    expect(await found(person, "", ["topic"]), "topics").toEqual([...topics, ...topicComments].sort());
+    const meetings = await allowed(
+      person,
+      "item.view",
+      "item",
+      world.topics.map((topic) => topic.meetingId),
+    );
+    expect(await found(person, UPDATE_WORD, ["topic"]), "topic updates").toEqual(
+      world.topics
+        .filter((topic) => topics.includes(topic.id) && meetings.includes(topic.meetingId))
+        .map((topic) => topic.id)
+        .sort(),
+    );
+    const expectedDecisions = world.decisions
+      .filter((decision) => meetings.includes(decision.meetingId))
+      .map((decision) => decision.id)
+      .sort();
+    expect(await found(person, "", ["decision"]), "decisions").toEqual(expectedDecisions);
+    expect(await found(person, PRIVATE_WORD, []), "private notes").toEqual([]);
+    visibleCounts.set(
+      person,
+      expectedPages.length + expectedComments.length + expectedAttachments.length + topics.length,
+    );
   }
 
   describe("with stored access", () => {
@@ -418,6 +542,33 @@ describe.skipIf(!baseUrl)("search access matrix", () => {
       expect(visibleCounts.get("endedMember")).toBeLessThan(visibleCounts.get("member") ?? 0);
     });
 
+    it("covers attachments, topics and decisions that only some people may view", async () => {
+      const counts = await Promise.all(
+        (["member", "plainMember", "guest"] as const).map(async (person) => ({
+          attachments: (await found(person, "", ["attachment"])).length,
+          topics: (await found(person, "", ["topic"])).length,
+          decisions: (await found(person, "", ["decision"])).length,
+        })),
+      );
+      for (const count of counts) {
+        expect(count.attachments).toBeLessThan(world.attachments.length);
+        expect(count.topics).toBeLessThan(world.topics.length * 2);
+        expect(count.decisions).toBeLessThan(world.decisions.length);
+      }
+      expect(counts.some((count) => count.attachments > 0 && count.topics > 0 && count.decisions > 0)).toBe(
+        true,
+      );
+    });
+
+    it("never finds private notes, not even their author", async () => {
+      const author = await test.services.search.search(
+        accountPrincipal(world.ownerId),
+        world.organizationId,
+        searchRequest(PRIVATE_WORD, { includeArchived: true }),
+      );
+      expect(author.results).toEqual([]);
+    });
+
     it("never finds hidden or deleted comments, also for editors", async () => {
       for (const person of people) {
         const ids = await found(person, "", ["comment"]);
@@ -429,7 +580,8 @@ describe.skipIf(!baseUrl)("search access matrix", () => {
   describe("while access updates are pending", () => {
     beforeAll(async () => {
       await query(
-        `update search_chunks set readers = $1::text[], restrictions = '{}'
+        `update search_chunks set readers = $1::text[], restrictions = '{}',
+           context_readers = case when context_item_id is not null then $1::text[] end, context_restrictions = '{}'
          where organization_id = $2`,
         [
           [

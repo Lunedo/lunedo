@@ -6,6 +6,7 @@ import {
   customType,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
@@ -16,13 +17,14 @@ import {
 } from "drizzle-orm/pg-core";
 import { accounts } from "../accounts/schema.js";
 import { primaryId, timestamps } from "../database/columns.js";
+import { storedFiles } from "../files/schema.js";
 import { organizations } from "../organizations/schema.js";
 import { spaces, treeItems } from "../spaces/schema.js";
 
 const timestampColumn = () => timestamp({ withTimezone: true, mode: "date" });
 const tsvector = customType<{ data: string }>({ dataType: () => "tsvector" });
 
-export const searchSources = ["item", "comment"] as const;
+export const searchSources = ["item", "comment", "attachment", "decision"] as const;
 export type SearchSource = (typeof searchSources)[number];
 export const searchSource = pgEnum("search_source", searchSources);
 
@@ -55,6 +57,10 @@ export const searchChunks = pgTable(
     archived: boolean().notNull().default(false),
     readers: text().array().notNull(),
     restrictions: uuid().array().notNull(),
+    contextItemId: uuid().references(() => treeItems.id, { onDelete: "cascade" }),
+    contextReaders: text().array(),
+    contextRestrictions: uuid().array().notNull().default(sql`'{}'::uuid[]`),
+    attachment: jsonb(),
     document: tsvector().notNull(),
     ...timestamps(),
   },
@@ -63,12 +69,35 @@ export const searchChunks = pgTable(
     index().on(table.itemId),
     index().on(table.spaceId),
     index().on(table.authorId),
+    index().on(table.contextItemId),
     index("search_chunks_organization_config_index").on(table.organizationId, table.config),
     index("search_chunks_organization_updated_index").on(table.organizationId, table.contentUpdatedAt),
     index("search_chunks_document_index").using("gin", table.document),
     index("search_chunks_readers_index").using("gin", table.readers),
     index("search_chunks_labels_index").using("gin", table.labels),
     check("search_chunks_position", sql`${table.position} >= 0`),
+  ],
+);
+
+export const searchFileTextStates = ["extracted", "skipped"] as const;
+export type SearchFileTextState = (typeof searchFileTextStates)[number];
+export const searchFileTextState = pgEnum("search_file_text_state", searchFileTextStates);
+
+export const searchFileTexts = pgTable(
+  "search_file_texts",
+  {
+    fileId: uuid()
+      .primaryKey()
+      .references(() => storedFiles.id, { onDelete: "cascade" }),
+    extractorVersion: integer().notNull(),
+    state: searchFileTextState().notNull(),
+    reason: text(),
+    truncated: boolean().notNull().default(false),
+    sections: jsonb().notNull().default(sql`'[]'::jsonb`),
+    ...timestamps(),
+  },
+  (table) => [
+    check("search_file_texts_reason", sql`(${table.state} = 'skipped') = (${table.reason} is not null)`),
   ],
 );
 
