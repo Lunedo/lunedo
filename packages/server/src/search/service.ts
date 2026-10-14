@@ -268,7 +268,10 @@ export class SearchService {
     let authorIds: string[] | null = null;
     if (request.authorIds.length > 0 || operators.author.length > 0) {
       authorIds = [
-        ...new Set([...request.authorIds, ...(await this.#authorsNamed(principal, operators.author))]),
+        ...new Set([
+          ...(await this.#visibleAuthors(principal, request.authorIds)),
+          ...(await this.#authorsNamed(principal, operators.author)),
+        ]),
       ];
     }
 
@@ -309,6 +312,15 @@ export class SearchService {
       from page_status_values sv join spaces s on s.id = sv.space_id
       where sv.id = any(${sql.param([...new Set(ids)])}::uuid[]) and ${pageStatusEnabledCondition(sql`s`)}`);
     return new Map(result.rows.map((row) => [row.id, row]));
+  }
+
+  async #visibleAuthors(principal: Principal, ids: readonly string[]): Promise<string[]> {
+    if (ids.length === 0) return [];
+    const result = await this.#database.execute<{ id: string }>(sql`
+      select a.id from accounts a left join accounts m on m.id = a.merged_into_id
+      where a.id = any(${sql.param([...new Set(ids)])}::uuid[])
+        and ${this.#people.visibleCondition(principal, sql`coalesce(m.id, a.id)`)}`);
+    return result.rows.map((row) => row.id);
   }
 
   async #authorsNamed(principal: Principal, names: readonly string[]): Promise<string[]> {

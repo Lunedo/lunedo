@@ -347,6 +347,38 @@ describe.skipIf(!baseUrl)("search", () => {
     expect(requests.map((request) => request.filters.statusIds)).toEqual([[sharedVerified?.id]]);
   });
 
+  it("filters by author IDs only of people the person can see", async () => {
+    const w = await world();
+    const leaverId = await member(w.org.id, "member", "Lea Leaver");
+    const open = await space(w.org.id, w.authorId, {
+      visibility: "organization",
+      grants: [{ principalKind: "account", principalId: leaverId, role: "editor" }],
+    });
+    const left = await test.services.tree.create(accountPrincipal(leaverId), open.id, {
+      kind: "page",
+      title: "Left behind",
+      mode: "live",
+      placement: { parentId: null },
+      document: doc(paragraph(`${w.word} handover`)),
+    });
+    await drain();
+    expect(await ids(w.other, w.org.id, w.word, { authorIds: [leaverId] })).toEqual([left.id]);
+
+    await test.pool.query("delete from space_permissions where principal_id = $1", [leaverId]);
+    await test.pool.query(
+      "update memberships set expires_at = now() - interval '1 day' where account_id = $1",
+      [leaverId],
+    );
+    await drain();
+    expect(await test.services.people.canSee(w.other, leaverId)).toBe(false);
+    expect(await ids(w.other, w.org.id, `${w.word} handover`)).toEqual([left.id]);
+    const invisible = await find(w.other, w.org.id, w.word, { authorIds: [leaverId] });
+    const unknown = await find(w.other, w.org.id, w.word, { authorIds: [randomUUID()] });
+    expect({ ...invisible, index: null }).toEqual({ ...unknown, index: null });
+    expect(invisible.results).toEqual([]);
+    expect(await ids(w.author, w.org.id, w.word, { authorIds: [w.otherId, leaverId] })).toEqual([w.beta]);
+  });
+
   it("filters by page status and follows changes of status, values and the space setting", async () => {
     const w = await world();
     const statuses = test.services.pageStatus;
