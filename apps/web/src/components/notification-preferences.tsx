@@ -6,7 +6,7 @@ import {
   notificationChannelSettingKey,
   notificationEvents,
 } from "@pagehall/shared";
-import { Button, Notice, Section, Select, Skeleton, Switch, Table } from "@pagehall/ui";
+import { Button, Notice, Section, Select, Skeleton, Switch } from "@pagehall/ui";
 import { Building2, Lock, PenLine, Server } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { SettingEntry } from "../api/organization-queries.js";
@@ -89,7 +89,7 @@ function RowSource({
   );
 }
 
-function EventTable({
+function EventList({
   rows,
   caption,
   level,
@@ -117,87 +117,78 @@ function EventTable({
       for (const entry of own(row)) await onChange(entry.key, undefined);
     });
 
+  const inAppLabel = t("notifications.channels.inApp");
+  const emailLabel = t("notifications.channels.email");
   return (
-    <Table
-      caption={caption}
-      rowKey={(row) => row.event.id}
-      rows={rows}
-      columns={[
-        {
-          key: "event",
-          header: t("notifications.event"),
-          cell: (row) => (
-            <div className="flex min-w-0 flex-col gap-1">
-              <span className="font-medium wrap-anywhere">{label(row)}</span>
-              <RowSource row={row} level={level} organizationName={organizationName} />
-              <SaveIndicator tracker={saveState(row.event.id)} />
-            </div>
-          ),
-        },
-        {
-          key: "inApp",
-          header: t("notifications.channels.inApp"),
-          cell: (row) => {
-            const reason = disabledReason(t, row.inApp, level, editable, organizationName);
-            return (
-              <Switch
-                label={t("notifications.channelFor", {
-                  event: label(row),
-                  channel: t("notifications.channels.inApp"),
-                })}
-                labelHidden
-                checked={current(row.inApp) === true}
-                disabled={reason !== undefined}
-                {...(reason ? { disabledReason: reason } : {})}
-                onCheckedChange={(checked) => save(row, row.inApp.key, checked)}
-              />
-            );
-          },
-        },
-        {
-          key: "email",
-          header: t("notifications.channels.email"),
-          cell: (row) => {
-            const reason = disabledReason(t, row.email, level, editable, organizationName);
-            const value = current(row.email);
-            return (
-              <div className="flex flex-col gap-1">
-                <Select
-                  aria-label={t("notifications.channelFor", {
-                    event: label(row),
-                    channel: t("notifications.channels.email"),
-                  })}
-                  value={isDelivery(value) ? value : "off"}
-                  disabled={reason !== undefined}
-                  options={emailDeliveries.map((delivery) => ({
-                    value: delivery,
-                    label: t(`notifications.email.${delivery}`),
-                  }))}
-                  onValueChange={(next) => save(row, row.email.key, next)}
-                />
-                {reason ? <span className="text-text-muted text-xs">{reason}</span> : null}
+    <div>
+      <div
+        aria-hidden="true"
+        className="hidden items-center gap-4 border-border border-b bg-surface-sunken px-4 py-2 font-semibold text-text-muted text-xs md:flex"
+      >
+        <span className="min-w-0 flex-1">{t("notifications.event")}</span>
+        <span className="w-number-field shrink-0">{inAppLabel}</span>
+        <span className="w-field shrink-0">{emailLabel}</span>
+      </div>
+      <ul aria-label={caption} className="flex flex-col divide-y divide-border">
+        {rows.map((row) => {
+          const inAppReason = disabledReason(t, row.inApp, level, editable, organizationName);
+          const emailReason = disabledReason(t, row.email, level, editable, organizationName);
+          const email = current(row.email);
+          return (
+            <li key={row.event.id} className="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3">
+              <div className="flex min-w-0 flex-1 basis-field flex-col gap-1">
+                <span className="font-medium wrap-anywhere">{label(row)}</span>
+                <span className="flex flex-wrap items-center gap-2">
+                  <RowSource row={row} level={level} organizationName={organizationName} />
+                  {editable && own(row).length > 0 ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      aria-label={t("notifications.resetEvent", { event: label(row) })}
+                      onClick={() => reset(row)}
+                    >
+                      {t("notifications.reset")}
+                    </Button>
+                  ) : null}
+                </span>
+                <SaveIndicator tracker={saveState(row.event.id)} />
               </div>
-            );
-          },
-        },
-        {
-          key: "reset",
-          header: <span className="sr-only">{t("settings.actions")}</span>,
-          align: "end",
-          cell: (row) =>
-            editable && own(row).length > 0 ? (
-              <Button
-                variant="outline"
-                size="sm"
-                aria-label={t("notifications.resetEvent", { event: label(row) })}
-                onClick={() => reset(row)}
-              >
-                {t("notifications.reset")}
-              </Button>
-            ) : null,
-        },
-      ]}
-    />
+              <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center md:gap-4">
+                <div className="flex items-center gap-2 md:w-number-field">
+                  <Switch
+                    label={t("notifications.channelFor", { event: label(row), channel: inAppLabel })}
+                    labelHidden
+                    checked={current(row.inApp) === true}
+                    disabled={inAppReason !== undefined}
+                    {...(inAppReason ? { disabledReason: inAppReason } : {})}
+                    onCheckedChange={(checked) => save(row, row.inApp.key, checked)}
+                  />
+                  <span aria-hidden="true" className="text-sm md:hidden">
+                    {inAppLabel}
+                  </span>
+                </div>
+                <div className="flex min-w-0 flex-1 flex-col gap-1 md:w-field md:flex-none">
+                  <span aria-hidden="true" className="text-sm md:hidden">
+                    {emailLabel}
+                  </span>
+                  <Select
+                    aria-label={t("notifications.channelFor", { event: label(row), channel: emailLabel })}
+                    value={isDelivery(email) ? email : "off"}
+                    disabled={emailReason !== undefined}
+                    options={emailDeliveries.map((delivery) => ({
+                      value: delivery,
+                      label: t(`notifications.email.${delivery}`),
+                    }))}
+                    onValueChange={(next) => save(row, row.email.key, next)}
+                  />
+                  {emailReason ? <span className="text-text-muted text-xs">{emailReason}</span> : null}
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 
@@ -236,7 +227,7 @@ export function NotificationPreferences({
         </Notice>
       ) : null}
       <Section title={t("notifications.eventTypes")}>
-        <EventTable rows={content} caption={t("notifications.eventTypes")} {...tableProps} />
+        <EventList rows={content} caption={t("notifications.eventTypes")} {...tableProps} />
       </Section>
       {administration.length > 0 ? (
         <details className="rounded-md border border-border bg-surface">
@@ -244,7 +235,7 @@ export function NotificationPreferences({
             {t("notifications.administrationEvents")}
           </summary>
           <div className="border-border border-t">
-            <EventTable
+            <EventList
               rows={administration}
               caption={t("notifications.administrationEvents")}
               {...tableProps}

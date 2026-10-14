@@ -62,15 +62,15 @@ describe("notification preferences", () => {
         onChange={onChange}
       />,
     );
-    const table = screen.getByRole("table", { name: "Events" });
-    const mentions = within(table).getByText("Mentions of me").closest("tr") as HTMLElement;
+    const table = screen.getByRole("list", { name: "Events" });
+    const mentions = within(table).getByText("Mentions of me").closest("li") as HTMLElement;
     expect(within(mentions).getByText("Default of Northwind")).toBeTruthy();
     expect(within(mentions).queryByRole("button", { name: /Reset/ })).toBeNull();
     expect(within(mentions).getByRole("combobox", { name: "Mentions of me: E-mail" }).textContent).toContain(
       "Off",
     );
 
-    const changes = within(table).getByText("Changes to content I watch").closest("tr") as HTMLElement;
+    const changes = within(table).getByText("Changes to content I watch").closest("li") as HTMLElement;
     expect(within(changes).getByText("Set by you")).toBeTruthy();
     expect(
       within(changes)

@@ -2427,7 +2427,7 @@
     "email": {
       "off": "Aus",
       "immediately": "Sofort",
-      "digest": "In der täglichen Zusammenfassung"
+      "digest": "Täglich gesammelt"
     },
     "reset": "Zurücksetzen",
     "resetEvent": "{event} auf den Standard zurücksetzen",
