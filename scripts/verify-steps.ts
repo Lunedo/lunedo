@@ -14,6 +14,7 @@ export function verifySteps(base: string): VerifyStep[] {
     { name: "Lint", command: "pnpm", args: ["lint"] },
     { name: "Private references", command: "pnpm", args: ["references:check"] },
     { name: "Patched dependencies", command: "pnpm", args: ["patches:check"] },
+    { name: "Playwright image", command: "pnpm", args: ["playwright-image:check"] },
     { name: "Translations", command: "pnpm", args: ["i18n:check"] },
     { name: "Typecheck", command: "pnpm", args: ["typecheck"] },
     { name: "Script tests", command: "node", args: ["--test", "scripts/*.test.ts"] },

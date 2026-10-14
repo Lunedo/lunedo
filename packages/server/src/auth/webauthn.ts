@@ -8,6 +8,7 @@ import {
   verifyAuthenticationResponse,
   verifyRegistrationResponse,
 } from "@simplewebauthn/server";
+import { COSEALG } from "@simplewebauthn/server/helpers";
 import { and, eq } from "drizzle-orm";
 import { instanceNameSetting, instanceUrlSetting } from "../accounts/instance-settings.js";
 import type { Database, Executor } from "../database/database.js";
@@ -87,6 +88,7 @@ export class WebAuthnService {
       userID: uuidBytes(account.id),
       timeout: TIMEOUT_MS,
       attestationType: "none",
+      supportedAlgorithmIDs: [COSEALG.EdDSA, COSEALG.ES256, COSEALG.RS256],
       excludeCredentials: existing.map((credential) => ({
         id: credential.credentialId,
         transports: credential.transports,

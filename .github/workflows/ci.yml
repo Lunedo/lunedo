@@ -91,6 +91,7 @@ jobs:
       - run: pnpm lint
       - run: pnpm references:check
       - run: pnpm patches:check
+      - run: pnpm playwright-image:check
       - run: pnpm i18n:check
       - run: pnpm typecheck
       - name: Script tests
@@ -263,7 +264,7 @@ jobs:
     runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 40
     container:
-      image: mcr.microsoft.com/playwright@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27 # v1.63.0-noble
+      image: mcr.microsoft.com/playwright@sha256:06a9939e57531807f8d5fd76ce44b53165ffb7d7501d87ab10e285c20b1e971f # v1.64.0-noble
     services:
       postgres:
         image: postgres:16-alpine

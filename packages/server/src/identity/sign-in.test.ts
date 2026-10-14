@@ -617,6 +617,16 @@ describe.skipIf(!baseUrl)("signing in through an OpenID Connect provider", () =>
     expect(await linkedProviders(moved.accountId)).toEqual([moved.first, moved.second].sort());
   });
 
+  it("offers only the signature algorithms the sign-in request limits are sized for", async () => {
+    const moved = await accountFromProvider();
+    const options = await test.services.webauthn.registrationOptions({
+      id: moved.accountId,
+      email: moved.email,
+      name: "",
+    });
+    expect(options.pubKeyCredParams.map((parameter) => parameter.alg)).toEqual([-8, -7, -257]);
+  });
+
   it("links an account without a password with one of its passkeys", async () => {
     const moved = await accountFromProvider();
     const authenticator = new VirtualAuthenticator();

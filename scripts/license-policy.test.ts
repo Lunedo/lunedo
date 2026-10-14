@@ -4,7 +4,7 @@ import { findLicenseViolations, isApprovedLicense, type PackageLicense } from ".
 
 describe("isApprovedLicense", () => {
   it("accepts approved licenses", () => {
-    for (const license of ["MIT", "Apache-2.0", "BSD-3-Clause", "ISC", "OFL-1.1", "MPL-2.0"]) {
+    for (const license of ["MIT", "Apache-2.0", "BSD-3-Clause", "ISC", "OFL-1.1", "MPL-2.0", "PSF-2.0"]) {
       assert.equal(isApprovedLicense(license), true, license);
     }
   });
