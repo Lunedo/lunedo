@@ -1,9 +1,11 @@
 import {
+  builtInPageStatuses,
   ITEM_DESCRIPTION_MAX_LENGTH,
   ITEM_TITLE_MAX_LENGTH,
   LABEL_MAX_LENGTH,
   MAX_TEMPLATE_TITLE_PATTERN,
   pageModes,
+  pageStatusColors,
   pageWidths,
   SPACE_DESCRIPTION_MAX_LENGTH,
   SPACE_NAME_MAX_LENGTH,
@@ -267,6 +269,29 @@ export const modeSchema = z
     "Editing mode of a page: `publish` (readers see the last published version while editors work on a draft) or `live` (readers see every change at once). Folders and links are always `live`.",
   );
 
+export const pageStatusColorSchema = z
+  .enum(pageStatusColors)
+  .describe("Color of the status: `neutral`, `accent`, `info`, `success`, `warning` or `danger`.");
+
+export const pageStatusSchema = z
+  .object({
+    id: uuid("ID of the status value."),
+    builtIn: extensibleEnum(
+      builtInPageStatuses,
+      "Which default value this is, or null for a value a space admin added. Clients show the translated name of a default value unless `name` is set.",
+    ).nullable(),
+    name: z.string().nullable().describe("Name set by a space admin, or null to show the default name."),
+    color: pageStatusColorSchema,
+  })
+  .describe("A page status.");
+
+export const examplePageStatus = {
+  id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
+  builtIn: "verified",
+  name: null,
+  color: "success",
+};
+
 export const treeItemSchema = z
   .object({
     id: uuid("ID of the item."),
@@ -296,7 +321,12 @@ export const treeItemSchema = z
     editRestricted: z.boolean().describe("Whether only an access list may edit the item."),
     link: linkSchema.nullable().describe("Target of a link, or null for pages and folders."),
     creatorId: uuid("Account that created the item, or null.").nullable(),
-    ownerId: uuid("Account responsible for the item, or null.").nullable(),
+    ownerId: uuid(
+      "Owner of the item, or null. The owner stays set when the person leaves; `owner.active` in the item details says whether the item has an active owner.",
+    ).nullable(),
+    status: pageStatusSchema
+      .nullable()
+      .describe("Status of a page, or null when it has none or page status is turned off in the space."),
     createdAt: timestamp("When the item was created."),
     updatedAt: timestamp("When the item last changed in the tree."),
     contentUpdatedAt: timestamp("When the content of the page last changed."),
@@ -321,6 +351,7 @@ export const exampleItem = {
   link: null,
   creatorId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
   ownerId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+  status: examplePageStatus,
   createdAt: "2026-10-05T08:00:00.000Z",
   updatedAt: "2026-10-05T08:00:00.000Z",
   contentUpdatedAt: "2026-10-05T08:00:00.000Z",
@@ -355,6 +386,26 @@ export const itemDetailsSchema = treeItemSchema
           .describe("An ancestor."),
       )
       .describe("Ancestors from the root down to the parent."),
+    owner: z
+      .object({
+        id: uuid("ID of the owner."),
+        name: z
+          .string()
+          .nullable()
+          .describe("Name of the owner, or null when the caller may not see the person."),
+        email: z
+          .string()
+          .nullable()
+          .describe("E-mail address of the owner, or null when the caller may not see it."),
+        active: z
+          .boolean()
+          .describe(
+            "Whether the owner can still act: false when the account is deactivated or its membership in the organization ended.",
+          ),
+      })
+      .nullable()
+      .describe("Owner of the item, or null when it has none."),
+    ownershipTransferable: z.boolean().describe("Whether the caller may give the item a new owner."),
   })
   .describe("An item with its place in the tree.");
 

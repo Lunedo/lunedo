@@ -128,6 +128,8 @@ export const auditEventNames = [
   "page.updateRejected",
   "page.restrictionSet",
   "page.restrictionRemoved",
+  "page.ownerTransferred",
+  "space.pageStatusValuesChanged",
   "page.restrictionHolderAdded",
   "page.restrictionHolderRemoved",
   "page.shared",

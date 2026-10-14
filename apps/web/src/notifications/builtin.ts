@@ -120,6 +120,14 @@ notificationTypes.register(
     link: (item) => (item.target.id ? { to: `/access-requests/${item.target.id}` } : null),
   },
   {
+    id: "ownership.orphaned",
+    icon: UserRoundX,
+    link: (item) => {
+      const spaceKey = (item.params as { spaceKey?: string }).spaceKey;
+      return spaceKey ? { to: `/spaces/${encodeURIComponent(spaceKey)}/settings/content` } : null;
+    },
+  },
+  {
     id: "restriction.orphaned",
     icon: Lock,
     link: (item) => {

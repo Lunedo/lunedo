@@ -148,6 +148,12 @@ export const contentNotificationParamSchemas = {
     spaceName: z.string(),
     spaceKey: z.string(),
   }),
+  "ownership.orphaned": z.object({
+    spaceId: idSchema,
+    spaceName: z.string(),
+    spaceKey: z.string(),
+    items: z.number().int().positive(),
+  }),
   "space.confidentialWithoutAdministrator": z.object({ spaceKey: z.string() }),
   "meeting.notesAvailable": z.object({
     itemTitle: z.string(),

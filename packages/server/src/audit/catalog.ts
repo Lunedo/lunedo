@@ -1214,6 +1214,23 @@ export const auditCatalog = {
     fields: pageFields.extend({ kind: z.enum(restrictionKindNames) }),
     visibility: "organization",
   }),
+  "page.ownerTransferred": event({
+    actor: ["account", "system"],
+    target: "page",
+    fields: pageFields.extend({ previousOwnerId: z.uuid().nullable(), ownerId: z.uuid() }),
+    visibility: "organization",
+  }),
+  "space.pageStatusValuesChanged": event({
+    actor: ["account"],
+    target: "space",
+    fields: z.object({
+      operation: z.enum(["added", "changed", "removed", "reordered"]),
+      valueId: z.uuid().nullable(),
+      name: z.string().nullable(),
+      pages: z.number().int().min(0),
+    }),
+    visibility: "organization",
+  }),
   "page.restrictionRemoved": event({
     actor: ["account", "system"],
     target: "page",

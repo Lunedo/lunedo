@@ -26,6 +26,7 @@ import type { PeopleService } from "./people.js";
 import type { SpaceRole, SpaceVisibility } from "./schema.js";
 import { type DefaultSpacePermissions, defaultSpacePermissionsSetting, type SpaceGrant } from "./settings.js";
 import { signalSpaceChange } from "./signals.js";
+import { insertDefaultPageStatuses } from "./status.js";
 
 export const SPACE_NAME_MAX_LENGTH = 100;
 export const SPACE_DESCRIPTION_MAX_LENGTH = 1000;
@@ -319,6 +320,7 @@ export class SpaceService {
           returning id`)
       ).rows;
       if (!space) throw new Error("The space was not created");
+      await insertDefaultPageStatuses(tx, space.id);
       const target: SpaceTarget = { id: space.id, organizationId, ownerId: null, confidential };
       const grants = mergeGrants(
         input.grants,

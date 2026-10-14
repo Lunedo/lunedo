@@ -7,13 +7,14 @@ import { useDocumentTitle } from "../../screens/settings/settings-page.js";
 import { spaceDisplayName } from "../space-badge.js";
 import { useSpace } from "../space-context.js";
 
-export type SpaceSettingsTab = "general" | "permissions" | "access" | "content" | "templates";
+export type SpaceSettingsTab = "general" | "permissions" | "access" | "content" | "status" | "templates";
 
 const TAB_PATHS = {
   general: "/spaces/$spaceKey/settings/general",
   permissions: "/spaces/$spaceKey/settings/permissions",
   access: "/spaces/$spaceKey/settings/access",
   content: "/spaces/$spaceKey/settings/content",
+  status: "/spaces/$spaceKey/settings/status",
   templates: "/spaces/$spaceKey/settings/templates",
 } as const;
 
@@ -54,6 +55,7 @@ export function SpaceSettingsPage({
           { value: "permissions", label: t("spaces.settings.permissions") },
           { value: "access", label: t("spaces.access.tab") },
           { value: "content", label: t("content.title") },
+          { value: "status", label: t("pageStatus.settingsTitle") },
           { value: "templates", label: t("templates.title") },
         ]}
       >

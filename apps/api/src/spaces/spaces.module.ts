@@ -4,6 +4,7 @@ import { OneOnOnesController } from "../meetings/one-on-ones.controller.js";
 import { ConfidentialSpacesController } from "./confidential-spaces.controller.js";
 import { ItemsController } from "./items.controller.js";
 import { OrganizationSpacesController } from "./organization-spaces.controller.js";
+import { OwnershipController } from "./ownership.controller.js";
 import { PersonalSpacesController } from "./personal-spaces.controller.js";
 import { SpacesController } from "./spaces.controller.js";
 import { TemplatesController } from "./templates.controller.js";
@@ -16,6 +17,7 @@ import { VersionsController } from "./versions.controller.js";
     OrganizationSpacesController,
     ConfidentialSpacesController,
     ItemsController,
+    OwnershipController,
     PersonalSpacesController,
     VersionsController,
     TrashController,

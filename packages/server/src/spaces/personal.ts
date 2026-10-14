@@ -10,6 +10,7 @@ import { insertPage } from "./items.js";
 import { randomPersonalSpaceKey } from "./keys.js";
 import { signalSpaceChange } from "./signals.js";
 import type { Space, SpaceService } from "./spaces.js";
+import { insertDefaultPageStatuses } from "./status.js";
 
 export interface PersonalSpaceForReview {
   spaceId: string;
@@ -70,6 +71,7 @@ export class PersonalSpaceService {
             on conflict (personal_of) do nothing
             returning id`);
           if (!inserted.rows[0]) return null;
+          await insertDefaultPageStatuses(tx, spaceId);
           await tx.execute(sql`
             insert into space_permissions (id, space_id, principal_kind, principal_id, role, created_by)
             values (${uuidv7()}, ${spaceId}, 'account', ${actor.id}, 'admin', ${actor.id})`);

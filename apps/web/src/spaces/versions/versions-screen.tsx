@@ -38,6 +38,7 @@ import {
   versionsQuery,
 } from "../content-queries.js";
 import { itemSlug } from "../item-paths.js";
+import { ItemActivity } from "../ownership/item-activity.js";
 import { spaceDisplayName } from "../space-badge.js";
 import { useSpace } from "../space-context.js";
 import { type ItemDetails, itemQuery, pagePath } from "../space-queries.js";
@@ -208,6 +209,7 @@ function VersionHistory({ page }: { page: ItemDetails }) {
           />
         </div>
       )}
+      <ItemActivity itemId={page.id} />
       {restoring !== null ? (
         <RestoreDialog
           page={page}

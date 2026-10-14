@@ -1375,7 +1375,16 @@
     "restrictedParentInTrashNamed": "„{title}“ liegt im Papierkorb und schränkt ein, wer diese Seite ansehen kann. Stelle die Seite zusammen mit den Seiten darüber wieder her, damit diese Einschränkung bleibt.",
     "restrictedParentInTrashNamedAsk": "„{title}“ liegt im Papierkorb und schränkt ein, wer diese Seite ansehen kann. Bitte Space- oder Organisationsadministratoren, sie zuerst wiederherzustellen.",
     "moveChangesAccess": "Das Verschieben ändert, wer den Inhalt öffnen kann. Prüfe, wer Zugriff erhält und wer ihn verliert, und bestätige dann das Verschieben.",
-    "restrictionPending": "In Confluence dürfen weniger Personen diese Seite lesen, und diese Abweichung der Berechtigungen ist noch nicht übernommen. Übernimm sie zuerst im Tab „Berechtigungen“ oder behalte die Pagehall-Version."
+    "restrictionPending": "In Confluence dürfen weniger Personen diese Seite lesen, und diese Abweichung der Berechtigungen ist noch nicht übernommen. Übernimm sie zuerst im Tab „Berechtigungen“ oder behalte die Pagehall-Version.",
+    "ownerNeedsEditAccess": "Die Person kann diesen Inhalt nicht bearbeiten und deshalb nicht Besitzer werden. Wähle jemanden, der ihn bearbeiten kann, oder gib der Person zuerst Bearbeitungsrechte.",
+    "ownershipNotTransferable": "Der Besitzer von archivierten Inhalten, Inhalten im Papierkorb und Besprechungsthemen lässt sich nicht ändern. Hole den Inhalt zuerst zurück.",
+    "invalidStatus": "Der Status ist ungültig. Prüfe den Namen und lade die Liste neu.",
+    "statusExists": "Einen Wert mit diesem Namen gibt es schon. Wähle einen anderen Namen.",
+    "statusNotFound": "Dieser Status wurde inzwischen entfernt. Lade neu und wähle einen anderen.",
+    "statusInUse": "Seiten verwenden diesen Status. Bestätige, wie viele ihn verlieren, und entferne ihn erneut.",
+    "statusInUsePages": "{count, plural, one {# Seite hat} other {# Seiten haben}} jetzt diesen Status. Prüfe die Zahl und entferne ihn erneut.",
+    "statusDisabled": "Der Seitenstatus ist in diesem Space ausgeschaltet. Ein Space-Admin kann ihn in den Space-Einstellungen einschalten.",
+    "tooManyStatusValues": "Der Space hat schon die größte Zahl an Werten. Entferne zuerst einen."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -2044,6 +2053,10 @@
         "label": "Version nach einer Pause im Live-Modus",
         "description": "Eine Seite im Live-Modus erhält nach dieser Zeit ohne Änderungen eine Version, oder wenn die letzte bearbeitende Person sie verlässt."
       },
+      "pages_status": {
+        "label": "Seitenstatus",
+        "description": "Bearbeiter können markieren, wie weit eine Seite ist, und Leser sehen es oben auf der Seite. Ausgeschaltet ist der Status überall verborgen; Seiten behalten ihn, falls du ihn wieder einschaltest."
+      },
       "trash_firstStageDays": {
         "label": "Zeit im Papierkorb",
         "description": "Wie lange Bearbeiter gelöschte Seiten aus dem Papierkorb eines Space wiederherstellen können."
@@ -2339,6 +2352,9 @@
       },
       "page": {
         "shared": "{actor} hat {itemTitle} für dich freigegeben: {role, select, editor {du kannst die Seite bearbeiten} commenter {du kannst sie lesen und kommentieren} other {du kannst sie lesen}}{includeDescendants, select, true { mitsamt ihren Unterseiten} other {}}."
+      },
+      "ownership": {
+        "orphaned": "{items, plural, one {# Inhalt} other {# Inhalte}} in {spaceName} {items, plural, one {hat} other {haben}} keinen Besitzer mehr, weil der Besitzer gegangen ist. Weise in den Space-Einstellungen neue Besitzer zu."
       },
       "restriction": {
         "orphaned": "Niemand auf der Zugriffsliste der beschränkten Seite {itemTitle} in {spaceName} hat noch ein aktives Konto. Prüfe die Beschränkung in den Space-Einstellungen."
@@ -3205,6 +3221,7 @@
         "archived": "Space archiviert",
         "unarchived": "Space aus dem Archiv geholt",
         "confidentialAdministratorAppointed": "Space-Admin eines vertraulichen Space ernannt",
+        "pageStatusValuesChanged": "Werte für den Seitenstatus geändert",
         "confidentialDeleted": "Vertraulicher Space gelöscht"
       },
       "page": {
@@ -3217,6 +3234,7 @@
         "unarchived": "Seite aus dem Archiv geholt",
         "restrictionSet": "Seite beschränkt",
         "restrictionRemoved": "Seitenbeschränkung aufgehoben",
+        "ownerTransferred": "Besitzer geändert",
         "shared": "Seite freigegeben",
         "shareChanged": "Seitenzugriff geändert",
         "unshared": "Seitenzugriff entfernt",
@@ -6923,5 +6941,95 @@
       "showDifference": "Abweichung der Berechtigungen anzeigen",
       "selectionLimited": "Einige ausgewählte Seiten warten auf eine Einschränkung aus Confluence, daher wird nur „Pagehall-Version behalten“ angeboten."
     }
+  },
+  "pageStatus": {
+    "title": "Seitenstatus",
+    "set": "Status setzen",
+    "change": "Status ändern",
+    "setFailed": "Der Status wurde nicht geändert",
+    "loadFailed": "Die Statuswerte konnten nicht geladen werden",
+    "remove": "Status entfernen",
+    "setByAdmins": "Space-Admins legen die Werte in den Space-Einstellungen fest.",
+    "builtIn": {
+      "roughDraft": "Rohentwurf",
+      "inProgress": "In Arbeit",
+      "readyForReview": "Bereit zur Prüfung",
+      "verified": "Geprüft"
+    },
+    "colors": {
+      "neutral": "Grau",
+      "accent": "Akzentfarbe",
+      "info": "Blau",
+      "success": "Grün",
+      "warning": "Orange",
+      "danger": "Rot"
+    },
+    "settingsTitle": "Seitenstatus",
+    "settingsDescription": "Zeigt oben auf jeder Seite, wie weit sie ist, zum Beispiel in Arbeit oder geprüft. Bearbeiter setzen den Status, Leser sehen ihn.",
+    "valuesTitle": "Werte",
+    "valuesDescription": "Bearbeiter wählen aus diesen Werten in dieser Reihenfolge. Wenn du einen Wert umbenennst oder umfärbst, ändert er sich auf allen Seiten, die ihn haben.",
+    "reorderFailed": "Die Reihenfolge wurde nicht gespeichert",
+    "noValues": "Es gibt keine Werte. Füge einen hinzu, damit Bearbeiter einen Status setzen können.",
+    "removeTitle": "„{name}“ entfernen?",
+    "removeUsed": "{count, plural, one {# Seite hat diesen Status und verliert ihn.} other {# Seiten haben diesen Status und verlieren ihn.}} Ihr Status wird nicht durch einen anderen Wert ersetzt.",
+    "removeUnused": "Keine Seite hat diesen Status. Bearbeiter können ihn nicht mehr wählen.",
+    "removeConfirm": "Status entfernen",
+    "keep": "Status behalten",
+    "removed": "„{name}“ wurde entfernt",
+    "removeFailed": "Der Status wurde nicht entfernt",
+    "name": "Name",
+    "color": "Farbe",
+    "usedBy": "{count, plural, =0 {Nicht verwendet} one {# Seite} other {# Seiten}}",
+    "moveUp": "„{name}“ nach oben",
+    "moveDown": "„{name}“ nach unten",
+    "removeLabel": "„{name}“ entfernen",
+    "nameLength": "Gib einen Namen mit 1 bis {max} Zeichen ein.",
+    "newName": "Neuer Wert",
+    "newNameExample": "Zum Beispiel: Veraltet",
+    "add": "Wert hinzufügen",
+    "added": "„{name}“ wurde hinzugefügt",
+    "limitReached": "Ein Space kann bis zu {max} Werte haben. Entferne einen, um einen weiteren hinzuzufügen.",
+    "byImport": "Der Import",
+    "activitySet": "{actor} hat den Status gesetzt auf",
+    "activityRemoved": "{actor} hat den Status entfernt"
+  },
+  "ownership": {
+    "someone": "Jemand, den du nicht sehen kannst",
+    "nobody": "niemandem",
+    "inactiveOwner": "Gegangen oder deaktiviert",
+    "owner": "Besitzer",
+    "noOwner": "keiner",
+    "ownerLeft": "Besitzer gegangen",
+    "transfer": "Besitz übertragen",
+    "assign": "Besitzer zuweisen",
+    "transferred": "{name} ist jetzt Besitzer von „{title}“",
+    "transferTitle": "Besitz von „{title}“ übertragen",
+    "assignTitle": "Besitzer für „{title}“ zuweisen",
+    "transferDescription": "Besitzer ist jetzt {name}. Der neue Besitzer ist für den Inhalt verantwortlich und hält ihn aktuell.",
+    "assignDescription": "Der Inhalt hat keinen aktiven Besitzer. Wähle, wer ab jetzt dafür verantwortlich ist.",
+    "transferFailed": "Der Besitzer wurde nicht geändert",
+    "newOwner": "Neuer Besitzer",
+    "newOwnerHint": "Es erscheinen nur Personen, die den Inhalt gerade bearbeiten können.",
+    "chooseOwner": "Wähle den neuen Besitzer.",
+    "searchPeople": "Nach Namen suchen",
+    "noCandidates": "Niemand sonst, der diesen Inhalt bearbeiten kann, passt. Gib der Person zuerst Bearbeitungsrechte.",
+    "transferConfirm": "Besitz übertragen",
+    "assignConfirm": "Besitzer zuweisen",
+    "unownedTitle": "Inhalte ohne Besitzer",
+    "spaceUnownedDescription": "Inhalte, deren Besitzer deaktiviert wurde oder die Organisation verlassen hat. Weise einen neuen Besitzer zu, damit jemand verantwortlich bleibt. Kommt die Person zurück, gehören ihr die Inhalte wieder, sofern du niemand anderen zugewiesen hast.",
+    "organizationUnownedDescription": "Inhalte ohne aktiven Besitzer in den Spaces, die du lesen kannst. Vertrauliche Spaces erscheinen nicht; dort weisen ihre Space-Admins Besitzer zu.",
+    "unownedFailed": "Die Inhalte ohne Besitzer konnten nicht geladen werden",
+    "hiddenTitle": "{count, plural, one {# weiterer Inhalt hat} other {# weitere Inhalte haben}} keinen Besitzer",
+    "hiddenDescription": "Du kannst sie nicht öffnen, zum Beispiel weil sie beschränkt sind. Jemand auf ihrer Zugriffsliste oder ein Space-Admin, der sie öffnen kann, kann einen Besitzer zuweisen.",
+    "unownedEmptyTitle": "Alle Inhalte haben einen Besitzer",
+    "unownedEmpty": "Wenn ein Besitzer deaktiviert wird oder die Organisation verlässt, erscheinen seine Inhalte hier.",
+    "reasonDeactivated": "{name} wurde deaktiviert",
+    "reasonLeft": "{name} hat die Organisation verlassen",
+    "reasonNone": "Hatte nie einen Besitzer",
+    "showMore": "Mehr anzeigen",
+    "activityTitle": "Status und Besitzer",
+    "activityFailed": "Die Änderungen von Status und Besitzer konnten nicht geladen werden",
+    "activityEmpty": "Status und Besitzer wurden noch nicht geändert.",
+    "activityTransferred": "{actor} hat den Besitz von {from} an {to} übertragen"
   }
 }

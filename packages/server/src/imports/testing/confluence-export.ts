@@ -30,6 +30,7 @@ export interface SyntheticPage {
   readonly modified?: string;
   readonly modifierKey?: string;
   readonly version?: number;
+  readonly pageStatus?: string;
 }
 
 export interface SyntheticAttachmentVersion {
@@ -223,6 +224,20 @@ export function createXmlExport(model: SyntheticExport): Buffer {
       contentObject(className, page, model, page.id, null, page.version ?? (page.history?.length ?? 0) + 1),
     );
     body(page.id, className, page.body);
+    if (page.pageStatus !== undefined) {
+      propertyId += 1;
+      parts.push(
+        object(
+          "ContentProperty",
+          String(propertyId),
+          [
+            property("name", "content-state-published"),
+            property("stringValue", page.pageStatus),
+            reference("content", className, page.id),
+          ].join(""),
+        ),
+      );
+    }
     for (const [index, old] of (page.history ?? []).entries()) {
       parts.push(contentObject(className, page, model, old.id, old, index + 1));
       body(old.id, className, old.body);
@@ -541,6 +556,17 @@ export function createCsvExport(
     }
   }
   const properties: (string | number | null)[][] = [];
+  for (const page of [...model.pages, ...(model.blogPosts ?? [])]) {
+    if (page.pageStatus === undefined) continue;
+    properties.push([
+      String(600_000 + properties.length),
+      "content-state-published",
+      page.pageStatus,
+      null,
+      null,
+      page.id,
+    ]);
+  }
   for (const comment of model.comments ?? []) {
     content.push([
       comment.id,
