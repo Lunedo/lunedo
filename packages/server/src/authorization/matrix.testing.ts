@@ -260,6 +260,7 @@ const EXPECTED: Record<string, Expectation> = {
   "import.resolve": { scope: "organization", rule: "importResolver" },
   "import.takeOver": { scope: "organization", rule: "heldForAdministrator" },
   "export.view": { scope: "instance", rule: "exportOwner" },
+  "export.delete": { scope: "instance", rule: "exportOwner" },
   "export.download": { scope: "instance", rule: "readyExportOwner" },
 };
 

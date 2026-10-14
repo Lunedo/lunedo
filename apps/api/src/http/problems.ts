@@ -141,6 +141,7 @@ export const problems = {
   exportDisabled: { status: 403, title: "Export is turned off for this space" },
   exportRunning: { status: 409, title: "Another export of yours is still running" },
   nothingToExport: { status: 409, title: "There is nothing to export" },
+  tooManyExports: { status: 409, title: "You keep as many exports as allowed" },
   holderNotInPagehall: { status: 409, title: "The person or group is not in Pagehall yet" },
   differenceResolved: { status: 409, title: "The difference no longer exists" },
   notRestricted: { status: 409, title: "The page has no restriction of this kind" },

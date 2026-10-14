@@ -605,6 +605,11 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
         rule: "exportOwner",
         tokenScope: { area: "spaces", level: "view" },
       },
+      "export.delete": {
+        scope: "instance",
+        rule: "exportOwner",
+        tokenScope: { area: "spaces", level: "manage" },
+      },
       "export.download": {
         scope: "instance",
         rule: "readyExportOwner",

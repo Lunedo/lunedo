@@ -21066,12 +21066,12 @@
       "delete": {
         "operationId": "exports.remove",
         "summary": "Delete an export",
-        "description": "Deletes one of your exports and its file. A running export stops.\n\nRequires the permission `export.view` on the export in `exportId`.",
+        "description": "Deletes one of your exports and its file. A running export stops.\n\nRequires the permission `export.delete` on the export in `exportId`.",
         "tags": [
           "Exports"
         ],
         "x-pagehall-permission": {
-          "action": "export.view",
+          "action": "export.delete",
           "resource": "export",
           "parameter": "exportId"
         },
@@ -149801,7 +149801,7 @@
       "post": {
         "operationId": "exports.exportPages",
         "summary": "Export a page with its subpages",
-        "description": "Starts an export of the page and every subpage you can read, as a ZIP archive with the page tree as folders, each page as Markdown and HTML and the attachments next to their pages. The export runs in the background. When it is ready, you get a notification with the download; the download is kept for 7 days and only you can open it. You can run one export at a time.\n\nRequires the permission `item.export` on the item in `pageId`.",
+        "description": "Starts an export of the page and every subpage you can read, as a ZIP archive with the page tree as folders, each page as Markdown and HTML and the attachments next to their pages. The export runs in the background. When it is ready, you get a notification with the download; the download is kept for 7 days and only you can open it. You can run one export at a time and keep up to 5; a new export of the same space or page replaces the earlier one.\n\nRequires the permission `item.export` on the item in `pageId`.",
         "tags": [
           "Exports"
         ],
@@ -150132,7 +150132,7 @@
             }
           },
           "409": {
-            "description": "`exportRunning`: Another export of yours is still running. `nothingToExport`: There is nothing to export.",
+            "description": "`exportRunning`: Another export of yours is still running. `nothingToExport`: There is nothing to export. `tooManyExports`: You keep as many exports as allowed.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -150153,6 +150153,14 @@
                       "title": "There is nothing to export",
                       "status": 409,
                       "code": "nothingToExport"
+                    }
+                  },
+                  "tooManyExports": {
+                    "value": {
+                      "type": "urn:pagehall:problem:tooManyExports",
+                      "title": "You keep as many exports as allowed",
+                      "status": 409,
+                      "code": "tooManyExports"
                     }
                   }
                 }
@@ -166350,7 +166358,7 @@
       "post": {
         "operationId": "exports.exportSpace",
         "summary": "Export a space",
-        "description": "Starts an export of every page of the space you can read, as a ZIP archive with the page tree as folders, each page as Markdown and HTML, the attachments next to their pages and an index.html that lists the tree. Links between exported pages become relative paths. The export runs in the background. When it is ready, you get a notification with the download; the download is kept for 7 days and only you can open it. You can run one export at a time.\n\nRequires the permission `space.export` on the space in `spaceId`.",
+        "description": "Starts an export of every page of the space you can read, as a ZIP archive with the page tree as folders, each page as Markdown and HTML, the attachments next to their pages and an index.html that lists the tree. Links between exported pages become relative paths. The export runs in the background. When it is ready, you get a notification with the download; the download is kept for 7 days and only you can open it. You can run one export at a time and keep up to 5; a new export of the same space or page replaces the earlier one.\n\nRequires the permission `space.export` on the space in `spaceId`.",
         "tags": [
           "Exports"
         ],
@@ -166681,7 +166689,7 @@
             }
           },
           "409": {
-            "description": "`exportRunning`: Another export of yours is still running.",
+            "description": "`exportRunning`: Another export of yours is still running. `tooManyExports`: You keep as many exports as allowed.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -166694,6 +166702,14 @@
                       "title": "Another export of yours is still running",
                       "status": 409,
                       "code": "exportRunning"
+                    }
+                  },
+                  "tooManyExports": {
+                    "value": {
+                      "type": "urn:pagehall:problem:tooManyExports",
+                      "title": "You keep as many exports as allowed",
+                      "status": 409,
+                      "code": "tooManyExports"
                     }
                   }
                 }

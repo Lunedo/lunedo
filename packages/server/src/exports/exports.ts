@@ -51,10 +51,11 @@ const STALE_MINUTES = 10;
 const HEARTBEAT_MS = 5_000;
 const MAX_EXPORT_BYTES = Number.MAX_SAFE_INTEGER;
 const MAX_LISTED_EXPORTS = 50;
+export const MAX_KEPT_EXPORTS = 5;
 
 export type PageExportFormat = "markdown" | "html" | "zip";
 
-export type ExportErrorCode = "exportNotFound" | "exportRunning" | "nothingToExport";
+export type ExportErrorCode = "exportNotFound" | "exportRunning" | "nothingToExport" | "tooManyExports";
 
 export type ExportFailureCode =
   | "exportDisabled"
@@ -174,6 +175,13 @@ function failureOf(error: ForbiddenError): ExportFailureCode {
 }
 
 const SAFE_LINK = /^(https?:|mailto:)/i;
+
+function owned(actor: Extract<Principal, { type: "account" }>): ReturnType<typeof sql> {
+  const organizationId = actor.token?.organizationId;
+  return organizationId
+    ? sql`account_id = ${actor.id} and organization_id = ${organizationId}`
+    : sql`account_id = ${actor.id}`;
+}
 
 export class ExportService {
   readonly #database: Database;
@@ -371,6 +379,22 @@ export class ExportService {
     const id = uuidv7();
     try {
       await this.#database.transaction(async (tx) => {
+        await tx.execute(
+          sql`select pg_advisory_xact_lock(hashtextextended(${`pagehall.exports:${actor.id}`}, 0))`,
+        );
+        await this.#delete(
+          tx,
+          sql`account_id = ${actor.id} and state in ('ready', 'failed') and scope = ${scope}
+            and space_id = ${subject.spaceId} and root_item_id is not distinct from ${subject.rootItemId}`,
+        );
+        const kept = await tx.execute<{ count: number }>(sql`
+          select count(*)::int as count from exports where account_id = ${actor.id} and state = 'ready'`);
+        if (Number(kept.rows[0]?.count ?? 0) >= MAX_KEPT_EXPORTS) {
+          throw new ExportError(
+            "tooManyExports",
+            `You can keep up to ${MAX_KEPT_EXPORTS} exports. Delete one you no longer need first.`,
+          );
+        }
         await tx.execute(sql`
           insert into exports (id, account_id, token_id, started_with_token, organization_id, scope, space_id,
             root_item_id, name)
@@ -401,7 +425,7 @@ export class ExportService {
       throw error;
     }
     await this.#enqueue(id);
-    return this.#require(actor.id, id);
+    return this.#require(actor, id);
   }
 
   async #subject(target: { spaceId: string } | { pageId: string }): Promise<{
@@ -461,24 +485,30 @@ export class ExportService {
     return result.rows[0] ?? null;
   }
 
-  async #require(accountId: string, id: string): Promise<ExportSummary> {
-    const row = await this.#row(id);
-    if (!row || row.account_id !== accountId)
-      throw new ExportError("exportNotFound", "The export does not exist");
+  async #owned(actor: Extract<Principal, { type: "account" }>, id: string): Promise<ExportRow | null> {
+    const result = await this.#database.execute<ExportRow>(
+      sql`select * from exports where id = ${id} and ${owned(actor)}`,
+    );
+    return result.rows[0] ?? null;
+  }
+
+  async #require(actor: Extract<Principal, { type: "account" }>, id: string): Promise<ExportSummary> {
+    const row = await this.#owned(actor, id);
+    if (!row) throw new ExportError("exportNotFound", "The export does not exist");
     return summary(row);
   }
 
   async list(actor: Principal): Promise<ExportSummary[]> {
     if (actor.type !== "account") return [];
     const result = await this.#database.execute<ExportRow>(sql`
-      select * from exports where account_id = ${actor.id} and (expires_at is null or expires_at > now())
+      select * from exports where ${owned(actor)} and (expires_at is null or expires_at > now())
       order by created_at desc, id desc limit ${MAX_LISTED_EXPORTS}`);
     return result.rows.map(summary);
   }
 
   async get(actor: Principal, id: string): Promise<ExportSummary> {
     if (actor.type !== "account") throw new ExportError("exportNotFound", "The export does not exist");
-    return this.#require(actor.id, id);
+    return this.#require(actor, id);
   }
 
   async #requireRoot(viewer: Principal, row: ExportRow): Promise<void> {
@@ -494,8 +524,8 @@ export class ExportService {
   async download(actor: Principal, id: string): Promise<ExportFile> {
     if (actor.type !== "account") throw new ExportError("exportNotFound", "The export does not exist");
     await this.#authorization.require(actor, "export.download", { type: "export", id });
-    const row = await this.#row(id);
-    if (!row?.file_id || row.state !== "ready" || row.account_id !== actor.id) {
+    const row = await this.#owned(actor, id);
+    if (!row?.file_id || row.state !== "ready") {
       throw new ExportError("exportNotFound", "The export does not exist");
     }
     try {
@@ -516,7 +546,7 @@ export class ExportService {
   async remove(actor: Principal, id: string): Promise<void> {
     if (actor.type !== "account") throw new ExportError("exportNotFound", "The export does not exist");
     const removed = await this.#database.transaction(async (tx) =>
-      this.#delete(tx, sql`id = ${id} and account_id = ${actor.id}`),
+      this.#delete(tx, sql`id = ${id} and ${owned(actor)}`),
     );
     if (removed === 0) throw new ExportError("exportNotFound", "The export does not exist");
   }

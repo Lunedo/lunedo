@@ -30,7 +30,7 @@ const pageExportQuery = z
   .strict();
 
 const exportStarted =
-  "The export runs in the background. When it is ready, you get a notification with the download; the download is kept for 7 days and only you can open it. You can run one export at a time.";
+  "The export runs in the background. When it is ready, you get a notification with the download; the download is kept for 7 days and only you can open it. You can run one export at a time and keep up to 5; a new export of the same space or page replaces the earlier one.";
 
 function send(reply: FastifyReply, file: ExportFile) {
   reply.header("content-type", file.contentType);
@@ -89,7 +89,7 @@ export class ExportsController {
       schema: exportSchema,
       example: { ...exampleExport, scope: "pages", state: "queued", progress: { done: 0, total: 0 } },
     },
-    errors: ["exportDisabled", "exportRunning", "nothingToExport"],
+    errors: ["exportDisabled", "exportRunning", "tooManyExports", "nothingToExport"],
   })
   async exportPages(@Param("pageId") pageId: string, @Req() request: FastifyRequest) {
     return this.#services.exports.start(actorOf(request), { pageId });
@@ -108,7 +108,7 @@ export class ExportsController {
       schema: exportSchema,
       example: { ...exampleExport, state: "queued", progress: { done: 0, total: 0 } },
     },
-    errors: ["exportDisabled", "exportRunning"],
+    errors: ["exportDisabled", "exportRunning", "tooManyExports"],
   })
   async exportSpace(@Param("spaceId") spaceId: string, @Req() request: FastifyRequest) {
     return this.#services.exports.start(actorOf(request), { spaceId });
@@ -163,7 +163,7 @@ export class ExportsController {
   }
 
   @Delete("exports/:exportId")
-  @Permission("export.view", exportResource)
+  @Permission("export.delete", exportResource)
   @ApiRoute({
     summary: "Delete an export",
     description: "Deletes one of your exports and its file. A running export stops.",

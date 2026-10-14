@@ -499,6 +499,63 @@ describe.skipIf(!baseUrl)("exports", () => {
   }
 
   describe("the background job", () => {
+    it("replaces an earlier export of the same space or page and keeps only a few per person", async () => {
+      const context = await setup();
+      const first = await exported(context.admin, { spaceId: context.space.id });
+      const firstFile = await test.database.execute<{ file_id: string }>(
+        sql`select file_id from exports where id = ${first.id}`,
+      );
+      const second = await exported(context.admin, { spaceId: context.space.id });
+      expect((await test.services.exports.list(context.admin)).map((entry) => entry.id)).toEqual([second.id]);
+      const orphaned = await test.database.execute<{ state: string }>(
+        sql`select state from stored_files where id = ${firstFile.rows[0]?.file_id ?? null}`,
+      );
+      expect(orphaned.rows.map((row) => row.state)).toEqual(["orphaned"]);
+      for (const page of [
+        context.pages.welcome,
+        context.pages.ops,
+        context.pages.network,
+        context.pages.salaries,
+      ]) {
+        await exported(context.admin, { pageId: page.id });
+      }
+      await expect(
+        test.services.exports.start(context.admin, { pageId: context.pages.bonus.id }),
+      ).rejects.toMatchObject({ code: "tooManyExports" });
+      await test.services.exports.remove(context.admin, second.id);
+      await expect(
+        test.services.exports.start(context.admin, { pageId: context.pages.bonus.id }),
+      ).resolves.toMatchObject({ state: "queued" });
+    });
+
+    it("shows a token limited to one organization only the exports of that organization", async () => {
+      const context = await setup();
+      const { id } = await exported(context.reader, { spaceId: context.space.id });
+      const other = await organization();
+      const limited: Principal = {
+        type: "account",
+        id: context.readerId,
+        token: {
+          id: crypto.randomUUID(),
+          organizationId: other.id,
+          scopes: { organization: { spaces: "manage" } },
+        },
+      };
+      expect(await test.services.exports.list(limited)).toEqual([]);
+      await expect(test.services.exports.get(limited, id)).rejects.toMatchObject({ code: "exportNotFound" });
+      await expect(test.services.exports.download(limited, id)).rejects.toMatchObject({
+        code: "exportNotFound",
+      });
+      await expect(test.services.exports.remove(limited, id)).rejects.toMatchObject({
+        code: "exportNotFound",
+      });
+      const own: Principal = {
+        ...limited,
+        token: { ...limited.token, organizationId: context.org.id } as never,
+      };
+      expect((await test.services.exports.list(own)).map((entry) => entry.id)).toEqual([id]);
+    });
+
     it("allows one running export per person", async () => {
       const context = await setup();
       const started = await test.services.exports.start(context.reader, { spaceId: context.space.id });
