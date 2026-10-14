@@ -646,4 +646,64 @@ describe.skipIf(!baseUrl)("exports", () => {
       });
     });
   });
+  describe("blog posts in a space export", () => {
+    async function blogSetup() {
+      const context = await setup();
+      const post = async (title: string, body: string) => {
+        const created = await test.services.blog.create(context.admin, context.space.id, { title });
+        await test.services.documents.replace(context.admin, created.id, doc(paragraph(text(body))));
+        return created;
+      };
+      const release = await post("Release notes", "Published post text");
+      await test.services.attachments.upload(context.admin, release.id, {
+        name: "changes.txt",
+        body: Readable.from([Buffer.from("post attachment")]),
+        contentLength: 15,
+      });
+      await test.services.versions.publish(context.admin, release.id);
+      await test.services.documents.replace(
+        context.admin,
+        release.id,
+        doc(paragraph(text("Post draft secret"))),
+      );
+      const draft = await post("Draft post", "Never published post");
+      const restricted = await post("Board post", "Board only text");
+      await test.services.versions.publish(context.admin, restricted.id);
+      await test.services.pageAccess.change(context.admin, restricted.id, [
+        { action: "share", holderKind: "account", holderId: context.insiderId, role: "editor" },
+        { action: "restrict", kind: "view" },
+      ]);
+      return { ...context, posts: { release, draft, restricted } };
+    }
+
+    it("puts published posts the exporter can read into a Blog folder, with their attachments", async () => {
+      const context = await blogSetup();
+      const { files } = await exported(context.reader, { spaceId: context.space.id });
+      expect(textOf(files, "Blog/Release notes/Release notes.md")).toContain("Published post text");
+      expect(textOf(files, "Blog/Release notes/Release notes.html")).toContain("Published post text");
+      expect(textOf(files, "Blog/Release notes/changes.txt")).toBe("post attachment");
+      expect(textOf(files, "index.html")).toContain("Release%20notes.html");
+      const all = everything(files);
+      expect(all).not.toContain("Post draft secret");
+      expect(all).not.toContain("Draft post");
+      expect(all).not.toContain("Never published post");
+      expect(all).not.toContain("Board post");
+      expect(all).not.toContain("Board only text");
+    });
+
+    it("includes restricted posts for people they are shared with", async () => {
+      const context = await blogSetup();
+      const { files } = await exported(context.insider, { spaceId: context.space.id });
+      expect(textOf(files, "Blog/Board post/Board post.md")).toContain("Board only text");
+    });
+
+    it("leaves the Blog folder out of a page export and when there are no posts", async () => {
+      const context = await blogSetup();
+      const page = await exported(context.reader, { pageId: context.pages.welcome.id });
+      expect([...page.files.keys()].some((path) => path.startsWith("Blog/"))).toBe(false);
+      const plain = await setup();
+      const space = await exported(plain.reader, { spaceId: plain.space.id });
+      expect([...space.files.keys()].some((path) => path.startsWith("Blog/"))).toBe(false);
+    });
+  });
 });
