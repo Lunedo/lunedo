@@ -13,7 +13,7 @@
     "openapi": "node --enable-source-maps dist/openapi/write.js openapi.json"
   },
   "dependencies": {
-    "@fastify/static": "^10.1.5",
+    "@fastify/static": "^10.1.6",
     "@nestjs/common": "^12.1.2",
     "@nestjs/core": "^12.1.2",
     "@nestjs/platform-fastify": "^12.1.2",
@@ -27,8 +27,8 @@
   "devDependencies": {
     "@nestjs/testing": "^12.1.2",
     "@pagehall/config": "workspace:*",
-    "@scalar/api-reference": "^1.72.4",
-    "@types/node": "^24.19.1",
+    "@scalar/api-reference": "^1.73.1",
+    "@types/node": "^24.19.2",
     "@types/ws": "^8.18.2",
     "ajv": "^8.20.0",
     "otpauth": "^9.5.2",

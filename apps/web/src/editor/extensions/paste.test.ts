@@ -127,4 +127,12 @@ describe("Markdown pasting", () => {
     expect(text).not.toContain('"type":"bold"');
     expect(text).toContain("alert(1)");
   });
+
+  it("links full web addresses and leaves bare domains and file names as text", () => {
+    const html = markdownToHtml("See https://example.com/docs and example.com or notes.md");
+    expect(html).toContain('<a href="https://example.com/docs">https://example.com/docs</a>');
+    expect(html).not.toContain("http://example.com");
+    expect(html).not.toContain("notes.md</a>");
+    expect(html).not.toContain(">example.com</a>");
+  });
 });
