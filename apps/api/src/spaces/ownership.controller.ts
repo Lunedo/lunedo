@@ -242,7 +242,7 @@ export class OwnershipController {
     params: itemParams,
     body: ownerSchema,
     bodyExample: { ownerId: examplePerson.id },
-    errors: ["invalidOwner", "ownershipNotTransferable"],
+    errors: ["ownerNeedsEditAccess", "ownershipNotTransferable"],
   })
   async transfer(
     @Param("itemId") itemId: string,

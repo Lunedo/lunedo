@@ -206,7 +206,7 @@ export class OwnershipService {
         : null;
       if (!edit?.allowed) {
         throw new SpaceError(
-          "invalidOwner",
+          "ownerNeedsEditAccess",
           "The new owner needs edit access to the item. Choose someone who can edit it, or give them access first.",
         );
       }

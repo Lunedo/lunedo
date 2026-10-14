@@ -108436,7 +108436,7 @@
             "description": "Done. The response has no body."
           },
           "400": {
-            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidOwner`: The owner is not valid.",
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `ownerNeedsEditAccess`: The new owner cannot edit the item.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -108459,12 +108459,12 @@
                       "code": "invalidInput"
                     }
                   },
-                  "invalidOwner": {
+                  "ownerNeedsEditAccess": {
                     "value": {
-                      "type": "urn:pagehall:problem:invalidOwner",
-                      "title": "The owner is not valid",
+                      "type": "urn:pagehall:problem:ownerNeedsEditAccess",
+                      "title": "The new owner cannot edit the item",
                       "status": 400,
-                      "code": "invalidOwner"
+                      "code": "ownerNeedsEditAccess"
                     }
                   }
                 }

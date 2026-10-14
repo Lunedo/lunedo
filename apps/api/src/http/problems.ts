@@ -205,6 +205,7 @@ export const problems = {
   },
   overviewPage: { status: 409, title: "The overview page of a space stays a page in its space" },
   tooManyLabels: { status: 409, title: "The page has too many labels" },
+  ownerNeedsEditAccess: { status: 400, title: "The new owner cannot edit the item" },
   ownershipNotTransferable: { status: 409, title: "The owner of this item cannot be changed here" },
   invalidStatus: { status: 400, title: "The status is not valid" },
   statusExists: { status: 409, title: "A status with this name exists already" },

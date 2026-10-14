@@ -97,7 +97,7 @@ describe.skipIf(!databaseBaseUrl)("ownership and page status through the API", (
       ownerId: context.reader.id,
     });
     expect(refused.statusCode).toBe(400);
-    expect(refused.json()).toMatchObject({ code: "invalidOwner" });
+    expect(refused.json()).toMatchObject({ code: "ownerNeedsEditAccess" });
 
     const moved = await context.author.client.put(`/api/v1/items/${context.page.id}/owner`, {
       ownerId: context.editor.id,

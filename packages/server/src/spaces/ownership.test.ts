@@ -103,11 +103,11 @@ describe.skipIf(!baseUrl)("ownership of content", () => {
     const context = await setup();
     await expect(
       test.services.ownership.transfer(context.author, context.page.id, context.readerId),
-    ).rejects.toMatchObject({ code: "invalidOwner" });
+    ).rejects.toMatchObject({ code: "ownerNeedsEditAccess" });
     const outsider = await member(context.org.id, "member", "Outsider");
     await expect(
       test.services.ownership.transfer(context.author, context.page.id, outsider),
-    ).rejects.toMatchObject({ code: "invalidOwner" });
+    ).rejects.toMatchObject({ code: "ownerNeedsEditAccess" });
     expect(await ownerOf(context.page.id)).toBe(context.authorId);
 
     const candidates = await test.services.ownership.candidates(context.author, context.page.id, "");
@@ -128,7 +128,7 @@ describe.skipIf(!baseUrl)("ownership of content", () => {
     expect(candidates.map((candidate) => candidate.id)).not.toContain(context.editorId);
     await expect(
       test.services.ownership.transfer(context.author, context.page.id, context.editorId),
-    ).rejects.toMatchObject({ code: "invalidOwner" });
+    ).rejects.toMatchObject({ code: "ownerNeedsEditAccess" });
   });
 
   it("lets only the owner, space admins and organization admins who read the space transfer", async () => {
