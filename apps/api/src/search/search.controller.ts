@@ -99,7 +99,8 @@ const spaceRefSchema = z
   .object({
     id: uuid("ID of the space."),
     key: z.string().describe("Key of the space."),
-    name: z.string().describe("Name of the space."),
+    name: z.string().describe("Name of the space. Empty for personal spaces, which clients name themselves."),
+    personal: z.boolean().describe("Whether this is a personal space."),
   })
   .describe("A space the caller can open.");
 
@@ -163,6 +164,7 @@ const responseSchema = z
                   .describe("ID of the space, or null for pages shared with the caller."),
                 key: z.string().nullable().describe("Key of the space, or null."),
                 name: z.string().nullable().describe("Name of the space, or null."),
+                personal: z.boolean().describe("Whether this is a personal space."),
                 count: z.number().int().describe("Number of results."),
               })
               .describe("A space."),
@@ -214,7 +216,12 @@ const exampleResponse = {
         { text: "WireGuard", highlighted: true },
         { text: " client on your laptop.", highlighted: false },
       ],
-      space: { id: "01929b1e-7c1a-7000-8000-000000000010", key: "ITOPS", name: "IT Operations" },
+      space: {
+        id: "01929b1e-7c1a-7000-8000-000000000010",
+        key: "ITOPS",
+        name: "IT Operations",
+        personal: false,
+      },
       sharedWithYou: false,
       path: [],
       labels: ["vpn"],
@@ -228,7 +235,15 @@ const exampleResponse = {
   nextCursor: null,
   facets: {
     types: [{ value: "page", count: 1 }],
-    spaces: [{ id: "01929b1e-7c1a-7000-8000-000000000010", key: "ITOPS", name: "IT Operations", count: 1 }],
+    spaces: [
+      {
+        id: "01929b1e-7c1a-7000-8000-000000000010",
+        key: "ITOPS",
+        name: "IT Operations",
+        personal: false,
+        count: 1,
+      },
+    ],
     labels: [{ value: "vpn", count: 1 }],
     authors: [{ id: "01929b1e-7c1a-7000-8000-000000000001", name: "Ada Lovelace", count: 1 }],
     statuses: [{ ...examplePageStatus, count: 1 }],
@@ -250,6 +265,7 @@ function toApi(response: SearchResponse): z.output<typeof responseSchema> {
             id: facet.value,
             key: facet.key,
             name: facet.name,
+            personal: facet.personal,
             count: facet.count,
           })),
           labels: response.facets.labels,

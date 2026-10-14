@@ -3,6 +3,7 @@ import type { DocumentJson } from "@pagehall/editor-schema";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accountPrincipal, type Principal, SYSTEM } from "../accounts/principal.js";
 import type { PrincipalKind } from "../organizations/access-schema.js";
+import { randomPersonalSpaceKey } from "../spaces/keys.js";
 import type { SpaceRole, SpaceVisibility } from "../spaces/schema.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
@@ -263,6 +264,36 @@ describe.skipIf(!baseUrl)("search access matrix", () => {
     }
     await fill(confidential.id, 2, accountHolders);
 
+    const personalSpaces: string[] = [];
+    for (const [person, index] of [
+      ["member", 6],
+      ["guest", 7],
+      ["endedMember", 9],
+    ] as const) {
+      const personal = randomUUID();
+      personalSpaces.push(personal);
+      await query(
+        `insert into spaces (id, personal_of, owner_account_id, key, name, visibility, created_by)
+         values ($1, $2, $2, $3, '', 'private', $2)`,
+        [personal, ids[person], randomPersonalSpaceKey()],
+      );
+      for (const account of [ids[person], org.owner]) {
+        await query(
+          "insert into space_permissions (id, space_id, principal_kind, principal_id, role) values ($1, $2, 'account', $3, 'admin')",
+          [randomUUID(), personal, account],
+        );
+      }
+      for (let grant = 0; grant < 2; grant++) {
+        const holder = pick(spaceHolders);
+        await query(
+          `insert into space_permissions (id, space_id, principal_kind, principal_id, role)
+           values ($1, $2, $3, $4, $5) on conflict do nothing`,
+          [randomUUID(), personal, holder.kind, holder.id, pick(roles)],
+        );
+      }
+      await fill(personal, index);
+    }
+
     const deleted = await fixtures.space(org.id, org.owner, {
       visibility: "organization",
       grants: [{ principalKind: "organizationMembers", principalId: null, role: "reader" }],
@@ -281,8 +312,8 @@ describe.skipIf(!baseUrl)("search access matrix", () => {
     await query("update accounts set state = 'deactivated' where id = $1", [ids.deactivated]);
     const all = await query(
       `select t.id from tree_items t join spaces s on s.id = t.space_id
-       where s.organization_id = $1 and t.kind = 'page' order by t.id`,
-      [org.id],
+       where (s.organization_id = $1 or s.id = any($2::uuid[])) and t.kind = 'page' order by t.id`,
+      [org.id, personalSpaces],
     );
     expect(all.rows.length).toBeGreaterThan(items.length);
     return {

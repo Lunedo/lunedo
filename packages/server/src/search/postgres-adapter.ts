@@ -1,7 +1,7 @@
 import { uuidv7 } from "@pagehall/shared";
 import { type SQL, sql } from "drizzle-orm";
 import type { Executor } from "../database/database.js";
-import { liveAccessCondition, storedAccessCondition } from "./access.js";
+import { liveAccessCondition, type SearchViewer, storedAccessCondition } from "./access.js";
 import {
   type AdapterFacets,
   type AdapterHit,
@@ -66,6 +66,7 @@ export class PostgresSearchAdapter implements SearchAdapter {
       from jsonb_to_recordset(${JSON.stringify(rows)}::jsonb) as c(id uuid, source text, source_id uuid,
         position integer, content_type text, title text, heading text, anchor text, body text, author_id uuid,
         content_created_at timestamptz, content_updated_at timestamptz)`);
+    if (item.organizationId === null) return;
     await executor.execute(sql`
       insert into search_terms (organization_id, word)
       select distinct ${item.organizationId}::uuid, word from (
@@ -114,8 +115,12 @@ export class PostgresSearchAdapter implements SearchAdapter {
       return { hits: [], total: 0, hasMore: false, facets: request.facets ? emptyFacets() : null };
 
     const conditions: SQL[] = [
-      sql`c.organization_id = ${organization}`,
-      sql`s.organization_id = ${organization}`,
+      request.viewer.personalTokens.length > 0
+        ? sql`(c.organization_id = ${organization} or c.organization_id is null)`
+        : sql`c.organization_id = ${organization}`,
+      request.viewer.personalTokens.length > 0
+        ? sql`(s.organization_id = ${organization} or s.organization_id is null)`
+        : sql`s.organization_id = ${organization}`,
       sql`s.deleted_at is null`,
       sql`t.trash_entry_id is null`,
       parts.match,
@@ -209,7 +214,7 @@ export class PostgresSearchAdapter implements SearchAdapter {
     if (query.clauses.length === 0 && query.excluded.length === 0) {
       return { match: sql`true`, score: sql`0`, excerpt: plainExcerpt };
     }
-    const configs = await this.#configs(executor, request.viewer.organizationId);
+    const configs = await this.#configs(executor, request.viewer);
     if (configs.length === 0) return "nothing";
     const expansions = await this.#expansions(executor, request.viewer.organizationId, query);
     const prefix = request.prefixLastTerm ? lastTerm(query) : null;
@@ -240,17 +245,23 @@ export class PostgresSearchAdapter implements SearchAdapter {
     };
   }
 
-  async #configs(executor: Executor, organizationId: string): Promise<string[]> {
-    const result = await executor.execute<{ config: string }>(sql`
-      with recursive found(config) as (
-        (select config from search_chunks where organization_id = ${organizationId} order by config limit 1)
-        union all
-        select (select c.config from search_chunks c
-          where c.organization_id = ${organizationId} and c.config > found.config order by c.config limit 1)
-        from found where found.config is not null
-      )
-      select config from found where config is not null`);
-    return result.rows.map((row) => row.config);
+  async #configs(executor: Executor, viewer: SearchViewer): Promise<string[]> {
+    const scopes = [sql`organization_id = ${viewer.organizationId}::uuid`];
+    if (viewer.personalTokens.length > 0) scopes.push(sql`organization_id is null`);
+    const configs = new Set<string>();
+    for (const scope of scopes) {
+      const result = await executor.execute<{ config: string }>(sql`
+        with recursive found(config) as (
+          (select config from search_chunks where ${scope} order by config limit 1)
+          union all
+          select (select c.config from search_chunks c
+            where ${scope} and c.config > found.config order by c.config limit 1)
+          from found where found.config is not null
+        )
+        select config from found where config is not null`);
+      for (const row of result.rows) configs.add(row.config);
+    }
+    return [...configs].sort();
   }
 
   async #expansions(

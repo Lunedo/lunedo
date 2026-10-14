@@ -18,6 +18,7 @@ export interface SearchViewer {
   organizationId: string;
   portal: boolean;
   tokens: string[];
+  personalTokens: string[];
   listedRestrictions: string[];
 }
 
@@ -81,29 +82,36 @@ export async function loadViewer(
         order by gm.group_id) as groups,
       array(select r.item_id::text from page_restrictions r
         join tree_items t on t.id = r.item_id join spaces s on s.id = t.space_id
-        where r.kind = 'view' and s.organization_id = ${organization}
-          and ${restrictionListedCondition(sql`r`, sql`a.id`, organization)}
+        where r.kind = 'view' and (s.organization_id = ${organization} or s.personal_of is not null)
+          and ${restrictionListedCondition(sql`r`, sql`a.id`, sql`s.organization_id`)}
         order by r.item_id) as listed
     from accounts a where a.id = ${principal.id} and a.state = 'active'`);
   const row = result.rows[0];
   if (!row) return null;
   const portal = row.type === "portal";
-  const tokens: string[] = [];
-  if (row.in_organization) {
-    tokens.push(`account:${principal.id}`);
-    if (!portal) tokens.push(`share-account:${principal.id}`);
-  }
+  const own = [`account:${principal.id}`, ...(portal ? [] : [`share-account:${principal.id}`])];
+  const shared: string[] = [];
   for (const group of row.groups) {
-    tokens.push(`group:${group}`);
-    if (!portal) tokens.push(`share-group:${group}`);
+    shared.push(`group:${group}`);
+    if (!portal) shared.push(`share-group:${group}`);
   }
+  if (row.type === "standard") shared.push("internal");
+  const tokens = [...(row.in_organization ? own : []), ...shared];
   if (row.member) tokens.push(`members:${organizationId}`);
-  if (row.type === "standard") tokens.push("internal");
-  return { accountId: principal.id, organizationId, portal, tokens, listedRestrictions: row.listed };
+  const personalTokens = token?.organizationId ? [] : [...own, ...shared];
+  return {
+    accountId: principal.id,
+    organizationId,
+    portal,
+    tokens,
+    personalTokens,
+    listedRestrictions: row.listed,
+  };
 }
 
 export function storedAccessCondition(viewer: SearchViewer, chunk: SQL): SQL {
-  return sql`(${chunk}.readers && ${sql.param(viewer.tokens)}::text[]
+  return sql`(((${chunk}.organization_id is not null and ${chunk}.readers && ${sql.param(viewer.tokens)}::text[])
+      or (${chunk}.organization_id is null and ${chunk}.readers && ${sql.param(viewer.personalTokens)}::text[]))
     and ${chunk}.restrictions <@ ${sql.param(viewer.listedRestrictions)}::uuid[])`;
 }
 

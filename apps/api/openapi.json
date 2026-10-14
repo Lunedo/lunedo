@@ -134235,13 +134235,18 @@
                                   },
                                   "name": {
                                     "type": "string",
-                                    "description": "Name of the space."
+                                    "description": "Name of the space. Empty for personal spaces, which clients name themselves."
+                                  },
+                                  "personal": {
+                                    "type": "boolean",
+                                    "description": "Whether this is a personal space."
                                   }
                                 },
                                 "required": [
                                   "id",
                                   "key",
-                                  "name"
+                                  "name",
+                                  "personal"
                                 ],
                                 "additionalProperties": false,
                                 "description": "A space the caller can open."
@@ -134488,6 +134493,10 @@
                                       "null"
                                     ]
                                   },
+                                  "personal": {
+                                    "type": "boolean",
+                                    "description": "Whether this is a personal space."
+                                  },
                                   "count": {
                                     "type": "integer",
                                     "minimum": -9007199254740991,
@@ -134499,6 +134508,7 @@
                                   "id",
                                   "key",
                                   "name",
+                                  "personal",
                                   "count"
                                 ],
                                 "additionalProperties": false,
@@ -134694,7 +134704,8 @@
                       "space": {
                         "id": "01929b1e-7c1a-7000-8000-000000000010",
                         "key": "ITOPS",
-                        "name": "IT Operations"
+                        "name": "IT Operations",
+                        "personal": false
                       },
                       "sharedWithYou": false,
                       "path": [],
@@ -134729,6 +134740,7 @@
                         "id": "01929b1e-7c1a-7000-8000-000000000010",
                         "key": "ITOPS",
                         "name": "IT Operations",
+                        "personal": false,
                         "count": 1
                       }
                     ],

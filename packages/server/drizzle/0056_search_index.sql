@@ -1,7 +1,7 @@
 CREATE TYPE "public"."search_source" AS ENUM('item', 'comment');--> statement-breakpoint
 CREATE TABLE "search_chunks" (
 	"id" uuid PRIMARY KEY NOT NULL,
-	"organization_id" uuid NOT NULL,
+	"organization_id" uuid,
 	"space_id" uuid NOT NULL,
 	"item_id" uuid NOT NULL,
 	"source" "search_source" NOT NULL,

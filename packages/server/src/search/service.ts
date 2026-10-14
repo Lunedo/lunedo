@@ -61,6 +61,7 @@ export interface SearchSpace {
   id: string;
   key: string;
   name: string;
+  personal: boolean;
 }
 
 export interface SearchHit {
@@ -84,7 +85,7 @@ export interface SearchHit {
 
 export interface SearchFacets {
   contentTypes: FacetCount<SearchContentType>[];
-  spaces: (FacetCount<string | null> & { key: string | null; name: string | null })[];
+  spaces: (FacetCount<string | null> & { key: string | null; name: string | null; personal: boolean })[];
   labels: FacetCount<string>[];
   authors: (FacetCount<string> & { name: string })[];
   statuses: (FacetCount<string> & Omit<PageStatus, "id">)[];
@@ -200,9 +201,10 @@ export class SearchService {
   }
 
   async #visibleSpaces(principal: Principal, organizationId: string): Promise<Map<string, SearchSpace>> {
-    const result = await this.#database.execute<{ id: string; key: string; name: string }>(sql`
-      select s.id, s.key, s.name from spaces s
-      where s.organization_id = ${organizationId} and ${this.#authorization.spaceFilter(principal, sql`s`)}`);
+    const result = await this.#database.execute<SearchSpace & Record<string, unknown>>(sql`
+      select s.id, s.key, s.name, s.personal_of is not null as personal from spaces s
+      where (s.organization_id = ${organizationId} or s.personal_of is not null)
+        and ${this.#authorization.spaceFilter(principal, sql`s`)}`);
     return new Map(result.rows.map((row) => [row.id, row]));
   }
 
@@ -250,7 +252,10 @@ export class SearchService {
 
     const statusRequested = request.statusIds.length > 0 || operators.status.length > 0;
     const statusIds = [
-      ...new Set([...request.statusIds, ...(await this.#statusesNamed(organizationId, operators.status))]),
+      ...new Set([
+        ...request.statusIds,
+        ...(await this.#statusesNamed(organizationId, spaces, operators.status)),
+      ]),
     ];
     if (statusRequested && statusIds.length === 0) return null;
 
@@ -266,13 +271,18 @@ export class SearchService {
     };
   }
 
-  async #statusesNamed(organizationId: string, names: readonly string[]): Promise<string[]> {
+  async #statusesNamed(
+    organizationId: string,
+    spaces: Map<string, SearchSpace>,
+    names: readonly string[],
+  ): Promise<string[]> {
     if (names.length === 0) return [];
     const exact = names.map((name) => name.trim().toLowerCase());
     const builtIn = names.map((name) => name.toLowerCase().replace(/[^a-z]/g, ""));
     const result = await this.#database.execute<{ id: string }>(sql`
       select sv.id from page_status_values sv join spaces s on s.id = sv.space_id
-      where s.organization_id = ${organizationId} and ${pageStatusEnabledCondition(sql`s`)}
+      where (s.organization_id = ${organizationId} or s.id = any(${sql.param([...spaces.keys()])}::uuid[]))
+        and ${pageStatusEnabledCondition(sql`s`)}
         and (lower(sv.name) = any(${sql.param(exact)}::text[])
           or (sv.name is null and lower(sv.built_in) = any(${sql.param(builtIn)}::text[])))`);
     return result.rows.map((row) => row.id);
@@ -367,6 +377,7 @@ export class SearchService {
           count: facet.count,
           key: space?.key ?? null,
           name: space?.name ?? null,
+          personal: space?.personal ?? false,
         };
       }),
       labels: facets.labels,

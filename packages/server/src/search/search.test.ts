@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { DocumentJson, NodeJson } from "@pagehall/editor-schema";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accountPrincipal, type Principal } from "../accounts/principal.js";
@@ -23,7 +24,7 @@ function heading(text: string): NodeJson {
 
 describe.skipIf(!baseUrl)("search", () => {
   let test: TestServices;
-  const { organization, member, space } = spaceFixtures(() => test);
+  const { organization, member, space, join } = spaceFixtures(() => test);
 
   beforeAll(async () => {
     test = await createTestServices(baseUrl ?? "");
@@ -104,6 +105,7 @@ describe.skipIf(!baseUrl)("search", () => {
     return {
       org,
       author,
+      authorId,
       other,
       otherId,
       outsider: accountPrincipal(outsiderId),
@@ -177,8 +179,8 @@ describe.skipIf(!baseUrl)("search", () => {
     expect(result.facets?.contentTypes).toEqual([{ value: "page", count: 3 }]);
     expect(result.facets?.spaces).toEqual(
       expect.arrayContaining([
-        { value: w.shared.id, count: 2, key: w.shared.key, name: "Shared space" },
-        { value: w.second.id, count: 1, key: w.second.key, name: "Second space" },
+        { value: w.shared.id, count: 2, key: w.shared.key, name: "Shared space", personal: false },
+        { value: w.second.id, count: 1, key: w.second.key, name: "Second space", personal: false },
       ]),
     );
     expect(result.facets?.authors.map((facet) => [facet.name, facet.count]).sort()).toEqual([
@@ -308,6 +310,48 @@ describe.skipIf(!baseUrl)("search", () => {
     await test.settings.set(pageStatusEnabledSetting, { space: w.second.id }, "space", true);
     await drain();
     expect(await ids(w.other, w.org.id, w.word, { statusIds: [secondVerified?.id] })).toEqual([w.gamma]);
+  });
+
+  it("finds pages of personal spaces for their owner and for people they are shared with", async () => {
+    const w = await world();
+    const personal = await test.services.personalSpaces.ensure(w.author, "Personal space");
+    const diary = await test.services.tree.create(w.author, personal.id, {
+      kind: "page",
+      title: "Diary",
+      mode: "live",
+      placement: { parentId: null },
+      document: doc(paragraph(`${w.word} personal notes`)),
+    });
+    await drain();
+    const own = await find(w.author, w.org.id, `${w.word} personal`);
+    expect(own.results.map((hit) => hit.itemId)).toEqual([diary.id]);
+    expect(own.results[0]?.space).toMatchObject({ id: personal.id, personal: true });
+    expect(own.facets?.spaces).toEqual([
+      { value: personal.id, count: 1, key: personal.key, name: personal.name, personal: true },
+    ]);
+    const elsewhere = await organization();
+    await join(elsewhere.id, w.authorId);
+    expect(await ids(w.author, elsewhere.id, `${w.word} personal`)).toEqual([diary.id]);
+    expect(await ids(w.other, w.org.id, `${w.word} personal`)).toEqual([]);
+
+    await test.pool.query(
+      `insert into page_shares (id, item_id, principal_kind, principal_id, role, include_descendants)
+       values ($1, $2, 'account', $3, 'reader', false)`,
+      [randomUUID(), diary.id, w.otherId],
+    );
+    await drain();
+    const shared = await find(w.other, w.org.id, `${w.word} personal`);
+    expect(shared.results.map((hit) => [hit.itemId, hit.sharedWithYou, hit.space])).toEqual([
+      [diary.id, true, null],
+    ]);
+    expect(await ids(w.outsider, w.org.id, `${w.word} personal`)).toEqual([]);
+
+    const scoped = {
+      type: "account" as const,
+      id: w.authorId,
+      token: { id: "token", organizationId: w.org.id, scopes: { organization: { spaces: "view" as const } } },
+    };
+    expect(await ids(scoped, w.org.id, `${w.word} personal`)).toEqual([]);
   });
 
   it("finds nothing for an API token without access to spaces or for another organization", async () => {

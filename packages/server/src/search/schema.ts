@@ -30,9 +30,7 @@ export const searchChunks = pgTable(
   "search_chunks",
   {
     id: primaryId(),
-    organizationId: uuid()
-      .notNull()
-      .references(() => organizations.id, { onDelete: "cascade" }),
+    organizationId: uuid().references(() => organizations.id, { onDelete: "cascade" }),
     spaceId: uuid()
       .notNull()
       .references(() => spaces.id, { onDelete: "cascade" }),

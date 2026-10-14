@@ -12961,7 +12961,7 @@
           "name": "organization_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "space_id": {
           "name": "space_id",

@@ -31,7 +31,7 @@ export interface DrainResult {
 
 function indexable(item: SQL, space: SQL): SQL {
   return sql`(${item}.kind in ('page', 'blogPost') and ${item}.trash_entry_id is null and ${space}.deleted_at is null
-    and ${space}.organization_id is not null and (${item}.mode = 'live' or ${item}.published_version_id is not null))`;
+    and (${item}.mode = 'live' or ${item}.published_version_id is not null))`;
 }
 
 function archived(item: SQL, space: SQL): SQL {
@@ -226,7 +226,7 @@ export class SearchIndexer {
       mode: "publish" | "live";
       title: string;
       space_id: string;
-      organization_id: string;
+      organization_id: string | null;
       creator_id: string | null;
       created_at: Date | string;
       content_updated_at: Date | string;

@@ -33,7 +33,7 @@ export interface ItemAccess {
 }
 
 export interface IndexedItem extends ItemAccess {
-  organizationId: string;
+  organizationId: string | null;
   labels: string[];
   status: string | null;
   language: ContentLanguage;
