@@ -194,7 +194,7 @@ export class SearchService {
     if (!viewer) return empty;
     const query = parseQuery(request.query);
     const spaces = await this.#visibleSpaces(principal, organizationId);
-    const filters = await this.#filters(principal, organizationId, request, query.operators, spaces);
+    const filters = await this.#filters(principal, request, query.operators, spaces);
     if (!filters) return empty;
     const limit = Math.min(Math.max(request.limit, 1), SEARCH_PAGE_LIMIT);
     const result = await this.#adapter.search(this.#database, {
@@ -233,7 +233,6 @@ export class SearchService {
 
   async #filters(
     principal: Principal,
-    organizationId: string,
     request: SearchRequest,
     operators: ReturnType<typeof parseQuery>["operators"],
     spaces: Map<string, SearchSpace>,
@@ -275,10 +274,7 @@ export class SearchService {
 
     const statusRequested = request.statusIds.length > 0 || operators.status.length > 0;
     const statusIds = [
-      ...new Set([
-        ...request.statusIds,
-        ...(await this.#statusesNamed(organizationId, spaces, operators.status)),
-      ]),
+      ...new Set([...request.statusIds, ...(await this.#statusesNamed(spaces, operators.status))]),
     ];
     if (statusRequested && statusIds.length === 0) return null;
 
@@ -294,18 +290,13 @@ export class SearchService {
     };
   }
 
-  async #statusesNamed(
-    organizationId: string,
-    spaces: Map<string, SearchSpace>,
-    names: readonly string[],
-  ): Promise<string[]> {
+  async #statusesNamed(spaces: Map<string, SearchSpace>, names: readonly string[]): Promise<string[]> {
     if (names.length === 0) return [];
     const exact = names.map((name) => name.trim().toLowerCase());
     const builtIn = names.map((name) => name.toLowerCase().replace(/[^a-z]/g, ""));
     const result = await this.#database.execute<{ id: string }>(sql`
       select sv.id from page_status_values sv join spaces s on s.id = sv.space_id
-      where (s.organization_id = ${organizationId} or s.id = any(${sql.param([...spaces.keys()])}::uuid[]))
-        and ${pageStatusEnabledCondition(sql`s`)}
+      where s.id = any(${sql.param([...spaces.keys()])}::uuid[]) and ${pageStatusEnabledCondition(sql`s`)}
         and (lower(sv.name) = any(${sql.param(exact)}::text[])
           or (sv.name is null and lower(sv.built_in) = any(${sql.param(builtIn)}::text[])))`);
     return result.rows.map((row) => row.id);

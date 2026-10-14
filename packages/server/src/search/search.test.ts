@@ -6,8 +6,10 @@ import { pageStatusEnabledSetting } from "../spaces/settings.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { spaceFixtures } from "../testing/spaces.js";
+import type { AdapterSearch, SearchAdapter } from "./adapter.js";
+import { PostgresSearchAdapter } from "./postgres-adapter.js";
 import { searchRequest } from "./search.testing.js";
-import { correctedQuery } from "./service.js";
+import { correctedQuery, SearchService } from "./service.js";
 
 const baseUrl = testDatabaseBaseUrl();
 
@@ -287,6 +289,62 @@ describe.skipIf(!baseUrl)("search", () => {
     );
     expect(correctedQuery("printer", corrections)).toBeNull();
     expect(correctedQuery("cartrige", new Map())).toBeNull();
+  });
+
+  function recordingSearch() {
+    const adapter = new PostgresSearchAdapter();
+    const requests: AdapterSearch[] = [];
+    const recording: SearchAdapter = {
+      replaceItem: adapter.replaceItem.bind(adapter),
+      removeItem: adapter.removeItem.bind(adapter),
+      updateAccess: adapter.updateAccess.bind(adapter),
+      indexedItemsOfSpace: adapter.indexedItemsOfSpace.bind(adapter),
+      search: (executor, request) => {
+        requests.push(request);
+        return adapter.search(executor, request);
+      },
+    };
+    const service = new SearchService({
+      database: test.database,
+      authorization: test.services.authorization,
+      people: test.services.people,
+      adapter: recording,
+      indexer: test.services.search.indexer,
+    });
+    return { service, requests };
+  }
+
+  it("looks up status names in spaces the person can see only", async () => {
+    const w = await world();
+    const statuses = test.services.pageStatus;
+    const [, , , sharedVerified] = await statuses.values(w.shared.id);
+    const [, , , hiddenVerified] = await statuses.values(w.hidden.id);
+    await statuses.update(w.author, w.shared.id, sharedVerified?.id ?? "", { name: `Classified ${w.word}` });
+    await statuses.update(w.author, w.hidden.id, hiddenVerified?.id ?? "", { name: `Secret ${w.word}` });
+    const { service, requests } = recordingSearch();
+    await service.search(w.other, w.org.id, searchRequest(`status:"Classified ${w.word}"`));
+    expect(requests.map((request) => request.filters.statusIds)).toEqual([[sharedVerified?.id]]);
+
+    requests.length = 0;
+    const hiddenName = await service.search(
+      w.other,
+      w.org.id,
+      searchRequest(`${w.word} status:"Secret ${w.word}"`),
+    );
+    const unknownName = await service.search(
+      w.other,
+      w.org.id,
+      searchRequest(`${w.word} status:"None ${w.word}"`),
+    );
+    expect(requests).toEqual([]);
+    expect({ ...hiddenName, index: null }).toEqual({ ...unknownName, index: null });
+    requests.length = 0;
+    await service.search(w.author, w.org.id, searchRequest(`status:"Secret ${w.word}"`));
+    expect(requests.map((request) => request.filters.statusIds)).toEqual([[hiddenVerified?.id]]);
+    await statuses.update(w.author, w.hidden.id, hiddenVerified?.id ?? "", { name: `Classified ${w.word}` });
+    requests.length = 0;
+    await service.search(w.other, w.org.id, searchRequest(`status:"Classified ${w.word}"`));
+    expect(requests.map((request) => request.filters.statusIds)).toEqual([[sharedVerified?.id]]);
   });
 
   it("filters by page status and follows changes of status, values and the space setting", async () => {
