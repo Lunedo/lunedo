@@ -135,6 +135,14 @@ export {
   roleScope,
 } from "../organizations/access-schema.js";
 export { organizationDomains, organizationLogos, organizations } from "../organizations/schema.js";
+export {
+  searchChunks,
+  searchIndexState,
+  searchPendingItems,
+  searchPendingSpaces,
+  searchSource,
+  searchTerms,
+} from "../search/schema.js";
 export { settingLevel, settingValues } from "../settings/schema.js";
 export { setupSessions, setupSteps } from "../setup/schema.js";
 export {

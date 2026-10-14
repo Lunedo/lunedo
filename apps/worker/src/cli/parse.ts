@@ -7,6 +7,8 @@ export type Command =
   | { name: "keys rotate" }
   | { name: "keys status" }
   | { name: "audit verify" }
+  | { name: "search rebuild" }
+  | { name: "search status" }
   | { name: "help" };
 
 export class UsageError extends Error {
@@ -20,6 +22,8 @@ export const usage = `Usage:
   pagehall keys rotate
   pagehall keys status
   pagehall audit verify
+  pagehall search rebuild
+  pagehall search status
 `;
 
 export function parseCommand(argv: readonly string[]): Command {
@@ -60,6 +64,10 @@ export function parseCommand(argv: readonly string[]): Command {
       return { name: "keys status" };
     case "audit verify":
       return { name: "audit verify" };
+    case "search rebuild":
+      return { name: "search rebuild" };
+    case "search status":
+      return { name: "search status" };
     default:
       throw new UsageError(`Unknown command: ${[group, action].filter(Boolean).join(" ")}`);
   }

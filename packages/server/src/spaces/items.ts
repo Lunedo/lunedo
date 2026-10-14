@@ -1,10 +1,11 @@
-import { uuidv7 } from "@pagehall/shared";
+import { type ContentLanguage, uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import { type AuthorizationService, ForbiddenError } from "../authorization/service.js";
 import type { AccessImpact } from "../authorization/space-access.js";
 import type { ContentActivity } from "../collaboration/content.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
+import { contentLanguageOf, spaceContentLanguage } from "../search/languages.js";
 import type { SettingsService } from "../settings/service.js";
 import type { ValueSigner } from "../sharing/signer.js";
 import { actorIdOf, SpaceError } from "./common.js";
@@ -56,6 +57,7 @@ export interface TreeItem {
   link: ItemLink | null;
   creatorId: string | null;
   ownerId: string | null;
+  contentLanguage: ContentLanguage | null;
   createdAt: Date;
   updatedAt: Date;
   contentUpdatedAt: Date;
@@ -65,6 +67,7 @@ export interface ItemDetails extends TreeItem {
   spaceKey: string;
   spaceName: string;
   spaceAccess: boolean;
+  spaceContentLanguage: ContentLanguage;
   ancestors: { id: string; kind: TreeItemKind; title: string; published: boolean }[];
 }
 
@@ -113,6 +116,7 @@ type ItemRow = {
   link_title: string | null;
   creator_id: string | null;
   owner_id: string | null;
+  content_language: string | null;
   created_at: Date | string;
   updated_at: Date | string;
   content_updated_at: Date | string;
@@ -193,6 +197,7 @@ function toItem(row: ItemRow): TreeItem {
       : null,
     creatorId: row.creator_id,
     ownerId: row.owner_id,
+    contentLanguage: contentLanguageOf(row.content_language),
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
     contentUpdatedAt: new Date(row.content_updated_at),
@@ -368,7 +373,7 @@ export class TreeService {
         (lt.trash_entry_id is not null and ${this.#authorization.itemFilter(viewer, sql`lt`, sql`ls`)}
           and ${publishedFor(this.#authorization, viewer, sql`lt`, sql`ls`)}) as link_in_trash,
         lt.space_id as link_space_id, ls.key as link_space_key, lt.kind as link_kind, lt.title as link_title,
-        t.creator_id, t.owner_id, t.created_at, t.updated_at, t.content_updated_at
+        t.creator_id, t.owner_id, t.content_language, t.created_at, t.updated_at, t.content_updated_at
       from tree_items t
       join spaces ts on ts.id = t.space_id
       left join tree_items lt on lt.id = t.link_item_id
@@ -417,8 +422,13 @@ export class TreeService {
   async details(viewer: Principal, itemId: string): Promise<ItemDetails | null> {
     const item = await this.get(viewer, itemId);
     if (!item) return null;
-    const space = await this.#database.execute<{ key: string; name: string; access: boolean }>(
-      sql`select s.key, s.name, ${this.#authorization.spaceFilter(viewer, sql`s`)} as access
+    const space = await this.#database.execute<{
+      key: string;
+      name: string;
+      organization_id: string | null;
+      access: boolean;
+    }>(
+      sql`select s.key, s.name, s.organization_id, ${this.#authorization.spaceFilter(viewer, sql`s`)} as access
         from spaces s where s.id = ${item.spaceId}`,
     );
     const access = space.rows[0]?.access === true;
@@ -427,6 +437,11 @@ export class TreeService {
       spaceKey: access ? (space.rows[0]?.key ?? "") : "",
       spaceName: access ? (space.rows[0]?.name ?? "") : "",
       spaceAccess: access,
+      spaceContentLanguage: await spaceContentLanguage(
+        this.#settings,
+        space.rows[0]?.organization_id ?? null,
+        item.spaceId,
+      ),
       ancestors: await this.ancestors(viewer, itemId),
     };
   }
@@ -636,6 +651,25 @@ export class TreeService {
     });
     const item = await this.get(actor, itemId);
     if (!item) throw new SpaceError("itemNotFound", "The item does not exist");
+    return item;
+  }
+
+  async setContentLanguage(
+    actor: Principal,
+    itemId: string,
+    language: ContentLanguage | null,
+  ): Promise<TreeItem> {
+    await this.#database.transaction(async (tx) => {
+      const updated = await tx.execute<{ space_id: string }>(sql`
+        update tree_items set content_language = ${language}, updated_at = now()
+        where id = ${itemId} and kind in ('page', 'blogPost')
+        returning space_id`);
+      const row = updated.rows[0];
+      if (!row) throw new SpaceError("itemNotFound", "The page does not exist");
+      await signalSpaceChange(tx, { spaceId: row.space_id, kind: "tree", itemId });
+    });
+    const item = await this.get(actor, itemId);
+    if (!item) throw new SpaceError("itemNotFound", "The page does not exist");
     return item;
   }
 

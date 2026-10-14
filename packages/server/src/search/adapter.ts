@@ -1,0 +1,115 @@
+import type { ContentLanguage } from "@pagehall/shared";
+import type { Executor } from "../database/database.js";
+import type { SearchViewer } from "./access.js";
+import type { ParsedQuery } from "./query.js";
+import type { SearchSource } from "./schema.js";
+
+export const searchContentTypes = ["page", "blogPost", "comment"] as const;
+export type SearchContentType = (typeof searchContentTypes)[number];
+
+export const searchSorts = ["relevance", "newest"] as const;
+export type SearchSort = (typeof searchSorts)[number];
+
+export interface IndexedChunk {
+  source: SearchSource;
+  sourceId: string;
+  position: number;
+  contentType: SearchContentType;
+  title: string;
+  heading: string;
+  anchor: string | null;
+  body: string;
+  authorId: string | null;
+  contentCreatedAt: Date;
+  contentUpdatedAt: Date;
+}
+
+export interface ItemAccess {
+  itemId: string;
+  spaceId: string;
+  readers: string[];
+  restrictions: string[];
+  archived: boolean;
+}
+
+export interface IndexedItem extends ItemAccess {
+  organizationId: string;
+  labels: string[];
+  status: string | null;
+  language: ContentLanguage;
+  config: string;
+  chunks: IndexedChunk[];
+}
+
+export interface SearchFilters {
+  spaceIds: string[] | null;
+  contentTypes: SearchContentType[];
+  labels: string[];
+  authorIds: string[] | null;
+  statuses: string[];
+  includeArchived: boolean;
+  updatedAfter: Date | null;
+  updatedBefore: Date | null;
+}
+
+export interface AdapterSearch {
+  viewer: SearchViewer;
+  query: ParsedQuery;
+  prefixLastTerm: boolean;
+  filters: SearchFilters;
+  visibleSpaceIds: string[];
+  sort: SearchSort;
+  limit: number;
+  after: { score: number; updatedAt: string; sourceId: string } | null;
+  firstSpaceId: string | null;
+  facets: boolean;
+}
+
+export interface AdapterHit {
+  source: SearchSource;
+  sourceId: string;
+  itemId: string;
+  spaceId: string;
+  contentType: SearchContentType;
+  title: string;
+  heading: string;
+  anchor: string | null;
+  excerpt: string;
+  labels: string[];
+  status: string | null;
+  authorId: string | null;
+  archived: boolean;
+  score: number;
+  contentUpdatedAt: string;
+}
+
+export interface FacetCount<T> {
+  value: T;
+  count: number;
+}
+
+export interface AdapterFacets {
+  contentTypes: FacetCount<SearchContentType>[];
+  spaces: FacetCount<string | null>[];
+  labels: FacetCount<string>[];
+  authors: FacetCount<string>[];
+  statuses: FacetCount<string>[];
+}
+
+export interface AdapterResult {
+  hits: AdapterHit[];
+  total: number;
+  hasMore: boolean;
+  facets: AdapterFacets | null;
+}
+
+export const EXCERPT_START = "\u0001";
+export const EXCERPT_END = "\u0002";
+
+export interface SearchAdapter {
+  replaceItem(executor: Executor, item: IndexedItem): Promise<void>;
+  removeItem(executor: Executor, itemId: string): Promise<void>;
+  updateAccess(executor: Executor, updates: ItemAccess[]): Promise<void>;
+  indexedItemsOfSpace(executor: Executor, spaceId: string): Promise<string[]>;
+  search(executor: Executor, request: AdapterSearch): Promise<AdapterResult>;
+}
