@@ -2,14 +2,14 @@ import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Put, Query, 
 import type { BlogCursor } from "@pagehall/server";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
-import { Permission } from "../access/route-access.js";
+import { InternalRoute, Permission, SessionRoute } from "../access/route-access.js";
 import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
 import { decodeCursor, encodeCursor } from "../http/pagination.js";
 import { notFound } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
-import { organizationIdParams, uuid } from "../http/schemas.js";
+import { organizationIdParams, timestamp, uuid } from "../http/schemas.js";
 import {
   blogPageSchema,
   blogPostSchema,
@@ -46,6 +46,40 @@ const coverSchema = z
   .strict()
   .describe("The cover image.");
 const blogCursor = z.tuple([z.string().max(64), z.string().max(64), z.string().max(40)]);
+
+const subscriptionSchema = z
+  .object({ following: z.boolean().describe("Whether the caller follows the blog of the space.") })
+  .describe("The caller's subscription.");
+const followedBlogSchema = z
+  .object({
+    spaceId: uuid("ID of the space."),
+    spaceKey: z.string().describe("Key of the space."),
+    spaceName: z.string().describe("Name of the space."),
+    personal: z.boolean().describe("Whether it is a personal space."),
+    followedAt: timestamp("When the caller started following."),
+  })
+  .describe("A blog the caller follows.");
+const followedBlogsSchema = z
+  .object({
+    items: z.array(followedBlogSchema).describe("Blogs of spaces the caller can read, by name."),
+    unavailable: z
+      .number()
+      .int()
+      .describe(
+        "Followed blogs of spaces the caller cannot read at the moment. Their notifications resume when access returns.",
+      ),
+  })
+  .describe("Followed blogs.");
+const removedSchema = z
+  .object({ removed: z.number().int().describe("Number of subscriptions removed.") })
+  .describe("The result.");
+const exampleFollowedBlog = {
+  spaceId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
+  spaceKey: "ENG",
+  spaceName: "Engineering",
+  personal: false,
+  followedAt: "2026-10-01T08:00:00.000Z",
+};
 
 function page(result: { posts: unknown[]; next: BlogCursor | null }) {
   return { items: result.posts, nextCursor: result.next ? encodeCursor(result.next) : null };
@@ -351,5 +385,78 @@ export class BlogController {
     const space = await this.#services.spaces.get(found.spaceId);
     if (space?.organizationId !== organizationId) throw notFound();
     return this.#services.blog.pin(actorOf(request), postId, "organization", body.pinned);
+  }
+
+  @Get("spaces/:spaceId/blog/subscription")
+  @Permission("space.view", { type: "space", param: "spaceId" }, { sessionOnly: true })
+  @ApiRoute({
+    summary: "Check whether you follow a blog",
+    description: "Says whether the caller gets a notification for new posts of the space's blog.",
+    tags: [TAG],
+    params: spaceParams,
+    response: { description: "The subscription.", schema: subscriptionSchema, example: { following: true } },
+  })
+  async subscription(@Param("spaceId") spaceId: string, @Req() request: FastifyRequest) {
+    return { following: await this.#services.blogSubscriptions.following(actorOf(request), spaceId) };
+  }
+
+  @Put("spaces/:spaceId/blog/subscription")
+  @Permission("space.view", { type: "space", param: "spaceId" }, { sessionOnly: true })
+  @ApiRoute({
+    summary: "Follow a blog",
+    description:
+      "You get a notification for every new post of the space's blog that you can read, when it is published. Posts you wrote yourself are left out. While you cannot read the space, the subscription stays but sends nothing.",
+    tags: [TAG],
+    status: 204,
+    params: spaceParams,
+  })
+  async follow(@Param("spaceId") spaceId: string, @Req() request: FastifyRequest) {
+    await this.#services.blogSubscriptions.follow(actorOf(request), spaceId);
+  }
+
+  @Delete("spaces/:spaceId/blog/subscription")
+  @Permission("instance.content.view", { type: "instance" }, { sessionOnly: true })
+  @ApiRoute({
+    summary: "Stop following a blog",
+    description: "Ends the subscription. It succeeds also when you did not follow the blog.",
+    tags: [TAG],
+    status: 204,
+    params: spaceParams,
+  })
+  async unfollow(@Param("spaceId") spaceId: string, @Req() request: FastifyRequest) {
+    await this.#services.blogSubscriptions.unfollow(actorOf(request), spaceId);
+  }
+
+  @Get("account/followed-blogs")
+  @SessionRoute()
+  @InternalRoute()
+  @ApiRoute({
+    summary: "List the blogs you follow",
+    description:
+      "Lists followed blogs of spaces the caller can read, by name, and counts those of spaces the caller cannot read at the moment.",
+    tags: [TAG],
+    response: {
+      description: "The blogs.",
+      schema: followedBlogsSchema,
+      example: { items: [exampleFollowedBlog], unavailable: 0 },
+    },
+  })
+  async followed(@Req() request: FastifyRequest) {
+    const result = await this.#services.blogSubscriptions.list(actorOf(request));
+    return { items: result.blogs, unavailable: result.unavailable };
+  }
+
+  @Delete("account/followed-blogs/unavailable")
+  @SessionRoute()
+  @InternalRoute()
+  @ApiRoute({
+    summary: "Stop following blogs you cannot read",
+    description: "Ends the subscriptions to blogs of spaces you cannot read at the moment.",
+    tags: [TAG],
+    status: 200,
+    response: { description: "Subscriptions removed.", schema: removedSchema, example: { removed: 1 } },
+  })
+  async removeUnavailable(@Req() request: FastifyRequest) {
+    return { removed: await this.#services.blogSubscriptions.removeUnavailable(actorOf(request)) };
   }
 }

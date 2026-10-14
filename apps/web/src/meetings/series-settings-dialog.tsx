@@ -17,6 +17,12 @@ import {
 } from "./schedule-fields.js";
 
 const NAME_MAX = 200;
+const REMINDERS = ["off", "oneDay", "twoDays", "oneWeek"] as const;
+type Reminder = (typeof REMINDERS)[number];
+
+function isReminder(value: string): value is Reminder {
+  return (REMINDERS as readonly string[]).includes(value);
+}
 
 function scheduleOf(series: Series): ScheduleValue {
   return {
@@ -43,6 +49,9 @@ export function SeriesSettingsDialog({
   const [name, setName] = useState(series.title);
   const [members, setMembers] = useState<ComboboxItem[]>([]);
   const [templateId, setTemplateId] = useState(series.template.id);
+  const [reminder, setReminder] = useState<Reminder>(
+    isReminder(series.reminder) ? series.reminder : "oneDay",
+  );
   const [schedule, setSchedule] = useState<ScheduleValue>(() => scheduleOf(series));
   const [errors, setErrors] = useState<ScheduleErrors & { name?: string }>({});
   const [busy, setBusy] = useState(false);
@@ -62,6 +71,7 @@ export function SeriesSettingsDialog({
     if (!open) return;
     setName(series.title);
     setTemplateId(series.template.id);
+    setReminder(isReminder(series.reminder) ? series.reminder : "oneDay");
     setSchedule(scheduleOf(series));
     setMembers(
       series.members.map((member) => ({
@@ -92,6 +102,7 @@ export function SeriesSettingsDialog({
             name: name.trim(),
             members: members.map((member) => member.value),
             templateId,
+            reminder,
             ...(scheduleChanged ? { schedule: scheduleBody(schedule) } : {}),
           },
         }),
@@ -164,6 +175,15 @@ export function SeriesSettingsDialog({
                     ...seriesTemplates.map((template) => ({ value: template.id, label: template.name })),
                   ]
             }
+          />
+        </Field>
+        <Field label={t("meetings.reminder.label")} hint={t("meetings.reminder.hint")}>
+          <Select
+            value={reminder}
+            onValueChange={(value) => {
+              if (isReminder(value)) setReminder(value);
+            }}
+            options={REMINDERS.map((value) => ({ value, label: t(`meetings.reminder.${value}`) }))}
           />
         </Field>
         <ScheduleFields

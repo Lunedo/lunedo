@@ -228,7 +228,7 @@ describe.skipIf(!baseUrl)("notifications", () => {
       [scopeId],
     );
     const migration = readFileSync(
-      new URL("../../drizzle/0060_watching_and_preferences.sql", import.meta.url),
+      new URL("../../drizzle/0061_watching_and_preferences.sql", import.meta.url),
       "utf8",
     );
     for (const statement of migration.split("--> statement-breakpoint").slice(-3)) {

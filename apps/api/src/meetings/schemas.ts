@@ -4,6 +4,7 @@ import {
   MAX_SERIES_MEMBERS,
   MAX_STATEMENT_LENGTH,
   MAX_TOPIC_LABELS,
+  meetingReminders,
   meetingStates,
   rhythmFrequencies,
   SERIES_NAME_MAX_LENGTH,
@@ -94,6 +95,11 @@ export const scheduleInputSchema = z
   .strict()
   .describe("When the meetings take place.");
 
+const REMINDER_DESCRIPTION =
+  "When attendees are reminded to add their topics: `off`, or one day, two days or one week before each meeting.";
+const reminderInputSchema = z.enum(meetingReminders).describe(REMINDER_DESCRIPTION);
+export const reminderSchema = extensibleEnum(meetingReminders, REMINDER_DESCRIPTION);
+
 export const createSeriesSchema = z
   .object({
     name: z
@@ -115,6 +121,7 @@ export const createSeriesSchema = z
       .max(64)
       .default("builtin:team-meeting")
       .describe("Template for the meeting pages: a template ID or `builtin:<key>`."),
+    reminder: reminderInputSchema.default("oneDay"),
     ...scheduleFields,
   })
   .strict()
@@ -133,6 +140,7 @@ export const updateSeriesSchema = z
       .optional()
       .describe("All members, in order."),
     templateId: z.string().max(64).optional().describe("Template for new meetings."),
+    reminder: reminderInputSchema.optional(),
     schedule: scheduleInputSchema
       .optional()
       .describe("New schedule. The upcoming meeting moves to the new rhythm."),
@@ -211,6 +219,7 @@ export const seriesSchema = z
         name: z.string().nullable().describe("Name of the template, or null when it was deleted."),
       })
       .describe("Template of the meeting pages."),
+    reminder: reminderSchema,
     source: extensibleEnum(scheduleSources, "Where the schedule comes from: set here or from a calendar."),
     calendarUid: z.string().nullable().describe("Calendar UID when the schedule comes from a calendar."),
     upcoming: meetingSummarySchema
@@ -238,6 +247,7 @@ export const exampleSeries = {
     durationMinutes: 45,
   },
   template: { id: "builtin:team-meeting", name: "Team meeting" },
+  reminder: "oneDay",
   source: "manual",
   calendarUid: null,
   upcoming: exampleMeetingSummary,

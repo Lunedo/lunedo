@@ -14,6 +14,7 @@ import "../notifications/builtin.js";
 import "./builtin.js";
 import { QuickSearchHost } from "../search/quick-search.js";
 import { signedOut } from "../session/sign-out.js";
+import { AnnouncementBanners } from "./announcement-banners.js";
 import { CommandPaletteHost } from "./command-palette.js";
 import { railItems, type ShellContext, type Shortcut, shortcuts } from "./extensions.js";
 import { Heron } from "./heron.js";
@@ -126,6 +127,7 @@ function ShellFrame() {
         </Rail>
         {notificationsOpen ? <NotificationPanel onClose={() => setNotificationsOpen(false)} /> : null}
         <div className="flex min-w-0 flex-1 flex-col">
+          <AnnouncementBanners />
           <InsecureProvidersBanner />
           <MissingGroupsBanner />
           <WithoutOrganizationBanner />

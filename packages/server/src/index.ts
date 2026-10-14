@@ -53,6 +53,18 @@ export {
 } from "./accounts/principal.js";
 export { accountScopeChain } from "./accounts/scope.js";
 export {
+  ANNOUNCEMENT_LINK_LABEL_MAX_LENGTH,
+  ANNOUNCEMENT_TEXT_MAX_LENGTH,
+  ANNOUNCEMENT_URL_MAX_LENGTH,
+  type Announcement,
+  type AnnouncementChangeSignal,
+  type AnnouncementInput,
+  AnnouncementService,
+  type ManagedAnnouncement,
+  type ShownAnnouncement,
+} from "./announcements/announcements.js";
+export { type AnnouncementSeverity, announcementSeverities } from "./announcements/schema.js";
+export {
   AUDIT_CHANGES_CHANNEL,
   type AuditChangeSignal,
   AuditLog,
@@ -138,6 +150,7 @@ export {
   MAX_BLOG_PAGE,
   SCHEDULE_MAX_DAYS,
 } from "./collaboration/blog.js";
+export { BlogSubscriptionService, type FollowedBlog } from "./collaboration/blog-subscriptions.js";
 export {
   COMMENT_RESTORE_MINUTES,
   type Comment,
@@ -424,11 +437,14 @@ export {
   type PrivateNotesEntry,
   PrivateNotesService,
 } from "./meetings/private-notes.js";
+export { MeetingReminders, REMINDER_MINUTES } from "./meetings/reminders.js";
 export { MAX_INTERVAL, type Rhythm, rhythmFrequencies, rhythmSchema, weekdays } from "./meetings/schedule.js";
 export {
   type Attendance,
   attendanceValues,
+  type MeetingReminder,
   type MeetingState,
+  meetingReminders,
   meetingStates,
   type ScheduleSource,
   scheduleSources,
@@ -710,6 +726,14 @@ export {
   type SpaceGrant,
   spaceGrantSchema,
 } from "./spaces/settings.js";
+export {
+  MAX_SHORTCUTS,
+  SHORTCUT_LABEL_MAX_LENGTH,
+  SHORTCUT_URL_MAX_LENGTH,
+  type Shortcut,
+  ShortcutService,
+  type ShortcutTarget,
+} from "./spaces/shortcuts.js";
 export {
   DOCUMENT_CHANGES_CHANNEL,
   type DocumentChangeSignal,

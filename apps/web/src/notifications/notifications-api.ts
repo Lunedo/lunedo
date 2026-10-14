@@ -13,6 +13,7 @@ import { organizationKeys } from "../api/organization-queries.js";
 import { queryKeys } from "../api/queries.js";
 import { request } from "../api/request.js";
 import { importChanged, importKeys } from "../imports/imports-api.js";
+import { announcementsChanged } from "../shell/announcement-banners.js";
 import { isSpaceChangeEvent, type SpaceChangeEvent, spacesChanged } from "../spaces/space-queries.js";
 
 export const notificationKeys = {
@@ -239,7 +240,9 @@ export function useNotificationStream(enabled: boolean): void {
         return;
       }
     };
+    const onAnnouncements = () => announcementsChanged(queryClient);
     source.addEventListener("notifications", onChange);
+    source.addEventListener("announcements", onAnnouncements);
     source.addEventListener("imports", onImports);
     source.addEventListener("spaces", onSpaces);
     source.addEventListener("changes", onObjects);
@@ -252,6 +255,7 @@ export function useNotificationStream(enabled: boolean): void {
       source.removeEventListener("changes", onObjects);
       source.removeEventListener("spaces", onSpaces);
       source.removeEventListener("imports", onImports);
+      source.removeEventListener("announcements", onAnnouncements);
       if (flush) clearTimeout(flush);
       if (flushSpaces) clearTimeout(flushSpaces);
       source.close();

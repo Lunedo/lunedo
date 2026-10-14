@@ -10,6 +10,7 @@ import { sql } from "drizzle-orm";
 import * as Y from "yjs";
 import { type Principal, SYSTEM } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
+import { queueBlogAnnouncement } from "../collaboration/blog-subscriptions.js";
 import { type ContentActivity, syncCommentAnchors } from "../collaboration/content.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import {
@@ -237,10 +238,13 @@ export class VersionService {
         updated_at = now()
       where id = ${page.itemId}`);
     await publishAttachments(tx, page.itemId);
-    await tx.execute(sql`
-      update blog_posts set published_at = coalesce(published_at, now()), scheduled_at = null, scheduled_by = null,
+    const post = await tx.execute<{ first: boolean }>(sql`
+      with previous as (select published_at from blog_posts where item_id = ${page.itemId} for update)
+      update blog_posts b set published_at = coalesce(b.published_at, now()), scheduled_at = null, scheduled_by = null,
         scheduled_time_zone = null, held_at = null, updated_at = now()
-      where item_id = ${page.itemId}`);
+      from previous where b.item_id = ${page.itemId}
+      returning previous.published_at is null as first`);
+    if (post.rows[0]?.first && options.reason !== "imported") await queueBlogAnnouncement(tx, page.itemId);
     await recomputeLinks(tx, page.itemId, document);
     await signalSpaceChange(tx, { spaceId: page.spaceId, kind: "page", itemId: page.itemId });
     await signalSpaceChange(tx, { spaceId: page.spaceId, kind: "tree", itemId: page.itemId });

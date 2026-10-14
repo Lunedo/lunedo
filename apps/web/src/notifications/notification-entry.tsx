@@ -24,13 +24,16 @@ export function notificationText(
   accountId?: string,
 ): string {
   const raw = (item.params ?? {}) as Record<string, unknown>;
+  const dateTimes = notificationTypes.list().find((entry) => entry.id === item.type)?.dateTimeParams ?? [];
   const params = Object.fromEntries(
     Object.entries(raw).map(([key, value]) => [
       key,
       value === null
         ? translateKey(t, "common.unknown")
         : typeof value === "string" && /^\d{4}-\d{2}-\d{2}(T|$)/.test(value)
-          ? format.date(value)
+          ? dateTimes.includes(key)
+            ? format.dateTime(value)
+            : format.date(value)
           : value,
     ]),
   );

@@ -12,6 +12,7 @@ export interface NotificationType {
   icon: LucideIcon;
   link: (item: NotificationItem) => NotificationLink | null;
   watched?: boolean;
+  dateTimeParams?: readonly string[];
 }
 
 export const notificationTypes = createRegistry<NotificationType>();

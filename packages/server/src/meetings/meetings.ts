@@ -33,7 +33,7 @@ import {
   ScheduleError,
   validateSchedule,
 } from "./schedule.js";
-import type { Attendance, MeetingState, ScheduleSource } from "./schema.js";
+import type { Attendance, MeetingReminder, MeetingState, ScheduleSource } from "./schema.js";
 
 export const SERIES_NAME_MAX_LENGTH = 200;
 export const MAX_SERIES_MEMBERS = 100;
@@ -56,6 +56,7 @@ export interface SeriesScheduleInput {
 
 export interface CreateSeriesInput extends SeriesScheduleInput {
   name: string;
+  reminder?: MeetingReminder | undefined;
   parentId: string | null;
   members: string[];
   templateId: string;
@@ -95,6 +96,7 @@ export interface SeriesDetails {
     durationMinutes: number;
   };
   template: { id: string; name: string | null };
+  reminder: MeetingReminder;
   source: ScheduleSource;
   calendarUid: string | null;
   upcoming: MeetingSummary | null;
@@ -434,9 +436,9 @@ export class MeetingService {
           ${name}, 'live', ${actorId}, ${actorId})`);
       await tx.execute(sql`
         insert into meeting_series (item_id, recurrence, starts_on, start_time, time_zone, duration_minutes,
-          template_id, created_by)
+          template_id, reminder, created_by)
         values (${id}, ${schedule.recurrence}, ${schedule.startsOn}, ${schedule.startTime}, ${schedule.timeZone},
-          ${durationMinutes}, ${template.id}, ${actorId})`);
+          ${durationMinutes}, ${template.id}, ${input.reminder ?? "oneDay"}, ${actorId})`);
       for (const [position, accountId] of members.entries()) {
         await tx.execute(sql`
           insert into meeting_series_members (series_id, account_id, position)
@@ -487,13 +489,14 @@ export class MeetingService {
     const series = await this.#series(this.#database, seriesId);
     const extra = await this.#database.execute<{
       source: ScheduleSource;
+      reminder: MeetingReminder;
       calendar_uid: string | null;
       created_at: Date | string;
       parent_id: string | null;
       one_on_one: boolean;
       open_topics: string;
     }>(sql`
-      select ms.source, ms.calendar_uid, ms.created_at, t.parent_id, s.one_on_one,
+      select ms.source, ms.reminder, ms.calendar_uid, ms.created_at, t.parent_id, s.one_on_one,
         (select count(*) from meeting_topics mt join tree_items tt on tt.id = mt.item_id
           join spaces ts on ts.id = tt.space_id
           where mt.series_id = ms.item_id and mt.status = 'open'
@@ -524,6 +527,7 @@ export class MeetingService {
         durationMinutes: series.duration_minutes,
       },
       template: { id: series.template_id, name: template?.name ?? null },
+      reminder: row.reminder,
       source: row.source,
       calendarUid: row.calendar_uid,
       upcoming,
@@ -559,6 +563,7 @@ export class MeetingService {
       members?: string[] | undefined;
       schedule?: SeriesScheduleInput | undefined;
       templateId?: string | undefined;
+      reminder?: MeetingReminder | undefined;
     },
   ): Promise<void> {
     await this.#database.transaction(async (tx) => {
@@ -572,6 +577,10 @@ export class MeetingService {
       if (changes.templateId !== undefined) {
         const template = await this.#template(actor, series.space_id, changes.templateId);
         await tx.execute(sql`update meeting_series set template_id = ${template.id}, updated_at = now()
+          where item_id = ${seriesId}`);
+      }
+      if (changes.reminder !== undefined) {
+        await tx.execute(sql`update meeting_series set reminder = ${changes.reminder}, updated_at = now()
           where item_id = ${seriesId}`);
       }
       if (changes.members !== undefined) {

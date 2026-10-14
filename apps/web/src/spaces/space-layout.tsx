@@ -35,6 +35,7 @@ import { useShell } from "../shell/shell.js";
 import { ArchiveSection } from "./archive/archive-section.js";
 import { itemHref, itemSlug } from "./item-paths.js";
 import { Redirect } from "./redirect.js";
+import { SidebarShortcuts } from "./shortcuts/sidebar-shortcuts.js";
 import { SpaceBadge, spaceDisplayName } from "./space-badge.js";
 import { SpaceContext, type SpaceContextValue } from "./space-context.js";
 import { itemQuery, type SpaceWithRole, sharedPath, spaceByKeyQuery } from "./space-queries.js";
@@ -441,6 +442,7 @@ function SpaceNavigation({
           </li>
         ) : null}
       </ul>
+      <SidebarShortcuts spaceId={space.id} />
       <div className="flex items-center gap-1 px-2 pt-4 pb-1">
         <h2 className="flex-1 text-xs font-semibold tracking-label text-text-muted uppercase">
           {t("tree.title")}

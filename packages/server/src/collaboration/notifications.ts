@@ -35,6 +35,15 @@ const scheduleHeld = defineNotificationType({
   },
 });
 
+const blogPostPublished = defineNotificationType({
+  type: "blogPost.published",
+  targetType: "item",
+  params: contentNotificationParamSchemas["blogPost.published"],
+  async visible(context) {
+    return context.targetId !== null && context.can("item.view", { type: "item", id: context.targetId });
+  },
+});
+
 const commentCreated = defineNotificationType({
   type: "comment.created",
   targetType: "item",
@@ -57,6 +66,7 @@ export const collaborationNotificationTypes = [
   contentMentioned,
   taskAssigned,
   scheduleHeld,
+  blogPostPublished,
   commentCreated,
   contentChanged,
 ];

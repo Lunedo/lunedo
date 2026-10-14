@@ -59,6 +59,7 @@ import { StarButton, useContentCollaboration } from "../content-collaboration.js
 import { type BlogPost, blogPostQuery, collaborationKeys } from "../queries.js";
 import { PageReactions } from "../reaction-bar.js";
 import { PostBadges, PostMeta } from "./blog-list.js";
+import { FollowBlogButton } from "./follow-blog.js";
 import { HeldNotice } from "./held-notice.js";
 
 const route = getRouteApi("/app/spaces/$spaceKey/blog/$itemId/{-$slug}");
@@ -427,6 +428,9 @@ function BlogPostArticle({ item, post, lostEdit }: { item: ItemDetails; post: Bl
                     {t("page.edit")}
                   </Button>
                 )
+              ) : null}
+              {space.role && !editing ? (
+                <FollowBlogButton spaceId={space.id} spaceName={spaceDisplayName(t, space)} />
               ) : null}
               <StarButton target={{ itemId: item.id }} title={title} />
               <WatchMenu target={{ type: "item", id: item.id }} name={title} />

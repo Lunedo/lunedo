@@ -13,6 +13,7 @@ export type SpaceSettingsTab =
   | "access"
   | "content"
   | "status"
+  | "shortcuts"
   | "templates"
   | "export";
 
@@ -22,6 +23,7 @@ const TAB_PATHS = {
   access: "/spaces/$spaceKey/settings/access",
   content: "/spaces/$spaceKey/settings/content",
   status: "/spaces/$spaceKey/settings/status",
+  shortcuts: "/spaces/$spaceKey/settings/shortcuts",
   templates: "/spaces/$spaceKey/settings/templates",
   export: "/spaces/$spaceKey/settings/export",
 } as const;
@@ -64,6 +66,7 @@ export function SpaceSettingsPage({
           { value: "access", label: t("spaces.access.tab") },
           { value: "content", label: t("content.title") },
           { value: "status", label: t("pageStatus.settingsTitle") },
+          { value: "shortcuts", label: t("spaceShortcuts.title") },
           { value: "templates", label: t("templates.title") },
           { value: "export", label: t("exports.settings.tab") },
         ]}

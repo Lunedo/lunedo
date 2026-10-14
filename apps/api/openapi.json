@@ -25,6 +25,10 @@
       "description": ""
     },
     {
+      "name": "Announcements",
+      "description": ""
+    },
+    {
       "name": "Attachments",
       "description": ""
     },
@@ -1761,6 +1765,234 @@
                       "title": "Too many requests",
                       "status": 429,
                       "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/account/followed-blogs": {
+      "get": {
+        "operationId": "blog.followed",
+        "summary": "List the blogs you follow",
+        "description": "Lists followed blogs of spaces the caller can read, by name, and counts those of spaces the caller cannot read at the moment.\n\nNeeds a signed-in session.",
+        "tags": [
+          "Blog"
+        ],
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The blogs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "spaceId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the space."
+                          },
+                          "spaceKey": {
+                            "type": "string",
+                            "description": "Key of the space."
+                          },
+                          "spaceName": {
+                            "type": "string",
+                            "description": "Name of the space."
+                          },
+                          "personal": {
+                            "type": "boolean",
+                            "description": "Whether it is a personal space."
+                          },
+                          "followedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "When the caller started following. ISO 8601 timestamp in UTC."
+                          }
+                        },
+                        "required": [
+                          "spaceId",
+                          "spaceKey",
+                          "spaceName",
+                          "personal",
+                          "followedAt"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A blog the caller follows."
+                      },
+                      "description": "Blogs of spaces the caller can read, by name."
+                    },
+                    "unavailable": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Followed blogs of spaces the caller cannot read at the moment. Their notifications resume when access returns."
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "unavailable"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Followed blogs."
+                },
+                "example": {
+                  "items": [
+                    {
+                      "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
+                      "spaceKey": "ENG",
+                      "spaceName": "Engineering",
+                      "personal": false,
+                      "followedAt": "2026-10-01T08:00:00.000Z"
+                    }
+                  ],
+                  "unavailable": 0
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/account/followed-blogs/unavailable": {
+      "delete": {
+        "operationId": "blog.removeUnavailable",
+        "summary": "Stop following blogs you cannot read",
+        "description": "Ends the subscriptions to blogs of spaces you cannot read at the moment.\n\nNeeds a signed-in session.",
+        "tags": [
+          "Blog"
+        ],
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Subscriptions removed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "removed": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of subscriptions removed."
+                    }
+                  },
+                  "required": [
+                    "removed"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The result."
+                },
+                "example": {
+                  "removed": 1
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
                     }
                   }
                 }
@@ -8763,6 +8995,392 @@
                       "title": "Own sessions are ended on the security page",
                       "status": 409,
                       "code": "endOwnSessions"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/announcements": {
+      "get": {
+        "operationId": "announcements.shown",
+        "summary": "List the announcements shown to you",
+        "description": "Returns the announcements of the instance and of the caller's organizations that have not ended. Show those that have started, and hide dismissed information.\n\nRequires the permission `instance.content.view` on the instance. Needs a signed-in session; API tokens are refused.",
+        "tags": [
+          "Announcements"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.content.view",
+          "resource": "instance"
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The announcements.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID of the announcement. It stays the same when the announcement is changed."
+                      },
+                      "scope": {
+                        "type": "string",
+                        "enum": [
+                          "instance",
+                          "organization"
+                        ],
+                        "description": "Who set it."
+                      },
+                      "organizationId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The organization, or null for the instance."
+                      },
+                      "version": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Changes with every change of the announcement."
+                      },
+                      "severity": {
+                        "type": "string",
+                        "enum": [
+                          "information",
+                          "warning"
+                        ],
+                        "description": "`information` can be dismissed by each person until the announcement changes; `warning` stays until its end."
+                      },
+                      "text": {
+                        "type": "string",
+                        "description": "The text."
+                      },
+                      "link": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "url": {
+                                "type": "string",
+                                "maxLength": 2000,
+                                "description": "Address starting with https:// or http://."
+                              },
+                              "label": {
+                                "type": "string",
+                                "maxLength": 60,
+                                "description": "Text of the link."
+                              }
+                            },
+                            "required": [
+                              "url",
+                              "label"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A link shown after the text."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The link, or null."
+                      },
+                      "startsAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "When it starts to show. ISO 8601 timestamp in UTC."
+                      },
+                      "endsAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "When it stops showing. ISO 8601 timestamp in UTC."
+                      },
+                      "dismissed": {
+                        "type": "boolean",
+                        "description": "Whether the caller dismissed this version."
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "scope",
+                      "organizationId",
+                      "version",
+                      "severity",
+                      "text",
+                      "link",
+                      "startsAt",
+                      "endsAt",
+                      "dismissed"
+                    ],
+                    "additionalProperties": false,
+                    "description": "An announcement."
+                  },
+                  "description": "Announcements of the instance and of the caller's organizations that have not ended, including ones that start later. The instance announcement comes first."
+                },
+                "example": [
+                  {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                    "scope": "organization",
+                    "organizationId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a01",
+                    "version": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a41",
+                    "severity": "information",
+                    "text": "New: search in attachments. PDF, Word and Excel files are now searchable.",
+                    "link": {
+                      "url": "https://wiki.example.org/spaces/ENG/blog",
+                      "label": "Read the post"
+                    },
+                    "startsAt": "2026-10-14T08:00:00.000Z",
+                    "endsAt": "2026-10-21T08:00:00.000Z",
+                    "dismissed": false
+                  }
+                ]
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed. `sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/announcements/{announcementId}/dismiss": {
+      "post": {
+        "operationId": "announcements.dismiss",
+        "summary": "Dismiss an announcement",
+        "description": "Hides an information announcement for you until it changes. Warnings cannot be dismissed; they disappear at their end.\n\nRequires the permission `instance.content.view` on the instance. Needs a signed-in session; API tokens are refused.",
+        "tags": [
+          "Announcements"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.content.view",
+          "resource": "instance"
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "announcementId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the announcement.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "version": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "The version that was shown."
+                  }
+                },
+                "required": [
+                  "version"
+                ],
+                "additionalProperties": false,
+                "description": "The version to dismiss."
+              },
+              "example": {
+                "version": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a41"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Done. The response has no body."
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`announcementChanged`: The announcement changed in the meantime. `announcementNotDismissible`: A warning cannot be dismissed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "announcementChanged": {
+                    "value": {
+                      "type": "urn:pagehall:problem:announcementChanged",
+                      "title": "The announcement changed in the meantime",
+                      "status": 409,
+                      "code": "announcementChanged"
+                    }
+                  },
+                  "announcementNotDismissible": {
+                    "value": {
+                      "type": "urn:pagehall:problem:announcementNotDismissible",
+                      "title": "A warning cannot be dismissed",
+                      "status": 409,
+                      "code": "announcementNotDismissible"
                     }
                   }
                 }
@@ -43792,6 +44410,825 @@
                       "title": "The address of the instance is set in the server environment",
                       "status": 409,
                       "code": "instanceUrlFromEnvironment"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/instance/announcement": {
+      "delete": {
+        "operationId": "announcements.removeInstance",
+        "summary": "Remove the instance announcement",
+        "description": "Removes the banner of the instance for everyone at once.\n\nRequires the permission `instance.settings.manage` on the instance.",
+        "tags": [
+          "Announcements"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.settings.manage",
+          "resource": "instance"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Done. The response has no body."
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "announcements.instance",
+        "summary": "Get the instance announcement",
+        "description": "Returns the banner of the instance as set, also when it has ended or starts later.\n\nRequires the permission `instance.settings.view` on the instance.",
+        "tags": [
+          "Announcements"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.settings.view",
+          "resource": "instance"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The announcement.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "announcement": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the announcement. It stays the same when the announcement is changed."
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "instance",
+                                "organization"
+                              ],
+                              "description": "Who set it."
+                            },
+                            "organizationId": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The organization, or null for the instance."
+                            },
+                            "version": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "Changes with every change of the announcement."
+                            },
+                            "severity": {
+                              "type": "string",
+                              "enum": [
+                                "information",
+                                "warning"
+                              ],
+                              "description": "`information` can be dismissed by each person until the announcement changes; `warning` stays until its end."
+                            },
+                            "text": {
+                              "type": "string",
+                              "description": "The text."
+                            },
+                            "link": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "url": {
+                                      "type": "string",
+                                      "maxLength": 2000,
+                                      "description": "Address starting with https:// or http://."
+                                    },
+                                    "label": {
+                                      "type": "string",
+                                      "maxLength": 60,
+                                      "description": "Text of the link."
+                                    }
+                                  },
+                                  "required": [
+                                    "url",
+                                    "label"
+                                  ],
+                                  "additionalProperties": false,
+                                  "description": "A link shown after the text."
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The link, or null."
+                            },
+                            "startsAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "description": "When it starts to show. ISO 8601 timestamp in UTC."
+                            },
+                            "endsAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "description": "When it stops showing. ISO 8601 timestamp in UTC."
+                            },
+                            "updatedAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "description": "When it was last changed. ISO 8601 timestamp in UTC."
+                            },
+                            "updatedBy": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "description": "ID of the person."
+                                    },
+                                    "name": {
+                                      "description": "Name, or null when the caller may not see the person.",
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "name"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Who changed it last."
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "scope",
+                            "organizationId",
+                            "version",
+                            "severity",
+                            "text",
+                            "link",
+                            "startsAt",
+                            "endsAt",
+                            "updatedAt",
+                            "updatedBy"
+                          ],
+                          "additionalProperties": false,
+                          "description": "An announcement banner."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The announcement, or null when none is set."
+                    }
+                  },
+                  "required": [
+                    "announcement"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The current announcement."
+                },
+                "example": {
+                  "announcement": {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                    "scope": "organization",
+                    "organizationId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a01",
+                    "version": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a41",
+                    "severity": "information",
+                    "text": "New: search in attachments. PDF, Word and Excel files are now searchable.",
+                    "link": {
+                      "url": "https://wiki.example.org/spaces/ENG/blog",
+                      "label": "Read the post"
+                    },
+                    "startsAt": "2026-10-14T08:00:00.000Z",
+                    "endsAt": "2026-10-21T08:00:00.000Z",
+                    "updatedAt": "2026-10-14T07:55:00.000Z",
+                    "updatedBy": {
+                      "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                      "name": "Anna Weber"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "announcements.setInstance",
+        "summary": "Set the instance announcement",
+        "description": "Shows a banner on every screen of signed-in people, above an organization's banner. Open sessions show the change at once.\n\nRequires the permission `instance.settings.manage` on the instance.",
+        "tags": [
+          "Announcements"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.settings.manage",
+          "resource": "instance"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "severity": {
+                    "type": "string",
+                    "enum": [
+                      "information",
+                      "warning"
+                    ],
+                    "description": "`information` can be dismissed by each person until the announcement changes; `warning` stays until its end."
+                  },
+                  "text": {
+                    "type": "string",
+                    "maxLength": 300,
+                    "description": "Up to 300 characters."
+                  },
+                  "link": {
+                    "default": null,
+                    "description": "A link shown after the text, or null.",
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "url": {
+                            "type": "string",
+                            "maxLength": 2000,
+                            "description": "Address starting with https:// or http://."
+                          },
+                          "label": {
+                            "type": "string",
+                            "maxLength": 60,
+                            "description": "Text of the link."
+                          }
+                        },
+                        "required": [
+                          "url",
+                          "label"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "startsAt": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "When it starts to show, or null for now. ISO 8601 timestamp; an offset is allowed."
+                  },
+                  "endsAt": {
+                    "description": "When it stops showing. Needs to be in the future and after the start. ISO 8601 timestamp; an offset is allowed.",
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "severity",
+                  "text",
+                  "endsAt"
+                ],
+                "additionalProperties": false,
+                "description": "The announcement. It replaces the current one; everyone sees it again, also people who dismissed it."
+              },
+              "example": {
+                "severity": "information",
+                "text": "New: search in attachments. PDF, Word and Excel files are now searchable.",
+                "link": {
+                  "url": "https://wiki.example.org/spaces/ENG/blog",
+                  "label": "Read the post"
+                },
+                "startsAt": null,
+                "endsAt": "2026-10-21T08:00:00.000Z"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The announcement.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the announcement. It stays the same when the announcement is changed."
+                    },
+                    "scope": {
+                      "type": "string",
+                      "enum": [
+                        "instance",
+                        "organization"
+                      ],
+                      "description": "Who set it."
+                    },
+                    "organizationId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The organization, or null for the instance."
+                    },
+                    "version": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "Changes with every change of the announcement."
+                    },
+                    "severity": {
+                      "type": "string",
+                      "enum": [
+                        "information",
+                        "warning"
+                      ],
+                      "description": "`information` can be dismissed by each person until the announcement changes; `warning` stays until its end."
+                    },
+                    "text": {
+                      "type": "string",
+                      "description": "The text."
+                    },
+                    "link": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "url": {
+                              "type": "string",
+                              "maxLength": 2000,
+                              "description": "Address starting with https:// or http://."
+                            },
+                            "label": {
+                              "type": "string",
+                              "maxLength": 60,
+                              "description": "Text of the link."
+                            }
+                          },
+                          "required": [
+                            "url",
+                            "label"
+                          ],
+                          "additionalProperties": false,
+                          "description": "A link shown after the text."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The link, or null."
+                    },
+                    "startsAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When it starts to show. ISO 8601 timestamp in UTC."
+                    },
+                    "endsAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When it stops showing. ISO 8601 timestamp in UTC."
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When it was last changed. ISO 8601 timestamp in UTC."
+                    },
+                    "updatedBy": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the person."
+                            },
+                            "name": {
+                              "description": "Name, or null when the caller may not see the person.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Who changed it last."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "scope",
+                    "organizationId",
+                    "version",
+                    "severity",
+                    "text",
+                    "link",
+                    "startsAt",
+                    "endsAt",
+                    "updatedAt",
+                    "updatedBy"
+                  ],
+                  "additionalProperties": false,
+                  "description": "An announcement banner."
+                },
+                "example": {
+                  "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                  "scope": "organization",
+                  "organizationId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a01",
+                  "version": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a41",
+                  "severity": "information",
+                  "text": "New: search in attachments. PDF, Word and Excel files are now searchable.",
+                  "link": {
+                    "url": "https://wiki.example.org/spaces/ENG/blog",
+                    "label": "Read the post"
+                  },
+                  "startsAt": "2026-10-14T08:00:00.000Z",
+                  "endsAt": "2026-10-21T08:00:00.000Z",
+                  "updatedAt": "2026-10-14T07:55:00.000Z",
+                  "updatedBy": {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                    "name": "Anna Weber"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidAnnouncement`: The announcement is not valid. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidAnnouncement": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidAnnouncement",
+                      "title": "The announcement is not valid",
+                      "status": 400,
+                      "code": "invalidAnnouncement"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
                     }
                   }
                 }
@@ -112117,6 +113554,16 @@
                       "additionalProperties": false,
                       "description": "Template of the meeting pages."
                     },
+                    "reminder": {
+                      "type": "string",
+                      "description": "When attendees are reminded to add their topics: `off`, or one day, two days or one week before each meeting. New values can be added in later versions; handle unknown values.",
+                      "x-extensible-enum": [
+                        "off",
+                        "oneDay",
+                        "twoDays",
+                        "oneWeek"
+                      ]
+                    },
                     "source": {
                       "type": "string",
                       "description": "Where the schedule comes from: set here or from a calendar. New values can be added in later versions; handle unknown values.",
@@ -112240,6 +113687,7 @@
                     "members",
                     "schedule",
                     "template",
+                    "reminder",
                     "source",
                     "calendarUid",
                     "upcoming",
@@ -112281,6 +113729,7 @@
                     "id": "builtin:team-meeting",
                     "name": "Team meeting"
                   },
+                  "reminder": "oneDay",
                   "source": "manual",
                   "calendarUid": null,
                   "upcoming": {
@@ -112475,6 +113924,16 @@
                     "description": "Template for new meetings.",
                     "type": "string",
                     "maxLength": 64
+                  },
+                  "reminder": {
+                    "type": "string",
+                    "enum": [
+                      "off",
+                      "oneDay",
+                      "twoDays",
+                      "oneWeek"
+                    ],
+                    "description": "When attendees are reminded to add their topics: `off`, or one day, two days or one week before each meeting."
                   },
                   "schedule": {
                     "description": "New schedule. The upcoming meeting moves to the new rhythm.",
@@ -112790,6 +114249,16 @@
                       "additionalProperties": false,
                       "description": "Template of the meeting pages."
                     },
+                    "reminder": {
+                      "type": "string",
+                      "description": "When attendees are reminded to add their topics: `off`, or one day, two days or one week before each meeting. New values can be added in later versions; handle unknown values.",
+                      "x-extensible-enum": [
+                        "off",
+                        "oneDay",
+                        "twoDays",
+                        "oneWeek"
+                      ]
+                    },
                     "source": {
                       "type": "string",
                       "description": "Where the schedule comes from: set here or from a calendar. New values can be added in later versions; handle unknown values.",
@@ -112913,6 +114382,7 @@
                     "members",
                     "schedule",
                     "template",
+                    "reminder",
                     "source",
                     "calendarUid",
                     "upcoming",
@@ -112954,6 +114424,7 @@
                     "id": "builtin:team-meeting",
                     "name": "Team meeting"
                   },
+                  "reminder": "oneDay",
                   "source": "manual",
                   "calendarUid": null,
                   "upcoming": {
@@ -119055,7 +120526,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Server-sent events. The event `notifications` carries the unread count at the start and after every change. The event `settings` names a setting whose value for the caller may have changed, with its level and, for an organization, the organization ID; reload the setting. The event `syncRuns` names a run of a provider's sync log that started, changed or ended, sent only to callers who may view sign-in providers; reload the sync log. The event `changes` names the kind of object that changed in the instance or in an organization, as recorded in the audit log, sent only to callers who may view such objects there or the audit log of that level; reload lists that show such objects. The event `spaces` names a space whose settings, access, page tree or page content changed, with the kind of change and the affected item, sent only to callers who can read the space; reload what shows it. The event `imports` names an import whose state or progress changed, with its organization, sent only to callers who can see the import; reload it.",
+            "description": "Server-sent events. The event `notifications` carries the unread count at the start and after every change. The event `settings` names a setting whose value for the caller may have changed, with its level and, for an organization, the organization ID; reload the setting. The event `syncRuns` names a run of a provider's sync log that started, changed or ended, sent only to callers who may view sign-in providers; reload the sync log. The event `changes` names the kind of object that changed in the instance or in an organization, as recorded in the audit log, sent only to callers who may view such objects there or the audit log of that level; reload lists that show such objects. The event `spaces` names a space whose settings, access, page tree or page content changed, with the kind of change and the affected item, sent only to callers who can read the space; reload what shows it. The event `imports` names an import whose state or progress changed, with its organization, sent only to callers who can see the import; reload it. The event `announcements` says that the announcement of the instance or of one of the caller's organizations changed; reload the announcements.",
             "content": {
               "text/event-stream": {
                 "schema": {
@@ -121106,6 +122577,920 @@
                   "$ref": "#/components/schemas/Problem"
                 },
                 "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{organizationId}/announcement": {
+      "delete": {
+        "operationId": "announcements.removeOrganization",
+        "summary": "Remove the organization announcement",
+        "description": "Removes the banner of the organization for all its members at once.\n\nRequires the permission `organization.settings.manage` on the organization in `organizationId`.",
+        "tags": [
+          "Announcements"
+        ],
+        "x-pagehall-permission": {
+          "action": "organization.settings.manage",
+          "resource": "organization",
+          "parameter": "organizationId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the organization.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Done. The response has no body."
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "announcements.organization",
+        "summary": "Get the organization announcement",
+        "description": "Returns the banner of the organization as set, also when it has ended or starts later.\n\nRequires the permission `organization.settings.view` on the organization in `organizationId`.",
+        "tags": [
+          "Announcements"
+        ],
+        "x-pagehall-permission": {
+          "action": "organization.settings.view",
+          "resource": "organization",
+          "parameter": "organizationId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the organization.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The announcement.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "announcement": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the announcement. It stays the same when the announcement is changed."
+                            },
+                            "scope": {
+                              "type": "string",
+                              "enum": [
+                                "instance",
+                                "organization"
+                              ],
+                              "description": "Who set it."
+                            },
+                            "organizationId": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The organization, or null for the instance."
+                            },
+                            "version": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "Changes with every change of the announcement."
+                            },
+                            "severity": {
+                              "type": "string",
+                              "enum": [
+                                "information",
+                                "warning"
+                              ],
+                              "description": "`information` can be dismissed by each person until the announcement changes; `warning` stays until its end."
+                            },
+                            "text": {
+                              "type": "string",
+                              "description": "The text."
+                            },
+                            "link": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "url": {
+                                      "type": "string",
+                                      "maxLength": 2000,
+                                      "description": "Address starting with https:// or http://."
+                                    },
+                                    "label": {
+                                      "type": "string",
+                                      "maxLength": 60,
+                                      "description": "Text of the link."
+                                    }
+                                  },
+                                  "required": [
+                                    "url",
+                                    "label"
+                                  ],
+                                  "additionalProperties": false,
+                                  "description": "A link shown after the text."
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The link, or null."
+                            },
+                            "startsAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "description": "When it starts to show. ISO 8601 timestamp in UTC."
+                            },
+                            "endsAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "description": "When it stops showing. ISO 8601 timestamp in UTC."
+                            },
+                            "updatedAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "description": "When it was last changed. ISO 8601 timestamp in UTC."
+                            },
+                            "updatedBy": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "description": "ID of the person."
+                                    },
+                                    "name": {
+                                      "description": "Name, or null when the caller may not see the person.",
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "name"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Who changed it last."
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "scope",
+                            "organizationId",
+                            "version",
+                            "severity",
+                            "text",
+                            "link",
+                            "startsAt",
+                            "endsAt",
+                            "updatedAt",
+                            "updatedBy"
+                          ],
+                          "additionalProperties": false,
+                          "description": "An announcement banner."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The announcement, or null when none is set."
+                    }
+                  },
+                  "required": [
+                    "announcement"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The current announcement."
+                },
+                "example": {
+                  "announcement": {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                    "scope": "organization",
+                    "organizationId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a01",
+                    "version": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a41",
+                    "severity": "information",
+                    "text": "New: search in attachments. PDF, Word and Excel files are now searchable.",
+                    "link": {
+                      "url": "https://wiki.example.org/spaces/ENG/blog",
+                      "label": "Read the post"
+                    },
+                    "startsAt": "2026-10-14T08:00:00.000Z",
+                    "endsAt": "2026-10-21T08:00:00.000Z",
+                    "updatedAt": "2026-10-14T07:55:00.000Z",
+                    "updatedBy": {
+                      "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                      "name": "Anna Weber"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "announcements.setOrganization",
+        "summary": "Set the organization announcement",
+        "description": "Shows a banner on every screen of the organization's members, below the instance banner. Open sessions show the change at once.\n\nRequires the permission `organization.settings.manage` on the organization in `organizationId`.",
+        "tags": [
+          "Announcements"
+        ],
+        "x-pagehall-permission": {
+          "action": "organization.settings.manage",
+          "resource": "organization",
+          "parameter": "organizationId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the organization.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "severity": {
+                    "type": "string",
+                    "enum": [
+                      "information",
+                      "warning"
+                    ],
+                    "description": "`information` can be dismissed by each person until the announcement changes; `warning` stays until its end."
+                  },
+                  "text": {
+                    "type": "string",
+                    "maxLength": 300,
+                    "description": "Up to 300 characters."
+                  },
+                  "link": {
+                    "default": null,
+                    "description": "A link shown after the text, or null.",
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "url": {
+                            "type": "string",
+                            "maxLength": 2000,
+                            "description": "Address starting with https:// or http://."
+                          },
+                          "label": {
+                            "type": "string",
+                            "maxLength": 60,
+                            "description": "Text of the link."
+                          }
+                        },
+                        "required": [
+                          "url",
+                          "label"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "startsAt": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "When it starts to show, or null for now. ISO 8601 timestamp; an offset is allowed."
+                  },
+                  "endsAt": {
+                    "description": "When it stops showing. Needs to be in the future and after the start. ISO 8601 timestamp; an offset is allowed.",
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "severity",
+                  "text",
+                  "endsAt"
+                ],
+                "additionalProperties": false,
+                "description": "The announcement. It replaces the current one; everyone sees it again, also people who dismissed it."
+              },
+              "example": {
+                "severity": "information",
+                "text": "New: search in attachments. PDF, Word and Excel files are now searchable.",
+                "link": {
+                  "url": "https://wiki.example.org/spaces/ENG/blog",
+                  "label": "Read the post"
+                },
+                "startsAt": null,
+                "endsAt": "2026-10-21T08:00:00.000Z"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The announcement.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the announcement. It stays the same when the announcement is changed."
+                    },
+                    "scope": {
+                      "type": "string",
+                      "enum": [
+                        "instance",
+                        "organization"
+                      ],
+                      "description": "Who set it."
+                    },
+                    "organizationId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The organization, or null for the instance."
+                    },
+                    "version": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "Changes with every change of the announcement."
+                    },
+                    "severity": {
+                      "type": "string",
+                      "enum": [
+                        "information",
+                        "warning"
+                      ],
+                      "description": "`information` can be dismissed by each person until the announcement changes; `warning` stays until its end."
+                    },
+                    "text": {
+                      "type": "string",
+                      "description": "The text."
+                    },
+                    "link": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "url": {
+                              "type": "string",
+                              "maxLength": 2000,
+                              "description": "Address starting with https:// or http://."
+                            },
+                            "label": {
+                              "type": "string",
+                              "maxLength": 60,
+                              "description": "Text of the link."
+                            }
+                          },
+                          "required": [
+                            "url",
+                            "label"
+                          ],
+                          "additionalProperties": false,
+                          "description": "A link shown after the text."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The link, or null."
+                    },
+                    "startsAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When it starts to show. ISO 8601 timestamp in UTC."
+                    },
+                    "endsAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When it stops showing. ISO 8601 timestamp in UTC."
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When it was last changed. ISO 8601 timestamp in UTC."
+                    },
+                    "updatedBy": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the person."
+                            },
+                            "name": {
+                              "description": "Name, or null when the caller may not see the person.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Who changed it last."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "scope",
+                    "organizationId",
+                    "version",
+                    "severity",
+                    "text",
+                    "link",
+                    "startsAt",
+                    "endsAt",
+                    "updatedAt",
+                    "updatedBy"
+                  ],
+                  "additionalProperties": false,
+                  "description": "An announcement banner."
+                },
+                "example": {
+                  "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                  "scope": "organization",
+                  "organizationId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a01",
+                  "version": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a41",
+                  "severity": "information",
+                  "text": "New: search in attachments. PDF, Word and Excel files are now searchable.",
+                  "link": {
+                    "url": "https://wiki.example.org/spaces/ENG/blog",
+                    "label": "Read the post"
+                  },
+                  "startsAt": "2026-10-14T08:00:00.000Z",
+                  "endsAt": "2026-10-21T08:00:00.000Z",
+                  "updatedAt": "2026-10-14T07:55:00.000Z",
+                  "updatedBy": {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                    "name": "Anna Weber"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidAnnouncement`: The announcement is not valid. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidAnnouncement": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidAnnouncement",
+                      "title": "The announcement is not valid",
+                      "status": 400,
+                      "code": "invalidAnnouncement"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
                   "forbidden": {
                     "value": {
                       "type": "urn:pagehall:problem:forbidden",
@@ -171657,6 +174042,413 @@
         }
       }
     },
+    "/api/v1/spaces/{spaceId}/blog/subscription": {
+      "delete": {
+        "operationId": "blog.unfollow",
+        "summary": "Stop following a blog",
+        "description": "Ends the subscription. It succeeds also when you did not follow the blog.\n\nRequires the permission `instance.content.view` on the instance. Needs a signed-in session; API tokens are refused.",
+        "tags": [
+          "Blog"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.content.view",
+          "resource": "instance"
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the space.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Done. The response has no body."
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "blog.subscription",
+        "summary": "Check whether you follow a blog",
+        "description": "Says whether the caller gets a notification for new posts of the space's blog.\n\nRequires the permission `space.view` on the space in `spaceId`. Needs a signed-in session; API tokens are refused.",
+        "tags": [
+          "Blog"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.view",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the space.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The subscription.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "following": {
+                      "type": "boolean",
+                      "description": "Whether the caller follows the blog of the space."
+                    }
+                  },
+                  "required": [
+                    "following"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The caller's subscription."
+                },
+                "example": {
+                  "following": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed. `sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "blog.follow",
+        "summary": "Follow a blog",
+        "description": "You get a notification for every new post of the space's blog that you can read, when it is published. Posts you wrote yourself are left out. While you cannot read the space, the subscription stays but sends nothing.\n\nRequires the permission `space.view` on the space in `spaceId`. Needs a signed-in session; API tokens are refused.",
+        "tags": [
+          "Blog"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.view",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the space.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Done. The response has no body."
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed. `sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/spaces/{spaceId}/delete": {
       "post": {
         "operationId": "trash.deleteSpace",
@@ -176596,6 +179388,17 @@
                     "type": "string",
                     "maxLength": 64
                   },
+                  "reminder": {
+                    "default": "oneDay",
+                    "type": "string",
+                    "enum": [
+                      "off",
+                      "oneDay",
+                      "twoDays",
+                      "oneWeek"
+                    ],
+                    "description": "When attendees are reminded to add their topics: `off`, or one day, two days or one week before each meeting."
+                  },
                   "rhythm": {
                     "type": "object",
                     "properties": {
@@ -176918,6 +179721,16 @@
                       "additionalProperties": false,
                       "description": "Template of the meeting pages."
                     },
+                    "reminder": {
+                      "type": "string",
+                      "description": "When attendees are reminded to add their topics: `off`, or one day, two days or one week before each meeting. New values can be added in later versions; handle unknown values.",
+                      "x-extensible-enum": [
+                        "off",
+                        "oneDay",
+                        "twoDays",
+                        "oneWeek"
+                      ]
+                    },
                     "source": {
                       "type": "string",
                       "description": "Where the schedule comes from: set here or from a calendar. New values can be added in later versions; handle unknown values.",
@@ -177041,6 +179854,7 @@
                     "members",
                     "schedule",
                     "template",
+                    "reminder",
                     "source",
                     "calendarUid",
                     "upcoming",
@@ -177082,6 +179896,7 @@
                     "id": "builtin:team-meeting",
                     "name": "Team meeting"
                   },
+                  "reminder": "oneDay",
                   "source": "manual",
                   "calendarUid": null,
                   "upcoming": {
@@ -181232,6 +184047,1748 @@
                       "title": "A higher level locked the setting",
                       "status": 409,
                       "code": "settingLocked"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/spaces/{spaceId}/shortcuts": {
+      "get": {
+        "operationId": "shortcuts.list",
+        "summary": "List the shortcuts of a space",
+        "description": "Lists the shortcuts in the space sidebar. Shortcuts to content the caller cannot open are left out entirely.\n\nRequires the permission `space.view` on the space in `spaceId`.",
+        "tags": [
+          "Spaces"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.view",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the space.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The shortcuts.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID of the shortcut."
+                      },
+                      "label": {
+                        "type": "string",
+                        "description": "The label shown in the sidebar."
+                      },
+                      "url": {
+                        "description": "The external address, or null for content in Pagehall.",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "item": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "ID of the content."
+                              },
+                              "kind": {
+                                "type": "string",
+                                "description": "Kind of the content. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "page",
+                                  "folder",
+                                  "link",
+                                  "blogPost",
+                                  "meetingSeries",
+                                  "meetingTopic"
+                                ]
+                              },
+                              "title": {
+                                "type": "string",
+                                "description": "Title of the content."
+                              },
+                              "spaceKey": {
+                                "type": "string",
+                                "description": "Key of the space the content is in."
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "kind",
+                              "title",
+                              "spaceKey"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The content in Pagehall, or null for an external address or content the caller cannot open."
+                      },
+                      "hidden": {
+                        "type": "boolean",
+                        "description": "Whether the caller cannot open the content. Only space admins see such shortcuts, in the settings."
+                      },
+                      "position": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991,
+                        "description": "Position in the list."
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "label",
+                      "url",
+                      "item",
+                      "hidden",
+                      "position"
+                    ],
+                    "additionalProperties": false,
+                    "description": "A shortcut in the space sidebar."
+                  },
+                  "description": "The shortcuts, in order."
+                },
+                "example": [
+                  {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a50",
+                    "label": "On-call rota",
+                    "url": null,
+                    "item": {
+                      "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a51",
+                      "kind": "page",
+                      "title": "On-call rota 2026",
+                      "spaceKey": "OPS"
+                    },
+                    "hidden": false,
+                    "position": 0
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "shortcuts.add",
+        "summary": "Add a shortcut",
+        "description": "Adds a shortcut at the end of the list. A space can have up to 20 shortcuts. Content needs to be open to you; people who cannot open it do not see the shortcut.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
+        "tags": [
+          "Spaces"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.manage",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the space.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "maxLength": 80,
+                    "description": "Up to 80 characters."
+                  },
+                  "target": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "itemId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "A page, folder, blog post or meeting series you can open."
+                          }
+                        },
+                        "required": [
+                          "itemId"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "url": {
+                            "type": "string",
+                            "maxLength": 2000,
+                            "description": "An address starting with https:// or http://."
+                          }
+                        },
+                        "required": [
+                          "url"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ],
+                    "description": "Where the shortcut leads."
+                  }
+                },
+                "required": [
+                  "label",
+                  "target"
+                ],
+                "additionalProperties": false,
+                "description": "The new shortcut."
+              },
+              "example": {
+                "label": "Status page",
+                "target": {
+                  "url": "https://status.example.org"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The new shortcut.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the shortcut."
+                    },
+                    "label": {
+                      "type": "string",
+                      "description": "The label shown in the sidebar."
+                    },
+                    "url": {
+                      "description": "The external address, or null for content in Pagehall.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "item": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the content."
+                            },
+                            "kind": {
+                              "type": "string",
+                              "description": "Kind of the content. New values can be added in later versions; handle unknown values.",
+                              "x-extensible-enum": [
+                                "page",
+                                "folder",
+                                "link",
+                                "blogPost",
+                                "meetingSeries",
+                                "meetingTopic"
+                              ]
+                            },
+                            "title": {
+                              "type": "string",
+                              "description": "Title of the content."
+                            },
+                            "spaceKey": {
+                              "type": "string",
+                              "description": "Key of the space the content is in."
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "kind",
+                            "title",
+                            "spaceKey"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The content in Pagehall, or null for an external address or content the caller cannot open."
+                    },
+                    "hidden": {
+                      "type": "boolean",
+                      "description": "Whether the caller cannot open the content. Only space admins see such shortcuts, in the settings."
+                    },
+                    "position": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Position in the list."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "label",
+                    "url",
+                    "item",
+                    "hidden",
+                    "position"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A shortcut in the space sidebar."
+                },
+                "example": {
+                  "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a50",
+                  "label": "On-call rota",
+                  "url": null,
+                  "item": {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a51",
+                    "kind": "page",
+                    "title": "On-call rota 2026",
+                    "spaceKey": "OPS"
+                  },
+                  "hidden": false,
+                  "position": 0
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidShortcut`: The shortcut is not valid. `shortcutTargetNotFound`: The content of the shortcut cannot be found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidShortcut": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidShortcut",
+                      "title": "The shortcut is not valid",
+                      "status": 400,
+                      "code": "invalidShortcut"
+                    }
+                  },
+                  "shortcutTargetNotFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:shortcutTargetNotFound",
+                      "title": "The content of the shortcut cannot be found",
+                      "status": 400,
+                      "code": "shortcutTargetNotFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`tooManyShortcuts`: The space has too many shortcuts.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "tooManyShortcuts": {
+                    "value": {
+                      "type": "urn:pagehall:problem:tooManyShortcuts",
+                      "title": "The space has too many shortcuts",
+                      "status": 409,
+                      "code": "tooManyShortcuts"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/spaces/{spaceId}/shortcuts/{shortcutId}": {
+      "delete": {
+        "operationId": "shortcuts.remove",
+        "summary": "Remove a shortcut",
+        "description": "Removes the shortcut from the sidebar of the space.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
+        "tags": [
+          "Spaces"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.manage",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the space.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "shortcutId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the shortcut.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Done. The response has no body."
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found. `shortcutNotFound`: The shortcut does not exist anymore.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  },
+                  "shortcutNotFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:shortcutNotFound",
+                      "title": "The shortcut does not exist anymore",
+                      "status": 404,
+                      "code": "shortcutNotFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "shortcuts.update",
+        "summary": "Change a shortcut",
+        "description": "Changes the label or the target. A new content target needs to be open to the caller.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
+        "tags": [
+          "Spaces"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.manage",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the space.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "shortcutId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the shortcut.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "maxLength": 80,
+                    "description": "Up to 80 characters."
+                  },
+                  "target": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "itemId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "A page, folder, blog post or meeting series you can open."
+                          }
+                        },
+                        "required": [
+                          "itemId"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "url": {
+                            "type": "string",
+                            "maxLength": 2000,
+                            "description": "An address starting with https:// or http://."
+                          }
+                        },
+                        "required": [
+                          "url"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ],
+                    "description": "Where the shortcut leads."
+                  }
+                },
+                "additionalProperties": false,
+                "description": "The changes."
+              },
+              "example": {
+                "label": "On-call"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The changed shortcut.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the shortcut."
+                    },
+                    "label": {
+                      "type": "string",
+                      "description": "The label shown in the sidebar."
+                    },
+                    "url": {
+                      "description": "The external address, or null for content in Pagehall.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "item": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the content."
+                            },
+                            "kind": {
+                              "type": "string",
+                              "description": "Kind of the content. New values can be added in later versions; handle unknown values.",
+                              "x-extensible-enum": [
+                                "page",
+                                "folder",
+                                "link",
+                                "blogPost",
+                                "meetingSeries",
+                                "meetingTopic"
+                              ]
+                            },
+                            "title": {
+                              "type": "string",
+                              "description": "Title of the content."
+                            },
+                            "spaceKey": {
+                              "type": "string",
+                              "description": "Key of the space the content is in."
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "kind",
+                            "title",
+                            "spaceKey"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The content in Pagehall, or null for an external address or content the caller cannot open."
+                    },
+                    "hidden": {
+                      "type": "boolean",
+                      "description": "Whether the caller cannot open the content. Only space admins see such shortcuts, in the settings."
+                    },
+                    "position": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Position in the list."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "label",
+                    "url",
+                    "item",
+                    "hidden",
+                    "position"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A shortcut in the space sidebar."
+                },
+                "example": {
+                  "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a50",
+                  "label": "On-call rota",
+                  "url": null,
+                  "item": {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a51",
+                    "kind": "page",
+                    "title": "On-call rota 2026",
+                    "spaceKey": "OPS"
+                  },
+                  "hidden": false,
+                  "position": 0
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidShortcut`: The shortcut is not valid. `shortcutTargetNotFound`: The content of the shortcut cannot be found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidShortcut": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidShortcut",
+                      "title": "The shortcut is not valid",
+                      "status": 400,
+                      "code": "invalidShortcut"
+                    }
+                  },
+                  "shortcutTargetNotFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:shortcutTargetNotFound",
+                      "title": "The content of the shortcut cannot be found",
+                      "status": 400,
+                      "code": "shortcutTargetNotFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found. `shortcutNotFound`: The shortcut does not exist anymore.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  },
+                  "shortcutNotFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:shortcutNotFound",
+                      "title": "The shortcut does not exist anymore",
+                      "status": 404,
+                      "code": "shortcutNotFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/spaces/{spaceId}/shortcuts/manage": {
+      "get": {
+        "operationId": "shortcuts.manage",
+        "summary": "List all shortcuts of a space for editing",
+        "description": "Lists every shortcut, also those to content the caller cannot open. For those, `hidden` is true and the content is not named.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
+        "tags": [
+          "Spaces"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.manage",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the space.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The shortcuts.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID of the shortcut."
+                      },
+                      "label": {
+                        "type": "string",
+                        "description": "The label shown in the sidebar."
+                      },
+                      "url": {
+                        "description": "The external address, or null for content in Pagehall.",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "item": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "ID of the content."
+                              },
+                              "kind": {
+                                "type": "string",
+                                "description": "Kind of the content. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "page",
+                                  "folder",
+                                  "link",
+                                  "blogPost",
+                                  "meetingSeries",
+                                  "meetingTopic"
+                                ]
+                              },
+                              "title": {
+                                "type": "string",
+                                "description": "Title of the content."
+                              },
+                              "spaceKey": {
+                                "type": "string",
+                                "description": "Key of the space the content is in."
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "kind",
+                              "title",
+                              "spaceKey"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The content in Pagehall, or null for an external address or content the caller cannot open."
+                      },
+                      "hidden": {
+                        "type": "boolean",
+                        "description": "Whether the caller cannot open the content. Only space admins see such shortcuts, in the settings."
+                      },
+                      "position": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991,
+                        "description": "Position in the list."
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "label",
+                      "url",
+                      "item",
+                      "hidden",
+                      "position"
+                    ],
+                    "additionalProperties": false,
+                    "description": "A shortcut in the space sidebar."
+                  },
+                  "description": "The shortcuts, in order."
+                },
+                "example": [
+                  {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a50",
+                    "label": "On-call rota",
+                    "url": null,
+                    "item": {
+                      "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a51",
+                      "kind": "page",
+                      "title": "On-call rota 2026",
+                      "spaceKey": "OPS"
+                    },
+                    "hidden": false,
+                    "position": 0
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/spaces/{spaceId}/shortcuts/order": {
+      "put": {
+        "operationId": "shortcuts.reorder",
+        "summary": "Reorder the shortcuts",
+        "description": "Sets the order of the shortcuts in the sidebar. Name every shortcut of the space once.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
+        "tags": [
+          "Spaces"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.manage",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the space.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ids": {
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of a shortcut."
+                    },
+                    "description": "Every shortcut, in the new order."
+                  }
+                },
+                "required": [
+                  "ids"
+                ],
+                "additionalProperties": false,
+                "description": "The new order."
+              },
+              "example": {
+                "ids": [
+                  "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a50"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The shortcuts in their new order.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID of the shortcut."
+                      },
+                      "label": {
+                        "type": "string",
+                        "description": "The label shown in the sidebar."
+                      },
+                      "url": {
+                        "description": "The external address, or null for content in Pagehall.",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "item": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "ID of the content."
+                              },
+                              "kind": {
+                                "type": "string",
+                                "description": "Kind of the content. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "page",
+                                  "folder",
+                                  "link",
+                                  "blogPost",
+                                  "meetingSeries",
+                                  "meetingTopic"
+                                ]
+                              },
+                              "title": {
+                                "type": "string",
+                                "description": "Title of the content."
+                              },
+                              "spaceKey": {
+                                "type": "string",
+                                "description": "Key of the space the content is in."
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "kind",
+                              "title",
+                              "spaceKey"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The content in Pagehall, or null for an external address or content the caller cannot open."
+                      },
+                      "hidden": {
+                        "type": "boolean",
+                        "description": "Whether the caller cannot open the content. Only space admins see such shortcuts, in the settings."
+                      },
+                      "position": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991,
+                        "description": "Position in the list."
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "label",
+                      "url",
+                      "item",
+                      "hidden",
+                      "position"
+                    ],
+                    "additionalProperties": false,
+                    "description": "A shortcut in the space sidebar."
+                  },
+                  "description": "The shortcuts, in order."
+                },
+                "example": [
+                  {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a50",
+                    "label": "On-call rota",
+                    "url": null,
+                    "item": {
+                      "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a51",
+                      "kind": "page",
+                      "title": "On-call rota 2026",
+                      "spaceKey": "OPS"
+                    },
+                    "hidden": false,
+                    "position": 0
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidShortcut`: The shortcut is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidShortcut": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidShortcut",
+                      "title": "The shortcut is not valid",
+                      "status": 400,
+                      "code": "invalidShortcut"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
                     }
                   }
                 }

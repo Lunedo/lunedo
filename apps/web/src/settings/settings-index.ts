@@ -187,6 +187,7 @@ export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
       setting("notifications.watchAutomatically"),
       row("watched", "notifications.watching.watched"),
     ]),
+    section("blog.followedTitle", [row("followedBlogs", "blog.followedTitle", "blog.followedDescription")]),
   ],
   "organization.general": [
     section("organization.general.profile", [
@@ -210,6 +211,11 @@ export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
   "organization.notifications": [
     section("notifications.eventTypes", notificationEvents()),
     section("notifications.delivery", NOTIFICATION_DELIVERY_KEYS.map(setting)),
+  ],
+  "organization.announcements": [
+    section("announcements.banner", [
+      row("announcement", "announcements.title", "announcements.organizationDescription"),
+    ]),
   ],
   "organization.spaces": [
     section("spaces.organization.creating", [
@@ -251,6 +257,11 @@ export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
   "instance.notifications": [
     section("notifications.eventTypes", notificationEvents()),
     section("notifications.delivery", [setting("notifications.digestTime")]),
+  ],
+  "instance.announcements": [
+    section("announcements.banner", [
+      row("announcement", "announcements.title", "announcements.instanceDescription"),
+    ]),
   ],
   "instance.personalSpaces": [
     section("spaces.instance.availability", [setting("spaces.personalSpaces")]),

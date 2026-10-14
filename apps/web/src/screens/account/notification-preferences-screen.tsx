@@ -2,6 +2,7 @@ import { Button, Section, SettingRow } from "@pagehall/ui";
 import { Link } from "@tanstack/react-router";
 import { BellRing } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { FollowedBlogs } from "../../collaboration/blog/followed-blogs.js";
 import { NotificationPreferences } from "../../components/notification-preferences.js";
 import { SettingsList } from "../../components/settings-list.js";
 import { useNotificationDelivery, useWatchedList } from "../../notifications/watching-api.js";
@@ -75,6 +76,7 @@ export function NotificationPreferencesScreen() {
           }
         />
       </Section>
+      <FollowedBlogs />
     </SettingsPage>
   );
 }

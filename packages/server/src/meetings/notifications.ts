@@ -10,6 +10,15 @@ const notesAvailable = defineNotificationType({
   },
 });
 
+const meetingReminder = defineNotificationType({
+  type: "meeting.reminder",
+  targetType: "item",
+  params: contentNotificationParamSchemas["meeting.reminder"],
+  async visible(context) {
+    return context.targetId !== null && context.can("item.view", { type: "item", id: context.targetId });
+  },
+});
+
 const oneOnOneStarted = defineNotificationType({
   type: "oneOnOne.started",
   targetType: "item",
@@ -32,4 +41,9 @@ const confidentialWithoutAdministrator = defineNotificationType({
   },
 });
 
-export const meetingNotificationTypes = [notesAvailable, oneOnOneStarted, confidentialWithoutAdministrator];
+export const meetingNotificationTypes = [
+  notesAvailable,
+  meetingReminder,
+  oneOnOneStarted,
+  confidentialWithoutAdministrator,
+];

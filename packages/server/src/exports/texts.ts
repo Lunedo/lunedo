@@ -6,6 +6,7 @@ export interface ExportTexts {
   contents: string;
   untitledPage: string;
   untitledFolder: string;
+  blog: string;
   publishedVersion: (version: number, date: string) => string;
   lastChanged: (date: string) => string;
   exported: (date: string) => string;
@@ -54,6 +55,7 @@ const english: ExportTexts = {
   contents: "Contents",
   untitledPage: "Untitled page",
   untitledFolder: "Untitled folder",
+  blog: "Blog",
   publishedVersion: (version, date) => `Published version ${version} of ${date}`,
   lastChanged: (date) => `Last changed on ${date}`,
   exported: (date) => `Exported on ${date}`,
@@ -102,6 +104,7 @@ const german: ExportTexts = {
   contents: "Inhalt",
   untitledPage: "Seite ohne Titel",
   untitledFolder: "Ordner ohne Titel",
+  blog: "Blog",
   publishedVersion: (version, date) => `Veröffentlichte Version ${version} vom ${date}`,
   lastChanged: (date) => `Zuletzt geändert am ${date}`,
   exported: (date) => `Exportiert am ${date}`,

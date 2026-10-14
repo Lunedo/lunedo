@@ -941,7 +941,8 @@
     "removeCertificate": "Zertifikat entfernen",
     "removeDomain": "Domain entfernen",
     "deleteRole": "Rolle löschen",
-    "removeCredential": "Zugang entfernen"
+    "removeCredential": "Zugang entfernen",
+    "opensInNewTab": "(öffnet in einem neuen Tab)"
   },
   "ui": {
     "clear": "Leeren",
@@ -1071,7 +1072,8 @@
     "templates": "Vorlagen",
     "accessOverview": "Zugriffsübersicht",
     "imports": "Import",
-    "exports": "Exporte"
+    "exports": "Exporte",
+    "announcements": "Ankündigungen"
   },
   "commands": {
     "label": "Befehlspalette",
@@ -1397,7 +1399,14 @@
     "exportDisabled": "Der Export ist für diesen Space ausgeschaltet. Ein Space-Admin kann ihn in den Space-Einstellungen einschalten.",
     "exportRunning": "Ein anderer Export von dir läuft noch. Warte, bis er fertig ist, oder brich ihn unter Einstellungen › Exporte ab.",
     "nothingToExport": "Es gibt noch nichts zu exportieren. Veröffentliche die Seite zuerst.",
-    "tooManyExports": "Du hast bereits 5 Exporte. Lösche unter Einstellungen › Exporte einen, den du nicht mehr brauchst, und versuche es erneut."
+    "tooManyExports": "Du hast bereits 5 Exporte. Lösche unter Einstellungen › Exporte einen, den du nicht mehr brauchst, und versuche es erneut.",
+    "invalidShortcut": "Die Verknüpfung ist ungültig. Prüfe die Bezeichnung und die Adresse.",
+    "shortcutNotFound": "Die Verknüpfung gibt es nicht mehr. Lade die Liste neu.",
+    "shortcutTargetNotFound": "Der Inhalt wurde nicht gefunden oder du kannst ihn nicht öffnen. Wähle einen Inhalt, den du selbst öffnen kannst.",
+    "tooManyShortcuts": "Der Space hat die höchste erlaubte Zahl an Verknüpfungen. Entferne eine, bevor du eine neue hinzufügst.",
+    "invalidAnnouncement": "Die Ankündigung ist ungültig. Prüfe den Text, den Link und das Ende.",
+    "announcementNotDismissible": "Eine Warnung bleibt bis zu ihrem Ende und kann nicht ausgeblendet werden.",
+    "announcementChanged": "Die Ankündigung wurde inzwischen geändert. Lies den neuen Text und blende sie dann erneut aus."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -2388,7 +2397,8 @@
         "assigned": "Dir wurde in {itemTitle} eine Aufgabe zugewiesen: {taskText}"
       },
       "blogPost": {
-        "scheduleHeld": "{reason, select, accountRemoved {Der geplante Beitrag {itemTitle} wartet auf Freigabe, weil die Person, die ihn geplant hat, kein Konto mehr hat.} other {Der geplante Beitrag {itemTitle} wartet auf Freigabe, weil {actor} ihn nicht mehr bearbeiten kann.}}"
+        "scheduleHeld": "{reason, select, accountRemoved {Der geplante Beitrag {itemTitle} wartet auf Freigabe, weil die Person, die ihn geplant hat, kein Konto mehr hat.} other {Der geplante Beitrag {itemTitle} wartet auf Freigabe, weil {actor} ihn nicht mehr bearbeiten kann.}}",
+        "published": "Neuer Beitrag in {spaceName}: {itemTitle}"
       },
       "page": {
         "shared": "{actor} hat {itemTitle} für dich freigegeben: {role, select, editor {du kannst die Seite bearbeiten} commenter {du kannst sie lesen und kommentieren} other {du kannst sie lesen}}{includeDescendants, select, true { mitsamt ihren Unterseiten} other {}}.",
@@ -2402,7 +2412,8 @@
         "orphaned": "Niemand auf der Zugriffsliste der beschränkten Seite {itemTitle} in {spaceName} hat noch ein aktives Konto. Prüfe die Beschränkung in den Space-Einstellungen."
       },
       "meeting": {
-        "notesAvailable": "{actor} hat {itemTitle} geschlossen. Die Notizen sind verfügbar."
+        "notesAvailable": "{actor} hat {itemTitle} geschlossen. Die Notizen sind verfügbar.",
+        "reminder": "{seriesTitle} am {startsAt}: Trag deine Themen vor der Besprechung ein, damit sich alle vorbereiten können."
       },
       "oneOnOne": {
         "started": "{actor} hat ein 1:1 mit dir gestartet: {itemTitle}."
@@ -3360,7 +3371,8 @@
         "confidentialAdministratorAppointed": "Space-Admin eines vertraulichen Space ernannt",
         "pageStatusValuesChanged": "Werte für den Seitenstatus geändert",
         "confidentialDeleted": "Vertraulicher Space gelöscht",
-        "exported": "Space exportiert"
+        "exported": "Space exportiert",
+        "shortcutsChanged": "Verknüpfungen des Space geändert"
       },
       "page": {
         "updateRejected": "Seitenänderung abgelehnt",
@@ -3440,6 +3452,10 @@
         "reimportApplied": "Erneuter Import angewendet",
         "conflictsDecided": "Entscheidungen zu einem erneuten Import getroffen",
         "permissionDifferenceApplied": "Abweichung der Berechtigungen aus einem erneuten Import übernommen"
+      },
+      "announcement": {
+        "changed": "Ankündigungsbanner gesetzt",
+        "removed": "Ankündigungsbanner entfernt"
       }
     },
     "action": "Aktion",
@@ -3484,7 +3500,8 @@
       "space": "Space",
       "page": "Seite",
       "trashEntry": "Papierkorbeintrag",
-      "template": "Vorlage"
+      "template": "Vorlage",
+      "announcement": "Ankündigung"
     },
     "properties": {
       "value": "Wert",
@@ -3577,7 +3594,16 @@
       "stage": "Stufe",
       "cause": "Anlass",
       "entries": "Einträge",
-      "level": "Ebene"
+      "level": "Ebene",
+      "replaced": "Ersetzt",
+      "severity": "Dringlichkeit",
+      "text": "Text",
+      "linkUrl": "Link-Adresse",
+      "linkLabel": "Link-Text",
+      "startsAt": "Beginn",
+      "endsAt": "Ende",
+      "shortcutId": "Verknüpfung",
+      "itemId": "Inhalt"
     },
     "values": {
       "account": "Konto",
@@ -5385,7 +5411,29 @@
       "focus": "Fokuspunkt bei {x} % von links und {y} % von oben. Klicken oder Pfeiltasten verschieben ihn.",
       "wide": "In breiten Listen",
       "square": "In kleinen Kacheln"
-    }
+    },
+    "follow": "Blog folgen",
+    "following": "Gefolgt",
+    "followHint": "Erhalte eine Benachrichtigung für jeden neuen Beitrag dieses Blogs.",
+    "followingHint": "Du erhältst eine Benachrichtigung für jeden neuen Beitrag. Wähle, um nicht mehr zu folgen.",
+    "followed": "Du folgst dem Blog von {space}. Neue Beiträge erscheinen in deinen Benachrichtigungen.",
+    "unfollowed": "Du folgst dem Blog von {space} nicht mehr.",
+    "followFailed": "Dem Blog konnte nicht gefolgt werden. Prüfe deine Verbindung und versuche es noch einmal.",
+    "unfollowFailed": "Das Folgen konnte nicht beendet werden. Prüfe deine Verbindung und versuche es noch einmal.",
+    "unfollow": "Nicht mehr folgen",
+    "followedTitle": "Gefolgte Blogs",
+    "followedDescription": "Du erhältst eine Benachrichtigung für jeden neuen Beitrag in diesen Blogs, den du lesen kannst. Einem Blog folgst du auf seiner Seite.",
+    "followedEmptyTitle": "Du folgst keinem Blog",
+    "followedEmpty": "Öffne den Blog eines Space und wähle „Blog folgen“, um von neuen Beiträgen zu erfahren.",
+    "followedLoadFailed": "Die gefolgten Blogs konnten nicht geladen werden",
+    "followedSince": "Gefolgt seit {date}",
+    "personalBlog": "{name} (persönlicher Space)",
+    "removeUnavailableDescription": "Du erhältst keine Benachrichtigungen von ihnen, wenn du wieder Zugriff hast. Du kannst ihnen dann erneut folgen.",
+    "unavailableRemoveFailed": "Das Folgen konnte nicht beendet werden. Prüfe deine Verbindung und versuche es noch einmal.",
+    "removeUnavailable": "{count, plural, one {# Blog nicht mehr folgen} other {# Blogs nicht mehr folgen}}",
+    "removeUnavailableTitle": "{count, plural, one {# Blog, den du nicht öffnen kannst, nicht mehr folgen?} other {# Blogs, die du nicht öffnen kannst, nicht mehr folgen?}}",
+    "unavailableFollowed": "{count, plural, one {Du folgst # Blog eines Space, den du gerade nicht öffnen kannst. Seine Benachrichtigungen kommen wieder, wenn du wieder Zugriff hast.} other {Du folgst # Blogs von Spaces, die du gerade nicht öffnen kannst. Ihre Benachrichtigungen kommen wieder, wenn du wieder Zugriff hast.}}",
+    "unavailableRemoved": "{count, plural, one {Du folgst # Blog nicht mehr.} other {Du folgst # Blogs nicht mehr.}}"
   },
   "files": {
     "title": "Anhänge",
@@ -6151,6 +6199,14 @@
       "added": "{name} wurde zu diesem 1:1 hinzugefügt.",
       "started": "Neues 1:1 mit {name} gestartet.",
       "failed": "Die Person konnte nicht gewechselt werden"
+    },
+    "reminder": {
+      "label": "Erinnerung an die Teilnehmenden",
+      "hint": "Die Teilnehmenden werden gebeten, ihre Themen einzutragen, mit einem Link zur Besprechung. Jede Besprechung wird einmal erinnert.",
+      "off": "Keine Erinnerung",
+      "oneDay": "1 Tag vorher",
+      "twoDays": "2 Tage vorher",
+      "oneWeek": "1 Woche vorher"
     }
   },
   "confidential": {
@@ -7425,5 +7481,113 @@
       "includeArchived": "Archivierte Inhalte einbeziehen",
       "clearFilters": "{count, plural, one {# Filter zurücksetzen} other {# Filter zurücksetzen}}"
     }
+  },
+  "announcements": {
+    "title": "Ankündigungen",
+    "organizationDescription": "Zeig allen Mitgliedern dieser Organisation ein Banner auf jedem Bildschirm, zum Beispiel für Neuigkeiten oder geplante Wartungen.",
+    "instanceDescription": "Zeig allen Angemeldeten dieser Instanz ein Banner auf jedem Bildschirm, über dem Banner ihrer Organisation.",
+    "banner": "Banner",
+    "loadFailed": "Die Ankündigung konnte nicht geladen werden",
+    "order": "Das Banner der Instanz steht über dem Banner der Organisation. Änderungen erscheinen sofort in jedem offenen Fenster.",
+    "changedBy": "Zuletzt geändert von {name} am {date}.",
+    "statusNone": "Es ist kein Banner gesetzt",
+    "statusShown": "Das Banner wird bis {date} angezeigt",
+    "statusScheduled": "Das Banner wird von {start} bis {end} angezeigt",
+    "statusEnded": "Das Banner ist am {date} abgelaufen",
+    "severity": "Dringlichkeit",
+    "information": "Information",
+    "informationHint": "Jede Person kann sie ausblenden. Sie erscheint wieder, wenn du sie änderst.",
+    "warning": "Warnung",
+    "warningHint": "Kann nicht ausgeblendet werden. Sie verschwindet an ihrem Ende.",
+    "text": "Text",
+    "textHint": "{count} von {max} Zeichen.",
+    "textExample": "Zum Beispiel: Wartung heute von 22:00 bis 23:00 Uhr, Pagehall ist nur lesbar.",
+    "textRequired": "Gib den Text des Banners ein.",
+    "textTooLong": "Der Text darf höchstens {max} Zeichen haben.",
+    "linkUrl": "Link-Adresse",
+    "linkUrlHint": "Optional, beginnend mit https:// oder http://.",
+    "linkLabel": "Link-Text",
+    "linkLabelExample": "Zum Beispiel: Zum Beitrag",
+    "linkInvalid": "Gib eine vollständige Adresse ein, die mit https:// oder http:// beginnt.",
+    "linkMissing": "Gib die Adresse des Links ein oder entferne den Link-Text.",
+    "linkLabelMissing": "Gib den Text des Links ein oder entferne die Adresse.",
+    "linkLabelTooLong": "Der Link-Text darf höchstens {max} Zeichen haben.",
+    "start": "Beginn",
+    "startDate": "Datum des Beginns",
+    "startTime": "Uhrzeit des Beginns",
+    "startHint": "Leer lassen, um es sofort anzuzeigen. Zeitzone: {timeZone}.",
+    "end": "Ende",
+    "endDate": "Datum des Endes",
+    "endTime": "Uhrzeit des Endes",
+    "endHint": "Zeitzone: {timeZone}.",
+    "dateInvalid": "Gib ein gültiges Datum und eine gültige Uhrzeit ein.",
+    "endRequired": "Gib Datum und Uhrzeit ein, zu denen das Banner endet.",
+    "endInPast": "Wähle ein Ende in der Zukunft.",
+    "endBeforeStart": "Wähle ein Ende nach dem Beginn.",
+    "preview": "Vorschau",
+    "previewInformation": "Alle können dieses Banner ausblenden, bis du es änderst.",
+    "previewWarning": "Niemand kann dieses Banner ausblenden. Es verschwindet an seinem Ende.",
+    "publish": "Banner anzeigen",
+    "saveChanges": "Änderungen speichern",
+    "saved": "Banner gespeichert. Offene Fenster zeigen es sofort.",
+    "saveFailed": "Das Banner konnte nicht gespeichert werden",
+    "readOnly": "Du kannst das Banner ansehen. Zum Ändern brauchst du die Berechtigung, Einstellungen zu verwalten.",
+    "removeTitle": "Banner entfernen",
+    "removeDescription": "Das Banner verschwindet sofort für alle. Du kannst das einige Sekunden lang rückgängig machen.",
+    "remove": "Banner entfernen",
+    "removed": "Banner entfernt.",
+    "removeFailed": "Das Banner konnte nicht entfernt werden. Prüfe deine Verbindung und versuche es noch einmal.",
+    "restoreFailed": "Das Banner konnte nicht wiederhergestellt werden. Setze es erneut.",
+    "instanceRegion": "Ankündigung der Instanz",
+    "organizationRegion": "Ankündigung der Organisation",
+    "warningLabel": "Warnung:",
+    "dismiss": "Ankündigung ausblenden",
+    "dismissFailed": "Die Ankündigung konnte nicht ausgeblendet werden. Prüfe deine Verbindung und versuche es noch einmal.",
+    "fromInstance": "Instanz",
+    "fromOrganization": "Organisation"
+  },
+  "spaceShortcuts": {
+    "title": "Verknüpfungen",
+    "description": "Links in der Seitenleiste dieses Space, zu Inhalten in Pagehall oder zu anderen Websites.",
+    "panelDescription": "Verknüpfungen erscheinen über den Seiten, in dieser Reihenfolge. Man sieht nur Verknüpfungen zu Inhalten, die man öffnen kann. Ein Space kann bis zu {max} Verknüpfungen haben.",
+    "add": "Verknüpfung hinzufügen",
+    "addTitle": "Verknüpfung hinzufügen",
+    "editTitle": "Verknüpfung bearbeiten",
+    "dialogDescription": "Verknüpfungen zu Websites öffnen in einem neuen Tab.",
+    "target": "Führt zu",
+    "targetItem": "Inhalt in Pagehall",
+    "targetUrl": "Website",
+    "itemLabel": "Inhalt",
+    "itemHint": "Suche nach dem Titel. Gefunden wird nur, was du öffnen kannst.",
+    "itemRequired": "Wähle den Inhalt, zu dem die Verknüpfung führt.",
+    "noMatch": "Kein passender Inhalt",
+    "hiddenTargetKept": "Der bisherige Inhalt bleibt, außer du wählst einen anderen.",
+    "url": "Adresse",
+    "urlHint": "Beginnend mit https:// oder http://.",
+    "urlInvalid": "Gib eine vollständige Adresse ein, die mit https:// oder http:// beginnt.",
+    "label": "Bezeichnung",
+    "labelHint": "Wird in der Seitenleiste angezeigt, höchstens {max} Zeichen. Leer verwendet den Titel des Inhalts.",
+    "labelExample": "Zum Beispiel: Bereitschaftsplan",
+    "labelRequired": "Gib eine Bezeichnung ein.",
+    "labelTooLong": "Die Bezeichnung darf höchstens {max} Zeichen haben.",
+    "save": "Verknüpfung speichern",
+    "added": "Verknüpfung „{label}“ hinzugefügt.",
+    "saved": "Verknüpfung „{label}“ gespeichert.",
+    "addFailed": "Die Verknüpfung konnte nicht hinzugefügt werden",
+    "saveFailed": "Die Verknüpfung konnte nicht gespeichert werden",
+    "loadFailed": "Die Verknüpfungen konnten nicht geladen werden",
+    "empty": "Dieser Space hat noch keine Verknüpfungen. Füge Links zu Inhalten hinzu, die oft gebraucht werden.",
+    "limitReached": "Dieser Space hat {max} Verknüpfungen, die höchste erlaubte Zahl. Entferne eine, um eine neue hinzuzufügen.",
+    "itemIn": "{title} · {space}",
+    "hiddenTarget": "Inhalt, den du nicht öffnen kannst",
+    "hiddenHint": "Wer den Inhalt öffnen kann, sieht diese Verknüpfung. Alle anderen sehen sie nicht.",
+    "moveUp": "„{label}“ nach oben verschieben",
+    "moveDown": "„{label}“ nach unten verschieben",
+    "edit": "„{label}“ bearbeiten",
+    "remove": "„{label}“ entfernen",
+    "removed": "Verknüpfung „{label}“ entfernt.",
+    "removeFailed": "Die Verknüpfung konnte nicht entfernt werden. Prüfe deine Verbindung und versuche es noch einmal.",
+    "restoreFailed": "Die Verknüpfung konnte nicht wiederhergestellt werden. Füge sie erneut hinzu.",
+    "reorderFailed": "Die Reihenfolge konnte nicht gespeichert werden. Prüfe deine Verbindung und versuche es noch einmal."
   }
 }

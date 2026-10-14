@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Inject, Param, Post, Query, Req, Res } from "@nestjs/common";
 import {
+  type AnnouncementChangeSignal,
   type AuditChangeSignal,
   accountPrincipal,
   currentRequestContext,
@@ -172,7 +173,7 @@ export class NotificationsController {
     raw: {
       contentTypes: ["text/event-stream"],
       description:
-        "Server-sent events. The event `notifications` carries the unread count at the start and after every change. The event `settings` names a setting whose value for the caller may have changed, with its level and, for an organization, the organization ID; reload the setting. The event `syncRuns` names a run of a provider's sync log that started, changed or ended, sent only to callers who may view sign-in providers; reload the sync log. The event `changes` names the kind of object that changed in the instance or in an organization, as recorded in the audit log, sent only to callers who may view such objects there or the audit log of that level; reload lists that show such objects. The event `spaces` names a space whose settings, access, page tree or page content changed, with the kind of change and the affected item, sent only to callers who can read the space; reload what shows it. The event `imports` names an import whose state or progress changed, with its organization, sent only to callers who can see the import; reload it.",
+        "Server-sent events. The event `notifications` carries the unread count at the start and after every change. The event `settings` names a setting whose value for the caller may have changed, with its level and, for an organization, the organization ID; reload the setting. The event `syncRuns` names a run of a provider's sync log that started, changed or ended, sent only to callers who may view sign-in providers; reload the sync log. The event `changes` names the kind of object that changed in the instance or in an organization, as recorded in the audit log, sent only to callers who may view such objects there or the audit log of that level; reload lists that show such objects. The event `spaces` names a space whose settings, access, page tree or page content changed, with the kind of change and the affected item, sent only to callers who can read the space; reload what shows it. The event `imports` names an import whose state or progress changed, with its organization, sent only to callers who can see the import; reload it. The event `announcements` says that the announcement of the instance or of one of the caller's organizations changed; reload the announcements.",
       example:
         'event: notifications\ndata: {"unreadCount":2}\n\nevent: settings\ndata: {"key":"branding.accentColor","level":"instance","organizationId":null}\n\nevent: syncRuns\ndata: {"providerId":"01929b1e-0000-7000-8000-000000000001","runId":"01929b1e-0000-7000-8000-000000000002"}\n\nevent: changes\ndata: {"scope":"organization","organizationId":"01929b1e-0000-7000-8000-000000000003","target":"group"}\n\n',
     },
@@ -341,12 +342,35 @@ data: ${JSON.stringify(signal)}
 `);
       }, "Sending an import event failed");
     };
+    const pendingAnnouncements = new Set<string>();
+    const sendAnnouncement = (signal: AnnouncementChangeSignal) => {
+      const data = JSON.stringify(signal);
+      if (pendingAnnouncements.has(data)) return;
+      pendingAnnouncements.add(data);
+      enqueue(async () => {
+        pendingAnnouncements.delete(data);
+        if (closed) return;
+        if (signal.organizationId) {
+          const decision = await services.authorization.explain(
+            accountPrincipal(session.accountId),
+            "organization.view",
+            { type: "organization", id: signal.organizationId },
+          );
+          if (!decision.allowed || closed) return;
+        }
+        raw.write(`event: announcements
+data: ${data}
+
+`);
+      }, "Sending an announcement event failed");
+    };
     const unsubscribe = await hub.subscribe(session.accountId, send);
     const unsubscribeSettings = await hub.subscribeSettings(sendSetting);
     const unsubscribeSyncRuns = await hub.subscribeSyncRuns(sendSyncRun);
     const unsubscribeChanges = await hub.subscribeChanges(sendChange);
     const unsubscribeSpaces = await spaceSignals.join(session.accountId, sendSpace);
     const unsubscribeImports = await hub.subscribeImports(sendImport);
+    const unsubscribeAnnouncements = await hub.subscribeAnnouncements(sendAnnouncement);
     const heartbeat = setInterval(() => {
       services.sessions.isActive(session.id).then(
         (active) => {
@@ -368,6 +392,7 @@ data: ${JSON.stringify(signal)}
       unsubscribeChanges();
       unsubscribeSpaces();
       unsubscribeImports();
+      unsubscribeAnnouncements();
       raw.end();
     };
     reply.hijack();
