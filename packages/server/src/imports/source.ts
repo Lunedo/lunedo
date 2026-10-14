@@ -25,6 +25,11 @@ export interface SourceBody {
 
 export type SourceContentType = "page" | "blogPost";
 
+export interface SourcePageStatus {
+  readonly name: string;
+  readonly color: string | null;
+}
+
 export interface SourcePage {
   readonly sourceId: string;
   readonly type: SourceContentType;
@@ -35,6 +40,7 @@ export interface SourcePage {
   readonly modifierId: string | null;
   readonly modifiedAt: string | null;
   readonly version: number;
+  readonly status: SourcePageStatus | null;
 }
 
 export interface SourceAttachmentVersion {

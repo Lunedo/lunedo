@@ -17,6 +17,7 @@ import type { SettingsService } from "../settings/service.js";
 import { encodeState, MAX_LABELS_PER_PAGE, normalizeLabel, recomputeLinks } from "../spaces/documents.js";
 import { endPosition, ITEM_TITLE_MAX_LENGTH, lockSpaces } from "../spaces/items.js";
 import { signalSpaceChange } from "../spaces/signals.js";
+import { applyImportedStatus } from "../spaces/status.js";
 import type { TrashService } from "../spaces/trash.js";
 import type { VersionService } from "../spaces/versions.js";
 import { refreshReaderVisibility } from "../spaces/visibility.js";
@@ -530,8 +531,12 @@ export class ImportPipeline {
         );
         for (const page of open) {
           let id: string;
+          const ownerId = (page.creatorId ? people.get(page.creatorId) : undefined) ?? null;
           if (page.sourceId === home) {
             id = space.overviewId;
+            if (!run.reimport) {
+              await tx.execute(sql`update tree_items set owner_id = ${ownerId} where id = ${id}`);
+            }
           } else {
             const nested = page.type === "page" && page.parentId !== null && page.parentId !== home;
             const parentId =
@@ -556,7 +561,7 @@ export class ImportPipeline {
               insert into tree_items (id, space_id, parent_id, kind, position, title, mode, creator_id, owner_id,
                 created_at, content_updated_at)
               values (${id}, ${space.spaceId}, ${parentId}, ${page.type}, ${position}, ${pageTitle(page)}, 'publish',
-                ${creatorId}, ${creatorId}, coalesce(${page.createdAt}::timestamptz, now()),
+                ${creatorId}, ${ownerId}, coalesce(${page.createdAt}::timestamptz, now()),
                 coalesce(${page.modifiedAt}::timestamptz, now()))`);
             await tx.execute(sql`
               insert into page_documents (item_id, state, snapshot, schema_version, updated_by)
@@ -567,6 +572,9 @@ export class ImportPipeline {
               await tx.execute(sql`
                 insert into blog_posts (item_id, created_at) values (${id}, coalesce(${page.createdAt}::timestamptz, now()))`);
             }
+          }
+          if (page.status && page.type === "page" && !(run.reimport && page.sourceId === home)) {
+            await applyImportedStatus(tx, space.spaceId, id, page.status);
           }
           await this.#restrict(
             tx,

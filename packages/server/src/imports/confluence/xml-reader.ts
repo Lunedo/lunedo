@@ -3,10 +3,10 @@ import type { ByteSource } from "../formats/bytes.js";
 import { DEFAULT_XML_LIMITS, parseXml } from "../formats/xml.js";
 import type { ScanContext } from "../source.js";
 import {
-  COMMENT_PROPERTIES,
   confluenceDate,
   formerTitleRecord,
   isCurrentStatus,
+  KEPT_PROPERTIES,
   kinds,
   pageSort,
   STORAGE_BODY_TYPE,
@@ -382,7 +382,7 @@ export class ConfluenceXmlReader extends StagedConfluenceReader {
       }
       case "ContentProperty": {
         const name = (property("name") ?? "").trim();
-        if (!COMMENT_PROPERTIES.has(name)) return;
+        if (!KEPT_PROPERTIES.has(name)) return;
         const content = reference("content");
         const value = property("stringValue") || property("longValue") || property("dateValue") || "";
         await context.staging.put({
