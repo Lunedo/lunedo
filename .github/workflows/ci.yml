@@ -483,14 +483,9 @@ jobs:
         if: ${{ !cancelled() && github.event_name == 'pull_request' }}
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          if gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json labels --jq '.labels[].name' | grep -qx 'breaking-api-change'; then
-            node scripts/check-api-compatibility.ts "$BASE_SHA" --allow-breaking
-          else
-            node scripts/check-api-compatibility.ts "$BASE_SHA"
-          fi
+        run: node scripts/check-api-compatibility.ts "$BASE_SHA" --pr "$PR_NUMBER"
       - if: ${{ !cancelled() }}
         run: corepack enable
       - name: Locate the pnpm store

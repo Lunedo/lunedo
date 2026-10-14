@@ -16,25 +16,19 @@ jobs:
     name: Run CI again for the breaking-api-change label
     if: github.event.label.name == 'breaking-api-change' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
-    timeout-minutes: 60
+    timeout-minutes: 15
     permissions:
       actions: write
       contents: read
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
       - name: Run the latest CI run of this commit again
         env:
-          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          BRANCH: ${{ github.event.pull_request.head.ref }}
-        run: |
-          run_id=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --event pull_request --branch "$BRANCH" --json databaseId,headSha --jq "map(select(.headSha == \"$HEAD_SHA\")) | .[0].databaseId")
-          if [ -z "$run_id" ]; then
-            echo "::error title=No CI run found::There is no CI run for commit $HEAD_SHA. Push a commit or reopen the pull request to start one."
-            exit 1
-          fi
-          status=$(gh run view "$run_id" --repo "$GITHUB_REPOSITORY" --json status --jq .status)
-          if [ "$status" != "completed" ]; then
-            gh run cancel "$run_id" --repo "$GITHUB_REPOSITORY"
-            gh run watch "$run_id" --repo "$GITHUB_REPOSITORY" >/dev/null || true
-          fi
-          gh run rerun "$run_id" --repo "$GITHUB_REPOSITORY"
+        run: node scripts/rerun-ci.ts "$HEAD_SHA"
