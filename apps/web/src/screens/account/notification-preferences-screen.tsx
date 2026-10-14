@@ -1,5 +1,6 @@
 import { BellRing } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { FollowedBlogs } from "../../collaboration/blog/followed-blogs.js";
 import { NotificationPreferences } from "../../components/notification-preferences.js";
 import { usePreferenceList, useUpdatePreference } from "../../preferences/preferences.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
@@ -25,6 +26,7 @@ export function NotificationPreferencesScreen() {
         editable
         onChange={(key, value) => update.mutateAsync({ key, value })}
       />
+      <FollowedBlogs />
     </SettingsPage>
   );
 }

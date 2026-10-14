@@ -5,6 +5,7 @@ export {
   instance,
   setupCompletedThrough,
 } from "../accounts/schema.js";
+export { announcementDismissals, announcementSeverity, announcements } from "../announcements/schema.js";
 export {
   auditChains,
   auditConfidentialEvents,
@@ -28,7 +29,9 @@ export {
   webauthnCredentials,
 } from "../auth/schema.js";
 export {
+  blogPostAnnouncements,
   blogPosts,
+  blogSubscriptions,
   comments,
   contentMentions,
   reactions,
@@ -109,6 +112,7 @@ export {
   meetingAttendees,
   meetingOccurrenceOverrides,
   meetingPrivateNotes,
+  meetingReminder,
   meetingSeries,
   meetingSeriesMembers,
   meetingState,
@@ -181,6 +185,7 @@ export {
   spaceKeyAliases,
   spacePermissions,
   spaceRole,
+  spaceShortcuts,
   spaces,
   spaceVisibility,
   trashEntries,

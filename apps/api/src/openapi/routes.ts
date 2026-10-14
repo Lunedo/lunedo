@@ -21,6 +21,7 @@ import { MeetingsController } from "../meetings/meetings.controller.js";
 import { OneOnOnesController } from "../meetings/one-on-ones.controller.js";
 import { NotificationsController } from "../notifications/notifications.controller.js";
 import { AccountsController } from "../organizations/accounts.controller.js";
+import { AnnouncementsController } from "../organizations/announcements.controller.js";
 import { GroupsController } from "../organizations/groups.controller.js";
 import { InstanceController } from "../organizations/instance.controller.js";
 import { OrganizationsController } from "../organizations/organizations.controller.js";
@@ -35,6 +36,7 @@ import { ItemsController } from "../spaces/items.controller.js";
 import { OrganizationSpacesController } from "../spaces/organization-spaces.controller.js";
 import { OwnershipController } from "../spaces/ownership.controller.js";
 import { PersonalSpacesController } from "../spaces/personal-spaces.controller.js";
+import { ShortcutsController } from "../spaces/shortcuts.controller.js";
 import { SpacesController } from "../spaces/spaces.controller.js";
 import { TemplatesController } from "../spaces/templates.controller.js";
 import { TrashController } from "../spaces/trash.controller.js";
@@ -50,6 +52,7 @@ export const apiControllers = (): Type[] => [
   GroupsController,
   InstanceController,
   AccountsController,
+  AnnouncementsController,
   ServiceAccountsController,
   TokensController,
   AuditController,
@@ -63,6 +66,7 @@ export const apiControllers = (): Type[] => [
   ConfidentialSpacesController,
   ItemsController,
   OwnershipController,
+  ShortcutsController,
   PersonalSpacesController,
   VersionsController,
   TrashController,

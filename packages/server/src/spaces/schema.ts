@@ -456,3 +456,27 @@ export const collaborationClients = pgTable(
   },
   (table) => [primaryKey({ columns: [table.itemId, table.clientId] }), index().on(table.accountId)],
 );
+
+export const spaceShortcuts = pgTable(
+  "space_shortcuts",
+  {
+    id: primaryId(),
+    spaceId: uuid()
+      .notNull()
+      .references((): AnyPgColumn => spaces.id, { onDelete: "cascade" }),
+    label: text().notNull(),
+    itemId: uuid().references((): AnyPgColumn => treeItems.id, { onDelete: "cascade" }),
+    url: text(),
+    position: integer().notNull(),
+    createdBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    ...timestamps(),
+  },
+  (table) => [
+    index().on(table.spaceId, table.position),
+    index().on(table.itemId),
+    index().on(table.createdBy),
+    check("space_shortcuts_one_target", sql`(${table.itemId} is null) <> (${table.url} is null)`),
+    check("space_shortcuts_label_length", sql`length(${table.label}) between 1 and 80`),
+    check("space_shortcuts_url_length", sql`${table.url} is null or length(${table.url}) <= 2000`),
+  ],
+);

@@ -4,6 +4,7 @@ import { AccountAdministrationService } from "./accounts/administration.js";
 import { InstanceAddressService } from "./accounts/instance-address.js";
 import { AccountLifecycleService } from "./accounts/lifecycle.js";
 import { AccountOverviewService } from "./accounts/overview.js";
+import { AnnouncementService } from "./announcements/announcements.js";
 import { AuditLog } from "./audit/audit-log.js";
 import { AuditReader } from "./audit/reader.js";
 import { AUDIT_RETENTION_SCHEDULE, applyAuditRetention, auditRetentionJob } from "./audit/retention.js";
@@ -21,6 +22,7 @@ import { AuthorizationRegistry } from "./authorization/registry.js";
 import { resourceTypes } from "./authorization/resources.js";
 import { AuthorizationService } from "./authorization/service.js";
 import { BlogService } from "./collaboration/blog.js";
+import { BlogSubscriptionService } from "./collaboration/blog-subscriptions.js";
 import { CommentService } from "./collaboration/comments.js";
 import { ContentActivity } from "./collaboration/content.js";
 import { HomeService } from "./collaboration/home.js";
@@ -107,6 +109,7 @@ import { MeetingService } from "./meetings/meetings.js";
 import { meetingNotificationTypes } from "./meetings/notifications.js";
 import { OneOnOneService } from "./meetings/one-on-ones.js";
 import { PrivateNotesService } from "./meetings/private-notes.js";
+import { MEETING_REMINDERS_SCHEDULE, MeetingReminders, meetingRemindersJob } from "./meetings/reminders.js";
 import { TopicService } from "./meetings/topics.js";
 import { NotificationRegistry } from "./notifications/registry.js";
 import { NOTIFICATION_RETENTION_SCHEDULE, notificationRetentionJob } from "./notifications/retention.js";
@@ -159,6 +162,7 @@ import { PeopleService } from "./spaces/people.js";
 import { SpaceHolders, SpacePermissionService } from "./spaces/permissions.js";
 import { PersonalSpaceService } from "./spaces/personal.js";
 import { ReportService } from "./spaces/reports.js";
+import { ShortcutService } from "./spaces/shortcuts.js";
 import { SpaceService } from "./spaces/spaces.js";
 import { PageStatusService } from "./spaces/status.js";
 import { TrashService } from "./spaces/trash.js";
@@ -217,6 +221,8 @@ export interface AccountServices {
   tree: TreeService;
   ownership: OwnershipService;
   pageStatus: PageStatusService;
+  shortcuts: ShortcutService;
+  announcements: AnnouncementService;
   documents: PageDocumentService;
   versions: VersionService;
   trash: TrashService;
@@ -227,6 +233,7 @@ export interface AccountServices {
   reactions: ReactionService;
   tasks: TaskService;
   blog: BlogService;
+  blogSubscriptions: BlogSubscriptionService;
   home: HomeService;
   signer: ValueSigner;
   pageAccess: PageAccessService;
@@ -239,6 +246,7 @@ export interface AccountServices {
   guestShares: GuestShareService;
   confidentialSpaces: ConfidentialSpaceService;
   meetings: MeetingService;
+  meetingReminders: MeetingReminders;
   topics: TopicService;
   decisions: DecisionService;
   reports: ReportService;
@@ -529,6 +537,8 @@ export function createAccountServices(options: {
     administrators: (executor, spaceId) => pageAccess.spaceAdministrators(executor, spaceId),
   });
   const pageStatus = new PageStatusService({ database, authorization, settings, people, audit });
+  const shortcuts = new ShortcutService({ database, authorization, audit });
+  const announcements = new AnnouncementService({ database, authorization, audit, people });
   const tree = new TreeService({
     database,
     authorization,
@@ -553,6 +563,7 @@ export function createAccountServices(options: {
   });
   const tasks = new TaskService({ database, authorization, settings, people });
   const blog = new BlogService({ database, authorization, versions, audit, people, notifications });
+  const blogSubscriptions = new BlogSubscriptionService({ database, authorization, notifications });
   const home = new HomeService({ database, authorization, settings, tasks, blog, people });
   const pageAccess = new PageAccessService({ database, authorization, audit, people, notifications });
   const shareLinks = new ShareLinkService({
@@ -622,6 +633,7 @@ export function createAccountServices(options: {
     notifications,
     activity,
   });
+  const meetingReminders = new MeetingReminders({ database, authorization, notifications });
   const topics = new TopicService({ database, authorization, people, documents, meetings });
   const decisions = new DecisionService({ database, authorization });
   const reports = new ReportService({ database, authorization, people });
@@ -764,6 +776,8 @@ export function createAccountServices(options: {
     tree,
     ownership,
     pageStatus,
+    shortcuts,
+    announcements,
     documents,
     versions,
     trash,
@@ -774,6 +788,7 @@ export function createAccountServices(options: {
     reactions,
     tasks,
     blog,
+    blogSubscriptions,
     home,
     signer,
     pageAccess,
@@ -786,6 +801,7 @@ export function createAccountServices(options: {
     guestShares,
     confidentialSpaces,
     meetings,
+    meetingReminders,
     topics,
     decisions,
     reports,
@@ -920,6 +936,10 @@ export async function workAccountJobs(
     const published = await services.blog.publishDue();
     if (published > 0) job.logger.info({ published }, "Scheduled blog posts published");
   });
+  await jobs.work(meetingRemindersJob, async (job) => {
+    const sent = await services.meetingReminders.sendDue();
+    if (sent > 0) job.logger.info({ sent }, "Meeting reminders sent");
+  });
   await jobs.work(collaborationCleanupJob, async (job) => {
     const removed = {
       views: await services.home.removeOldViews(),
@@ -928,6 +948,7 @@ export async function workAccountJobs(
     job.logger.debug(removed, "Collaboration data cleaned up");
   });
   await jobs.schedule(scheduledBlogPostsJob, SCHEDULED_BLOG_POSTS_SCHEDULE, {}, { key: "minutely" });
+  await jobs.schedule(meetingRemindersJob, MEETING_REMINDERS_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(collaborationCleanupJob, COLLABORATION_CLEANUP_SCHEDULE, {}, { key: "hourly" });
   await jobs.schedule(dispatchPendingMailJob, DISPATCH_PENDING_MAIL_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(trashRetentionJob, TRASH_RETENTION_SCHEDULE, {}, { key: "hourly" });

@@ -6,6 +6,7 @@ import { App, createQueryClient } from "../app.js";
 import { createFormatter } from "../format/format.js";
 import { initI18n } from "../i18n/index.js";
 import { mockApi, problem } from "../testing/render.js";
+import "./builtin.js";
 import { notificationText } from "./notification-entry.js";
 import { groupByDay } from "./notification-panel.js";
 import {
@@ -126,6 +127,49 @@ describe("notificationText", () => {
     ).toBe(
       "The API token Deploy has not been used for 90 days. It keeps working; revoke it if nobody needs it anymore.",
     );
+  });
+});
+
+describe("notificationText for blog posts and meeting reminders", () => {
+  it("names the blog and shows the meeting start with its time", async () => {
+    const i18n = await initI18n(["en"]);
+    const t = i18n.getFixedT("en");
+    const format = createFormatter({
+      language: "en",
+      timeZone: "Europe/Vienna",
+      dateFormat: "DD/MM/YYYY",
+      timeFormat: "24h",
+      numberFormat: "en-US",
+      firstDayOfWeek: "monday",
+    });
+    expect(
+      notificationText(
+        t,
+        notification("p", {
+          type: "blogPost.published",
+          params: { itemTitle: "WireGuard", itemKind: "blogPost", spaceKey: "ENG", spaceName: "Engineering" },
+        }),
+        format,
+      ),
+    ).toBe("New post in Engineering: WireGuard");
+    expect(
+      notificationText(
+        t,
+        notification("r", {
+          type: "meeting.reminder",
+          params: {
+            itemTitle: "Platform weekly · 15 Oct 2026",
+            seriesTitle: "Platform weekly",
+            spaceKey: "ENG",
+            startsAt: "2026-10-15T07:30:00.000Z",
+          },
+        }),
+        format,
+      ),
+    ).toBe(
+      `Platform weekly on ${format.dateTime("2026-10-15T07:30:00.000Z")}: add your topics before the meeting so others can prepare.`,
+    );
+    expect(format.dateTime("2026-10-15T07:30:00.000Z")).toContain("09:30");
   });
 });
 

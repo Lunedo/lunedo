@@ -33,6 +33,10 @@ export const attendanceValues = ["present", "excused", "absent"] as const;
 export type Attendance = (typeof attendanceValues)[number];
 export const attendance = pgEnum("meeting_attendance", attendanceValues);
 
+export const meetingReminders = ["off", "oneDay", "twoDays", "oneWeek"] as const;
+export type MeetingReminder = (typeof meetingReminders)[number];
+export const meetingReminder = pgEnum("meeting_reminder", meetingReminders);
+
 export const topicStatuses = ["open", "closed"] as const;
 export type TopicStatus = (typeof topicStatuses)[number];
 export const topicStatus = pgEnum("meeting_topic_status", topicStatuses);
@@ -55,6 +59,7 @@ export const meetingSeries = pgTable(
     templateId: text().notNull(),
     source: scheduleSource().notNull().default("manual"),
     calendarUid: text(),
+    reminder: meetingReminder().notNull().default("oneDay"),
     createdBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
     ...timestamps(),
   },
@@ -116,6 +121,7 @@ export const meetings = pgTable(
     closedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
     nextMeetingId: uuid().references((): AnyPgColumn => meetings.itemId, { onDelete: "set null" }),
     calendarUid: text(),
+    remindedAt: timestampColumn(),
     ...timestamps(),
   },
   (table) => [
@@ -124,6 +130,9 @@ export const meetings = pgTable(
       .on(table.seriesId, table.recurrenceId)
       .where(sql`${table.recurrenceId} is not null`),
     index().on(table.seriesId, table.startsAt),
+    index("meetings_reminder_due_index")
+      .on(table.startsAt)
+      .where(sql`${table.state} = 'upcoming' and ${table.remindedAt} is null`),
     index().on(table.closedBy),
     index().on(table.nextMeetingId),
     check(

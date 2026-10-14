@@ -23,6 +23,7 @@ export const auditTargetTypes = [
   "shareLink",
   "accessRequest",
   "import",
+  "announcement",
 ] as const;
 export type AuditTargetType = (typeof auditTargetTypes)[number];
 
@@ -1240,6 +1241,43 @@ export const auditCatalog = {
       valueId: z.uuid().nullable(),
       name: z.string().nullable(),
       pages: z.number().int().min(0),
+    }),
+    visibility: "organization",
+  }),
+  "space.shortcutsChanged": event({
+    actor: ["account"],
+    target: "space",
+    fields: z.object({
+      operation: z.enum(["added", "changed", "removed", "reordered"]),
+      shortcutId: z.uuid().nullable(),
+      name: z.string().nullable(),
+      url: z.string().nullable(),
+      itemId: z.uuid().nullable(),
+    }),
+    visibility: "organization",
+  }),
+  "announcement.changed": event({
+    actor: ["account"],
+    target: "announcement",
+    fields: z.object({
+      level: z.enum(["instance", "organization"]),
+      replaced: z.boolean(),
+      severity: z.enum(["information", "warning"]),
+      text: z.string(),
+      linkUrl: z.string().nullable(),
+      linkLabel: z.string().nullable(),
+      startsAt: z.iso.datetime(),
+      endsAt: z.iso.datetime(),
+    }),
+    visibility: "organization",
+  }),
+  "announcement.removed": event({
+    actor: ["account"],
+    target: "announcement",
+    fields: z.object({
+      level: z.enum(["instance", "organization"]),
+      severity: z.enum(["information", "warning"]),
+      text: z.string(),
     }),
     visibility: "organization",
   }),

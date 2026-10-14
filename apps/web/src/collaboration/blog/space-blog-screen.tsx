@@ -23,6 +23,7 @@ import { spaceDisplayName } from "../../spaces/space-badge.js";
 import { useSpace } from "../../spaces/space-context.js";
 import { collaborationKeys } from "../queries.js";
 import { BlogList, PostBadges, PostMeta, postHref } from "./blog-list.js";
+import { FollowBlogButton } from "./follow-blog.js";
 import { HeldActions, heldReason } from "./held-notice.js";
 
 const TITLE_MAX = 255;
@@ -213,11 +214,16 @@ export function SpaceBlogScreen() {
           { label: t("blog.title") },
         ]}
         actions={
-          canEdit ? (
-            <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>
-              {t("blog.write")}
-            </Button>
-          ) : undefined
+          <>
+            {space.role ? (
+              <FollowBlogButton spaceId={space.id} spaceName={spaceDisplayName(t, space)} />
+            ) : null}
+            {canEdit ? (
+              <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>
+                {t("blog.write")}
+              </Button>
+            ) : null}
+          </>
         }
       />
       {posts.isPending ? (

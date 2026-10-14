@@ -155,6 +155,18 @@ export const contentNotificationParamSchemas = {
     items: z.number().int().positive(),
   }),
   "space.confidentialWithoutAdministrator": z.object({ spaceKey: z.string() }),
+  "blogPost.published": z.object({
+    itemTitle: z.string(),
+    itemKind: contentKind,
+    spaceKey: z.string(),
+    spaceName: z.string(),
+  }),
+  "meeting.reminder": z.object({
+    itemTitle: z.string(),
+    seriesTitle: z.string(),
+    spaceKey: z.string(),
+    startsAt: z.iso.datetime(),
+  }),
   "meeting.notesAvailable": z.object({
     itemTitle: z.string(),
     spaceKey: z.string(),
