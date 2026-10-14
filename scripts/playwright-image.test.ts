@@ -32,7 +32,7 @@ describe("playwrightImageProblems", () => {
   it("rejects an image from another version and names file and line", () => {
     const files = { "ci.yml": workflow(`mcr.microsoft.com/playwright@sha256:${digest} # v1.63.0-noble`) };
     assert.deepEqual(playwrightImageProblems(files, lock("1.64.0")), [
-      "ci.yml:5 uses the Playwright image 1.63.0, @playwright/test is 1.64.0",
+      "ci.yml:4 uses the Playwright image 1.63.0, @playwright/test is 1.64.0",
     ]);
   });
 
