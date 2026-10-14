@@ -356,6 +356,7 @@ export class TreeService {
           actorId: actorIdOf(actor),
           mode: await this.#modeFor(target.spaceId, undefined),
         });
+        await this.#activity.created(tx, id, actorIdOf(actor));
         await signalSpaceChange(tx, { spaceId: target.spaceId, kind: "tree", itemId: id });
         return id;
       });
@@ -634,6 +635,7 @@ export class TreeService {
       if (input.kind === "page") await insertInitialDocument(tx, itemId, actorId, input.document);
       await refreshReaderVisibility(tx, [itemId]);
       if (input.kind === "page") await this.#documents.afterInsert(tx, itemId, actorId);
+      if (input.kind === "page") await this.#activity.created(tx, itemId, actorId);
       await signalSpaceChange(tx, { spaceId, kind: "tree", itemId });
       return itemId;
     });

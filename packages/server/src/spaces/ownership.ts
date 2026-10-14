@@ -5,6 +5,7 @@ import type { AuditLog } from "../audit/audit-log.js";
 import { accountItemCondition } from "../authorization/item-access.js";
 import { type AuthorizationService, ForbiddenError } from "../authorization/service.js";
 import { organizationMembership } from "../authorization/space-access.js";
+import type { ContentActivity } from "../collaboration/content.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import type { NotificationService } from "../notifications/service.js";
 import { actorIdOf, auditScopeOf, SpaceError } from "./common.js";
@@ -80,6 +81,7 @@ export class OwnershipService {
   readonly #people: PeopleService;
   readonly #audit: AuditLog;
   readonly #notifications: NotificationService;
+  readonly #activity: ContentActivity;
   readonly #administrators: (executor: Executor, spaceId: string) => Promise<string[]>;
 
   constructor(options: {
@@ -88,6 +90,7 @@ export class OwnershipService {
     people: PeopleService;
     audit: AuditLog;
     notifications: NotificationService;
+    activity: ContentActivity;
     administrators: (executor: Executor, spaceId: string) => Promise<string[]>;
   }) {
     this.#database = options.database;
@@ -95,6 +98,7 @@ export class OwnershipService {
     this.#people = options.people;
     this.#audit = options.audit;
     this.#notifications = options.notifications;
+    this.#activity = options.activity;
     this.#administrators = options.administrators;
   }
 
@@ -224,6 +228,12 @@ export class OwnershipService {
         scope: auditScopeOf({ organizationId: item.organization_id }),
       });
       await signalSpaceChange(tx, { spaceId: item.space_id, kind: "tree", itemId });
+      const names = await this.#people.names([ownerId], tx);
+      await this.#activity.ownerChanged(tx, itemId, {
+        actorId: actorIdOf(actor),
+        ownerId,
+        ownerName: names.get(ownerId) ?? "",
+      });
     });
   }
 

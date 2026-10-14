@@ -84,6 +84,10 @@ const notificationSchema = z.object({
   organizationId: idSchema.nullable(),
   target: z.object({ type: z.string(), id: z.string().nullable() }),
   actor: z.object({ type: z.string(), id: idSchema.nullable(), name: z.string().nullable() }).nullable(),
+  actorCount: z
+    .number()
+    .int()
+    .describe("Number of different people whose actions are combined in this notification."),
   params: z.json(),
   count: z.number().int(),
   createdAt: z.iso.datetime(),

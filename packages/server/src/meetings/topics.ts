@@ -3,6 +3,7 @@ import { uuidv7 } from "@pagehall/shared";
 import { type SQL, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";
+import type { ContentActivity } from "../collaboration/content.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import { actorIdOf, SpaceError } from "../spaces/common.js";
 import { normalizeLabel, type PageDocumentService } from "../spaces/documents.js";
@@ -113,6 +114,7 @@ export class TopicService {
   readonly #people: PeopleService;
   readonly #documents: PageDocumentService;
   readonly #meetings: MeetingService;
+  readonly #activity: ContentActivity;
 
   constructor(options: {
     database: Database;
@@ -120,12 +122,14 @@ export class TopicService {
     people: PeopleService;
     documents: PageDocumentService;
     meetings: MeetingService;
+    activity: ContentActivity;
   }) {
     this.#database = options.database;
     this.#authorization = options.authorization;
     this.#people = options.people;
     this.#documents = options.documents;
     this.#meetings = options.meetings;
+    this.#activity = options.activity;
   }
 
   #select(viewer: Principal): SQL {
@@ -301,6 +305,7 @@ export class TopicService {
         );
       }
       await refreshReaderVisibility(tx, [id]);
+      await this.#activity.created(tx, id, actorId);
       await this.#meetings.addTopicToUpcoming(tx, actor, seriesId, id);
       await signalSpaceChange(tx, { spaceId: row.space_id, kind: "meetings", itemId: seriesId });
       return id;

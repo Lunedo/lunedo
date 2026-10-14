@@ -118,6 +118,7 @@ export const tasks = pgTable(
     statusChangedAt: timestampColumn(),
     statusChangedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
     notifiedAssigneeId: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    assignedById: uuid().references(() => accounts.id, { onDelete: "set null" }),
     ...timestamps(),
   },
   (table) => [

@@ -1,18 +1,18 @@
 import { randomUUID } from "node:crypto";
-import { notificationSettingKey } from "@pagehall/shared";
+import { readFileSync } from "node:fs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import { NotificationListener } from "../database/notifications.js";
 import { createLogger } from "../logging/logger.js";
-import { smtpSetting } from "../mail/mail-service.js";
+import { graphMailSetting, mailMethodSetting, smtpSetting } from "../mail/mail-service.js";
 import { accentColorSetting, dateFormatSetting } from "../settings/preferences.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { deliverPendingMail } from "../testing/jobs.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { NotificationHub } from "./hub.js";
 import type { NotifyInput } from "./service.js";
-import { notificationPreferenceSetting, notificationRetentionSetting } from "./types.js";
+import { notificationEventSettings, notificationRetentionSetting } from "./types.js";
 
 const baseUrl = testDatabaseBaseUrl();
 
@@ -178,23 +178,73 @@ describe.skipIf(!baseUrl)("notifications", () => {
   it("follows the preferences of instance, organization and user", async () => {
     await test.settings.set(smtpSetting, {}, "instance", SMTP);
     const org = await organization();
-    const setting = notificationPreferenceSetting("guest.expiring");
-    await test.settings.set(setting, { organization: org.id }, "organization", { inApp: true, email: false });
+    const setting = notificationEventSettings.get("guestExpiring");
+    if (!setting) throw new Error("No settings for guest expiry");
+    await test.settings.set(setting.email, { organization: org.id }, "organization", "off");
 
     const first = await notify(guestNotice(org.id, [org.owner.id]));
     expect(first.mailIds).toEqual([]);
     expect(await rows(org.owner.id)).toHaveLength(1);
 
-    await test.settings.set(setting, { organization: org.id, user: org.owner.id }, "user", {
-      inApp: false,
-      email: true,
-    });
+    await test.settings.set(setting.inApp, { organization: org.id, user: org.owner.id }, "user", false);
+    await test.settings.set(
+      setting.email,
+      { organization: org.id, user: org.owner.id },
+      "user",
+      "immediately",
+    );
     const second = await notify(guestNotice(org.id, [org.owner.id]));
     expect(second.mailIds).toHaveLength(1);
     expect(await rows(org.owner.id)).toHaveLength(1);
-    expect(setting.key).toBe(notificationSettingKey("guest.expiring"));
-    expect(setting.key).toBe("notifications.guestExpiring");
+    expect(setting.inApp.key).toBe("notifications.guestExpiring.inApp");
+    expect(setting.email.key).toBe("notifications.guestExpiring.email");
     await test.settings.set(smtpSetting, {}, "instance", null);
+  });
+
+  it("queues e-mail when the instance sends through Microsoft Graph", async () => {
+    const org = await organization();
+    await test.settings.set(graphMailSetting, {}, "instance", {
+      tenantId: "00000000-0000-0000-0000-000000000001",
+      clientId: "00000000-0000-0000-0000-000000000002",
+      sender: "wiki@example.org",
+      senderName: "Pagehall",
+      authority: "https://login.microsoftonline.com",
+      graphUrl: "https://graph.microsoft.com",
+    });
+    await test.settings.set(mailMethodSetting, {}, "instance", "graph");
+    const sent = await notify(guestNotice(org.id, [org.owner.id]));
+    expect(sent.mailIds).toHaveLength(1);
+    await test.settings.set(mailMethodSetting, {}, "instance", "smtp");
+    await test.settings.set(graphMailSetting, {}, "instance", null);
+  });
+
+  it("splits stored preferences of a type into one value per channel", async () => {
+    const scopeId = randomUUID();
+    await test.pool.query(
+      `insert into setting_values (id, level, scope_id, key, value, locked) values
+        (gen_random_uuid(), 'organization', $1, 'notifications.guestExpiring', '{"inApp": false, "email": true}', true),
+        (gen_random_uuid(), 'organization', $1, 'notifications.guestInactive', null, true),
+        (gen_random_uuid(), 'organization', $1, 'notifications.retentionDays', '30', false)`,
+      [scopeId],
+    );
+    const migration = readFileSync(
+      new URL("../../drizzle/0060_watching_and_preferences.sql", import.meta.url),
+      "utf8",
+    );
+    for (const statement of migration.split("--> statement-breakpoint").slice(-3)) {
+      await test.pool.query(statement);
+    }
+    const stored = await test.pool.query<{ key: string; value: unknown; locked: boolean }>(
+      "select key, value, locked from setting_values where scope_id = $1 order by key",
+      [scopeId],
+    );
+    expect(stored.rows).toEqual([
+      { key: "notifications.guestExpiring.email", value: "immediately", locked: true },
+      { key: "notifications.guestExpiring.inApp", value: false, locked: true },
+      { key: "notifications.guestInactive.email", value: null, locked: true },
+      { key: "notifications.guestInactive.inApp", value: null, locked: true },
+      { key: "notifications.retentionDays", value: 30, locked: false },
+    ]);
   });
 
   it("sends e-mail only when a mail server is configured, with the organization's logo and color", async () => {
