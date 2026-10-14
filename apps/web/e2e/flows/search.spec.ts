@@ -136,11 +136,12 @@ test("finds attachments, running topics and decisions and opens each where it li
 
   await page.goto(`/search?q=${hits.word}`);
   await fileLink.click();
-  await expect(page.getByRole("heading", { name: "Restart the VPN gateway", level: 1 })).toBeVisible();
   const drawer = page.getByRole("dialog", { name: hits.fileName });
   await expect(drawer).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(drawer).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Restart the VPN gateway", level: 1 })).toBeVisible();
+  expect(new URL(page.url()).pathname).toContain(world.gatewayPath);
   expect(new URL(page.url()).searchParams.get("attachment")).toBeNull();
 });
 
