@@ -5,6 +5,9 @@ type Cause =
   | "dns"
   | "connection"
   | "timeout"
+  | "connectTimeout"
+  | "greetingTimeout"
+  | "sendTimeout"
   | "socket"
   | "tls"
   | "auth"
@@ -22,6 +25,9 @@ const CAUSES: Record<string, Cause> = {
   EHOSTUNREACH: "connection",
   ENETUNREACH: "connection",
   ETIMEDOUT: "timeout",
+  SMTP_CONNECT_TIMEOUT: "connectTimeout",
+  SMTP_GREETING_TIMEOUT: "greetingTimeout",
+  SMTP_SEND_TIMEOUT: "sendTimeout",
   ESOCKET: "socket",
   ECONNRESET: "socket",
   ETLS: "tls",

@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import {
   ORGANIZATION_NAME,
@@ -13,6 +14,10 @@ import { expectAccessible, freshTotp, signInWithPassword, waitForMail } from "..
 test.describe.configure({ mode: "serial" });
 
 test("sets up a fresh instance and signs in the owner with a second factor", async ({ page }) => {
+  test.skip(
+    existsSync(OWNER_STORAGE),
+    "An earlier attempt already set up the instance and signed in the owner.",
+  );
   const { setupCode } = readState();
   expect(setupCode).toBeTruthy();
 
@@ -91,24 +96,39 @@ test("sets up a fresh instance and signs in the owner with a second factor", asy
   await expect(page.getByRole("heading", { name: "For you", level: 1 })).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Main navigation" })).toBeVisible();
   await page.context().storageState({ path: OWNER_STORAGE });
+});
 
-  await page.goto("/settings/instance/general");
-  await expect(page.getByText("E-mail is not set up")).toBeVisible();
-  await page.getByRole("link", { name: "Set up e-mail" }).click();
-  await page.getByLabel("Server", { exact: true }).fill(SMTP_HOST);
-  await page.getByLabel("Port").fill(String(SMTP_PORT));
-  await page.getByRole("radiogroup", { name: "Security" }).getByRole("radio", { name: /None/ }).click();
-  await page.getByLabel("Sender address").fill("wiki@pagehall.test");
-  await page.getByLabel("Send a test mail to").fill(OWNER.email);
-  await page.getByRole("button", { name: "Send test mail" }).click();
-  await expect(page.getByText("The mail server accepted the test mail.")).toBeVisible();
-  await waitForMail(OWNER.email, /test/i);
-  await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByText("SMTP settings saved. Pagehall sends through SMTP.").first()).toBeVisible();
-  await page.goto("/settings/instance/general");
-  await expect(page.getByRole("heading", { name: "General" })).toBeVisible();
-  await expect(page.getByText("E-mail is not set up")).toBeHidden();
+test.describe("e-mail", () => {
+  test.use({ storageState: OWNER_STORAGE });
 
-  const setupAgain = await page.request.get("/api/v1/setup");
-  expect(setupAgain.status()).toBe(404);
+  test("sets up e-mail delivery for the instance", async ({ page }) => {
+    await page.goto("/settings/instance/general");
+    await expect(page.getByRole("heading", { name: "General" })).toBeVisible();
+    const notConfigured = await page
+      .getByText("E-mail is not set up")
+      .waitFor({ state: "visible", timeout: 5000 })
+      .then(
+        () => true,
+        () => false,
+      );
+    if (notConfigured) {
+      await page.getByRole("link", { name: "Set up e-mail" }).click();
+      await page.getByLabel("Server", { exact: true }).fill(SMTP_HOST);
+      await page.getByLabel("Port").fill(String(SMTP_PORT));
+      await page.getByRole("radiogroup", { name: "Security" }).getByRole("radio", { name: /None/ }).click();
+      await page.getByLabel("Sender address").fill("wiki@pagehall.test");
+      await page.getByLabel("Send a test mail to").fill(OWNER.email);
+      await page.getByRole("button", { name: "Send test mail" }).click();
+      await expect(page.getByText("The mail server accepted the test mail.")).toBeVisible();
+      await waitForMail(OWNER.email, /test/i);
+      await page.getByRole("button", { name: "Save", exact: true }).click();
+      await expect(page.getByText("SMTP settings saved. Pagehall sends through SMTP.").first()).toBeVisible();
+      await page.goto("/settings/instance/general");
+      await expect(page.getByRole("heading", { name: "General" })).toBeVisible();
+      await expect(page.getByText("E-mail is not set up")).toBeHidden();
+    }
+
+    const setupAgain = await page.request.get("/api/v1/setup");
+    expect(setupAgain.status()).toBe(404);
+  });
 });
