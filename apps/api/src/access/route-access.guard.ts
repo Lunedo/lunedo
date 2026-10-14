@@ -18,7 +18,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { API_ROUTE, type ApiRouteDefinition } from "../http/api-route.js";
 import { COOKIES, readCookie } from "../http/cookies.js";
-import { ProblemException } from "../http/problems.js";
+import { forbiddenProblem, ProblemException } from "../http/problems.js";
 import { bearerToken } from "../http/request.js";
 import { ROUTE_ACCESS, type RouteAccess } from "./route-access.js";
 
@@ -203,7 +203,7 @@ export class RouteAccessGuard implements CanActivate {
     if (resource.type !== "instance" && (await this.#hidden(services, principal, resource))) {
       throw new ProblemException("notFound");
     }
-    throw new ProblemException("forbidden", "Not allowed", { denials: decision.denials });
+    throw forbiddenProblem(decision.denials);
   }
 
   async #hidden(services: AccountServices, principal: Principal, resource: Resource): Promise<boolean> {
@@ -214,6 +214,7 @@ export class RouteAccessGuard implements CanActivate {
       task: "task.view",
       attachment: "attachment.view",
       import: "import.view",
+      export: "export.view",
     };
     const view = views[resource.type];
     if (view) return !(await services.authorization.authorize(principal, view, resource));

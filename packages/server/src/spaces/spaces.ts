@@ -24,7 +24,12 @@ import { defaultPageMode, insertPage } from "./items.js";
 import { isValidSpaceKey, normalizeSpaceKey, spaceKeyCandidates, suggestSpaceKey } from "./keys.js";
 import type { PeopleService } from "./people.js";
 import type { SpaceRole, SpaceVisibility } from "./schema.js";
-import { type DefaultSpacePermissions, defaultSpacePermissionsSetting, type SpaceGrant } from "./settings.js";
+import {
+  type DefaultSpacePermissions,
+  defaultSpacePermissionsSetting,
+  exportEnabledSetting,
+  type SpaceGrant,
+} from "./settings.js";
 import { signalSpaceChange } from "./signals.js";
 import { insertDefaultPageStatuses } from "./status.js";
 
@@ -48,6 +53,7 @@ export interface Space {
   ownerName: string | null;
   overviewItemId: string | null;
   archived: boolean;
+  exportEnabled: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -73,6 +79,7 @@ type SpaceRow = {
   owner_name: string | null;
   overview_item_id: string | null;
   archived: boolean;
+  export_enabled: boolean;
   created_at: Date | string;
   updated_at: Date | string;
 };
@@ -80,7 +87,11 @@ type SpaceRow = {
 const SPACE_COLUMNS = sql`s.id, s.key, s.name, s.description, s.visibility, s.discoverable,
   s.confidential, s.one_on_one, s.quarantined, s.organization_id,
   o.name as organization_name, s.personal_of, s.owner_account_id, owner.name as owner_name,
-  s.overview_item_id, s.archived_at is not null as archived, s.created_at, s.updated_at`;
+  s.overview_item_id, s.archived_at is not null as archived,
+  coalesce((select (sv.value)::boolean from setting_values sv
+    where sv.key = ${exportEnabledSetting.key} and sv.level = 'space' and sv.scope_id = s.id
+      and sv.value is not null), true) as export_enabled,
+  s.created_at, s.updated_at`;
 
 const SPACE_FROM = sql`spaces s
   left join organizations o on o.id = s.organization_id
@@ -104,6 +115,7 @@ function toSpace(row: SpaceRow): Space {
     ownerName: row.owner_name,
     overviewItemId: row.overview_item_id,
     archived: row.archived,
+    exportEnabled: row.export_enabled,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
   };

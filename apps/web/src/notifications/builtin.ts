@@ -4,6 +4,7 @@ import {
   Bot,
   Building2,
   CalendarClock,
+  FileArchive,
   FileInput,
   KeyRound,
   ListChecks,
@@ -163,6 +164,16 @@ notificationTypes.register(
     icon: FileInput,
     link: (item) =>
       item.target.id ? inOrganization(item, "/imports/$importId", { importId: item.target.id }) : null,
+  },
+  {
+    id: "export.ready",
+    icon: FileArchive,
+    link: () => ({ to: "/settings/exports" }),
+  },
+  {
+    id: "export.failed",
+    icon: FileArchive,
+    link: () => ({ to: "/settings/exports" }),
   },
   {
     id: "space.confidentialWithoutAdministrator",

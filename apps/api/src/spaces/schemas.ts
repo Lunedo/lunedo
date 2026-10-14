@@ -68,6 +68,11 @@ export const spaceSchema = z
     ownerName: z.string().nullable().describe("Name of the owner of a personal space, or null."),
     overviewItemId: uuid("The overview page of the space.").nullable(),
     archived: z.boolean().describe("Whether the space is archived. Archived spaces are read-only."),
+    exportEnabled: z
+      .boolean()
+      .describe(
+        "Whether pages and the space can be exported. Space administrators turn export off and on; it applies to everyone. Turning it off does not prevent copying content.",
+      ),
     createdAt: timestamp("When the space was created."),
     updatedAt: timestamp("When the settings of the space last changed."),
   })
@@ -94,6 +99,7 @@ export const exampleSpace = {
   ownerName: null,
   overviewItemId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a11",
   archived: false,
+  exportEnabled: true,
   createdAt: "2026-10-05T08:00:00.000Z",
   updatedAt: "2026-10-05T08:00:00.000Z",
 };

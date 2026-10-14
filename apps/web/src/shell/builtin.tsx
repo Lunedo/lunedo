@@ -4,6 +4,7 @@ import {
   Bot,
   Building2,
   CircleHelp,
+  FileArchive,
   FileClock,
   Globe,
   Import,
@@ -78,6 +79,14 @@ navigationItems.register(
     icon: BellRing,
     labelKey: "navigation.notifications",
     to: "/settings/notifications",
+  },
+  {
+    id: "account.exports",
+    order: 40,
+    section: "account",
+    icon: FileArchive,
+    labelKey: "navigation.exports",
+    to: "/settings/exports",
   },
   {
     id: "organization.general",

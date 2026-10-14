@@ -34,7 +34,13 @@ export interface RuleContext {
 
 export type Rule = (context: RuleContext) => Promise<boolean>;
 
-export type RestrictionDenial = "inTrash" | "archived" | "unpublished" | "restricted" | "editRestricted";
+export type RestrictionDenial =
+  | "inTrash"
+  | "archived"
+  | "unpublished"
+  | "restricted"
+  | "editRestricted"
+  | "exportDisabled";
 
 export interface RestrictionResult {
   denial: RestrictionDenial;

@@ -237,6 +237,15 @@ export {
 export { NotificationListener, notify } from "./database/notifications.js";
 export { createDatabasePool, type DatabasePool, pingDatabase } from "./database/pool.js";
 export {
+  EXPORT_RETENTION_DAYS,
+  ExportError,
+  type ExportFile,
+  ExportService,
+  type ExportSummary,
+  type PageExportFormat,
+} from "./exports/exports.js";
+export { type ExportScope, type ExportState, exportScopes, exportStates } from "./exports/schema.js";
+export {
   type Attachment,
   type AttachmentContent,
   AttachmentError,
@@ -664,6 +673,7 @@ export {
   defaultPageModeSetting,
   defaultSpacePermissionsSchema,
   defaultSpacePermissionsSetting,
+  exportEnabledSetting,
   liveVersionIdleMinutesSetting,
   membersCreateConfidentialSpacesSetting,
   membersCreateSpacesSetting,

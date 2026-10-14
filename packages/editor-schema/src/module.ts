@@ -95,6 +95,31 @@ export interface ReportedDecision {
   date: string;
 }
 
+export const taskReportDueWindows = ["any", "overdue", "next7Days", "next30Days", "none"] as const;
+export type TaskReportDue = (typeof taskReportDueWindows)[number];
+
+export const taskReportStatuses = ["open", "done", "all"] as const;
+export type TaskReportStatus = (typeof taskReportStatuses)[number];
+
+export interface TaskReportRequest {
+  spaceId: string | null;
+  seriesId: string | null;
+  pageIds: readonly string[];
+  labels: readonly string[];
+  assignee: string | null;
+  assignedToViewer: boolean;
+  due: TaskReportDue;
+  status: TaskReportStatus;
+}
+
+export interface ReportedTask {
+  text: string;
+  done: boolean;
+  assignee: string | null;
+  dueDate: string | null;
+  page: { title: string; href: string };
+}
+
 export interface RenderLabels {
   noAccess: string;
   inTrash: string;
@@ -120,6 +145,11 @@ export interface RenderLabels {
   reportTitle: string;
   reportAuthor: string;
   reportUpdated: string;
+  noReportedTasks: string;
+  reportTask: string;
+  reportAssignee: string;
+  reportDue: string;
+  reportPage: string;
   templateButton: string;
   callout: Record<"info" | "tip" | "note" | "warning" | "error", string>;
 }
@@ -138,6 +168,8 @@ export interface RenderContext {
   formatSize?: (bytes: number) => string;
   pageReport?: (request: PageReportRequest) => readonly ReportedPage[] | null;
   decisionReport?: (request: DecisionReportRequest) => readonly ReportedDecision[] | null;
+  taskReport?: (request: TaskReportRequest) => readonly ReportedTask[] | null;
+  href?: (href: string) => string;
 }
 
 interface BaseRenderer {

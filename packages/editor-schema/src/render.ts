@@ -38,6 +38,11 @@ export const defaultLabels: RenderLabels = {
   reportTitle: "Title",
   reportAuthor: "Author",
   reportUpdated: "Last changed",
+  noReportedTasks: "No tasks match the filters",
+  reportTask: "Task",
+  reportAssignee: "Assigned to",
+  reportDue: "Due",
+  reportPage: "Page",
   templateButton: "Create from template",
   callout: { info: "Info", tip: "Tip", note: "Note", warning: "Warning", error: "Error" },
 };
@@ -132,7 +137,8 @@ abstract class Renderer {
   }
 
   safeHref(href: string): string | null {
-    return isAllowedHref(href) ? href : null;
+    if (!isAllowedHref(href)) return null;
+    return this.context.href ? this.context.href(href) : href;
   }
 
   protected orderedMarks(marks: ValidMark[]): { mark: ValidMark; definition: MarkDefinition }[] {

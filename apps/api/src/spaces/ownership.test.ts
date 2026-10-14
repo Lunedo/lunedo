@@ -161,6 +161,18 @@ describe.skipIf(!databaseBaseUrl)("ownership and page status through the API", (
     expect((await context.reader.client.get(`/api/v1/items/${context.page.id}`)).json().status).toBeNull();
   });
 
+  it("lets space admins turn the page status off and on in the space settings", async () => {
+    const context = await setup();
+    const settings = await context.admin.client.get(`/api/v1/spaces/${context.space.id}/settings`);
+    expect((settings.json() as { key: string }[]).map((setting) => setting.key)).toContain("pages.status");
+    const off = await context.admin.client.put(`/api/v1/spaces/${context.space.id}/settings/pages.status`, {
+      value: false,
+    });
+    expect(off.statusCode, off.body).toBe(204);
+    const listed = await context.reader.client.get(`/api/v1/spaces/${context.space.id}/page-statuses`);
+    expect(listed.json()).toMatchObject({ enabled: false });
+  });
+
   it("lists items without an owner for space admins only", async () => {
     const context = await setup();
     await test.runtime.services.memberships.deactivate({ type: "system" }, context.author.id);

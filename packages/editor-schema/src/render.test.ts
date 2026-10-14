@@ -758,6 +758,117 @@ describe("decision report", () => {
   });
 });
 
+describe("task report", () => {
+  const block = {
+    type: "taskReport",
+    attrs: { spaceId: PAGE, labels: ["vpn"], assignedToViewer: true, due: "overdue", status: "all" },
+  };
+  const tasks: RenderContext = {
+    formatDate: (iso) => `on ${iso}`,
+    taskReport: () => [
+      {
+        text: "Renew | certificate\nsoon",
+        done: false,
+        assignee: "Anna Berger",
+        dueDate: "2026-10-20",
+        page: { title: "VPN setup", href: `/pages/${PAGE}` },
+      },
+      {
+        text: "Close port",
+        done: true,
+        assignee: null,
+        dueDate: null,
+        page: { title: "", href: "javascript:x" },
+      },
+    ],
+  };
+
+  it("shows the label until the reader's tasks are known", () => {
+    expect(renderHtml(doc(block))).toContain("<p>Task report</p></div>");
+    expect(renderMarkdown(doc(block))).toBe("*Task report*\n");
+  });
+
+  it("asks for the tasks with the block's filters and lists them with assignee, due date and page", () => {
+    const requests: unknown[] = [];
+    const html = renderHtml(doc(block), {
+      ...tasks,
+      taskReport: (request) => {
+        requests.push(request);
+        return tasks.taskReport?.(request) ?? null;
+      },
+    });
+    expect(requests).toEqual([
+      {
+        spaceId: PAGE,
+        seriesId: null,
+        pageIds: [],
+        labels: ["vpn"],
+        assignee: null,
+        assignedToViewer: true,
+        due: "overdue",
+        status: "all",
+      },
+    ]);
+    expect(html).toContain(
+      `<tr data-checked="false"><td><input type="checkbox" disabled aria-label="Open"> Renew | certificate\nsoon</td><td>Anna Berger</td><td>on 2026-10-20</td><td><a href="/pages/${PAGE}">VPN setup</a></td></tr>`,
+    );
+    expect(html).toContain(
+      '<tr data-checked="true"><td><input type="checkbox" disabled aria-label="Done" checked> Close port</td><td></td><td></td><td>Untitled page</td></tr>',
+    );
+    expect(renderMarkdown(doc(block), tasks)).toBe(
+      `| Task | Assigned to | Due | Page |\n| --- | --- | --- | --- |\n| [ ] Renew \\| certificate soon | Anna Berger | on 2026-10-20 | [VPN setup](/pages/${PAGE}) |\n| [x] Close port |  |  | Untitled page |\n`,
+    );
+  });
+
+  it("says when no task matches", () => {
+    expect(renderHtml(doc(block), { taskReport: () => [] })).toContain(
+      '<p class="ph-listing-empty">No tasks match the filters</p>',
+    );
+    expect(renderMarkdown(doc(block), { taskReport: () => [] })).toBe("*No tasks match the filters*\n");
+  });
+});
+
+describe("link addresses", () => {
+  it("pass every allowed address through the context, so exports can point links elsewhere", () => {
+    const document = doc(
+      paragraph(text("Guide", [{ type: "link", attrs: { href: "/spaces/IT/pages/x" } }]), {
+        type: "pageLink",
+        attrs: { pageId: PAGE },
+      }),
+      { type: "image", attrs: { attachmentId: ID } },
+    );
+    const mapped: string[] = [];
+    const href = (address: string) => {
+      mapped.push(address);
+      return `mapped/${encodeURIComponent(address)}`;
+    };
+    const html = renderHtml(document, { ...context, href });
+    expect(html).toContain('href="mapped/%2Fspaces%2FIT%2Fpages%2Fx"');
+    expect(html).toContain(`src="mapped/%2Fapi%2Fv1%2Fattachments%2F${ID}"`);
+    expect(renderMarkdown(document, { ...context, href })).toContain(
+      `[Device naming](mapped/%2Fpages%2F${PAGE})`,
+    );
+    expect(mapped).toContain(`/pages/${PAGE}`);
+  });
+
+  it("never pass a disallowed address to the context", () => {
+    const mapped: string[] = [];
+    renderHtml(
+      doc(paragraph(text("x", [{ type: "link", attrs: { href: "https://example.org" } }])), {
+        type: "childPages",
+      }),
+      {
+        href: (address) => {
+          mapped.push(address);
+          return address;
+        },
+        childPages: () => [{ title: "Bad", href: "javascript:alert(1)", children: [] }],
+      },
+    );
+    expect(mapped).toEqual(["https://example.org"]);
+  });
+});
+
 describe("template button", () => {
   it("shows its label, or a default label, with the template and title pattern", () => {
     expect(

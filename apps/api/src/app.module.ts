@@ -7,6 +7,7 @@ import { AuthModule } from "./auth/auth.module.js";
 import { CollaborationModule } from "./collaboration/collaboration.module.js";
 import { API_CONTEXT, type ApiContext } from "./context.js";
 import { DocsModule } from "./docs/docs.module.js";
+import { ExportsModule } from "./exports/exports.module.js";
 import { FilesModule } from "./files/files.module.js";
 import { HealthModule } from "./health/health.module.js";
 import { ApiRouteInterceptor } from "./http/api-route.interceptor.js";
@@ -45,6 +46,7 @@ export class AppModule {
               CollaborationModule,
               FilesModule,
               ImportsModule,
+              ExportsModule,
               SharingModule,
               SearchModule,
             ]

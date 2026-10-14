@@ -132,6 +132,8 @@ type Rule =
   | "importResolver"
   | "heldForAdministrator"
   | "ownerOrOrganizationAdministrator"
+  | "exportOwner"
+  | "readyExportOwner"
   | "self";
 
 interface Expectation {
@@ -230,6 +232,7 @@ const EXPECTED: Record<string, Expectation> = {
   "space.manage": { scope: "space" },
   "space.trash": { scope: "space" },
   "space.delete": { scope: "space" },
+  "space.export": { scope: "space" },
   "deletedSpace.restore": { scope: "instance", rule: "formerAdministrator" },
   "item.view": { scope: "space" },
   "item.edit": { scope: "space" },
@@ -241,6 +244,7 @@ const EXPECTED: Record<string, Expectation> = {
   "item.approveSchedule": { scope: "space" },
   "item.share": { scope: "space" },
   "item.transferOwnership": { scope: "space", rule: "ownerOrOrganizationAdministrator" },
+  "item.export": { scope: "space" },
   "comment.view": { scope: "space" },
   "comment.reply": { scope: "space" },
   "comment.resolve": { scope: "space" },
@@ -256,6 +260,9 @@ const EXPECTED: Record<string, Expectation> = {
   "import.manage": { scope: "organization", rule: "importer" },
   "import.resolve": { scope: "organization", rule: "importResolver" },
   "import.takeOver": { scope: "organization", rule: "heldForAdministrator" },
+  "export.view": { scope: "instance", rule: "exportOwner" },
+  "export.delete": { scope: "instance", rule: "exportOwner" },
+  "export.download": { scope: "instance", rule: "readyExportOwner" },
 };
 
 function expectedAllowed(held: Held, actionName: string): boolean {
@@ -283,6 +290,8 @@ function expectedAllowed(held: Held, actionName: string): boolean {
     importResolver: () => false,
     heldForAdministrator: () => false,
     ownerOrOrganizationAdministrator: () => false,
+    exportOwner: () => false,
+    readyExportOwner: () => false,
   };
   if (expectation.rule && rules[expectation.rule]()) return true;
   if (expectation.scope === "space") return false;
@@ -310,6 +319,7 @@ interface Fixture {
   attachmentId: string;
   deletedSpaceEntryId: string;
   importId: string;
+  exportId: string;
 }
 
 export function permissionMatrix(only: readonly Subject[], extras: boolean): void {
@@ -407,9 +417,14 @@ export function permissionMatrix(only: readonly Subject[], extras: boolean): voi
         "insert into imports (id, organization_id, importer_id, source) values ($1, $2, $3, 'confluence-xml') returning id",
         [randomUUID(), created.id, owner],
       );
+      const exportRow = await test.pool.query<{ id: string }>(
+        "insert into exports (id, account_id, scope, space_id, name, state, expires_at) values ($1, $2, 'space', $3, 'Matrix space', 'ready', now() + interval '1 day') returning id",
+        [randomUUID(), owner, space.id],
+      );
       return {
         organizationId: created.id,
         importId: importRow.rows[0]?.id ?? "",
+        exportId: exportRow.rows[0]?.id ?? "",
         groupId: group.rows[0]?.id ?? "",
         targetId,
         spaceId: space.id,
@@ -473,6 +488,8 @@ export function permissionMatrix(only: readonly Subject[], extras: boolean): voi
           return { type: "deletedSpace", id: target.deletedSpaceEntryId };
         case "import":
           return { type: "import", id: target.importId };
+        case "export":
+          return { type: "export", id: target.exportId };
         default:
           throw new Error(`The matrix has no resource for ${action.resourceType.type}`);
       }

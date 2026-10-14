@@ -138,6 +138,10 @@ export const problems = {
   comparisonWithheld: { status: 403, title: "The new content is restricted at the source" },
   invalidDecision: { status: 400, title: "The decision does not fit the change" },
   restrictionPending: { status: 409, title: "The restriction from the source is not applied yet" },
+  exportDisabled: { status: 403, title: "Export is turned off for this space" },
+  exportRunning: { status: 409, title: "Another export of yours is still running" },
+  nothingToExport: { status: 409, title: "There is nothing to export" },
+  tooManyExports: { status: 409, title: "You keep as many exports as allowed" },
   holderNotInPagehall: { status: 409, title: "The person or group is not in Pagehall yet" },
   differenceResolved: { status: 409, title: "The difference no longer exists" },
   notRestricted: { status: 409, title: "The page has no restriction of this kind" },
@@ -444,6 +448,17 @@ export class ProblemException extends HttpException {
   ) {
     super(problemBody(code, detail, extensions), problems[code].status);
   }
+}
+
+export function forbiddenProblem(denials: readonly string[]): ProblemException {
+  if (denials.includes("exportDisabled")) {
+    return new ProblemException(
+      "exportDisabled",
+      "Export is turned off for this space. A space administrator can turn it on in the space settings.",
+      { denials },
+    );
+  }
+  return new ProblemException("forbidden", "Not allowed", { denials });
 }
 
 export function notFound(detail = "Not found"): ProblemException {

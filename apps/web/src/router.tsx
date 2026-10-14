@@ -409,6 +409,15 @@ const spaceStatusRoute = createRoute({
   ),
 });
 
+const spaceExportRoute = createRoute({
+  getParentRoute: () => spaceSettingsRoute,
+  path: "/export",
+  component: lazyRouteComponent(
+    () => import("./spaces/settings/space-export-screen.js"),
+    "SpaceExportScreen",
+  ),
+});
+
 const spaceTemplatesRoute = createRoute({
   getParentRoute: () => spaceSettingsRoute,
   path: "/templates",
@@ -442,6 +451,12 @@ const securityRoute = createRoute({
   getParentRoute: () => settingsRoute,
   path: "/security",
   component: lazyRouteComponent(() => import("./screens/account/security-screen.js"), "SecurityScreen"),
+});
+
+const exportsRoute = createRoute({
+  getParentRoute: () => settingsRoute,
+  path: "/exports",
+  component: lazyRouteComponent(() => import("./exports/exports-screen.js"), "ExportsScreen"),
 });
 
 const notificationSettingsRoute = createRoute({
@@ -775,6 +790,7 @@ const routeTree = rootRoute.addChildren([
         spaceContentRoute,
         spaceStatusRoute,
         spaceTemplatesRoute,
+        spaceExportRoute,
       ]),
     ]),
     settingsRoute.addChildren([
@@ -782,6 +798,7 @@ const routeTree = rootRoute.addChildren([
       preferencesRoute,
       securityRoute,
       notificationSettingsRoute,
+      exportsRoute,
       organizationRoute.addChildren([
         organizationIndexRoute,
         organizationGeneralRoute,

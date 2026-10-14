@@ -167,6 +167,12 @@ export const contentNotificationParamSchemas = {
   }),
   "import.failed": z.object({ spaceKey: z.string(), spaceName: z.string(), errorCode: z.string() }),
   "import.held": z.object({ spaceKey: z.string() }),
+  "export.ready": z.object({
+    name: z.string(),
+    scope: z.enum(["space", "pages"]),
+    expiresAt: z.iso.datetime(),
+  }),
+  "export.failed": z.object({ name: z.string(), scope: z.enum(["space", "pages"]), errorCode: z.string() }),
   "oneOnOne.started": z.object({
     itemTitle: z.string(),
     spaceKey: z.string(),
