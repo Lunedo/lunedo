@@ -334,7 +334,7 @@ export class TreeService {
       type: "space",
       id: target.spaceId,
     });
-    if (!readable.allowed) throw new ForbiddenError(readable);
+    if (!readable.allowed) throw new SpaceError("spaceNotFound", "The space does not exist");
     let itemId = await this.findByTitle(actor, target.spaceId, title);
     let created = false;
     if (!itemId) {
@@ -831,7 +831,10 @@ export class TreeService {
 
   async #requireEdit(actor: Principal, spaceId: string): Promise<void> {
     const decision = await this.#authorization.explain(actor, "space.edit", { type: "space", id: spaceId });
-    if (!decision.allowed) throw new ForbiddenError(decision);
+    if (decision.allowed) return;
+    const visible = await this.#authorization.explain(actor, "space.view", { type: "space", id: spaceId });
+    if (!visible.allowed) throw new SpaceError("spaceNotFound", "The space does not exist");
+    throw new ForbiddenError(decision);
   }
 
   async convert(actor: Principal, itemId: string, kind: "page" | "folder"): Promise<TreeItem> {
