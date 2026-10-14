@@ -291,6 +291,21 @@ describe("version history", () => {
         [`GET /api/v1/pages/${VPN}/compare`]: () => ({
           body: { diff, before: doc("a"), after: doc("b"), references: { people: {}, pages: {} } },
         }),
+        [`GET /api/v1/pages/${VPN}/versions/6`]: () => ({
+          body: {
+            number: 6,
+            title: "VPN access",
+            note: "",
+            reason: "published",
+            restoredFrom: null,
+            createdAt: "2026-09-28T09:05:00.000Z",
+            createdBy: { id: OLIVIA.id, name: "Lukas Hofer" },
+            contributors: [],
+            document: doc("a"),
+            schemaVersion: 2,
+            references: { people: {}, pages: {} },
+          },
+        }),
         [`POST /api/v1/pages/${VPN}/versions/6/restore`]: () => ({
           body: { mode: "publish", version: null },
         }),
@@ -314,6 +329,60 @@ describe("version history", () => {
   });
 });
 
+describe("the first version", () => {
+  it("is shown on its own with a text saying so instead of being compared with itself", async () => {
+    const { requests } = mockApi(
+      routes("editor", {
+        [`GET /api/v1/pages/${VPN}/versions`]: () => ({
+          body: [
+            {
+              number: 2,
+              title: "VPN access",
+              note: "",
+              reason: "published",
+              restoredFrom: null,
+              createdAt: "2026-10-03T14:20:00.000Z",
+              createdBy: { id: OLIVIA.id, name: "Anna Berger" },
+              contributors: [],
+            },
+            {
+              number: 1,
+              title: "VPN access",
+              note: "",
+              reason: "published",
+              restoredFrom: null,
+              createdAt: "2026-09-28T09:05:00.000Z",
+              createdBy: { id: OLIVIA.id, name: "Lukas Hofer" },
+              contributors: [],
+            },
+          ],
+        }),
+        [`GET /api/v1/pages/${VPN}/discarded-drafts`]: () => ({ body: [] }),
+        [`GET /api/v1/pages/${VPN}/versions/1`]: () => ({
+          body: {
+            number: 1,
+            title: "VPN access",
+            note: "",
+            reason: "published",
+            restoredFrom: null,
+            createdAt: "2026-09-28T09:05:00.000Z",
+            createdBy: { id: OLIVIA.id, name: "Lukas Hofer" },
+            contributors: [],
+            document: doc("The very first text"),
+            schemaVersion: 2,
+            references: { people: {}, pages: {} },
+          },
+        }),
+      }),
+    );
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/history?to=1`);
+    expect(await screen.findByText("This is the first version")).toBeTruthy();
+    expect(await screen.findByText("The very first text")).toBeTruthy();
+    expect(screen.queryByText("No differences")).toBeNull();
+    expect(requests.some((request) => request.path.endsWith("/compare"))).toBe(false);
+  });
+});
+
 describe("trash", () => {
   const entry = {
     id: ENTRY,
@@ -330,7 +399,60 @@ describe("trash", () => {
     deletedBy: { id: OLIVIA.id, name: "Lukas Hofer" },
     stageTwoAt: null,
     removedAt: new Date(Date.now() + 28.5 * 24 * 3600 * 1000).toISOString(),
+    formerParentEntryId: null,
   };
+  const FOLDER_ENTRY = "01929b1e-0000-7000-8000-0000000000e2";
+
+  it("names the folder in the trash and restores both on request", async () => {
+    const { requests } = mockApi(
+      routes("editor", {
+        [`GET /api/v1/spaces/${SPACE_ID}/trash`]: () => ({
+          body: [
+            { ...entry, formerParentEntryId: FOLDER_ENTRY },
+            { ...entry, id: FOLDER_ENTRY, itemId: OVERVIEW, itemKind: "folder", title: "Runbooks" },
+          ],
+        }),
+        [`POST /api/v1/spaces/${SPACE_ID}/trash/${ENTRY}/restore`]: (request) =>
+          request.path.includes("withParents=true")
+            ? { body: { itemId: VPN, parentId: OVERVIEW, parentEntries: 1 } }
+            : { body: { itemId: VPN, parentId: null, parentEntries: 0 } },
+      }),
+    );
+    await renderAt("/spaces/ITOPS/trash");
+    const row = (await screen.findByText("Old VPN setup")).closest("tr") as HTMLElement;
+    await userEvent.click(within(row).getByRole("button", { name: "Restore" }));
+    const dialog = await screen.findByRole("dialog", { name: "“Runbooks” is in the trash too" });
+    expect(within(dialog).getByText(/was below “Runbooks”/)).toBeTruthy();
+    expect(document.activeElement).toBe(within(dialog).getByRole("button", { name: "Restore both" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Restore both" }));
+    await waitFor(() =>
+      expect(
+        requests.some((request) => request.path.endsWith(`/trash/${ENTRY}/restore?withParents=true`)),
+      ).toBe(true),
+    );
+  });
+
+  it("restores only the page at the top level and says why when asked to", async () => {
+    const { requests } = mockApi(
+      routes("editor", {
+        [`GET /api/v1/spaces/${SPACE_ID}/trash`]: () => ({
+          body: [
+            { ...entry, formerParentEntryId: FOLDER_ENTRY },
+            { ...entry, id: FOLDER_ENTRY, itemId: OVERVIEW, itemKind: "folder", title: "Runbooks" },
+          ],
+        }),
+        [`POST /api/v1/spaces/${SPACE_ID}/trash/${ENTRY}/restore`]: () => ({
+          body: { itemId: VPN, parentId: null, parentEntries: 0 },
+        }),
+      }),
+    );
+    await renderAt("/spaces/ITOPS/trash");
+    const row = (await screen.findByText("Old VPN setup")).closest("tr") as HTMLElement;
+    await userEvent.click(within(row).getByRole("button", { name: "Restore" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Restore only “Old VPN setup”" }));
+    expect(await screen.findByText(/“Runbooks”, where it was, is still in the trash/)).toBeTruthy();
+    expect(requests.some((request) => request.path.includes("withParents"))).toBe(false);
+  });
 
   it("lists deleted items, restores them and lets space admins empty the trash", async () => {
     const { requests } = mockApi(
@@ -689,5 +811,78 @@ describe("sharing and access", () => {
     expect(await screen.findByText("You can no longer edit this page")).toBeTruthy();
     expect(await screen.findByText("Published text")).toBeTruthy();
     expect(screen.queryByRole("textbox", { name: "Page content" })).toBeNull();
+  });
+});
+
+describe("an empty page", () => {
+  const emptyContent = () => ({
+    body: {
+      itemId: VPN,
+      title: "VPN access",
+      version: 7,
+      document: { type: "doc", content: [{ type: "paragraph" }] },
+      schemaVersion: 2,
+      revision: 4,
+      updatedAt: "2026-10-05T08:10:00.000Z",
+      updatedBy: OLIVIA.id,
+      references: { people: {}, pages: {} },
+    },
+  });
+
+  it("tells editors that it is empty and starts the editor from the page", async () => {
+    mockApi(
+      routes("editor", {
+        [`GET /api/v1/pages/${VPN}/content`]: emptyContent,
+        [`GET /api/v1/pages/${VPN}/draft`]: () => ({
+          body: {
+            title: "VPN access",
+            document: { type: "doc", content: [{ type: "paragraph" }] },
+            revision: 9,
+            updatedAt: "2026-10-07T08:00:00.000Z",
+            hasChanges: false,
+            changes: 0,
+            basedOn: 7,
+            contributors: [],
+            references: { people: {}, pages: {} },
+          },
+        }),
+      }),
+    );
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    expect(await screen.findByText("This page is empty")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Start writing" }));
+    await waitFor(() => expect(window.location.search).toContain("edit=true"));
+  });
+
+  it("tells readers that nothing has been written yet and offers no action", async () => {
+    mockApi(routes("reader", { [`GET /api/v1/pages/${VPN}/content`]: emptyContent }));
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    expect(await screen.findByText("This page is empty")).toBeTruthy();
+    expect(screen.getByText("Nothing has been written here yet.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Start writing" })).toBeNull();
+  });
+});
+
+describe("leaving a space", () => {
+  it("goes to the audit log of the organization from the shortcut instead of back into the space", async () => {
+    mockApi(
+      routes("editor", {
+        "GET /api/v1/account/permissions": () => ({
+          body: {
+            instance: ["instance.content.view"],
+            organization: ["organization.view", "organization.audit.view"],
+            grantableAreas: { instance: {}, organization: {} },
+          },
+        }),
+      }),
+    );
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await screen.findByText("Published text");
+    await userEvent.keyboard("ga");
+    await waitFor(() =>
+      expect(window.location.pathname).toBe(`/settings/organizations/${ORGANIZATION.id}/audit-log`),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(window.location.pathname).toBe(`/settings/organizations/${ORGANIZATION.id}/audit-log`);
   });
 });

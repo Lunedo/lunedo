@@ -6,6 +6,7 @@ import {
   type TimeFormat,
   type WeekStart,
 } from "@pagehall/shared";
+import { browserTimeZone } from "./time-zones.js";
 
 export interface FormatSettings {
   language: string;
@@ -46,14 +47,15 @@ export function createFormatter(settings: FormatSettings): Formatter {
   const percent = new Intl.NumberFormat(numberLocale, { style: "percent", maximumFractionDigits: 2 });
   const relative = new Intl.RelativeTimeFormat(settings.language, { numeric: "auto" });
 
-  const date = (value: Date | string) => formatDate(toDate(value), settings.dateFormat, settings.timeZone);
+  const date = (value: Date | string) =>
+    formatDate(toDate(value), settings.dateFormat, settings.timeZone, settings.language);
   const time = (value: Date | string) => timeFormatter.format(toDate(value));
 
   return {
     settings,
     date,
     time,
-    dateTime: (value) => `${date(value)} ${time(value)}`,
+    dateTime: (value) => `${date(value)}, ${time(value)}`,
     relative(value, now = new Date()) {
       const seconds = Math.round((toDate(value).getTime() - now.getTime()) / 1000);
       const absolute = Math.abs(seconds);
@@ -76,7 +78,7 @@ export function createFormatter(settings: FormatSettings): Formatter {
       return new Intl.NumberFormat(numberLocale, {
         style: "unit",
         unit: units[unit],
-        unitDisplay: "short",
+        unitDisplay: unit === 0 ? "long" : "short",
         maximumFractionDigits: unit === 0 ? 0 : 1,
       }).format(size);
     },
@@ -86,6 +88,6 @@ export function createFormatter(settings: FormatSettings): Formatter {
 
 export const defaultFormatSettings: FormatSettings = {
   language: "en",
-  timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+  timeZone: browserTimeZone(),
   ...defaultFormats,
 };

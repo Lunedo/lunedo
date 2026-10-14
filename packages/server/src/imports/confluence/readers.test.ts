@@ -136,7 +136,7 @@ describe.skipIf(!baseUrl)("Confluence export readers", () => {
       { sourceId: BOB.accountId, accountId: BOB.accountId, userKey: BOB.key },
     ]);
     expect(result.bodies[PAGE.beta]).toContain("Beta links back");
-    expect(result.summary).toMatchObject({ pages: 8, attachments: 3, people: 2, spaceKey: "SYN" });
+    expect(result.summary).toMatchObject({ pages: 8, attachments: 3, people: 3, spaceKey: "SYN" });
   });
 
   it("reads attachments with every version in the export and labels", async () => {

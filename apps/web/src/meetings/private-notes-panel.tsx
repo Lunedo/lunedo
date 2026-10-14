@@ -169,6 +169,7 @@ function NotesEditor({
         role: "textbox",
       },
     },
+    autofocus: "end",
     immediatelyRender: true,
     shouldRerenderOnTransaction: false,
     onUpdate: ({ editor: current }) => {

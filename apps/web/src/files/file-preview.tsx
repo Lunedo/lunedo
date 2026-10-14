@@ -307,40 +307,42 @@ export function FilePreviewDrawer({
       title={attachment?.name ?? t("files.preview.open")}
       size="panel"
     >
-      {error ? (
-        <LoadError what={t("files.preview.fileFailed")} error={error} onRetry={() => onRetry?.()} />
-      ) : null}
-      {!attachment && !error ? <Skeleton className="h-card w-full" /> : null}
-      {attachment ? (
-        <div className="flex flex-col gap-4">
-          <p className="text-sm text-text-muted">
-            {t("files.summary", {
-              type: typeLabel(t, attachment),
-              size: format.bytes(attachment.size),
-              version: attachment.version,
-            })}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <a
-              href={contentUrl(attachment.id, { download: true })}
-              download={attachment.name}
-              className="inline-flex min-h-hit items-center gap-2 rounded-md border border-border px-3 font-medium hover:bg-hover focus-visible:focus-ring"
-            >
-              <Download aria-hidden="true" className="size-icon" />
-              {t("files.download")}
-            </a>
-            {attachment.versions > 1 || canEdit ? (
-              <Button variant="secondary" icon={History} onClick={() => setShowVersions((value) => !value)}>
-                {showVersions
-                  ? t("files.versions.hide")
-                  : t("files.versions.show", { count: attachment.versions })}
-              </Button>
-            ) : null}
+      <div className="flex flex-col gap-4 p-4">
+        {error ? (
+          <LoadError what={t("files.preview.fileFailed")} error={error} onRetry={() => onRetry?.()} />
+        ) : null}
+        {!attachment && !error ? <Skeleton className="h-card w-full" /> : null}
+        {attachment ? (
+          <div className="flex flex-col gap-4">
+            <p className="text-sm text-text-muted">
+              {t("files.summary", {
+                type: typeLabel(t, attachment),
+                size: format.bytes(attachment.size),
+                version: attachment.version,
+              })}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <a
+                href={contentUrl(attachment.id, { download: true })}
+                download={attachment.name}
+                className="inline-flex min-h-hit items-center gap-2 rounded-md border border-border px-3 font-medium hover:bg-hover focus-visible:focus-ring"
+              >
+                <Download aria-hidden="true" className="size-icon" />
+                {t("files.download")}
+              </a>
+              {attachment.versions > 1 || canEdit ? (
+                <Button variant="secondary" icon={History} onClick={() => setShowVersions((value) => !value)}>
+                  {showVersions
+                    ? t("files.versions.hide")
+                    : t("files.versions.show", { count: attachment.versions })}
+                </Button>
+              ) : null}
+            </div>
+            {showVersions ? <Versions attachment={attachment} canEdit={canEdit} /> : null}
+            <PreviewBody attachment={attachment} source={attachmentSource(attachment.id)} />
           </div>
-          {showVersions ? <Versions attachment={attachment} canEdit={canEdit} /> : null}
-          <PreviewBody attachment={attachment} source={attachmentSource(attachment.id)} />
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </Drawer>
   );
 }

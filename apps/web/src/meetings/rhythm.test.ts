@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { initI18n } from "../i18n/index.js";
-import { choiceOf, describeRhythm, instantInZone, rhythmFor } from "./rhythm.js";
+import { choiceOf, describeRhythm, rhythmFor } from "./rhythm.js";
 
 describe("rhythm presets", () => {
   it("take the weekday and day of the month from the first date", () => {
@@ -58,20 +58,6 @@ describe("rhythm presets", () => {
     expect(describeRhythm(german.t, rhythm, "de")).toBe("Monatlich am ersten Dienstag");
     expect(describeRhythm(english.t, { frequency: "weekly", interval: 2, weekdays: ["TH"] }, "en")).toBe(
       "Every 2 weeks on Thursday",
-    );
-  });
-});
-
-describe("local times", () => {
-  it("turn a local date and time into the right instant on both sides of a daylight saving change", () => {
-    expect(instantInZone("2026-10-23", "09:30", "Europe/Vienna").toISOString()).toBe(
-      "2026-10-23T07:30:00.000Z",
-    );
-    expect(instantInZone("2026-10-30", "09:30", "Europe/Vienna").toISOString()).toBe(
-      "2026-10-30T08:30:00.000Z",
-    );
-    expect(instantInZone("2026-10-30", "09:30", "America/New_York").toISOString()).toBe(
-      "2026-10-30T13:30:00.000Z",
     );
   });
 });

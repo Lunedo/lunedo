@@ -203,7 +203,7 @@ describe.skipIf(!baseUrl)("SetupService", () => {
       "select v.key, v.value from setting_values v join organizations o on o.id = v.scope_id where v.level = 'organization' and v.key like 'locale.%' order by v.key",
     );
     expect(formats.rows).toEqual([
-      { key: "locale.dateFormat", value: "DD.MM.YYYY" },
+      { key: "locale.dateFormat", value: "D MMM YYYY" },
       { key: "locale.firstDayOfWeek", value: "monday" },
       { key: "locale.language", value: "de" },
       { key: "locale.numberFormat", value: "de-DE" },

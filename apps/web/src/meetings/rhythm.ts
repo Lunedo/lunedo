@@ -1,4 +1,5 @@
 import type { TFunction } from "i18next";
+import { weekdayLabel } from "../format/zoned.js";
 import { translateKey } from "../i18n/translate.js";
 
 export const WEEKDAYS = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"] as const;
@@ -85,9 +86,7 @@ export function choiceOf(rhythm: Rhythm | null): RhythmChoice {
 }
 
 export function weekdayName(code: WeekdayCode, language: string, width: "long" | "short" = "long"): string {
-  const monday = new Date(Date.UTC(2024, 0, 1, 12));
-  const date = new Date(monday.getTime() + WEEKDAYS.indexOf(code) * 86_400_000);
-  return new Intl.DateTimeFormat(language, { weekday: width, timeZone: "UTC" }).format(date);
+  return weekdayLabel(WEEKDAYS.indexOf(code), language, width);
 }
 
 export function describeRhythm(t: TFunction, rhythm: Rhythm | null, language: string): string {
@@ -119,34 +118,4 @@ export function describeRhythm(t: TFunction, rhythm: Rhythm | null, language: st
     case "yearly":
       return t("meetings.rhythm.describe.yearly", { count: rhythm.interval });
   }
-}
-
-export function localDateInZone(instant: Date, timeZone: string): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(instant);
-}
-
-export function localTimeInZone(instant: Date, timeZone: string): string {
-  return new Intl.DateTimeFormat("en-GB", {
-    timeZone,
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).format(instant);
-}
-
-export function instantInZone(date: string, time: string, timeZone: string): Date {
-  const guess = new Date(`${date}T${time}:00Z`);
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const local = `${localDateInZone(guess, timeZone)}T${localTimeInZone(guess, timeZone)}`;
-    const offset = new Date(`${local}:00Z`).getTime() - guess.getTime();
-    const candidate = new Date(new Date(`${date}T${time}:00Z`).getTime() - offset);
-    if (candidate.getTime() === guess.getTime()) return candidate;
-    guess.setTime(candidate.getTime());
-  }
-  return guess;
 }

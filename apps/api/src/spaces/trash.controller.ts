@@ -78,7 +78,7 @@ const archivedSchema = z
 const entries = z.array(trashEntrySchema).describe("Trash entries.");
 
 const RESTRICTED_PARENT =
-  "When the former parent page is in the trash and the content would lose a view restriction it inherited, the restore is refused with `restrictedParentInTrash`; repeat it with `withParents=true` to restore the parent pages with it.";
+  "When the former parent page is in the trash and the content would lose a view restriction it inherited, the restore is refused with `restrictedParentInTrash`; repeat it with `withParents=true` to restore the parent pages with it. `withParents=true` also restores a former parent page that is in the trash without a restriction, so the content returns below it.";
 
 @Controller("api/v1")
 export class TrashController {

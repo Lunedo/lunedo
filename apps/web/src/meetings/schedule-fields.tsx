@@ -1,6 +1,7 @@
 import { Checkbox, Field, Input, Select, TimeZoneCombobox } from "@pagehall/ui";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
+import { dayInZone } from "../format/zoned.js";
 import { translateKey } from "../i18n/translate.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import {
@@ -28,7 +29,7 @@ export function defaultSchedule(timeZone: string, preset: RhythmChoice["preset"]
   const tomorrow = new Date(Date.now() + 86_400_000);
   return {
     choice: { preset, interval: 2, weekdays: [] },
-    startsOn: new Intl.DateTimeFormat("en-CA", { timeZone }).format(tomorrow),
+    startsOn: dayInZone(tomorrow, timeZone),
     startTime: "09:30",
     timeZone,
     durationMinutes: "45",

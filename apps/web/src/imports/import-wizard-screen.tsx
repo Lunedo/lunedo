@@ -6,6 +6,7 @@ import {
   DangerZone,
   ErrorState,
   Field,
+  FieldError,
   focusFirstInvalidSoon,
   IconButton,
   Input,
@@ -120,6 +121,7 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
   const [saveError, setSaveError] = useState<unknown>(null);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof Form | "file" | "people" | "start", string>>>({});
+  const [peopleAttempt, setPeopleAttempt] = useState(0);
   const [peopleChoice, setPeopleChoice] = useState<PeopleChoice>(
     (entry.peopleSource?.kind as PeopleChoice | undefined) ?? "token",
   );
@@ -230,6 +232,7 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
       const problem = peopleProblem();
       if (problem) {
         setErrors({ people: problem });
+        setPeopleAttempt((count) => count + 1);
         focusFirstInvalidSoon();
         return;
       }
@@ -258,6 +261,7 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
       if (!entry.peopleSource) {
         goTo(1);
         setErrors({ people: t(`imports.people.${peopleChoice}.missing`) });
+        setPeopleAttempt((count) => count + 1);
         focusFirstInvalidSoon();
         return;
       }
@@ -384,6 +388,7 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
             setErrors({});
           }}
           error={errors.people}
+          attempt={peopleAttempt}
         />
       ) : null}
       {step === "space" ? (
@@ -520,13 +525,10 @@ function SourceStep({
               },
             ]}
           />
-          {fileError ? (
-            <p role="alert" className="text-sm text-danger">
-              {fileError}
-            </p>
-          ) : null}
+          {fileError ? <FieldError>{fileError}</FieldError> : null}
           {where === "upload" ? (
             <UploadField
+              invalid={Boolean(fileError)}
               organizationId={organizationId}
               current={entry.file?.kind === "upload" ? entry.file : null}
               maxBytes={folder.data?.maxUploadBytes ?? Number.MAX_SAFE_INTEGER}
@@ -546,6 +548,7 @@ function SourceStep({
               loading={folder.isPending}
               error={folder.isError ? folder.error : null}
               onRetry={() => void folder.refetch()}
+              invalid={Boolean(fileError)}
               value={entry.file?.kind === "folder" ? entry.file.name : null}
               onChange={(name) =>
                 void patch({ file: { kind: "folder", name } }).catch((error: unknown) =>
@@ -576,7 +579,9 @@ function FolderField({
   onRetry,
   value,
   onChange,
+  invalid,
 }: {
+  invalid: boolean;
   path: string;
   files: { name: string; size: number }[];
   enabled: boolean;
@@ -606,6 +611,7 @@ function FolderField({
           <Select
             value={value ?? ""}
             onValueChange={onChange}
+            invalid={invalid}
             placeholder={t("imports.wizard.source.folderPlaceholder")}
             options={files.map((file) => ({
               value: file.name,

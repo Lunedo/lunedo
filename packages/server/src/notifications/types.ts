@@ -43,7 +43,7 @@ export const notificationRetentionSetting = defineSetting({
 export const notificationSettings = [...preferenceSettings.values(), notificationRetentionSetting];
 
 export function formatDay(instant: string, locale: MailLocale): string {
-  return formatDate(new Date(instant), locale.dateFormat, locale.timeZone);
+  return formatDate(new Date(instant), locale.dateFormat, locale.timeZone, locale.language);
 }
 
 const apiTokenExpiring = defineNotificationType({

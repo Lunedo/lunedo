@@ -36,6 +36,7 @@ export interface TrashEntry {
   deletedBy: { id: string; name: string | null } | null;
   stageTwoAt: Date | null;
   removedAt: Date;
+  formerParentEntryId: string | null;
 }
 
 type EntryRow = {
@@ -56,11 +57,17 @@ type EntryRow = {
   deleted_at: Date | string;
   deleted_by: string | null;
   stage_two_at: Date | string | null;
+  former_parent_entry_id: string | null;
 };
 
 const ENTRY_COLUMNS = sql`e.id, e.space_id, s.key as space_key, s.name as space_name, s.organization_id,
   s.personal_of is not null as personal, s.confidential, e.kind, e.root_item_id, e.item_kind, e.title, e.descendants, e.stage,
-  e.purging, e.deleted_at, e.deleted_by, e.stage_two_at`;
+  e.purging, e.deleted_at, e.deleted_by, e.stage_two_at,
+  (select pe.id from tree_items root
+    join tree_items parent on parent.id = root.restore_parent_id
+    join trash_entries pe on pe.id = parent.trash_entry_id and pe.kind = 'items' and not pe.purging
+    where root.id = e.root_item_id and e.kind = 'items' and root.archived_root_id is distinct from root.id
+  ) as former_parent_entry_id`;
 
 export interface ReturnOptions {
   withParents?: boolean;
@@ -141,6 +148,7 @@ export class TrashService {
   async #toEntries(rows: EntryRow[]): Promise<TrashEntry[]> {
     const names = await this.#people.names(rows.flatMap((row) => (row.deleted_by ? [row.deleted_by] : [])));
     const entries: TrashEntry[] = [];
+    const listed = new Set(rows.map((row) => row.id));
     for (const row of rows) {
       const periods = await this.#periods(row);
       const deletedAt = new Date(row.deleted_at);
@@ -162,6 +170,10 @@ export class TrashService {
         deletedBy: row.deleted_by ? { id: row.deleted_by, name: names.get(row.deleted_by) ?? null } : null,
         stageTwoAt,
         removedAt: new Date(secondStageStart.getTime() + periods.second * DAY_MS),
+        formerParentEntryId:
+          row.former_parent_entry_id && listed.has(row.former_parent_entry_id)
+            ? row.former_parent_entry_id
+            : null,
       });
     }
     return entries;
@@ -424,16 +436,19 @@ export class TrashService {
     options: ReturnOptions,
   ): Promise<number> {
     if (await parentAvailable(tx, spaceId, parentId)) return 0;
-    if (!(await losesViewRestriction(tx, itemId))) return 0;
+    const restricted = await losesViewRestriction(tx, itemId);
+    if (!restricted && !options.withParents) return 0;
     const chain = await parentChain(tx, spaceId, parentId);
     const restorable =
       chain.complete && chain.entries.length > 0 && (await this.#mayRestoreAll(chain.entries, options));
     if (!options.withParents || !restorable) {
+      if (!restricted) return 0;
       throw await this.#restrictedParent(tx, actor, parentId, restorable ? chain.entries.length : 0);
     }
     for (const parentEntryId of [...chain.entries].reverse()) {
       const parentEntry = await this.#entry(tx, parentEntryId, true);
       if (!parentEntry || parentEntry.purging || parentEntry.kind !== "items") {
+        if (!restricted) return 0;
         throw await this.#restrictedParent(tx, actor, parentId, 0);
       }
       await this.#restoreItems(tx, actor, parentEntry, {});

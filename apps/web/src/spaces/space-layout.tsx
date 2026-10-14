@@ -51,7 +51,8 @@ export function SpaceLayout() {
   const { t } = useTranslation();
   const { spaceKey } = route.useParams();
   const location = useLocation();
-  const [, , currentKey = "", ...rest] = location.pathname.split("/");
+  const [, root, pathKey = "", ...rest] = location.pathname.split("/");
+  const currentKey = root === "spaces" ? pathKey : spaceKey;
   const urlItemId =
     (rest[0] === "pages" || rest[0] === "folders" || rest[0] === "blog") && isUuid(rest[1]) ? rest[1] : null;
   const addressed = useQuery({

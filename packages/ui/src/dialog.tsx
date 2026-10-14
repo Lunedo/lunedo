@@ -4,6 +4,7 @@ import { type ReactNode, useRef, useState } from "react";
 import { Button, IconButton } from "./button.js";
 import { classNames } from "./class-names.js";
 import { Field, Input } from "./field.js";
+import { focusInitial } from "./initial-focus.js";
 import { useUiLabels } from "./labels.js";
 import { useReturnFocus } from "./return-focus.js";
 
@@ -36,11 +37,15 @@ export function Dialog({
 }: DialogProps) {
   const labels = useUiLabels();
   const returnFocus = useReturnFocus(open);
+  const content = useRef<HTMLDivElement>(null);
+  const header = useRef<HTMLDivElement>(null);
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-40 grid place-items-center overflow-y-auto bg-overlay p-4">
           <DialogPrimitive.Content
+            ref={content}
+            onOpenAutoFocus={(event) => focusInitial(event, content, header)}
             onCloseAutoFocus={returnFocus}
             {...(description ? {} : { "aria-describedby": undefined })}
             className={classNames(
@@ -48,7 +53,7 @@ export function Dialog({
               SIZES[size],
             )}
           >
-            <div className="flex items-start gap-3">
+            <div ref={header} className="flex items-start gap-3">
               <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <DialogPrimitive.Title className="text-content font-semibold tracking-heading">
                   {title}
@@ -150,6 +155,7 @@ export function ConfirmDialog({
             </Button>
           )}
           <Button
+            {...(destructive || typedConfirmation ? {} : { "data-autofocus": "" })}
             variant={destructive ? "dangerPrimary" : "primary"}
             loading={busy}
             onClick={() => void confirm()}
@@ -157,7 +163,12 @@ export function ConfirmDialog({
             {confirmLabel}
           </Button>
           {destructive ? (
-            <Button variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>
+            <Button
+              {...(typedConfirmation ? {} : { "data-autofocus": "" })}
+              variant="outline"
+              disabled={busy}
+              onClick={() => onOpenChange(false)}
+            >
               {cancelLabel}
             </Button>
           ) : null}
@@ -208,11 +219,15 @@ export function Drawer({
 }: DrawerProps) {
   const labels = useUiLabels();
   const returnFocus = useReturnFocus(open);
+  const content = useRef<HTMLDivElement>(null);
+  const header = useRef<HTMLDivElement>(null);
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-overlay" />
         <DialogPrimitive.Content
+          ref={content}
+          onOpenAutoFocus={(event) => focusInitial(event, content, header)}
           onCloseAutoFocus={returnFocus}
           aria-describedby={undefined}
           className={classNames(
@@ -221,7 +236,7 @@ export function Drawer({
             side === "left" ? "left-0 border-r border-border" : "right-0 border-l border-border",
           )}
         >
-          <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+          <div ref={header} className="flex items-center gap-2 border-b border-border px-4 py-3">
             <DialogPrimitive.Title className="flex-1 font-semibold">{title}</DialogPrimitive.Title>
             <DialogPrimitive.Close asChild>
               <IconButton label={labels.close} icon={X} tooltip={false} />

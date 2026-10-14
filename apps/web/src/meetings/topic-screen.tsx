@@ -375,7 +375,11 @@ function EditTopicDialog({
   const titleInput = useRef<HTMLInputElement>(null);
   const save = async () => {
     if (title.trim().length === 0 || title.trim().length > 255) {
-      setError(t("meetings.topics.titleInvalid", { max: 255 }));
+      setError(
+        title.trim().length === 0
+          ? t("meetings.topics.titleRequired", { max: 255 })
+          : t("meetings.topics.titleInvalid", { max: 255 }),
+      );
       titleInput.current?.focus();
       return;
     }

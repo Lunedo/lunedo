@@ -114,6 +114,56 @@ describe.skipIf(!baseUrl)("trash and archive", () => {
       expect(parentEntry.descendants).toBe(1);
     });
 
+    it("names the entry of a former parent in the trash and restores both together on request", async () => {
+      const context = await setup();
+      const parent = await item(context, "Parent", null, "folder");
+      const child = await item(context, "Child", parent.id);
+      const childEntry = await test.services.trash.deleteItem(context.editor, child.id);
+      const parentEntry = await test.services.trash.deleteItem(context.editor, parent.id);
+      const listed = await test.services.trash.listSpace(context.editor, context.space.id);
+      expect(listed.find((entry) => entry.id === childEntry.id)?.formerParentEntryId).toBe(parentEntry.id);
+      expect(listed.find((entry) => entry.id === parentEntry.id)?.formerParentEntryId).toBeNull();
+
+      expect(
+        await test.services.trash.restore(context.editor, childEntry.id, {
+          withParents: true,
+          mayRestore: async () => true,
+        }),
+      ).toEqual({ itemId: child.id, parentId: parent.id, parentEntries: 1 });
+      expect(await rootTitles(context)).toContain("Parent");
+      expect(await rootTitles(context, parent.id)).toEqual(["Child"]);
+      expect(await test.services.trash.listSpace(context.editor, context.space.id)).toEqual([]);
+    });
+
+    it("keeps restoring at the top level when the former parent is in the trash and nobody asked for both", async () => {
+      const context = await setup();
+      const parent = await item(context, "Parent", null, "folder");
+      const child = await item(context, "Child", parent.id);
+      const childEntry = await test.services.trash.deleteItem(context.editor, child.id);
+      await test.services.trash.deleteItem(context.editor, parent.id);
+      expect(await test.services.trash.restore(context.editor, childEntry.id)).toEqual({
+        itemId: child.id,
+        parentId: null,
+        parentEntries: 0,
+      });
+      expect(await rootTitles(context)).toEqual(expect.arrayContaining(["Child"]));
+      expect(await rootTitles(context)).not.toContain("Parent");
+    });
+
+    it("restores only the content when the caller may not restore the former parent", async () => {
+      const context = await setup();
+      const parent = await item(context, "Parent", null, "folder");
+      const child = await item(context, "Child", parent.id);
+      const childEntry = await test.services.trash.deleteItem(context.editor, child.id);
+      await test.services.trash.deleteItem(context.editor, parent.id);
+      expect(
+        await test.services.trash.restore(context.editor, childEntry.id, {
+          withParents: true,
+          mayRestore: async () => false,
+        }),
+      ).toEqual({ itemId: child.id, parentId: null, parentEntries: 0 });
+    });
+
     it("shows links to pages in the trash as in trash to readers who could open them", async () => {
       const context = await setup();
       const target = await item(context, "Printer list");
