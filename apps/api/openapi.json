@@ -135071,6 +135071,16 @@
             }
           },
           {
+            "name": "languages",
+            "in": "query",
+            "required": false,
+            "description": "Only results in one of these content languages. Up to 20 values, separated by commas.",
+            "schema": {
+              "type": "string",
+              "maxLength": 2000
+            }
+          },
+          {
             "name": "includeArchived",
             "in": "query",
             "required": false,
@@ -135627,6 +135637,61 @@
                                 "description": "A status value."
                               },
                               "description": "Status values with their number of results."
+                            },
+                            "languages": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "value": {
+                                    "type": "string",
+                                    "description": "The content language code."
+                                  },
+                                  "count": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991,
+                                    "description": "Number of results."
+                                  }
+                                },
+                                "required": [
+                                  "value",
+                                  "count"
+                                ],
+                                "additionalProperties": false,
+                                "description": "Content language"
+                              },
+                              "description": "Content languages with their number of results."
+                            },
+                            "updated": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "value": {
+                                    "type": "string",
+                                    "description": "Changed within the last `week` (7 days), `month` (30 days) or `year` (365 days). New values can be added in later versions; handle unknown values.",
+                                    "x-extensible-enum": [
+                                      "week",
+                                      "month",
+                                      "year"
+                                    ]
+                                  },
+                                  "count": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991,
+                                    "description": "Number of results."
+                                  }
+                                },
+                                "required": [
+                                  "value",
+                                  "count"
+                                ],
+                                "additionalProperties": false,
+                                "description": "Time range"
+                              },
+                              "description": "Time ranges with their number of results."
                             }
                           },
                           "required": [
@@ -135634,7 +135699,9 @@
                             "spaces",
                             "labels",
                             "authors",
-                            "statuses"
+                            "statuses",
+                            "languages",
+                            "updated"
                           ],
                           "additionalProperties": false
                         },
@@ -135642,7 +135709,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Number of results per filter value, or null in quick search."
+                      "description": "Number of results per filter value, or null in quick search. Each group is counted as if its own filter were not set, so other values of a filter that is in use keep their counts."
                     },
                     "suggestion": {
                       "description": "The search text with misspelled words replaced by similar words from content the caller can read, or null when there is nothing to correct. Always null in quick search.",
@@ -135764,6 +135831,26 @@
                         "color": "success",
                         "count": 1
                       }
+                    ],
+                    "languages": [
+                      {
+                        "value": "en",
+                        "count": 1
+                      }
+                    ],
+                    "updated": [
+                      {
+                        "value": "week",
+                        "count": 1
+                      },
+                      {
+                        "value": "month",
+                        "count": 1
+                      },
+                      {
+                        "value": "year",
+                        "count": 1
+                      }
                     ]
                   },
                   "suggestion": null,
@@ -135838,6 +135925,2523 @@
                   "$ref": "#/components/schemas/Problem"
                 },
                 "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{organizationId}/search/recent": {
+      "delete": {
+        "operationId": "savedSearches.forgetAll",
+        "summary": "Clear your recent searches",
+        "description": "Deletes all recent searches of the caller in the organization.\n\nRequires the permission `organization.search` on the organization in `organizationId`.",
+        "tags": [
+          "Search"
+        ],
+        "x-pagehall-permission": {
+          "action": "organization.search",
+          "resource": "organization",
+          "parameter": "organizationId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the organization.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Done. The response has no body."
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "savedSearches.recent",
+        "summary": "List your recent searches",
+        "description": "Lists the last 10 searches the caller ran in the organization, newest first. Only the caller sees them.\n\nRequires the permission `organization.search` on the organization in `organizationId`.",
+        "tags": [
+          "Search"
+        ],
+        "x-pagehall-permission": {
+          "action": "organization.search",
+          "resource": "organization",
+          "parameter": "organizationId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the organization.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recent searches.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID of the recent search."
+                      },
+                      "query": {
+                        "type": "string",
+                        "description": "The search text."
+                      },
+                      "filters": {
+                        "type": "object",
+                        "properties": {
+                          "spaceIds": {
+                            "default": [],
+                            "description": "ID of a spaces.",
+                            "maxItems": 20,
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of a space"
+                            }
+                          },
+                          "types": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "description": "A type: `page`, `blogPost` or `comment`. New values can be added in later versions; handle unknown values.",
+                              "x-extensible-enum": [
+                                "page",
+                                "blogPost",
+                                "comment"
+                              ]
+                            },
+                            "description": "Types of results."
+                          },
+                          "labels": {
+                            "default": [],
+                            "description": "Labels.",
+                            "maxItems": 20,
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 100,
+                              "description": "A label."
+                            }
+                          },
+                          "authorIds": {
+                            "default": [],
+                            "description": "ID of an authors.",
+                            "maxItems": 20,
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of an author"
+                            }
+                          },
+                          "statusIds": {
+                            "default": [],
+                            "description": "ID of a status values.",
+                            "maxItems": 20,
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of a status value"
+                            }
+                          },
+                          "languages": {
+                            "default": [],
+                            "description": "Content languages.",
+                            "maxItems": 20,
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 20,
+                              "description": "A content language code, such as `en`."
+                            }
+                          },
+                          "updated": {
+                            "default": null,
+                            "description": "Changed within the last `week`, `month` (30 days) or `year` (365 days), or null for any time.",
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "week",
+                                  "month",
+                                  "year"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "includeArchived": {
+                            "default": false,
+                            "description": "Whether archived pages are included.",
+                            "type": "boolean"
+                          },
+                          "sort": {
+                            "default": "relevance",
+                            "description": "`relevance` or `newest`.",
+                            "type": "string",
+                            "enum": [
+                              "relevance",
+                              "newest"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "spaceIds",
+                          "types",
+                          "labels",
+                          "authorIds",
+                          "statusIds",
+                          "languages",
+                          "updated",
+                          "includeArchived",
+                          "sort"
+                        ],
+                        "additionalProperties": false,
+                        "description": "Filters of a search, as on the search page."
+                      },
+                      "searchedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "When the caller last ran this search. ISO 8601 timestamp in UTC."
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "query",
+                      "filters",
+                      "searchedAt"
+                    ],
+                    "additionalProperties": false,
+                    "description": "A recent search."
+                  },
+                  "description": "Up to 10 searches, newest first."
+                },
+                "example": [
+                  {
+                    "id": "01929b1e-7c1a-7000-8000-000000000031",
+                    "query": "vpn gateway",
+                    "filters": {
+                      "spaceIds": [],
+                      "types": [
+                        "page"
+                      ],
+                      "labels": [
+                        "runbook"
+                      ],
+                      "authorIds": [],
+                      "statusIds": [],
+                      "languages": [],
+                      "updated": "month",
+                      "includeArchived": false,
+                      "sort": "relevance"
+                    },
+                    "searchedAt": "2026-10-14T08:30:00.000Z"
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "savedSearches.remember",
+        "summary": "Remember a search",
+        "description": "Adds a search to the caller's recent searches, or moves it to the top when it is there already. Only the last 10 are kept. An empty query is not remembered.\n\nRequires the permission `organization.search` on the organization in `organizationId`.",
+        "tags": [
+          "Search"
+        ],
+        "x-pagehall-permission": {
+          "action": "organization.search",
+          "resource": "organization",
+          "parameter": "organizationId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the organization.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "query": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "The search text, with operators."
+                  },
+                  "filters": {
+                    "type": "object",
+                    "properties": {
+                      "spaceIds": {
+                        "default": [],
+                        "description": "ID of a spaces.",
+                        "maxItems": 20,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "ID of a space"
+                        }
+                      },
+                      "types": {
+                        "default": [],
+                        "description": "Types of results.",
+                        "maxItems": 3,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "page",
+                            "blogPost",
+                            "comment"
+                          ],
+                          "description": "A type: `page`, `blogPost` or `comment`."
+                        }
+                      },
+                      "labels": {
+                        "default": [],
+                        "description": "Labels.",
+                        "maxItems": 20,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100,
+                          "description": "A label."
+                        }
+                      },
+                      "authorIds": {
+                        "default": [],
+                        "description": "ID of an authors.",
+                        "maxItems": 20,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "ID of an author"
+                        }
+                      },
+                      "statusIds": {
+                        "default": [],
+                        "description": "ID of a status values.",
+                        "maxItems": 20,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "ID of a status value"
+                        }
+                      },
+                      "languages": {
+                        "default": [],
+                        "description": "Content languages.",
+                        "maxItems": 20,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 20,
+                          "description": "A content language code, such as `en`."
+                        }
+                      },
+                      "updated": {
+                        "default": null,
+                        "description": "Changed within the last `week`, `month` (30 days) or `year` (365 days), or null for any time.",
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "week",
+                              "month",
+                              "year"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "includeArchived": {
+                        "default": false,
+                        "description": "Whether archived pages are included.",
+                        "type": "boolean"
+                      },
+                      "sort": {
+                        "default": "relevance",
+                        "description": "`relevance` or `newest`.",
+                        "type": "string",
+                        "enum": [
+                          "relevance",
+                          "newest"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false,
+                    "description": "Filters of a search, as on the search page."
+                  }
+                },
+                "required": [
+                  "query",
+                  "filters"
+                ],
+                "additionalProperties": false,
+                "description": "A search the caller ran."
+              },
+              "example": {
+                "query": "vpn gateway",
+                "filters": {
+                  "spaceIds": [],
+                  "types": [
+                    "page"
+                  ],
+                  "labels": [
+                    "runbook"
+                  ],
+                  "authorIds": [],
+                  "statusIds": [],
+                  "languages": [],
+                  "updated": "month",
+                  "includeArchived": false,
+                  "sort": "relevance"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Done. The response has no body."
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{organizationId}/search/recent/{searchId}": {
+      "delete": {
+        "operationId": "savedSearches.forget",
+        "summary": "Delete a recent search",
+        "description": "Deletes one of the caller's recent searches.\n\nRequires the permission `organization.search` on the organization in `organizationId`.",
+        "tags": [
+          "Search"
+        ],
+        "x-pagehall-permission": {
+          "action": "organization.search",
+          "resource": "organization",
+          "parameter": "organizationId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the organization.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "searchId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the recent search.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Done. The response has no body."
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{organizationId}/search/saved": {
+      "get": {
+        "operationId": "savedSearches.saved",
+        "summary": "List your saved searches",
+        "description": "Lists the searches the caller saved in the organization. Only the caller sees them.\n\nRequires the permission `organization.search` on the organization in `organizationId`.",
+        "tags": [
+          "Search"
+        ],
+        "x-pagehall-permission": {
+          "action": "organization.search",
+          "resource": "organization",
+          "parameter": "organizationId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the organization.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Saved searches.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID of the saved search."
+                      },
+                      "name": {
+                        "type": "string",
+                        "description": "Name of the saved search."
+                      },
+                      "query": {
+                        "type": "string",
+                        "description": "The search text."
+                      },
+                      "filters": {
+                        "type": "object",
+                        "properties": {
+                          "spaceIds": {
+                            "default": [],
+                            "description": "ID of a spaces.",
+                            "maxItems": 20,
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of a space"
+                            }
+                          },
+                          "types": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "description": "A type: `page`, `blogPost` or `comment`. New values can be added in later versions; handle unknown values.",
+                              "x-extensible-enum": [
+                                "page",
+                                "blogPost",
+                                "comment"
+                              ]
+                            },
+                            "description": "Types of results."
+                          },
+                          "labels": {
+                            "default": [],
+                            "description": "Labels.",
+                            "maxItems": 20,
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 100,
+                              "description": "A label."
+                            }
+                          },
+                          "authorIds": {
+                            "default": [],
+                            "description": "ID of an authors.",
+                            "maxItems": 20,
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of an author"
+                            }
+                          },
+                          "statusIds": {
+                            "default": [],
+                            "description": "ID of a status values.",
+                            "maxItems": 20,
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of a status value"
+                            }
+                          },
+                          "languages": {
+                            "default": [],
+                            "description": "Content languages.",
+                            "maxItems": 20,
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 20,
+                              "description": "A content language code, such as `en`."
+                            }
+                          },
+                          "updated": {
+                            "default": null,
+                            "description": "Changed within the last `week`, `month` (30 days) or `year` (365 days), or null for any time.",
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "week",
+                                  "month",
+                                  "year"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "includeArchived": {
+                            "default": false,
+                            "description": "Whether archived pages are included.",
+                            "type": "boolean"
+                          },
+                          "sort": {
+                            "default": "relevance",
+                            "description": "`relevance` or `newest`.",
+                            "type": "string",
+                            "enum": [
+                              "relevance",
+                              "newest"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "spaceIds",
+                          "types",
+                          "labels",
+                          "authorIds",
+                          "statusIds",
+                          "languages",
+                          "updated",
+                          "includeArchived",
+                          "sort"
+                        ],
+                        "additionalProperties": false,
+                        "description": "Filters of a search, as on the search page."
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "When the search was saved. ISO 8601 timestamp in UTC."
+                      },
+                      "updatedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "When the saved search last changed. ISO 8601 timestamp in UTC."
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "query",
+                      "filters",
+                      "createdAt",
+                      "updatedAt"
+                    ],
+                    "additionalProperties": false,
+                    "description": "A saved search. It stores the query and filters, never results."
+                  },
+                  "description": "Saved searches, ordered by name."
+                },
+                "example": [
+                  {
+                    "id": "01929b1e-7c1a-7000-8000-000000000032",
+                    "name": "Runbooks to verify",
+                    "query": "status:draft",
+                    "filters": {
+                      "spaceIds": [],
+                      "types": [
+                        "page"
+                      ],
+                      "labels": [
+                        "runbook"
+                      ],
+                      "authorIds": [],
+                      "statusIds": [],
+                      "languages": [],
+                      "updated": "month",
+                      "includeArchived": false,
+                      "sort": "relevance"
+                    },
+                    "createdAt": "2026-10-14T08:30:00.000Z",
+                    "updatedAt": "2026-10-14T08:30:00.000Z"
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "savedSearches.save",
+        "summary": "Save a search",
+        "description": "Saves a query with its filters under a name for the caller. Running it later shows what the caller can read at that time. Up to 100 per person and organization.\n\nRequires the permission `organization.search` on the organization in `organizationId`.",
+        "tags": [
+          "Search"
+        ],
+        "x-pagehall-permission": {
+          "action": "organization.search",
+          "resource": "organization",
+          "parameter": "organizationId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the organization.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "description": "Name of the saved search, 1 to 100 characters."
+                  },
+                  "query": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "The search text, with operators."
+                  },
+                  "filters": {
+                    "type": "object",
+                    "properties": {
+                      "spaceIds": {
+                        "default": [],
+                        "description": "ID of a spaces.",
+                        "maxItems": 20,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "ID of a space"
+                        }
+                      },
+                      "types": {
+                        "default": [],
+                        "description": "Types of results.",
+                        "maxItems": 3,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "page",
+                            "blogPost",
+                            "comment"
+                          ],
+                          "description": "A type: `page`, `blogPost` or `comment`."
+                        }
+                      },
+                      "labels": {
+                        "default": [],
+                        "description": "Labels.",
+                        "maxItems": 20,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100,
+                          "description": "A label."
+                        }
+                      },
+                      "authorIds": {
+                        "default": [],
+                        "description": "ID of an authors.",
+                        "maxItems": 20,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "ID of an author"
+                        }
+                      },
+                      "statusIds": {
+                        "default": [],
+                        "description": "ID of a status values.",
+                        "maxItems": 20,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "ID of a status value"
+                        }
+                      },
+                      "languages": {
+                        "default": [],
+                        "description": "Content languages.",
+                        "maxItems": 20,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 20,
+                          "description": "A content language code, such as `en`."
+                        }
+                      },
+                      "updated": {
+                        "default": null,
+                        "description": "Changed within the last `week`, `month` (30 days) or `year` (365 days), or null for any time.",
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "week",
+                              "month",
+                              "year"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "includeArchived": {
+                        "default": false,
+                        "description": "Whether archived pages are included.",
+                        "type": "boolean"
+                      },
+                      "sort": {
+                        "default": "relevance",
+                        "description": "`relevance` or `newest`.",
+                        "type": "string",
+                        "enum": [
+                          "relevance",
+                          "newest"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false,
+                    "description": "Filters of a search, as on the search page."
+                  }
+                },
+                "required": [
+                  "name",
+                  "query",
+                  "filters"
+                ],
+                "additionalProperties": false,
+                "description": "A search to save."
+              },
+              "example": {
+                "name": "Runbooks to verify",
+                "query": "status:draft",
+                "filters": {
+                  "spaceIds": [],
+                  "types": [
+                    "page"
+                  ],
+                  "labels": [
+                    "runbook"
+                  ],
+                  "authorIds": [],
+                  "statusIds": [],
+                  "languages": [],
+                  "updated": "month",
+                  "includeArchived": false,
+                  "sort": "relevance"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The saved search.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the saved search."
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Name of the saved search."
+                    },
+                    "query": {
+                      "type": "string",
+                      "description": "The search text."
+                    },
+                    "filters": {
+                      "type": "object",
+                      "properties": {
+                        "spaceIds": {
+                          "default": [],
+                          "description": "ID of a spaces.",
+                          "maxItems": 20,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of a space"
+                          }
+                        },
+                        "types": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "description": "A type: `page`, `blogPost` or `comment`. New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
+                              "page",
+                              "blogPost",
+                              "comment"
+                            ]
+                          },
+                          "description": "Types of results."
+                        },
+                        "labels": {
+                          "default": [],
+                          "description": "Labels.",
+                          "maxItems": 20,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 100,
+                            "description": "A label."
+                          }
+                        },
+                        "authorIds": {
+                          "default": [],
+                          "description": "ID of an authors.",
+                          "maxItems": 20,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of an author"
+                          }
+                        },
+                        "statusIds": {
+                          "default": [],
+                          "description": "ID of a status values.",
+                          "maxItems": 20,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of a status value"
+                          }
+                        },
+                        "languages": {
+                          "default": [],
+                          "description": "Content languages.",
+                          "maxItems": 20,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 20,
+                            "description": "A content language code, such as `en`."
+                          }
+                        },
+                        "updated": {
+                          "default": null,
+                          "description": "Changed within the last `week`, `month` (30 days) or `year` (365 days), or null for any time.",
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "week",
+                                "month",
+                                "year"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "includeArchived": {
+                          "default": false,
+                          "description": "Whether archived pages are included.",
+                          "type": "boolean"
+                        },
+                        "sort": {
+                          "default": "relevance",
+                          "description": "`relevance` or `newest`.",
+                          "type": "string",
+                          "enum": [
+                            "relevance",
+                            "newest"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "spaceIds",
+                        "types",
+                        "labels",
+                        "authorIds",
+                        "statusIds",
+                        "languages",
+                        "updated",
+                        "includeArchived",
+                        "sort"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Filters of a search, as on the search page."
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the search was saved. ISO 8601 timestamp in UTC."
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the saved search last changed. ISO 8601 timestamp in UTC."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "query",
+                    "filters",
+                    "createdAt",
+                    "updatedAt"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A saved search. It stores the query and filters, never results."
+                },
+                "example": {
+                  "id": "01929b1e-7c1a-7000-8000-000000000032",
+                  "name": "Runbooks to verify",
+                  "query": "status:draft",
+                  "filters": {
+                    "spaceIds": [],
+                    "types": [
+                      "page"
+                    ],
+                    "labels": [
+                      "runbook"
+                    ],
+                    "authorIds": [],
+                    "statusIds": [],
+                    "languages": [],
+                    "updated": "month",
+                    "includeArchived": false,
+                    "sort": "relevance"
+                  },
+                  "createdAt": "2026-10-14T08:30:00.000Z",
+                  "updatedAt": "2026-10-14T08:30:00.000Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`tooManySavedSearches`: Too many saved searches.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "tooManySavedSearches": {
+                    "value": {
+                      "type": "urn:pagehall:problem:tooManySavedSearches",
+                      "title": "Too many saved searches",
+                      "status": 409,
+                      "code": "tooManySavedSearches"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{organizationId}/search/saved/{searchId}": {
+      "delete": {
+        "operationId": "savedSearches.remove",
+        "summary": "Delete a saved search",
+        "description": "Deletes one of the caller's saved searches.\n\nRequires the permission `organization.search` on the organization in `organizationId`.",
+        "tags": [
+          "Search"
+        ],
+        "x-pagehall-permission": {
+          "action": "organization.search",
+          "resource": "organization",
+          "parameter": "organizationId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the organization.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "searchId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the saved search.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Done. The response has no body."
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "savedSearches.update",
+        "summary": "Change a saved search",
+        "description": "Renames a saved search of the caller or replaces its query or filters.\n\nRequires the permission `organization.search` on the organization in `organizationId`.",
+        "tags": [
+          "Search"
+        ],
+        "x-pagehall-permission": {
+          "action": "organization.search",
+          "resource": "organization",
+          "parameter": "organizationId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the organization.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "searchId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the saved search.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "description": "Name of the saved search, 1 to 100 characters."
+                  },
+                  "query": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "The search text, with operators."
+                  },
+                  "filters": {
+                    "type": "object",
+                    "properties": {
+                      "spaceIds": {
+                        "default": [],
+                        "description": "ID of a spaces.",
+                        "maxItems": 20,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "ID of a space"
+                        }
+                      },
+                      "types": {
+                        "default": [],
+                        "description": "Types of results.",
+                        "maxItems": 3,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "page",
+                            "blogPost",
+                            "comment"
+                          ],
+                          "description": "A type: `page`, `blogPost` or `comment`."
+                        }
+                      },
+                      "labels": {
+                        "default": [],
+                        "description": "Labels.",
+                        "maxItems": 20,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100,
+                          "description": "A label."
+                        }
+                      },
+                      "authorIds": {
+                        "default": [],
+                        "description": "ID of an authors.",
+                        "maxItems": 20,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "ID of an author"
+                        }
+                      },
+                      "statusIds": {
+                        "default": [],
+                        "description": "ID of a status values.",
+                        "maxItems": 20,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "ID of a status value"
+                        }
+                      },
+                      "languages": {
+                        "default": [],
+                        "description": "Content languages.",
+                        "maxItems": 20,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 20,
+                          "description": "A content language code, such as `en`."
+                        }
+                      },
+                      "updated": {
+                        "default": null,
+                        "description": "Changed within the last `week`, `month` (30 days) or `year` (365 days), or null for any time.",
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "week",
+                              "month",
+                              "year"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "includeArchived": {
+                        "default": false,
+                        "description": "Whether archived pages are included.",
+                        "type": "boolean"
+                      },
+                      "sort": {
+                        "default": "relevance",
+                        "description": "`relevance` or `newest`.",
+                        "type": "string",
+                        "enum": [
+                          "relevance",
+                          "newest"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false,
+                    "description": "Filters of a search, as on the search page."
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Fields to change."
+              },
+              "example": {
+                "name": "Verify runbooks"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The saved search.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the saved search."
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Name of the saved search."
+                    },
+                    "query": {
+                      "type": "string",
+                      "description": "The search text."
+                    },
+                    "filters": {
+                      "type": "object",
+                      "properties": {
+                        "spaceIds": {
+                          "default": [],
+                          "description": "ID of a spaces.",
+                          "maxItems": 20,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of a space"
+                          }
+                        },
+                        "types": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "description": "A type: `page`, `blogPost` or `comment`. New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
+                              "page",
+                              "blogPost",
+                              "comment"
+                            ]
+                          },
+                          "description": "Types of results."
+                        },
+                        "labels": {
+                          "default": [],
+                          "description": "Labels.",
+                          "maxItems": 20,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 100,
+                            "description": "A label."
+                          }
+                        },
+                        "authorIds": {
+                          "default": [],
+                          "description": "ID of an authors.",
+                          "maxItems": 20,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of an author"
+                          }
+                        },
+                        "statusIds": {
+                          "default": [],
+                          "description": "ID of a status values.",
+                          "maxItems": 20,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of a status value"
+                          }
+                        },
+                        "languages": {
+                          "default": [],
+                          "description": "Content languages.",
+                          "maxItems": 20,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 20,
+                            "description": "A content language code, such as `en`."
+                          }
+                        },
+                        "updated": {
+                          "default": null,
+                          "description": "Changed within the last `week`, `month` (30 days) or `year` (365 days), or null for any time.",
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "week",
+                                "month",
+                                "year"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "includeArchived": {
+                          "default": false,
+                          "description": "Whether archived pages are included.",
+                          "type": "boolean"
+                        },
+                        "sort": {
+                          "default": "relevance",
+                          "description": "`relevance` or `newest`.",
+                          "type": "string",
+                          "enum": [
+                            "relevance",
+                            "newest"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "spaceIds",
+                        "types",
+                        "labels",
+                        "authorIds",
+                        "statusIds",
+                        "languages",
+                        "updated",
+                        "includeArchived",
+                        "sort"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Filters of a search, as on the search page."
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the search was saved. ISO 8601 timestamp in UTC."
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the saved search last changed. ISO 8601 timestamp in UTC."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "query",
+                    "filters",
+                    "createdAt",
+                    "updatedAt"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A saved search. It stores the query and filters, never results."
+                },
+                "example": {
+                  "id": "01929b1e-7c1a-7000-8000-000000000032",
+                  "name": "Runbooks to verify",
+                  "query": "status:draft",
+                  "filters": {
+                    "spaceIds": [],
+                    "types": [
+                      "page"
+                    ],
+                    "labels": [
+                      "runbook"
+                    ],
+                    "authorIds": [],
+                    "statusIds": [],
+                    "languages": [],
+                    "updated": "month",
+                    "includeArchived": false,
+                    "sort": "relevance"
+                  },
+                  "createdAt": "2026-10-14T08:30:00.000Z",
+                  "updatedAt": "2026-10-14T08:30:00.000Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
                   "forbidden": {
                     "value": {
                       "type": "urn:pagehall:problem:forbidden",

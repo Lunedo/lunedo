@@ -13,6 +13,8 @@ import {
   PasswordPolicyError,
   ProviderResponseError,
   RelyingPartyError,
+  SavedSearchLimitError,
+  SavedSearchNameError,
   SessionGoneError,
   SettingAboveMaximumError,
   SettingBelowMinimumError,
@@ -181,6 +183,8 @@ function map(error: unknown): Mapped | null {
     return { code: "settingLocked", detail: error.message, extensions: { lockedBy: error.lockedBy.level } };
   }
   if (error instanceof SettingError) return { code: "invalidSetting", detail: error.message };
+  if (error instanceof SavedSearchLimitError) return { code: "tooManySavedSearches", detail: error.message };
+  if (error instanceof SavedSearchNameError) return { code: "invalidInput", detail: error.message };
   if (error instanceof ZodError) {
     return {
       code: "invalidInput",

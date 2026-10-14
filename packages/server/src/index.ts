@@ -506,14 +506,30 @@ export { StartupError } from "./runtime/startup-error.js";
 export {
   type SearchContentType,
   type SearchSort,
+  type SearchUpdatedRange,
   searchContentTypes,
   searchSorts,
+  searchUpdatedRanges,
+  UPDATED_RANGE_DAYS,
 } from "./search/adapter.js";
 export { type IndexState, SearchIndexer } from "./search/indexer.js";
 export { searchIndexJob } from "./search/jobs.js";
 export { contentLanguageSetting } from "./search/languages.js";
 export { PostgresSearchAdapter } from "./search/postgres-adapter.js";
 export { MAX_QUERY_LENGTH, searchOperators } from "./search/query.js";
+export {
+  MAX_SAVED_SEARCH_NAME,
+  RECENT_SEARCH_LIMIT,
+  type RecentSearch,
+  SAVED_SEARCH_LIMIT,
+  type SavedSearch,
+  SavedSearchLimitError,
+  SavedSearchNameError,
+  SavedSearchService,
+  type SearchFilterValues,
+  searchFiltersSchema,
+  searchQueryTextSchema,
+} from "./search/saved-searches.js";
 export {
   DEFAULT_SEARCH_LIMIT,
   QUICK_SEARCH_LIMIT,

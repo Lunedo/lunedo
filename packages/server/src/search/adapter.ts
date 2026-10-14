@@ -10,6 +10,11 @@ export type SearchContentType = (typeof searchContentTypes)[number];
 export const searchSorts = ["relevance", "newest"] as const;
 export type SearchSort = (typeof searchSorts)[number];
 
+export const searchUpdatedRanges = ["week", "month", "year"] as const;
+export type SearchUpdatedRange = (typeof searchUpdatedRanges)[number];
+
+export const UPDATED_RANGE_DAYS: Record<SearchUpdatedRange, number> = { week: 7, month: 30, year: 365 };
+
 export interface IndexedChunk {
   source: SearchSource;
   sourceId: string;
@@ -47,6 +52,7 @@ export interface SearchFilters {
   labels: string[];
   authorIds: string[] | null;
   statusIds: string[];
+  languages: string[];
   includeArchived: boolean;
   updatedAfter: Date | null;
   updatedBefore: Date | null;
@@ -95,6 +101,8 @@ export interface AdapterFacets {
   labels: FacetCount<string>[];
   authors: FacetCount<string>[];
   statuses: FacetCount<string>[];
+  languages: FacetCount<string>[];
+  updated: FacetCount<SearchUpdatedRange>[];
 }
 
 export interface AdapterResult {

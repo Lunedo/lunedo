@@ -9,6 +9,7 @@ export function searchRequest(query: string, overrides: Partial<SearchRequest> =
     labels: [],
     authorIds: [],
     statusIds: [],
+    languages: [],
     includeArchived: false,
     updatedAfter: null,
     updatedBefore: null,

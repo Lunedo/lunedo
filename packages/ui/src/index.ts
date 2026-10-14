@@ -97,6 +97,14 @@ export {
   useFieldControl,
 } from "./field.js";
 export { focusFirstInvalid, focusFirstInvalidSoon } from "./focus-invalid.js";
+export {
+  type FuzzyMatch,
+  fuzzyMatch,
+  Highlighted,
+  type HighlightPart,
+  highlightParts,
+  type MatchRange,
+} from "./fuzzy.js";
 export { Icon, type IconSize } from "./icon.js";
 export { type UiLabels, UiProvider, useUiLabels } from "./labels.js";
 export {

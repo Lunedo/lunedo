@@ -9,6 +9,7 @@ export interface ShellContext {
   can(action: string): boolean;
   navigate(to: string, params?: Record<string, string>): void;
   openCommandPalette(): void;
+  openSearch(): void;
   openShortcuts(): void;
   toggleNotifications(): void;
   toggleSidebar(): void;
@@ -30,6 +31,7 @@ export interface NavigationItem {
   labelKey: string;
   to: string;
   permission?: string;
+  shortcut?: string[];
   visible?: (context: ShellContext) => boolean;
 }
 

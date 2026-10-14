@@ -214,6 +214,7 @@ export const recentViews = pgTable(
       .notNull()
       .references(() => treeItems.id, { onDelete: "cascade" }),
     viewedAt: timestampColumn().notNull().defaultNow(),
+    views: integer().notNull().default(1),
   },
   (table) => [
     primaryKey({ columns: [table.accountId, table.itemId] }),
