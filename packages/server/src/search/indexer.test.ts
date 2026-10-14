@@ -18,7 +18,7 @@ import { PostgresSearchAdapter } from "./postgres-adapter.js";
 import { searchRequest } from "./search.testing.js";
 
 const baseUrl = testDatabaseBaseUrl();
-const SEARCH_MIGRATION = "0055_search_index";
+const SEARCH_MIGRATION = "0056_search_index";
 
 function body(text: string): DocumentJson {
   return { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text }] }] };
@@ -30,6 +30,7 @@ function migrationsBefore(tag: string): string {
   const journalPath = path.join(folder, "meta", "_journal.json");
   const journal = JSON.parse(readFileSync(journalPath, "utf8")) as { entries: { tag: string }[] };
   const index = journal.entries.findIndex((entry) => entry.tag === tag);
+  if (index < 0) throw new Error(`The migration ${tag} does not exist`);
   journal.entries = journal.entries.slice(0, index);
   writeFileSync(journalPath, JSON.stringify(journal));
   return folder;
