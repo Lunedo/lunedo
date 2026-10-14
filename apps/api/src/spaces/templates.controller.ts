@@ -37,6 +37,7 @@ const templateParams = z.object({ templateId: uuid("ID of the template.") }).str
 const spaceSettingParams = spaceParams.extend({ key: z.string().max(100).describe("Key of the setting.") });
 
 const SPACE_SETTING_KEYS = new Set([
+  "spaces.export",
   "pages.defaultMode",
   "pages.liveVersionIdleMinutes",
   "trash.firstStageDays",
