@@ -125,6 +125,8 @@ export const auditEventNames = [
   "space.restored",
   "space.archived",
   "space.unarchived",
+  "space.exported",
+  "page.subtreeExported",
   "page.updateRejected",
   "page.restrictionSet",
   "page.restrictionRemoved",

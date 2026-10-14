@@ -37,7 +37,9 @@ const templateParams = z.object({ templateId: uuid("ID of the template.") }).str
 const spaceSettingParams = spaceParams.extend({ key: z.string().max(100).describe("Key of the setting.") });
 
 const SPACE_SETTING_KEYS = new Set([
+  "spaces.export",
   "pages.defaultMode",
+  "pages.status",
   "pages.liveVersionIdleMinutes",
   "trash.firstStageDays",
   "trash.secondStageDays",
@@ -505,7 +507,7 @@ export class TemplatesController {
   @ApiRoute({
     summary: "List the settings of a space",
     description:
-      "Lists the settings that can be set for the space: default editing mode of new pages, the idle time after which live pages get a version, the trash periods and the content language search uses. Each shows whether it is inherited or set here.",
+      "Lists the settings that can be set for the space: default editing mode of new pages, the idle time after which live pages get a version, the trash periods, reactions, page status, whether export is allowed and the content language search uses. Each shows whether it is inherited or set here.",
     tags: [SETTINGS],
     params: spaceParams,
     response: {

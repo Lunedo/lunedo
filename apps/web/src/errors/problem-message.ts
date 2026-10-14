@@ -207,6 +207,10 @@ const KNOWN = new Set([
   "statusInUse",
   "statusDisabled",
   "tooManyStatusValues",
+  "exportDisabled",
+  "exportRunning",
+  "nothingToExport",
+  "tooManyExports",
 ]);
 
 const DIRECTORY_PROBLEMS: Record<string, string> = {

@@ -23,6 +23,12 @@ import {
   type PageReportRequest,
   type PageReportSort,
   pageReportSorts,
+  type ReportedTask,
+  type TaskReportDue,
+  type TaskReportRequest,
+  type TaskReportStatus,
+  taskReportDueWindows,
+  taskReportStatuses,
 } from "../module.js";
 import { element, markdownUrl } from "../text.js";
 import {
@@ -34,11 +40,7 @@ import {
   uuidValue,
 } from "../values.js";
 
-export const taskReportDueWindows = ["any", "overdue", "next7Days", "next30Days", "none"] as const;
-export type TaskReportDue = (typeof taskReportDueWindows)[number];
-
-export const taskReportStatuses = ["open", "done", "all"] as const;
-export type TaskReportStatus = (typeof taskReportStatuses)[number];
+export { type TaskReportDue, type TaskReportStatus, taskReportDueWindows, taskReportStatuses };
 
 export const MAX_PAGE_REPORT_LIMIT = 100;
 export const DEFAULT_PAGE_REPORT_LIMIT = 20;
@@ -65,6 +67,19 @@ export function pageReportRequest(node: { attrs: Record<string, unknown> }): Pag
     sort: attrOf<PageReportSort>(node, "sort"),
     reverse: attrOf<boolean>(node, "reverse"),
     limit: attrOf<number>(node, "limit"),
+  };
+}
+
+export function taskReportRequest(node: { attrs: Record<string, unknown> }): TaskReportRequest {
+  return {
+    spaceId: attrOf<string | null>(node, "spaceId"),
+    seriesId: attrOf<string | null>(node, "seriesId"),
+    pageIds: attrOf<string[]>(node, "pageIds"),
+    labels: attrOf<string[]>(node, "labels"),
+    assignee: attrOf<string | null>(node, "assignee"),
+    assignedToViewer: attrOf<boolean>(node, "assignedToViewer"),
+    due: attrOf<TaskReportDue>(node, "due"),
+    status: attrOf<TaskReportStatus>(node, "status"),
   };
 }
 
@@ -292,6 +307,77 @@ function reportAttributes(node: ValidNode): Record<string, string | null> {
   };
 }
 
+function taskReportHtml(tasks: readonly ReportedTask[] | null, renderer: HtmlRenderer): string {
+  if (tasks === null) return element("p", {}, renderer.escape(renderer.label("taskReport")));
+  if (tasks.length === 0) {
+    return element("p", { class: "ph-listing-empty" }, renderer.escape(renderer.label("noReportedTasks")));
+  }
+  const head = element(
+    "thead",
+    {},
+    element(
+      "tr",
+      {},
+      [
+        renderer.label("reportTask"),
+        renderer.label("reportAssignee"),
+        renderer.label("reportDue"),
+        renderer.label("reportPage"),
+      ]
+        .map((heading) => element("th", { scope: "col" }, renderer.escape(heading)))
+        .join(""),
+    ),
+  );
+  const rows = tasks.map((task) => {
+    const href = renderer.safeHref(task.page.href);
+    const title = renderer.escape(task.page.title || renderer.label("untitledPage"));
+    const status = renderer.label(task.done ? "taskDone" : "taskOpen");
+    const box = `<input type="checkbox" disabled aria-label="${renderer.escape(status)}"${task.done ? " checked" : ""}>`;
+    return element(
+      "tr",
+      { "data-checked": task.done ? "true" : "false" },
+      [
+        `${box} ${renderer.escape(task.text)}`,
+        renderer.escape(task.assignee ?? ""),
+        renderer.escape(task.dueDate ? renderer.formatDate(task.dueDate) : ""),
+        href ? element("a", { href }, title) : title,
+      ]
+        .map((cell) => element("td", {}, cell))
+        .join(""),
+    );
+  });
+  return element("table", {}, `${head}${element("tbody", {}, rows.join(""))}`);
+}
+
+function markdownCell(text: string): string {
+  return text.replace(/\s*[\r\n]+\s*/g, " ");
+}
+
+function taskReportMarkdown(tasks: readonly ReportedTask[] | null, renderer: MarkdownRenderer): string {
+  if (tasks === null) return `*${renderer.escape(renderer.label("taskReport"))}*`;
+  if (tasks.length === 0) return `*${renderer.escape(renderer.label("noReportedTasks"))}*`;
+  const header = [
+    renderer.label("reportTask"),
+    renderer.label("reportAssignee"),
+    renderer.label("reportDue"),
+    renderer.label("reportPage"),
+  ]
+    .map((heading) => renderer.escape(heading))
+    .join(" | ");
+  const rows = tasks.map((task) => {
+    const href = renderer.safeHref(task.page.href);
+    const title = renderer.escape(task.page.title || renderer.label("untitledPage"));
+    const cells = [
+      `${task.done ? "[x]" : "[ ]"} ${markdownCell(renderer.escape(task.text))}`,
+      markdownCell(renderer.escape(task.assignee ?? "")),
+      renderer.escape(task.dueDate ? renderer.formatDate(task.dueDate) : ""),
+      href ? `[${markdownCell(title)}](${markdownUrl(href)})` : markdownCell(title),
+    ];
+    return `| ${cells.join(" | ")} |`;
+  });
+  return [`| ${header} |`, "| --- | --- | --- | --- |", ...rows].join("\n");
+}
+
 export const taskReportModule = defineModule({
   name: "taskReport",
   nodes: [
@@ -325,9 +411,10 @@ export const taskReportModule = defineModule({
             "data-due": attrOf<string>(node, "due"),
             "data-status": attrOf<string>(node, "status"),
           },
-          element("p", {}, renderer.escape(renderer.label("taskReport"))),
+          taskReportHtml(renderer.context.taskReport?.(taskReportRequest(node)) ?? null, renderer),
         ),
-      markdown: (_node, renderer) => `*${renderer.escape(renderer.label("taskReport"))}*`,
+      markdown: (node, renderer) =>
+        taskReportMarkdown(renderer.context.taskReport?.(taskReportRequest(node)) ?? null, renderer),
       text: () => "",
     },
   ],

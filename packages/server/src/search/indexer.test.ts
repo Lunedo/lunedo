@@ -30,7 +30,7 @@ function migrationsBefore(tag: string): string {
   const journalPath = path.join(folder, "meta", "_journal.json");
   const journal = JSON.parse(readFileSync(journalPath, "utf8")) as { entries: { tag: string }[] };
   const index = journal.entries.findIndex((entry) => entry.tag === tag);
-  if (index === -1) throw new Error(`Migration ${tag} does not exist`);
+  if (index < 0) throw new Error(`The migration ${tag} does not exist`);
   journal.entries = journal.entries.slice(0, index);
   writeFileSync(journalPath, JSON.stringify(journal));
   return folder;

@@ -1070,7 +1070,8 @@
     "pagesAndTrash": "Pages and trash",
     "templates": "Templates",
     "accessOverview": "Access overview",
-    "imports": "Import"
+    "imports": "Import",
+    "exports": "Exports"
   },
   "commands": {
     "label": "Command palette",
@@ -1392,7 +1393,11 @@
     "statusInUse": "Pages use this status. Confirm how many lose it, then remove it again.",
     "statusInUsePages": "{count, plural, one {# page now has} other {# pages now have}} this status. Check the number and remove it again.",
     "statusDisabled": "Page status is turned off in this space. A space admin can turn it on in the space settings.",
-    "tooManyStatusValues": "The space has the largest number of values already. Remove one first."
+    "tooManyStatusValues": "The space has the largest number of values already. Remove one first.",
+    "exportDisabled": "Export is turned off for this space. A space admin can turn it on in the space settings.",
+    "exportRunning": "Another export of yours is still running. Wait until it is done, or stop it under Settings › Exports.",
+    "nothingToExport": "There is nothing to export yet. Publish the page first.",
+    "tooManyExports": "You already keep 5 exports. Delete one you no longer need under Settings › Exports, then try again."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -2129,6 +2134,10 @@
         "label": "Further Atlassian sites",
         "description": "Host names Pagehall may contact with an import's API token besides sites under atlassian.net, separated by commas, such as wiki.example.com."
       },
+      "spaces_export": {
+        "label": "Allow export",
+        "description": "People can export pages and the space as Markdown and HTML. When it is off, nobody can export, space admins included."
+      },
       "content_language": {
         "label": "Content language",
         "description": "Language of the pages in this space. Search uses it to find words in all their forms, for example houses when someone searches for house. Each page can use a different language."
@@ -2384,6 +2393,10 @@
         "finished": "The import into {spaceName} ({spaceKey}) is ready for review. {problems, plural, =0 {Nothing needs attention.} one {# item needs attention.} other {# items need attention.}}",
         "failed": "The import into {spaceName} ({spaceKey}) failed. Open it to see why and what to do.",
         "held": "The import into the space {spaceKey} paused because its administrator can no longer import. You can take it over."
+      },
+      "export": {
+        "ready": "Your export of {name} is ready to download until {expiresAt}.",
+        "failed": "Your export of {name} failed. Open your exports to see why and what to do."
       }
     }
   },
@@ -3234,7 +3247,8 @@
         "unarchived": "Space brought back from the archive",
         "confidentialAdministratorAppointed": "Space admin of a confidential space appointed",
         "confidentialDeleted": "Confidential space deleted",
-        "pageStatusValuesChanged": "Page status values changed"
+        "pageStatusValuesChanged": "Page status values changed",
+        "exported": "Space exported"
       },
       "page": {
         "updateRejected": "Page change rejected",
@@ -3252,7 +3266,8 @@
         "unshared": "Page access removed",
         "guestInvited": "Guest invited to a page",
         "restrictionHolderAdded": "Person or group added to a page restriction",
-        "restrictionHolderRemoved": "Person or group removed from a page restriction"
+        "restrictionHolderRemoved": "Person or group removed from a page restriction",
+        "subtreeExported": "Page exported with its subpages"
       },
       "trash": {
         "itemsDeleted": "Moved to the trash",
@@ -7056,6 +7071,104 @@
     "activityFailed": "The changes of status and owner could not be loaded",
     "activityEmpty": "The status and the owner have not changed yet.",
     "activityTransferred": "{actor} changed the owner from {from} to {to}"
+  },
+  "exports": {
+    "close": "Close",
+    "disabled": {
+      "title": "Export is turned off for this space",
+      "admin": "It applies to everyone, including you. Turn it on in the space settings to export.",
+      "openSettings": "Open export settings",
+      "reader": "A space admin can turn it on in the space settings. Until then, nobody can export pages of this space.",
+      "adminHere": "It applies to everyone, including you. Turn on “Allow export” above to export."
+    },
+    "page": {
+      "title": "Export page",
+      "menu": "Export",
+      "format": "Format",
+      "scope": "The export contains what you can read: the published version, without comments, private notes and history.",
+      "start": "Start export",
+      "download": "Download",
+      "failed": "“{title}” was not exported",
+      "unpublishedTitle": "This page has not been published yet",
+      "unpublished": "Exports contain only published content. Publish the page first, then export it.",
+      "formats": {
+        "markdown": {
+          "label": "Markdown",
+          "description": "One .md file. Links to other pages and to attachments point to Pagehall."
+        },
+        "html": {
+          "label": "HTML",
+          "description": "One .html file that opens in any browser, also offline."
+        },
+        "zip": {
+          "label": "ZIP with attachments",
+          "description": "The page as Markdown and HTML together with its attachments."
+        },
+        "subpages": {
+          "label": "ZIP with subpages",
+          "description": "This page and every subpage you can read, with attachments. It is prepared in the background, and you get a notification when the download is ready."
+        }
+      }
+    },
+    "started": {
+      "title": "Export started",
+      "description": "You get a notification when the download is ready. You find it under Settings › Exports.",
+      "open": "Show exports",
+      "failed": "The export could not be started"
+    },
+    "space": {
+      "title": "Export {name}",
+      "menu": "Export space",
+      "panelTitle": "Export this space",
+      "description": "Creates a ZIP file with every page you can read: the page tree as folders, each page as Markdown and HTML, attachments next to their pages and an index.html with the tree. Comments, private notes and history are not included. The download is kept for 7 days and only you can open it.",
+      "start": "Export space",
+      "empty": "You have no exports of this space.",
+      "yourExports": "Show your exports"
+    },
+    "list": {
+      "label": "Your exports",
+      "loadFailed": "Your exports could not be loaded",
+      "emptyTitle": "No exports",
+      "emptyDescription": "When you export a space or a page with its subpages, the download appears here.",
+      "deleteFailed": "The export of {name} was not deleted",
+      "deleteTitle": "Delete the export of {name}?",
+      "deleteRunning": "The export stops and nothing is kept. You can start it again later.",
+      "deleteReady": "The download is deleted at once. You can export again later.",
+      "deleteConfirm": "Delete export",
+      "keep": "Keep export",
+      "scopeSpace": "Space",
+      "scopePages": "Page with subpages",
+      "readyDetails": "{size} · available until {date}",
+      "startedAt": "started {date}",
+      "download": "Download",
+      "cancel": "Stop the export of {name}",
+      "delete": "Delete the export of {name}",
+      "progress": "Progress of the export of {name}"
+    },
+    "states": {
+      "queued": "Waiting",
+      "running": "Running",
+      "ready": "Ready",
+      "failed": "Failed"
+    },
+    "errors": {
+      "exportDisabled": "Export was turned off for the space. Ask a space admin to turn it on, then export again.",
+      "noAccess": "You can no longer read what was exported, or it was deleted. Export again what you can read.",
+      "tokenRevoked": "The API token that started the export was revoked or expired. Start the export again.",
+      "interrupted": "The export was interrupted several times. Start it again; if it fails again, tell the person who runs Pagehall.",
+      "internalError": "Something went wrong while building the export. Start it again; if it fails again, tell the person who runs Pagehall."
+    },
+    "screen": {
+      "title": "Exports",
+      "description": "Downloads of spaces and pages you exported. Each download is kept for 7 days and only you can open it."
+    },
+    "settings": {
+      "tab": "Export",
+      "title": "Export",
+      "description": "Let people export pages and the whole space as Markdown and HTML.",
+      "settingTitle": "Export setting",
+      "copyNote": "Turning export off does not prevent copying: people who can read a page can still copy its content."
+    }
   },
   "search": {
     "title": "Search",

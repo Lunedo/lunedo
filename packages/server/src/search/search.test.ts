@@ -6,7 +6,10 @@ import { pageStatusEnabledSetting } from "../spaces/settings.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { spaceFixtures } from "../testing/spaces.js";
+import type { AdapterSearch, SearchAdapter } from "./adapter.js";
+import { PostgresSearchAdapter } from "./postgres-adapter.js";
 import { searchRequest } from "./search.testing.js";
+import { correctedQuery, SearchService } from "./service.js";
 
 const baseUrl = testDatabaseBaseUrl();
 
@@ -259,6 +262,129 @@ describe.skipIf(!baseUrl)("search", () => {
       [unique],
     );
     expect(rows.rows.map((row) => row.organization_id)).toEqual([elsewhere.id]);
+  });
+
+  it("corrects typos only with words of content the person can read and suggests only those", async () => {
+    const w = await world();
+    for (const word of ["cartrigea", "cartrigeb", "cartrigec"]) {
+      await test.services.tree.create(w.author, w.hidden.id, {
+        kind: "page",
+        title: "Hidden draft",
+        mode: "live",
+        placement: { parentId: null },
+        document: doc(paragraph(`${w.word} ${word} confidential`)),
+      });
+    }
+    await drain();
+    expect(await ids(w.other, w.org.id, `${w.word} cartrige`)).toEqual([w.gamma]);
+    expect((await find(w.other, w.org.id, `${w.word} cartrige`)).suggestion).toBe(`${w.word} cartridge`);
+    expect((await find(w.author, w.org.id, `${w.word} cartrige`)).suggestion).toBe(`${w.word} cartrigea`);
+
+    const hiddenWord = await find(w.other, w.org.id, "confidentail");
+    const unknownWord = await find(w.other, w.org.id, "qwertzuiop");
+    expect({ ...hiddenWord, index: null }).toEqual({ ...unknownWord, index: null });
+    expect(hiddenWord).toMatchObject({ results: [], total: 0, suggestion: null });
+    expect((await find(w.author, w.org.id, "confidentail")).suggestion).toBe("confidential");
+
+    expect((await find(w.other, w.org.id, `${w.word} printer`)).suggestion).toBeNull();
+    expect((await find(w.other, w.org.id, `${w.word} cartrige`, { mode: "quick" })).suggestion).toBeNull();
+  });
+
+  it("builds the suggested search text from the corrected words only", () => {
+    const corrections = new Map([["cartrige", "cartridge"]]);
+    expect(correctedQuery('Cartrige "cartrige ink" -cartrige label:cartrige', corrections)).toBe(
+      'cartridge "cartrige ink" -cartrige label:cartrige',
+    );
+    expect(correctedQuery("printer", corrections)).toBeNull();
+    expect(correctedQuery("cartrige", new Map())).toBeNull();
+  });
+
+  function recordingSearch() {
+    const adapter = new PostgresSearchAdapter();
+    const requests: AdapterSearch[] = [];
+    const recording: SearchAdapter = {
+      replaceItem: adapter.replaceItem.bind(adapter),
+      removeItem: adapter.removeItem.bind(adapter),
+      updateAccess: adapter.updateAccess.bind(adapter),
+      indexedItemsOfSpace: adapter.indexedItemsOfSpace.bind(adapter),
+      search: (executor, request) => {
+        requests.push(request);
+        return adapter.search(executor, request);
+      },
+    };
+    const service = new SearchService({
+      database: test.database,
+      authorization: test.services.authorization,
+      people: test.services.people,
+      adapter: recording,
+      indexer: test.services.search.indexer,
+    });
+    return { service, requests };
+  }
+
+  it("looks up status names in spaces the person can see only", async () => {
+    const w = await world();
+    const statuses = test.services.pageStatus;
+    const [, , , sharedVerified] = await statuses.values(w.shared.id);
+    const [, , , hiddenVerified] = await statuses.values(w.hidden.id);
+    await statuses.update(w.author, w.shared.id, sharedVerified?.id ?? "", { name: `Classified ${w.word}` });
+    await statuses.update(w.author, w.hidden.id, hiddenVerified?.id ?? "", { name: `Secret ${w.word}` });
+    const { service, requests } = recordingSearch();
+    await service.search(w.other, w.org.id, searchRequest(`status:"Classified ${w.word}"`));
+    expect(requests.map((request) => request.filters.statusIds)).toEqual([[sharedVerified?.id]]);
+
+    requests.length = 0;
+    const hiddenName = await service.search(
+      w.other,
+      w.org.id,
+      searchRequest(`${w.word} status:"Secret ${w.word}"`),
+    );
+    const unknownName = await service.search(
+      w.other,
+      w.org.id,
+      searchRequest(`${w.word} status:"None ${w.word}"`),
+    );
+    expect(requests).toEqual([]);
+    expect({ ...hiddenName, index: null }).toEqual({ ...unknownName, index: null });
+    requests.length = 0;
+    await service.search(w.author, w.org.id, searchRequest(`status:"Secret ${w.word}"`));
+    expect(requests.map((request) => request.filters.statusIds)).toEqual([[hiddenVerified?.id]]);
+    await statuses.update(w.author, w.hidden.id, hiddenVerified?.id ?? "", { name: `Classified ${w.word}` });
+    requests.length = 0;
+    await service.search(w.other, w.org.id, searchRequest(`status:"Classified ${w.word}"`));
+    expect(requests.map((request) => request.filters.statusIds)).toEqual([[sharedVerified?.id]]);
+  });
+
+  it("filters by author IDs only of people the person can see", async () => {
+    const w = await world();
+    const leaverId = await member(w.org.id, "member", "Lea Leaver");
+    const open = await space(w.org.id, w.authorId, {
+      visibility: "organization",
+      grants: [{ principalKind: "account", principalId: leaverId, role: "editor" }],
+    });
+    const left = await test.services.tree.create(accountPrincipal(leaverId), open.id, {
+      kind: "page",
+      title: "Left behind",
+      mode: "live",
+      placement: { parentId: null },
+      document: doc(paragraph(`${w.word} handover`)),
+    });
+    await drain();
+    expect(await ids(w.other, w.org.id, w.word, { authorIds: [leaverId] })).toEqual([left.id]);
+
+    await test.pool.query("delete from space_permissions where principal_id = $1", [leaverId]);
+    await test.pool.query(
+      "update memberships set expires_at = now() - interval '1 day' where account_id = $1",
+      [leaverId],
+    );
+    await drain();
+    expect(await test.services.people.canSee(w.other, leaverId)).toBe(false);
+    expect(await ids(w.other, w.org.id, `${w.word} handover`)).toEqual([left.id]);
+    const invisible = await find(w.other, w.org.id, w.word, { authorIds: [leaverId] });
+    const unknown = await find(w.other, w.org.id, w.word, { authorIds: [randomUUID()] });
+    expect({ ...invisible, index: null }).toEqual({ ...unknown, index: null });
+    expect(invisible.results).toEqual([]);
+    expect(await ids(w.author, w.org.id, w.word, { authorIds: [w.otherId, leaverId] })).toEqual([w.beta]);
   });
 
   it("filters by page status and follows changes of status, values and the space setting", async () => {

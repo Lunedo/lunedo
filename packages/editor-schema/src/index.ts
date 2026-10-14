@@ -81,8 +81,10 @@ export {
   type RenderLabels,
   type ReportedDecision,
   type ReportedPage,
+  type ReportedTask,
   type ResolvedPageLink,
   required,
+  type TaskReportRequest,
 } from "./module.js";
 export { createDefaultRegistry, defaultModules } from "./modules/index.js";
 export {
@@ -102,6 +104,7 @@ export {
   type TaskReportDue,
   type TaskReportStatus,
   taskReportDueWindows,
+  taskReportRequest,
   taskReportStatuses,
 } from "./modules/reports.js";
 export {

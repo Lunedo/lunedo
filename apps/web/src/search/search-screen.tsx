@@ -213,7 +213,7 @@ export function SearchScreen() {
             <NoResults
               query={query}
               filters={filters}
-              suggestion={suggestionOf(first)}
+              suggestion={first.suggestion}
               onShow={(nextQuery, nextFilters) => show(nextQuery, nextFilters)}
             />
           ) : (
@@ -254,11 +254,6 @@ export function SearchScreen() {
       </Drawer>
     </SearchFrame>
   );
-}
-
-function suggestionOf(response: SearchResponse): string | null {
-  const value: unknown = (response as { suggestion?: unknown }).suggestion;
-  return typeof value === "string" && value.trim().length > 0 ? value : null;
 }
 
 function SearchFrame({ children }: { children: ReactNode }) {

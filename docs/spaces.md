@@ -68,6 +68,18 @@ Pages have labels (up to 100 per page, listed per space under `/spaces/{key}/lab
 
 Through the API, `GET /api/v1/pages/{pageId}/content` returns the content as JSON and `PUT` replaces it; `GET /api/v1/pages/{pageId}/markdown` returns it as GitHub-flavored Markdown. A `PUT` is validated against the editor schema and reaches open editors at once.
 
+## Export
+
+People export what they can read: pages in publish mode in their published version, with modules such as child page lists, reports, task lists and meeting details rendered as static content with their own permissions. Pages they cannot read are left out together with their titles and links. Comments, private notes and history are not exported.
+
+- A single page exports at once as Markdown, as one HTML file with inline styles that opens offline, or as a ZIP with both and the page's attachments (`GET /api/v1/pages/{pageId}/export?format=markdown|html|zip`).
+- A space (`POST /api/v1/spaces/{spaceId}/exports`) or a page with its subpages (`POST /api/v1/pages/{pageId}/exports`) is built by a background job into a ZIP: the page tree as folders, each page as Markdown and HTML, attachments next to their pages and an `index.html` with the tree. Links between exported pages become relative paths; other links point to the instance address. File names are safe on Windows, macOS and Linux and unique within their folder.
+- When the archive is complete, the person gets a notification. The download (`GET /api/v1/exports/{exportId}/content`) is kept for 7 days, only for that person and only while they can still read what was exported. Each person runs one export at a time and keeps up to five; a new export of the same space or page replaces the earlier one. Exports are deleted when the person leaves the organization or is deactivated.
+- If the worker stops while building, the job starts over; after three interrupted attempts the export fails with a reason and a notification. A download is never offered before the archive is complete.
+- Space admins turn export off in the space settings (`spaces.export`). It then applies to everyone, space and organization admins included, and the API answers with `exportDisabled`. Turning it off does not prevent copying content.
+
+Space and subtree exports are recorded in the audit log as `space.exported` and `page.subtreeExported`.
+
 ## Audit
 
 Creating spaces, changing their settings, keys, visibility and permissions, appointing space admins and transferring personal spaces are recorded in the audit log (`space.created`, `space.updated`, `space.permissionGranted`, `space.permissionChanged`, `space.permissionRemoved`, `space.administratorAppointed`, `space.personalTransferred`). Refused collaboration updates are recorded as `page.updateRejected`. See [audit.md](audit.md).

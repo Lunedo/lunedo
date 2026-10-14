@@ -207,6 +207,12 @@ const responseSchema = z
       .describe(
         "Number of results per filter value, or null in quick search. Each group is counted as if its own filter were not set, so other values of a filter that is in use keep their counts.",
       ),
+    suggestion: z
+      .string()
+      .nullable()
+      .describe(
+        "The search text with misspelled words replaced by similar words from content the caller can read, or null when there is nothing to correct. Always null in quick search.",
+      ),
     index: z
       .object({
         building: z
@@ -269,6 +275,7 @@ const exampleResponse = {
       { value: "year", count: 1 },
     ],
   },
+  suggestion: null,
   index: { building: false },
 };
 
@@ -306,6 +313,7 @@ function toApi(response: SearchResponse): z.output<typeof responseSchema> {
           updated: response.facets.updated,
         }
       : null,
+    suggestion: response.suggestion,
     index: { building: response.index.building },
   };
 }

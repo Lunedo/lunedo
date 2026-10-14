@@ -5,6 +5,7 @@ import {
   CommentInvalidError,
   DocumentInvalidError,
   EmailInUseError,
+  ExportError,
   FileTooLargeError,
   ForbiddenError,
   ImportError,
@@ -29,7 +30,13 @@ import {
 import type { FastifyReply } from "fastify";
 import { ZodError } from "zod";
 import { API_CONTEXT, type ApiContext } from "../context.js";
-import { isProblemCode, type ProblemCode, ProblemException, problemBody } from "./problems.js";
+import {
+  forbiddenProblem,
+  isProblemCode,
+  type ProblemCode,
+  ProblemException,
+  problemBody,
+} from "./problems.js";
 
 const STATUS_CODES: Record<number, ProblemCode> = {
   400: "invalidInput",
@@ -129,8 +136,17 @@ function map(error: unknown): Mapped | null {
       extensions: { retryAfterSeconds: error.retryAfterSeconds },
     };
   }
-  if (error instanceof ForbiddenError)
-    return { code: "forbidden", extensions: { denials: error.decision.denials } };
+  if (error instanceof ForbiddenError) {
+    const problem = forbiddenProblem(error.decision.denials);
+    return {
+      code: problem.code,
+      detail: (problem.getResponse() as { detail?: string }).detail ?? "Not allowed",
+      extensions: problem.extensions,
+    };
+  }
+  if (error instanceof ExportError) {
+    return { code: error.code === "exportNotFound" ? "notFound" : error.code, detail: error.message };
+  }
   if (error instanceof OrganizationError)
     return { code: codeOf(error.code, "invalidInput"), detail: error.message, extensions: error.details };
   if (error instanceof ImportError) {

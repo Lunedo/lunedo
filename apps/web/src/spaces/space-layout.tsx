@@ -2,6 +2,7 @@ import { Button, Drawer, IconButton, Menu, Notice, Skeleton } from "@pagehall/ui
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi, Link, Outlet, useLocation, useNavigate, useParams } from "@tanstack/react-router";
 import {
+  FileArchive,
   FileInput,
   FilePlus,
   Folder,
@@ -25,6 +26,7 @@ import { useTranslation } from "react-i18next";
 import { isApiError } from "../api/request.js";
 import { StarButton } from "../collaboration/content-collaboration.js";
 import { LoadError } from "../errors/failure.js";
+import { SpaceExportDialog } from "../exports/space-export.js";
 import { CreateSeriesDialog } from "../meetings/create-series-dialog.js";
 import { seriesPath, spaceSeriesQuery } from "../meetings/queries.js";
 import { NoPageAccess } from "../sharing/access-requests.js";
@@ -253,6 +255,7 @@ function SpaceNavigation({
   const meetingsActive = location.pathname === `/spaces/${space.key}/meetings`;
   const series = useQuery({ ...spaceSeriesQuery(space.id), throwOnError: false });
   const runningSeries = (series.data ?? []).filter((entry) => !entry.archived);
+  const [exporting, setExporting] = useState(false);
   return (
     <div
       className="flex flex-col gap-1 px-2 py-4"
@@ -272,35 +275,52 @@ function SpaceNavigation({
               : t("spaces.inOrganization", { organization: space.organizationName ?? "" })}
           </span>
         </div>
-        {space.role === "admin" ? (
-          <Menu
-            trigger={<IconButton label={t("spaces.options")} icon={MoreVertical} size="sm" />}
-            items={[
-              {
-                label: t("spaces.settings.general"),
-                icon: Settings,
-                onSelect: () => shell.navigate("/spaces/$spaceKey/settings/general", { spaceKey: space.key }),
-              },
-              {
-                label: t("spaces.settings.permissions"),
-                icon: Shield,
-                onSelect: () =>
-                  shell.navigate("/spaces/$spaceKey/settings/permissions", { spaceKey: space.key }),
-              },
-              {
-                label: t("content.title"),
-                icon: Trash2,
-                onSelect: () => shell.navigate("/spaces/$spaceKey/settings/content", { spaceKey: space.key }),
-              },
-              {
-                label: t("templates.title"),
-                icon: LayoutTemplate,
-                onSelect: () =>
-                  shell.navigate("/spaces/$spaceKey/settings/templates", { spaceKey: space.key }),
-              },
-            ]}
-          />
-        ) : null}
+        <Menu
+          trigger={<IconButton label={t("spaces.options")} icon={MoreVertical} size="sm" />}
+          items={[
+            ...(space.role === "admin"
+              ? [
+                  {
+                    label: t("spaces.settings.general"),
+                    icon: Settings,
+                    onSelect: () =>
+                      shell.navigate("/spaces/$spaceKey/settings/general", { spaceKey: space.key }),
+                  },
+                  {
+                    label: t("spaces.settings.permissions"),
+                    icon: Shield,
+                    onSelect: () =>
+                      shell.navigate("/spaces/$spaceKey/settings/permissions", { spaceKey: space.key }),
+                  },
+                  {
+                    label: t("content.title"),
+                    icon: Trash2,
+                    onSelect: () =>
+                      shell.navigate("/spaces/$spaceKey/settings/content", { spaceKey: space.key }),
+                  },
+                  {
+                    label: t("templates.title"),
+                    icon: LayoutTemplate,
+                    onSelect: () =>
+                      shell.navigate("/spaces/$spaceKey/settings/templates", { spaceKey: space.key }),
+                  },
+                  { type: "separator" as const },
+                ]
+              : []),
+            { label: t("exports.space.menu"), icon: FileArchive, onSelect: () => setExporting(true) },
+          ]}
+        />
+        <SpaceExportDialog
+          space={{
+            id: space.id,
+            key: space.key,
+            name,
+            exportEnabled: space.exportEnabled,
+            admin: space.role === "admin",
+          }}
+          open={exporting}
+          onOpenChange={setExporting}
+        />
         <StarButton target={{ spaceId: space.id }} title={name} />
         <IconButton
           className="hidden md:inline-flex"

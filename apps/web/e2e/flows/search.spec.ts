@@ -66,7 +66,9 @@ test("searches from a space, opens a result, filters and saves the search", asyn
   const save = page.getByRole("dialog", { name: "Save this search" });
   await save.getByLabel("Name").fill("Gateway in operations");
   await save.getByRole("button", { name: "Save search" }).click();
-  await expect(page.getByText("Search saved. You find it under Saved searches.", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Search saved. You find it under Saved searches.", { exact: true }),
+  ).toBeVisible();
   await expect(filters.getByRole("link", { name: "Gateway in operations" })).toBeVisible();
 
   const colleague = await organization.invite("Kim");

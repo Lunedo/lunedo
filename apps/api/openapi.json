@@ -41,6 +41,10 @@
       "description": ""
     },
     {
+      "name": "Exports",
+      "description": ""
+    },
+    {
       "name": "Groups",
       "description": "Groups of accounts and their managers."
     },
@@ -3183,6 +3187,10 @@
                       "type": "boolean",
                       "description": "Whether the space is archived. Archived spaces are read-only."
                     },
+                    "exportEnabled": {
+                      "type": "boolean",
+                      "description": "Whether pages and the space can be exported. Space administrators turn export off and on; it applies to everyone. Turning it off does not prevent copying content."
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -3211,6 +3219,7 @@
                     "ownerName",
                     "overviewItemId",
                     "archived",
+                    "exportEnabled",
                     "createdAt",
                     "updatedAt"
                   ],
@@ -3234,6 +3243,7 @@
                   "ownerName": null,
                   "overviewItemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a11",
                   "archived": false,
+                  "exportEnabled": true,
                   "createdAt": "2026-10-05T08:00:00.000Z",
                   "updatedAt": "2026-10-05T08:00:00.000Z"
                 }
@@ -20741,6 +20751,987 @@
                       "title": "Not found",
                       "status": 404,
                       "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/exports": {
+      "get": {
+        "operationId": "exports.list",
+        "summary": "List your exports",
+        "description": "Lists your exports of the last 7 days that were not deleted, newest first.\n\nRequires the permission `instance.content.view` on the instance.",
+        "tags": [
+          "Exports"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.content.view",
+          "resource": "instance"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Your exports.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID of the export."
+                      },
+                      "scope": {
+                        "type": "string",
+                        "enum": [
+                          "space",
+                          "pages"
+                        ],
+                        "description": "What is exported: `space` for a whole space, `pages` for a page with its subpages."
+                      },
+                      "spaceId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The exported space, or null when it was deleted since."
+                      },
+                      "rootItemId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The exported page for `pages`, or null."
+                      },
+                      "name": {
+                        "type": "string",
+                        "description": "Name of the space or title of the page when the export was started."
+                      },
+                      "state": {
+                        "type": "string",
+                        "enum": [
+                          "queued",
+                          "running",
+                          "ready",
+                          "failed"
+                        ],
+                        "description": "`queued` waits for a worker, `running` is being built, `ready` can be downloaded, `failed` stopped with an error."
+                      },
+                      "progress": {
+                        "type": "object",
+                        "properties": {
+                          "done": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Files written so far."
+                          },
+                          "total": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Files in the export, 0 until known."
+                          }
+                        },
+                        "required": [
+                          "done",
+                          "total"
+                        ],
+                        "additionalProperties": false,
+                        "description": "Progress of a running export."
+                      },
+                      "fileName": {
+                        "description": "File name of the ZIP archive once it is ready.",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "size": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Size of the ZIP archive in bytes once it is ready."
+                      },
+                      "errorCode": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "x-extensible-enum": [
+                              "exportDisabled",
+                              "noAccess",
+                              "tokenRevoked",
+                              "interrupted",
+                              "internalError"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Why a failed export stopped: export was turned off for the space, access to the space or page was lost, the API token that started it was revoked, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "When the export was started. ISO 8601 timestamp in UTC."
+                      },
+                      "finishedAt": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "When the export finished or failed. ISO 8601 timestamp in UTC."
+                      },
+                      "expiresAt": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "When the download is deleted, 7 days after it is ready. ISO 8601 timestamp in UTC."
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "scope",
+                      "spaceId",
+                      "rootItemId",
+                      "name",
+                      "state",
+                      "progress",
+                      "fileName",
+                      "size",
+                      "errorCode",
+                      "createdAt",
+                      "finishedAt",
+                      "expiresAt"
+                    ],
+                    "additionalProperties": false,
+                    "description": "An export of a space or of a page with its subpages, built in the background."
+                  },
+                  "description": "Exports, newest first, at most 50."
+                },
+                "example": [
+                  {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a90",
+                    "scope": "space",
+                    "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
+                    "rootItemId": null,
+                    "name": "IT Operations",
+                    "state": "ready",
+                    "progress": {
+                      "done": 413,
+                      "total": 413
+                    },
+                    "fileName": "IT Operations 2026-10-14.zip",
+                    "size": 18432112,
+                    "errorCode": null,
+                    "createdAt": "2026-10-14T09:00:00.000Z",
+                    "finishedAt": "2026-10-14T09:01:12.000Z",
+                    "expiresAt": "2026-10-21T09:01:12.000Z"
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/exports/{exportId}": {
+      "delete": {
+        "operationId": "exports.remove",
+        "summary": "Delete an export",
+        "description": "Deletes one of your exports and its file. A running export stops.\n\nRequires the permission `export.delete` on the export in `exportId`.",
+        "tags": [
+          "Exports"
+        ],
+        "x-pagehall-permission": {
+          "action": "export.delete",
+          "resource": "export",
+          "parameter": "exportId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "exportId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the export.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Done. The response has no body."
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "exports.get",
+        "summary": "Get an export",
+        "description": "Returns the state and progress of one of your exports.\n\nRequires the permission `export.view` on the export in `exportId`.",
+        "tags": [
+          "Exports"
+        ],
+        "x-pagehall-permission": {
+          "action": "export.view",
+          "resource": "export",
+          "parameter": "exportId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "exportId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the export.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The export.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the export."
+                    },
+                    "scope": {
+                      "type": "string",
+                      "enum": [
+                        "space",
+                        "pages"
+                      ],
+                      "description": "What is exported: `space` for a whole space, `pages` for a page with its subpages."
+                    },
+                    "spaceId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The exported space, or null when it was deleted since."
+                    },
+                    "rootItemId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The exported page for `pages`, or null."
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Name of the space or title of the page when the export was started."
+                    },
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "queued",
+                        "running",
+                        "ready",
+                        "failed"
+                      ],
+                      "description": "`queued` waits for a worker, `running` is being built, `ready` can be downloaded, `failed` stopped with an error."
+                    },
+                    "progress": {
+                      "type": "object",
+                      "properties": {
+                        "done": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Files written so far."
+                        },
+                        "total": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Files in the export, 0 until known."
+                        }
+                      },
+                      "required": [
+                        "done",
+                        "total"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Progress of a running export."
+                    },
+                    "fileName": {
+                      "description": "File name of the ZIP archive once it is ready.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "size": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Size of the ZIP archive in bytes once it is ready."
+                    },
+                    "errorCode": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "x-extensible-enum": [
+                            "exportDisabled",
+                            "noAccess",
+                            "tokenRevoked",
+                            "interrupted",
+                            "internalError"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Why a failed export stopped: export was turned off for the space, access to the space or page was lost, the API token that started it was revoked, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the export was started. ISO 8601 timestamp in UTC."
+                    },
+                    "finishedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the export finished or failed. ISO 8601 timestamp in UTC."
+                    },
+                    "expiresAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the download is deleted, 7 days after it is ready. ISO 8601 timestamp in UTC."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "scope",
+                    "spaceId",
+                    "rootItemId",
+                    "name",
+                    "state",
+                    "progress",
+                    "fileName",
+                    "size",
+                    "errorCode",
+                    "createdAt",
+                    "finishedAt",
+                    "expiresAt"
+                  ],
+                  "additionalProperties": false,
+                  "description": "An export of a space or of a page with its subpages, built in the background."
+                },
+                "example": {
+                  "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a90",
+                  "scope": "space",
+                  "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
+                  "rootItemId": null,
+                  "name": "IT Operations",
+                  "state": "ready",
+                  "progress": {
+                    "done": 413,
+                    "total": 413
+                  },
+                  "fileName": "IT Operations 2026-10-14.zip",
+                  "size": 18432112,
+                  "errorCode": null,
+                  "createdAt": "2026-10-14T09:00:00.000Z",
+                  "finishedAt": "2026-10-14T09:01:12.000Z",
+                  "expiresAt": "2026-10-21T09:01:12.000Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/exports/{exportId}/content": {
+      "get": {
+        "operationId": "exports.download",
+        "summary": "Download an export",
+        "description": "Sends the ZIP archive of a ready export. Only the person who started it can download it, for 7 days, and only while export is turned on for the space and they can still read what was exported.\n\nRequires the permission `export.download` on the export in `exportId`.",
+        "tags": [
+          "Exports"
+        ],
+        "x-pagehall-permission": {
+          "action": "export.download",
+          "resource": "export",
+          "parameter": "exportId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "exportId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the export.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The ZIP archive.",
+            "content": {
+              "application/zip": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": ""
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`exportDisabled`: Export is turned off for this space. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "exportDisabled": {
+                    "value": {
+                      "type": "urn:pagehall:problem:exportDisabled",
+                      "title": "Export is turned off for this space",
+                      "status": 403,
+                      "code": "exportDisabled"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
                     }
                   }
                 }
@@ -134720,6 +135711,13 @@
                       ],
                       "description": "Number of results per filter value, or null in quick search. Each group is counted as if its own filter were not set, so other values of a filter that is in use keep their counts."
                     },
+                    "suggestion": {
+                      "description": "The search text with misspelled words replaced by similar words from content the caller can read, or null when there is nothing to correct. Always null in quick search.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "index": {
                       "type": "object",
                       "properties": {
@@ -134740,6 +135738,7 @@
                     "total",
                     "nextCursor",
                     "facets",
+                    "suggestion",
                     "index"
                   ],
                   "additionalProperties": false,
@@ -134854,6 +135853,7 @@
                       }
                     ]
                   },
+                  "suggestion": null,
                   "index": {
                     "building": false
                   }
@@ -139894,6 +140894,10 @@
                       "type": "boolean",
                       "description": "Whether the space is archived. Archived spaces are read-only."
                     },
+                    "exportEnabled": {
+                      "type": "boolean",
+                      "description": "Whether pages and the space can be exported. Space administrators turn export off and on; it applies to everyone. Turning it off does not prevent copying content."
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -139922,6 +140926,7 @@
                     "ownerName",
                     "overviewItemId",
                     "archived",
+                    "exportEnabled",
                     "createdAt",
                     "updatedAt"
                   ],
@@ -139945,6 +140950,7 @@
                   "ownerName": null,
                   "overviewItemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a11",
                   "archived": false,
+                  "exportEnabled": true,
                   "createdAt": "2026-10-05T08:00:00.000Z",
                   "updatedAt": "2026-10-05T08:00:00.000Z"
                 }
@@ -140298,6 +141304,10 @@
                             "type": "boolean",
                             "description": "Whether the space is archived. Archived spaces are read-only."
                           },
+                          "exportEnabled": {
+                            "type": "boolean",
+                            "description": "Whether pages and the space can be exported. Space administrators turn export off and on; it applies to everyone. Turning it off does not prevent copying content."
+                          },
                           "createdAt": {
                             "type": "string",
                             "format": "date-time",
@@ -140326,6 +141336,7 @@
                           "ownerName",
                           "overviewItemId",
                           "archived",
+                          "exportEnabled",
                           "createdAt",
                           "updatedAt"
                         ],
@@ -140368,6 +141379,7 @@
                       "ownerName": null,
                       "overviewItemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a11",
                       "archived": false,
+                      "exportEnabled": true,
                       "createdAt": "2026-10-05T08:00:00.000Z",
                       "updatedAt": "2026-10-05T08:00:00.000Z"
                     }
@@ -152992,6 +154004,617 @@
         }
       }
     },
+    "/api/v1/pages/{pageId}/export": {
+      "get": {
+        "operationId": "exports.page",
+        "summary": "Export a page",
+        "description": "Sends the page as readers see it: the published version in publish mode. Modules such as child page lists and reports are rendered with your permissions; content you cannot read is left out. Comments, private notes and the history are not exported. Links to other pages and to attachments point to Pagehall, except the attachments inside a ZIP.\n\nRequires the permission `item.export` on the item in `pageId`.",
+        "tags": [
+          "Exports"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.export",
+          "resource": "item",
+          "parameter": "pageId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "pageId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the page.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": true,
+            "description": "`markdown` for one Markdown file, `html` for one HTML file with inline styles that can be read offline, `zip` for both together with the attachments of the page.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "markdown",
+                "html",
+                "zip"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The page as a Markdown file, an HTML file or a ZIP archive.",
+            "content": {
+              "text/markdown": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "# Connect through WireGuard\n"
+              },
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "# Connect through WireGuard\n"
+              },
+              "application/zip": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "# Connect through WireGuard\n"
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`exportDisabled`: Export is turned off for this space. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "exportDisabled": {
+                    "value": {
+                      "type": "urn:pagehall:problem:exportDisabled",
+                      "title": "Export is turned off for this space",
+                      "status": 403,
+                      "code": "exportDisabled"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`nothingToExport`: There is nothing to export.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "nothingToExport": {
+                    "value": {
+                      "type": "urn:pagehall:problem:nothingToExport",
+                      "title": "There is nothing to export",
+                      "status": 409,
+                      "code": "nothingToExport"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pages/{pageId}/exports": {
+      "post": {
+        "operationId": "exports.exportPages",
+        "summary": "Export a page with its subpages",
+        "description": "Starts an export of the page and every subpage you can read, as a ZIP archive with the page tree as folders, each page as Markdown and HTML and the attachments next to their pages. The export runs in the background. When it is ready, you get a notification with the download; the download is kept for 7 days and only you can open it. You can run one export at a time and keep up to 5; a new export of the same space or page replaces the earlier one.\n\nRequires the permission `item.export` on the item in `pageId`.",
+        "tags": [
+          "Exports"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.export",
+          "resource": "item",
+          "parameter": "pageId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "pageId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the page.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "The started export.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the export."
+                    },
+                    "scope": {
+                      "type": "string",
+                      "enum": [
+                        "space",
+                        "pages"
+                      ],
+                      "description": "What is exported: `space` for a whole space, `pages` for a page with its subpages."
+                    },
+                    "spaceId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The exported space, or null when it was deleted since."
+                    },
+                    "rootItemId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The exported page for `pages`, or null."
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Name of the space or title of the page when the export was started."
+                    },
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "queued",
+                        "running",
+                        "ready",
+                        "failed"
+                      ],
+                      "description": "`queued` waits for a worker, `running` is being built, `ready` can be downloaded, `failed` stopped with an error."
+                    },
+                    "progress": {
+                      "type": "object",
+                      "properties": {
+                        "done": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Files written so far."
+                        },
+                        "total": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Files in the export, 0 until known."
+                        }
+                      },
+                      "required": [
+                        "done",
+                        "total"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Progress of a running export."
+                    },
+                    "fileName": {
+                      "description": "File name of the ZIP archive once it is ready.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "size": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Size of the ZIP archive in bytes once it is ready."
+                    },
+                    "errorCode": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "x-extensible-enum": [
+                            "exportDisabled",
+                            "noAccess",
+                            "tokenRevoked",
+                            "interrupted",
+                            "internalError"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Why a failed export stopped: export was turned off for the space, access to the space or page was lost, the API token that started it was revoked, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the export was started. ISO 8601 timestamp in UTC."
+                    },
+                    "finishedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the export finished or failed. ISO 8601 timestamp in UTC."
+                    },
+                    "expiresAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the download is deleted, 7 days after it is ready. ISO 8601 timestamp in UTC."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "scope",
+                    "spaceId",
+                    "rootItemId",
+                    "name",
+                    "state",
+                    "progress",
+                    "fileName",
+                    "size",
+                    "errorCode",
+                    "createdAt",
+                    "finishedAt",
+                    "expiresAt"
+                  ],
+                  "additionalProperties": false,
+                  "description": "An export of a space or of a page with its subpages, built in the background."
+                },
+                "example": {
+                  "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a90",
+                  "scope": "pages",
+                  "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
+                  "rootItemId": null,
+                  "name": "IT Operations",
+                  "state": "queued",
+                  "progress": {
+                    "done": 0,
+                    "total": 0
+                  },
+                  "fileName": "IT Operations 2026-10-14.zip",
+                  "size": 18432112,
+                  "errorCode": null,
+                  "createdAt": "2026-10-14T09:00:00.000Z",
+                  "finishedAt": "2026-10-14T09:01:12.000Z",
+                  "expiresAt": "2026-10-21T09:01:12.000Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `exportDisabled`: Export is turned off for this space. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "exportDisabled": {
+                    "value": {
+                      "type": "urn:pagehall:problem:exportDisabled",
+                      "title": "Export is turned off for this space",
+                      "status": 403,
+                      "code": "exportDisabled"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`exportRunning`: Another export of yours is still running. `nothingToExport`: There is nothing to export. `tooManyExports`: You keep as many exports as allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "exportRunning": {
+                    "value": {
+                      "type": "urn:pagehall:problem:exportRunning",
+                      "title": "Another export of yours is still running",
+                      "status": 409,
+                      "code": "exportRunning"
+                    }
+                  },
+                  "nothingToExport": {
+                    "value": {
+                      "type": "urn:pagehall:problem:nothingToExport",
+                      "title": "There is nothing to export",
+                      "status": 409,
+                      "code": "nothingToExport"
+                    }
+                  },
+                  "tooManyExports": {
+                    "value": {
+                      "type": "urn:pagehall:problem:tooManyExports",
+                      "title": "You keep as many exports as allowed",
+                      "status": 409,
+                      "code": "tooManyExports"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/pages/{pageId}/give-access/preview": {
       "post": {
         "operationId": "pageAccess.givePagePreview",
@@ -164549,6 +166172,10 @@
                           "type": "boolean",
                           "description": "Whether the space is archived. Archived spaces are read-only."
                         },
+                        "exportEnabled": {
+                          "type": "boolean",
+                          "description": "Whether pages and the space can be exported. Space administrators turn export off and on; it applies to everyone. Turning it off does not prevent copying content."
+                        },
                         "createdAt": {
                           "type": "string",
                           "format": "date-time",
@@ -164595,6 +166222,7 @@
                         "ownerName",
                         "overviewItemId",
                         "archived",
+                        "exportEnabled",
                         "createdAt",
                         "updatedAt",
                         "role"
@@ -164632,6 +166260,7 @@
                     "ownerName": null,
                     "overviewItemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a11",
                     "archived": false,
+                    "exportEnabled": true,
                     "createdAt": "2026-10-05T08:00:00.000Z",
                     "updatedAt": "2026-10-05T08:00:00.000Z",
                     "role": "reader"
@@ -164963,6 +166592,10 @@
                             "type": "boolean",
                             "description": "Whether the space is archived. Archived spaces are read-only."
                           },
+                          "exportEnabled": {
+                            "type": "boolean",
+                            "description": "Whether pages and the space can be exported. Space administrators turn export off and on; it applies to everyone. Turning it off does not prevent copying content."
+                          },
                           "createdAt": {
                             "type": "string",
                             "format": "date-time",
@@ -164991,6 +166624,7 @@
                           "ownerName",
                           "overviewItemId",
                           "archived",
+                          "exportEnabled",
                           "createdAt",
                           "updatedAt"
                         ],
@@ -165033,6 +166667,7 @@
                       "ownerName": null,
                       "overviewItemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a11",
                       "archived": false,
+                      "exportEnabled": true,
                       "createdAt": "2026-10-05T08:00:00.000Z",
                       "updatedAt": "2026-10-05T08:00:00.000Z"
                     }
@@ -165282,6 +166917,10 @@
                       "type": "boolean",
                       "description": "Whether the space is archived. Archived spaces are read-only."
                     },
+                    "exportEnabled": {
+                      "type": "boolean",
+                      "description": "Whether pages and the space can be exported. Space administrators turn export off and on; it applies to everyone. Turning it off does not prevent copying content."
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -165328,6 +166967,7 @@
                     "ownerName",
                     "overviewItemId",
                     "archived",
+                    "exportEnabled",
                     "createdAt",
                     "updatedAt",
                     "role"
@@ -165352,6 +166992,7 @@
                   "ownerName": null,
                   "overviewItemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a11",
                   "archived": false,
+                  "exportEnabled": true,
                   "createdAt": "2026-10-05T08:00:00.000Z",
                   "updatedAt": "2026-10-05T08:00:00.000Z",
                   "role": "editor"
@@ -165648,6 +167289,10 @@
                       "type": "boolean",
                       "description": "Whether the space is archived. Archived spaces are read-only."
                     },
+                    "exportEnabled": {
+                      "type": "boolean",
+                      "description": "Whether pages and the space can be exported. Space administrators turn export off and on; it applies to everyone. Turning it off does not prevent copying content."
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -165676,6 +167321,7 @@
                     "ownerName",
                     "overviewItemId",
                     "archived",
+                    "exportEnabled",
                     "createdAt",
                     "updatedAt"
                   ],
@@ -165699,6 +167345,7 @@
                   "ownerName": null,
                   "overviewItemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a11",
                   "archived": false,
+                  "exportEnabled": true,
                   "createdAt": "2026-10-05T08:00:00.000Z",
                   "updatedAt": "2026-10-05T08:00:00.000Z"
                 }
@@ -169132,6 +170779,391 @@
         }
       }
     },
+    "/api/v1/spaces/{spaceId}/exports": {
+      "post": {
+        "operationId": "exports.exportSpace",
+        "summary": "Export a space",
+        "description": "Starts an export of every page of the space you can read, as a ZIP archive with the page tree as folders, each page as Markdown and HTML, the attachments next to their pages and an index.html that lists the tree. Links between exported pages become relative paths. The export runs in the background. When it is ready, you get a notification with the download; the download is kept for 7 days and only you can open it. You can run one export at a time and keep up to 5; a new export of the same space or page replaces the earlier one.\n\nRequires the permission `space.export` on the space in `spaceId`.",
+        "tags": [
+          "Exports"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.export",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the space.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "The started export.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the export."
+                    },
+                    "scope": {
+                      "type": "string",
+                      "enum": [
+                        "space",
+                        "pages"
+                      ],
+                      "description": "What is exported: `space` for a whole space, `pages` for a page with its subpages."
+                    },
+                    "spaceId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The exported space, or null when it was deleted since."
+                    },
+                    "rootItemId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The exported page for `pages`, or null."
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Name of the space or title of the page when the export was started."
+                    },
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "queued",
+                        "running",
+                        "ready",
+                        "failed"
+                      ],
+                      "description": "`queued` waits for a worker, `running` is being built, `ready` can be downloaded, `failed` stopped with an error."
+                    },
+                    "progress": {
+                      "type": "object",
+                      "properties": {
+                        "done": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Files written so far."
+                        },
+                        "total": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Files in the export, 0 until known."
+                        }
+                      },
+                      "required": [
+                        "done",
+                        "total"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Progress of a running export."
+                    },
+                    "fileName": {
+                      "description": "File name of the ZIP archive once it is ready.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "size": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Size of the ZIP archive in bytes once it is ready."
+                    },
+                    "errorCode": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "x-extensible-enum": [
+                            "exportDisabled",
+                            "noAccess",
+                            "tokenRevoked",
+                            "interrupted",
+                            "internalError"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Why a failed export stopped: export was turned off for the space, access to the space or page was lost, the API token that started it was revoked, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the export was started. ISO 8601 timestamp in UTC."
+                    },
+                    "finishedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the export finished or failed. ISO 8601 timestamp in UTC."
+                    },
+                    "expiresAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the download is deleted, 7 days after it is ready. ISO 8601 timestamp in UTC."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "scope",
+                    "spaceId",
+                    "rootItemId",
+                    "name",
+                    "state",
+                    "progress",
+                    "fileName",
+                    "size",
+                    "errorCode",
+                    "createdAt",
+                    "finishedAt",
+                    "expiresAt"
+                  ],
+                  "additionalProperties": false,
+                  "description": "An export of a space or of a page with its subpages, built in the background."
+                },
+                "example": {
+                  "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a90",
+                  "scope": "space",
+                  "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
+                  "rootItemId": null,
+                  "name": "IT Operations",
+                  "state": "queued",
+                  "progress": {
+                    "done": 0,
+                    "total": 0
+                  },
+                  "fileName": "IT Operations 2026-10-14.zip",
+                  "size": 18432112,
+                  "errorCode": null,
+                  "createdAt": "2026-10-14T09:00:00.000Z",
+                  "finishedAt": "2026-10-14T09:01:12.000Z",
+                  "expiresAt": "2026-10-21T09:01:12.000Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `exportDisabled`: Export is turned off for this space. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "exportDisabled": {
+                    "value": {
+                      "type": "urn:pagehall:problem:exportDisabled",
+                      "title": "Export is turned off for this space",
+                      "status": 403,
+                      "code": "exportDisabled"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`exportRunning`: Another export of yours is still running. `tooManyExports`: You keep as many exports as allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "exportRunning": {
+                    "value": {
+                      "type": "urn:pagehall:problem:exportRunning",
+                      "title": "Another export of yours is still running",
+                      "status": 409,
+                      "code": "exportRunning"
+                    }
+                  },
+                  "tooManyExports": {
+                    "value": {
+                      "type": "urn:pagehall:problem:tooManyExports",
+                      "title": "You keep as many exports as allowed",
+                      "status": 409,
+                      "code": "tooManyExports"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/spaces/{spaceId}/give-access/draft": {
       "delete": {
         "operationId": "pageAccess.discardGiveAccessDraft",
@@ -172206,6 +174238,10 @@
                       "type": "boolean",
                       "description": "Whether the space is archived. Archived spaces are read-only."
                     },
+                    "exportEnabled": {
+                      "type": "boolean",
+                      "description": "Whether pages and the space can be exported. Space administrators turn export off and on; it applies to everyone. Turning it off does not prevent copying content."
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -172234,6 +174270,7 @@
                     "ownerName",
                     "overviewItemId",
                     "archived",
+                    "exportEnabled",
                     "createdAt",
                     "updatedAt"
                   ],
@@ -172257,6 +174294,7 @@
                   "ownerName": null,
                   "overviewItemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a11",
                   "archived": false,
+                  "exportEnabled": true,
                   "createdAt": "2026-10-05T08:00:00.000Z",
                   "updatedAt": "2026-10-05T08:00:00.000Z"
                 }
@@ -177543,7 +179581,7 @@
       "get": {
         "operationId": "templates.spaceSettings",
         "summary": "List the settings of a space",
-        "description": "Lists the settings that can be set for the space: default editing mode of new pages, the idle time after which live pages get a version, the trash periods and the content language search uses. Each shows whether it is inherited or set here.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
+        "description": "Lists the settings that can be set for the space: default editing mode of new pages, the idle time after which live pages get a version, the trash periods, reactions, page status, whether export is allowed and the content language search uses. Each shows whether it is inherited or set here.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
         "tags": [
           "Settings"
         ],
@@ -182369,6 +184407,10 @@
                       "type": "boolean",
                       "description": "Whether the space is archived. Archived spaces are read-only."
                     },
+                    "exportEnabled": {
+                      "type": "boolean",
+                      "description": "Whether pages and the space can be exported. Space administrators turn export off and on; it applies to everyone. Turning it off does not prevent copying content."
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -182397,6 +184439,7 @@
                     "ownerName",
                     "overviewItemId",
                     "archived",
+                    "exportEnabled",
                     "createdAt",
                     "updatedAt"
                   ],
@@ -182420,6 +184463,7 @@
                   "ownerName": null,
                   "overviewItemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a11",
                   "archived": false,
+                  "exportEnabled": true,
                   "createdAt": "2026-10-05T08:00:00.000Z",
                   "updatedAt": "2026-10-05T08:00:00.000Z"
                 }

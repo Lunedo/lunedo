@@ -10,6 +10,7 @@ import { isFormerSpaceAdministrator } from "../spaces/former-administrators.js";
 import { grantsSpaceRole } from "../spaces/roles.js";
 import type { SpaceRole } from "../spaces/schema.js";
 import {
+  exportEnabledSetting,
   membersCreateConfidentialSpacesSetting,
   membersCreateSpacesSetting,
   personalSpacesSetting,
@@ -39,6 +40,19 @@ async function groupOrganization(executor: RuleContext["executor"], id: string):
 }
 
 export function resourceTypes(settings: SettingsService): ResourceType[] {
+  const exportDisabled = async (executor: Executor, spaceId: string): Promise<RestrictionResult | null> => {
+    const space = await executor.execute<{ organization_id: string | null }>(
+      sql`select organization_id from spaces where id = ${spaceId}`,
+    );
+    const organizationId = space.rows[0]?.organization_id;
+    const enabled = await settings.get(
+      exportEnabledSetting,
+      { ...(organizationId ? { organization: organizationId } : {}), space: spaceId },
+      { executor },
+    );
+    return enabled ? null : { denial: "exportDisabled" };
+  };
+
   const instance: ResourceType = {
     type: "instance",
     actions: {
@@ -253,11 +267,17 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
       "space.manage": { scope: "space", spaceRole: "admin", restriction: "present" },
       "space.trash": { scope: "space", spaceRole: "editor", restriction: "present" },
       "space.delete": { scope: "space", spaceRole: "admin", restriction: "present" },
+      "space.export": { scope: "space", spaceRole: "reader", restriction: "exportable" },
     },
     restrictions: {
       present: async (executor, id) => {
         const state = await spaceState(executor, id);
         return state?.deleted ? { denial: "inTrash" } : null;
+      },
+      exportable: async (executor, id) => {
+        const state = await spaceState(executor, id);
+        if (!state || state.deleted) return { denial: "inTrash" };
+        return exportDisabled(executor, id);
       },
       writable: async (executor, id) => {
         const state = await spaceState(executor, id);
@@ -300,6 +320,7 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
       "item.pin": { scope: "space", spaceRole: "admin", restriction: "interactive" },
       "item.approveSchedule": { scope: "space", spaceRole: "admin", restriction: "writable" },
       "item.share": { scope: "space", spaceRole: "editor", restriction: "readable" },
+      "item.export": { scope: "space", spaceRole: "reader", restriction: "exportable" },
       "item.transferOwnership": {
         scope: "space",
         spaceRole: "admin",
@@ -345,6 +366,12 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
         return state.spaceArchived ? { denial: "archived" } : null;
       },
       interactive: async (executor, id) => interactiveItem(await itemState(executor, id)),
+      exportable: async (executor, id) => {
+        const state = await itemState(executor, id);
+        if (!state || state.trashed) return { denial: "inTrash" };
+        if (state.unpublished) return { denial: "unpublished" };
+        return exportDisabled(executor, state.spaceId);
+      },
     },
   };
 
@@ -575,6 +602,44 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
     },
   };
 
+  const exportOf: ResourceType = {
+    type: "export",
+    actions: {
+      "export.view": {
+        scope: "instance",
+        rule: "exportOwner",
+        tokenScope: { area: "spaces", level: "view" },
+      },
+      "export.delete": {
+        scope: "instance",
+        rule: "exportOwner",
+        tokenScope: { area: "spaces", level: "manage" },
+      },
+      "export.download": {
+        scope: "instance",
+        rule: "readyExportOwner",
+        tokenScope: { area: "spaces", level: "view" },
+      },
+    },
+    rules: {
+      exportOwner: async (context) => {
+        const id = context.resource.id;
+        if (!id || !UUID.test(id)) return false;
+        const result = await context.executor.execute<{ id: string }>(sql`
+          select id from exports where id = ${id.toLowerCase()} and account_id = ${context.accountId}`);
+        return result.rows.length > 0;
+      },
+      readyExportOwner: async (context) => {
+        const id = context.resource.id;
+        if (!id || !UUID.test(id)) return false;
+        const result = await context.executor.execute<{ id: string }>(sql`
+          select id from exports where id = ${id.toLowerCase()} and account_id = ${context.accountId}
+            and state = 'ready' and expires_at > now()`);
+        return result.rows.length > 0;
+      },
+    },
+  };
+
   return [
     instance,
     organization,
@@ -588,6 +653,7 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
     task,
     attachment,
     importOf,
+    exportOf,
   ];
 }
 
@@ -652,14 +718,21 @@ async function spaceState(
 async function itemState(
   executor: Executor,
   id: string,
-): Promise<{ trashed: boolean; archived: boolean; spaceArchived: boolean; unpublished: boolean } | null> {
+): Promise<{
+  spaceId: string;
+  trashed: boolean;
+  archived: boolean;
+  spaceArchived: boolean;
+  unpublished: boolean;
+} | null> {
   const result = await executor.execute<{
+    space_id: string;
     trashed: boolean;
     archived: boolean;
     space_archived: boolean;
     unpublished: boolean;
   }>(sql`
-    select (t.trash_entry_id is not null or s.deleted_at is not null) as trashed,
+    select t.space_id, (t.trash_entry_id is not null or s.deleted_at is not null) as trashed,
       (t.archived_root_id is not null or s.archived_at is not null or s.quarantined) as archived,
       (s.archived_at is not null or s.quarantined) as space_archived,
       not t.reader_visible as unpublished
@@ -667,6 +740,7 @@ async function itemState(
   const row = result.rows[0];
   return row
     ? {
+        spaceId: row.space_id,
         trashed: row.trashed,
         archived: row.archived,
         spaceArchived: row.space_archived,
