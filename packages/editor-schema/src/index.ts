@@ -1,6 +1,6 @@
 import { addInlineCommentMark, hasAnchor, type TextAnchor } from "./anchors.js";
 import type { DocumentJson } from "./json.js";
-import { createEditorKit } from "./kit.js";
+import { createEditorKit, type Section } from "./kit.js";
 import type { Heading, RenderContext } from "./module.js";
 import { createDefaultRegistry } from "./modules/index.js";
 import type { ValidationResult } from "./validate.js";
@@ -45,7 +45,7 @@ export type {
   SourceElement,
 } from "./importing.js";
 export type { DocumentJson, MarkJson, NodeJson, ValidMark, ValidNode } from "./json.js";
-export { buildSchema, createEditorKit, type EditorKit } from "./kit.js";
+export { buildSchema, createEditorKit, type EditorKit, type Section } from "./kit.js";
 export {
   editorSchemaVersion,
   type Migration,
@@ -183,6 +183,10 @@ export function containsAnchor(doc: DocumentJson, anchor: TextAnchor): boolean {
 
 export function plainText(doc: DocumentJson): string {
   return editorKit.plainText(doc);
+}
+
+export function extractSections(doc: DocumentJson): Section[] {
+  return editorKit.extractSections(doc);
 }
 
 export {

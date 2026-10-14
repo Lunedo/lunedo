@@ -14,6 +14,7 @@ import type { SettingChange } from "../../settings/setting-mutations.js";
 import {
   COLLABORATION_KEYS,
   PAGE_MODE_KEYS,
+  SEARCH_KEYS,
   SPACE_FILE_KEYS,
   TRASH_KEYS,
 } from "../../settings/settings-index.js";
@@ -67,6 +68,16 @@ export function SpaceContentScreen() {
           <SettingsList
             settings={entries}
             keys={PAGE_MODE_KEYS}
+            level="space"
+            organizationName={space.organizationName ?? undefined}
+            canManage={() => space.role === "admin"}
+            onChange={onChange}
+          />
+        </Panel>
+        <Panel title={t("content.searchSection")}>
+          <SettingsList
+            settings={entries}
+            keys={SEARCH_KEYS}
             level="space"
             organizationName={space.organizationName ?? undefined}
             canManage={() => space.role === "admin"}

@@ -26,7 +26,7 @@ export function holderCovers(kind: SQL, id: SQL, account: SQL, organization: SQL
     and (${kind} <> 'account' or ${organizationMembership(organization, account)}))`;
 }
 
-function shareCondition(account: SQL, item: SQL, space: SQL, minimum: SpaceRole): SQL {
+export function shareCondition(account: SQL, item: SQL, space: SQL, minimum: SpaceRole): SQL {
   return sql`exists (select 1 from page_shares pshare
     where pshare.item_id = any(${item}.path) and (pshare.item_id = ${item}.id or pshare.include_descendants)
       and pshare.role = any(${sql.param(rolesFrom(minimum))}::space_role[])

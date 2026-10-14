@@ -13,6 +13,7 @@ import {
   spaceVisibilities,
   treeItemKinds,
 } from "@pagehall/server";
+import { contentLanguages } from "@pagehall/shared";
 import { z } from "zod";
 import { extensibleEnum, timestamp, uuid } from "../http/schemas.js";
 
@@ -269,6 +270,20 @@ export const modeSchema = z
     "Editing mode of a page: `publish` (readers see the last published version while editors work on a draft) or `live` (readers see every change at once). Folders and links are always `live`.",
   );
 
+export const contentLanguageSchema = extensibleEnum(
+  contentLanguages,
+  "Content language as an ISO 639-1 code, or `other` for a language without its own word matching. Words are then matched as written.",
+);
+
+export const contentLanguageBodySchema = z
+  .object({
+    language: z
+      .enum(contentLanguages)
+      .nullable()
+      .describe("The language, or null to use the language of the space."),
+  })
+  .strict()
+  .describe("The content language of a page.");
 export const pageStatusColorSchema = z
   .enum(pageStatusColors)
   .describe("Color of the status: `neutral`, `accent`, `info`, `success`, `warning` or `danger`.");
@@ -321,6 +336,9 @@ export const treeItemSchema = z
     editRestricted: z.boolean().describe("Whether only an access list may edit the item."),
     link: linkSchema.nullable().describe("Target of a link, or null for pages and folders."),
     creatorId: uuid("Account that created the item, or null.").nullable(),
+    contentLanguage: contentLanguageSchema
+      .nullable()
+      .describe("Language of the page content for search, or null to use the language of the space."),
     ownerId: uuid(
       "Owner of the item, or null. The owner stays set when the person leaves; `owner.active` in the item details says whether the item has an active owner.",
     ).nullable(),
@@ -351,6 +369,7 @@ export const exampleItem = {
   link: null,
   creatorId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
   ownerId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+  contentLanguage: null,
   status: examplePageStatus,
   createdAt: "2026-10-05T08:00:00.000Z",
   updatedAt: "2026-10-05T08:00:00.000Z",
@@ -370,6 +389,9 @@ export const itemDetailsSchema = treeItemSchema
       .describe(
         "Whether the caller has access to the space; false when the item is visible only through a share or link.",
       ),
+    spaceContentLanguage: contentLanguageSchema.describe(
+      "Content language of the space, which pages without a content language of their own use for search.",
+    ),
     ancestors: z
       .array(
         z

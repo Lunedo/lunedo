@@ -42,6 +42,7 @@ const SPACE_SETTING_KEYS = new Set([
   "trash.firstStageDays",
   "trash.secondStageDays",
   "reactions.enabled",
+  "content.language",
 ]);
 
 const categorySchema = z
@@ -504,7 +505,7 @@ export class TemplatesController {
   @ApiRoute({
     summary: "List the settings of a space",
     description:
-      "Lists the settings that can be set for the space: default editing mode of new pages, the idle time after which live pages get a version, and the trash periods. Each shows whether it is inherited or set here.",
+      "Lists the settings that can be set for the space: default editing mode of new pages, the idle time after which live pages get a version, the trash periods and the content language search uses. Each shows whether it is inherited or set here.",
     tags: [SETTINGS],
     params: spaceParams,
     response: {

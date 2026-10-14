@@ -119,6 +119,35 @@ describe("SettingsList", () => {
     );
   }
 
+  it("offers every content language and follows the organization until one is chosen", async () => {
+    const onChange = vi.fn(async () => undefined);
+    await renderWithProviders(
+      <PreferencesProvider>
+        <SettingsList
+          settings={[
+            entry({
+              key: "content.language",
+              value: null,
+              defaultValue: null,
+              lockable: false,
+              levels: [{ level: "space", value: null, locked: false, effective: true }],
+            }),
+          ]}
+          keys={["content.language"]}
+          level="space"
+          canManage={() => true}
+          onChange={onChange}
+        />
+      </PreferencesProvider>,
+    );
+    const box = screen.getByRole("combobox", { name: "Content language" }) as HTMLInputElement;
+    expect(box.value).toBe("Same as the organization");
+    await userEvent.click(box);
+    expect(screen.getByRole("option", { name: "Other language (exact words only)" })).toBeTruthy();
+    await userEvent.click(screen.getByRole("option", { name: "German" }));
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith("content.language", { value: "de" }));
+  });
+
   it("follows an inherited duration and overrides it from the common values", async () => {
     const onChange = vi.fn(async () => undefined);
     await renderList([entry({})], onChange);

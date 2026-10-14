@@ -93,6 +93,10 @@
       "description": "Custom roles and role assignments of an organization."
     },
     {
+      "name": "Search",
+      "description": "Searching pages, blog posts and comments the caller can read."
+    },
+    {
       "name": "Service accounts",
       "description": "Accounts for scripts and integrations, owned by an organization."
     },
@@ -104348,6 +104352,49 @@
                         ],
                         "description": "Account that created the item, or null."
                       },
+                      "contentLanguage": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "description": "Content language as an ISO 639-1 code, or `other` for a language without its own word matching. Words are then matched as written. New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
+                              "ar",
+                              "ca",
+                              "da",
+                              "de",
+                              "el",
+                              "en",
+                              "es",
+                              "eu",
+                              "fi",
+                              "fr",
+                              "ga",
+                              "hi",
+                              "hu",
+                              "hy",
+                              "id",
+                              "it",
+                              "lt",
+                              "nb",
+                              "ne",
+                              "nl",
+                              "pt",
+                              "ro",
+                              "ru",
+                              "sr",
+                              "sv",
+                              "ta",
+                              "tr",
+                              "yi",
+                              "other"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Language of the page content for search, or null to use the language of the space."
+                      },
                       "ownerId": {
                         "anyOf": [
                           {
@@ -104463,6 +104510,7 @@
                       "editRestricted",
                       "link",
                       "creatorId",
+                      "contentLanguage",
                       "ownerId",
                       "status",
                       "createdAt",
@@ -104495,6 +104543,7 @@
                     "link": null,
                     "creatorId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                     "ownerId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                    "contentLanguage": null,
                     "status": {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
                       "builtIn": "verified",
@@ -105219,6 +105268,49 @@
                       ],
                       "description": "Account that created the item, or null."
                     },
+                    "contentLanguage": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "Content language as an ISO 639-1 code, or `other` for a language without its own word matching. Words are then matched as written. New values can be added in later versions; handle unknown values.",
+                          "x-extensible-enum": [
+                            "ar",
+                            "ca",
+                            "da",
+                            "de",
+                            "el",
+                            "en",
+                            "es",
+                            "eu",
+                            "fi",
+                            "fr",
+                            "ga",
+                            "hi",
+                            "hu",
+                            "hy",
+                            "id",
+                            "it",
+                            "lt",
+                            "nb",
+                            "ne",
+                            "nl",
+                            "pt",
+                            "ro",
+                            "ru",
+                            "sr",
+                            "sv",
+                            "ta",
+                            "tr",
+                            "yi",
+                            "other"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Language of the page content for search, or null to use the language of the space."
+                    },
                     "ownerId": {
                       "anyOf": [
                         {
@@ -105319,6 +105411,41 @@
                     "spaceAccess": {
                       "type": "boolean",
                       "description": "Whether the caller has access to the space; false when the item is visible only through a share or link."
+                    },
+                    "spaceContentLanguage": {
+                      "type": "string",
+                      "description": "Content language of the space, which pages without a content language of their own use for search.",
+                      "x-extensible-enum": [
+                        "ar",
+                        "ca",
+                        "da",
+                        "de",
+                        "el",
+                        "en",
+                        "es",
+                        "eu",
+                        "fi",
+                        "fr",
+                        "ga",
+                        "hi",
+                        "hu",
+                        "hy",
+                        "id",
+                        "it",
+                        "lt",
+                        "nb",
+                        "ne",
+                        "nl",
+                        "pt",
+                        "ro",
+                        "ru",
+                        "sr",
+                        "sv",
+                        "ta",
+                        "tr",
+                        "yi",
+                        "other"
+                      ]
                     },
                     "ancestors": {
                       "type": "array",
@@ -105427,6 +105554,7 @@
                     "editRestricted",
                     "link",
                     "creatorId",
+                    "contentLanguage",
                     "ownerId",
                     "status",
                     "createdAt",
@@ -105435,6 +105563,7 @@
                     "spaceKey",
                     "spaceName",
                     "spaceAccess",
+                    "spaceContentLanguage",
                     "ancestors",
                     "owner",
                     "ownershipTransferable"
@@ -105460,6 +105589,7 @@
                   "link": null,
                   "creatorId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                   "ownerId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                  "contentLanguage": null,
                   "status": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
                     "builtIn": "verified",
@@ -105472,6 +105602,7 @@
                   "spaceKey": "ITOPS",
                   "spaceName": "IT Operations",
                   "spaceAccess": true,
+                  "spaceContentLanguage": "en",
                   "ancestors": [],
                   "owner": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
@@ -105870,6 +106001,49 @@
                       ],
                       "description": "Account that created the item, or null."
                     },
+                    "contentLanguage": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "Content language as an ISO 639-1 code, or `other` for a language without its own word matching. Words are then matched as written. New values can be added in later versions; handle unknown values.",
+                          "x-extensible-enum": [
+                            "ar",
+                            "ca",
+                            "da",
+                            "de",
+                            "el",
+                            "en",
+                            "es",
+                            "eu",
+                            "fi",
+                            "fr",
+                            "ga",
+                            "hi",
+                            "hu",
+                            "hy",
+                            "id",
+                            "it",
+                            "lt",
+                            "nb",
+                            "ne",
+                            "nl",
+                            "pt",
+                            "ro",
+                            "ru",
+                            "sr",
+                            "sv",
+                            "ta",
+                            "tr",
+                            "yi",
+                            "other"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Language of the page content for search, or null to use the language of the space."
+                    },
                     "ownerId": {
                       "anyOf": [
                         {
@@ -105977,6 +106151,7 @@
                     "editRestricted",
                     "link",
                     "creatorId",
+                    "contentLanguage",
                     "ownerId",
                     "status",
                     "createdAt",
@@ -106004,6 +106179,7 @@
                   "link": null,
                   "creatorId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                   "ownerId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                  "contentLanguage": null,
                   "status": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
                     "builtIn": "verified",
@@ -107043,6 +107219,49 @@
                       ],
                       "description": "Account that created the item, or null."
                     },
+                    "contentLanguage": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "Content language as an ISO 639-1 code, or `other` for a language without its own word matching. Words are then matched as written. New values can be added in later versions; handle unknown values.",
+                          "x-extensible-enum": [
+                            "ar",
+                            "ca",
+                            "da",
+                            "de",
+                            "el",
+                            "en",
+                            "es",
+                            "eu",
+                            "fi",
+                            "fr",
+                            "ga",
+                            "hi",
+                            "hu",
+                            "hy",
+                            "id",
+                            "it",
+                            "lt",
+                            "nb",
+                            "ne",
+                            "nl",
+                            "pt",
+                            "ro",
+                            "ru",
+                            "sr",
+                            "sv",
+                            "ta",
+                            "tr",
+                            "yi",
+                            "other"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Language of the page content for search, or null to use the language of the space."
+                    },
                     "ownerId": {
                       "anyOf": [
                         {
@@ -107150,6 +107369,7 @@
                     "editRestricted",
                     "link",
                     "creatorId",
+                    "contentLanguage",
                     "ownerId",
                     "status",
                     "createdAt",
@@ -107177,6 +107397,7 @@
                   "link": null,
                   "creatorId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                   "ownerId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                  "contentLanguage": null,
                   "status": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
                     "builtIn": "verified",
@@ -107646,6 +107867,49 @@
                       ],
                       "description": "Account that created the item, or null."
                     },
+                    "contentLanguage": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "Content language as an ISO 639-1 code, or `other` for a language without its own word matching. Words are then matched as written. New values can be added in later versions; handle unknown values.",
+                          "x-extensible-enum": [
+                            "ar",
+                            "ca",
+                            "da",
+                            "de",
+                            "el",
+                            "en",
+                            "es",
+                            "eu",
+                            "fi",
+                            "fr",
+                            "ga",
+                            "hi",
+                            "hu",
+                            "hy",
+                            "id",
+                            "it",
+                            "lt",
+                            "nb",
+                            "ne",
+                            "nl",
+                            "pt",
+                            "ro",
+                            "ru",
+                            "sr",
+                            "sv",
+                            "ta",
+                            "tr",
+                            "yi",
+                            "other"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Language of the page content for search, or null to use the language of the space."
+                    },
                     "ownerId": {
                       "anyOf": [
                         {
@@ -107753,6 +108017,7 @@
                     "editRestricted",
                     "link",
                     "creatorId",
+                    "contentLanguage",
                     "ownerId",
                     "status",
                     "createdAt",
@@ -107780,6 +108045,7 @@
                   "link": null,
                   "creatorId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                   "ownerId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                  "contentLanguage": null,
                   "status": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
                     "builtIn": "verified",
@@ -133696,6 +133962,937 @@
         }
       }
     },
+    "/api/v1/organizations/{organizationId}/search": {
+      "get": {
+        "operationId": "search.search",
+        "summary": "Search the content of an organization",
+        "description": "Searches pages, blog posts and comments of all spaces of the organization the caller can read, for the search page and for search while typing. Results, counts and excerpts only ever include content the caller can read; pages shared with the caller show no space or path. Drafts are never searched. Unknown filter values and values of things the caller cannot see give the same empty answer.\n\nRequires the permission `organization.search` on the organization in `organizationId`.",
+        "tags": [
+          "Search"
+        ],
+        "x-pagehall-permission": {
+          "action": "organization.search",
+          "resource": "organization",
+          "parameter": "organizationId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the organization.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "description": "The search text. Words must all match. `\"exact phrase\"` matches the words in this order, `-word` excludes a word, `OR` between two words matches either. The operators `space:KEY`, `label:name`, `author:name`, `status:name` (default values also by their English name, such as `status:verified`) and `type:page|blog|comment` filter like the parameters; quote values with spaces.",
+            "schema": {
+              "default": "",
+              "type": "string",
+              "maxLength": 500
+            }
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "required": false,
+            "description": "`full` (default) for the search page with counts per filter value and pages of results. `quick` for search while typing: few results, the last word also matches longer words, results of `spaceId` first, no counts and no further pages.",
+            "schema": {
+              "default": "full",
+              "type": "string",
+              "enum": [
+                "full",
+                "quick"
+              ]
+            }
+          },
+          {
+            "name": "spaceId",
+            "in": "query",
+            "required": false,
+            "description": "In quick search, the space the person is in; its results come first.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "spaceIds",
+            "in": "query",
+            "required": false,
+            "description": "Only results in these spaces. Up to 20 values, separated by commas.",
+            "schema": {
+              "type": "string",
+              "maxLength": 2000
+            }
+          },
+          {
+            "name": "types",
+            "in": "query",
+            "required": false,
+            "description": "Only results of these types: `page`, `blogPost` or `comment`. Up to 20 values, separated by commas.",
+            "schema": {
+              "type": "string",
+              "maxLength": 2000
+            }
+          },
+          {
+            "name": "labels",
+            "in": "query",
+            "required": false,
+            "description": "Only pages with at least one of these labels. Up to 20 values, separated by commas.",
+            "schema": {
+              "type": "string",
+              "maxLength": 2000
+            }
+          },
+          {
+            "name": "authorIds",
+            "in": "query",
+            "required": false,
+            "description": "Only results by these authors. Up to 20 values, separated by commas.",
+            "schema": {
+              "type": "string",
+              "maxLength": 2000
+            }
+          },
+          {
+            "name": "statusIds",
+            "in": "query",
+            "required": false,
+            "description": "Only pages with one of these status values. Up to 20 values, separated by commas.",
+            "schema": {
+              "type": "string",
+              "maxLength": 2000
+            }
+          },
+          {
+            "name": "includeArchived",
+            "in": "query",
+            "required": false,
+            "description": "`true` includes archived pages. Default `false`.",
+            "schema": {
+              "default": "false",
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          },
+          {
+            "name": "updatedAfter",
+            "in": "query",
+            "required": false,
+            "description": "Only results changed at or after this time. ISO 8601 timestamp; an offset is allowed.",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "updatedBefore",
+            "in": "query",
+            "required": false,
+            "description": "Only results changed before this time. ISO 8601 timestamp; an offset is allowed.",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "description": "`relevance` (default), best matches first, or `newest`, last changed first.",
+            "schema": {
+              "default": "relevance",
+              "type": "string",
+              "enum": [
+                "relevance",
+                "newest"
+              ]
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Cursor from `nextCursor` of the previous page. Leave it out for the first page.",
+            "schema": {
+              "type": "string",
+              "maxLength": 500
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of results, from 1 to 50. Default 20, in quick search 8.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The results.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "results": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "description": "`page`, `blogPost` or `comment`. New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
+                              "page",
+                              "blogPost",
+                              "comment"
+                            ]
+                          },
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the page, blog post or comment."
+                          },
+                          "itemId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the page or blog post; for a comment, the page it belongs to."
+                          },
+                          "title": {
+                            "type": "string",
+                            "description": "Title of the page or blog post; for a comment, of its page."
+                          },
+                          "heading": {
+                            "type": "string",
+                            "description": "Heading of the section that matched, or an empty string."
+                          },
+                          "anchor": {
+                            "description": "Anchor of that heading on the page, or null.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "excerpt": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "text": {
+                                  "type": "string",
+                                  "description": "Part of the excerpt."
+                                },
+                                "highlighted": {
+                                  "type": "boolean",
+                                  "description": "Whether this part matched the search words."
+                                }
+                              },
+                              "required": [
+                                "text",
+                                "highlighted"
+                              ],
+                              "additionalProperties": false,
+                              "description": "Part of an excerpt."
+                            },
+                            "description": "Text around the matched words, from content the caller can read only."
+                          },
+                          "space": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the space."
+                                  },
+                                  "key": {
+                                    "type": "string",
+                                    "description": "Key of the space."
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "description": "Name of the space. Empty for personal spaces, which clients name themselves."
+                                  },
+                                  "personal": {
+                                    "type": "boolean",
+                                    "description": "Whether this is a personal space."
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "key",
+                                  "name",
+                                  "personal"
+                                ],
+                                "additionalProperties": false,
+                                "description": "A space the caller can open."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The space, or null when the caller can read the page only because it was shared with them."
+                          },
+                          "sharedWithYou": {
+                            "type": "boolean",
+                            "description": "Whether the caller can read the page only through a share. Space and path stay hidden then."
+                          },
+                          "path": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "description": "ID of the page."
+                                },
+                                "title": {
+                                  "type": "string",
+                                  "description": "Title of the page."
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "title"
+                              ],
+                              "additionalProperties": false,
+                              "description": "A parent page."
+                            },
+                            "description": "Parent pages the caller can read, from the top. Empty for shared pages."
+                          },
+                          "labels": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Labels of the page."
+                          },
+                          "status": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the status value."
+                                  },
+                                  "builtIn": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "x-extensible-enum": [
+                                          "roughDraft",
+                                          "inProgress",
+                                          "readyForReview",
+                                          "verified"
+                                        ]
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ],
+                                    "description": "Which default value this is, or null for a value a space admin added. Clients show the translated name of a default value unless `name` is set. New values can be added in later versions; handle unknown values."
+                                  },
+                                  "name": {
+                                    "description": "Name set by a space admin, or null to show the default name.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "color": {
+                                    "type": "string",
+                                    "enum": [
+                                      "neutral",
+                                      "accent",
+                                      "info",
+                                      "success",
+                                      "warning",
+                                      "danger"
+                                    ],
+                                    "description": "Color of the status: `neutral`, `accent`, `info`, `success`, `warning` or `danger`."
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "builtIn",
+                                  "name",
+                                  "color"
+                                ],
+                                "additionalProperties": false,
+                                "description": "A page status."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Status of the page, or null when it has none or page status is turned off in the space."
+                          },
+                          "author": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the author."
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "description": "Name of the author."
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The author, or null when unknown or not visible to the caller."
+                          },
+                          "archived": {
+                            "type": "boolean",
+                            "description": "Whether the page is archived."
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "When the content last changed. ISO 8601 timestamp in UTC."
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "id",
+                          "itemId",
+                          "title",
+                          "heading",
+                          "anchor",
+                          "excerpt",
+                          "space",
+                          "sharedWithYou",
+                          "path",
+                          "labels",
+                          "status",
+                          "author",
+                          "archived",
+                          "updatedAt"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A search result."
+                      },
+                      "description": "Results, in the requested order."
+                    },
+                    "total": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of results the caller can read, on all pages."
+                    },
+                    "nextCursor": {
+                      "description": "Cursor for the next page, or null on the last page.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "facets": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "types": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "value": {
+                                    "type": "string",
+                                    "description": "The type. New values can be added in later versions; handle unknown values.",
+                                    "x-extensible-enum": [
+                                      "page",
+                                      "blogPost",
+                                      "comment"
+                                    ]
+                                  },
+                                  "count": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991,
+                                    "description": "Number of results."
+                                  }
+                                },
+                                "required": [
+                                  "value",
+                                  "count"
+                                ],
+                                "additionalProperties": false,
+                                "description": "Type"
+                              },
+                              "description": "Types with their number of results."
+                            },
+                            "spaces": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "format": "uuid",
+                                        "description": "ID of the space."
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ],
+                                    "description": "ID of the space, or null for pages shared with the caller."
+                                  },
+                                  "key": {
+                                    "description": "Key of the space, or null.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "name": {
+                                    "description": "Name of the space, or null.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "personal": {
+                                    "type": "boolean",
+                                    "description": "Whether this is a personal space."
+                                  },
+                                  "count": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991,
+                                    "description": "Number of results."
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "key",
+                                  "name",
+                                  "personal",
+                                  "count"
+                                ],
+                                "additionalProperties": false,
+                                "description": "A space."
+                              },
+                              "description": "Spaces with their number of results."
+                            },
+                            "labels": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "value": {
+                                    "type": "string",
+                                    "description": "The label."
+                                  },
+                                  "count": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991,
+                                    "description": "Number of results."
+                                  }
+                                },
+                                "required": [
+                                  "value",
+                                  "count"
+                                ],
+                                "additionalProperties": false,
+                                "description": "Label"
+                              },
+                              "description": "Labels with their number of results."
+                            },
+                            "authors": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the author."
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "description": "Name of the author."
+                                  },
+                                  "count": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991,
+                                    "description": "Number of results."
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name",
+                                  "count"
+                                ],
+                                "additionalProperties": false,
+                                "description": "An author."
+                              },
+                              "description": "Authors with their number of results."
+                            },
+                            "statuses": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the status value."
+                                  },
+                                  "builtIn": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "x-extensible-enum": [
+                                          "roughDraft",
+                                          "inProgress",
+                                          "readyForReview",
+                                          "verified"
+                                        ]
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ],
+                                    "description": "Which default value this is, or null for a value a space admin added. Clients show the translated name of a default value unless `name` is set. New values can be added in later versions; handle unknown values."
+                                  },
+                                  "name": {
+                                    "description": "Name set by a space admin, or null to show the default name.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "color": {
+                                    "type": "string",
+                                    "enum": [
+                                      "neutral",
+                                      "accent",
+                                      "info",
+                                      "success",
+                                      "warning",
+                                      "danger"
+                                    ],
+                                    "description": "Color of the status: `neutral`, `accent`, `info`, `success`, `warning` or `danger`."
+                                  },
+                                  "count": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991,
+                                    "description": "Number of results."
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "builtIn",
+                                  "name",
+                                  "color",
+                                  "count"
+                                ],
+                                "additionalProperties": false,
+                                "description": "A status value."
+                              },
+                              "description": "Status values with their number of results."
+                            }
+                          },
+                          "required": [
+                            "types",
+                            "spaces",
+                            "labels",
+                            "authors",
+                            "statuses"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Number of results per filter value, or null in quick search."
+                    },
+                    "index": {
+                      "type": "object",
+                      "properties": {
+                        "building": {
+                          "type": "boolean",
+                          "description": "Whether the index is being built; results may be incomplete meanwhile."
+                        }
+                      },
+                      "required": [
+                        "building"
+                      ],
+                      "additionalProperties": false,
+                      "description": "State of the search index."
+                    }
+                  },
+                  "required": [
+                    "results",
+                    "total",
+                    "nextCursor",
+                    "facets",
+                    "index"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Search results."
+                },
+                "example": {
+                  "results": [
+                    {
+                      "type": "page",
+                      "id": "01929b1e-7c1a-7000-8000-000000000020",
+                      "itemId": "01929b1e-7c1a-7000-8000-000000000020",
+                      "title": "VPN access",
+                      "heading": "Setup",
+                      "anchor": "setup",
+                      "excerpt": [
+                        {
+                          "text": "Install the ",
+                          "highlighted": false
+                        },
+                        {
+                          "text": "WireGuard",
+                          "highlighted": true
+                        },
+                        {
+                          "text": " client on your laptop.",
+                          "highlighted": false
+                        }
+                      ],
+                      "space": {
+                        "id": "01929b1e-7c1a-7000-8000-000000000010",
+                        "key": "ITOPS",
+                        "name": "IT Operations",
+                        "personal": false
+                      },
+                      "sharedWithYou": false,
+                      "path": [],
+                      "labels": [
+                        "vpn"
+                      ],
+                      "status": {
+                        "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
+                        "builtIn": "verified",
+                        "name": null,
+                        "color": "success"
+                      },
+                      "author": {
+                        "id": "01929b1e-7c1a-7000-8000-000000000001",
+                        "name": "Ada Lovelace"
+                      },
+                      "archived": false,
+                      "updatedAt": "2026-10-14T08:30:00.000Z"
+                    }
+                  ],
+                  "total": 1,
+                  "nextCursor": null,
+                  "facets": {
+                    "types": [
+                      {
+                        "value": "page",
+                        "count": 1
+                      }
+                    ],
+                    "spaces": [
+                      {
+                        "id": "01929b1e-7c1a-7000-8000-000000000010",
+                        "key": "ITOPS",
+                        "name": "IT Operations",
+                        "personal": false,
+                        "count": 1
+                      }
+                    ],
+                    "labels": [
+                      {
+                        "value": "vpn",
+                        "count": 1
+                      }
+                    ],
+                    "authors": [
+                      {
+                        "id": "01929b1e-7c1a-7000-8000-000000000001",
+                        "name": "Ada Lovelace",
+                        "count": 1
+                      }
+                    ],
+                    "statuses": [
+                      {
+                        "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
+                        "builtIn": "verified",
+                        "name": null,
+                        "color": "success",
+                        "count": 1
+                      }
+                    ]
+                  },
+                  "index": {
+                    "building": false
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/organizations/{organizationId}/service-accounts": {
       "get": {
         "operationId": "serviceAccounts.list",
@@ -147102,6 +148299,621 @@
                       "title": "The document does not match the editor schema",
                       "status": 400,
                       "code": "invalidDocument"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pages/{pageId}/content-language": {
+      "put": {
+        "operationId": "items.setContentLanguage",
+        "summary": "Set the content language of a page",
+        "description": "Sets the language search uses to match the words of the page, or clears it so the page uses the content language of its space.\n\nRequires the permission `item.edit` on the item in `pageId`.",
+        "tags": [
+          "Pages"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.edit",
+          "resource": "item",
+          "parameter": "pageId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "pageId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the page.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "language": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "ar",
+                          "ca",
+                          "da",
+                          "de",
+                          "el",
+                          "en",
+                          "es",
+                          "eu",
+                          "fi",
+                          "fr",
+                          "ga",
+                          "hi",
+                          "hu",
+                          "hy",
+                          "id",
+                          "it",
+                          "lt",
+                          "nb",
+                          "ne",
+                          "nl",
+                          "pt",
+                          "ro",
+                          "ru",
+                          "sr",
+                          "sv",
+                          "ta",
+                          "tr",
+                          "yi",
+                          "other"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "The language, or null to use the language of the space."
+                  }
+                },
+                "required": [
+                  "language"
+                ],
+                "additionalProperties": false,
+                "description": "The content language of a page."
+              },
+              "example": {
+                "language": "de"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The page.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the item."
+                    },
+                    "spaceId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "Space of the item."
+                    },
+                    "parentId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Parent item, or null at the root of the tree."
+                    },
+                    "kind": {
+                      "type": "string",
+                      "description": "`page`, `folder`, `link` or `blogPost`. Blog posts are not part of the tree; they appear in the blog of their space. New values can be added in later versions; handle unknown values.",
+                      "x-extensible-enum": [
+                        "page",
+                        "folder",
+                        "link",
+                        "blogPost",
+                        "meetingSeries",
+                        "meetingTopic"
+                      ]
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "Title. Empty for a link to content the caller cannot read."
+                    },
+                    "description": {
+                      "type": "string",
+                      "description": "Short description of a folder."
+                    },
+                    "width": {
+                      "type": "string",
+                      "enum": [
+                        "fixed",
+                        "full"
+                      ],
+                      "description": "Page width: `fixed` or `full`."
+                    },
+                    "mode": {
+                      "type": "string",
+                      "enum": [
+                        "publish",
+                        "live"
+                      ],
+                      "description": "Editing mode of a page: `publish` (readers see the last published version while editors work on a draft) or `live` (readers see every change at once). Folders and links are always `live`."
+                    },
+                    "published": {
+                      "type": "boolean",
+                      "description": "Whether readers can see the page. False for a page in publish mode that was never published; only editors see it."
+                    },
+                    "archived": {
+                      "type": "boolean",
+                      "description": "Whether the item is archived. Archived items are read-only."
+                    },
+                    "position": {
+                      "type": "string",
+                      "description": "Sort key among the siblings. Items sort by it in binary order."
+                    },
+                    "hasChildren": {
+                      "type": "boolean",
+                      "description": "Whether the item has children."
+                    },
+                    "viewRestriction": {
+                      "type": "string",
+                      "enum": [
+                        "none",
+                        "own",
+                        "inherited"
+                      ],
+                      "description": "Whether only an access list may view the item: set on the item itself, on a page above, or not at all."
+                    },
+                    "editRestricted": {
+                      "type": "boolean",
+                      "description": "Whether only an access list may edit the item."
+                    },
+                    "link": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "itemId": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Linked page or folder, or null for an address or when the caller cannot read it."
+                            },
+                            "url": {
+                              "description": "Linked `http` or `https` address, or null.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "accessible": {
+                              "type": "boolean",
+                              "description": "Whether the caller can open the target. If not, the title is empty."
+                            },
+                            "inTrash": {
+                              "type": "boolean",
+                              "description": "Whether the target is in the trash. Only true for callers who could read it before."
+                            },
+                            "target": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "spaceId": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "description": "Space of the target."
+                                    },
+                                    "spaceKey": {
+                                      "type": "string",
+                                      "description": "Key of that space."
+                                    },
+                                    "kind": {
+                                      "type": "string",
+                                      "description": "Kind of the target. New values can be added in later versions; handle unknown values.",
+                                      "x-extensible-enum": [
+                                        "page",
+                                        "folder",
+                                        "link",
+                                        "blogPost",
+                                        "meetingSeries",
+                                        "meetingTopic"
+                                      ]
+                                    },
+                                    "title": {
+                                      "type": "string",
+                                      "description": "Title of the target."
+                                    }
+                                  },
+                                  "required": [
+                                    "spaceId",
+                                    "spaceKey",
+                                    "kind",
+                                    "title"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The linked page or folder, or null."
+                            }
+                          },
+                          "required": [
+                            "itemId",
+                            "url",
+                            "accessible",
+                            "inTrash",
+                            "target"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Where a link in the page tree points."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Target of a link, or null for pages and folders."
+                    },
+                    "creatorId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Account that created the item, or null."
+                    },
+                    "contentLanguage": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "Content language as an ISO 639-1 code, or `other` for a language without its own word matching. Words are then matched as written. New values can be added in later versions; handle unknown values.",
+                          "x-extensible-enum": [
+                            "ar",
+                            "ca",
+                            "da",
+                            "de",
+                            "el",
+                            "en",
+                            "es",
+                            "eu",
+                            "fi",
+                            "fr",
+                            "ga",
+                            "hi",
+                            "hu",
+                            "hy",
+                            "id",
+                            "it",
+                            "lt",
+                            "nb",
+                            "ne",
+                            "nl",
+                            "pt",
+                            "ro",
+                            "ru",
+                            "sr",
+                            "sv",
+                            "ta",
+                            "tr",
+                            "yi",
+                            "other"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Language of the page content for search, or null to use the language of the space."
+                    },
+                    "ownerId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Owner of the item, or null. The owner stays set when the person leaves; `owner.active` in the item details says whether the item has an active owner."
+                    },
+                    "status": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the status value."
+                            },
+                            "builtIn": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "x-extensible-enum": [
+                                    "roughDraft",
+                                    "inProgress",
+                                    "readyForReview",
+                                    "verified"
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Which default value this is, or null for a value a space admin added. Clients show the translated name of a default value unless `name` is set. New values can be added in later versions; handle unknown values."
+                            },
+                            "name": {
+                              "description": "Name set by a space admin, or null to show the default name.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "color": {
+                              "type": "string",
+                              "enum": [
+                                "neutral",
+                                "accent",
+                                "info",
+                                "success",
+                                "warning",
+                                "danger"
+                              ],
+                              "description": "Color of the status: `neutral`, `accent`, `info`, `success`, `warning` or `danger`."
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "builtIn",
+                            "name",
+                            "color"
+                          ],
+                          "additionalProperties": false,
+                          "description": "A page status."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Status of a page, or null when it has none or page status is turned off in the space."
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the item was created. ISO 8601 timestamp in UTC."
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the item last changed in the tree. ISO 8601 timestamp in UTC."
+                    },
+                    "contentUpdatedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the content of the page last changed. ISO 8601 timestamp in UTC."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "spaceId",
+                    "parentId",
+                    "kind",
+                    "title",
+                    "description",
+                    "width",
+                    "mode",
+                    "published",
+                    "archived",
+                    "position",
+                    "hasChildren",
+                    "viewRestriction",
+                    "editRestricted",
+                    "link",
+                    "creatorId",
+                    "contentLanguage",
+                    "ownerId",
+                    "status",
+                    "createdAt",
+                    "updatedAt",
+                    "contentUpdatedAt"
+                  ],
+                  "additionalProperties": false,
+                  "description": "An item of the page tree."
+                },
+                "example": {
+                  "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                  "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
+                  "parentId": null,
+                  "kind": "page",
+                  "title": "VPN access for remote staff",
+                  "description": "",
+                  "width": "fixed",
+                  "mode": "publish",
+                  "published": true,
+                  "archived": false,
+                  "position": "a1",
+                  "hasChildren": false,
+                  "viewRestriction": "none",
+                  "editRestricted": false,
+                  "link": null,
+                  "creatorId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                  "ownerId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                  "contentLanguage": "de",
+                  "status": {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
+                    "builtIn": "verified",
+                    "name": null,
+                    "color": "success"
+                  },
+                  "createdAt": "2026-10-05T08:00:00.000Z",
+                  "updatedAt": "2026-10-05T08:00:00.000Z",
+                  "contentUpdatedAt": "2026-10-05T08:00:00.000Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
                     }
                   },
                   "invalidInput": {
@@ -166533,6 +168345,49 @@
                             ],
                             "description": "Account that created the item, or null."
                           },
+                          "contentLanguage": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "description": "Content language as an ISO 639-1 code, or `other` for a language without its own word matching. Words are then matched as written. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "ar",
+                                  "ca",
+                                  "da",
+                                  "de",
+                                  "el",
+                                  "en",
+                                  "es",
+                                  "eu",
+                                  "fi",
+                                  "fr",
+                                  "ga",
+                                  "hi",
+                                  "hu",
+                                  "hy",
+                                  "id",
+                                  "it",
+                                  "lt",
+                                  "nb",
+                                  "ne",
+                                  "nl",
+                                  "pt",
+                                  "ro",
+                                  "ru",
+                                  "sr",
+                                  "sv",
+                                  "ta",
+                                  "tr",
+                                  "yi",
+                                  "other"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Language of the page content for search, or null to use the language of the space."
+                          },
                           "ownerId": {
                             "anyOf": [
                               {
@@ -166640,6 +168495,7 @@
                           "editRestricted",
                           "link",
                           "creatorId",
+                          "contentLanguage",
                           "ownerId",
                           "status",
                           "createdAt",
@@ -166686,6 +168542,7 @@
                       "link": null,
                       "creatorId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                       "ownerId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                      "contentLanguage": null,
                       "status": {
                         "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
                         "builtIn": "verified",
@@ -167204,6 +169061,49 @@
                       ],
                       "description": "Account that created the item, or null."
                     },
+                    "contentLanguage": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "Content language as an ISO 639-1 code, or `other` for a language without its own word matching. Words are then matched as written. New values can be added in later versions; handle unknown values.",
+                          "x-extensible-enum": [
+                            "ar",
+                            "ca",
+                            "da",
+                            "de",
+                            "el",
+                            "en",
+                            "es",
+                            "eu",
+                            "fi",
+                            "fr",
+                            "ga",
+                            "hi",
+                            "hu",
+                            "hy",
+                            "id",
+                            "it",
+                            "lt",
+                            "nb",
+                            "ne",
+                            "nl",
+                            "pt",
+                            "ro",
+                            "ru",
+                            "sr",
+                            "sv",
+                            "ta",
+                            "tr",
+                            "yi",
+                            "other"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Language of the page content for search, or null to use the language of the space."
+                    },
                     "ownerId": {
                       "anyOf": [
                         {
@@ -167311,6 +169211,7 @@
                     "editRestricted",
                     "link",
                     "creatorId",
+                    "contentLanguage",
                     "ownerId",
                     "status",
                     "createdAt",
@@ -167338,6 +169239,7 @@
                   "link": null,
                   "creatorId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                   "ownerId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                  "contentLanguage": null,
                   "status": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
                     "builtIn": "verified",
@@ -173037,7 +174939,7 @@
       "get": {
         "operationId": "templates.spaceSettings",
         "summary": "List the settings of a space",
-        "description": "Lists the settings that can be set for the space: default editing mode of new pages, the idle time after which live pages get a version, and the trash periods. Each shows whether it is inherited or set here.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
+        "description": "Lists the settings that can be set for the space: default editing mode of new pages, the idle time after which live pages get a version, the trash periods and the content language search uses. Each shows whether it is inherited or set here.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
         "tags": [
           "Settings"
         ],

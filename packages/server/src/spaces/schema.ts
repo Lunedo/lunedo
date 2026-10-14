@@ -185,6 +185,7 @@ export const treeItems = pgTable(
     restorePosition: binaryOrderedText(),
     creatorId: uuid().references(() => accounts.id, { onDelete: "set null" }),
     ownerId: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    contentLanguage: text(),
     statusId: uuid().references((): AnyPgColumn => pageStatusValues.id, { onDelete: "set null" }),
     statusChangedAt: timestampColumn(),
     statusChangedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
