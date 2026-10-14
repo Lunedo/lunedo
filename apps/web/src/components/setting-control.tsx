@@ -10,6 +10,7 @@ import {
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
+import { clockTime } from "../format/clock-time.js";
 import { browserTimeZone } from "../format/time-zones.js";
 import { supportedLanguages } from "../i18n/index.js";
 import { translateKey } from "../i18n/translate.js";
@@ -18,13 +19,6 @@ import { languageLabel, localeOptionSet } from "../settings/locale-options.js";
 import { fromMinutes, type SettingField, toMinutes } from "../settings/setting-fields.js";
 
 const INHERITED_LANGUAGE = "inherited";
-
-export function clockTime(time: string, language: string): string {
-  const [hours = 0, minutes = 0] = time.split(":").map(Number);
-  return new Intl.DateTimeFormat(language, { hour: "numeric", minute: "2-digit", timeZone: "UTC" }).format(
-    Date.UTC(2000, 0, 1, hours, minutes),
-  );
-}
 
 export interface SettingControlProps {
   field: SettingField;

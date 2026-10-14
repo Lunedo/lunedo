@@ -13,6 +13,7 @@ import { Info, Lock, LockOpen, MoreHorizontal } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { SettingEntry } from "../api/organization-queries.js";
+import { clockTime } from "../format/clock-time.js";
 import { translateKey } from "../i18n/translate.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { contentLanguageLabel } from "../search/content-language.js";
@@ -26,7 +27,7 @@ import {
 } from "../settings/setting-fields.js";
 import type { SettingChange } from "../settings/setting-mutations.js";
 import { SaveIndicator, useSaveState } from "./auto-save.js";
-import { clockTime, SettingControl } from "./setting-control.js";
+import { SettingControl } from "./setting-control.js";
 import { disabledReason, inheritedValue, SettingSource } from "./setting-source.js";
 
 type Level = "instance" | "organization" | "space" | "user";
