@@ -192,6 +192,12 @@ const responseSchema = z
       })
       .nullable()
       .describe("Number of results per filter value, or null in quick search."),
+    suggestion: z
+      .string()
+      .nullable()
+      .describe(
+        "The search text with misspelled words replaced by similar words from content the caller can read, or null when there is nothing to correct. Always null in quick search.",
+      ),
     index: z
       .object({
         building: z
@@ -248,6 +254,7 @@ const exampleResponse = {
     authors: [{ id: "01929b1e-7c1a-7000-8000-000000000001", name: "Ada Lovelace", count: 1 }],
     statuses: [{ ...examplePageStatus, count: 1 }],
   },
+  suggestion: null,
   index: { building: false },
 };
 
@@ -283,6 +290,7 @@ function toApi(response: SearchResponse): z.output<typeof responseSchema> {
           })),
         }
       : null,
+    suggestion: response.suggestion,
     index: { building: response.index.building },
   };
 }

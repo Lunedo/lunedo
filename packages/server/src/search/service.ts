@@ -96,6 +96,7 @@ export interface SearchResponse {
   total: number;
   nextCursor: SearchCursor | null;
   facets: SearchFacets | null;
+  suggestion: string | null;
   index: { building: boolean };
 }
 
@@ -128,6 +129,25 @@ export function excerptParts(raw: string): ExcerptPart[] {
   return parts
     .map((part) => ({ ...part, text: part.text.replaceAll(EXCERPT_START, "").replaceAll(EXCERPT_END, "") }))
     .filter((part) => part.text.length > 0);
+}
+
+export function correctedQuery(text: string, corrections: ReadonlyMap<string, string>): string | null {
+  if (corrections.size === 0) return null;
+  let changed = false;
+  const corrected = text
+    .split('"')
+    .map((segment, index) =>
+      index % 2 === 1
+        ? segment
+        : segment.replace(/(?<=^|\s)\p{L}+(?=\s|$)/gu, (word) => {
+            const replacement = corrections.get(word.toLowerCase());
+            if (!replacement) return word;
+            changed = true;
+            return replacement;
+          }),
+    )
+    .join('"');
+  return changed ? corrected : null;
 }
 
 export class SearchService {
@@ -167,13 +187,14 @@ export class SearchService {
       total: 0,
       nextCursor: null,
       facets: quick ? null : emptyFacets(),
+      suggestion: null,
       index,
     };
     const viewer = await loadViewer(this.#database, principal, organizationId);
     if (!viewer) return empty;
     const query = parseQuery(request.query);
     const spaces = await this.#visibleSpaces(principal, organizationId);
-    const filters = await this.#filters(principal, organizationId, request, query.operators, spaces);
+    const filters = await this.#filters(principal, request, query.operators, spaces);
     if (!filters) return empty;
     const limit = Math.min(Math.max(request.limit, 1), SEARCH_PAGE_LIMIT);
     const result = await this.#adapter.search(this.#database, {
@@ -188,6 +209,7 @@ export class SearchService {
       firstSpaceId:
         quick && request.currentSpaceId && spaces.has(request.currentSpaceId) ? request.currentSpaceId : null,
       facets: !quick,
+      suggest: !quick,
     });
     const hits = await this.#describe(principal, result.hits, spaces);
     const last = hits[hits.length - 1];
@@ -196,6 +218,7 @@ export class SearchService {
       total: result.total,
       nextCursor: result.hasMore && last && !quick ? last.cursor : null,
       facets: result.facets ? await this.#facets(principal, result.facets, spaces) : null,
+      suggestion: correctedQuery(request.query, result.corrections),
       index,
     };
   }
@@ -210,7 +233,6 @@ export class SearchService {
 
   async #filters(
     principal: Principal,
-    organizationId: string,
     request: SearchRequest,
     operators: ReturnType<typeof parseQuery>["operators"],
     spaces: Map<string, SearchSpace>,
@@ -246,16 +268,16 @@ export class SearchService {
     let authorIds: string[] | null = null;
     if (request.authorIds.length > 0 || operators.author.length > 0) {
       authorIds = [
-        ...new Set([...request.authorIds, ...(await this.#authorsNamed(principal, operators.author))]),
+        ...new Set([
+          ...(await this.#visibleAuthors(principal, request.authorIds)),
+          ...(await this.#authorsNamed(principal, operators.author)),
+        ]),
       ];
     }
 
     const statusRequested = request.statusIds.length > 0 || operators.status.length > 0;
     const statusIds = [
-      ...new Set([
-        ...request.statusIds,
-        ...(await this.#statusesNamed(organizationId, spaces, operators.status)),
-      ]),
+      ...new Set([...request.statusIds, ...(await this.#statusesNamed(spaces, operators.status))]),
     ];
     if (statusRequested && statusIds.length === 0) return null;
 
@@ -271,18 +293,13 @@ export class SearchService {
     };
   }
 
-  async #statusesNamed(
-    organizationId: string,
-    spaces: Map<string, SearchSpace>,
-    names: readonly string[],
-  ): Promise<string[]> {
+  async #statusesNamed(spaces: Map<string, SearchSpace>, names: readonly string[]): Promise<string[]> {
     if (names.length === 0) return [];
     const exact = names.map((name) => name.trim().toLowerCase());
     const builtIn = names.map((name) => name.toLowerCase().replace(/[^a-z]/g, ""));
     const result = await this.#database.execute<{ id: string }>(sql`
       select sv.id from page_status_values sv join spaces s on s.id = sv.space_id
-      where (s.organization_id = ${organizationId} or s.id = any(${sql.param([...spaces.keys()])}::uuid[]))
-        and ${pageStatusEnabledCondition(sql`s`)}
+      where s.id = any(${sql.param([...spaces.keys()])}::uuid[]) and ${pageStatusEnabledCondition(sql`s`)}
         and (lower(sv.name) = any(${sql.param(exact)}::text[])
           or (sv.name is null and lower(sv.built_in) = any(${sql.param(builtIn)}::text[])))`);
     return result.rows.map((row) => row.id);
@@ -295,6 +312,15 @@ export class SearchService {
       from page_status_values sv join spaces s on s.id = sv.space_id
       where sv.id = any(${sql.param([...new Set(ids)])}::uuid[]) and ${pageStatusEnabledCondition(sql`s`)}`);
     return new Map(result.rows.map((row) => [row.id, row]));
+  }
+
+  async #visibleAuthors(principal: Principal, ids: readonly string[]): Promise<string[]> {
+    if (ids.length === 0) return [];
+    const result = await this.#database.execute<{ id: string }>(sql`
+      select a.id from accounts a left join accounts m on m.id = a.merged_into_id
+      where a.id = any(${sql.param([...new Set(ids)])}::uuid[])
+        and ${this.#people.visibleCondition(principal, sql`coalesce(m.id, a.id)`)}`);
+    return result.rows.map((row) => row.id);
   }
 
   async #authorsNamed(principal: Principal, names: readonly string[]): Promise<string[]> {

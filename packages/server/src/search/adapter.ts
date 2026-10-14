@@ -63,6 +63,7 @@ export interface AdapterSearch {
   after: { score: number; updatedAt: string; sourceId: string } | null;
   firstSpaceId: string | null;
   facets: boolean;
+  suggest: boolean;
 }
 
 export interface AdapterHit {
@@ -101,6 +102,7 @@ export interface AdapterResult {
   total: number;
   hasMore: boolean;
   facets: AdapterFacets | null;
+  corrections: Map<string, string>;
 }
 
 export const EXCERPT_START = "\u0001";
