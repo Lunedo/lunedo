@@ -199,6 +199,14 @@ const KNOWN = new Set([
   "fileTooLarge",
   "rangeNotSatisfiable",
   "tooManyRequests",
+  "ownerNeedsEditAccess",
+  "ownershipNotTransferable",
+  "invalidStatus",
+  "statusExists",
+  "statusNotFound",
+  "statusInUse",
+  "statusDisabled",
+  "tooManyStatusValues",
 ]);
 
 const DIRECTORY_PROBLEMS: Record<string, string> = {
@@ -236,6 +244,9 @@ export function problemMessage(t: TFunction, error: unknown): string {
   }
   if (error.code === "shareBeyondOwnAccess" && problem.uncoveredPages) {
     return t("problems.shareBeyondOwnAccessBelow", { count: problem.uncoveredPages });
+  }
+  if (error.code === "statusInUse" && problem.pages) {
+    return t("problems.statusInUsePages", { count: problem.pages });
   }
   if (error.code === "confidentialSharing" && problem.pages) {
     return t("problems.confidentialSharingPages", { count: problem.pages });

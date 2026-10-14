@@ -22,6 +22,7 @@ import { useDocumentTitle } from "../screens/settings/settings-page.js";
 import { FolderDescription } from "./folder-description.js";
 import { InlineTitle } from "./inline-title.js";
 import { itemHref, itemSlug } from "./item-paths.js";
+import { OwnerLine } from "./ownership/owner-line.js";
 import { Redirect } from "./redirect.js";
 import { spaceDisplayName } from "./space-badge.js";
 import { useSpace } from "./space-context.js";
@@ -126,6 +127,13 @@ export function FolderScreen() {
             ) : null}
           </>
         }
+      />
+      <OwnerLine
+        itemId={folder.id}
+        spaceId={space.id}
+        title={folder.title}
+        owner={folder.owner}
+        transferable={folder.ownershipTransferable}
       />
       {canEdit ? (
         <FolderDescription value={folder.description} onSave={(description) => save({ description })} />

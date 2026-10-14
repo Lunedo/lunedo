@@ -18,6 +18,7 @@ import {
   TRASH_KEYS,
 } from "../../settings/settings-index.js";
 import { contentKeys } from "../content-queries.js";
+import { UnownedItems } from "../ownership/unowned-items.js";
 import { spaceDisplayName } from "../space-badge.js";
 import { useSpace } from "../space-context.js";
 import { spaceKeys } from "../space-queries.js";
@@ -57,6 +58,11 @@ export function SpaceContentScreen() {
       icon={Trash2}
     >
       <div className="flex flex-col gap-8">
+        {space.role === "admin" ? (
+          <Panel title={t("ownership.unownedTitle")} description={t("ownership.spaceUnownedDescription")}>
+            <UnownedItems scope={{ spaceId: space.id }} />
+          </Panel>
+        ) : null}
         <Panel title={t("content.pagesSection")}>
           <SettingsList
             settings={entries}

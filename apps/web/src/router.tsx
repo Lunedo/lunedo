@@ -400,6 +400,15 @@ const spaceContentRoute = createRoute({
   ),
 });
 
+const spaceStatusRoute = createRoute({
+  getParentRoute: () => spaceSettingsRoute,
+  path: "/status",
+  component: lazyRouteComponent(
+    () => import("./spaces/settings/space-status-screen.js"),
+    "SpaceStatusScreen",
+  ),
+});
+
 const spaceTemplatesRoute = createRoute({
   getParentRoute: () => spaceSettingsRoute,
   path: "/templates",
@@ -764,6 +773,7 @@ const routeTree = rootRoute.addChildren([
         spacePermissionsRoute,
         spaceAccessRoute,
         spaceContentRoute,
+        spaceStatusRoute,
         spaceTemplatesRoute,
       ]),
     ]),
