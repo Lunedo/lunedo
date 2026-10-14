@@ -1,5 +1,5 @@
 {
-  "id": "0b09256c-1949-4936-bb4c-5305e08fdf3d",
+  "id": "ea51c343-8695-416a-9e4d-a37aca0c784d",
   "prevId": "6dfb2813-d373-433a-aa36-6a8255b9e8c3",
   "version": "7",
   "dialect": "postgresql",
@@ -12567,6 +12567,159 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.recent_searches": {
+      "name": "recent_searches",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "query": {
+          "name": "query",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "filters": {
+          "name": "filters",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fingerprint": {
+          "name": "fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "searched_at": {
+          "name": "searched_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "recent_searches_organization_id_account_id_fingerprint_index": {
+          "name": "recent_searches_organization_id_account_id_fingerprint_index",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "fingerprint",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "recent_searches_organization_id_account_id_searched_at_index": {
+          "name": "recent_searches_organization_id_account_id_searched_at_index",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "searched_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "recent_searches_account_id_index": {
+          "name": "recent_searches_account_id_index",
+          "columns": [
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "recent_searches_organization_id_organizations_id_fk": {
+          "name": "recent_searches_organization_id_organizations_id_fk",
+          "tableFrom": "recent_searches",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "recent_searches_account_id_accounts_id_fk": {
+          "name": "recent_searches_account_id_accounts_id_fk",
+          "tableFrom": "recent_searches",
+          "tableTo": "accounts",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.recent_views": {
       "name": "recent_views",
       "schema": "",
@@ -12589,6 +12742,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "views": {
+          "name": "views",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
         }
       },
       "indexes": {
@@ -13209,6 +13369,133 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.saved_searches": {
+      "name": "saved_searches",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "query": {
+          "name": "query",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "filters": {
+          "name": "filters",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "saved_searches_organization_id_account_id_index": {
+          "name": "saved_searches_organization_id_account_id_index",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "saved_searches_account_id_index": {
+          "name": "saved_searches_account_id_index",
+          "columns": [
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "saved_searches_organization_id_organizations_id_fk": {
+          "name": "saved_searches_organization_id_organizations_id_fk",
+          "tableFrom": "saved_searches",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "saved_searches_account_id_accounts_id_fk": {
+          "name": "saved_searches_account_id_accounts_id_fk",
+          "tableFrom": "saved_searches",
+          "tableTo": "accounts",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.scim_tokens": {
       "name": "scim_tokens",
       "schema": "",
@@ -13469,31 +13756,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "context_item_id": {
-          "name": "context_item_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "context_readers": {
-          "name": "context_readers",
-          "type": "text[]",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "context_restrictions": {
-          "name": "context_restrictions",
-          "type": "uuid[]",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::uuid[]"
-        },
-        "attachment": {
-          "name": "attachment",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
         "document": {
           "name": "document",
           "type": "tsvector",
@@ -13578,21 +13840,6 @@
           "columns": [
             {
               "expression": "author_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "search_chunks_context_item_id_index": {
-          "name": "search_chunks_context_item_id_index",
-          "columns": [
-            {
-              "expression": "context_item_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -13743,19 +13990,6 @@
           ],
           "onDelete": "set null",
           "onUpdate": "no action"
-        },
-        "search_chunks_context_item_id_tree_items_id_fk": {
-          "name": "search_chunks_context_item_id_tree_items_id_fk",
-          "tableFrom": "search_chunks",
-          "tableTo": "tree_items",
-          "columnsFrom": [
-            "context_item_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -13765,91 +13999,6 @@
         "search_chunks_position": {
           "name": "search_chunks_position",
           "value": "\"search_chunks\".\"position\" >= 0"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.search_file_texts": {
-      "name": "search_file_texts",
-      "schema": "",
-      "columns": {
-        "file_id": {
-          "name": "file_id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "extractor_version": {
-          "name": "extractor_version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "state": {
-          "name": "state",
-          "type": "search_file_text_state",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "reason": {
-          "name": "reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "truncated": {
-          "name": "truncated",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "sections": {
-          "name": "sections",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'[]'::jsonb"
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "search_file_texts_file_id_stored_files_id_fk": {
-          "name": "search_file_texts_file_id_stored_files_id_fk",
-          "tableFrom": "search_file_texts",
-          "tableTo": "stored_files",
-          "columnsFrom": [
-            "file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "search_file_texts_reason": {
-          "name": "search_file_texts_reason",
-          "value": "(\"search_file_texts\".\"state\" = 'skipped') = (\"search_file_texts\".\"reason\" is not null)"
         }
       },
       "isRLSEnabled": false
@@ -17717,22 +17866,12 @@
         "calendar"
       ]
     },
-    "public.search_file_text_state": {
-      "name": "search_file_text_state",
-      "schema": "public",
-      "values": [
-        "extracted",
-        "skipped"
-      ]
-    },
     "public.search_source": {
       "name": "search_source",
       "schema": "public",
       "values": [
         "item",
-        "comment",
-        "attachment",
-        "decision"
+        "comment"
       ]
     },
     "public.session_kind": {

@@ -24,11 +24,13 @@ export function RailIcon({ icon: Icon }: { icon: LucideIcon }) {
 export function SearchRailItem() {
   const { t } = useTranslation();
   const shell = useShell();
+  const location = useLocation();
   return (
     <RailButton
       label={t("rail.search")}
       icon={<RailIcon icon={Search} />}
-      onClick={shell.openCommandPalette}
+      current={location.pathname === "/search"}
+      onClick={shell.openSearch}
     />
   );
 }

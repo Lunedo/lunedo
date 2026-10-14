@@ -174,4 +174,63 @@ describe.skipIf(!databaseBaseUrl)("search through the API", () => {
     const cleared = await editor.client.put(`/api/v1/pages/${pageId}/content-language`, { language: null });
     expect(cleared.json().contentLanguage).toBeNull();
   });
+  it("filters by content language and counts recent changes", async () => {
+    const { reader, word } = await setup();
+    const languages = await reader.client.get(`/api/v1/organizations/${organizationId}/search?q=${word}`);
+    expect(languages.json().facets.languages).toHaveLength(1);
+    expect(languages.json().facets.updated).toContainEqual({ value: "week", count: 1 });
+    const none = await reader.client.get(
+      `/api/v1/organizations/${organizationId}/search?q=${word}&languages=xx`,
+    );
+    expect(none.json().total).toBe(0);
+  });
+
+  it("keeps recent searches private to the person who searched", async () => {
+    const { editor, reader } = await setup();
+    const base = `/api/v1/organizations/${organizationId}/search/recent`;
+    const filters = { labels: ["runbook"], updated: "month" };
+    const remembered = await reader.client.post(base, { query: "vpn gateway", filters });
+    expect(remembered.statusCode, remembered.body).toBe(204);
+    const list = await reader.client.get(base);
+    expect(list.statusCode, list.body).toBe(200);
+    expect(list.json()).toEqual([
+      expect.objectContaining({
+        query: "vpn gateway",
+        filters: expect.objectContaining({ labels: ["runbook"], updated: "month", sort: "relevance" }),
+      }),
+    ]);
+    expect((await editor.client.get(base)).json()).toEqual([]);
+    const id = list.json()[0].id as string;
+    expect((await editor.client.delete(`${base}/${id}`)).statusCode).toBe(404);
+    expect((await editor.client.delete(base)).statusCode).toBe(204);
+    expect((await reader.client.get(base)).json()).toHaveLength(1);
+    expect((await reader.client.delete(`${base}/${id}`)).statusCode).toBe(204);
+    expect((await reader.client.get(base)).json()).toEqual([]);
+    const invalid = await reader.client.post(base, { query: "x", filters: { sort: "oldest" } });
+    expect(invalid.statusCode).toBe(400);
+  });
+
+  it("keeps saved searches private and stores the query, never results", async () => {
+    const { editor, reader, word } = await setup();
+    const base = `/api/v1/organizations/${organizationId}/search/saved`;
+    const created = await reader.client.post(base, {
+      name: "Printers",
+      query: word,
+      filters: { types: ["page"] },
+    });
+    expect(created.statusCode, created.body).toBe(201);
+    const saved = created.json();
+    expect(Object.keys(saved).sort()).toEqual(["createdAt", "filters", "id", "name", "query", "updatedAt"]);
+    expect((await editor.client.get(base)).json()).toEqual([]);
+    expect((await editor.client.patch(`${base}/${saved.id}`, { name: "Mine now" })).statusCode).toBe(404);
+    expect((await editor.client.delete(`${base}/${saved.id}`)).statusCode).toBe(404);
+    const renamed = await reader.client.patch(`${base}/${saved.id}`, { name: "Printer pages" });
+    expect(renamed.statusCode, renamed.body).toBe(200);
+    expect(renamed.json().name).toBe("Printer pages");
+    expect((await reader.client.post(base, { name: " ", query: "x", filters: {} })).statusCode).toBe(400);
+    expect((await reader.client.get(base)).json().map((entry: { name: string }) => entry.name)).toEqual([
+      "Printer pages",
+    ]);
+    expect((await reader.client.delete(`${base}/${saved.id}`)).statusCode).toBe(204);
+  });
 });

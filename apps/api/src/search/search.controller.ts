@@ -7,6 +7,7 @@ import {
   type SearchResponse,
   searchContentTypes,
   searchSorts,
+  searchUpdatedRanges,
 } from "@pagehall/server";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
@@ -59,6 +60,10 @@ const searchQuery = z
     labels: list(z.string().max(100), "Only pages with at least one of these labels."),
     authorIds: list(uuid("ID of an author."), "Only results by these authors."),
     statusIds: list(uuid("ID of a status value."), "Only pages with one of these status values."),
+    languages: list(
+      z.string().max(20).describe("A content language code, such as `en`."),
+      "Only results in one of these content languages.",
+    ),
     includeArchived: z
       .enum(["true", "false"])
       .default("false")
@@ -232,9 +237,19 @@ const responseSchema = z
               .describe("A status value."),
           )
           .describe("Status values with their number of results."),
+        languages: facetSchema(z.string().describe("The content language code."), "Content language"),
+        updated: facetSchema(
+          extensibleEnum(
+            searchUpdatedRanges,
+            "Changed within the last `week` (7 days), `month` (30 days) or `year` (365 days).",
+          ),
+          "Time range",
+        ),
       })
       .nullable()
-      .describe("Number of results per filter value, or null in quick search."),
+      .describe(
+        "Number of results per filter value, or null in quick search. Each group is counted as if its own filter were not set, so other values of a filter that is in use keep their counts.",
+      ),
     suggestion: z
       .string()
       .nullable()
@@ -299,6 +314,12 @@ const exampleResponse = {
     labels: [{ value: "vpn", count: 1 }],
     authors: [{ id: "01929b1e-7c1a-7000-8000-000000000001", name: "Ada Lovelace", count: 1 }],
     statuses: [{ ...examplePageStatus, count: 1 }],
+    languages: [{ value: "en", count: 1 }],
+    updated: [
+      { value: "week", count: 1 },
+      { value: "month", count: 1 },
+      { value: "year", count: 1 },
+    ],
   },
   suggestion: null,
   index: { building: false },
@@ -334,6 +355,8 @@ function toApi(response: SearchResponse): z.output<typeof responseSchema> {
             color: facet.color,
             count: facet.count,
           })),
+          languages: response.facets.languages,
+          updated: response.facets.updated,
         }
       : null,
     suggestion: response.suggestion,
@@ -371,6 +394,7 @@ export class SearchController {
       labels: query.labels ?? [],
       authorIds: query.authorIds ?? [],
       statusIds: query.statusIds ?? [],
+      languages: query.languages ?? [],
       includeArchived: query.includeArchived,
       updatedAfter: query.updatedAfter ?? null,
       updatedBefore: query.updatedBefore ?? null,

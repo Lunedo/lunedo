@@ -24,6 +24,7 @@ import { AccountsController } from "../organizations/accounts.controller.js";
 import { GroupsController } from "../organizations/groups.controller.js";
 import { InstanceController } from "../organizations/instance.controller.js";
 import { OrganizationsController } from "../organizations/organizations.controller.js";
+import { SavedSearchesController } from "../search/saved-searches.controller.js";
 import { SearchController } from "../search/search.controller.js";
 import { SetupController } from "../setup/setup.controller.js";
 import { ShareLinksController } from "../sharing/links.controller.js";
@@ -80,6 +81,7 @@ export const apiControllers = (): Type[] => [
   ImportsController,
   ExportsController,
   SearchController,
+  SavedSearchesController,
 ];
 
 export interface ApiRouteInfo {

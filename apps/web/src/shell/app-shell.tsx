@@ -12,6 +12,7 @@ import { preferenceKeys, useUpdatePreference } from "../preferences/preferences.
 import { useFormat, usePreferences } from "../preferences/preferences-provider.js";
 import "../notifications/builtin.js";
 import "./builtin.js";
+import { QuickSearchHost } from "../search/quick-search.js";
 import { signedOut } from "../session/sign-out.js";
 import { CommandPaletteHost } from "./command-palette.js";
 import { railItems, type ShellContext, type Shortcut, shortcuts } from "./extensions.js";
@@ -42,6 +43,7 @@ function ShellFrame() {
   const preferences = usePreferences();
   const updatePreference = useUpdatePreference();
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const allShortcuts = useRegistry(shortcuts);
@@ -66,7 +68,14 @@ function ShellFrame() {
       organizationId: organization.organizationId,
       can: organization.can,
       navigate: (to, params) => void router.navigate({ to: to as never, params: params as never }),
-      openCommandPalette: () => setPaletteOpen(true),
+      openCommandPalette: () => {
+        setSearchOpen(false);
+        setPaletteOpen(true);
+      },
+      openSearch: () => {
+        setPaletteOpen(false);
+        setSearchOpen(true);
+      },
       openShortcuts: () => setShortcutsOpen(true),
       toggleNotifications: () => setNotificationsOpen((open) => !open),
       toggleSidebar: () =>
@@ -127,6 +136,7 @@ function ShellFrame() {
         </div>
       </div>
       <CommandPaletteHost open={paletteOpen} onOpenChange={setPaletteOpen} />
+      <QuickSearchHost open={searchOpen} onOpenChange={setSearchOpen} />
       <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
     </ShellStateContext>
   );

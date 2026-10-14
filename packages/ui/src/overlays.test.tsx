@@ -78,6 +78,37 @@ describe("Tabs", () => {
 });
 
 describe("CommandPalette", () => {
+  it("selects the first entry when results arrive late, until the person moves with the arrows", async () => {
+    const more = { id: "more", label: "Search all results", onSelect: () => {} };
+    const hit = { id: "hit", label: "Restart the gateway", onSelect: () => {} };
+    const palette = (items: { id: string; label: string; onSelect: () => void }[]) => (
+      <CommandPalette
+        open
+        onOpenChange={() => {}}
+        label="Search"
+        placeholder="Search"
+        emptyText="No results"
+        filter={false}
+        groups={[{ heading: "Results", items }]}
+      />
+    );
+    const view = renderUi(palette([more]));
+    await userEvent.type(screen.getByRole("combobox"), "gate");
+    view.rerender(palette([hit, more]));
+    await waitFor(() =>
+      expect(screen.getByRole("option", { name: "Restart the gateway" }).getAttribute("aria-selected")).toBe(
+        "true",
+      ),
+    );
+    await userEvent.keyboard("{ArrowDown}");
+    view.rerender(palette([hit, { id: "other", label: "Network overview", onSelect: () => {} }, more]));
+    await waitFor(() =>
+      expect(screen.getByRole("option", { name: "Search all results" }).getAttribute("aria-selected")).toBe(
+        "true",
+      ),
+    );
+  });
+
   it("filters while typing and runs the selected entry", async () => {
     const members = vi.fn();
     const security = vi.fn();
@@ -122,6 +153,48 @@ describe("CommandPalette", () => {
     );
     await userEvent.type(screen.getByRole("combobox"), "zzz");
     expect(await screen.findByText("No results")).toBeDefined();
+  });
+
+  it("keeps the order of external results, moves with arrows and opens the selected entry in a new tab", async () => {
+    const first = vi.fn();
+    const second = vi.fn();
+    const newTab = vi.fn();
+    renderUi(
+      <CommandPalette
+        open
+        onOpenChange={() => {}}
+        label="Search"
+        placeholder="Search"
+        emptyText="No results"
+        filter={false}
+        onOpenInNewTab={newTab}
+        groups={[
+          {
+            heading: "Pages",
+            items: [
+              { id: "b", label: "Zebra", description: "Second line", href: "/b", onSelect: first },
+              { id: "a", label: "Alpha", href: "/a", onSelect: second },
+            ],
+          },
+        ]}
+      />,
+    );
+    const list = screen.getByRole("listbox");
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "ZebraSecond line",
+      "Alpha",
+    ]);
+    await userEvent.type(screen.getByRole("combobox"), "x");
+    expect(screen.getAllByRole("option")).toHaveLength(2);
+    await waitFor(() =>
+      expect(screen.getByRole("option", { name: /Zebra/ }).getAttribute("aria-selected")).toBe("true"),
+    );
+    await userEvent.keyboard("{ArrowDown}{Control>}{Enter}{/Control}");
+    expect(newTab).toHaveBeenCalledWith(expect.objectContaining({ id: "a", href: "/a" }));
+    expect(second).not.toHaveBeenCalled();
+    await userEvent.keyboard("{Enter}");
+    expect(second).toHaveBeenCalledOnce();
+    expect(list).toBeDefined();
   });
 });
 

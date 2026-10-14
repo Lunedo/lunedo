@@ -81,6 +81,7 @@ describe("registries", () => {
       can: (action) => allowed.includes(action),
       navigate: () => undefined,
       openCommandPalette: () => undefined,
+      openSearch: () => undefined,
       openShortcuts: () => undefined,
       toggleNotifications: () => undefined,
       toggleSidebar: () => undefined,
