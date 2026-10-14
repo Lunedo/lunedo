@@ -25,6 +25,12 @@ export interface EditorKit {
   renderMarkdown(doc: unknown, context?: RenderContext): string;
   extractHeadings(doc: DocumentJson): Heading[];
   plainText(doc: DocumentJson): string;
+  extractSections(doc: DocumentJson): Section[];
+}
+
+export interface Section {
+  heading: Heading | null;
+  text: string;
 }
 
 function proseMirrorAttributes(
@@ -64,26 +70,56 @@ export function createEditorKit(registry: ModuleRegistry): EditorKit {
     return node.content.map(textOf).join(separator);
   };
 
+  const headingNamer = () => {
+    const used = new Map<string, number>();
+    return (node: ValidNode): Heading | null => {
+      const heading = registry.node(node.type)?.heading?.(node, node.content.map(textOf).join("").trim());
+      if (!heading) return null;
+      const base = slugify(heading.text);
+      const count = used.get(base) ?? 0;
+      used.set(base, count + 1);
+      return { level: heading.level, text: heading.text, id: count === 0 ? base : `${base}-${count + 1}` };
+    };
+  };
+
   const extractHeadings = (doc: DocumentJson): Heading[] => {
     const headings: Heading[] = [];
-    const used = new Map<string, number>();
+    const name = headingNamer();
     const visit = (node: ValidNode) => {
-      const definition = registry.node(node.type);
-      const heading = definition?.heading?.(node, node.content.map(textOf).join("").trim());
-      if (heading) {
-        const base = slugify(heading.text);
-        const count = used.get(base) ?? 0;
-        used.set(base, count + 1);
-        headings.push({
-          level: heading.level,
-          text: heading.text,
-          id: count === 0 ? base : `${base}-${count + 1}`,
-        });
-      }
+      const heading = name(node);
+      if (heading) headings.push(heading);
       for (const child of node.content) visit(child);
     };
     visit(toValidNode(doc));
     return headings;
+  };
+
+  const extractSections = (doc: DocumentJson): Section[] => {
+    const sections: { heading: Heading | null; lines: string[] }[] = [{ heading: null, lines: [] }];
+    const name = headingNamer();
+    const add = (text: string) => {
+      const line = text.trim();
+      if (line.length > 0) sections[sections.length - 1]?.lines.push(line);
+    };
+    const visit = (node: ValidNode) => {
+      const heading = name(node);
+      const inline = node.content.some(isInline);
+      if (heading) {
+        sections.push({ heading, lines: [] });
+        if (!inline) for (const child of node.content) visit(child);
+        return;
+      }
+      if (inline || node.content.length === 0) {
+        add(textOf(node));
+        return;
+      }
+      if (registry.node(node.type)?.text) add(textOf(node));
+      for (const child of node.content) visit(child);
+    };
+    for (const child of toValidNode(doc).content) visit(child);
+    return sections
+      .filter((section) => section.heading !== null || section.lines.length > 0)
+      .map((section) => ({ heading: section.heading, text: section.lines.join("\n") }));
   };
 
   const validated = (doc: unknown): ValidNode => {
@@ -109,6 +145,7 @@ export function createEditorKit(registry: ModuleRegistry): EditorKit {
       return markdown.length > 0 ? `${markdown}\n` : "";
     },
     extractHeadings,
+    extractSections,
     plainText: (doc) => textOf(toValidNode(doc as NodeJson)).trim(),
   };
 }
