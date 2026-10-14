@@ -229,6 +229,27 @@ describe.skipIf(!baseUrl)("search", () => {
     expect(await ids(w.other, w.org.id, `${w.word} cartrige`)).toEqual([w.gamma]);
   });
 
+  it("keeps the words used to correct typos per organization", async () => {
+    const w = await world();
+    const unique = `zephyr${w.word.replace(/[^a-z]/g, "")}`;
+    const elsewhere = await organization();
+    const ownerId = await member(elsewhere.id, "member", "Elsewhere");
+    const other = await space(elsewhere.id, ownerId, { visibility: "organization" });
+    await test.services.tree.create(accountPrincipal(ownerId), other.id, {
+      kind: "page",
+      title: "Elsewhere",
+      mode: "live",
+      placement: { parentId: null },
+      document: doc(paragraph(unique)),
+    });
+    await drain();
+    const rows = await test.pool.query<{ organization_id: string }>(
+      "select organization_id from search_terms where word = $1",
+      [unique],
+    );
+    expect(rows.rows.map((row) => row.organization_id)).toEqual([elsewhere.id]);
+  });
+
   it("finds nothing for an API token without access to spaces or for another organization", async () => {
     const w = await world();
     const token = {

@@ -67,13 +67,13 @@ export class PostgresSearchAdapter implements SearchAdapter {
         position integer, content_type text, title text, heading text, anchor text, body text, author_id uuid,
         content_created_at timestamptz, content_updated_at timestamptz)`);
     await executor.execute(sql`
-      insert into search_terms (word)
-      select distinct word from (
+      insert into search_terms (organization_id, word)
+      select distinct ${item.organizationId}::uuid, word from (
         select unnest(tsvector_to_array(to_tsvector('simple', c.title || ' ' || c.heading || ' ' || c.body))) as word
         from search_chunks c where c.item_id = ${item.itemId}) words
       where length(word) between ${MIN_TYPO_LENGTH} and 40 and word ~ '^[[:alpha:]]+$'
       order by word
-      on conflict (word) do nothing`);
+      on conflict (organization_id, word) do nothing`);
   }
 
   async removeItem(executor: Executor, itemId: string): Promise<void> {
@@ -210,7 +210,7 @@ export class PostgresSearchAdapter implements SearchAdapter {
     }
     const configs = await this.#configs(executor, request.viewer.organizationId);
     if (configs.length === 0) return "nothing";
-    const expansions = await this.#expansions(executor, query);
+    const expansions = await this.#expansions(executor, request.viewer.organizationId, query);
     const prefix = request.prefixLastTerm ? lastTerm(query) : null;
     const perConfig = configs.map((config) => ({
       config,
@@ -252,7 +252,11 @@ export class PostgresSearchAdapter implements SearchAdapter {
     return result.rows.map((row) => row.config);
   }
 
-  async #expansions(executor: Executor, query: ParsedQuery): Promise<Map<string, string[]>> {
+  async #expansions(
+    executor: Executor,
+    organizationId: string,
+    query: ParsedQuery,
+  ): Promise<Map<string, string[]>> {
     const terms = [
       ...new Set(
         query.clauses
@@ -265,7 +269,7 @@ export class PostgresSearchAdapter implements SearchAdapter {
     if (terms.length === 0) return new Map();
     const result = await executor.execute<{ term: string; words: string[] }>(sql`
       select q.term, array(select w.word from search_terms w
-        where w.word % q.term and w.word <> q.term and similarity(w.word, q.term) >= ${TYPO_SIMILARITY}
+        where w.organization_id = ${organizationId} and w.word % q.term and w.word <> q.term and similarity(w.word, q.term) >= ${TYPO_SIMILARITY}
         order by similarity(w.word, q.term) desc, w.word limit ${TYPO_ALTERNATIVES}) as words
       from unnest(${sql.param(terms)}::text[]) as q(term)`);
     return new Map(result.rows.map((row) => [row.term, row.words]));

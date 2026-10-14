@@ -186,8 +186,6 @@ const responseSchema = z
         building: z
           .boolean()
           .describe("Whether the index is being built; results may be incomplete meanwhile."),
-        done: z.number().int().describe("Number of pages indexed so far while building."),
-        total: z.number().int().describe("Number of pages to index while building."),
       })
       .describe("State of the search index."),
   })
@@ -226,7 +224,7 @@ const exampleResponse = {
     authors: [{ id: "01929b1e-7c1a-7000-8000-000000000001", name: "Ada Lovelace", count: 1 }],
     statuses: [],
   },
-  index: { building: false, done: 0, total: 0 },
+  index: { building: false },
 };
 
 function toApi(response: SearchResponse): z.output<typeof responseSchema> {
@@ -254,7 +252,7 @@ function toApi(response: SearchResponse): z.output<typeof responseSchema> {
           statuses: response.facets.statuses,
         }
       : null,
-    index: { building: response.index.building, done: response.index.done, total: response.index.total },
+    index: { building: response.index.building },
   };
 }
 

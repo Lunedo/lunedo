@@ -17,7 +17,7 @@ import {
   type SearchFilters,
   type SearchSort,
 } from "./adapter.js";
-import type { IndexState, SearchIndexer } from "./indexer.js";
+import type { SearchIndexer } from "./indexer.js";
 import { parseQuery } from "./query.js";
 
 export const SEARCH_PAGE_LIMIT = 50;
@@ -94,7 +94,7 @@ export interface SearchResponse {
   total: number;
   nextCursor: SearchCursor | null;
   facets: SearchFacets | null;
-  index: IndexState;
+  index: { building: boolean };
 }
 
 const TYPE_ALIASES: Record<string, SearchContentType> = {
@@ -158,7 +158,7 @@ export class SearchService {
     organizationId: string,
     request: SearchRequest,
   ): Promise<SearchResponse> {
-    const index = await this.#indexer.state();
+    const index = { building: (await this.#indexer.state()).building };
     const quick = request.mode === "quick";
     const empty: SearchResponse = {
       results: [],

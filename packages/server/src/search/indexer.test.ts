@@ -189,8 +189,8 @@ describe.skipIf(!baseUrl)("search indexer", () => {
       context.org.id,
       searchRequest(context.word),
     );
-    expect(during.index.building).toBe(true);
-    expect(during.index.total).toBe(marked);
+    expect(during.index).toEqual({ building: true });
+    expect(await test.services.search.indexer.state()).toMatchObject({ building: true, total: marked });
     await test.services.search.indexer.drain();
     expect(await found(context)).toEqual([...context.ids].sort());
     const after = await test.services.search.indexer.state();
@@ -294,7 +294,8 @@ describe.skipIf(!baseUrl)("search index after the migration", () => {
       searchRequest("existed"),
     );
     expect(before.results).toEqual([]);
-    expect(before.index).toMatchObject({ building: true, total: 2, done: 0 });
+    expect(before.index).toEqual({ building: true });
+    expect(await test.services.search.indexer.state()).toMatchObject({ building: true, total: 2, done: 0 });
     await test.services.search.indexer.drain();
     const after = await test.services.search.search(
       accountPrincipal(accountId),

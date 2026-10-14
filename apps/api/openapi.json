@@ -132981,24 +132981,10 @@
                         "building": {
                           "type": "boolean",
                           "description": "Whether the index is being built; results may be incomplete meanwhile."
-                        },
-                        "done": {
-                          "type": "integer",
-                          "minimum": -9007199254740991,
-                          "maximum": 9007199254740991,
-                          "description": "Number of pages indexed so far while building."
-                        },
-                        "total": {
-                          "type": "integer",
-                          "minimum": -9007199254740991,
-                          "maximum": 9007199254740991,
-                          "description": "Number of pages to index while building."
                         }
                       },
                       "required": [
-                        "building",
-                        "done",
-                        "total"
+                        "building"
                       ],
                       "additionalProperties": false,
                       "description": "State of the search index."
@@ -133089,9 +133075,7 @@
                     "statuses": []
                   },
                   "index": {
-                    "building": false,
-                    "done": 0,
-                    "total": 0
+                    "building": false
                   }
                 }
               }

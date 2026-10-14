@@ -87,7 +87,7 @@ describe.skipIf(!databaseBaseUrl)("search through the API", () => {
     });
     expect(body.results[0].excerpt).toContainEqual({ text: word, highlighted: true });
     expect(body.facets.types).toEqual([{ value: "page", count: 1 }]);
-    expect(body.index).toEqual({ building: false, done: 0, total: 0 });
+    expect(body.index).toEqual({ building: false });
   });
 
   it("serves quick search with few results and no counts", async () => {

@@ -8,6 +8,7 @@ import {
   integer,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -73,10 +74,17 @@ export const searchChunks = pgTable(
   ],
 );
 
-export const searchTerms = pgTable("search_terms", {
-  word: text().primaryKey(),
-  ...timestamps(),
-});
+export const searchTerms = pgTable(
+  "search_terms",
+  {
+    organizationId: uuid()
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    word: text().notNull(),
+    ...timestamps(),
+  },
+  (table) => [primaryKey({ columns: [table.organizationId, table.word] })],
+);
 
 export const searchPendingItems = pgTable(
   "search_pending_items",

@@ -54,9 +54,11 @@ CREATE TABLE "search_pending_spaces" (
 );
 --> statement-breakpoint
 CREATE TABLE "search_terms" (
-	"word" text PRIMARY KEY NOT NULL,
+	"organization_id" uuid NOT NULL,
+	"word" text NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "search_terms_organization_id_word_pk" PRIMARY KEY("organization_id","word")
 );
 --> statement-breakpoint
 ALTER TABLE "tree_items" ADD COLUMN "content_language" text;--> statement-breakpoint
@@ -64,6 +66,7 @@ ALTER TABLE "search_chunks" ADD CONSTRAINT "search_chunks_organization_id_organi
 ALTER TABLE "search_chunks" ADD CONSTRAINT "search_chunks_space_id_spaces_id_fk" FOREIGN KEY ("space_id") REFERENCES "public"."spaces"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "search_chunks" ADD CONSTRAINT "search_chunks_item_id_tree_items_id_fk" FOREIGN KEY ("item_id") REFERENCES "public"."tree_items"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "search_chunks" ADD CONSTRAINT "search_chunks_author_id_accounts_id_fk" FOREIGN KEY ("author_id") REFERENCES "public"."accounts"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "search_terms" ADD CONSTRAINT "search_terms_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX "search_chunks_source_unique" ON "search_chunks" USING btree ("source","source_id","position");--> statement-breakpoint
 CREATE INDEX "search_chunks_item_id_index" ON "search_chunks" USING btree ("item_id");--> statement-breakpoint
 CREATE INDEX "search_chunks_space_id_index" ON "search_chunks" USING btree ("space_id");--> statement-breakpoint

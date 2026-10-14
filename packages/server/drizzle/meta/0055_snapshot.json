@@ -1,5 +1,5 @@
 {
-  "id": "3c3580b2-e9ef-462d-9cee-bd5c96fa7370",
+  "id": "1109c5de-6677-480c-8984-34a339565ca2",
   "prevId": "38bbe17b-50da-4922-8678-c52b5ff7c7f6",
   "version": "7",
   "dialect": "postgresql",
@@ -13032,10 +13032,16 @@
       "name": "search_terms",
       "schema": "",
       "columns": {
+        "organization_id": {
+          "name": "organization_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
         "word": {
           "name": "word",
           "type": "text",
-          "primaryKey": true,
+          "primaryKey": false,
           "notNull": true
         },
         "created_at": {
@@ -13054,8 +13060,30 @@
         }
       },
       "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
+      "foreignKeys": {
+        "search_terms_organization_id_organizations_id_fk": {
+          "name": "search_terms_organization_id_organizations_id_fk",
+          "tableFrom": "search_terms",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "search_terms_organization_id_word_pk": {
+          "name": "search_terms_organization_id_word_pk",
+          "columns": [
+            "organization_id",
+            "word"
+          ]
+        }
+      },
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
