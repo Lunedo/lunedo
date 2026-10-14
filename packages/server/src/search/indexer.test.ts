@@ -112,6 +112,7 @@ describe.skipIf(!baseUrl)("search indexer", () => {
         search: adapter.search.bind(adapter),
         removeItem: adapter.removeItem.bind(adapter),
         updateAccess: adapter.updateAccess.bind(adapter),
+        updateContextAccess: adapter.updateContextAccess.bind(adapter),
         indexedItemsOfSpace: adapter.indexedItemsOfSpace.bind(adapter),
         replaceItem: async (executor, item) => {
           await adapter.replaceItem(executor, item);

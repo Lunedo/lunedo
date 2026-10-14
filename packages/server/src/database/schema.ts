@@ -144,6 +144,8 @@ export {
   recentSearches,
   savedSearches,
   searchChunks,
+  searchFileTextState,
+  searchFileTexts,
   searchIndexState,
   searchPendingItems,
   searchPendingSpaces,

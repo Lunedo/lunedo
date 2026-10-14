@@ -8,6 +8,9 @@ allowBuilds:
   esbuild: false
   vue-demi: false
 
+ignoredOptionalDependencies:
+  - "@napi-rs/canvas"
+
 overrides:
   "@scalar/json-magic>undici": ^7.29.1
 

@@ -2,16 +2,28 @@ import { commentText, type DocumentJson, migrateDocument } from "@pagehall/edito
 import { type ContentLanguage, OTHER_CONTENT_LANGUAGE } from "@pagehall/shared";
 import { type SQL, sql } from "drizzle-orm";
 import type { Database, Executor } from "../database/database.js";
+import { FileTooLargeError } from "../files/files.js";
 import type { Logger } from "../logging/logger.js";
 import { pageStatusEnabledCondition } from "../spaces/status.js";
 import { readerTokens, restrictionIds } from "./access.js";
-import type { IndexedChunk, IndexedItem, ItemAccess, SearchAdapter } from "./adapter.js";
-import { documentChunks, textChunks } from "./chunks.js";
+import type { ContextAccess, IndexedChunk, IndexedItem, ItemAccess, SearchAdapter } from "./adapter.js";
+import { cleanText, documentChunks, MAX_CHUNKS_PER_SOURCE, splitText, textChunks } from "./chunks.js";
+import { TextExtractor } from "./extraction/extractor.js";
+import {
+  type ExtractableFormat,
+  type ExtractedSection,
+  type ExtractionOutcome,
+  extractableContentTypes,
+  extractableFormat,
+} from "./extraction/text.js";
 import { contentLanguageOf, TextSearchConfigs } from "./languages.js";
 
 export const SEARCH_CHANGES_CHANNEL = "pagehall_search_changes";
 
+export const EXTRACTOR_VERSION = 1;
+
 const BATCH_SIZE = 50;
+const INDEXED_KINDS = sql`('page', 'blogPost', 'meetingTopic')`;
 const MAX_RETRY_DELAY_SECONDS = 60 * 60;
 const BUSY_RETRY_MS = 2000;
 
@@ -29,8 +41,17 @@ export interface DrainResult {
   nextDueAt: Date | null;
 }
 
+export interface AttachmentFiles {
+  readAll(fileId: string, maxBytes: number): Promise<Buffer>;
+}
+
+interface LoadedItem {
+  item: IndexedItem | null;
+  incomplete: boolean;
+}
+
 function indexable(item: SQL, space: SQL): SQL {
-  return sql`(${item}.kind in ('page', 'blogPost') and ${item}.trash_entry_id is null and ${space}.deleted_at is null
+  return sql`(${item}.kind in ${INDEXED_KINDS} and ${item}.trash_entry_id is null and ${space}.deleted_at is null
     and (${item}.mode = 'live' or ${item}.published_version_id is not null))`;
 }
 
@@ -69,11 +90,20 @@ export class SearchIndexer {
   readonly #database: Database;
   readonly #adapter: SearchAdapter;
   readonly #configs: TextSearchConfigs;
+  readonly #files: AttachmentFiles | null;
+  readonly #extractor: TextExtractor;
 
-  constructor(options: { database: Database; adapter: SearchAdapter }) {
+  constructor(options: {
+    database: Database;
+    adapter: SearchAdapter;
+    files?: AttachmentFiles | undefined;
+    extractor?: TextExtractor | undefined;
+  }) {
     this.#database = options.database;
     this.#adapter = options.adapter;
     this.#configs = new TextSearchConfigs(options.database);
+    this.#files = options.files ?? null;
+    this.#extractor = options.extractor ?? new TextExtractor();
   }
 
   async drain(options: { signal?: AbortSignal; logger?: Logger } = {}): Promise<DrainResult> {
@@ -109,12 +139,14 @@ export class SearchIndexer {
       for (const row of items.rows) {
         if (options.signal?.aborted) break;
         try {
+          await this.#extractTexts(row.item_id, options);
           if (await this.#indexItem(row.item_id, Number(row.generation))) result.items += 1;
           else {
             busyItems.add(row.item_id);
             busy = true;
           }
         } catch (error) {
+          if (options.signal?.aborted) break;
           result.failed += 1;
           busyItems.add(row.item_id);
           options.logger?.warn(
@@ -146,7 +178,7 @@ export class SearchIndexer {
   async requestRebuild(executor: Executor = this.#database): Promise<number> {
     const marked = await executor.execute<{ item_id: string }>(sql`
       insert into search_pending_items (item_id)
-      select id from tree_items where kind in ('page', 'blogPost')
+      select id from tree_items where kind in ${INDEXED_KINDS}
       on conflict (item_id) do update set generation = search_pending_items.generation + 1, due_at = now(),
         attempts = 0, updated_at = now()
       returning item_id`);
@@ -203,26 +235,82 @@ export class SearchIndexer {
       );
       const lockedSpaces = new Set<string>();
       let spaceId = current.rows[0]?.space_id ?? null;
-      let item: IndexedItem | null = null;
+      let loaded: LoadedItem = { item: null, incomplete: false };
       while (spaceId && !lockedSpaces.has(spaceId)) {
         await tx.execute(sql`select pg_advisory_xact_lock_shared(${lockKey("space", spaceId)})`);
         lockedSpaces.add(spaceId);
-        item = await this.#load(tx, itemId);
-        spaceId = item?.spaceId ?? null;
+        loaded = await this.#load(tx, itemId);
+        spaceId = loaded.item?.spaceId ?? null;
       }
-      if (item) await this.#adapter.replaceItem(tx, item);
+      if (loaded.item) await this.#adapter.replaceItem(tx, loaded.item);
       else await this.#adapter.removeItem(tx, itemId);
       await tx.execute(
         sql`delete from search_pending_items where item_id = ${itemId} and generation = ${generation}`,
       );
+      if (loaded.incomplete) await tx.execute(sql`select search_mark_item(${itemId}, interval '0')`);
       return true;
     });
   }
 
-  async #load(executor: Executor, itemId: string): Promise<IndexedItem | null> {
+  async #extractTexts(itemId: string, options: { signal?: AbortSignal; logger?: Logger }): Promise<void> {
+    const files = this.#files;
+    if (!files) return;
+    const pending = await this.#database.execute<{
+      id: string;
+      size: string | number;
+      content_type: string;
+    }>(sql`
+      select distinct f.id, f.size, f.content_type
+      from attachments a join attachment_versions v on v.id = a.published_version_id
+      join stored_files f on f.id = v.file_id and f.state = 'ready'
+      where a.item_id = ${itemId} and f.content_type = any(${sql.param(extractableContentTypes)}::text[])
+        and not exists (select 1 from search_file_texts ft
+          where ft.file_id = f.id and ft.extractor_version = ${EXTRACTOR_VERSION})
+      order by f.id`);
+    for (const file of pending.rows) {
+      if (options.signal?.aborted) return;
+      const format = extractableFormat(file.content_type);
+      if (!format) continue;
+      const outcome = await this.#extract(files, file.id, Number(file.size), format, options.signal);
+      if (outcome.status === "skipped") {
+        options.logger?.warn(
+          { fileId: file.id, format, reason: outcome.reason },
+          "The text of an attachment could not be extracted; it is found by its name only",
+        );
+      }
+      await this.#database.execute(sql`
+        insert into search_file_texts (file_id, extractor_version, state, reason, truncated, sections)
+        values (${file.id}, ${EXTRACTOR_VERSION}, ${outcome.status},
+          ${outcome.status === "skipped" ? outcome.reason : null},
+          ${outcome.status === "extracted" && outcome.truncated},
+          ${JSON.stringify(outcome.status === "extracted" ? outcome.sections : [])}::jsonb)
+        on conflict (file_id) do update set extractor_version = excluded.extractor_version, state = excluded.state,
+          reason = excluded.reason, truncated = excluded.truncated, sections = excluded.sections,
+          updated_at = now()`);
+    }
+  }
+
+  async #extract(
+    files: AttachmentFiles,
+    fileId: string,
+    size: number,
+    format: ExtractableFormat,
+    signal: AbortSignal | undefined,
+  ): Promise<ExtractionOutcome> {
+    const maxBytes = this.#extractor.limits.maxBytes;
+    if (size > maxBytes) return { status: "skipped", reason: "tooLarge" };
+    const data = await files.readAll(fileId, maxBytes).catch((error: unknown) => {
+      if (error instanceof FileTooLargeError) return null;
+      throw error;
+    });
+    if (!data) return { status: "skipped", reason: "tooLarge" };
+    return this.#extractor.extract(format, data, signal);
+  }
+
+  async #load(executor: Executor, itemId: string): Promise<LoadedItem> {
     const result = await executor.execute<{
       id: string;
-      kind: "page" | "blogPost";
+      kind: "page" | "blogPost" | "meetingTopic";
       mode: "publish" | "live";
       title: string;
       space_id: string;
@@ -263,11 +351,11 @@ export class SearchIndexer {
       left join page_documents d on d.item_id = t.id and t.mode = 'live'
       where t.id = ${itemId}`);
     const row = result.rows[0];
-    if (!row?.indexable) return null;
+    if (!row?.indexable) return { item: null, incomplete: false };
     const live = row.mode === "live";
     const stored = live ? row.live_document : row.version_document;
     const schemaVersion = live ? row.live_schema : row.version_schema;
-    if (!live && !stored) return null;
+    if (!live && !stored) return { item: null, incomplete: false };
     const document = stored && schemaVersion ? migrateDocument(stored, schemaVersion) : null;
     const title = live ? row.title : (row.version_title ?? row.title);
     const updatedAt = asDate(
@@ -280,19 +368,34 @@ export class SearchIndexer {
       contentLanguageOf(row.space_language) ??
       contentLanguageOf(row.organization_language) ??
       OTHER_CONTENT_LANGUAGE;
+    const topic = row.kind === "meetingTopic";
+    const own = {
+      title,
+      authorId: row.creator_id,
+      contentCreatedAt: asDate(row.created_at),
+      context: null,
+      attachment: null,
+    };
     const chunks: IndexedChunk[] = (
       document ? documentChunks(document) : [{ heading: "", anchor: null, body: "" }]
     ).map((chunk, position) => ({
+      ...own,
+      ...chunk,
       source: "item",
       sourceId: row.id,
       position,
-      contentType: row.kind,
-      title,
-      ...chunk,
-      authorId: row.creator_id,
-      contentCreatedAt: asDate(row.created_at),
+      contentType: row.kind === "meetingTopic" ? "topic" : row.kind,
       contentUpdatedAt: updatedAt,
     }));
+    chunks.push(
+      ...(topic
+        ? await this.#topicUpdates(executor, row.id, chunks.length, own)
+        : await this.#decisions(executor, row.id, own)),
+    );
+    const attachments = topic
+      ? { chunks: [], incomplete: false }
+      : await this.#attachments(executor, row.id, title);
+    chunks.push(...attachments.chunks);
     const comments = await executor.execute<{
       id: string;
       body: DocumentJson;
@@ -311,28 +414,172 @@ export class SearchIndexer {
           source: "comment",
           sourceId: comment.id,
           position,
-          contentType: "comment",
+          contentType: topic ? "topic" : "comment",
           title,
           ...chunk,
           authorId: comment.author_id,
           contentCreatedAt: asDate(comment.created_at),
           contentUpdatedAt: asDate(comment.updated_at),
+          context: null,
+          attachment: null,
         });
       });
     }
     return {
-      itemId: row.id,
-      spaceId: row.space_id,
-      organizationId: row.organization_id,
-      readers: row.readers,
-      restrictions: row.restrictions,
-      archived: row.archived,
-      labels: row.labels,
-      status: row.status_id,
-      language,
-      config: await this.#configs.configFor(language),
-      chunks,
+      item: {
+        itemId: row.id,
+        spaceId: row.space_id,
+        organizationId: row.organization_id,
+        readers: row.readers,
+        restrictions: row.restrictions,
+        archived: row.archived,
+        labels: row.labels,
+        status: row.status_id,
+        language,
+        config: await this.#configs.configFor(language),
+        chunks,
+      },
+      incomplete: attachments.incomplete,
     };
+  }
+
+  async #topicUpdates(
+    executor: Executor,
+    topicId: string,
+    first: number,
+    own: { title: string; authorId: string | null; contentCreatedAt: Date },
+  ): Promise<IndexedChunk[]> {
+    const updates = await executor.execute<{
+      meeting_id: string;
+      meeting_title: string;
+      text: string;
+      updated_at: Date | string;
+      readers: string[];
+      restrictions: string[];
+    }>(sql`
+      select u.item_id as meeting_id, mt.title as meeting_title, u.text, u.updated_at,
+        ${readers(sql`mt`, sql`ms`)} as readers, ${restrictionIds(sql`mt`)} as restrictions
+      from meeting_topic_updates u join meetings m on m.item_id = u.item_id
+      join tree_items mt on mt.id = u.item_id join spaces ms on ms.id = mt.space_id
+      where u.topic_id = ${topicId} and m.state <> 'skipped' and ${indexable(sql`mt`, sql`ms`)}
+      order by coalesce(m.starts_at, u.updated_at), u.item_id`);
+    const chunks: IndexedChunk[] = [];
+    for (const update of updates.rows) {
+      const context: ContextAccess = {
+        itemId: update.meeting_id,
+        readers: update.readers,
+        restrictions: update.restrictions,
+      };
+      for (const chunk of textChunks(update.text)) {
+        if (first + chunks.length >= MAX_CHUNKS_PER_SOURCE) return chunks;
+        chunks.push({
+          ...own,
+          source: "item",
+          sourceId: topicId,
+          position: first + chunks.length,
+          contentType: "topic",
+          heading: cleanText(update.meeting_title),
+          anchor: null,
+          body: chunk.body,
+          contentUpdatedAt: asDate(update.updated_at),
+          context,
+          attachment: null,
+        });
+      }
+    }
+    return chunks;
+  }
+
+  async #decisions(
+    executor: Executor,
+    itemId: string,
+    own: { title: string; authorId: string | null },
+  ): Promise<IndexedChunk[]> {
+    const decisions = await executor.execute<{
+      id: string;
+      text: string;
+      created_at: Date | string;
+      updated_at: Date | string;
+    }>(sql`
+      select d.id, d.text, d.created_at, d.updated_at from decisions d
+      where d.item_id = ${itemId} and d.published and d.text <> ''
+      order by d.position, d.id`);
+    return decisions.rows.flatMap((decision) =>
+      textChunks(decision.text).map((chunk, position) => ({
+        ...own,
+        ...chunk,
+        source: "decision" as const,
+        sourceId: decision.id,
+        position,
+        contentType: "decision" as const,
+        contentCreatedAt: asDate(decision.created_at),
+        contentUpdatedAt: asDate(decision.updated_at),
+        context: null,
+        attachment: null,
+      })),
+    );
+  }
+
+  async #attachments(
+    executor: Executor,
+    itemId: string,
+    title: string,
+  ): Promise<{ chunks: IndexedChunk[]; incomplete: boolean }> {
+    const attachments = await executor.execute<{
+      id: string;
+      name: string;
+      size: string | number;
+      content_type: string;
+      ready: boolean;
+      uploaded_by: string | null;
+      created_at: Date | string;
+      uploaded_at: Date | string;
+      cached: boolean;
+      sections: ExtractedSection[] | null;
+    }>(sql`
+      select a.id, v.name, f.size, f.content_type, f.state = 'ready' as ready, v.uploaded_by, a.created_at,
+        v.created_at as uploaded_at, ft.file_id is not null as cached,
+        case when ft.state = 'extracted' then ft.sections end as sections
+      from attachments a join attachment_versions v on v.id = a.published_version_id
+      join stored_files f on f.id = v.file_id
+      left join search_file_texts ft on ft.file_id = f.id and ft.extractor_version = ${EXTRACTOR_VERSION}
+      where a.item_id = ${itemId}
+      order by lower(v.name), a.id`);
+    const chunks: IndexedChunk[] = [];
+    let incomplete = false;
+    for (const attachment of attachments.rows) {
+      const extractable = extractableFormat(attachment.content_type) !== null;
+      if (extractable && attachment.ready && !attachment.cached && this.#files) incomplete = true;
+      const name = cleanText(attachment.name);
+      const bodies = (attachment.sections ?? [])
+        .flatMap((section) =>
+          splitText(cleanText(section.heading ? `${section.heading}\n${section.text}` : section.text)),
+        )
+        .slice(0, MAX_CHUNKS_PER_SOURCE);
+      const metadata = {
+        name: attachment.name,
+        contentType: attachment.content_type,
+        size: Number(attachment.size),
+      };
+      (bodies.length > 0 ? bodies : [""]).forEach((body, position) => {
+        chunks.push({
+          source: "attachment",
+          sourceId: attachment.id,
+          position,
+          contentType: "attachment",
+          title,
+          heading: name,
+          anchor: null,
+          body,
+          authorId: attachment.uploaded_by,
+          contentCreatedAt: asDate(attachment.created_at),
+          contentUpdatedAt: asDate(attachment.uploaded_at),
+          context: null,
+          attachment: metadata,
+        });
+      });
+    }
+    return { chunks, incomplete };
   }
 
   async #refreshSpace(spaceId: string, generation: number): Promise<boolean> {
@@ -349,18 +596,28 @@ export class SearchIndexer {
         archived: boolean;
         readers: string[];
         restrictions: string[];
+        meeting: boolean;
       }>(sql`
         select t.id, t.space_id, ${indexable(sql`t`, sql`s`)} as indexable, ${archived(sql`t`, sql`s`)} as archived,
-          ${readers(sql`t`, sql`s`)} as readers, ${restrictionIds(sql`t`)} as restrictions
+          ${readers(sql`t`, sql`s`)} as readers, ${restrictionIds(sql`t`)} as restrictions,
+          exists (select 1 from meetings m where m.item_id = t.id) as meeting
         from tree_items t join spaces s on s.id = t.space_id
-        where (t.space_id = ${spaceId} and t.kind in ('page', 'blogPost'))
+        where (t.space_id = ${spaceId} and t.kind in ${INDEXED_KINDS})
           or t.id = any(${sql.param(indexed)}::uuid[])`);
       const known = new Set(indexed);
       const updates: ItemAccess[] = [];
+      const contexts: ContextAccess[] = [];
       const missing: string[] = [];
       const seen = new Set<string>();
       for (const row of result.rows) {
         seen.add(row.id);
+        if (row.meeting) {
+          contexts.push({
+            itemId: row.id,
+            readers: row.indexable ? row.readers : [],
+            restrictions: row.restrictions,
+          });
+        }
         if (!row.indexable) {
           if (known.has(row.id)) await this.#adapter.removeItem(tx, row.id);
           continue;
@@ -379,6 +636,7 @@ export class SearchIndexer {
       }
       for (const itemId of indexed) if (!seen.has(itemId)) await this.#adapter.removeItem(tx, itemId);
       await this.#adapter.updateAccess(tx, updates);
+      await this.#adapter.updateContextAccess(tx, contexts);
       if (missing.length > 0) {
         await tx.execute(sql`
           insert into search_pending_items (item_id) select unnest(${sql.param(missing)}::uuid[])

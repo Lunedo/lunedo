@@ -6,6 +6,7 @@ import {
   SEARCH_PAGE_LIMIT,
   type SearchResponse,
   searchContentTypes,
+  searchItemTypes,
   searchSorts,
   searchUpdatedRanges,
 } from "@pagehall/server";
@@ -43,7 +44,7 @@ const searchQuery = z
       .max(MAX_QUERY_LENGTH)
       .default("")
       .describe(
-        'The search text. Words must all match. `"exact phrase"` matches the words in this order, `-word` excludes a word, `OR` between two words matches either. The operators `space:KEY`, `label:name`, `author:name`, `status:name` (default values also by their English name, such as `status:verified`) and `type:page|blog|comment` filter like the parameters; quote values with spaces.',
+        'The search text. Words must all match. `"exact phrase"` matches the words in this order, `-word` excludes a word, `OR` between two words matches either. The operators `space:KEY`, `label:name`, `author:name`, `status:name` (default values also by their English name, such as `status:verified`) and `type:page|blog|comment|attachment|topic|decision` filter like the parameters; quote values with spaces.',
       ),
     mode: z
       .enum(["full", "quick"])
@@ -53,7 +54,10 @@ const searchQuery = z
       ),
     spaceId: uuid("In quick search, the space the person is in; its results come first.").optional(),
     spaceIds: list(uuid("ID of a space."), "Only results in these spaces."),
-    types: list(z.enum(searchContentTypes), "Only results of these types: `page`, `blogPost` or `comment`."),
+    types: list(
+      z.enum(searchContentTypes),
+      "Only results of these types: `page`, `blogPost`, `comment`, `attachment`, `topic` or `decision`.",
+    ),
     labels: list(z.string().max(100), "Only pages with at least one of these labels."),
     authorIds: list(uuid("ID of an author."), "Only results by these authors."),
     statusIds: list(uuid("ID of a status value."), "Only pages with one of these status values."),
@@ -109,13 +113,40 @@ const spaceRefSchema = z
   })
   .describe("A space the caller can open.");
 
+const referenceSchema = (description: string) =>
+  z
+    .object({
+      id: uuid(`ID of the ${description}.`),
+      title: z.string().describe(`Title of the ${description}.`),
+    })
+    .describe(`The ${description}.`);
+
 const resultSchema = z
   .object({
-    type: extensibleEnum(searchContentTypes, "`page`, `blogPost` or `comment`."),
-    id: uuid("ID of the page, blog post or comment."),
-    itemId: uuid("ID of the page or blog post; for a comment, the page it belongs to."),
-    title: z.string().describe("Title of the page or blog post; for a comment, of its page."),
-    heading: z.string().describe("Heading of the section that matched, or an empty string."),
+    type: extensibleEnum(
+      searchContentTypes,
+      "`page`, `blogPost`, `comment`, `attachment`, `topic` (a running topic, its updates or a comment on it) or `decision`.",
+    ),
+    id: uuid(
+      "ID of the page, blog post, comment, attachment, running topic or decision; for a comment on a running topic, of the comment.",
+    ),
+    itemId: uuid(
+      "ID of the page, blog post or running topic the result belongs to; for a decision, the meeting it was recorded in.",
+    ),
+    itemType: extensibleEnum(
+      searchItemTypes,
+      "What `itemId` is: `page`, `blogPost` or `topic` (a running topic), so that clients open the right screen.",
+    ),
+    title: z
+      .string()
+      .describe(
+        "Title of the page, blog post or running topic; for a comment or attachment, of its page; for a decision, of its meeting.",
+      ),
+    heading: z
+      .string()
+      .describe(
+        "Heading of the section that matched, the file name of an attachment, the meeting of a topic update, or an empty string.",
+      ),
     anchor: z.string().nullable().describe("Anchor of that heading on the page, or null."),
     excerpt: excerptSchema,
     space: spaceRefSchema
@@ -142,6 +173,23 @@ const resultSchema = z
       .nullable()
       .describe("The author, or null when unknown or not visible to the caller."),
     archived: z.boolean().describe("Whether the page is archived."),
+    attachment: z
+      .object({
+        id: uuid("ID of the attachment."),
+        name: z.string().describe("File name."),
+        contentType: z.string().describe("Media type of the file."),
+        size: z.number().int().describe("Size in bytes."),
+      })
+      .nullable()
+      .describe("For an attachment, the file on its page; null otherwise."),
+    topic: referenceSchema("running topic")
+      .nullable()
+      .describe(
+        "For a topic, the running topic; for a decision, the topic it closed when the caller can read it; null otherwise.",
+      ),
+    series: referenceSchema("meeting series")
+      .nullable()
+      .describe("For a topic or decision, its meeting series when the caller can read it; null otherwise."),
     updatedAt: timestamp("When the content last changed."),
   })
   .describe("A search result.");
@@ -229,6 +277,7 @@ const exampleResponse = {
       type: "page",
       id: "01929b1e-7c1a-7000-8000-000000000020",
       itemId: "01929b1e-7c1a-7000-8000-000000000020",
+      itemType: "page",
       title: "VPN access",
       heading: "Setup",
       anchor: "setup",
@@ -249,6 +298,9 @@ const exampleResponse = {
       status: examplePageStatus,
       author: { id: "01929b1e-7c1a-7000-8000-000000000001", name: "Ada Lovelace" },
       archived: false,
+      attachment: null,
+      topic: null,
+      series: null,
       updatedAt: "2026-10-14T08:30:00.000Z",
     },
   ],
@@ -327,7 +379,7 @@ export class SearchController {
   @ApiRoute({
     summary: "Search the content of an organization",
     description:
-      "Searches pages, blog posts and comments of all spaces of the organization the caller can read, for the search page and for search while typing. Results, counts and excerpts only ever include content the caller can read; pages shared with the caller show no space or path. Drafts are never searched. Unknown filter values and values of things the caller cannot see give the same empty answer.",
+      "Searches pages, blog posts, comments, attachments, running topics and decisions of all spaces of the organization the caller can read, for the search page and for search while typing. The text of PDF, Word and Excel attachments is searched, file names of all attachments. Results, counts and excerpts only ever include content the caller can read; pages shared with the caller show no space or path. Drafts, attachments added only in a draft and private meeting notes are never searched. Unknown filter values and values of things the caller cannot see give the same empty answer.",
     tags: [TAG],
     params: organizationIdParams,
     query: searchQuery,

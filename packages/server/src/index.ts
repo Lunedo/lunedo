@@ -555,6 +555,7 @@ export {
   type SearchRequest,
   type SearchResponse,
   SearchService,
+  searchItemTypes,
 } from "./search/service.js";
 export { type AccountServices, createAccountServices } from "./services.js";
 export { builtinSettings, languageSetting, supportedLanguages, timeZoneSetting } from "./settings/builtin.js";

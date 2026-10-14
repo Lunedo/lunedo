@@ -18,7 +18,11 @@ export const searchFiltersSchema = z
   .object({
     spaceIds: ids("ID of a space"),
     types: z
-      .array(z.enum(searchContentTypes).describe("A type: `page`, `blogPost` or `comment`."))
+      .array(
+        z
+          .enum(searchContentTypes)
+          .describe("A type: `page`, `blogPost`, `comment`, `attachment`, `topic` or `decision`."),
+      )
       .max(searchContentTypes.length)
       .default([])
       .describe("Types of results."),

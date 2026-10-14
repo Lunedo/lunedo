@@ -55,7 +55,12 @@ const updateSavedSchema = z
 const storedFiltersSchema = searchFiltersSchema
   .extend({
     types: z
-      .array(extensibleEnum(searchContentTypes, "A type: `page`, `blogPost` or `comment`."))
+      .array(
+        extensibleEnum(
+          searchContentTypes,
+          "A type: `page`, `blogPost`, `comment`, `attachment`, `topic` or `decision`.",
+        ),
+      )
       .describe("Types of results."),
   })
   .describe("Filters of a search, as on the search page.");

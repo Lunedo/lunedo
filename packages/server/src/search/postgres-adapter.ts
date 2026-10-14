@@ -7,8 +7,10 @@ import {
   type AdapterHit,
   type AdapterResult,
   type AdapterSearch,
+  type ContextAccess,
   EXCERPT_END,
   EXCERPT_START,
+  type IndexedChunk,
   type IndexedItem,
   type ItemAccess,
   type SearchAdapter,
@@ -51,12 +53,22 @@ function prefixWord(text: string): string {
   return text.replace(/[^\p{L}\p{N}]/gu, "");
 }
 
+function weighted(chunk: IndexedChunk): { first: string; second: string; labels: boolean } {
+  if (chunk.source === "item") return { first: chunk.title, second: chunk.heading, labels: true };
+  if (chunk.source === "attachment") {
+    const name = chunk.attachment?.name ?? chunk.heading;
+    return { first: `${name} ${name.replace(/[^\p{L}\p{N}]+/gu, " ")}`, second: "", labels: false };
+  }
+  return { first: "", second: chunk.heading, labels: false };
+}
+
 export class PostgresSearchAdapter implements SearchAdapter {
   async replaceItem(executor: Executor, item: IndexedItem): Promise<void> {
     await executor.execute(sql`delete from search_chunks where item_id = ${item.itemId}`);
     if (item.chunks.length === 0) return;
     const rows = item.chunks.map((chunk) => ({
       id: uuidv7(),
+      ...weighted(chunk),
       source: chunk.source,
       source_id: chunk.sourceId,
       position: chunk.position,
@@ -68,24 +80,31 @@ export class PostgresSearchAdapter implements SearchAdapter {
       author_id: chunk.authorId,
       content_created_at: chunk.contentCreatedAt.toISOString(),
       content_updated_at: chunk.contentUpdatedAt.toISOString(),
+      context_item_id: chunk.context?.itemId ?? null,
+      context_readers: chunk.context?.readers ?? null,
+      context_restrictions: chunk.context?.restrictions ?? [],
+      attachment: chunk.attachment,
     }));
     const config = sql`${item.config}::regconfig`;
     await executor.execute(sql`
       insert into search_chunks (id, organization_id, space_id, item_id, source, source_id, position, content_type,
         title, heading, anchor, body, labels, status, language, config, author_id, content_created_at,
-        content_updated_at, archived, readers, restrictions, document)
+        content_updated_at, archived, readers, restrictions, context_item_id, context_readers, context_restrictions,
+        attachment, document)
       select c.id, ${item.organizationId}, ${item.spaceId}, ${item.itemId}, c.source::search_source, c.source_id,
         c.position, c.content_type, c.title, c.heading, c.anchor, c.body, ${sql.param(item.labels)}::text[],
         ${item.status}, ${item.language}, ${item.config}, c.author_id, c.content_created_at, c.content_updated_at,
         ${item.archived}, ${sql.param(item.readers)}::text[], ${sql.param(item.restrictions)}::uuid[],
-        setweight(to_tsvector(${config}, case when c.source = 'comment' then '' else c.title end), 'A')
-          || setweight(to_tsvector(${config}, c.heading), 'B')
+        c.context_item_id, c.context_readers, c.context_restrictions, c.attachment,
+        setweight(to_tsvector(${config}, c.first), 'A')
+          || setweight(to_tsvector(${config}, c.second), 'B')
           || setweight(to_tsvector(${config},
-            case when c.source = 'comment' then '' else array_to_string(${sql.param(item.labels)}::text[], ' ') end), 'C')
+            case when c.labels then array_to_string(${sql.param(item.labels)}::text[], ' ') else '' end), 'C')
           || setweight(to_tsvector(${config}, c.body), 'D')
       from jsonb_to_recordset(${JSON.stringify(rows)}::jsonb) as c(id uuid, source text, source_id uuid,
         position integer, content_type text, title text, heading text, anchor text, body text, author_id uuid,
-        content_created_at timestamptz, content_updated_at timestamptz)`);
+        content_created_at timestamptz, content_updated_at timestamptz, context_item_id uuid, context_readers text[],
+        context_restrictions uuid[], attachment jsonb, first text, second text, labels boolean)`);
     if (item.organizationId === null) return;
     await executor.execute(sql`
       insert into search_terms (organization_id, word)
@@ -118,6 +137,21 @@ export class PostgresSearchAdapter implements SearchAdapter {
         as u(item_id uuid, space_id uuid, readers text[], restrictions uuid[], archived boolean)
       where c.item_id = u.item_id and (c.space_id <> u.space_id or c.readers <> u.readers
         or c.restrictions <> u.restrictions or c.archived <> u.archived)`);
+  }
+
+  async updateContextAccess(executor: Executor, contexts: ContextAccess[]): Promise<void> {
+    if (contexts.length === 0) return;
+    const rows = contexts.map((context) => ({
+      item_id: context.itemId,
+      readers: context.readers,
+      restrictions: context.restrictions,
+    }));
+    await executor.execute(sql`
+      update search_chunks c
+      set context_readers = u.readers, context_restrictions = u.restrictions, updated_at = now()
+      from jsonb_to_recordset(${JSON.stringify(rows)}::jsonb) as u(item_id uuid, readers text[], restrictions uuid[])
+      where c.context_item_id = u.item_id and (c.context_readers is distinct from u.readers
+        or c.context_restrictions <> u.restrictions)`);
   }
 
   async indexedItemsOfSpace(executor: Executor, spaceId: string): Promise<string[]> {
@@ -226,7 +260,7 @@ export class PostgresSearchAdapter implements SearchAdapter {
     }>(sql`
       with matched as (
         select c.id, c.source, c.source_id, c.item_id, t.space_id, c.content_type, c.title, c.heading, c.anchor,
-          c.labels, c.status, c.author_id, c.archived, c.content_updated_at, c.position, c.language,
+          c.labels, c.status, c.author_id, c.archived, c.attachment, c.content_updated_at, c.position, c.language,
           ((${parts.score}) * (1 + ${usageBoost(sql`rv`)}))::float8 as score
           ${sql.join(flagColumns, sql``)}
         from search_chunks c
@@ -250,7 +284,7 @@ export class PostgresSearchAdapter implements SearchAdapter {
           'source', b.source, 'sourceId', b.source_id, 'itemId', b.item_id, 'spaceId', b.space_id,
           'contentType', b.content_type, 'title', b.title, 'heading', b.heading, 'anchor', b.anchor,
           'excerpt', ${parts.excerpt}, 'labels', b.labels, 'status', b.status, 'authorId', b.author_id,
-          'archived', b.archived, 'score', b.score, 'contentUpdatedAt', b.content_updated_at) order by ${order})
+          'archived', b.archived, 'attachment', b.attachment, 'score', b.score, 'contentUpdatedAt', b.content_updated_at) order by ${order})
           from page b join search_chunks bc on bc.id = b.id) as hits`);
     const row = result.rows[0];
     const hits = (row?.hits ?? []).map((hit) => ({ ...hit, score: Number(hit.score) }));

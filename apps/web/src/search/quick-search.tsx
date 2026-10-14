@@ -174,16 +174,19 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
     }
 
     const hits = current?.results ?? [];
-    const hitItem = (hit: SearchHit, withPath: boolean): CommandItem => {
+    const hitItem = (hit: SearchHit, withPath: boolean): CommandItem[] => {
       const href = hitHref(hit);
-      return {
-        id: `hit:${hit.type}:${hit.id}`,
-        label: hitTitle(t, hit),
-        description: withPath ? hitPath(t, hit).join(" › ") : <Highlighted parts={hit.excerpt} />,
-        icon: hitIcon(hit),
-        href,
-        onSelect: () => go(href),
-      };
+      if (!href) return [];
+      return [
+        {
+          id: `hit:${hit.type}:${hit.id}`,
+          label: hitTitle(t, hit),
+          description: withPath ? hitPath(t, hit).join(" › ") : <Highlighted parts={hit.excerpt} />,
+          icon: hitIcon(hit),
+          href,
+          onSelect: () => go(href),
+        },
+      ];
     };
     const content = hits.filter((hit) => hit.type !== "comment");
     const local = inSpace ? content.filter((hit) => hit.space?.id === space.id) : content;
@@ -193,13 +196,13 @@ function QuickSearch({ onOpenChange }: { onOpenChange: (open: boolean) => void }
         heading: inSpace
           ? t("search.quick.inSpace", { space: space.name || t("spaces.personal.label") })
           : t("search.quick.pagesAndPosts"),
-        items: local.map((hit) => hitItem(hit, false)),
+        items: local.flatMap((hit) => hitItem(hit, false)),
       },
       {
         heading: t("search.quick.comments"),
-        items: hits.filter((hit) => hit.type === "comment").map((hit) => hitItem(hit, false)),
+        items: hits.filter((hit) => hit.type === "comment").flatMap((hit) => hitItem(hit, false)),
       },
-      { heading: t("search.quick.otherSpaces"), items: elsewhere.map((hit) => hitItem(hit, true)) },
+      { heading: t("search.quick.otherSpaces"), items: elsewhere.flatMap((hit) => hitItem(hit, true)) },
     ];
     if (settled && !people.isPlaceholderData) {
       list.push({
