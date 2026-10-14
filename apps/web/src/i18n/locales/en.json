@@ -941,7 +941,8 @@
     "removeCertificate": "Remove certificate",
     "removeDomain": "Remove domain",
     "deleteRole": "Delete role",
-    "removeCredential": "Remove credential"
+    "removeCredential": "Remove credential",
+    "opensInNewTab": "(opens in a new tab)"
   },
   "ui": {
     "clear": "Clear",
@@ -1071,7 +1072,8 @@
     "templates": "Templates",
     "accessOverview": "Access overview",
     "imports": "Import",
-    "exports": "Exports"
+    "exports": "Exports",
+    "announcements": "Announcements"
   },
   "commands": {
     "label": "Command palette",
@@ -1397,7 +1399,14 @@
     "exportDisabled": "Export is turned off for this space. A space admin can turn it on in the space settings.",
     "exportRunning": "Another export of yours is still running. Wait until it is done, or stop it under Settings › Exports.",
     "nothingToExport": "There is nothing to export yet. Publish the page first.",
-    "tooManyExports": "You already keep 5 exports. Delete one you no longer need under Settings › Exports, then try again."
+    "tooManyExports": "You already keep 5 exports. Delete one you no longer need under Settings › Exports, then try again.",
+    "invalidShortcut": "The shortcut is not valid. Check the label and the address.",
+    "shortcutNotFound": "The shortcut does not exist anymore. Reload the list.",
+    "shortcutTargetNotFound": "The content cannot be found or you cannot open it. Choose content you can open yourself.",
+    "tooManyShortcuts": "The space has the most shortcuts allowed. Remove one before adding another.",
+    "invalidAnnouncement": "The announcement is not valid. Check the text, the link and the end.",
+    "announcementNotDismissible": "A warning stays until its end and cannot be dismissed.",
+    "announcementChanged": "The announcement changed in the meantime. Read the new text and dismiss it again."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -2369,7 +2378,8 @@
         "assigned": "You were assigned a task in {itemTitle}: {taskText}"
       },
       "blogPost": {
-        "scheduleHeld": "{reason, select, accountRemoved {The scheduled post {itemTitle} is waiting for approval because the person who scheduled it no longer has an account.} other {The scheduled post {itemTitle} is waiting for approval because {actor} can no longer edit it.}}"
+        "scheduleHeld": "{reason, select, accountRemoved {The scheduled post {itemTitle} is waiting for approval because the person who scheduled it no longer has an account.} other {The scheduled post {itemTitle} is waiting for approval because {actor} can no longer edit it.}}",
+        "published": "New post in {spaceName}: {itemTitle}"
       },
       "page": {
         "shared": "{actor} shared {itemTitle} with you: {role, select, editor {you can edit it} commenter {you can read and comment} other {you can read it}}{includeDescendants, select, true { together with its pages} other {}}."
@@ -2381,7 +2391,8 @@
         "orphaned": "Nobody on the access list of the restricted page {itemTitle} in {spaceName} has an active account anymore. Review the restriction in the space settings."
       },
       "meeting": {
-        "notesAvailable": "{actor} closed {itemTitle}. The notes are available."
+        "notesAvailable": "{actor} closed {itemTitle}. The notes are available.",
+        "reminder": "{seriesTitle} on {startsAt}: add your topics before the meeting so others can prepare."
       },
       "oneOnOne": {
         "started": "{actor} started a one-on-one with you: {itemTitle}."
@@ -3248,7 +3259,8 @@
         "confidentialAdministratorAppointed": "Space admin of a confidential space appointed",
         "confidentialDeleted": "Confidential space deleted",
         "pageStatusValuesChanged": "Page status values changed",
-        "exported": "Space exported"
+        "exported": "Space exported",
+        "shortcutsChanged": "Space shortcuts changed"
       },
       "page": {
         "updateRejected": "Page change rejected",
@@ -3328,6 +3340,10 @@
         "reimportApplied": "Re-import applied",
         "conflictsDecided": "Re-import decisions made",
         "permissionDifferenceApplied": "Permission difference from a re-import applied"
+      },
+      "announcement": {
+        "changed": "Announcement banner set",
+        "removed": "Announcement banner removed"
       }
     },
     "action": "Action",
@@ -3372,7 +3388,8 @@
       "space": "Space",
       "page": "Page",
       "trashEntry": "Trash entry",
-      "template": "Template"
+      "template": "Template",
+      "announcement": "Announcement"
     },
     "properties": {
       "value": "Value",
@@ -3465,7 +3482,16 @@
       "stage": "Trash stage",
       "cause": "Cause",
       "entries": "Entries",
-      "level": "Level"
+      "level": "Level",
+      "replaced": "Replaced",
+      "severity": "Severity",
+      "text": "Text",
+      "linkUrl": "Link address",
+      "linkLabel": "Link text",
+      "startsAt": "Start",
+      "endsAt": "End",
+      "shortcutId": "Shortcut",
+      "itemId": "Content"
     },
     "values": {
       "account": "Account",
@@ -5273,7 +5299,29 @@
       "focus": "Focal point at {x} % from the left and {y} % from the top. Click or use the arrow keys to move it.",
       "wide": "In wide lists",
       "square": "In small tiles"
-    }
+    },
+    "follow": "Follow blog",
+    "following": "Following",
+    "followHint": "Get a notification for every new post of this blog.",
+    "followingHint": "You get a notification for every new post. Select to stop following.",
+    "followed": "You follow the blog of {space}. New posts appear in your notifications.",
+    "unfollowed": "You no longer follow the blog of {space}.",
+    "followFailed": "The blog could not be followed. Check your connection and try again.",
+    "unfollowFailed": "The blog could not be unfollowed. Check your connection and try again.",
+    "unfollow": "Stop following",
+    "followedTitle": "Followed blogs",
+    "followedDescription": "You get a notification for every new post you can read in these blogs. Follow a blog on its page.",
+    "followedEmptyTitle": "You follow no blogs",
+    "followedEmpty": "Open the blog of a space and select “Follow blog” to hear about new posts.",
+    "followedLoadFailed": "The followed blogs could not be loaded",
+    "followedSince": "Following since {date}",
+    "personalBlog": "{name} (personal space)",
+    "removeUnavailableDescription": "You will get no notifications from them when your access returns. You can follow them again then.",
+    "unavailableRemoveFailed": "The blogs could not be unfollowed. Check your connection and try again.",
+    "removeUnavailable": "Stop following {count, plural, one {# blog} other {# blogs}}",
+    "removeUnavailableTitle": "Stop following {count, plural, one {# blog you cannot open} other {# blogs you cannot open}}?",
+    "unavailableFollowed": "{count, plural, one {You follow # blog of a space you cannot open at the moment. Its notifications resume when your access returns.} other {You follow # blogs of spaces you cannot open at the moment. Their notifications resume when your access returns.}}",
+    "unavailableRemoved": "{count, plural, one {You no longer follow # blog.} other {You no longer follow # blogs.}}"
   },
   "files": {
     "title": "Attachments",
@@ -6039,6 +6087,14 @@
       "added": "{name} was added to this one-on-one.",
       "started": "New one-on-one with {name} started.",
       "failed": "The person could not be changed"
+    },
+    "reminder": {
+      "label": "Reminder to attendees",
+      "hint": "Attendees are asked to add their topics, with a link to the meeting. Each meeting is reminded once.",
+      "off": "No reminder",
+      "oneDay": "1 day before",
+      "twoDays": "2 days before",
+      "oneWeek": "1 week before"
     }
   },
   "confidential": {
@@ -7313,5 +7369,113 @@
       "includeArchived": "Include archived content",
       "clearFilters": "{count, plural, one {Clear # filter} other {Clear # filters}}"
     }
+  },
+  "announcements": {
+    "title": "Announcements",
+    "organizationDescription": "Show a banner on every screen to all members of this organization, for example for news or planned maintenance.",
+    "instanceDescription": "Show a banner on every screen to everyone signed in on this instance, above the banner of their organization.",
+    "banner": "Banner",
+    "loadFailed": "The announcement could not be loaded",
+    "order": "The instance banner sits above the organization banner. Changes show at once in every open window.",
+    "changedBy": "Last changed by {name} on {date}.",
+    "statusNone": "No banner is set",
+    "statusShown": "The banner is shown until {date}",
+    "statusScheduled": "The banner shows from {start} to {end}",
+    "statusEnded": "The banner ended on {date}",
+    "severity": "Severity",
+    "information": "Information",
+    "informationHint": "Each person can dismiss it. It comes back when you change it.",
+    "warning": "Warning",
+    "warningHint": "Cannot be dismissed. It disappears at its end.",
+    "text": "Text",
+    "textHint": "{count} of {max} characters.",
+    "textExample": "For example: Maintenance tonight from 22:00 to 23:00, Pagehall is read-only.",
+    "textRequired": "Enter the text of the banner.",
+    "textTooLong": "The text can have up to {max} characters.",
+    "linkUrl": "Link address",
+    "linkUrlHint": "Optional, starting with https:// or http://.",
+    "linkLabel": "Link text",
+    "linkLabelExample": "For example: Read the post",
+    "linkInvalid": "Enter a complete address starting with https:// or http://.",
+    "linkMissing": "Enter the address of the link, or remove the link text.",
+    "linkLabelMissing": "Enter the text of the link, or remove the address.",
+    "linkLabelTooLong": "The link text can have up to {max} characters.",
+    "start": "Start",
+    "startDate": "Start date",
+    "startTime": "Start time",
+    "startHint": "Leave empty to show it at once. Time zone: {timeZone}.",
+    "end": "End",
+    "endDate": "End date",
+    "endTime": "End time",
+    "endHint": "Time zone: {timeZone}.",
+    "dateInvalid": "Enter a valid date and time.",
+    "endRequired": "Enter the date and time when the banner ends.",
+    "endInPast": "Choose an end in the future.",
+    "endBeforeStart": "Choose an end after the start.",
+    "preview": "Preview",
+    "previewInformation": "People can dismiss this banner until you change it.",
+    "previewWarning": "People cannot dismiss this banner. It disappears at its end.",
+    "publish": "Show banner",
+    "saveChanges": "Save changes",
+    "saved": "Banner saved. Open windows show it at once.",
+    "saveFailed": "The banner could not be saved",
+    "readOnly": "You can view the banner. Changing it needs permission to manage settings.",
+    "removeTitle": "Remove banner",
+    "removeDescription": "The banner disappears at once for everyone. You can undo this for a few seconds.",
+    "remove": "Remove banner",
+    "removed": "Banner removed.",
+    "removeFailed": "The banner could not be removed. Check your connection and try again.",
+    "restoreFailed": "The banner could not be restored. Set it again.",
+    "instanceRegion": "Instance announcement",
+    "organizationRegion": "Organization announcement",
+    "warningLabel": "Warning:",
+    "dismiss": "Dismiss announcement",
+    "dismissFailed": "The announcement could not be dismissed. Check your connection and try again.",
+    "fromInstance": "Instance",
+    "fromOrganization": "Organization"
+  },
+  "spaceShortcuts": {
+    "title": "Shortcuts",
+    "description": "Links in the sidebar of this space, to content in Pagehall or to other websites.",
+    "panelDescription": "Shortcuts appear above the pages, in this order. People only see shortcuts to content they can open. A space can have up to {max} shortcuts.",
+    "add": "Add shortcut",
+    "addTitle": "Add a shortcut",
+    "editTitle": "Edit shortcut",
+    "dialogDescription": "Shortcuts to websites open in a new tab.",
+    "target": "Leads to",
+    "targetItem": "Content in Pagehall",
+    "targetUrl": "Website",
+    "itemLabel": "Content",
+    "itemHint": "Search by title. Only content you can open is found.",
+    "itemRequired": "Choose the content the shortcut leads to.",
+    "noMatch": "No content matches",
+    "hiddenTargetKept": "The current content stays unless you choose other content.",
+    "url": "Address",
+    "urlHint": "Starting with https:// or http://.",
+    "urlInvalid": "Enter a complete address starting with https:// or http://.",
+    "label": "Label",
+    "labelHint": "Shown in the sidebar, up to {max} characters. Empty uses the title of the content.",
+    "labelExample": "For example: On-call rota",
+    "labelRequired": "Enter a label.",
+    "labelTooLong": "The label can have up to {max} characters.",
+    "save": "Save shortcut",
+    "added": "Shortcut “{label}” added.",
+    "saved": "Shortcut “{label}” saved.",
+    "addFailed": "The shortcut could not be added",
+    "saveFailed": "The shortcut could not be saved",
+    "loadFailed": "The shortcuts could not be loaded",
+    "empty": "This space has no shortcuts yet. Add links to content people need often.",
+    "limitReached": "This space has {max} shortcuts, the most allowed. Remove one to add another.",
+    "itemIn": "{title} · {space}",
+    "hiddenTarget": "Content you cannot open",
+    "hiddenHint": "People who can open the content see this shortcut. Nobody else sees it.",
+    "moveUp": "Move “{label}” up",
+    "moveDown": "Move “{label}” down",
+    "edit": "Edit “{label}”",
+    "remove": "Remove “{label}”",
+    "removed": "Shortcut “{label}” removed.",
+    "removeFailed": "The shortcut could not be removed. Check your connection and try again.",
+    "restoreFailed": "The shortcut could not be restored. Add it again.",
+    "reorderFailed": "The order could not be saved. Check your connection and try again."
   }
 }

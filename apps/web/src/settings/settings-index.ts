@@ -175,7 +175,10 @@ export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
       row("recoveryCodes", "security.recoveryCodes"),
     ]),
   ],
-  "account.notifications": [section("notifications.eventTypes", notificationEvents())],
+  "account.notifications": [
+    section("notifications.eventTypes", notificationEvents()),
+    section("blog.followedTitle", [row("followedBlogs", "blog.followedTitle", "blog.followedDescription")]),
+  ],
   "organization.general": [
     section("organization.general.profile", [
       row("name", "organization.general.name"),
@@ -196,6 +199,11 @@ export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
     section("organization.domains.guests", GUEST_KEYS.map(setting)),
   ],
   "organization.notifications": [section("notifications.eventTypes", notificationEvents())],
+  "organization.announcements": [
+    section("announcements.banner", [
+      row("announcement", "announcements.title", "announcements.organizationDescription"),
+    ]),
+  ],
   "organization.spaces": [
     section("spaces.organization.creating", [
       setting("spaces.membersCreateSpaces"),
@@ -234,6 +242,11 @@ export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
     ]),
   ],
   "instance.notifications": [section("notifications.eventTypes", notificationEvents())],
+  "instance.announcements": [
+    section("announcements.banner", [
+      row("announcement", "announcements.title", "announcements.instanceDescription"),
+    ]),
+  ],
   "instance.personalSpaces": [
     section("spaces.instance.availability", [setting("spaces.personalSpaces")]),
     section("spaces.instance.review", [

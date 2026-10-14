@@ -1,3 +1,8 @@
+import {
+  ANNOUNCEMENT_CHANGES_CHANNEL,
+  type AnnouncementChangeSignal,
+  parseAnnouncementChangeSignal,
+} from "../announcements/announcements.js";
 import { AUDIT_CHANGES_CHANNEL, type AuditChangeSignal, parseAuditChangeSignal } from "../audit/audit-log.js";
 import type { NotificationListener } from "../database/notifications.js";
 import { parseSyncRunSignal, SYNC_RUNS_CHANNEL, type SyncRunSignal } from "../identity/sync-signals.js";
@@ -20,6 +25,7 @@ type SyncRunHandler = (signal: SyncRunSignal) => void;
 type ChangeHandler = (signal: AuditChangeSignal) => void;
 type SpaceHandler = (signal: SpaceChangeSignal) => void;
 type ImportHandler = (signal: ImportChangeSignal) => void;
+type AnnouncementHandler = (signal: AnnouncementChangeSignal) => void;
 
 export class NotificationHub {
   readonly #listener: NotificationListener;
@@ -29,6 +35,7 @@ export class NotificationHub {
   readonly #changeHandlers = new Set<ChangeHandler>();
   readonly #spaceHandlers = new Set<SpaceHandler>();
   readonly #importHandlers = new Set<ImportHandler>();
+  readonly #announcementHandlers = new Set<AnnouncementHandler>();
   #listening: Promise<void> | undefined;
 
   constructor(listener: NotificationListener) {
@@ -83,6 +90,14 @@ export class NotificationHub {
     };
   }
 
+  async subscribeAnnouncements(handler: AnnouncementHandler): Promise<() => void> {
+    await this.#ready();
+    this.#announcementHandlers.add(handler);
+    return () => {
+      this.#announcementHandlers.delete(handler);
+    };
+  }
+
   async subscribe(accountId: string, handler: Handler): Promise<() => void> {
     await this.#ready();
     let handlers = this.#handlers.get(accountId);
@@ -132,6 +147,11 @@ export class NotificationHub {
       const signal = parseImportChangeSignal(payload);
       if (!signal) return;
       for (const handler of this.#importHandlers) handler(signal);
+    });
+    await this.#listener.listen(ANNOUNCEMENT_CHANGES_CHANNEL, (payload) => {
+      const signal = parseAnnouncementChangeSignal(payload);
+      if (!signal) return;
+      for (const handler of this.#announcementHandlers) handler(signal);
     });
     this.#listener.onReconnect(() => {
       for (const handlers of this.#handlers.values()) for (const handler of handlers) handler();

@@ -223,3 +223,25 @@ export const recentViews = pgTable(
     index().on(table.viewedAt),
   ],
 );
+
+export const blogSubscriptions = pgTable(
+  "blog_subscriptions",
+  {
+    spaceId: uuid()
+      .notNull()
+      .references(() => spaces.id, { onDelete: "cascade" }),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    ...timestamps(),
+  },
+  (table) => [primaryKey({ columns: [table.spaceId, table.accountId] }), index().on(table.accountId)],
+);
+
+export const blogPostAnnouncements = pgTable("blog_post_announcements", {
+  itemId: uuid()
+    .primaryKey()
+    .references(() => treeItems.id, { onDelete: "cascade" }),
+  deliveredThrough: uuid(),
+  ...timestamps(),
+});

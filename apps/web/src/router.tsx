@@ -421,6 +421,15 @@ const spaceStatusRoute = createRoute({
   ),
 });
 
+const spaceShortcutsRoute = createRoute({
+  getParentRoute: () => spaceSettingsRoute,
+  path: "/shortcuts",
+  component: lazyRouteComponent(
+    () => import("./spaces/settings/space-shortcuts-screen.js"),
+    "SpaceShortcutsScreen",
+  ),
+});
+
 const spaceExportRoute = createRoute({
   getParentRoute: () => spaceSettingsRoute,
   path: "/export",
@@ -560,6 +569,11 @@ const organizationNotificationsRoute = organizationScreen(
   "/notifications",
   () => import("./screens/organization/notification-defaults-screen.js"),
   "OrganizationNotificationDefaultsScreen",
+);
+const organizationAnnouncementsRoute = organizationScreen(
+  "/announcements",
+  () => import("./screens/organization/announcements-screen.js"),
+  "OrganizationAnnouncementsScreen",
 );
 const organizationSpacesRoute = organizationScreen(
   "/spaces",
@@ -724,6 +738,11 @@ const instanceNotificationsRoute = instanceScreen(
   () => import("./screens/instance/notification-defaults-screen.js"),
   "InstanceNotificationDefaultsScreen",
 );
+const instanceAnnouncementsRoute = instanceScreen(
+  "/announcements",
+  () => import("./screens/instance/announcements-screen.js"),
+  "InstanceAnnouncementsScreen",
+);
 const instancePersonalSpacesRoute = instanceScreen(
   "/personal-spaces",
   () => import("./spaces/settings/instance-personal-spaces-screen.js"),
@@ -802,6 +821,7 @@ const routeTree = rootRoute.addChildren([
         spaceAccessRoute,
         spaceContentRoute,
         spaceStatusRoute,
+        spaceShortcutsRoute,
         spaceTemplatesRoute,
         spaceExportRoute,
       ]),
@@ -825,6 +845,7 @@ const routeTree = rootRoute.addChildren([
         organizationSecurityRoute,
         domainsRoute,
         organizationNotificationsRoute,
+        organizationAnnouncementsRoute,
         organizationSpacesRoute,
         organizationContentRoute,
         organizationTemplatesRoute,
@@ -848,6 +869,7 @@ const routeTree = rootRoute.addChildren([
         instanceMailRoute,
         breakGlassRoute,
         instanceNotificationsRoute,
+        instanceAnnouncementsRoute,
         instancePersonalSpacesRoute,
         instanceContentRoute,
         instanceTemplatesRoute,

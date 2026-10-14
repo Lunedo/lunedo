@@ -163,6 +163,7 @@ export function spacesChanged(queryClient: QueryClient, events: SpaceChangeEvent
       add(["spaces", event.spaceId, "children"]);
       add(["spaces", event.spaceId, "trash"]);
       add(["spaces", event.spaceId, "archive"]);
+      add(["spaces", event.spaceId, "shortcuts"]);
       if (event.itemId) add(spaceKeys.item(event.itemId));
     }
     if (event.kind === "draft" && event.itemId) {

@@ -6,6 +6,7 @@ import { ItemsController } from "./items.controller.js";
 import { OrganizationSpacesController } from "./organization-spaces.controller.js";
 import { OwnershipController } from "./ownership.controller.js";
 import { PersonalSpacesController } from "./personal-spaces.controller.js";
+import { ShortcutsController } from "./shortcuts.controller.js";
 import { SpacesController } from "./spaces.controller.js";
 import { TemplatesController } from "./templates.controller.js";
 import { TrashController } from "./trash.controller.js";
@@ -18,6 +19,7 @@ import { VersionsController } from "./versions.controller.js";
     ConfidentialSpacesController,
     ItemsController,
     OwnershipController,
+    ShortcutsController,
     PersonalSpacesController,
     VersionsController,
     TrashController,

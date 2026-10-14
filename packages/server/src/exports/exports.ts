@@ -48,6 +48,7 @@ import { exportTexts } from "./texts.js";
 export const EXPORT_RETENTION_DAYS = 7;
 export const MAX_EXPORT_ATTEMPTS = 3;
 const STALE_MINUTES = 10;
+const BLOG_FOLDER_ID = "blog";
 const HEARTBEAT_MS = 5_000;
 const MAX_EXPORT_BYTES = Number.MAX_SAFE_INTEGER;
 const MAX_LISTED_EXPORTS = 50;
@@ -681,6 +682,39 @@ export class ExportService {
     return { type: "account", id: row.account_id, token: grant };
   }
 
+  async #blogPosts(viewer: Principal, row: ExportRow, folderTitle: string): Promise<PlanInput[]> {
+    const result = await this.#database.execute<{ id: string; title: string }>(sql`
+      select t.id, coalesce(v.title, t.title) as title
+      from tree_items t join spaces s on s.id = t.space_id join blog_posts b on b.item_id = t.id
+      join page_versions v on v.id = t.published_version_id
+      where t.space_id = ${row.space_id} and t.kind = 'blogPost' and b.published_at is not null
+        and t.reader_visible and t.archived_root_id is null
+        and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
+      order by b.published_at desc, t.id desc`);
+    if (result.rows.length === 0) return [];
+    const folder: PlanInput = {
+      id: BLOG_FOLDER_ID,
+      parentId: null,
+      path: [BLOG_FOLDER_ID],
+      kind: "folder",
+      title: folderTitle,
+      linkUrl: null,
+      linkItemId: null,
+    };
+    return [
+      folder,
+      ...result.rows.map((post) => ({
+        id: post.id,
+        parentId: BLOG_FOLDER_ID,
+        path: [BLOG_FOLDER_ID, post.id],
+        kind: "page" as const,
+        title: post.title,
+        linkUrl: null,
+        linkItemId: null,
+      })),
+    ];
+  }
+
   async #items(viewer: Principal, row: ExportRow): Promise<PlanInput[]> {
     const root = row.root_item_id;
     const archivedRoot = root
@@ -714,7 +748,10 @@ export class ExportService {
     const viewer = await this.#viewer(row);
     await this.#requireRoot(viewer, row);
     const { renderer, language } = await this.#renderer(viewer, row.account_id);
-    const items = await this.#items(viewer, row);
+    const items = [
+      ...(await this.#items(viewer, row)),
+      ...(row.root_item_id ? [] : await this.#blogPosts(viewer, row, renderer.texts.blog)),
+    ];
     const pageIds = items.filter((item) => item.kind === "page").map((item) => item.id);
     if (row.root_item_id && !pageIds.includes(row.root_item_id)) throw new ExportFailure("noAccess");
     const prepared = new Map<string, PreparedPage>();
