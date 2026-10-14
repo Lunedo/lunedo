@@ -111,6 +111,7 @@ const fields: SettingField[] = [
   },
   { key: "pages.liveVersionIdleMinutes", type: minutes(1, DAY, [5, 10, 30]) },
   { key: "content.language", type: { kind: "contentLanguage" } },
+  { key: "pages.status", type: { kind: "boolean" } },
   { key: "trash.firstStageDays", type: days(1, 3650, [30, 90, 180]) },
   { key: "trash.secondStageDays", type: days(1, 3650, [30, 45, 90]) },
   { key: "trash.firstStageMinimumDays", type: days(1, 3650, [1, 30, 90]) },

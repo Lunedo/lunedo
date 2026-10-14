@@ -320,6 +320,68 @@ describe.skipIf(!baseUrl)("Confluence imports", () => {
     });
   });
 
+  it.each(["xml", "csv"] as const)(
+    "gives imported items their author as owner and maps the page status from the %s export",
+    async (format) => {
+      const model = syntheticExport();
+      const withStatus: SyntheticExport = {
+        ...model,
+        pages: model.pages.map((page) =>
+          page.id === PAGE.alpha
+            ? {
+                ...page,
+                pageStatus: '{"contentState":{"id":5,"name":"verified","color":"#57D9A3"},"version":3}',
+              }
+            : page.id === PAGE.beta
+              ? { ...page, pageStatus: '{"name":"Needs legal review","color":"#FF5630"}' }
+              : page.id === PAGE.zeta
+                ? { ...page, pageStatus: "not json" }
+                : page,
+        ),
+      };
+      const result = await imported(withStatus, { key: format === "xml" ? "OWNX" : "OWNC", format });
+      const spaceId = result.quarantineSpace?.id ?? "";
+      const owners = await test.database.execute<{
+        id: string;
+        owner_id: string | null;
+        state: string | null;
+      }>(sql`
+        select t.id, t.owner_id, a.state from tree_items t left join accounts a on a.id = t.owner_id
+        where t.space_id = ${spaceId}`);
+      expect(owners.rows.length).toBeGreaterThan(5);
+      expect(owners.rows.filter((row) => row.owner_id === admin)).toEqual([]);
+      expect(owners.rows.every((row) => row.state === "placeholder")).toBe(true);
+      const alice = await test.database.execute<{ account_id: string }>(sql`
+        select account_id from account_external_ids
+        where organization_id = ${organizationId} and external_id = ${ALICE.accountId}`);
+      const alpha = await itemFor(result.id, PAGE.alpha);
+      expect(owners.rows.find((row) => row.id === alpha)?.owner_id).toBe(alice.rows[0]?.account_id);
+      const home = await itemFor(result.id, PAGE.home);
+      expect(owners.rows.find((row) => row.id === home)?.owner_id).toBe(alice.rows[0]?.account_id);
+
+      const status = async (sourceId: string) =>
+        (await test.services.tree.get(as(admin), await itemFor(result.id, sourceId)))?.status ?? null;
+      expect(await status(PAGE.alpha)).toMatchObject({ builtIn: "verified", name: null, color: "success" });
+      expect(await status(PAGE.beta)).toMatchObject({
+        builtIn: null,
+        name: "Needs legal review",
+        color: "danger",
+      });
+      expect(await status(PAGE.zeta)).toBeNull();
+      expect(await status(PAGE.aardvark)).toBeNull();
+      const values = await test.services.pageStatus.values(spaceId);
+      expect(values.map((value) => value.builtIn ?? value.name)).toEqual([
+        "roughDraft",
+        "inProgress",
+        "readyForReview",
+        "verified",
+        "Needs legal review",
+      ]);
+      const unowned = await test.services.ownership.spaceUnowned(as(admin), spaceId);
+      expect(unowned.items).toEqual([]);
+    },
+  );
+
   it("imports the CSV export with the same result as the XML export", async () => {
     const xml = await imported(syntheticExport(), { key: "SYNX" });
     const csv = await imported(syntheticExport(), { key: "SYNC", format: "csv" });

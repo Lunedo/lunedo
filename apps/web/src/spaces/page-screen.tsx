@@ -58,6 +58,9 @@ import { ContentLanguageDialog } from "./content-language-dialog.js";
 import { draftQuery } from "./content-queries.js";
 import { InlineTitle } from "./inline-title.js";
 import { itemHref, itemSlug } from "./item-paths.js";
+import { OwnerLine } from "./ownership/owner-line.js";
+import { pageStatusesQuery } from "./ownership/ownership-queries.js";
+import { PageStatusControl } from "./ownership/page-status.js";
 import { PageLabels } from "./page-labels.js";
 import {
   DraftBanner,
@@ -365,6 +368,7 @@ function PageArticle({
             </>
           }
         />
+        <PageMeta page={page} writable={writable} />
         {sharing.restrictionNote}
         {meeting ? (
           <MeetingHeader
@@ -463,6 +467,25 @@ function PageArticle({
         collaboration.panel
       )}
     </div>
+  );
+}
+
+function PageMeta({ page, writable }: { page: ItemDetails; writable: boolean }) {
+  const { space } = useSpace();
+  const statuses = useQuery({ ...pageStatusesQuery(space.id), enabled: writable, throwOnError: false });
+  const editable = writable && statuses.data?.enabled === true;
+  return (
+    <OwnerLine
+      itemId={page.id}
+      spaceId={space.id}
+      title={page.title}
+      owner={page.owner}
+      transferable={page.ownershipTransferable}
+    >
+      {editable || page.status ? (
+        <PageStatusControl itemId={page.id} spaceId={space.id} status={page.status} editable={editable} />
+      ) : null}
+    </OwnerLine>
   );
 }
 

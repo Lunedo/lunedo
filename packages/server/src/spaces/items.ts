@@ -19,10 +19,12 @@ import {
   representativeItems,
   summarizeChanges,
 } from "./move-impact.js";
+import type { ItemOwner, OwnershipService } from "./ownership.js";
 import type { PeopleService } from "./people.js";
-import type { PageMode, PageWidth, TreeItemKind } from "./schema.js";
+import type { BuiltInPageStatus, PageMode, PageStatusColor, PageWidth, TreeItemKind } from "./schema.js";
 import { defaultPageModeSetting } from "./settings.js";
 import { signalSpaceChange } from "./signals.js";
+import { type PageStatus, pageStatusEnabledCondition } from "./status.js";
 import { insertFirstVersion, type VersionService } from "./versions.js";
 import { publishedFor, refreshReaderVisibility, visibleItem } from "./visibility.js";
 
@@ -58,12 +60,15 @@ export interface TreeItem {
   creatorId: string | null;
   ownerId: string | null;
   contentLanguage: ContentLanguage | null;
+  status: PageStatus | null;
   createdAt: Date;
   updatedAt: Date;
   contentUpdatedAt: Date;
 }
 
 export interface ItemDetails extends TreeItem {
+  owner: ItemOwner | null;
+  ownershipTransferable: boolean;
   spaceKey: string;
   spaceName: string;
   spaceAccess: boolean;
@@ -117,6 +122,10 @@ type ItemRow = {
   creator_id: string | null;
   owner_id: string | null;
   content_language: string | null;
+  status_id: string | null;
+  status_built_in: BuiltInPageStatus | null;
+  status_name: string | null;
+  status_color: PageStatusColor | null;
   created_at: Date | string;
   updated_at: Date | string;
   content_updated_at: Date | string;
@@ -198,6 +207,10 @@ function toItem(row: ItemRow): TreeItem {
     creatorId: row.creator_id,
     ownerId: row.owner_id,
     contentLanguage: contentLanguageOf(row.content_language),
+    status:
+      row.status_id && row.status_color
+        ? { id: row.status_id, builtIn: row.status_built_in, name: row.status_name, color: row.status_color }
+        : null,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
     contentUpdatedAt: new Date(row.content_updated_at),
@@ -281,6 +294,7 @@ export class TreeService {
   readonly #settings: SettingsService;
   readonly #activity: ContentActivity;
   readonly #signer: ValueSigner;
+  readonly #ownership: OwnershipService;
 
   constructor(options: {
     database: Database;
@@ -291,6 +305,7 @@ export class TreeService {
     settings: SettingsService;
     activity: ContentActivity;
     signer: ValueSigner;
+    ownership: OwnershipService;
   }) {
     this.#database = options.database;
     this.#authorization = options.authorization;
@@ -300,6 +315,7 @@ export class TreeService {
     this.#settings = options.settings;
     this.#activity = options.activity;
     this.#signer = options.signer;
+    this.#ownership = options.ownership;
   }
 
   async #modeFor(spaceId: string, requested: PageMode | undefined): Promise<PageMode> {
@@ -323,7 +339,7 @@ export class TreeService {
       type: "space",
       id: target.spaceId,
     });
-    if (!readable.allowed) throw new ForbiddenError(readable);
+    if (!readable.allowed) throw new SpaceError("spaceNotFound", "The space does not exist");
     let itemId = await this.findByTitle(actor, target.spaceId, title);
     let created = false;
     if (!itemId) {
@@ -373,9 +389,11 @@ export class TreeService {
         (lt.trash_entry_id is not null and ${this.#authorization.itemFilter(viewer, sql`lt`, sql`ls`)}
           and ${publishedFor(this.#authorization, viewer, sql`lt`, sql`ls`)}) as link_in_trash,
         lt.space_id as link_space_id, ls.key as link_space_key, lt.kind as link_kind, lt.title as link_title,
-        t.creator_id, t.owner_id, t.content_language, t.created_at, t.updated_at, t.content_updated_at
+        t.creator_id, t.owner_id, t.content_language, sv.id as status_id, sv.built_in as status_built_in, sv.name as status_name,
+        sv.color as status_color, t.created_at, t.updated_at, t.content_updated_at
       from tree_items t
       join spaces ts on ts.id = t.space_id
+      left join page_status_values sv on sv.id = t.status_id and ${pageStatusEnabledCondition(sql`ts`)}
       left join tree_items lt on lt.id = t.link_item_id
       left join spaces ls on ls.id = lt.space_id`;
   }
@@ -443,6 +461,8 @@ export class TreeService {
         item.spaceId,
       ),
       ancestors: await this.ancestors(viewer, itemId),
+      owner: await this.#ownership.owner(viewer, itemId),
+      ownershipTransferable: await this.#ownership.canTransfer(viewer, itemId),
     };
   }
 
@@ -845,7 +865,10 @@ export class TreeService {
 
   async #requireEdit(actor: Principal, spaceId: string): Promise<void> {
     const decision = await this.#authorization.explain(actor, "space.edit", { type: "space", id: spaceId });
-    if (!decision.allowed) throw new ForbiddenError(decision);
+    if (decision.allowed) return;
+    const visible = await this.#authorization.explain(actor, "space.view", { type: "space", id: spaceId });
+    if (!visible.allowed) throw new SpaceError("spaceNotFound", "The space does not exist");
+    throw new ForbiddenError(decision);
   }
 
   async convert(actor: Principal, itemId: string, kind: "page" | "folder"): Promise<TreeItem> {

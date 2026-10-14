@@ -451,6 +451,28 @@ describe.skipIf(!baseUrl)("page tree and page content", () => {
       ).toEqual([source.id]);
     });
 
+    it("answers a hidden space like an unknown one when following a link or moving", async () => {
+      const { org, actor, space: created } = await setup();
+      const source = await page(actor, created.id, "Index");
+      const stranger = await member(org.id);
+      const hidden = await space(org.id, stranger);
+      const unknown = "01929b1e-0000-7000-8000-00000000dead";
+      for (const spaceId of [hidden.id, unknown]) {
+        await expect(
+          test.services.tree.followTitleLink(actor, source.id, { spaceId, title: "Secret" }),
+        ).rejects.toMatchObject({ code: "spaceNotFound" });
+        await expect(
+          test.services.tree.move(actor, source.id, { spaceId, parentId: null }),
+        ).rejects.toMatchObject({ code: "spaceNotFound" });
+      }
+      const readable = await space(org.id, stranger, {
+        grants: [{ principalKind: "account", principalId: actor.id, role: "reader" }],
+      });
+      await expect(
+        test.services.tree.move(actor, source.id, { spaceId: readable.id, parentId: null }),
+      ).rejects.toBeInstanceOf(ForbiddenError);
+    });
+
     it("normalizes labels, suggests readable ones and lists pages by label", async () => {
       const { org, editor, actor, space: created } = await setup();
       const target = await page(actor, created.id, "Labelled");

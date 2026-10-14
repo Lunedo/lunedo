@@ -4,10 +4,10 @@ import { readCsvRecords } from "../formats/csv.js";
 import type { ZipEntryLocation } from "../formats/zip.js";
 import type { ScanContext } from "../source.js";
 import {
-  COMMENT_PROPERTIES,
   confluenceDate,
   formerTitleRecord,
   isCurrentStatus,
+  KEPT_PROPERTIES,
   kinds,
   pageSort,
   type ScannedArchive,
@@ -155,7 +155,7 @@ export class ConfluenceCsvReader extends StagedConfluenceReader {
       case "contentproperties": {
         const name = value(row, "propertyname");
         const content = optional(row, "contentid");
-        if (!content || !COMMENT_PROPERTIES.has(name)) return;
+        if (!content || !KEPT_PROPERTIES.has(name)) return;
         const text = optional(row, "stringval") ?? optional(row, "longval") ?? optional(row, "dateval");
         await context.staging.put({
           kind: kinds.property,

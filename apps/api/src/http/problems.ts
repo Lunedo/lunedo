@@ -205,6 +205,14 @@ export const problems = {
   },
   overviewPage: { status: 409, title: "The overview page of a space stays a page in its space" },
   tooManyLabels: { status: 409, title: "The page has too many labels" },
+  ownerNeedsEditAccess: { status: 400, title: "The new owner cannot edit the item" },
+  ownershipNotTransferable: { status: 409, title: "The owner of this item cannot be changed here" },
+  invalidStatus: { status: 400, title: "The status is not valid" },
+  statusExists: { status: 409, title: "A status with this name exists already" },
+  statusNotFound: { status: 404, title: "The status does not exist anymore" },
+  statusInUse: { status: 409, title: "Pages use this status" },
+  statusDisabled: { status: 409, title: "Page status is turned off in this space" },
+  tooManyStatusValues: { status: 409, title: "The space has too many status values" },
   tooManyComments: { status: 409, title: "The page has too many comments" },
   anchorNotFound: { status: 409, title: "The selected text no longer exists" },
   restoreExpired: { status: 409, title: "The time to restore has passed" },
@@ -377,7 +385,7 @@ export const problemSchema = z
       .int()
       .optional()
       .describe(
-        "Number of pages that give access to groups or through broad links, for `confidentialSharing`.",
+        "Number of pages that give access to groups or through broad links, for `confidentialSharing`; number of pages that would lose the status, for `statusInUse`.",
       ),
     impact: moveImpactSchema
       .optional()

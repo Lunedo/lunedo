@@ -1375,7 +1375,16 @@
     "restrictedParentInTrashNamed": "“{title}” is in the trash and restricts who can view this page. Restore the page together with the pages above it to keep that restriction.",
     "restrictedParentInTrashNamedAsk": "“{title}” is in the trash and restricts who can view this page. Ask a space or organization administrator to restore it first.",
     "moveChangesAccess": "The move changes who can open the content. Check who gains and who loses access, then confirm the move.",
-    "restrictionPending": "Fewer people may read this page in Confluence, and that permission difference is not applied yet. Apply it in the permissions tab first, or keep the Pagehall version."
+    "restrictionPending": "Fewer people may read this page in Confluence, and that permission difference is not applied yet. Apply it in the permissions tab first, or keep the Pagehall version.",
+    "ownerNeedsEditAccess": "The person cannot edit this content, so they cannot become its owner. Choose someone who can edit it, or give them edit access first.",
+    "ownershipNotTransferable": "The owner of archived content, content in the trash and meeting topics cannot be changed. Bring the content back first.",
+    "invalidStatus": "The status is not valid. Check the name and reload the list.",
+    "statusExists": "A value with this name exists already. Choose another name.",
+    "statusNotFound": "This status was removed in the meantime. Reload and choose another one.",
+    "statusInUse": "Pages use this status. Confirm how many lose it, then remove it again.",
+    "statusInUsePages": "{count, plural, one {# page now has} other {# pages now have}} this status. Check the number and remove it again.",
+    "statusDisabled": "Page status is turned off in this space. A space admin can turn it on in the space settings.",
+    "tooManyStatusValues": "The space has the largest number of values already. Remove one first."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -2044,6 +2053,10 @@
         "label": "Version after a pause in live mode",
         "description": "A page in live mode gets a version after this time without changes, or when the last person editing leaves."
       },
+      "pages_status": {
+        "label": "Page status",
+        "description": "Editors can mark how far a page is, and readers see it at the top of the page. Turning it off hides the status everywhere; pages keep it in case you turn it on again."
+      },
       "trash_firstStageDays": {
         "label": "Time in the trash",
         "description": "How long editors can restore deleted pages from the trash of a space."
@@ -2343,6 +2356,9 @@
       },
       "page": {
         "shared": "{actor} shared {itemTitle} with you: {role, select, editor {you can edit it} commenter {you can read and comment} other {you can read it}}{includeDescendants, select, true { together with its pages} other {}}."
+      },
+      "ownership": {
+        "orphaned": "{items, plural, one {# item} other {# items}} in {spaceName} no longer {items, plural, one {has} other {have}} an owner, because the owner left. Assign new owners in the space settings."
       },
       "restriction": {
         "orphaned": "Nobody on the access list of the restricted page {itemTitle} in {spaceName} has an active account anymore. Review the restriction in the space settings."
@@ -3209,7 +3225,8 @@
         "archived": "Space archived",
         "unarchived": "Space brought back from the archive",
         "confidentialAdministratorAppointed": "Space admin of a confidential space appointed",
-        "confidentialDeleted": "Confidential space deleted"
+        "confidentialDeleted": "Confidential space deleted",
+        "pageStatusValuesChanged": "Page status values changed"
       },
       "page": {
         "updateRejected": "Page change rejected",
@@ -3221,6 +3238,7 @@
         "unarchived": "Page brought back from the archive",
         "restrictionSet": "Page restricted",
         "restrictionRemoved": "Page restriction removed",
+        "ownerTransferred": "Owner changed",
         "shared": "Page shared",
         "shareChanged": "Page access changed",
         "unshared": "Page access removed",
@@ -6940,5 +6958,95 @@
     "setForPage": "Set for this page.",
     "useSpace": "Use the language of the space",
     "other": "Other language (exact words only)"
+  },
+  "pageStatus": {
+    "title": "Page status",
+    "set": "Set status",
+    "change": "Change the status",
+    "setFailed": "The status was not changed",
+    "loadFailed": "The status values could not be loaded",
+    "remove": "Remove status",
+    "setByAdmins": "Space admins choose the values in the space settings.",
+    "builtIn": {
+      "roughDraft": "Rough draft",
+      "inProgress": "In progress",
+      "readyForReview": "Ready for review",
+      "verified": "Verified"
+    },
+    "colors": {
+      "neutral": "Gray",
+      "accent": "Accent color",
+      "info": "Blue",
+      "success": "Green",
+      "warning": "Orange",
+      "danger": "Red"
+    },
+    "settingsTitle": "Page status",
+    "settingsDescription": "Show at the top of each page how far it is, for example in progress or verified. Editors set the status; readers see it.",
+    "valuesTitle": "Values",
+    "valuesDescription": "Editors choose from these values, in this order. Renaming or recoloring a value changes it on every page that has it.",
+    "reorderFailed": "The order was not saved",
+    "noValues": "There are no values. Add one so editors can set a status.",
+    "removeTitle": "Remove “{name}”?",
+    "removeUsed": "{count, plural, one {# page has this status and loses it.} other {# pages have this status and lose it.}} Their status is not replaced by another value.",
+    "removeUnused": "No page has this status. Editors can no longer choose it.",
+    "removeConfirm": "Remove status",
+    "keep": "Keep status",
+    "removed": "“{name}” was removed",
+    "removeFailed": "The status was not removed",
+    "name": "Name",
+    "color": "Color",
+    "usedBy": "{count, plural, =0 {Not used} one {# page} other {# pages}}",
+    "moveUp": "Move “{name}” up",
+    "moveDown": "Move “{name}” down",
+    "removeLabel": "Remove “{name}”",
+    "nameLength": "Enter a name with 1 to {max} characters.",
+    "newName": "New value",
+    "newNameExample": "For example: Outdated",
+    "add": "Add value",
+    "added": "“{name}” was added",
+    "limitReached": "A space can have up to {max} values. Remove one to add another.",
+    "byImport": "The import",
+    "activitySet": "{actor} set the status to",
+    "activityRemoved": "{actor} removed the status"
+  },
+  "ownership": {
+    "someone": "Someone you cannot see",
+    "nobody": "nobody",
+    "inactiveOwner": "Left or deactivated",
+    "owner": "Owner",
+    "noOwner": "none",
+    "ownerLeft": "Owner left",
+    "transfer": "Transfer ownership",
+    "assign": "Assign owner",
+    "transferred": "{name} is now the owner of “{title}”",
+    "transferTitle": "Transfer ownership of “{title}”",
+    "assignTitle": "Assign an owner to “{title}”",
+    "transferDescription": "{name} is the owner now. The new owner is responsible for the content and keeps it up to date.",
+    "assignDescription": "The content has no active owner. Choose who is responsible for it from now on.",
+    "transferFailed": "The owner was not changed",
+    "newOwner": "New owner",
+    "newOwnerHint": "Only people who can edit the content right now are listed.",
+    "chooseOwner": "Choose the new owner.",
+    "searchPeople": "Search by name",
+    "noCandidates": "Nobody else who can edit this content matches. Give the person edit access first.",
+    "transferConfirm": "Transfer ownership",
+    "assignConfirm": "Assign owner",
+    "unownedTitle": "Content without an owner",
+    "spaceUnownedDescription": "Content whose owner was deactivated or left the organization. Assign a new owner so someone stays responsible. If the person returns, they own the content again unless you assigned someone else.",
+    "organizationUnownedDescription": "Content without an active owner in the spaces you can read. Confidential spaces are not listed; their space admins assign owners there.",
+    "unownedFailed": "The content without an owner could not be loaded",
+    "hiddenTitle": "{count, plural, one {# more item has} other {# more items have}} no owner",
+    "hiddenDescription": "You cannot open them, for example because they are restricted. Someone on their access list or a space admin who can open them can assign an owner.",
+    "unownedEmptyTitle": "Every item has an owner",
+    "unownedEmpty": "When an owner is deactivated or leaves the organization, their content appears here.",
+    "reasonDeactivated": "{name} was deactivated",
+    "reasonLeft": "{name} left the organization",
+    "reasonNone": "Never had an owner",
+    "showMore": "Show more",
+    "activityTitle": "Status and owner",
+    "activityFailed": "The changes of status and owner could not be loaded",
+    "activityEmpty": "The status and the owner have not changed yet.",
+    "activityTransferred": "{actor} changed the owner from {from} to {to}"
   }
 }

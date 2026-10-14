@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import type { Database, Transaction } from "../database/database.js";
 import { insertPage } from "../spaces/items.js";
 import { signalSpaceChange } from "../spaces/signals.js";
+import { insertDefaultPageStatuses } from "../spaces/status.js";
 
 const PURGE_BATCH = 500;
 
@@ -21,6 +22,7 @@ export async function createQuarantineSpace(
   await tx.execute(sql`
     insert into spaces (id, organization_id, key, name, visibility, discoverable, quarantined, created_by)
     values (${spaceId}, ${input.organizationId}, ${input.key}, ${input.name}, 'private', false, true, ${input.importerId})`);
+  await insertDefaultPageStatuses(tx, spaceId);
   await setQuarantineReaders(tx, spaceId, input.importerId, [input.importerId, ...input.readers]);
   const overviewId = await insertPage(tx, {
     spaceId,

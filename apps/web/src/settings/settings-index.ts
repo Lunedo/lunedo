@@ -104,6 +104,8 @@ const notificationEvents = (): IndexEntry[] =>
 
 export const PAGE_MODE_KEYS = ["pages.defaultMode", "pages.liveVersionIdleMinutes"] as const;
 
+export const PAGE_STATUS_KEYS = ["pages.status"] as const;
+
 export const TRASH_KEYS = ["trash.firstStageDays", "trash.secondStageDays"] as const;
 
 export const SEARCH_KEYS = ["content.language"] as const;

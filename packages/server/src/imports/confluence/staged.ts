@@ -18,6 +18,7 @@ import type {
   SourceLabel,
   SourceLike,
   SourcePage,
+  SourcePageStatus,
   SourcePerson,
   SourceRestriction,
   SourceSpace,
@@ -147,7 +148,9 @@ export interface StagedRestriction {
   group: string | null;
 }
 
-export const COMMENT_PROPERTIES = new Set([
+export const PAGE_STATUS_PROPERTY = "content-state-published";
+
+export const KEPT_PROPERTIES = new Set([
   "inline-comment",
   "actualCommentType",
   "inline-marker-ref",
@@ -155,6 +158,7 @@ export const COMMENT_PROPERTIES = new Set([
   "status",
   "status-lastmodifier",
   "status-lastmoddate",
+  PAGE_STATUS_PROPERTY,
 ]);
 
 export const kinds = {
@@ -197,6 +201,24 @@ export function commentStatus(value: string | undefined): SourceCommentStatus {
   if (status === "resolved") return "resolved";
   if (status === "dangling") return "dangling";
   return "open";
+}
+
+export function pageStatus(value: string | undefined): SourcePageStatus | null {
+  if (!value) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    return null;
+  }
+  if (typeof parsed !== "object" || parsed === null) return null;
+  const record = parsed as Record<string, unknown>;
+  const state = (
+    typeof record.contentState === "object" && record.contentState !== null ? record.contentState : record
+  ) as Record<string, unknown>;
+  const name = typeof state.name === "string" ? state.name.replace(/\s+/g, " ").trim() : "";
+  if (!name) return null;
+  return { name: name.slice(0, 40), color: typeof state.color === "string" ? state.color : null };
 }
 
 export function propertyDate(value: string | undefined): string | null {
@@ -387,6 +409,10 @@ export abstract class StagedConfluenceReader implements ImportReader {
         context.staging,
         batch.flatMap((page) => [page.data.creatorKey, page.data.modifierKey]),
       );
+      const statuses = await this.#properties(
+        context,
+        batch.map((page) => page.sourceId),
+      );
       for (const page of batch) {
         yield {
           sourceId: page.sourceId,
@@ -398,6 +424,7 @@ export abstract class StagedConfluenceReader implements ImportReader {
           modifierId: page.data.modifierKey ? (people.get(page.data.modifierKey) ?? null) : null,
           modifiedAt: page.data.modified,
           version: page.data.version,
+          status: pageStatus(statuses.get(page.sourceId)?.get(PAGE_STATUS_PROPERTY)),
         } satisfies SourcePage;
       }
       batch = [];
@@ -435,16 +462,12 @@ export abstract class StagedConfluenceReader implements ImportReader {
     yield* flush();
   }
 
-  async comments(context: ReadContext, contentIds: readonly string[]): Promise<readonly SourceComment[]> {
-    const records = (await context.staging.byRef<StagedComment>(kinds.comment, contentIds)).sort(
-      (left, right) =>
-        (left.ref ?? "").localeCompare(right.ref ?? "") ||
-        (left.data.created ?? "").localeCompare(right.data.created ?? "") ||
-        left.sourceId.localeCompare(right.sourceId),
-    );
-    const commentIds = records.map((comment) => comment.sourceId);
-    const properties = await context.staging.byRef<StagedProperty>(kinds.property, commentIds);
-    const links = await context.staging.byRef<Record<string, never>>(kinds.propertyLink, commentIds);
+  async #properties(
+    context: ReadContext,
+    contentIds: readonly string[],
+  ): Promise<Map<string, Map<string, string>>> {
+    const properties = await context.staging.byRef<StagedProperty>(kinds.property, contentIds);
+    const links = await context.staging.byRef<Record<string, never>>(kinds.propertyLink, contentIds);
     const linked = await context.staging.get<StagedProperty>(
       kinds.propertyValue,
       links.map((link) => link.sourceId),
@@ -456,13 +479,27 @@ export abstract class StagedConfluenceReader implements ImportReader {
         return value ? [{ ref: link.ref, data: value.data }] : [];
       }),
     ];
-    const byComment = new Map<string, Map<string, string>>();
+    const byContent = new Map<string, Map<string, string>>();
     for (const property of owned) {
       if (!property.ref) continue;
-      const map = byComment.get(property.ref) ?? new Map<string, string>();
+      const map = byContent.get(property.ref) ?? new Map<string, string>();
       map.set(property.data.name, property.data.value);
-      byComment.set(property.ref, map);
+      byContent.set(property.ref, map);
     }
+    return byContent;
+  }
+
+  async comments(context: ReadContext, contentIds: readonly string[]): Promise<readonly SourceComment[]> {
+    const records = (await context.staging.byRef<StagedComment>(kinds.comment, contentIds)).sort(
+      (left, right) =>
+        (left.ref ?? "").localeCompare(right.ref ?? "") ||
+        (left.data.created ?? "").localeCompare(right.data.created ?? "") ||
+        left.sourceId.localeCompare(right.sourceId),
+    );
+    const byComment = await this.#properties(
+      context,
+      records.map((comment) => comment.sourceId),
+    );
     const people = await this.#people(context.staging, [
       ...records.map((comment) => comment.data.creatorKey),
       ...[...byComment.values()].map((map) => map.get("status-lastmodifier")?.trim() || null),

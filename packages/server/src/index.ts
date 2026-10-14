@@ -622,6 +622,15 @@ export {
   trashRetentionJob,
 } from "./spaces/jobs.js";
 export { isValidSpaceKey, normalizeSpaceKey, SPACE_KEY_PATTERN, suggestSpaceKey } from "./spaces/keys.js";
+export {
+  MAX_OWNER_CANDIDATES,
+  MAX_UNOWNED_PAGE,
+  type OwnerCandidate,
+  type OwnerLoss,
+  type OwnershipChange,
+  type UnownedItem,
+  type UnownedPage,
+} from "./spaces/ownership.js";
 export type { Person } from "./spaces/people.js";
 export type { PermissionChange, SpacePermissionEntry } from "./spaces/permissions.js";
 export type { PersonalSpaceForReview } from "./spaces/personal.js";
@@ -633,9 +642,13 @@ export {
   ReportService,
 } from "./spaces/reports.js";
 export {
+  type BuiltInPageStatus,
+  builtInPageStatuses,
   type PageMode,
+  type PageStatusColor,
   type PageWidth,
   pageModes,
+  pageStatusColors,
   pageWidths,
   type SpaceRole,
   type SpaceVisibility,
@@ -654,6 +667,7 @@ export {
   liveVersionIdleMinutesSetting,
   membersCreateConfidentialSpacesSetting,
   membersCreateSpacesSetting,
+  pageStatusEnabledSetting,
   personalSpacesSetting,
   type SpaceGrant,
   spaceGrantSchema,
@@ -672,6 +686,13 @@ export {
   type Space,
   type SpaceWithRole,
 } from "./spaces/spaces.js";
+export {
+  MAX_PAGE_STATUS_VALUES,
+  PAGE_STATUS_NAME_MAX_LENGTH,
+  type PageStatus,
+  type PageStatusChange,
+  type PageStatusValue,
+} from "./spaces/status.js";
 export { ERASURE_REASON_MAX_LENGTH, type TrashEntry, TrashService } from "./spaces/trash.js";
 export {
   DISCARDED_DRAFT_DAYS,

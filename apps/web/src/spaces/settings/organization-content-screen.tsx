@@ -19,6 +19,7 @@ import {
 } from "../../settings/settings-index.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { contentKeys } from "../content-queries.js";
+import { UnownedItems } from "../ownership/unowned-items.js";
 import { DeletedContent } from "../trash/deleted-content.js";
 import { withParentsQuery } from "../trash/restore-with-parents.js";
 import { DeletedConfidentialNotice } from "./confidential-spaces.js";
@@ -105,6 +106,14 @@ export function OrganizationContentScreen() {
           canManage={state.can("organization.settings.manage")}
         />
       </Panel>
+      {state.can("organization.spaces.view") ? (
+        <Panel
+          title={t("ownership.unownedTitle")}
+          description={t("ownership.organizationUnownedDescription")}
+        >
+          <UnownedItems scope={{ organizationId }} showSpace />
+        </Panel>
+      ) : null}
       <Panel title={t("content.trashSection")}>
         <SettingsList
           settings={settings.data}

@@ -143,11 +143,14 @@ import {
   TRASH_RETENTION_SCHEDULE,
   trashRetentionJob,
 } from "./spaces/jobs.js";
+import { spaceNotificationTypes } from "./spaces/notifications.js";
+import { OwnershipService } from "./spaces/ownership.js";
 import { PeopleService } from "./spaces/people.js";
 import { SpaceHolders, SpacePermissionService } from "./spaces/permissions.js";
 import { PersonalSpaceService } from "./spaces/personal.js";
 import { ReportService } from "./spaces/reports.js";
 import { SpaceService } from "./spaces/spaces.js";
+import { PageStatusService } from "./spaces/status.js";
 import { TrashService } from "./spaces/trash.js";
 import { VersionService } from "./spaces/versions.js";
 import { TemplateService } from "./templates/templates.js";
@@ -201,6 +204,8 @@ export interface AccountServices {
   spacePermissions: SpacePermissionService;
   personalSpaces: PersonalSpaceService;
   tree: TreeService;
+  ownership: OwnershipService;
+  pageStatus: PageStatusService;
   documents: PageDocumentService;
   versions: VersionService;
   trash: TrashService;
@@ -306,6 +311,7 @@ export function createAccountServices(options: {
       ...sharingNotificationTypes,
       ...meetingNotificationTypes,
       ...importNotificationTypes,
+      ...spaceNotificationTypes,
     ),
   });
   mail.useNotifications(notifications);
@@ -500,6 +506,15 @@ export function createAccountServices(options: {
   const trash = new TrashService({ database, audit, settings, people, activity, authorization, logger });
   const archive = new ArchiveService({ database, audit, authorization, activity, trash });
   const signer = new ValueSigner({ database, encryption });
+  const ownership = new OwnershipService({
+    database,
+    authorization,
+    people,
+    audit,
+    notifications,
+    administrators: (executor, spaceId) => pageAccess.spaceAdministrators(executor, spaceId),
+  });
+  const pageStatus = new PageStatusService({ database, authorization, settings, people, audit });
   const tree = new TreeService({
     database,
     authorization,
@@ -509,6 +524,7 @@ export function createAccountServices(options: {
     settings,
     activity,
     signer,
+    ownership,
   });
   const templates = new TemplateService({ database, audit, settings, people, tree, documents });
   const reactions = new ReactionService({ database, settings, people });
@@ -570,6 +586,10 @@ export function createAccountServices(options: {
   memberships.onDeactivated((tx, accountId) => pageAccess.markOrphanedRestrictions(tx, accountId));
   const confidentialSpaces = new ConfidentialSpaceService({ database, audit, notifications });
   memberships.onDeactivated((tx, accountId) => confidentialSpaces.afterDeactivation(tx, accountId));
+  memberships.onDeactivated((tx, accountId) => ownership.afterDeactivation(tx, accountId));
+  memberships.onMembershipEnded((tx, organizationId, accountId) =>
+    ownership.afterMembershipEnded(tx, organizationId, accountId),
+  );
   memberships.onMembershipEnded((tx, organizationId, accountId) =>
     pageAccess.afterMembershipEnded(tx, organizationId, accountId),
   );
@@ -702,6 +722,8 @@ export function createAccountServices(options: {
     spacePermissions,
     personalSpaces,
     tree,
+    ownership,
+    pageStatus,
     documents,
     versions,
     trash,
