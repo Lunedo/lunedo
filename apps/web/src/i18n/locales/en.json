@@ -2107,6 +2107,10 @@
       "imports_atlassianHosts": {
         "label": "Further Atlassian sites",
         "description": "Host names Pagehall may contact with an import's API token besides sites under atlassian.net, separated by commas, such as wiki.example.com."
+      },
+      "content_language": {
+        "label": "Content language",
+        "description": "Language of the pages in this space. Search uses it to find words in all their forms, for example houses when someone searches for house. Each page can use a different language."
       }
     },
     "disabled": {
@@ -4624,7 +4628,8 @@
     "sharingSection": "Sharing",
     "filesSection": "Files",
     "importsSection": "Imports",
-    "importsSectionDescription": "Limits for imports from Confluence. The import folder itself is set by the person who runs the server."
+    "importsSectionDescription": "Limits for imports from Confluence. The import folder itself is set by the person who runs the server.",
+    "searchSection": "Search"
   },
   "archive": {
     "archive": "Archive",
@@ -6923,5 +6928,17 @@
       "showDifference": "Show the permission difference",
       "selectionLimited": "Some selected pages wait for a restriction from Confluence, so only “Keep Pagehall version” is offered."
     }
+  },
+  "contentLanguage": {
+    "menu": "Content language",
+    "title": "Content language of {title}",
+    "description": "Search uses this language to find the words of the page in all their forms.",
+    "label": "Language",
+    "space": "Same as the space ({language})",
+    "organization": "Same as the organization",
+    "inheritedFromSpace": "Inherited from the space: {language}.",
+    "setForPage": "Set for this page.",
+    "useSpace": "Use the language of the space",
+    "other": "Other language (exact words only)"
   }
 }

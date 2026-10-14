@@ -106,6 +106,8 @@ export const PAGE_MODE_KEYS = ["pages.defaultMode", "pages.liveVersionIdleMinute
 
 export const TRASH_KEYS = ["trash.firstStageDays", "trash.secondStageDays"] as const;
 
+export const SEARCH_KEYS = ["content.language"] as const;
+
 export const COLLABORATION_KEYS = ["reactions.enabled"] as const;
 
 export const FILE_KEYS = ["files.maxFileSizeMegabytes", "files.keepVersions"] as const;
