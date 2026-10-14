@@ -17,6 +17,7 @@ import {
   type SearchContentType,
   type SearchFilters,
   type SearchSort,
+  type SearchUpdatedRange,
 } from "./adapter.js";
 import type { SearchIndexer } from "./indexer.js";
 import { parseQuery } from "./query.js";
@@ -43,6 +44,7 @@ export interface SearchRequest {
   labels: string[];
   authorIds: string[];
   statusIds: string[];
+  languages: string[];
   includeArchived: boolean;
   updatedAfter: Date | null;
   updatedBefore: Date | null;
@@ -89,6 +91,8 @@ export interface SearchFacets {
   labels: FacetCount<string>[];
   authors: (FacetCount<string> & { name: string })[];
   statuses: (FacetCount<string> & Omit<PageStatus, "id">)[];
+  languages: FacetCount<string>[];
+  updated: FacetCount<SearchUpdatedRange>[];
 }
 
 export interface SearchResponse {
@@ -265,6 +269,7 @@ export class SearchService {
       labels,
       authorIds,
       statusIds,
+      languages: [...new Set(request.languages)].slice(0, MAX_FILTER_VALUES),
       includeArchived: request.includeArchived,
       updatedAfter: request.updatedAfter,
       updatedBefore: request.updatedBefore,
@@ -389,10 +394,12 @@ export class SearchService {
         const status = statuses.get(facet.value);
         return status ? [{ ...facet, builtIn: status.builtIn, name: status.name, color: status.color }] : [];
       }),
+      languages: facets.languages,
+      updated: facets.updated,
     };
   }
 }
 
 function emptyFacets(): SearchFacets {
-  return { contentTypes: [], spaces: [], labels: [], authors: [], statuses: [] };
+  return { contentTypes: [], spaces: [], labels: [], authors: [], statuses: [], languages: [], updated: [] };
 }

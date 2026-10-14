@@ -173,7 +173,7 @@ export class HomeService {
     if (!accountId) return;
     await this.#database.execute(sql`
       insert into recent_views (account_id, item_id) values (${accountId}, ${itemId})
-      on conflict (account_id, item_id) do update set viewed_at = now()`);
+      on conflict (account_id, item_id) do update set viewed_at = now(), views = least(recent_views.views + 1, 1000000)`);
   }
 
   async recent(viewer: Principal, limit = 20): Promise<(ContentReference & { viewedAt: Date })[]> {

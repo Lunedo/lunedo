@@ -119,6 +119,7 @@ import { OrganizationService } from "./organizations/organizations.js";
 import { RoleService } from "./organizations/roles.js";
 import { SearchIndexer } from "./search/indexer.js";
 import { PostgresSearchAdapter } from "./search/postgres-adapter.js";
+import { SavedSearchService } from "./search/saved-searches.js";
 import { SearchService } from "./search/service.js";
 import type { SettingsService } from "./settings/service.js";
 import { SetupRegistry } from "./setup/framework.js";
@@ -200,6 +201,7 @@ export interface AccountServices {
   scimTokens: ScimTokenService;
   people: PeopleService;
   search: SearchService;
+  savedSearches: SavedSearchService;
   spaces: SpaceService;
   spacePermissions: SpacePermissionService;
   personalSpaces: PersonalSpaceService;
@@ -485,6 +487,7 @@ export function createAccountServices(options: {
     adapter: searchAdapter,
     indexer: new SearchIndexer({ database, adapter: searchAdapter }),
   });
+  const savedSearches = new SavedSearchService({ database });
   const spaces = new SpaceService({ database, audit, authorization, settings, people });
   const spacePermissions = new SpacePermissionService({
     database,
@@ -595,6 +598,9 @@ export function createAccountServices(options: {
   );
   memberships.onMembershipEnded((tx, organizationId, accountId) =>
     confidentialSpaces.afterMembershipEnded(tx, organizationId, accountId),
+  );
+  memberships.onMembershipEnded((tx, organizationId, accountId) =>
+    savedSearches.afterMembershipEnded(tx, organizationId, accountId),
   );
   const meetings = new MeetingService({
     database,
@@ -718,6 +724,7 @@ export function createAccountServices(options: {
     scimTokens,
     people,
     search,
+    savedSearches,
     spaces,
     spacePermissions,
     personalSpaces,

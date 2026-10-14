@@ -189,7 +189,15 @@ describe.skipIf(!baseUrl)("search", () => {
     ]);
     const outsider = await find(w.outsider, w.org.id, w.word);
     expect(outsider.total).toBe(0);
-    expect(outsider.facets).toEqual({ contentTypes: [], spaces: [], labels: [], authors: [], statuses: [] });
+    expect(outsider.facets).toEqual({
+      contentTypes: [],
+      spaces: [],
+      labels: [],
+      authors: [],
+      statuses: [],
+      languages: [],
+      updated: [],
+    });
   });
 
   it("pages through results with a cursor in both sort orders", async () => {
@@ -373,5 +381,76 @@ describe.skipIf(!baseUrl)("search", () => {
     expect(await ids(scoped, w.org.id, w.word)).toHaveLength(3);
     const elsewhere = { ...scoped, token: { ...scoped.token, organizationId: (await organization()).id } };
     expect(await ids(elsewhere, w.org.id, w.word)).toEqual([]);
+  });
+  it("filters by content language and counts results per language", async () => {
+    const w = await world();
+    await test.services.tree.setContentLanguage(w.author, w.gamma, "de");
+    await drain();
+    const all = await find(w.other, w.org.id, w.word);
+    expect(all.facets?.languages).toEqual(
+      expect.arrayContaining([
+        { value: "de", count: 1 },
+        { value: expect.not.stringMatching(/^de$/), count: 2 },
+      ]),
+    );
+    expect(await ids(w.other, w.org.id, w.word, { languages: ["de"] })).toEqual([w.gamma]);
+  });
+
+  it("counts each filter group as if its own filter were not set", async () => {
+    const w = await world();
+    const result = await find(w.other, w.org.id, w.word, { spaceIds: [w.second.id] });
+    expect(result.total).toBe(1);
+    expect(result.facets?.spaces.map((facet) => [facet.value, facet.count]).sort()).toEqual(
+      [
+        [w.shared.id, 2],
+        [w.second.id, 1],
+      ].sort(),
+    );
+    expect(result.facets?.authors.map((facet) => [facet.name, facet.count])).toEqual([["Ada Author", 1]]);
+    expect(result.facets?.contentTypes).toEqual([{ value: "page", count: 1 }]);
+  });
+
+  it("counts results changed within the last week, month and year", async () => {
+    const w = await world();
+    await test.pool.query(
+      "update search_chunks set content_updated_at = now() - interval '40 days' where item_id = $1",
+      [w.gamma],
+    );
+    const result = await find(w.other, w.org.id, w.word);
+    expect(result.facets?.updated).toEqual([
+      { value: "week", count: 2 },
+      { value: "month", count: 2 },
+      { value: "year", count: 3 },
+    ]);
+    const recent = await find(w.other, w.org.id, w.word, {
+      updatedAfter: new Date(Date.now() - 7 * 86_400_000),
+    });
+    expect(recent.total).toBe(2);
+    expect(recent.facets?.updated).toEqual(result.facets?.updated);
+  });
+
+  it("ranks content the person used recently and often slightly higher", async () => {
+    const w = await world();
+    const text = `${w.word} identical words`;
+    const create = async (title: string) => {
+      const created = await test.services.tree.create(w.author, w.shared.id, {
+        kind: "page",
+        title,
+        mode: "live",
+        placement: { parentId: null },
+        document: doc(paragraph(text)),
+      });
+      return created.id;
+    };
+    const older = await create("Same title");
+    const newer = await create("Same title");
+    await drain();
+    const query = `${w.word} identical`;
+    const before = await find(w.other, w.org.id, query);
+    expect(before.results.map((hit) => hit.itemId)).toEqual([newer, older]);
+    for (let view = 0; view < 3; view += 1) await test.services.home.recordView(w.other, older);
+    const after = await find(w.other, w.org.id, query);
+    expect(after.results.map((hit) => hit.itemId)).toEqual([older, newer]);
+    expect((await find(w.author, w.org.id, query)).results.map((hit) => hit.itemId)).toEqual([newer, older]);
   });
 });

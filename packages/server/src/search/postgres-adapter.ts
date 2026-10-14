@@ -12,14 +12,28 @@ import {
   type IndexedItem,
   type ItemAccess,
   type SearchAdapter,
+  type SearchFilters,
+  searchUpdatedRanges,
+  UPDATED_RANGE_DAYS,
 } from "./adapter.js";
 import { lastTerm, type ParsedQuery, type QueryAtom } from "./query.js";
 
 const MIN_TYPO_LENGTH = 4;
 const TYPO_SIMILARITY = 0.5;
 const TYPO_ALTERNATIVES = 3;
+const RECENT_USE_DAYS = 30;
+const MAX_RECENT_BOOST = 0.15;
+const MAX_FREQUENT_BOOST = 0.1;
+const FREQUENT_VIEWS = 10;
 const FACET_LIMIT = 20;
 const EXCERPT_OPTIONS = `StartSel=${EXCERPT_START}, StopSel=${EXCERPT_END}, MaxWords=30, MinWords=12, ShortWord=2, MaxFragments=2, FragmentDelimiter=" … "`;
+
+type FacetGroup = keyof AdapterFacets;
+
+function usageBoost(view: SQL): SQL {
+  return sql`(case when ${view}.item_id is null then 0 else ${MAX_RECENT_BOOST} * exp(-greatest(extract(epoch from now() - ${view}.viewed_at), 0) / ${RECENT_USE_DAYS * 86400})
+    + ${MAX_FREQUENT_BOOST} * least(ln(1 + ${view}.views) / ln(${FREQUENT_VIEWS + 1}), 1) end)`;
+}
 
 interface QueryParts {
   match: SQL;
@@ -107,40 +121,78 @@ export class PostgresSearchAdapter implements SearchAdapter {
     return result.rows.map((row) => row.item_id);
   }
 
-  async search(executor: Executor, request: AdapterSearch): Promise<AdapterResult> {
+  #scope(request: AdapterSearch): SQL[] {
     const { viewer, filters } = request;
     const organization = sql`${viewer.organizationId}::uuid`;
-    const parts = await this.#queryParts(executor, request);
-    if (parts === "nothing")
-      return { hits: [], total: 0, hasMore: false, facets: request.facets ? emptyFacets() : null };
-
     const conditions: SQL[] = [
-      request.viewer.personalTokens.length > 0
+      viewer.personalTokens.length > 0
         ? sql`(c.organization_id = ${organization} or c.organization_id is null)`
         : sql`c.organization_id = ${organization}`,
-      request.viewer.personalTokens.length > 0
+      viewer.personalTokens.length > 0
         ? sql`(s.organization_id = ${organization} or s.organization_id is null)`
         : sql`s.organization_id = ${organization}`,
       sql`s.deleted_at is null`,
       sql`t.trash_entry_id is null`,
-      parts.match,
       sql`((p.space_id is null and c.space_id = t.space_id and ${storedAccessCondition(viewer, sql`c`)})
         or ((p.space_id is not null or c.space_id <> t.space_id)
           and ${liveAccessCondition(viewer, sql`c`, sql`t`, sql`s`)}))`,
     ];
     if (!filters.includeArchived) conditions.push(sql`not c.archived`);
-    if (filters.spaceIds) conditions.push(sql`t.space_id = any(${sql.param(filters.spaceIds)}::uuid[])`);
+    return conditions;
+  }
+
+  #filterConditions(filters: SearchFilters): [FacetGroup, SQL][] {
+    const conditions: [FacetGroup, SQL][] = [];
+    if (filters.spaceIds)
+      conditions.push(["spaces", sql`t.space_id = any(${sql.param(filters.spaceIds)}::uuid[])`]);
     if (filters.contentTypes.length > 0) {
-      conditions.push(sql`c.content_type = any(${sql.param(filters.contentTypes)}::text[])`);
+      conditions.push([
+        "contentTypes",
+        sql`c.content_type = any(${sql.param(filters.contentTypes)}::text[])`,
+      ]);
     }
-    if (filters.labels.length > 0) conditions.push(sql`c.labels && ${sql.param(filters.labels)}::text[]`);
-    if (filters.authorIds) conditions.push(sql`c.author_id = any(${sql.param(filters.authorIds)}::uuid[])`);
-    if (filters.statusIds.length > 0)
-      conditions.push(sql`c.status = any(${sql.param(filters.statusIds)}::text[])`);
+    if (filters.labels.length > 0)
+      conditions.push(["labels", sql`c.labels && ${sql.param(filters.labels)}::text[]`]);
+    if (filters.authorIds) {
+      conditions.push([
+        "authors",
+        sql`coalesce(c.author_id = any(${sql.param(filters.authorIds)}::uuid[]), false)`,
+      ]);
+    }
+    if (filters.statusIds.length > 0) {
+      conditions.push([
+        "statuses",
+        sql`coalesce(c.status = any(${sql.param(filters.statusIds)}::text[]), false)`,
+      ]);
+    }
+    if (filters.languages.length > 0) {
+      conditions.push(["languages", sql`c.language = any(${sql.param(filters.languages)}::text[])`]);
+    }
+    const updated: SQL[] = [];
     if (filters.updatedAfter)
-      conditions.push(sql`c.content_updated_at >= ${filters.updatedAfter.toISOString()}`);
+      updated.push(sql`c.content_updated_at >= ${filters.updatedAfter.toISOString()}`);
     if (filters.updatedBefore)
-      conditions.push(sql`c.content_updated_at < ${filters.updatedBefore.toISOString()}`);
+      updated.push(sql`c.content_updated_at < ${filters.updatedBefore.toISOString()}`);
+    if (updated.length > 0) conditions.push(["updated", sql`(${sql.join(updated, sql` and `)})`]);
+    return conditions;
+  }
+
+  async search(executor: Executor, request: AdapterSearch): Promise<AdapterResult> {
+    const { viewer } = request;
+    const parts = await this.#queryParts(executor, request);
+    if (parts === "nothing")
+      return { hits: [], total: 0, hasMore: false, facets: request.facets ? emptyFacets() : null };
+
+    const conditions = [...this.#scope(request), parts.match];
+    const filtered = this.#filterConditions(request.filters);
+    if (!request.facets) conditions.push(...filtered.map(([, condition]) => condition));
+    const flags = request.facets ? filtered : [];
+    const flagColumns = flags.map(([group, condition]) => sql`, (${condition}) as ${sql.raw(`f_${group}`)}`);
+    const passing = (except?: FacetGroup) =>
+      sql.join(
+        [sql`true`, ...flags.filter(([group]) => group !== except).map(([group]) => sql.raw(`f_${group}`))],
+        sql` and `,
+      );
 
     const visible = sql`${sql.param(request.visibleSpaceIds)}::uuid[]`;
     const first = request.firstSpaceId ? sql`(b.space_id = ${request.firstSpaceId}::uuid) desc, ` : sql``;
@@ -153,21 +205,25 @@ export class PostgresSearchAdapter implements SearchAdapter {
         ? sql`and (b.content_updated_at, b.source_id) < (${request.after.updatedAt}::timestamptz, ${request.after.sourceId}::uuid)`
         : sql`and (b.score, b.source_id) < (${request.after.score}::float8, ${request.after.sourceId}::uuid)`
       : sql``;
+    const counted = (group: FacetGroup, select: SQL, extra: SQL, from: SQL = sql`candidates`) =>
+      sql`coalesce((select jsonb_agg(jsonb_build_object('value', value, 'count', n) order by n desc, value)
+        from (${select} from ${from} where ${passing(group)} ${extra}) f), '[]'::jsonb)`;
+    const updatedCounts = sql.join(
+      searchUpdatedRanges.map(
+        (range) =>
+          sql`jsonb_build_object('value', ${range}::text, 'count', count(*) filter (where content_updated_at >= now() - make_interval(days => ${UPDATED_RANGE_DAYS[range]})))`,
+      ),
+      sql`, `,
+    );
     const facets = request.facets
       ? sql`jsonb_build_object(
-          'contentTypes', coalesce((select jsonb_agg(jsonb_build_object('value', value, 'count', n) order by n desc, value)
-            from (select content_type as value, count(*) as n from best group by 1) f), '[]'::jsonb),
-          'spaces', coalesce((select jsonb_agg(jsonb_build_object('value', value, 'count', n) order by n desc, value)
-            from (select case when space_id = any(${visible}) then space_id end as value, count(*) as n
-              from best group by 1) f), '[]'::jsonb),
-          'labels', coalesce((select jsonb_agg(jsonb_build_object('value', value, 'count', n) order by n desc, value)
-            from (select label as value, count(*) as n from best, unnest(labels) as label
-              group by 1 order by 2 desc, 1 limit ${FACET_LIMIT}) f), '[]'::jsonb),
-          'authors', coalesce((select jsonb_agg(jsonb_build_object('value', value, 'count', n) order by n desc, value)
-            from (select author_id as value, count(*) as n from best where author_id is not null
-              group by 1 order by 2 desc, 1 limit ${FACET_LIMIT}) f), '[]'::jsonb),
-          'statuses', coalesce((select jsonb_agg(jsonb_build_object('value', value, 'count', n) order by n desc, value)
-            from (select status as value, count(*) as n from best where status is not null group by 1) f), '[]'::jsonb))`
+          'contentTypes', ${counted("contentTypes", sql`select content_type as value, count(*) as n`, sql`group by 1`)},
+          'spaces', ${counted("spaces", sql`select case when space_id = any(${visible}) then space_id end as value, count(*) as n`, sql`group by 1`)},
+          'labels', ${counted("labels", sql`select label as value, count(*) as n`, sql`group by 1 order by 2 desc, 1 limit ${FACET_LIMIT}`, sql`candidates, unnest(labels) as label`)},
+          'authors', ${counted("authors", sql`select author_id as value, count(*) as n`, sql`and author_id is not null group by 1 order by 2 desc, 1 limit ${FACET_LIMIT}`)},
+          'statuses', ${counted("statuses", sql`select status as value, count(*) as n`, sql`and status is not null group by 1`)},
+          'languages', ${counted("languages", sql`select language as value, count(*) as n`, sql`group by 1`)},
+          'updated', (select jsonb_build_array(${updatedCounts}) from candidates where ${passing("updated")}))`
       : sql`null::jsonb`;
 
     const result = await executor.execute<{
@@ -177,16 +233,21 @@ export class PostgresSearchAdapter implements SearchAdapter {
     }>(sql`
       with matched as (
         select c.id, c.source, c.source_id, c.item_id, t.space_id, c.content_type, c.title, c.heading, c.anchor,
-          c.labels, c.status, c.author_id, c.archived, c.content_updated_at, c.position,
-          (${parts.score})::float8 as score
+          c.labels, c.status, c.author_id, c.archived, c.content_updated_at, c.position, c.language,
+          ((${parts.score}) * (1 + ${usageBoost(sql`rv`)}))::float8 as score
+          ${sql.join(flagColumns, sql``)}
         from search_chunks c
         join tree_items t on t.id = c.item_id
         join spaces s on s.id = t.space_id
         left join search_pending_spaces p on p.space_id = c.space_id
+        left join recent_views rv on rv.account_id = ${viewer.accountId}::uuid and rv.item_id = c.item_id
         where ${sql.join(conditions, sql` and `)}
       ),
-      best as (
+      candidates as (
         select distinct on (source, source_id) * from matched order by source, source_id, score desc, position
+      ),
+      best as (
+        select * from candidates where ${passing()}
       ),
       page as (
         select b.* from best b where true ${after} order by ${order} limit ${request.limit + 1}
@@ -204,7 +265,9 @@ export class PostgresSearchAdapter implements SearchAdapter {
       hits: hits.slice(0, request.limit),
       total: Number(row?.total ?? 0),
       hasMore: hits.length > request.limit,
-      facets: row?.facets ?? null,
+      facets: row?.facets
+        ? { ...row.facets, updated: row.facets.updated.filter((facet) => facet.count > 0) }
+        : null,
     };
   }
 
@@ -321,5 +384,5 @@ function tsquery(
 }
 
 function emptyFacets(): AdapterFacets {
-  return { contentTypes: [], spaces: [], labels: [], authors: [], statuses: [] };
+  return { contentTypes: [], spaces: [], labels: [], authors: [], statuses: [], languages: [], updated: [] };
 }

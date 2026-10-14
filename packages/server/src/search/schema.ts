@@ -6,6 +6,7 @@ import {
   customType,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
@@ -101,6 +102,46 @@ export const searchPendingSpaces = pgTable("search_pending_spaces", {
   generation: bigint({ mode: "number" }).notNull().default(1),
   ...timestamps(),
 });
+
+export const recentSearches = pgTable(
+  "recent_searches",
+  {
+    id: primaryId(),
+    organizationId: uuid()
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    query: text().notNull(),
+    filters: jsonb().notNull(),
+    fingerprint: text().notNull(),
+    searchedAt: timestampColumn().notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex().on(table.organizationId, table.accountId, table.fingerprint),
+    index().on(table.organizationId, table.accountId, table.searchedAt),
+    index().on(table.accountId),
+  ],
+);
+
+export const savedSearches = pgTable(
+  "saved_searches",
+  {
+    id: primaryId(),
+    organizationId: uuid()
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    name: text().notNull(),
+    query: text().notNull(),
+    filters: jsonb().notNull(),
+    ...timestamps(),
+  },
+  (table) => [index().on(table.organizationId, table.accountId), index().on(table.accountId)],
+);
 
 export const searchIndexState = pgTable(
   "search_index_state",

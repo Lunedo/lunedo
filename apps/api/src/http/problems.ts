@@ -222,6 +222,7 @@ export const problems = {
   notHeld: { status: 409, title: "The blog post is not waiting for approval" },
   blogPostMode: { status: 409, title: "Blog posts always use publish mode" },
   tooManyStars: { status: 409, title: "Too many starred items" },
+  tooManySavedSearches: { status: 409, title: "Too many saved searches" },
   notPublishMode: { status: 409, title: "The page is not in publish mode" },
   nothingToDiscard: { status: 409, title: "The draft has no changes to discard" },
   draftPending: { status: 409, title: "The draft has unpublished changes" },

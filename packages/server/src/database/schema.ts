@@ -136,6 +136,8 @@ export {
 } from "../organizations/access-schema.js";
 export { organizationDomains, organizationLogos, organizations } from "../organizations/schema.js";
 export {
+  recentSearches,
+  savedSearches,
   searchChunks,
   searchIndexState,
   searchPendingItems,
