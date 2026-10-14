@@ -14,6 +14,7 @@ import { parentEntriesSchema, restorableInSpace, withParentsQuery } from "./rest
 import {
   archivedItemSchema,
   backlinkSchema,
+  contentLanguageBodySchema,
   createItemSchema,
   documentSchema,
   exampleDocument,
@@ -271,6 +272,7 @@ export class ItemsController {
         spaceKey: "ITOPS",
         spaceName: "IT Operations",
         spaceAccess: true,
+        spaceContentLanguage: "en",
         ancestors: [],
       },
     },
@@ -516,6 +518,30 @@ export class ItemsController {
     @Req() request: FastifyRequest,
   ) {
     return this.#services.tree.followTitleLink(actorOf(request), pageId, body);
+  }
+
+  @Put("pages/:pageId/content-language")
+  @Permission("item.edit", page)
+  @ApiRoute({
+    summary: "Set the content language of a page",
+    description:
+      "Sets the language search uses to match the words of the page, or clears it so the page uses the content language of its space.",
+    tags: [TAG],
+    params: pageParams,
+    body: contentLanguageBodySchema,
+    bodyExample: { language: "de" },
+    response: {
+      description: "The page.",
+      schema: treeItemSchema,
+      example: { ...exampleItem, contentLanguage: "de" },
+    },
+  })
+  async setContentLanguage(
+    @Param("pageId") pageId: string,
+    @Body() body: z.output<typeof contentLanguageBodySchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.#services.tree.setContentLanguage(actorOf(request), pageId, body.language);
   }
 
   @Get("pages/:pageId/labels")

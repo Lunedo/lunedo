@@ -11,6 +11,7 @@ import {
   spaceVisibilities,
   treeItemKinds,
 } from "@pagehall/server";
+import { contentLanguages } from "@pagehall/shared";
 import { z } from "zod";
 import { extensibleEnum, timestamp, uuid } from "../http/schemas.js";
 
@@ -267,6 +268,21 @@ export const modeSchema = z
     "Editing mode of a page: `publish` (readers see the last published version while editors work on a draft) or `live` (readers see every change at once). Folders and links are always `live`.",
   );
 
+export const contentLanguageSchema = extensibleEnum(
+  contentLanguages,
+  "Content language as an ISO 639-1 code, or `other` for a language without its own word matching. Words are then matched as written.",
+);
+
+export const contentLanguageBodySchema = z
+  .object({
+    language: z
+      .enum(contentLanguages)
+      .nullable()
+      .describe("The language, or null to use the language of the space."),
+  })
+  .strict()
+  .describe("The content language of a page.");
+
 export const treeItemSchema = z
   .object({
     id: uuid("ID of the item."),
@@ -297,6 +313,9 @@ export const treeItemSchema = z
     link: linkSchema.nullable().describe("Target of a link, or null for pages and folders."),
     creatorId: uuid("Account that created the item, or null.").nullable(),
     ownerId: uuid("Account responsible for the item, or null.").nullable(),
+    contentLanguage: contentLanguageSchema
+      .nullable()
+      .describe("Language of the page content for search, or null to use the language of the space."),
     createdAt: timestamp("When the item was created."),
     updatedAt: timestamp("When the item last changed in the tree."),
     contentUpdatedAt: timestamp("When the content of the page last changed."),
@@ -321,6 +340,7 @@ export const exampleItem = {
   link: null,
   creatorId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
   ownerId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+  contentLanguage: null,
   createdAt: "2026-10-05T08:00:00.000Z",
   updatedAt: "2026-10-05T08:00:00.000Z",
   contentUpdatedAt: "2026-10-05T08:00:00.000Z",
@@ -339,6 +359,9 @@ export const itemDetailsSchema = treeItemSchema
       .describe(
         "Whether the caller has access to the space; false when the item is visible only through a share or link.",
       ),
+    spaceContentLanguage: contentLanguageSchema.describe(
+      "Content language of the space, which pages without a content language of their own use for search.",
+    ),
     ancestors: z
       .array(
         z
