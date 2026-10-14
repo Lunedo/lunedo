@@ -2039,8 +2039,8 @@
         "description": "Ältere Ereignisse werden entfernt."
       },
       "notifications_retentionDays": {
-        "label": "Aufbewahrung von Benachrichtigungen",
-        "description": "Ältere Benachrichtigungen werden entfernt."
+        "label": "Benachrichtigungen aufbewahren für",
+        "description": "Ältere Benachrichtigungen werden gelöscht."
       },
       "apiTokens_unusedNoticeDays": {
         "label": "Ungenutzte API-Tokens",
@@ -2141,6 +2141,14 @@
       "content_language": {
         "label": "Inhaltssprache",
         "description": "Sprache der Seiten in diesem Space. Die Suche findet damit Wörter in allen Formen, zum Beispiel Häuser bei der Suche nach Haus. Jede Seite kann eine andere Sprache verwenden."
+      },
+      "notifications_digestTime": {
+        "label": "Zusammenfassung senden um",
+        "description": "In der Zeitzone der jeweiligen Person. Wird nur gesendet, wenn etwas passiert ist."
+      },
+      "notifications_watchAutomatically": {
+        "label": "Beobachten, was ich erstelle, bearbeite oder kommentiere",
+        "description": "Du bekommst Änderungen und Kommentare zu diesen Inhalten."
       }
     },
     "disabled": {
@@ -2297,15 +2305,14 @@
     "preferencesTitle": "Benachrichtigungen",
     "preferencesDescription": "Wähle, wie du von jeder Art von Ereignis erfährst.",
     "defaultsTitle": "Benachrichtigungen",
-    "organizationDefaultsDescription": "Standards für Mitglieder. Alle können sie für sich ändern, solange du sie nicht sperrst.",
+    "organizationDefaultsDescription": "Standards für alle in {name}. Alle können sie für sich ändern; ihre eigene Wahl bleibt, wenn du einen Standard änderst.",
     "instanceDefaultsDescription": "Standards für alle auf dieser Instanz.",
     "eventTypes": "Ereignisse",
     "event": "Ereignis",
     "noEventTypes": "Es gibt keine Ereignisse zum Einstellen.",
     "channels": {
       "inApp": "In der App",
-      "email": "E-Mail",
-      "none": "keine"
+      "email": "E-Mail"
     },
     "events": {
       "identityProviderCredentialExpiring": "Zugang eines Identitätsanbieters läuft bald ab",
@@ -2322,7 +2329,18 @@
       "signInNewBrowser": "Anmeldung in einem neuen Browser",
       "apiTokenUnused": "API-Token ungenutzt",
       "accountHomeOrganizationChanged": "Heimatorganisation geändert",
-      "mailCredentialExpiring": "Zugangsdaten für E-Mail laufen bald ab"
+      "mailCredentialExpiring": "Zugangsdaten für E-Mail laufen bald ab",
+      "mentions": "Erwähnungen von mir",
+      "tasks": "Mir zugewiesene Aufgaben",
+      "shares": "Für mich freigegebene Seiten und Antworten auf meine Zugriffsanfragen",
+      "accessRequests": "Zugriffsanfragen, über die ich entscheide",
+      "comments": "Kommentare und Antworten zu beobachteten Inhalten",
+      "changes": "Änderungen an beobachteten Inhalten",
+      "blogPosts": "Neue Beiträge in Blogs, denen ich folge",
+      "meetings": "Erinnerungen und Notizen zu Besprechungen",
+      "ownershipAndStatus": "Besitzer- und Seitenstatusänderungen",
+      "spaceAdministration": "Space-Verwaltung",
+      "importsAndExports": "Importe und Exporte"
     },
     "types": {
       "identityProvider": {
@@ -2363,7 +2381,8 @@
         "credentialExpiring": "Das Client-Secret oder Zertifikat für den E-Mail-Versand über Microsoft Graph läuft am {expiresAt} ab. Füge vorher in den E-Mail-Einstellungen neue Zugangsdaten hinzu."
       },
       "content": {
-        "mentioned": "{actor} hat dich in {itemTitle} erwähnt"
+        "mentioned": "{actor} hat dich in {itemTitle} erwähnt",
+        "changed": "{actorCount, plural, =0 {{itemTitle} wurde geändert} one {{actor} hat {itemTitle} geändert} other {{actor} und {others, plural, one {# weitere Person} other {# weitere Personen}} haben {itemTitle} geändert}}"
       },
       "task": {
         "assigned": "Dir wurde in {itemTitle} eine Aufgabe zugewiesen: {taskText}"
@@ -2372,10 +2391,12 @@
         "scheduleHeld": "{reason, select, accountRemoved {Der geplante Beitrag {itemTitle} wartet auf Freigabe, weil die Person, die ihn geplant hat, kein Konto mehr hat.} other {Der geplante Beitrag {itemTitle} wartet auf Freigabe, weil {actor} ihn nicht mehr bearbeiten kann.}}"
       },
       "page": {
-        "shared": "{actor} hat {itemTitle} für dich freigegeben: {role, select, editor {du kannst die Seite bearbeiten} commenter {du kannst sie lesen und kommentieren} other {du kannst sie lesen}}{includeDescendants, select, true { mitsamt ihren Unterseiten} other {}}."
+        "shared": "{actor} hat {itemTitle} für dich freigegeben: {role, select, editor {du kannst die Seite bearbeiten} commenter {du kannst sie lesen und kommentieren} other {du kannst sie lesen}}{includeDescendants, select, true { mitsamt ihren Unterseiten} other {}}.",
+        "statusChanged": "{status, select, none {{actor} hat den Status von {itemTitle} entfernt} other {{actor} hat den Status von {itemTitle} auf {status} gesetzt}}"
       },
       "ownership": {
-        "orphaned": "{items, plural, one {# Inhalt} other {# Inhalte}} in {spaceName} {items, plural, one {hat} other {haben}} keinen Besitzer mehr, weil der Besitzer gegangen ist. Weise in den Space-Einstellungen neue Besitzer zu."
+        "orphaned": "{items, plural, one {# Inhalt} other {# Inhalte}} in {spaceName} {items, plural, one {hat} other {haben}} keinen Besitzer mehr, weil der Besitzer gegangen ist. Weise in den Space-Einstellungen neue Besitzer zu.",
+        "transferred": "{own, select, true {{actor} hat dich zum Besitzer von {itemTitle} gemacht} other {{actor} hat {itemTitle} einen neuen Besitzer gegeben}}"
       },
       "restriction": {
         "orphaned": "Niemand auf der Zugriffsliste der beschränkten Seite {itemTitle} in {spaceName} hat noch ein aktives Konto. Prüfe die Beschränkung in den Space-Einstellungen."
@@ -2397,7 +2418,98 @@
       "export": {
         "ready": "Dein Export von {name} steht bis {expiresAt} zum Herunterladen bereit.",
         "failed": "Dein Export von {name} ist fehlgeschlagen. Öffne deine Exporte, um zu sehen, warum und was zu tun ist."
+      },
+      "comment": {
+        "created": "{actorCount, plural, =0 {Jemand hat {itemTitle} kommentiert} one {{actor} hat {itemTitle} kommentiert} other {{actor} und {others, plural, one {# weitere Person} other {# weitere Personen}} haben {itemTitle} kommentiert}}"
       }
+    },
+    "channelFor": "{event}: {channel}",
+    "email": {
+      "off": "Aus",
+      "immediately": "Sofort",
+      "digest": "In der täglichen Zusammenfassung"
+    },
+    "reset": "Zurücksetzen",
+    "resetEvent": "{event} auf den Standard zurücksetzen",
+    "source": {
+      "organization": "Standard von {name}",
+      "instance": "Standard dieser Instanz",
+      "default": "Standard"
+    },
+    "emailMissingTitle": "E-Mail ist nicht eingerichtet",
+    "emailMissing": "Benachrichtigungen bleiben in der App. Deine E-Mail-Auswahl gilt, sobald die Administration E-Mail einrichtet.",
+    "emailMissingAdministrators": "Benachrichtigungen bleiben in der App. Die E-Mail-Auswahl gilt, sobald E-Mail in den E-Mail-Einstellungen der Instanz eingerichtet ist.",
+    "emailMethod": {
+      "smtp": "E-Mails werden über einen SMTP-Server versendet",
+      "graph": "E-Mails werden über Microsoft Graph versendet"
+    },
+    "emailMethodDescription": "Eingerichtet von den Instanz-Administratoren. Ohne E-Mail-Server bleiben Benachrichtigungen in der App.",
+    "administrationEvents": "Verwaltung und Sicherheit",
+    "delivery": "Zustellung",
+    "digest": {
+      "title": "Tägliche Zusammenfassung"
+    },
+    "counts": {
+      "content": {
+        "changed": "{count, plural, one {# Änderung} other {# Änderungen}}"
+      },
+      "comment": {
+        "created": "{count, plural, one {# Kommentar} other {# Kommentare}}"
+      }
+    },
+    "stopWatching": "Nicht mehr beobachten",
+    "stoppedWatching": "Du beobachtest {name} nicht mehr.",
+    "watching": {
+      "title": "Beobachten",
+      "watched": "Beobachtete und stummgeschaltete Inhalte",
+      "counts": "{watched} beobachtet · {muted} stummgeschaltet",
+      "manage": "Verwalten",
+      "screenTitle": "Beobachtete und stummgeschaltete Inhalte",
+      "screenDescription": "Du erfährst von Änderungen und Kommentaren an dem, was du beobachtest. Stummgeschaltete Inhalte und Spaces bleiben still.",
+      "none": "Du beobachtest nichts und hast nichts stummgeschaltet",
+      "noneDescription": "Beobachte Seiten, Blogbeiträge, Besprechungsserien und Spaces über ihr Menü, um von Änderungen und Kommentaren zu erfahren.",
+      "loadFailed": "Die beobachteten Inhalte konnten nicht geladen werden",
+      "changeFailed": "Der Beobachtungsstatus wurde nicht geändert",
+      "item": "Inhalt",
+      "state": "Status",
+      "states": {
+        "watching": "Beobachtet",
+        "muted": "Stummgeschaltet",
+        "notWatching": "Nicht beobachtet"
+      },
+      "keepsMentions": "Erwähnungen und Aufgaben kommen weiter an",
+      "automatic": "Weil du ihn erstellt, bearbeitet oder kommentiert hast",
+      "inSpace": "in {space}",
+      "kinds": {
+        "space": "Space",
+        "page": "Seite",
+        "blogPost": "Blogbeitrag",
+        "meetingSeries": "Besprechungsserie",
+        "meetingTopic": "Thema",
+        "folder": "Ordner",
+        "link": "Link"
+      },
+      "remove": "{name} nicht mehr beobachten",
+      "unmute": "Stummschaltung von {name} aufheben",
+      "removed": "Du beobachtest {name} nicht mehr.",
+      "unmuted": "{name} ist nicht mehr stummgeschaltet.",
+      "watch": "Beobachten",
+      "watchSpace": "Diesen Space beobachten",
+      "menu": "Beobachtungsoptionen für {name}",
+      "unwatch": "Nicht mehr beobachten",
+      "mute": "Stummschalten …",
+      "unmuteAction": "Stummschaltung aufheben",
+      "started": "Du beobachtest jetzt {name}.",
+      "mutedToast": "{name} ist stummgeschaltet.",
+      "viaSpace": "Du beobachtest das über seinen Space.",
+      "viaSeries": "Du beobachtest das über seine Besprechungsserie.",
+      "mutedViaSpace": "Über seinen Space stummgeschaltet.",
+      "mutedViaSeries": "Über seine Besprechungsserie stummgeschaltet.",
+      "muteTitle": "{name} stummschalten?",
+      "muteDescription": "Du bekommst keine Benachrichtigungen mehr aus {name}, auch nicht zu Änderungen und Kommentaren. Du kannst die Stummschaltung jederzeit aufheben.",
+      "keepMentions": "Bei Erwähnungen und mir zugewiesenen Aufgaben weiter benachrichtigen",
+      "muteConfirm": "Stummschalten",
+      "cancel": "Abbrechen"
     }
   },
   "mail": {
@@ -3057,7 +3169,7 @@
     }
   },
   "audit": {
-    "notificationSetting": "Benachrichtigungen · {event}",
+    "notificationSetting": "Benachrichtigungen · {event} · {channel}",
     "title": "Audit-Log",
     "organizationDescription": "Sicherheitsrelevante Änderungen in dieser Organisation.",
     "instanceDescription": "Sicherheitsrelevante Änderungen auf der Instanz.",

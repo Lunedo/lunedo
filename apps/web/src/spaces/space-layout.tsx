@@ -29,6 +29,7 @@ import { LoadError } from "../errors/failure.js";
 import { SpaceExportDialog } from "../exports/space-export.js";
 import { CreateSeriesDialog } from "../meetings/create-series-dialog.js";
 import { seriesPath, spaceSeriesQuery } from "../meetings/queries.js";
+import { WatchMenu } from "../notifications/watch-menu.js";
 import { NoPageAccess } from "../sharing/access-requests.js";
 import { useShell } from "../shell/shell.js";
 import { ArchiveSection } from "./archive/archive-section.js";
@@ -322,6 +323,7 @@ function SpaceNavigation({
           onOpenChange={setExporting}
         />
         <StarButton target={{ spaceId: space.id }} title={name} />
+        <WatchMenu target={{ type: "space", id: space.id }} name={name} />
         <IconButton
           className="hidden md:inline-flex"
           label={t("navigation.collapseSidebar")}

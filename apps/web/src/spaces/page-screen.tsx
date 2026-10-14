@@ -50,6 +50,7 @@ import { AttachmentPreviewProvider } from "../files/preview-host.js";
 import { UploadsProvider } from "../files/uploads.js";
 import { MeetingHeader } from "../meetings/meeting-header.js";
 import { PrivateNotesPanel } from "../meetings/private-notes-panel.js";
+import { WatchMenu } from "../notifications/watch-menu.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { useDocumentTitle } from "../screens/settings/settings-page.js";
 import { NoPageAccess } from "../sharing/access-requests.js";
@@ -358,6 +359,7 @@ function PageArticle({
               ) : null}
               {sharing.shareButton}
               <StarButton target={{ itemId: page.id }} title={title} />
+              <WatchMenu target={{ type: "item", id: page.id }} name={title} />
               {collaboration.commentsButton}
               {meeting ? (
                 <IconButton

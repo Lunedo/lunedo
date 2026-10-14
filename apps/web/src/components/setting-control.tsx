@@ -19,6 +19,13 @@ import { fromMinutes, type SettingField, toMinutes } from "../settings/setting-f
 
 const INHERITED_LANGUAGE = "inherited";
 
+export function clockTime(time: string, language: string): string {
+  const [hours = 0, minutes = 0] = time.split(":").map(Number);
+  return new Intl.DateTimeFormat(language, { hour: "numeric", minute: "2-digit", timeZone: "UTC" }).format(
+    Date.UTC(2000, 0, 1, hours, minutes),
+  );
+}
+
 export interface SettingControlProps {
   field: SettingField;
   label: string;
@@ -123,6 +130,26 @@ export function SettingControl(props: SettingControlProps) {
           }
           if (inherited || next !== value) void onSave(next);
         }}
+      />
+    );
+  }
+
+  if (type.kind === "time") {
+    const times = Array.from({ length: 24 }, (_, hour) => `${String(hour).padStart(2, "0")}:00`);
+    const current = [value, inheritedValue].filter((entry): entry is string => typeof entry === "string");
+    const options = [...new Set([...times, ...current])]
+      .sort()
+      .map((time) => ({ value: time, label: clockTime(time, i18n.language) }));
+    return (
+      <SettingSelect
+        aria-label={label}
+        value={String(value)}
+        inheritedValue={typeof inheritedValue === "string" ? inheritedValue : undefined}
+        inherited={inherited}
+        options={options}
+        disabled={disabled}
+        onValueChange={(next) => void onSave(next)}
+        onFollowDefault={() => void onFollowDefault()}
       />
     );
   }

@@ -471,6 +471,15 @@ const exportsRoute = createRoute({
   component: lazyRouteComponent(() => import("./exports/exports-screen.js"), "ExportsScreen"),
 });
 
+const watchedItemsRoute = createRoute({
+  getParentRoute: () => settingsRoute,
+  path: "/notifications/watching",
+  component: lazyRouteComponent(
+    () => import("./screens/account/watched-items-screen.js"),
+    "WatchedItemsScreen",
+  ),
+});
+
 const notificationSettingsRoute = createRoute({
   getParentRoute: () => settingsRoute,
   path: "/notifications",
@@ -811,6 +820,7 @@ const routeTree = rootRoute.addChildren([
       preferencesRoute,
       securityRoute,
       notificationSettingsRoute,
+      watchedItemsRoute,
       exportsRoute,
       organizationRoute.addChildren([
         organizationIndexRoute,
