@@ -119,11 +119,12 @@ export class PostgresSearchAdapter implements SearchAdapter {
       sql`s.deleted_at is null`,
       sql`t.trash_entry_id is null`,
       parts.match,
-      sql`((p.space_id is null and ${storedAccessCondition(viewer, sql`c`)})
-        or (p.space_id is not null and ${liveAccessCondition(viewer, sql`c`, sql`t`, sql`s`)}))`,
+      sql`((p.space_id is null and c.space_id = t.space_id and ${storedAccessCondition(viewer, sql`c`)})
+        or ((p.space_id is not null or c.space_id <> t.space_id)
+          and ${liveAccessCondition(viewer, sql`c`, sql`t`, sql`s`)}))`,
     ];
     if (!filters.includeArchived) conditions.push(sql`not c.archived`);
-    if (filters.spaceIds) conditions.push(sql`c.space_id = any(${sql.param(filters.spaceIds)}::uuid[])`);
+    if (filters.spaceIds) conditions.push(sql`t.space_id = any(${sql.param(filters.spaceIds)}::uuid[])`);
     if (filters.contentTypes.length > 0) {
       conditions.push(sql`c.content_type = any(${sql.param(filters.contentTypes)}::text[])`);
     }
@@ -170,12 +171,12 @@ export class PostgresSearchAdapter implements SearchAdapter {
       facets: AdapterFacets | null;
     }>(sql`
       with matched as (
-        select c.id, c.source, c.source_id, c.item_id, c.space_id, c.content_type, c.title, c.heading, c.anchor,
+        select c.id, c.source, c.source_id, c.item_id, t.space_id, c.content_type, c.title, c.heading, c.anchor,
           c.labels, c.status, c.author_id, c.archived, c.content_updated_at, c.position,
           (${parts.score})::float8 as score
         from search_chunks c
-        join spaces s on s.id = c.space_id
         join tree_items t on t.id = c.item_id
+        join spaces s on s.id = t.space_id
         left join search_pending_spaces p on p.space_id = c.space_id
         where ${sql.join(conditions, sql` and `)}
       ),

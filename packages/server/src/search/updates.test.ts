@@ -182,6 +182,34 @@ describe.skipIf(!baseUrl)("search index updates", () => {
     expect(await titles(context.editor, context.org.id, context.word)).toEqual(["Plans"]);
   });
 
+  it("checks a page against its new space at once when it moves to another space", async () => {
+    const context = await setup();
+    const target = await fixtures.space(context.org.id, context.editorId, { visibility: "private" });
+    const moving = await context.page("Roadmap", context.word);
+    await drain();
+    expect(await titles(context.reader, context.org.id, context.word)).toEqual(["Roadmap"]);
+    const impact = await test.services.tree.moveImpact(context.editor, moving.id, {
+      spaceId: target.id,
+      parentId: null,
+    });
+    await test.services.tree.move(context.editor, moving.id, {
+      spaceId: target.id,
+      parentId: null,
+      confirmation: impact.confirmation ?? "",
+    });
+    expect(await titles(context.reader, context.org.id, context.word)).toEqual([]);
+    await test.pool.query("delete from search_pending_spaces where space_id = any($1::uuid[])", [
+      [context.space.id, target.id],
+    ]);
+    expect(await titles(context.reader, context.org.id, context.word)).toEqual([]);
+    expect(await titles(context.editor, context.org.id, context.word, { spaceIds: [target.id] })).toEqual([
+      "Roadmap",
+    ]);
+    await drain();
+    expect(await titles(context.reader, context.org.id, context.word)).toEqual([]);
+    expect(await titles(context.editor, context.org.id, context.word)).toEqual(["Roadmap"]);
+  });
+
   it("follows shares and drops a removed share at once", async () => {
     const context = await setup();
     const parent = await context.page("Handbook", `${context.word} parent`);
