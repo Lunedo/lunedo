@@ -83,6 +83,14 @@ export const pageStatusEnabledSetting = defineSetting({
   lockable: false,
 });
 
+export const exportEnabledSetting = defineSetting({
+  key: "spaces.export",
+  schema: z.boolean(),
+  default: true,
+  levels: ["space"],
+  lockable: false,
+});
+
 const retentionDays = z.number().int().min(1).max(3650);
 
 export const trashFirstStageMinimumSetting = defineSetting({
@@ -127,6 +135,7 @@ export const spaceSettings = [
   defaultPageModeSetting,
   liveVersionIdleMinutesSetting,
   pageStatusEnabledSetting,
+  exportEnabledSetting,
   trashFirstStageMinimumSetting,
   trashSecondStageMinimumSetting,
   trashFirstStageDaysSetting,

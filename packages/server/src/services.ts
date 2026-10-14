@@ -38,6 +38,15 @@ import type { KeyRing } from "./crypto/key-ring.js";
 import type { KeyRingHolder } from "./crypto/key-ring-holder.js";
 import type { Database } from "./database/database.js";
 import type { DatabasePool } from "./database/pool.js";
+import { ExportService } from "./exports/exports.js";
+import {
+  EXPORT_CLEANUP_SCHEDULE,
+  EXPORT_WATCHDOG_SCHEDULE,
+  exportBuildJob,
+  exportCleanupJob,
+  exportWatchdogJob,
+} from "./exports/jobs.js";
+import { exportNotificationTypes } from "./exports/notifications.js";
 import { AttachmentService } from "./files/attachments.js";
 import { FileService } from "./files/files.js";
 import { FILE_CLEANUP_SCHEDULE, fileCleanupJob } from "./files/jobs.js";
@@ -232,6 +241,7 @@ export interface AccountServices {
   importUploads: UploadService;
   imports: ImportService;
   importWorker: ImportWorker;
+  exports: ExportService;
 }
 
 export function createAccountServices(options: {
@@ -308,6 +318,7 @@ export function createAccountServices(options: {
       ...meetingNotificationTypes,
       ...importNotificationTypes,
       ...spaceNotificationTypes,
+      ...exportNotificationTypes,
     ),
   });
   mail.useNotifications(notifications);
@@ -646,6 +657,28 @@ export function createAccountServices(options: {
     jobs,
     logger,
   });
+  const exports = new ExportService({
+    database,
+    pool: options.pool,
+    authorization,
+    audit,
+    notifications,
+    settings,
+    mail,
+    files,
+    documents,
+    attachments,
+    reports,
+    tasks,
+    people,
+    address: instanceAddress,
+    jobs,
+    logger,
+  });
+  memberships.onDeactivated((tx, accountId) => exports.afterDeactivation(tx, accountId));
+  memberships.onMembershipEnded((tx, organizationId, accountId) =>
+    exports.afterMembershipEnded(tx, organizationId, accountId),
+  );
   setupRegistry.register(
     ...builtinSetupSteps({
       database,
@@ -741,6 +774,7 @@ export function createAccountServices(options: {
     importUploads,
     imports,
     importWorker,
+    exports,
   };
 }
 
@@ -834,6 +868,20 @@ export async function workAccountJobs(
   await jobs.work(importCleanupJob, async (job) => {
     while ((await services.importUploads.removeExpired()) > 0) job.signal.throwIfAborted();
   });
+  await jobs.work(exportBuildJob, services.exports.work, { concurrency: 2 });
+  await jobs.work(exportWatchdogJob, async () => {
+    await services.exports.watchdog();
+  });
+  await jobs.work(exportCleanupJob, async (job) => {
+    let removed = 0;
+    for (;;) {
+      job.signal.throwIfAborted();
+      const batch = await services.exports.removeExpired();
+      removed += batch;
+      if (batch === 0) break;
+    }
+    if (removed > 0) job.logger.info({ removed }, "Expired exports removed");
+  });
   await jobs.work(fileCleanupJob, async (job) => {
     let removed = 0;
     for (;;) {
@@ -866,6 +914,8 @@ export async function workAccountJobs(
   await jobs.schedule(fileCleanupJob, FILE_CLEANUP_SCHEDULE, {}, { key: "hourly" });
   await jobs.schedule(importWatchdogJob, IMPORT_WATCHDOG_SCHEDULE, {}, { key: "regular" });
   await jobs.schedule(importCleanupJob, IMPORT_CLEANUP_SCHEDULE, {}, { key: "hourly" });
+  await jobs.schedule(exportWatchdogJob, EXPORT_WATCHDOG_SCHEDULE, {}, { key: "regular" });
+  await jobs.schedule(exportCleanupJob, EXPORT_CLEANUP_SCHEDULE, {}, { key: "hourly" });
   await jobs.schedule(liveVersionsJob, LIVE_VERSIONS_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(authCleanupJob, AUTH_CLEANUP_SCHEDULE, {}, { key: "regular" });
   await jobs.schedule(auditRetentionJob, AUDIT_RETENTION_SCHEDULE, {}, { key: "daily" });

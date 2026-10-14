@@ -1190,6 +1190,18 @@ export const auditCatalog = {
     fields: z.object({ name: z.string() }),
     visibility: "organization",
   }),
+  "space.exported": event({
+    actor: ["account"],
+    target: "space",
+    fields: z.object({ name: z.string(), key: z.string(), exportId: z.uuid() }),
+    visibility: "organization",
+  }),
+  "page.subtreeExported": event({
+    actor: ["account"],
+    target: "page",
+    fields: pageFields.extend({ exportId: z.uuid() }),
+    visibility: "organization",
+  }),
   "template.created": event({
     actor: ["account"],
     target: "template",

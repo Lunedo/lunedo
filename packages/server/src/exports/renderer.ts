@@ -1,0 +1,487 @@
+import {
+  type ChildPagesRequest,
+  type DecisionReportRequest,
+  type DocumentJson,
+  escapeHtml,
+  formatBytes,
+  type ListedAttachment,
+  type ListedPage,
+  type PageReportRequest,
+  type RenderContext,
+  type RenderLabels,
+  type ReportedDecision,
+  type ReportedPage,
+  type ReportedTask,
+  renderHtml,
+  renderMarkdown,
+  slugify,
+  type TaskReportRequest,
+  taskReportRequest,
+} from "@pagehall/editor-schema";
+import { sql } from "drizzle-orm";
+import type { Principal } from "../accounts/principal.js";
+import type { TaskService } from "../collaboration/tasks.js";
+import type { Database } from "../database/database.js";
+import type { AttachmentService } from "../files/attachments.js";
+import type { Logger } from "../logging/logger.js";
+import {
+  blocksOfType,
+  childPagesKey,
+  type PageDocumentService,
+  type PageReferences,
+  pagePath,
+  reportKey,
+} from "../spaces/documents.js";
+import type { PeopleService } from "../spaces/people.js";
+import type { ReportService } from "../spaces/reports.js";
+import { exportStyle } from "./style.js";
+import type { ExportTexts } from "./texts.js";
+
+export type ExportFormat = "markdown" | "html";
+
+const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+const PAGE_ADDRESS = new RegExp(
+  `^/spaces/[^/?#]*/(?:pages|blog)/(${UUID})(?:/[^?#]*)?(?:\\?[^#]*)?(#.*)?$`,
+  "i",
+);
+const ATTACHMENT_ADDRESS = new RegExp(`^/api/v1/attachments/(${UUID})/content$`, "i");
+const MAX_REPORTED_TASKS = 200;
+
+type Module = "childPages" | "attachmentList" | "pageReport" | "decisionReport" | "taskReport" | "taskStatus";
+
+export interface Locator {
+  page(pageId: string, format: ExportFormat): string | null;
+  attachment(attachmentId: string): string | null;
+  index(format: ExportFormat): string | null;
+}
+
+export const nowhere: Locator = { page: () => null, attachment: () => null, index: () => null };
+
+export interface ExportFormatter {
+  date(date: Date): string;
+  day(iso: string): string;
+  dateTime(date: Date): string;
+}
+
+export interface PreparedPage {
+  id: string;
+  title: string;
+  version: number | null;
+  updatedAt: Date;
+  document: DocumentJson;
+  references: PageReferences;
+  childPages: ReadonlyMap<string, readonly ListedPage[]> | null;
+  attachments: readonly ListedAttachment[] | null;
+  pageReports: ReadonlyMap<string, readonly ReportedPage[]> | null;
+  decisionReports: ReadonlyMap<string, readonly ReportedDecision[]> | null;
+  taskReports: ReadonlyMap<string, readonly ReportedTask[]> | null;
+  taskStatus: ReadonlyMap<string, boolean> | null;
+  meeting: { startsAt: Date | null; attendees: string[] } | null;
+  unavailable: ReadonlySet<Module>;
+  failed: boolean;
+}
+
+export interface RenderedPage {
+  markdown: string;
+  html: string;
+}
+
+function pageIdOf(href: string): string | null {
+  return PAGE_ADDRESS.exec(href)?.[1]?.toLowerCase() ?? null;
+}
+
+function keepVisiblePages(pages: readonly ListedPage[], visible: ReadonlySet<string>): ListedPage[] {
+  return pages.flatMap((page) => {
+    const id = pageIdOf(page.href);
+    if (id && !visible.has(id)) return [];
+    return [{ ...page, children: keepVisiblePages(page.children, visible) }];
+  });
+}
+
+function collectListedIds(pages: readonly ListedPage[], into: Set<string>): void {
+  for (const page of pages) {
+    const id = pageIdOf(page.href);
+    if (id) into.add(id);
+    collectListedIds(page.children, into);
+  }
+}
+
+export class PageExportRenderer {
+  readonly #database: Database;
+  readonly #documents: PageDocumentService;
+  readonly #attachments: AttachmentService;
+  readonly #reports: ReportService;
+  readonly #tasks: TaskService;
+  readonly #people: PeopleService;
+  readonly #logger: Logger;
+  readonly #viewer: Principal;
+  readonly #texts: ExportTexts;
+  readonly #format: ExportFormatter;
+  readonly #origin: string;
+
+  constructor(options: {
+    database: Database;
+    documents: PageDocumentService;
+    attachments: AttachmentService;
+    reports: ReportService;
+    tasks: TaskService;
+    people: PeopleService;
+    logger: Logger;
+    viewer: Principal;
+    texts: ExportTexts;
+    format: ExportFormatter;
+    origin: string;
+  }) {
+    this.#database = options.database;
+    this.#documents = options.documents;
+    this.#attachments = options.attachments;
+    this.#reports = options.reports;
+    this.#tasks = options.tasks;
+    this.#people = options.people;
+    this.#logger = options.logger;
+    this.#viewer = options.viewer;
+    this.#texts = options.texts;
+    this.#format = options.format;
+    this.#origin = options.origin.replace(/\/+$/, "");
+  }
+
+  get texts(): ExportTexts {
+    return this.#texts;
+  }
+
+  get format(): ExportFormatter {
+    return this.#format;
+  }
+
+  async #load<T>(module: Module, unavailable: Set<Module>, load: () => Promise<T>): Promise<T | null> {
+    try {
+      return await load();
+    } catch (error) {
+      this.#logger.warn({ err: error, module }, "A module could not be prepared for an export");
+      unavailable.add(module);
+      return null;
+    }
+  }
+
+  async #readerVisible(ids: Iterable<string>): Promise<Set<string>> {
+    const list = [...new Set(ids)];
+    if (list.length === 0) return new Set();
+    const result = await this.#database.execute<{ id: string }>(sql`
+      select id from tree_items where id = any(${sql.param(list)}::uuid[]) and reader_visible`);
+    return new Set(result.rows.map((row) => row.id));
+  }
+
+  async prepare(pageId: string): Promise<PreparedPage | null> {
+    const readable = await this.#documents.readable(pageId);
+    if (!readable) return null;
+    const document = readable.document;
+    const unavailable = new Set<Module>();
+    try {
+      const references = await this.#documents.references(this.#viewer, document);
+      const childPages = await this.#load("childPages", unavailable, () =>
+        this.#documents.childPages(this.#viewer, pageId, document),
+      );
+      const attachments = blocksOfType(document, "attachmentList").length
+        ? await this.#load("attachmentList", unavailable, async () =>
+            (await this.#attachments.list(this.#viewer, pageId, "published")).map(({ id, name, size }) => ({
+              id,
+              name,
+              size,
+            })),
+          )
+        : null;
+      const reports = await this.#load("pageReport", unavailable, () =>
+        this.#reports.forDocument(this.#viewer, document),
+      );
+      if (!reports) unavailable.add("decisionReport");
+      const taskReports = await this.#load("taskReport", unavailable, () => this.#taskReports(document));
+      const taskStatus = await this.#load("taskStatus", unavailable, async () => {
+        const statuses = await this.#tasks.statuses(this.#viewer, pageId);
+        return new Map(statuses.map((status) => [status.id, status.done]));
+      });
+      const meeting = await this.#meeting(pageId);
+      const referenced = new Set<string>(Object.keys(references.pages));
+      for (const pages of childPages?.values() ?? []) collectListedIds(pages, referenced);
+      for (const pages of reports?.pageReports.values() ?? []) {
+        for (const page of pages) referenced.add(pageIdOf(page.href) ?? "");
+      }
+      for (const decisions of reports?.decisionReports.values() ?? []) {
+        for (const decision of decisions) referenced.add(pageIdOf(decision.page.href) ?? "");
+      }
+      for (const tasks of taskReports?.values() ?? []) {
+        for (const task of tasks) referenced.add(pageIdOf(task.page.href) ?? "");
+      }
+      referenced.delete("");
+      const visible = await this.#readerVisible(referenced);
+      const listedVisible = (href: string) => {
+        const id = pageIdOf(href);
+        return id === null || visible.has(id);
+      };
+      return {
+        id: pageId,
+        title: readable.title,
+        version: readable.version,
+        updatedAt: readable.updatedAt,
+        document,
+        references: {
+          ...references,
+          pages: Object.fromEntries(
+            Object.entries(references.pages).map(([id, page]) => [
+              id,
+              page.accessible && !visible.has(id)
+                ? { title: "", spaceKey: "", kind: "page", accessible: false, inTrash: false }
+                : page,
+            ]),
+          ),
+        },
+        childPages: childPages
+          ? new Map([...childPages].map(([key, pages]) => [key, keepVisiblePages(pages, visible)]))
+          : null,
+        attachments,
+        pageReports: reports
+          ? new Map(
+              [...reports.pageReports].map(([key, pages]) => [
+                key,
+                pages.filter((page) => listedVisible(page.href)),
+              ]),
+            )
+          : null,
+        decisionReports: reports
+          ? new Map(
+              [...reports.decisionReports].map(([key, decisions]) => [
+                key,
+                decisions.filter((decision) => listedVisible(decision.page.href)),
+              ]),
+            )
+          : null,
+        taskReports: taskReports
+          ? new Map(
+              [...taskReports].map(([key, tasks]) => [
+                key,
+                tasks.filter((task) => listedVisible(task.page.href)),
+              ]),
+            )
+          : null,
+        taskStatus,
+        meeting,
+        unavailable,
+        failed: false,
+      };
+    } catch (error) {
+      this.#logger.warn({ err: error }, "A page could not be prepared for an export");
+      return {
+        id: pageId,
+        title: readable.title,
+        version: readable.version,
+        updatedAt: readable.updatedAt,
+        document,
+        references: { people: {}, pages: {}, topics: {} },
+        childPages: null,
+        attachments: null,
+        pageReports: null,
+        decisionReports: null,
+        taskReports: null,
+        taskStatus: null,
+        meeting: null,
+        unavailable,
+        failed: true,
+      };
+    }
+  }
+
+  async #taskReports(document: DocumentJson): Promise<Map<string, readonly ReportedTask[]>> {
+    const result = new Map<string, readonly ReportedTask[]>();
+    for (const block of blocksOfType(document, "taskReport")) {
+      const request = taskReportRequest({ attrs: block.attrs ?? {} });
+      const key = taskKey(request);
+      if (result.has(key)) continue;
+      const list = await this.#tasks.list(this.#viewer, {
+        assignee: request.assignedToViewer ? "me" : (request.assignee ?? undefined),
+        spaceId: request.spaceId ?? undefined,
+        seriesId: request.seriesId ?? undefined,
+        pageIds: request.pageIds.length > 0 ? request.pageIds : undefined,
+        labels: request.labels.length > 0 ? request.labels : undefined,
+        status: request.status,
+        due: request.due,
+        limit: MAX_REPORTED_TASKS,
+      });
+      result.set(
+        key,
+        list.items.map((task) => ({
+          text: task.text,
+          done: task.done,
+          assignee: task.assignee?.name ?? null,
+          dueDate: task.dueDate,
+          page: {
+            title: task.item.title,
+            href:
+              task.item.kind === "blogPost"
+                ? `/spaces/${encodeURIComponent(task.item.spaceKey)}/blog/${task.item.id}/${slugify(task.item.title)}`
+                : pagePath(task.item.spaceKey, task.item.id, task.item.title),
+          },
+        })),
+      );
+    }
+    return result;
+  }
+
+  async #meeting(pageId: string): Promise<PreparedPage["meeting"]> {
+    const meeting = await this.#database.execute<{ starts_at: Date | string | null }>(
+      sql`select starts_at from meetings where item_id = ${pageId}`,
+    );
+    const row = meeting.rows[0];
+    if (!row) return null;
+    const attendees = await this.#database.execute<{ account_id: string }>(sql`
+      select account_id from meeting_attendees where meeting_id = ${pageId} order by position, account_id`);
+    const ids = attendees.rows.map((attendee) => attendee.account_id);
+    const names = await this.#people.visibleNames(this.#viewer, ids);
+    return {
+      startsAt: row.starts_at === null ? null : new Date(row.starts_at),
+      attendees: ids.map((id) => names.get(id)).filter((name): name is string => name !== undefined),
+    };
+  }
+
+  #labels(page: PreparedPage): Partial<RenderLabels> {
+    const labels = this.#texts.labels;
+    const unavailable = (key: keyof Omit<RenderLabels, "callout">) => this.#texts.unavailable(labels[key]);
+    return {
+      ...labels,
+      ...(page.unavailable.has("childPages") ? { childPages: unavailable("childPages") } : {}),
+      ...(page.unavailable.has("attachmentList") ? { attachmentList: unavailable("attachmentList") } : {}),
+      ...(page.unavailable.has("pageReport") ? { pageReport: unavailable("pageReport") } : {}),
+      ...(page.unavailable.has("decisionReport") ? { decisionReport: unavailable("decisionReport") } : {}),
+      ...(page.unavailable.has("taskReport") ? { taskReport: unavailable("taskReport") } : {}),
+    };
+  }
+
+  #address(format: ExportFormat, locator: Locator) {
+    return (address: string): string => {
+      const page = PAGE_ADDRESS.exec(address);
+      const pageId = page?.[1]?.toLowerCase();
+      if (pageId) {
+        const local = locator.page(pageId, format);
+        if (local) return `${local}${page?.[2] ?? ""}`;
+      }
+      const attachmentId = ATTACHMENT_ADDRESS.exec(address)?.[1]?.toLowerCase();
+      if (attachmentId) {
+        const local = locator.attachment(attachmentId);
+        if (local) return local;
+      }
+      return address.startsWith("/") ? `${this.#origin}${address}` : address;
+    };
+  }
+
+  #context(page: PreparedPage, format: ExportFormat, locator: Locator): RenderContext {
+    const { references } = page;
+    return {
+      labels: this.#labels(page),
+      href: this.#address(format, locator),
+      formatDate: (iso) => this.#format.day(iso),
+      formatSize: formatBytes,
+      mention: (id) => {
+        const name = references.people[id];
+        return name ? { name } : null;
+      },
+      topic: (id) => references.topics[id] ?? null,
+      pageLink: (link) => {
+        if (!link.pageId) return null;
+        const target = references.pages[link.pageId];
+        if (target?.inTrash) return { href: "", title: target.title, accessible: false, inTrash: true };
+        return target?.accessible
+          ? {
+              href: pagePath(target.spaceKey, link.pageId, target.title),
+              title: target.title,
+              accessible: true,
+            }
+          : { href: "", title: "", accessible: false };
+      },
+      attachment: (id) => ({ href: `/api/v1/attachments/${id}/content` }),
+      attachmentList: () => page.attachments,
+      childPages: (request: ChildPagesRequest) =>
+        page.childPages ? (page.childPages.get(childPagesKey(request)) ?? []) : null,
+      pageReport: (request: PageReportRequest) =>
+        page.pageReports ? (page.pageReports.get(reportKey(request)) ?? []) : null,
+      decisionReport: (request: DecisionReportRequest) =>
+        page.decisionReports ? (page.decisionReports.get(reportKey(request)) ?? []) : null,
+      taskReport: (request: TaskReportRequest) =>
+        page.taskReports ? (page.taskReports.get(taskKey(request)) ?? []) : null,
+      taskStatus: (id) => page.taskStatus?.get(id) ?? null,
+    };
+  }
+
+  #meta(page: PreparedPage): string[] {
+    const lines = [
+      page.version !== null
+        ? this.#texts.publishedVersion(page.version, this.#format.date(page.updatedAt))
+        : this.#texts.lastChanged(this.#format.date(page.updatedAt)),
+    ];
+    if (page.meeting) {
+      if (page.meeting.startsAt)
+        lines.push(this.#texts.meeting(this.#format.dateTime(page.meeting.startsAt)));
+      if (page.meeting.attendees.length > 0) {
+        lines.push(this.#texts.attendees(page.meeting.attendees.join(", ")));
+      }
+    }
+    return lines;
+  }
+
+  #body(page: PreparedPage, format: ExportFormat, locator: Locator): string {
+    if (!page.failed) {
+      try {
+        const context = this.#context(page, format, locator);
+        return format === "html"
+          ? renderHtml(page.document, context)
+          : renderMarkdown(page.document, context);
+      } catch (error) {
+        this.#logger.warn({ err: error }, "A page could not be rendered for an export");
+      }
+    }
+    return format === "html"
+      ? `<p class="ph-export-note">${escapeHtml(this.#texts.pageUnavailable)}</p>`
+      : `> ${this.#texts.pageUnavailable}\n`;
+  }
+
+  title(page: PreparedPage): string {
+    return page.title.trim() || this.#texts.untitledPage;
+  }
+
+  markdown(page: PreparedPage, locator: Locator): string {
+    const index = locator.index("markdown");
+    const head = [
+      ...(index ? [`[${markdownText(this.#texts.contents)}](${index})`, ""] : []),
+      `# ${markdownText(this.title(page))}`,
+      "",
+      ...this.#meta(page).map((line) => `*${markdownText(line)}*`),
+      "",
+    ];
+    return `${head.join("\n")}\n${this.#body(page, "markdown", locator)}`;
+  }
+
+  html(page: PreparedPage, locator: Locator, language: string): string {
+    const index = locator.index("html");
+    const title = escapeHtml(this.title(page));
+    const meta = this.#meta(page)
+      .map((line) => `<p class="ph-meta">${escapeHtml(line)}</p>`)
+      .join("");
+    const navigation = index
+      ? `<nav><a href="${escapeHtml(index)}">${escapeHtml(this.#texts.contents)}</a></nav>`
+      : "";
+    return htmlDocument(
+      language,
+      title,
+      `${navigation}<header><h1>${title}</h1>${meta}</header><article>${this.#body(page, "html", locator)}</article>`,
+    );
+  }
+}
+
+export function taskKey(request: TaskReportRequest): string {
+  return JSON.stringify(Object.entries(request).sort(([left], [right]) => left.localeCompare(right)));
+}
+
+export function markdownText(text: string): string {
+  return text.replace(/[\\`*_[\]<>|~$&#]/g, "\\$&").replace(/\s*[\r\n]+\s*/g, " ");
+}
+
+export function htmlDocument(language: string, title: string, body: string): string {
+  return `<!doctype html>\n<html lang="${escapeHtml(language)}">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<title>${title}</title>\n<style>\n${exportStyle}\n</style>\n</head>\n<body>\n<main>${body}</main>\n</body>\n</html>\n`;
+}
