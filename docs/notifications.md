@@ -18,7 +18,11 @@ The notification center is the core channel: it always works, also without a mai
 | `identityProvider.credentialExpiring` | Instance owner for instance providers, owners of the organization for organization providers | The identity provider |
 | `identityProvider.syncHeld` | Instance owner and instance administrators | The identity provider |
 
-Event types register in the `NotificationRegistry` with a parameter schema, a visibility rule, the mail they render and their preference setting, so later features add their own without changing the core. Their parameters are defined in `@pagehall/shared`, so that the web client renders them with the same types.
+Content events reach people who watch the content, see [Watching](#watching): `content.changed` (a new version, published or saved at the end of a live editing session), `comment.created` (a comment or reply), `page.statusChanged` and `ownership.transferred` (also to the new owner). Mentions, assigned tasks, shares and access requests reach the person concerned.
+
+Event types register in the `NotificationRegistry` with a parameter schema, a visibility rule, the mail they render and, for types not about a page, the space or item they come from, so later features add their own without changing the core.
+
+Every type belongs to exactly one event of `notificationEvents` in `@pagehall/shared`. Preferences, muting and the delivery of every channel route through that list: `mentions`, `tasks`, `shares`, `accessRequests`, `comments`, `changes`, `blogPosts`, `meetings` and `ownershipAndStatus` for content, `spaceAdministration`, `importsAndExports` and one event per administration type such as `apiTokenExpiring`. Their parameters are defined in `@pagehall/shared`, so that the web client renders them with the same types.
 
 Mails for password resets, e-mail changes, recovery codes, invitations, registrations and test mails remain direct mails: they are part of a flow the person started and do not depend on preferences.
 
@@ -28,19 +32,33 @@ A sign-in from a browser whose device cookie the account has not used before cre
 
 `NotificationService.notify` runs inside the transaction of the change that causes the notification, so a notification exists exactly when the change is committed. A reminder is marked as sent in the same transaction; a crash in between sends it on the next run.
 
-Events of the same type on the same target for the same recipient within 15 minutes are combined into one unread notification with a count. An advisory lock per recipient and target makes concurrent events on several nodes end in one notification.
+Events of the same type on the same target for the same recipient are combined into one unread notification while the last event is less than 30 minutes old, for at most 24 hours. The notification keeps a count and the people who took part, so it reads "Gaby and 2 others changed …, 7 changes". Thirty minutes cover the pauses within one working session on a page; the 24-hour limit starts a new notification for a page that is edited all day. A read notification is never changed again. An advisory lock per recipient and target makes concurrent events on several nodes end in one notification.
+
+People are never notified about their own actions: content events skip a recipient who is the only person behind the event. Imports never notify and do not make anyone watch.
 
 Deactivated accounts receive nothing. Service accounts never receive notifications.
 
 ## Visibility
 
-Permissions are checked whenever notifications are listed or counted, through the authorization service. A notification whose target the recipient can no longer see is hidden, for example a guest notice after the recipient lost the members area of that organization, unless they are still the guest's responsible person.
+Permissions are checked when notifications are created and whenever they are listed or counted, through the authorization service. A notification whose target the recipient can no longer see is hidden, for example a guest notice after the recipient lost the members area of that organization, unless they are still the guest's responsible person.
 
 ## Preferences
 
-Every event type has the setting `notifications.<type>`, for example `notifications.guestExpiring`, with the value `{ "inApp": true, "email": true }`. It applies at instance, organization and user level and can be locked, so users choose their channels in their preferences and organizations can set defaults. E-mail is sent only when the channel is on, the account has an address and a mail server is configured.
+Every event has one setting per channel: `notifications.<event>.inApp` (true or false) and `notifications.<event>.email` (`off`, `immediately` or `digest`). They apply at instance, organization and user level and can be locked. Each channel inherits on its own, so a person who changes the e-mail choice keeps following the organization's default for the app. A new channel adds its own settings and needs no migration of stored values.
 
-`notifications.retentionDays` (instance, default 90) sets how long notifications are kept. A daily job removes older ones.
+Shipped defaults: every event in the app; e-mail immediately for mentions, tasks, shares and access requests; comments and new blog posts in the daily digest; everything else in the app only. Administration events keep e-mail on.
+
+E-mail is sent only when the person chose `immediately`, the account has an address, a mail server (SMTP or Microsoft Graph) is configured and the type has a mail. `digest` is stored now; the digest itself is sent at `notifications.digestTime` (default 08:00 in the person's time zone, instance, organization and user level).
+
+`notifications.retentionDays` (instance, default 90, overridable per organization) sets how long notifications are kept. A daily job removes older ones.
+
+## Watching
+
+People watch pages, blog posts, meeting series and spaces. A watch row holds one of three states for one item or space: `watching`, `muted` (with `keepMentions`, true by default) or `notWatching`. People who create, edit or comment on an item watch it automatically unless `notifications.watchAutomatically` is off for them or they chose a state for it before.
+
+The state that applies to an item comes from the item, then its meeting series, then its space; the most specific row wins, except that an automatic watch never overrides a mute further up. Muting silences every event about the item or space; mentions and assigned tasks still arrive when `keepMentions` is true.
+
+Watching never grants anything. Delivery checks that the watcher can read the item; while they cannot, nothing arrives and the watch stays, so delivery resumes when access returns.
 
 ## Live updates
 
@@ -48,7 +66,7 @@ A committed notification sends a PostgreSQL notification on the channel `pagehal
 
 ## Endpoints
 
-All endpoints are internal and need a signed-in session.
+These endpoints are internal and need a signed-in session. Watching is part of the public API: `GET`, `PUT` and `DELETE` on `/api/v1/items/{itemId}/watch` and `/api/v1/spaces/{spaceId}/watch` need read access to the item or space.
 
 | Endpoint | Purpose |
 |---|---|
@@ -56,6 +74,8 @@ All endpoints are internal and need a signed-in session.
 | `GET /api/v1/notifications/unread-count` | Unread notifications the caller may see |
 | `POST /api/v1/notifications/{notificationId}/read` | Mark one as read |
 | `POST /api/v1/notifications/read-all` | Mark all as read, optionally only those changed before `before` |
+| `GET /api/v1/account/watches` | Own watched and muted items the caller can still open, with counts |
+| `GET /api/v1/account/notification-delivery` | Whether e-mail can be delivered and how |
 | `GET /api/v1/notifications/stream` | Server-sent events: `notifications` with `{ "unreadCount": n }` at the start and after every change; `settings` with `{ "key", "level", "organizationId" }` when a setting changes whose value may change for the caller; a comment every 25 seconds; the stream ends when the session ends |
 
 A setting change reaches every node through PostgreSQL notifications. A node sends `settings` to a connection when the change is at the user level of its account, at the instance level, or at the level of an organization the account belongs to, unless a lower level of the account (its home organization or the account itself) overrides the value and the changed level does not lock it. Locking and unlocking always count, and so does a new value of a locked setting, because it applies regardless of lower levels. Clients reload the named setting.
