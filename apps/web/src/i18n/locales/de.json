@@ -1070,7 +1070,8 @@
     "pagesAndTrash": "Seiten und Papierkorb",
     "templates": "Vorlagen",
     "accessOverview": "Zugriffsübersicht",
-    "imports": "Import"
+    "imports": "Import",
+    "exports": "Exporte"
   },
   "commands": {
     "label": "Befehlspalette",
@@ -1384,7 +1385,11 @@
     "statusInUse": "Seiten verwenden diesen Status. Bestätige, wie viele ihn verlieren, und entferne ihn erneut.",
     "statusInUsePages": "{count, plural, one {# Seite hat} other {# Seiten haben}} jetzt diesen Status. Prüfe die Zahl und entferne ihn erneut.",
     "statusDisabled": "Der Seitenstatus ist in diesem Space ausgeschaltet. Ein Space-Admin kann ihn in den Space-Einstellungen einschalten.",
-    "tooManyStatusValues": "Der Space hat schon die größte Zahl an Werten. Entferne zuerst einen."
+    "tooManyStatusValues": "Der Space hat schon die größte Zahl an Werten. Entferne zuerst einen.",
+    "exportDisabled": "Der Export ist für diesen Space ausgeschaltet. Ein Space-Admin kann ihn in den Space-Einstellungen einschalten.",
+    "exportRunning": "Ein anderer Export von dir läuft noch. Warte, bis er fertig ist, oder brich ihn unter Einstellungen › Exporte ab.",
+    "nothingToExport": "Es gibt noch nichts zu exportieren. Veröffentliche die Seite zuerst.",
+    "tooManyExports": "Du hast bereits 5 Exporte. Lösche unter Einstellungen › Exporte einen, den du nicht mehr brauchst, und versuche es erneut."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -2120,6 +2125,10 @@
       "imports_atlassianHosts": {
         "label": "Weitere Atlassian-Sites",
         "description": "Hostnamen, mit denen Pagehall das API-Token eines Imports außer Sites unter atlassian.net verwenden darf, durch Kommas getrennt, etwa wiki.example.com."
+      },
+      "spaces_export": {
+        "label": "Export erlauben",
+        "description": "Seiten und der Space können als Markdown und HTML exportiert werden. Ist es aus, kann niemand exportieren, auch Space-Admins nicht."
       }
     },
     "disabled": {
@@ -2372,6 +2381,10 @@
         "finished": "Der Import in {spaceName} ({spaceKey}) ist bereit zur Prüfung. {problems, plural, =0 {Nichts ist zu prüfen.} one {# Punkt ist zu prüfen.} other {# Punkte sind zu prüfen.}}",
         "failed": "Der Import in {spaceName} ({spaceKey}) ist fehlgeschlagen. Öffne ihn, um Grund und nächste Schritte zu sehen.",
         "held": "Der Import in den Space {spaceKey} ist angehalten, weil die Person, die ihn gestartet hat, nicht mehr importieren darf. Du kannst ihn übernehmen."
+      },
+      "export": {
+        "ready": "Dein Export von {name} steht bis {expiresAt} zum Herunterladen bereit.",
+        "failed": "Dein Export von {name} ist fehlgeschlagen. Öffne deine Exporte, um zu sehen, warum und was zu tun ist."
       }
     }
   },
@@ -7033,5 +7046,103 @@
     "activityFailed": "Die Änderungen von Status und Besitzer konnten nicht geladen werden",
     "activityEmpty": "Status und Besitzer wurden noch nicht geändert.",
     "activityTransferred": "{actor} hat den Besitz von {from} an {to} übertragen"
+  },
+  "exports": {
+    "close": "Schließen",
+    "disabled": {
+      "title": "Der Export ist für diesen Space ausgeschaltet",
+      "admin": "Das gilt für alle, auch für dich. Schalte ihn in den Space-Einstellungen ein, um zu exportieren.",
+      "openSettings": "Export-Einstellungen öffnen",
+      "reader": "Ein Space-Admin kann ihn in den Space-Einstellungen einschalten. Bis dahin kann niemand Seiten dieses Space exportieren.",
+      "adminHere": "Das gilt für alle, auch für dich. Schalte oben „Export erlauben“ ein, um zu exportieren."
+    },
+    "page": {
+      "title": "Seite exportieren",
+      "menu": "Exportieren",
+      "format": "Format",
+      "scope": "Der Export enthält, was du lesen kannst: die veröffentlichte Version, ohne Kommentare, private Notizen und Verlauf.",
+      "start": "Export starten",
+      "download": "Herunterladen",
+      "failed": "„{title}“ wurde nicht exportiert",
+      "unpublishedTitle": "Diese Seite ist noch nicht veröffentlicht",
+      "unpublished": "Exporte enthalten nur veröffentlichte Inhalte. Veröffentliche die Seite zuerst und exportiere sie dann.",
+      "formats": {
+        "markdown": {
+          "label": "Markdown",
+          "description": "Eine .md-Datei. Links auf andere Seiten und Anhänge zeigen auf Pagehall."
+        },
+        "html": {
+          "label": "HTML",
+          "description": "Eine .html-Datei, die sich in jedem Browser öffnen lässt, auch offline."
+        },
+        "zip": {
+          "label": "ZIP mit Anhängen",
+          "description": "Die Seite als Markdown und HTML zusammen mit ihren Anhängen."
+        },
+        "subpages": {
+          "label": "ZIP mit Unterseiten",
+          "description": "Diese Seite und alle Unterseiten, die du lesen kannst, mit Anhängen. Der Export wird im Hintergrund erstellt; du bekommst eine Benachrichtigung, sobald der Download bereitsteht."
+        }
+      }
+    },
+    "started": {
+      "title": "Export gestartet",
+      "description": "Du bekommst eine Benachrichtigung, sobald der Download bereitsteht. Du findest ihn unter Einstellungen › Exporte.",
+      "open": "Exporte anzeigen",
+      "failed": "Der Export konnte nicht gestartet werden"
+    },
+    "space": {
+      "title": "{name} exportieren",
+      "menu": "Space exportieren",
+      "panelTitle": "Diesen Space exportieren",
+      "description": "Erstellt eine ZIP-Datei mit allen Seiten, die du lesen kannst: der Seitenbaum als Ordner, jede Seite als Markdown und HTML, Anhänge neben ihren Seiten und eine index.html mit dem Baum. Kommentare, private Notizen und Verlauf sind nicht enthalten. Der Download bleibt 7 Tage erhalten und nur du kannst ihn öffnen.",
+      "start": "Space exportieren",
+      "empty": "Du hast keine Exporte dieses Space.",
+      "yourExports": "Deine Exporte anzeigen"
+    },
+    "list": {
+      "label": "Deine Exporte",
+      "loadFailed": "Deine Exporte konnten nicht geladen werden",
+      "emptyTitle": "Keine Exporte",
+      "emptyDescription": "Wenn du einen Space oder eine Seite mit Unterseiten exportierst, erscheint der Download hier.",
+      "deleteFailed": "Der Export von {name} wurde nicht gelöscht",
+      "deleteTitle": "Export von {name} löschen?",
+      "deleteRunning": "Der Export wird abgebrochen und nichts davon bleibt erhalten. Du kannst ihn später neu starten.",
+      "deleteReady": "Der Download wird sofort gelöscht. Du kannst später erneut exportieren.",
+      "deleteConfirm": "Export löschen",
+      "keep": "Export behalten",
+      "scopeSpace": "Space",
+      "scopePages": "Seite mit Unterseiten",
+      "readyDetails": "{size} · verfügbar bis {date}",
+      "startedAt": "gestartet {date}",
+      "download": "Herunterladen",
+      "cancel": "Export von {name} abbrechen",
+      "delete": "Export von {name} löschen",
+      "progress": "Fortschritt des Exports von {name}"
+    },
+    "states": {
+      "queued": "Wartet",
+      "running": "Läuft",
+      "ready": "Bereit",
+      "failed": "Fehlgeschlagen"
+    },
+    "errors": {
+      "exportDisabled": "Der Export wurde für den Space ausgeschaltet. Bitte einen Space-Admin, ihn einzuschalten, und exportiere dann erneut.",
+      "noAccess": "Du kannst das Exportierte nicht mehr lesen, oder es wurde gelöscht. Exportiere erneut, was du lesen kannst.",
+      "tokenRevoked": "Das API-Token, das den Export gestartet hat, wurde widerrufen oder ist abgelaufen. Starte den Export erneut.",
+      "interrupted": "Der Export wurde mehrmals unterbrochen. Starte ihn erneut; scheitert er wieder, wende dich an die Person, die Pagehall betreibt.",
+      "internalError": "Beim Erstellen des Exports ist etwas schiefgegangen. Starte ihn erneut; scheitert er wieder, wende dich an die Person, die Pagehall betreibt."
+    },
+    "screen": {
+      "title": "Exporte",
+      "description": "Downloads von Spaces und Seiten, die du exportiert hast. Jeder Download bleibt 7 Tage erhalten und nur du kannst ihn öffnen."
+    },
+    "settings": {
+      "tab": "Export",
+      "title": "Export",
+      "description": "Erlaube, Seiten und den ganzen Space als Markdown und HTML zu exportieren.",
+      "settingTitle": "Export-Einstellung",
+      "copyNote": "Das Ausschalten des Exports verhindert kein Kopieren: Wer eine Seite lesen kann, kann ihren Inhalt weiterhin kopieren."
+    }
   }
 }

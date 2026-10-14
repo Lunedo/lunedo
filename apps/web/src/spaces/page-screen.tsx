@@ -16,6 +16,7 @@ import {
   ArrowRightLeft,
   Check,
   FileCheck,
+  FileDown,
   FilePen,
   FilePlus,
   FileText,
@@ -42,6 +43,7 @@ import { PageReadView, type ReadViewCollaboration } from "../editor/read-view.js
 import { CollaborationProblemNotice } from "../editor/save-indicator.js";
 import type { SaveState } from "../editor/save-state.js";
 import { LoadError } from "../errors/failure.js";
+import { PageExportDialog } from "../exports/page-export-dialog.js";
 import { AttachmentsSection, PageDropZone } from "../files/attachments-section.js";
 import { AttachmentPreviewProvider } from "../files/preview-host.js";
 import { UploadsProvider } from "../files/uploads.js";
@@ -176,6 +178,7 @@ function PageArticle({
   const saveState = useRef<SaveState>("saved");
   const [confirmingLive, setConfirmingLive] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const switchMode = useModeSwitch(page, draft.data, () => setConfirmingLive(true));
   const title = writable && publishMode && draft.data ? draft.data.title : page.title;
   const collaboration = useContentCollaboration({
@@ -270,7 +273,10 @@ function PageArticle({
       },
     );
   }
-  menuItems.push({ label: t("versions.history"), icon: History, onSelect: openHistory });
+  menuItems.push(
+    { label: t("versions.history"), icon: History, onSelect: openHistory },
+    { label: t("exports.page.menu"), icon: FileDown, onSelect: () => setExporting(true) },
+  );
   if (canEdit && !space.archived && !overview) {
     menuItems.push(
       { type: "separator" },
@@ -434,6 +440,12 @@ function PageArticle({
           onOpenChange={setConfirmingLive}
         />
         {sharing.dialog}
+        <PageExportDialog
+          page={{ id: page.id, title, publishable: !publishMode || page.published }}
+          space={{ key: space.key, exportEnabled: space.exportEnabled, admin: space.role === "admin" }}
+          open={exporting}
+          onOpenChange={setExporting}
+        />
         <SaveTemplateDialog
           spaceId={space.id}
           page={{ id: page.id, title }}
