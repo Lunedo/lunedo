@@ -126,6 +126,9 @@ import {
 import { MembershipService } from "./organizations/memberships.js";
 import { OrganizationService } from "./organizations/organizations.js";
 import { RoleService } from "./organizations/roles.js";
+import { SearchIndexer } from "./search/indexer.js";
+import { PostgresSearchAdapter } from "./search/postgres-adapter.js";
+import { SearchService } from "./search/service.js";
 import type { SettingsService } from "./settings/service.js";
 import { SetupRegistry } from "./setup/framework.js";
 import { SetupService } from "./setup/setup-service.js";
@@ -205,6 +208,7 @@ export interface AccountServices {
   scim: ScimService;
   scimTokens: ScimTokenService;
   people: PeopleService;
+  search: SearchService;
   spaces: SpaceService;
   spacePermissions: SpacePermissionService;
   personalSpaces: PersonalSpaceService;
@@ -484,6 +488,14 @@ export function createAccountServices(options: {
     jobs,
   });
   const people = new PeopleService({ database, authorization });
+  const searchAdapter = new PostgresSearchAdapter();
+  const search = new SearchService({
+    database,
+    authorization,
+    people,
+    adapter: searchAdapter,
+    indexer: new SearchIndexer({ database, adapter: searchAdapter }),
+  });
   const spaces = new SpaceService({ database, audit, authorization, settings, people });
   const spacePermissions = new SpacePermissionService({
     database,
@@ -738,6 +750,7 @@ export function createAccountServices(options: {
     scim,
     scimTokens,
     people,
+    search,
     spaces,
     spacePermissions,
     personalSpaces,

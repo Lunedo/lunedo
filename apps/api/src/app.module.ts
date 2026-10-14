@@ -17,6 +17,7 @@ import { ImportsModule } from "./imports/imports.module.js";
 import { MetricsController } from "./metrics/metrics.controller.js";
 import { NotificationsModule } from "./notifications/notifications.module.js";
 import { OrganizationsModule } from "./organizations/organizations.module.js";
+import { SearchModule } from "./search/search.module.js";
 import { SetupModule } from "./setup/setup.module.js";
 import { SharingModule } from "./sharing/sharing.module.js";
 import { SpacesModule } from "./spaces/spaces.module.js";
@@ -47,6 +48,7 @@ export class AppModule {
               ImportsModule,
               ExportsModule,
               SharingModule,
+              SearchModule,
             ]
           : []),
       ],

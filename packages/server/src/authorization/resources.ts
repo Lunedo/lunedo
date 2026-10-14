@@ -112,6 +112,11 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
     type: "organization",
     actions: {
       "organization.view": { scope: "organization", membership: ALL_MEMBERSHIPS, breakGlass: true },
+      "organization.search": {
+        scope: "organization",
+        membership: ALL_MEMBERSHIPS,
+        tokenScope: { area: "spaces", level: "view" },
+      },
       "organization.leave": { scope: "organization", membership: ALL_MEMBERSHIPS },
       "organization.update": organizationArea("settings", "manage"),
       "organization.settings.view": organizationArea("settings", "view"),

@@ -13,8 +13,11 @@ import { z } from "zod";
 import { browserTimeZone } from "../format/time-zones.js";
 import { supportedLanguages } from "../i18n/index.js";
 import { translateKey } from "../i18n/translate.js";
+import { contentLanguageItems } from "../search/content-language.js";
 import { languageLabel, localeOptionSet } from "../settings/locale-options.js";
 import { fromMinutes, type SettingField, toMinutes } from "../settings/setting-fields.js";
+
+const INHERITED_LANGUAGE = "inherited";
 
 export interface SettingControlProps {
   field: SettingField;
@@ -97,6 +100,29 @@ export function SettingControl(props: SettingControlProps) {
         muted={inherited}
         disabled={disabled}
         onValueChange={(next) => void choose(next)}
+      />
+    );
+  }
+
+  if (type.kind === "contentLanguage") {
+    return (
+      <Combobox
+        aria-label={label}
+        value={typeof value === "string" ? value : INHERITED_LANGUAGE}
+        items={[
+          { value: INHERITED_LANGUAGE, label: t("contentLanguage.organization") },
+          ...contentLanguageItems(t, i18n.language),
+        ]}
+        muted={inherited}
+        disabled={disabled}
+        onValueChange={(next) => {
+          if (next === null) return;
+          if (next === INHERITED_LANGUAGE) {
+            if (!inherited) void onFollowDefault();
+            return;
+          }
+          if (inherited || next !== value) void onSave(next);
+        }}
       />
     );
   }

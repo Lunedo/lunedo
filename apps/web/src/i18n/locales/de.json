@@ -2129,6 +2129,10 @@
       "spaces_export": {
         "label": "Export erlauben",
         "description": "Seiten und der Space können als Markdown und HTML exportiert werden. Ist es aus, kann niemand exportieren, auch Space-Admins nicht."
+      },
+      "content_language": {
+        "label": "Inhaltssprache",
+        "description": "Sprache der Seiten in diesem Space. Die Suche findet damit Wörter in allen Formen, zum Beispiel Häuser bei der Suche nach Haus. Jede Seite kann eine andere Sprache verwenden."
       }
     },
     "disabled": {
@@ -4657,7 +4661,8 @@
     "sharingSection": "Freigabe",
     "filesSection": "Dateien",
     "importsSection": "Importe",
-    "importsSectionDescription": "Grenzen für Importe aus Confluence. Den Import-Ordner selbst legt die Person fest, die den Server betreibt."
+    "importsSectionDescription": "Grenzen für Importe aus Confluence. Den Import-Ordner selbst legt die Person fest, die den Server betreibt.",
+    "searchSection": "Suche"
   },
   "archive": {
     "archive": "Archivieren",
@@ -6956,6 +6961,18 @@
       "showDifference": "Abweichung der Berechtigungen anzeigen",
       "selectionLimited": "Einige ausgewählte Seiten warten auf eine Einschränkung aus Confluence, daher wird nur „Pagehall-Version behalten“ angeboten."
     }
+  },
+  "contentLanguage": {
+    "menu": "Inhaltssprache",
+    "title": "Inhaltssprache von {title}",
+    "description": "Die Suche findet die Wörter der Seite mit dieser Sprache in allen Formen.",
+    "label": "Sprache",
+    "space": "Wie der Space ({language})",
+    "organization": "Wie die Organisation",
+    "inheritedFromSpace": "Vom Space übernommen: {language}.",
+    "setForPage": "Für diese Seite festgelegt.",
+    "useSpace": "Sprache des Space verwenden",
+    "other": "Andere Sprache (nur exakte Wörter)"
   },
   "pageStatus": {
     "title": "Seitenstatus",

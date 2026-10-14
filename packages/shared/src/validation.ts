@@ -6,6 +6,41 @@ export const supportedLanguages = ["en", "de"] as const;
 export type Language = (typeof supportedLanguages)[number];
 export const languageSchema = z.enum(supportedLanguages);
 
+export const OTHER_CONTENT_LANGUAGE = "other";
+export const contentLanguages = [
+  "ar",
+  "ca",
+  "da",
+  "de",
+  "el",
+  "en",
+  "es",
+  "eu",
+  "fi",
+  "fr",
+  "ga",
+  "hi",
+  "hu",
+  "hy",
+  "id",
+  "it",
+  "lt",
+  "nb",
+  "ne",
+  "nl",
+  "pt",
+  "ro",
+  "ru",
+  "sr",
+  "sv",
+  "ta",
+  "tr",
+  "yi",
+  OTHER_CONTENT_LANGUAGE,
+] as const;
+export type ContentLanguage = (typeof contentLanguages)[number];
+export const contentLanguageSchema = z.enum(contentLanguages);
+
 export const PASSWORD_MAX_LENGTH = 256;
 export const PASSWORD_MIN_LENGTH_FLOOR = 8;
 

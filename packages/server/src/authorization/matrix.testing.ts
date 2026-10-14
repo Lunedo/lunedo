@@ -185,6 +185,7 @@ const EXPECTED: Record<string, Expectation> = {
   "instance.templates.manage": instance("settings", "manage"),
   "instance.content.view": { scope: "instance", rule: "activeAccount" },
   "organization.view": { scope: "organization", membership: ALL_MEMBERSHIPS, breakGlass: true },
+  "organization.search": { scope: "organization", membership: ALL_MEMBERSHIPS },
   "organization.leave": { scope: "organization", membership: ALL_MEMBERSHIPS },
   "organization.update": organization("settings", "manage"),
   "organization.settings.view": organization("settings", "view"),

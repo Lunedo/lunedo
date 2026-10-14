@@ -66,6 +66,7 @@ const page = (id: string, title: string, extra: Record<string, unknown> = {}) =>
   link: null,
   creatorId: OLIVIA.id,
   ownerId: OLIVIA.id,
+  contentLanguage: null,
   createdAt: "2026-10-05T08:00:00.000Z",
   updatedAt: "2026-10-05T08:00:00.000Z",
   contentUpdatedAt: "2026-10-05T08:00:00.000Z",
@@ -135,7 +136,13 @@ function routes(
     }),
     [`GET /api/v1/spaces/${SPACE_ID}/archive`]: () => ({ body: [] }),
     [`GET /api/v1/items/${VPN}`]: () => ({
-      body: { ...page(VPN, "VPN access"), spaceKey: "ITOPS", spaceName: "IT Operations", ancestors: [] },
+      body: {
+        ...page(VPN, "VPN access"),
+        spaceKey: "ITOPS",
+        spaceName: "IT Operations",
+        spaceContentLanguage: "en",
+        ancestors: [],
+      },
     }),
     [`GET /api/v1/items/${OVERVIEW}`]: () => ({
       body: {
@@ -197,6 +204,33 @@ async function renderAt(path: string) {
   const i18n = await initI18n(["en"]);
   render(<App i18n={i18n} queryClient={createQueryClient()} />);
 }
+
+describe("content language", () => {
+  it("shows the language inherited from the space and saves another one at once", async () => {
+    const { requests } = mockApi(
+      routes("editor", {
+        [`PUT /api/v1/pages/${VPN}/content-language`]: (request) => ({
+          body: {
+            ...page(VPN, "VPN access"),
+            contentLanguage: (request.body as { language: string }).language,
+          },
+        }),
+      }),
+    );
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
+    await screen.findByText("Published text");
+    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Content language" }));
+    const dialog = await screen.findByRole("dialog", { name: "Content language of VPN access" });
+    expect(within(dialog).getByText("Inherited from the space: English.")).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole("combobox", { name: "Language" }));
+    await userEvent.click(await screen.findByRole("option", { name: "German" }));
+    await waitFor(() =>
+      expect(requests.find((request) => request.method === "PUT")?.body).toEqual({ language: "de" }),
+    );
+    expect(await within(dialog).findByText("Saved")).toBeTruthy();
+  });
+});
 
 describe("publish mode", () => {
   it("shows readers the published version without any draft", async () => {

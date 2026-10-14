@@ -15,6 +15,7 @@ import { useTranslation } from "react-i18next";
 import type { SettingEntry } from "../api/organization-queries.js";
 import { translateKey } from "../i18n/translate.js";
 import { useFormat } from "../preferences/preferences-provider.js";
+import { contentLanguageLabel } from "../search/content-language.js";
 import { localeOptionSet } from "../settings/locale-options.js";
 import {
   type SettingField,
@@ -38,6 +39,11 @@ export function useSettingValueFormatter() {
       return t("settings.noLimit");
     if (field?.type.kind === "number" && field.type.unlimited && value === "unlimited")
       return t("settings.noLimit");
+    if (field?.type.kind === "contentLanguage") {
+      return value === null || value === undefined
+        ? t("contentLanguage.organization")
+        : contentLanguageLabel(t, value, i18n.language);
+    }
     if (value === null || value === undefined || value === "") return t("settings.notSet");
     if (typeof value === "object" && "inApp" in value && "email" in value) {
       const channels = value as { inApp: unknown; email: unknown };

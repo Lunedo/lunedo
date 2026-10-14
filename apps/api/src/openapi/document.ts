@@ -65,6 +65,7 @@ const TAG_DESCRIPTIONS: Record<string, string> = {
   Trash: "Deleting and restoring content in two trash stages, archiving spaces and deleting spaces.",
   Templates: "Page templates of the instance, organizations and spaces, and the template gallery.",
   Pages: "The page tree with pages, folders and links, page content, labels and backlinks.",
+  Search: "Searching pages, blog posts and comments the caller can read.",
 };
 
 const ROOT = "root";

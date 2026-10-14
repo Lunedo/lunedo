@@ -21,6 +21,7 @@ import {
   FilePlus,
   FileText,
   History,
+  Languages,
   LayoutTemplate,
   Maximize2,
   Minimize2,
@@ -55,6 +56,7 @@ import { NoPageAccess } from "../sharing/access-requests.js";
 import { type PageSharing, usePageSharing } from "../sharing/page-sharing.js";
 import { EDIT_PAGE_EVENT } from "../shell/builtin.js";
 import { useArchiveItem, useDeleteItem, useDiscardDraft } from "./content-actions.js";
+import { ContentLanguageDialog } from "./content-language-dialog.js";
 import { draftQuery } from "./content-queries.js";
 import { InlineTitle } from "./inline-title.js";
 import { itemHref, itemSlug } from "./item-paths.js";
@@ -179,6 +181,7 @@ function PageArticle({
   const [confirmingLive, setConfirmingLive] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [choosingLanguage, setChoosingLanguage] = useState(false);
   const switchMode = useModeSwitch(page, draft.data, () => setConfirmingLive(true));
   const title = writable && publishMode && draft.data ? draft.data.title : page.title;
   const collaboration = useContentCollaboration({
@@ -266,6 +269,11 @@ function PageArticle({
             },
           ]
         : []),
+      {
+        label: t("contentLanguage.menu"),
+        icon: Languages,
+        onSelect: () => setChoosingLanguage(true),
+      },
       {
         label: t("templates.saveAsTemplate"),
         icon: LayoutTemplate,
@@ -452,6 +460,9 @@ function PageArticle({
           open={savingTemplate}
           onOpenChange={setSavingTemplate}
         />
+        {choosingLanguage ? (
+          <ContentLanguageDialog page={page} open={choosingLanguage} onOpenChange={setChoosingLanguage} />
+        ) : null}
       </article>
       {notesOpen ? (
         <div className="fixed inset-0 z-40 flex bg-surface md:sticky md:top-0 md:inset-auto md:z-auto md:h-dvh md:self-start">

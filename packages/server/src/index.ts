@@ -503,6 +503,27 @@ export {
 } from "./runtime/runtime.js";
 export { registerShutdown, SHUTDOWN_MARGIN_SECONDS } from "./runtime/shutdown.js";
 export { StartupError } from "./runtime/startup-error.js";
+export {
+  type SearchContentType,
+  type SearchSort,
+  searchContentTypes,
+  searchSorts,
+} from "./search/adapter.js";
+export { type IndexState, SearchIndexer } from "./search/indexer.js";
+export { searchIndexJob } from "./search/jobs.js";
+export { contentLanguageSetting } from "./search/languages.js";
+export { PostgresSearchAdapter } from "./search/postgres-adapter.js";
+export { MAX_QUERY_LENGTH, searchOperators } from "./search/query.js";
+export {
+  DEFAULT_SEARCH_LIMIT,
+  QUICK_SEARCH_LIMIT,
+  SEARCH_PAGE_LIMIT,
+  type SearchCursor,
+  type SearchHit,
+  type SearchRequest,
+  type SearchResponse,
+  SearchService,
+} from "./search/service.js";
 export { type AccountServices, createAccountServices } from "./services.js";
 export { builtinSettings, languageSetting, supportedLanguages, timeZoneSetting } from "./settings/builtin.js";
 export {

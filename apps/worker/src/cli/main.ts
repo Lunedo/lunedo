@@ -32,6 +32,7 @@ import {
 } from "@pagehall/server";
 import { verifyAuditLog } from "./audit.js";
 import { type Command, parseCommand, UsageError, usage } from "./parse.js";
+import { rebuildSearchIndex, searchIndexStatus } from "./search.js";
 
 const write = (text: string) => process.stdout.write(`${text}\n`);
 
@@ -138,6 +139,14 @@ async function run(command: Command): Promise<void> {
     }
     case "audit verify": {
       process.exitCode = await verifyAuditLog(databaseUrl, write);
+      return;
+    }
+    case "search rebuild": {
+      await rebuildSearchIndex(databaseUrl, write);
+      return;
+    }
+    case "search status": {
+      await searchIndexStatus(databaseUrl, write);
       return;
     }
     case "keys rotate":
