@@ -234,4 +234,49 @@ describe.skipIf(!databaseBaseUrl)("search through the API", () => {
     ]);
     expect((await reader.client.delete(`${base}/${saved.id}`)).statusCode).toBe(204);
   });
+
+  it("lets read-only API tokens list recent and saved searches, but not change them", async () => {
+    const { reader, word } = await setup();
+    const base = `/api/v1/organizations/${organizationId}/search`;
+    const saved = (
+      await reader.client.post(`${base}/saved`, { name: "Printers", query: word, filters: {} })
+    ).json();
+    expect((await reader.client.post(`${base}/recent`, { query: word, filters: {} })).statusCode).toBe(204);
+    const recentId = (await reader.client.get(`${base}/recent`)).json()[0].id as string;
+    const token = async (level: string) => {
+      const created = await reader.client.post("/api/v1/account/tokens", {
+        name: `Search ${level}`,
+        scopes: { organization: { spaces: level } },
+      });
+      expect(created.statusCode, created.body).toBe(201);
+      return { authorization: `Bearer ${created.json().token as string}` };
+    };
+    const script = new TestClient(test.app);
+    const viewing = await token("view");
+    expect((await script.get(`${base}?q=${word}`, viewing)).statusCode).toBe(200);
+    expect((await script.get(`${base}/recent`, viewing)).statusCode).toBe(200);
+    expect((await script.get(`${base}/saved`, viewing)).statusCode).toBe(200);
+    expect((await script.post(`${base}/recent`, { query: "other", filters: {} }, viewing)).statusCode).toBe(
+      403,
+    );
+    expect((await script.delete(`${base}/recent/${recentId}`, viewing)).statusCode).toBe(403);
+    expect((await script.delete(`${base}/recent`, viewing)).statusCode).toBe(403);
+    expect(
+      (await script.post(`${base}/saved`, { name: "Other", query: "x", filters: {} }, viewing)).statusCode,
+    ).toBe(403);
+    expect((await script.patch(`${base}/saved/${saved.id}`, { name: "Renamed" }, viewing)).statusCode).toBe(
+      403,
+    );
+    expect((await script.delete(`${base}/saved/${saved.id}`, viewing)).statusCode).toBe(403);
+    expect((await reader.client.get(`${base}/saved`)).json()).toEqual([
+      expect.objectContaining({ name: "Printers" }),
+    ]);
+    expect((await reader.client.get(`${base}/recent`)).json()).toHaveLength(1);
+
+    const managing = await token("manage");
+    expect((await script.patch(`${base}/saved/${saved.id}`, { name: "Renamed" }, managing)).statusCode).toBe(
+      200,
+    );
+    expect((await script.delete(`${base}/recent`, managing)).statusCode).toBe(204);
+  });
 });
