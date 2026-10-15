@@ -458,14 +458,15 @@ export function SmtpForm({
                       ref={field.ref}
                       type="file"
                       accept="application/json,.json"
-                      onChange={async (event) => {
+                      onChange={(event) => {
                         const file = event.target.files?.[0];
                         if (!file) return;
-                        const text = await file.text();
-                        const key = readServiceAccountKey(text);
-                        field.onChange(key ? text : "invalid");
-                        form.setValue("serviceAccount", key?.clientEmail ?? "");
-                        form.setValue("googleClientId", key?.clientId ?? "");
+                        void file.text().then((text) => {
+                          const key = readServiceAccountKey(text);
+                          field.onChange(key ? text : "invalid");
+                          form.setValue("serviceAccount", key?.clientEmail ?? "");
+                          form.setValue("googleClientId", key?.clientId ?? "");
+                        });
                       }}
                     />
                   )}
