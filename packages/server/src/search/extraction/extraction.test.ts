@@ -90,6 +90,16 @@ describe("attachment text extraction", () => {
     expect(text(outcome)).toContain("Paragraph number 0");
   });
 
+  it("stops at the limit between code points", async () => {
+    const limited = new TextExtractor({ maxCharacters: 40 });
+    const outcome = await limited.extract("docx", await docxFile([`a${"😀".repeat(30)}`]));
+    expect(outcome.status).toBe("extracted");
+    if (outcome.status !== "extracted") return;
+    expect(outcome.truncated).toBe(true);
+    const extracted = outcome.sections.map((section) => section.text).join("");
+    expect(extracted).toBe(`a${"😀".repeat(19)}`);
+  });
+
   it("skips encrypted PDF and Office files", async () => {
     expect(await extractor.extract("pdf", pdfFile([["Secret"]], { encrypted: true }))).toEqual({
       status: "skipped",

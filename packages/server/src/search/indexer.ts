@@ -26,6 +26,7 @@ const BATCH_SIZE = 50;
 const INDEXED_KINDS = sql`('page', 'blogPost', 'meetingTopic')`;
 const MAX_RETRY_DELAY_SECONDS = 60 * 60;
 const BUSY_RETRY_MS = 2000;
+const REFUSED_CONTENT_CLASSES = ["22", "54"];
 
 export interface IndexState {
   building: boolean;
@@ -80,6 +81,15 @@ function organizationLanguage(organization: SQL): SQL {
 
 function lockKey(kind: "item" | "space", id: string): SQL {
   return sql`hashtextextended(${`pagehall.search.${kind}:${id}`}, 0)`;
+}
+
+function refusedContent(error: unknown): { code: string } {
+  const cause = (error as { cause?: unknown }).cause ?? error;
+  const code = (cause as { code?: unknown }).code;
+  if (typeof code === "string" && REFUSED_CONTENT_CLASSES.some((prefix) => code.startsWith(prefix))) {
+    return { code };
+  }
+  throw error;
 }
 
 function asDate(value: Date | string): Date {
@@ -140,10 +150,17 @@ export class SearchIndexer {
         if (options.signal?.aborted) break;
         try {
           await this.#extractTexts(row.item_id, options);
-          if (await this.#indexItem(row.item_id, Number(row.generation))) result.items += 1;
-          else {
+          const outcome = await this.#indexItem(row.item_id, Number(row.generation));
+          if (outcome === "indexed") result.items += 1;
+          else if (outcome === "busy") {
             busyItems.add(row.item_id);
             busy = true;
+          } else {
+            result.failed += 1;
+            options.logger?.warn(
+              { itemId: row.item_id, error: { code: outcome.code } },
+              "An item was refused by the search index; it is left out of search until it changes",
+            );
           }
         } catch (error) {
           if (options.signal?.aborted) break;
@@ -224,12 +241,12 @@ export class SearchIndexer {
       where item_id = ${itemId} and generation = ${generation}`);
   }
 
-  async #indexItem(itemId: string, generation: number): Promise<boolean> {
+  async #indexItem(itemId: string, generation: number): Promise<"indexed" | "busy" | { code: string }> {
     return this.#database.transaction(async (tx) => {
       const lock = await tx.execute<{ locked: boolean }>(
         sql`select pg_try_advisory_xact_lock(${lockKey("item", itemId)}) as locked`,
       );
-      if (!lock.rows[0]?.locked) return false;
+      if (!lock.rows[0]?.locked) return "busy";
       const current = await tx.execute<{ space_id: string }>(
         sql`select space_id from tree_items where id = ${itemId}`,
       );
@@ -242,13 +259,19 @@ export class SearchIndexer {
         loaded = await this.#load(tx, itemId);
         spaceId = loaded.item?.spaceId ?? null;
       }
-      if (loaded.item) await this.#adapter.replaceItem(tx, loaded.item);
-      else await this.#adapter.removeItem(tx, itemId);
+      const item = loaded.item;
+      const refused = item
+        ? await tx
+            .transaction((savepoint) => this.#adapter.replaceItem(savepoint, item))
+            .then(() => null, refusedContent)
+        : null;
+      if (!item || refused) await this.#adapter.removeItem(tx, itemId);
       await tx.execute(
         sql`delete from search_pending_items where item_id = ${itemId} and generation = ${generation}`,
       );
+      if (refused) return refused;
       if (loaded.incomplete) await tx.execute(sql`select search_mark_item(${itemId}, interval '0')`);
-      return true;
+      return "indexed";
     });
   }
 
@@ -278,16 +301,33 @@ export class SearchIndexer {
           "The text of an attachment could not be extracted; it is found by its name only",
         );
       }
-      await this.#database.execute(sql`
-        insert into search_file_texts (file_id, extractor_version, state, reason, truncated, sections)
-        values (${file.id}, ${EXTRACTOR_VERSION}, ${outcome.status},
-          ${outcome.status === "skipped" ? outcome.reason : null},
-          ${outcome.status === "extracted" && outcome.truncated},
-          ${JSON.stringify(outcome.status === "extracted" ? outcome.sections : [])}::jsonb)
-        on conflict (file_id) do update set extractor_version = excluded.extractor_version, state = excluded.state,
-          reason = excluded.reason, truncated = excluded.truncated, sections = excluded.sections,
-          updated_at = now()`);
+      await this.#storeText(file.id, outcome).catch(async (error: unknown) => {
+        const refused = refusedContent(error);
+        options.logger?.warn(
+          { fileId: file.id, format, error: refused },
+          "The extracted text of an attachment was refused; it is found by its name only",
+        );
+        await this.#storeText(file.id, { status: "skipped", reason: "unreadable" });
+      });
     }
+  }
+
+  async #storeText(fileId: string, outcome: ExtractionOutcome): Promise<void> {
+    const sections =
+      outcome.status === "extracted"
+        ? outcome.sections.map((section) => ({
+            heading: cleanText(section.heading),
+            text: cleanText(section.text),
+          }))
+        : [];
+    await this.#database.execute(sql`
+      insert into search_file_texts (file_id, extractor_version, state, reason, truncated, sections)
+      values (${fileId}, ${EXTRACTOR_VERSION}, ${outcome.status},
+        ${outcome.status === "skipped" ? outcome.reason : null},
+        ${outcome.status === "extracted" && outcome.truncated}, ${JSON.stringify(sections)}::jsonb)
+      on conflict (file_id) do update set extractor_version = excluded.extractor_version, state = excluded.state,
+        reason = excluded.reason, truncated = excluded.truncated, sections = excluded.sections,
+        updated_at = now()`);
   }
 
   async #extract(

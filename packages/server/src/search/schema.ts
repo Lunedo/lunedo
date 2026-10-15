@@ -124,7 +124,10 @@ export const searchItemTerms = pgTable(
       .notNull()
       .references(() => treeItems.id, { onDelete: "cascade" }),
   },
-  (table) => [primaryKey({ columns: [table.organizationId, table.word, table.itemId] }), index().on(table.itemId)],
+  (table) => [
+    primaryKey({ columns: [table.organizationId, table.word, table.itemId] }),
+    index().on(table.itemId),
+  ],
 );
 
 export const searchPendingItems = pgTable(

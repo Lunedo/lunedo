@@ -32,6 +32,11 @@ export function extractableFormat(contentType: string): ExtractableFormat | null
   return CONTENT_TYPES[contentType] ?? null;
 }
 
+export function codePointBoundary(text: string, at: number): number {
+  const code = text.charCodeAt(at - 1);
+  return code >= 0xd800 && code <= 0xdbff ? at - 1 : at;
+}
+
 export class TextLimitReached extends Error {
   override name = "TextLimitReached";
 }
@@ -56,7 +61,7 @@ export class TextCollector {
     if (text.length === 0) return;
     const room = this.#maximum - this.#length;
     if (text.length > room) {
-      this.#parts.push(text.slice(0, Math.max(room, 0)));
+      this.#parts.push(text.slice(0, codePointBoundary(text, Math.max(room, 0))));
       this.#length = this.#maximum;
       throw new TextLimitReached("The extracted text reached its limit");
     }

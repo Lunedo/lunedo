@@ -158,6 +158,32 @@ describe.skipIf(!baseUrl)("search over attachments", () => {
     expect(all.facets?.contentTypes).toEqual(expect.arrayContaining([{ value: "attachment", count: 5 }]));
   });
 
+  it("finds Word and Excel files whose text contains NUL characters", async () => {
+    const context = await setup();
+    const words = { docx: word(), xlsx: word(), sheet: word() };
+    const created = await context.page("Exports");
+    const docx = await context.upload(
+      created.id,
+      "export.docx",
+      await docxFile([`Clause ${words.docx}\u0000end`]),
+    );
+    const xlsx = await context.upload(
+      created.id,
+      "export.xlsx",
+      await xlsxFile([{ name: `${words.sheet}\u0000`, rows: [["Item", `${words.xlsx}\u0000x`]] }]),
+    );
+    const result = await drain();
+    expect(result.failed).toBe(0);
+    expect(await ids(context.reader, context.org.id, words.docx)).toEqual([docx.id]);
+    expect(await ids(context.reader, context.org.id, words.xlsx)).toEqual([xlsx.id]);
+    expect(await ids(context.reader, context.org.id, words.sheet)).toEqual([xlsx.id]);
+    const texts = await test.pool.query<{ state: string }>(
+      "select ft.state from search_file_texts ft join attachment_versions v on v.file_id = ft.file_id where v.attachment_id = any($1::uuid[])",
+      [[docx.id, xlsx.id]],
+    );
+    expect(texts.rows.map((row) => row.state)).toEqual(["extracted", "extracted"]);
+  });
+
   it("indexes what readers see: files of a draft only once it is published", async () => {
     const context = await setup();
     const first = word();
