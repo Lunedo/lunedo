@@ -63,8 +63,8 @@ export class NameScope {
     }
   }
 
-  file(fileName: string, fallback: string): string {
+  file(fileName: string, fallback: string, length = MAX_NAME_LENGTH): string {
     const { base, extension } = splitExtension(fileName.trim());
-    return `${this.take(base, [extension], MAX_NAME_LENGTH - extension.length, fallback)}${extension}`;
+    return `${this.take(base, [extension], length - extension.length, fallback)}${extension}`;
   }
 }

@@ -1,4 +1,4 @@
-import { NameScope } from "./names.js";
+import { MAX_NAME_LENGTH, NameScope } from "./names.js";
 import type { ExportFormat, Locator } from "./renderer.js";
 
 export type PlannedKind = "page" | "folder" | "link";
@@ -45,6 +45,19 @@ export interface ExportPlan {
 }
 
 export const INDEX_NAME = "index";
+export const MAX_PATH_LENGTH = 239;
+export const MIN_NAME_LENGTH = 16;
+const LONGEST_EXTENSION = 11;
+const PAGE_EXTENSION = ".html".length;
+const MIN_FILE_LENGTH = MIN_NAME_LENGTH + LONGEST_EXTENSION;
+
+function lengthOf(text: string): number {
+  return [...text].length;
+}
+
+function prefixLength(folder: readonly string[]): number {
+  return folder.reduce((total, segment) => total + lengthOf(segment) + 1, 0);
+}
 
 function encodePath(segments: readonly string[]): string {
   return segments.map((segment) => encodeURIComponent(segment)).join("/");
@@ -88,6 +101,17 @@ export function planExport(options: {
     list.push(attachment);
     attachmentsOf.set(attachment.itemId, list);
   }
+  const heights = new Map<string, number>();
+  const height = (item: PlanInput): number => {
+    const known = heights.get(item.id);
+    if (known !== undefined) return known;
+    let levels = 0;
+    for (const child of children.get(item.id) ?? []) {
+      if (child.kind !== "link") levels = Math.max(levels, 1 + height(child));
+    }
+    heights.set(item.id, levels);
+    return levels;
+  };
   const pages: PlannedNode[] = [];
   const attachments: PlannedAttachment[] = [];
   const rootScope = new NameScope();
@@ -109,17 +133,28 @@ export function planExport(options: {
     };
     nodes.set(item.id, node);
     if (item.kind === "link") return node;
-    const flat = options.flat === true;
-    const own = flat ? folder : [...folder, scope.take(item.title.trim() || fallback)];
+    const room = MAX_PATH_LENGTH - prefixLength(folder);
+    const folderLength = Math.min(
+      MAX_NAME_LENGTH,
+      room - 1 - height(item) * (MIN_NAME_LENGTH + 1) - MIN_FILE_LENGTH,
+    );
+    const flat = options.flat === true || folderLength < MIN_NAME_LENGTH;
+    const own = flat ? folder : [...folder, scope.take(item.title.trim() || fallback, [""], folderLength)];
     const inner = flat ? scope : new NameScope();
+    const fileRoom = MAX_PATH_LENGTH - prefixLength(own);
     if (item.kind === "page") {
-      node.stem = inner.take(item.title.trim() || fallback, [".md", ".html"]);
+      node.stem = inner.take(
+        item.title.trim() || fallback,
+        [".md", ".html"],
+        Math.min(MAX_NAME_LENGTH, fileRoom - PAGE_EXTENSION),
+      );
       pages.push(node);
     }
     node.folder = own;
     for (const child of children.get(item.id) ?? []) node.children.push(place(child, own, inner));
     for (const attachment of item.kind === "page" ? (attachmentsOf.get(item.id) ?? []) : []) {
-      const planned = { ...attachment, path: [...own, inner.file(attachment.name, "attachment")].join("/") };
+      const name = inner.file(attachment.name, "attachment", Math.min(MAX_NAME_LENGTH, fileRoom));
+      const planned = { ...attachment, path: [...own, name].join("/") };
       node.attachments.push(planned);
       attachments.push(planned);
     }
