@@ -118,6 +118,43 @@ describe.skipIf(!databaseBaseUrl)("search through the API", () => {
     expect(broken.statusCode).toBe(400);
   });
 
+  it("answers crafted cursors with invalid input and pages with real ones", async () => {
+    const { editor, reader, word, spaceId } = await setup();
+    const second = await editor.client.post(`/api/v1/spaces/${spaceId}/items`, {
+      kind: "page",
+      title: "Second printer",
+      parentId: null,
+      mode: "live",
+    });
+    await editor.client.put(`/api/v1/pages/${second.json().id}/content`, {
+      document: documentWith(`Another ${word} printer`),
+    });
+    await test.runtime.services.search.indexer.drain();
+    const search = (query: string) =>
+      reader.client.get(
+        `/api/v1/organizations/${organizationId}/search?q=${word}&sort=newest&limit=1${query}`,
+      );
+    const first = await search("");
+    expect(first.json().total).toBe(2);
+    const next = await search(`&cursor=${first.json().nextCursor}`);
+    expect(next.statusCode, next.body).toBe(200);
+    expect(next.json().results.map((hit: { id: string }) => hit.id)).not.toContain(
+      first.json().results[0].id,
+    );
+    const id = first.json().results[0].id as string;
+    for (const time of [
+      "garbage",
+      "2026-02-30T00:00:00Z",
+      "0000-01-01T00:00:00Z",
+      "2026-01-01T00:00:00+16:00",
+    ]) {
+      const cursor = Buffer.from(JSON.stringify([1, time, id])).toString("base64url");
+      const crafted = await search(`&cursor=${cursor}`);
+      expect(crafted.statusCode, time).toBe(400);
+      expect(crafted.json()).toMatchObject({ code: "invalidInput" });
+    }
+  });
+
   it("returns attachments with their file and accepts the new types as filters", async () => {
     const { editor, reader, word, pageId } = await setup();
     const attachment = await test.runtime.services.attachments.upload(accountPrincipal(editor.id), pageId, {
