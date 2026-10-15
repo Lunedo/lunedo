@@ -24,7 +24,7 @@ export const meetingRemindersJob = defineJob({
 
 export const MEETING_REMINDERS_SCHEDULE = "* * * * *";
 
-function reminderOffset(series: SQL): SQL {
+export function reminderOffset(series: SQL): SQL {
   return sql`make_interval(mins => case ${series}.reminder
     when 'oneDay' then ${REMINDER_MINUTES.oneDay}::int
     when 'twoDays' then ${REMINDER_MINUTES.twoDays}::int
