@@ -2399,7 +2399,6 @@
     "markRead": "Mark as read",
     "unreadLabel": "Unread",
     "none": "No notifications",
-    "noneUnread": "No unread notifications",
     "noneDescription": "Reminders and notices about your organizations appear here.",
     "more": "Show more",
     "times": "{count, plural, one {once} other {# times}}",
@@ -2621,7 +2620,10 @@
       "muteDescription": "You get no notifications from {name} anymore, also not about changes and comments. You can unmute it at any time.",
       "keepMentions": "Still notify me about mentions, tasks assigned to me, pages shared with me and access requests I can decide",
       "muteConfirm": "Mute",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "menuWatched": "Watching options for {name}: watched",
+      "menuMuted": "Watching options for {name}: muted",
+      "menuNotWatched": "Watching options for {name}: not watched"
     },
     "push": {
       "title": "Browser push",
@@ -2676,7 +2678,12 @@
       "digestOff": "You no longer get the daily summary. Notifications still appear in the app.",
       "settings": "Change notification settings",
       "failed": "The e-mails could not be stopped"
-    }
+    },
+    "allRead": "You have read everything.",
+    "showAll": "Show all",
+    "notWatched": "Not watched",
+    "watchAgain": "Watch again",
+    "watchingAgain": "You watch {name} again."
   },
   "mail": {
     "title": "E-mail",

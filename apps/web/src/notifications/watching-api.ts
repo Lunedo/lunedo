@@ -28,6 +28,15 @@ export function useWatchStatus(target: WatchTarget) {
   });
 }
 
+export function useKnownWatchStatus(target: WatchTarget) {
+  return useQuery({
+    queryKey: watchKeys.status(target),
+    queryFn: () => fetchStatus(target),
+    enabled: false,
+    throwOnError: false,
+  });
+}
+
 export interface WatchChange {
   state: WatchState | null;
   keepMentions?: boolean;

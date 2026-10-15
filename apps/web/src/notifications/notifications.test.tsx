@@ -255,6 +255,7 @@ describe("the notification panel", () => {
       "GET /api/v1/notifications": () => ({ body: { items, nextCursor: null } }),
       "POST /api/v1/notifications/read-all": () => {
         unread = 0;
+        items.splice(0, items.length);
         return { body: { marked: 1 } };
       },
       "GET /api/v1/account/sessions": () => problem(404, "notFound"),
@@ -288,9 +289,77 @@ describe("the notification panel", () => {
     await waitFor(() =>
       expect(requests.some((request) => request.path === "/api/v1/notifications/read-all")).toBe(true),
     );
-    expect(await screen.findByRole("button", { name: "Notifications" })).toBeTruthy();
+    const bell = await screen.findByRole("button", { name: "Notifications" });
+    await userEvent.click(within(panel).getByRole("radio", { name: "Unread" }));
+    expect(await within(panel).findByText("You have read everything.")).toBeTruthy();
+    expect(
+      within(panel).queryByText("Reminders and notices about your organizations appear here."),
+    ).toBeNull();
+    await userEvent.click(within(panel).getByRole("button", { name: "Show all" }));
+    expect(within(panel).getByRole("radio", { name: "All" }).getAttribute("aria-checked")).toBe("true");
     await userEvent.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("complementary", { name: "Notifications" })).toBeNull());
+    expect(document.activeElement).toBe(bell);
+  });
+});
+
+describe("watching from a notification", () => {
+  it("replaces Stop watching with Watch again once the item is no longer watched", async () => {
+    const itemId = "01929b1e-0000-7000-8000-0000000000d1";
+    const items = [
+      notification("01929b1e-0000-7000-8000-00000000000c", {
+        type: "comment.created",
+        target: { type: "item", id: itemId },
+        actor: { type: "account", id: "01929b1e-0000-7000-8000-0000000000d2", name: "Bea Builder" },
+        actorCount: 1,
+        params: { itemTitle: "Restart the VPN gateway", itemKind: "page", spaceKey: "OPS" },
+      }),
+    ];
+    const status = (state: string) => ({
+      body: {
+        own: { state, keepMentions: true, automatic: false },
+        effective: { state, keepMentions: true, source: "target" },
+      },
+    });
+    const { requests } = mockApi({
+      "GET /api/v1/instance/info": () => ({
+        body: {
+          name: "Example Wiki",
+          setupComplete: true,
+          language: "en",
+          accentColor: "petrol",
+          passwordMinLength: 12,
+          selfRegistration: false,
+          organization: null,
+        },
+      }),
+      "GET /api/v1/auth/session": () => ({
+        body: { sessionKind: "full", account: ACCOUNT, methods: ["password"], recentlyAuthenticated: true },
+      }),
+      "GET /api/v1/organizations": () => ({ body: { items: [], nextCursor: null } }),
+      "GET /api/v1/account/permissions": () => ({ body: { instance: [], organization: [] } }),
+      "GET /api/v1/account/preferences": () => ({ body: [] }),
+      "GET /api/v1/notifications/unread-count": () => ({ body: { count: 1 } }),
+      "GET /api/v1/notifications": () => ({ body: { items, nextCursor: null } }),
+      [`PUT /api/v1/items/${itemId}/watch`]: (request) => status((request.body as { state: string }).state),
+      "GET /api/v1/account/sessions": () => problem(404, "notFound"),
+    });
+    window.history.replaceState(null, "", "/settings/preferences");
+    const i18n = await initI18n(["en"]);
+    render(<App i18n={i18n} queryClient={createQueryClient()} />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Notifications, 1 unread" }, { timeout: 5000 }),
+    );
+    const panel = screen.getByRole("complementary", { name: "Notifications" });
+    await userEvent.click(await within(panel).findByRole("button", { name: "Stop watching" }));
+    expect(await within(panel).findByText("Not watched")).toBeTruthy();
+    expect(within(panel).queryByRole("button", { name: "Stop watching" })).toBeNull();
+    await userEvent.click(within(panel).getByRole("button", { name: "Watch again" }));
+    expect(await within(panel).findByRole("button", { name: "Stop watching" })).toBeTruthy();
+    expect(requests.filter((request) => request.method === "PUT").map((request) => request.body)).toEqual([
+      { state: "notWatching" },
+      { state: "watching" },
+    ]);
   });
 });
 

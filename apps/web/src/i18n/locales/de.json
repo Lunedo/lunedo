@@ -2399,7 +2399,6 @@
     "markRead": "Als gelesen markieren",
     "unreadLabel": "Ungelesen",
     "none": "Keine Benachrichtigungen",
-    "noneUnread": "Keine ungelesenen Benachrichtigungen",
     "noneDescription": "Hier erscheinen Erinnerungen und Hinweise zu deinen Organisationen.",
     "more": "Mehr anzeigen",
     "times": "{count, plural, one {einmal} other {# Mal}}",
@@ -2621,7 +2620,10 @@
       "muteDescription": "Du bekommst keine Benachrichtigungen mehr aus {name}, auch nicht zu Änderungen und Kommentaren. Du kannst die Stummschaltung jederzeit aufheben.",
       "keepMentions": "Weiter benachrichtigen bei Erwähnungen, mir zugewiesenen Aufgaben, für mich freigegebenen Seiten und Zugriffsanfragen, über die ich entscheide",
       "muteConfirm": "Stummschalten",
-      "cancel": "Abbrechen"
+      "cancel": "Abbrechen",
+      "menuWatched": "Beobachtungsoptionen für {name}: beobachtet",
+      "menuMuted": "Beobachtungsoptionen für {name}: stummgeschaltet",
+      "menuNotWatched": "Beobachtungsoptionen für {name}: nicht beobachtet"
     },
     "push": {
       "title": "Browser-Push",
@@ -2676,7 +2678,12 @@
       "digestOff": "Du bekommst keine tägliche Zusammenfassung mehr. Benachrichtigungen erscheinen weiter in der App.",
       "settings": "Benachrichtigungseinstellungen ändern",
       "failed": "Die E-Mails konnten nicht abbestellt werden"
-    }
+    },
+    "allRead": "Du hast alles gelesen.",
+    "showAll": "Alle anzeigen",
+    "notWatched": "Nicht beobachtet",
+    "watchAgain": "Wieder beobachten",
+    "watchingAgain": "Du beobachtest {name} wieder."
   },
   "mail": {
     "title": "E-Mail",

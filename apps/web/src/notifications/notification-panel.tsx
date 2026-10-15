@@ -132,11 +132,23 @@ export function NotificationPanel({ onClose }: { onClose: () => void }) {
           </div>
         ) : null}
         {list.isSuccess && items.length === 0 ? (
-          <EmptyState
-            icon={BellOff}
-            title={filter === "unread" ? t("notifications.noneUnread") : t("notifications.none")}
-            description={t("notifications.noneDescription")}
-          />
+          filter === "unread" ? (
+            <EmptyState
+              icon={CheckCheck}
+              title={t("notifications.allRead")}
+              action={
+                <Button variant="secondary" onClick={() => setFilter("all")}>
+                  {t("notifications.showAll")}
+                </Button>
+              }
+            />
+          ) : (
+            <EmptyState
+              icon={BellOff}
+              title={t("notifications.none")}
+              description={t("notifications.noneDescription")}
+            />
+          )
         ) : null}
         {groupByDay(items).map((group) => (
           <section key={group.key} aria-labelledby={`notifications-${group.key}`} className="pt-2">
