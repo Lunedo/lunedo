@@ -50,7 +50,13 @@ const targetSchema = z
     z
       .object({
         homeserver: z.string().min(1).max(2000).describe("Address of the Matrix homeserver."),
-        roomId: z.string().min(1).max(500).describe("Room ID, for example `!abc:example.org`."),
+        roomId: z
+          .string()
+          .min(1)
+          .max(500)
+          .describe(
+            "Room as people see it in their client: an alias such as `#ops:example.org`, a matrix.to link or a room ID such as `!abc:example.org`. Aliases and links are resolved to the room ID when saving.",
+          ),
         accessToken: z
           .string()
           .min(1)

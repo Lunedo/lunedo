@@ -357,7 +357,7 @@ export const problemSchema = z
     fields: z
       .array(z.string().describe("Path of an invalid field, with dots between levels."))
       .optional()
-      .describe("Invalid fields, for `invalidInput`."),
+      .describe("Invalid fields, for `invalidInput` and the codes about the address of a chat channel."),
     denials: z
       .array(z.string().describe("Reason code of the authorization service."))
       .optional()
@@ -367,7 +367,12 @@ export const problemSchema = z
       .int()
       .optional()
       .describe("Seconds to wait before retrying, for `rateLimited` and `locked`."),
-    problem: z.string().optional().describe("Which password rule failed, for `passwordPolicy`."),
+    problem: z
+      .string()
+      .optional()
+      .describe(
+        "Which password rule failed, for `passwordPolicy`; why the address of a chat channel was refused, for `invalidChatAddress`.",
+      ),
     minLength: z.number().int().optional().describe("Minimum password length, for `passwordPolicy`."),
     lockedBy: z.string().optional().describe("Level that locked the setting, for `settingLocked`."),
     minimum: z.number().optional().describe("Lowest allowed value, for `settingBelowMinimum`."),

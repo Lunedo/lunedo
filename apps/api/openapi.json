@@ -128151,7 +128151,7 @@
                             "type": "string",
                             "minLength": 1,
                             "maxLength": 500,
-                            "description": "Room ID, for example `!abc:example.org`."
+                            "description": "Room as people see it in their client: an alias such as `#ops:example.org`, a matrix.to link or a room ID such as `!abc:example.org`. Aliases and links are resolved to the room ID when saving."
                           },
                           "accessToken": {
                             "type": "string",
@@ -128853,7 +128853,7 @@
                             "type": "string",
                             "minLength": 1,
                             "maxLength": 500,
-                            "description": "Room ID, for example `!abc:example.org`."
+                            "description": "Room as people see it in their client: an alias such as `#ops:example.org`, a matrix.to link or a room ID such as `!abc:example.org`. Aliases and links are resolved to the room ID when saving."
                           },
                           "accessToken": {
                             "type": "string",
@@ -129627,7 +129627,7 @@
                             "type": "string",
                             "minLength": 1,
                             "maxLength": 500,
-                            "description": "Room ID, for example `!abc:example.org`."
+                            "description": "Room as people see it in their client: an alias such as `#ops:example.org`, a matrix.to link or a room ID such as `!abc:example.org`. Aliases and links are resolved to the room ID when saving."
                           },
                           "accessToken": {
                             "type": "string",
@@ -178603,7 +178603,7 @@
                             "type": "string",
                             "minLength": 1,
                             "maxLength": 500,
-                            "description": "Room ID, for example `!abc:example.org`."
+                            "description": "Room as people see it in their client: an alias such as `#ops:example.org`, a matrix.to link or a room ID such as `!abc:example.org`. Aliases and links are resolved to the room ID when saving."
                           },
                           "accessToken": {
                             "type": "string",
@@ -179307,7 +179307,7 @@
                             "type": "string",
                             "minLength": 1,
                             "maxLength": 500,
-                            "description": "Room ID, for example `!abc:example.org`."
+                            "description": "Room as people see it in their client: an alias such as `#ops:example.org`, a matrix.to link or a room ID such as `!abc:example.org`. Aliases and links are resolved to the room ID when saving."
                           },
                           "accessToken": {
                             "type": "string",
@@ -180104,7 +180104,7 @@
                             "type": "string",
                             "minLength": 1,
                             "maxLength": 500,
-                            "description": "Room ID, for example `!abc:example.org`."
+                            "description": "Room as people see it in their client: an alias such as `#ops:example.org`, a matrix.to link or a room ID such as `!abc:example.org`. Aliases and links are resolved to the room ID when saving."
                           },
                           "accessToken": {
                             "type": "string",
@@ -200967,7 +200967,7 @@
             "description": "The last part of `type`, for clients that prefer a short key."
           },
           "fields": {
-            "description": "Invalid fields, for `invalidInput`.",
+            "description": "Invalid fields, for `invalidInput` and the codes about the address of a chat channel.",
             "type": "array",
             "items": {
               "type": "string",
@@ -200989,7 +200989,7 @@
             "maximum": 9007199254740991
           },
           "problem": {
-            "description": "Which password rule failed, for `passwordPolicy`.",
+            "description": "Which password rule failed, for `passwordPolicy`; why the address of a chat channel was refused, for `invalidChatAddress`.",
             "type": "string"
           },
           "minLength": {

@@ -209,6 +209,85 @@ describe.skipIf(!baseUrl)("chat channels", () => {
       expect(replaced.signingSecret).not.toBe(saved.signingSecret);
     });
 
+    it("names the field and the reason when it refuses an address", async () => {
+      const context = await setup();
+      const attempt = (kind: "slack" | "matrix", target: Record<string, string>) =>
+        test.services.chatChannels.create(context.admin, context.scope, {
+          kind,
+          name: "Alerts",
+          events: ["pagePublished"],
+          target,
+        });
+      await expect(attempt("slack", { url: "http://hooks example" })).rejects.toMatchObject({
+        code: "invalidAddress",
+        field: "target.url",
+        problem: "notUrl",
+      });
+      await expect(attempt("slack", { url: "https://unknown.test/hook" })).rejects.toMatchObject({
+        code: "invalidAddress",
+        field: "target.url",
+        problem: "unresolvable",
+      });
+      await expect(attempt("slack", { url: "http://private.test/hook" })).rejects.toMatchObject({
+        code: "blockedAddress",
+        field: "target.url",
+      });
+      await expect(
+        attempt("matrix", {
+          homeserver: "http://private.test",
+          roomId: "!abc:example.org",
+          accessToken: "t",
+        }),
+      ).rejects.toMatchObject({ code: "blockedAddress", field: "target.homeserver" });
+      await expect(
+        attempt("matrix", { homeserver: hook(""), roomId: "ops", accessToken: "t" }),
+      ).rejects.toMatchObject({ code: "invalidAddress", field: "target.roomId", problem: "roomAddress" });
+    });
+
+    it("resolves the room address people see in Matrix to the room ID", async () => {
+      const context = await setup();
+      const homeserver = `http://hooks.test:${port}`;
+      respond = (request) => {
+        if (request.method !== "GET") return { status: 200, body: { event_id: "$1" } };
+        if (request.headers.authorization !== "Bearer bot-token") return { status: 401, body: {} };
+        return request.url.pathname.endsWith(encodeURIComponent("#ops:example.org"))
+          ? { status: 200, body: { room_id: "!resolved:example.org", servers: ["example.org"] } }
+          : { status: 404, body: { errcode: "M_NOT_FOUND" } };
+      };
+      for (const roomId of ["#ops:example.org", "https://matrix.to/#/%23ops%3Aexample.org?via=example.org"]) {
+        requests.length = 0;
+        const result = await test.services.chatChannels.test(context.scope, {
+          kind: "matrix",
+          name: "Ops",
+          events: ["pagePublished"],
+          target: { homeserver, roomId, accessToken: "bot-token" },
+        });
+        expect(result).toEqual({ delivered: true });
+        const sent = requests.find((request) => request.method === "PUT");
+        expect(sent?.url.pathname).toContain(encodeURIComponent("!resolved:example.org"));
+      }
+      await expect(
+        test.services.chatChannels.create(context.admin, context.scope, {
+          kind: "matrix",
+          name: "Ops",
+          events: ["pagePublished"],
+          target: { homeserver, roomId: "#unknown:example.org", accessToken: "bot-token" },
+        }),
+      ).rejects.toMatchObject({ code: "invalidAddress", field: "target.roomId", problem: "roomNotFound" });
+      await expect(
+        test.services.chatChannels.create(context.admin, context.scope, {
+          kind: "matrix",
+          name: "Ops",
+          events: ["pagePublished"],
+          target: { homeserver, roomId: "#ops:example.org", accessToken: "wrong" },
+        }),
+      ).rejects.toMatchObject({
+        code: "invalidAddress",
+        field: "target.accessToken",
+        problem: "unauthorized",
+      });
+    });
+
     it("refuses confidential spaces and channels of other spaces", async () => {
       const context = await setup();
       const council = await test.services.spaces.create(
