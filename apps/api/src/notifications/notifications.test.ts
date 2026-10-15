@@ -121,6 +121,7 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
     const client = await signedInClient(test, other.email, other.password);
     expect((await client.get(`/api/v1/notifications/${item.id}`)).statusCode).toBe(404);
     expect((await owner.get(`/api/v1/notifications/${randomUUID()}`)).statusCode).toBe(404);
+    await owner.post("/api/v1/notifications/read-all", {});
   });
 
   it("unsubscribes with one click from a mail program, without a session or request header", async () => {

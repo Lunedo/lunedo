@@ -89,7 +89,7 @@ describe.skipIf(!databaseBaseUrl)("e-mail settings through the API", () => {
     });
     expect(refused.json()).toEqual({
       delivered: false,
-      error: { code: "graphMailboxNotAllowed", responseCode: 403 },
+      error: { code: "graphMailboxNotAllowed", responseCode: 403, step: "send" },
     });
     graph.data.mailScope = null;
 
