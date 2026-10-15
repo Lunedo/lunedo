@@ -218,4 +218,32 @@ describe.skipIf(!databaseBaseUrl)("exports through the API", () => {
     });
     expect(outside.statusCode).toBe(416);
   });
+
+  it("accepts a single range only and refuses several or malformed ranges", async () => {
+    const context = await setup();
+    const started = await context.exporter.client.post(`/api/v1/spaces/${context.space.id}/exports`);
+    const { id } = started.json() as { id: string };
+    await run(id);
+    const details = async () =>
+      (await context.exporter.client.get(`/api/v1/exports/${id}`)).json() as {
+        expiresAt: string;
+        size: number;
+      };
+    const { size, expiresAt } = await details();
+    for (const range of [
+      "bytes=0-1,4-5",
+      "bytes=0-1, 4-5",
+      "bytes=0-,-1",
+      "bytes=5-2",
+      "bytes=-0",
+      "bytes=-",
+      "bytes=x-1",
+      "items=0-1",
+    ]) {
+      const refused = await context.exporter.client.get(`/api/v1/exports/${id}/content`, { range });
+      expect(refused.statusCode, range).toBe(416);
+      expect(refused.headers["content-range"], range).toBe(`bytes */${size}`);
+    }
+    expect((await details()).expiresAt).toBe(expiresAt);
+  });
 });
