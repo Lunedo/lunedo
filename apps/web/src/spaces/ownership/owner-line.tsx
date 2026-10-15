@@ -119,7 +119,7 @@ export function OwnerLine({
       </span>
       {owner && !owner.active ? <Badge variant="warning">{t("ownership.ownerLeft")}</Badge> : null}
       {transferable ? (
-        <>
+        <span data-owner-action="" className="inline-flex items-center gap-2 whitespace-nowrap">
           <span aria-hidden="true">·</span>
           <button
             type="button"
@@ -128,7 +128,7 @@ export function OwnerLine({
           >
             {owner ? t("ownership.transfer") : t("ownership.assign")}
           </button>
-        </>
+        </span>
       ) : null}
       {transferring ? (
         <TransferOwnerDialog
