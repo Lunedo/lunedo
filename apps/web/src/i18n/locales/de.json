@@ -2676,6 +2676,7 @@
       "senderHint": "Das Postfach, als das Pagehall sendet.",
       "senderName": "Absendername",
       "senderNameHint": "Optional. Ohne ihn wird der Name des Postfachs angezeigt.",
+      "sentItems": "Über Microsoft Graph gesendete E-Mails werden nicht in den Gesendeten Elementen des Absenderpostfachs abgelegt. Graph kann den Header für die Abmeldung mit einem Klick nicht mitsenden, deshalb lassen sich Benachrichtigungs-E-Mails nur über den Link in der E-Mail abbestellen. Über SMTP enthalten sie zusätzlich den Header.",
       "credentials": "Client-Secret oder Zertifikat",
       "noCredentials": "Noch keines. Füge ein Client-Secret hinzu oder erstelle ein Zertifikat, bevor Pagehall senden kann.",
       "kinds": {
