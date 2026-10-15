@@ -6539,7 +6539,7 @@
                           },
                           "keepMentions": {
                             "type": "boolean",
-                            "description": "Whether mentions and assigned tasks still arrive while muted."
+                            "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                           },
                           "automatic": {
                             "type": "boolean",
@@ -112569,7 +112569,7 @@
                             },
                             "keepMentions": {
                               "type": "boolean",
-                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                              "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
                             "automatic": {
                               "type": "boolean",
@@ -112605,7 +112605,7 @@
                             },
                             "keepMentions": {
                               "type": "boolean",
-                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                              "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
                             "source": {
                               "type": "string",
@@ -112831,7 +112831,7 @@
                             },
                             "keepMentions": {
                               "type": "boolean",
-                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                              "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
                             "automatic": {
                               "type": "boolean",
@@ -112867,7 +112867,7 @@
                             },
                             "keepMentions": {
                               "type": "boolean",
-                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                              "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
                             "source": {
                               "type": "string",
@@ -113119,7 +113119,7 @@
                             },
                             "keepMentions": {
                               "type": "boolean",
-                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                              "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
                             "automatic": {
                               "type": "boolean",
@@ -113155,7 +113155,7 @@
                             },
                             "keepMentions": {
                               "type": "boolean",
-                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                              "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
                             "source": {
                               "type": "string",
@@ -190812,7 +190812,7 @@
                             },
                             "keepMentions": {
                               "type": "boolean",
-                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                              "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
                             "automatic": {
                               "type": "boolean",
@@ -190848,7 +190848,7 @@
                             },
                             "keepMentions": {
                               "type": "boolean",
-                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                              "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
                             "source": {
                               "type": "string",
@@ -191074,7 +191074,7 @@
                             },
                             "keepMentions": {
                               "type": "boolean",
-                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                              "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
                             "automatic": {
                               "type": "boolean",
@@ -191110,7 +191110,7 @@
                             },
                             "keepMentions": {
                               "type": "boolean",
-                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                              "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
                             "source": {
                               "type": "string",
@@ -191275,7 +191275,7 @@
       "put": {
         "operationId": "watches.watchSpace",
         "summary": "Watch, mute or stop watching a space",
-        "description": "Watching a space delivers changes and comments on everything in it the caller can read. Muting it silences everything from it, except mentions and assigned tasks when `keepMentions` is true.\n\nRequires the permission `space.view` on the space in `spaceId`.",
+        "description": "Watching a space delivers changes and comments on everything in it the caller can read. Muting it silences everything from it, except mentions, assigned tasks, shares with the caller and access requests the caller can decide when `keepMentions` is true.\n\nRequires the permission `space.view` on the space in `spaceId`.",
         "tags": [
           "Watching"
         ],
@@ -191361,7 +191361,7 @@
                             },
                             "keepMentions": {
                               "type": "boolean",
-                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                              "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
                             "automatic": {
                               "type": "boolean",
@@ -191397,7 +191397,7 @@
                             },
                             "keepMentions": {
                               "type": "boolean",
-                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                              "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
                             "source": {
                               "type": "string",

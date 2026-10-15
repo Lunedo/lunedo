@@ -56,7 +56,7 @@ E-mail is sent only when the person chose `immediately`, the account has an addr
 
 People watch pages, blog posts, meeting series and spaces. A watch row holds one of three states for one item or space: `watching`, `muted` (with `keepMentions`, true by default) or `notWatching`. People who create, edit or comment on an item watch it automatically unless `notifications.watchAutomatically` is off for them or they chose a state for it before.
 
-The state that applies to an item comes from the item, then its meeting series, then its space; the most specific row wins, except that an automatic watch never overrides a mute further up. Muting silences every event about the item or space; mentions and assigned tasks still arrive when `keepMentions` is true.
+The state that applies to an item comes from the item, then its meeting series, then its space; the most specific row wins, except that an automatic watch never overrides a mute further up. Muting silences every event about the item or space; mentions, assigned tasks, shares with the person and access requests they can decide still arrive when `keepMentions` is true, which is the default.
 
 Watching never grants anything. Delivery checks that the watcher can read the item; while they cannot, nothing arrives and the watch stays, so delivery resumes when access returns.
 

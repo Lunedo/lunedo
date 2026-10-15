@@ -2488,7 +2488,7 @@
         "muted": "Muted",
         "notWatching": "Not watching"
       },
-      "keepsMentions": "Mentions and tasks still arrive",
+      "keepsMentions": "Mentions, tasks, shares and access requests still arrive",
       "automatic": "Because you created, edited or commented on it",
       "inSpace": "in {space}",
       "kinds": {
@@ -2518,7 +2518,7 @@
       "mutedViaSeries": "Muted through its meeting series.",
       "muteTitle": "Mute {name}?",
       "muteDescription": "You get no notifications from {name} anymore, also not about changes and comments. You can unmute it at any time.",
-      "keepMentions": "Still notify me about mentions and tasks assigned to me",
+      "keepMentions": "Still notify me about mentions, tasks assigned to me, pages shared with me and access requests I can decide",
       "muteConfirm": "Mute",
       "cancel": "Cancel"
     }
