@@ -149,6 +149,7 @@ function matrix(message: ChatMessage): unknown {
       `<p>${title}</p>`,
       message.detail ? `<p>${htmlEscape(message.detail)}</p>` : "",
     ].join(""),
+    "m.mentions": {},
   };
 }
 
