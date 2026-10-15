@@ -30,7 +30,6 @@ import { InstanceController } from "../organizations/instance.controller.js";
 import { OrganizationsController } from "../organizations/organizations.controller.js";
 import { SavedSearchesController } from "../search/saved-searches.controller.js";
 import { SearchController } from "../search/search.controller.js";
-import { StorageController } from "../storage/storage.controller.js";
 import { SetupController } from "../setup/setup.controller.js";
 import { ShareLinksController } from "../sharing/links.controller.js";
 import { PageAccessController } from "../sharing/page-access.controller.js";
@@ -45,6 +44,7 @@ import { SpacesController } from "../spaces/spaces.controller.js";
 import { TemplatesController } from "../spaces/templates.controller.js";
 import { TrashController } from "../spaces/trash.controller.js";
 import { VersionsController } from "../spaces/versions.controller.js";
+import { StorageController } from "../storage/storage.controller.js";
 import { ServiceAccountsController } from "../tokens/service-accounts.controller.js";
 import { TokensController } from "../tokens/tokens.controller.js";
 
