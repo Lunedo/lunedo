@@ -88,7 +88,7 @@ export const watches = pgTable(
     spaceId: uuid().references(() => spaces.id, { onDelete: "cascade" }),
     itemId: uuid().references(() => treeItems.id, { onDelete: "cascade" }),
     state: watchState().notNull(),
-    keepMentions: boolean().notNull().default(true),
+    keepActionable: boolean().notNull().default(true),
     automatic: boolean().notNull().default(false),
     ...timestamps(),
   },

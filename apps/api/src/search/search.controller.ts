@@ -35,7 +35,17 @@ function list<T extends z.ZodType<unknown, string>>(item: T, description: string
     .describe(`${description} Up to ${MAX_LIST_VALUES} values, separated by commas.`);
 }
 
-const cursorSchema = z.tuple([z.number(), z.string().max(40), uuid("ID of the last result.")]);
+const MAX_TIME_ZONE_OFFSET_HOURS = 15;
+
+const cursorTimestamp = z.iso
+  .datetime({ offset: true })
+  .max(40)
+  .refine((value) => {
+    const offset = /([+-])(\d{2}):\d{2}$/.exec(value);
+    return Number(value.slice(0, 4)) >= 1 && (!offset || Number(offset[2]) <= MAX_TIME_ZONE_OFFSET_HOURS);
+  });
+
+const cursorSchema = z.tuple([z.number(), cursorTimestamp, uuid("ID of the last result.")]);
 
 const searchQuery = z
   .object({

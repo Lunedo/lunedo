@@ -2,7 +2,9 @@ import { randomUUID } from "node:crypto";
 import { cpSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { Writable } from "node:stream";
 import type { DocumentJson } from "@pagehall/editor-schema";
+import { sql } from "drizzle-orm";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accountPrincipal } from "../accounts/principal.js";
@@ -102,6 +104,90 @@ describe.skipIf(!baseUrl)("search indexer", () => {
     expect(pending.rows[0]?.count).toBe(0);
   });
 
+  it("never writes the access of a moved page from a refresh of its old space", async () => {
+    const org = await fixtures.organization();
+    const editorId = await fixtures.member(org.id, "member", "Editor");
+    const readerId = await fixtures.member(org.id, "member", "Reader");
+    const editor = accountPrincipal(editorId);
+    const reader = accountPrincipal(readerId);
+    const source = await fixtures.space(org.id, editorId, { visibility: "private" });
+    const target = await fixtures.space(org.id, editorId, {
+      visibility: "private",
+      grants: [{ principalKind: "account", principalId: readerId, role: "reader" }],
+    });
+    const word = `w${randomUUID().replace(/-/g, "").slice(0, 10)}`;
+    const page = await test.services.tree.create(editor, source.id, {
+      kind: "page",
+      title: "Moving",
+      mode: "live",
+      placement: { parentId: null },
+      document: body(word),
+    });
+    await test.services.search.indexer.drain();
+    const impact = await test.services.tree.moveImpact(editor, page.id, {
+      spaceId: target.id,
+      parentId: null,
+    });
+    await test.services.tree.move(editor, page.id, {
+      spaceId: target.id,
+      parentId: null,
+      confirmation: impact.confirmation ?? "",
+    });
+
+    const adapter = new PostgresSearchAdapter();
+    let refreshing: string | null = null;
+    let paused: () => void = () => {};
+    const reachedUpdate = new Promise<void>((resolve) => {
+      paused = resolve;
+    });
+    let release: () => void = () => {};
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const stop = new AbortController();
+    const firstNode = new SearchIndexer({
+      database: test.database,
+      adapter: {
+        ...adapter,
+        search: adapter.search.bind(adapter),
+        replaceItem: adapter.replaceItem.bind(adapter),
+        removeItem: adapter.removeItem.bind(adapter),
+        updateContextAccess: adapter.updateContextAccess.bind(adapter),
+        indexedItemsOfSpace: async (executor, spaceId) => {
+          refreshing = spaceId;
+          return adapter.indexedItemsOfSpace(executor, spaceId);
+        },
+        updateAccess: async (executor, updates) => {
+          if (refreshing === source.id) {
+            paused();
+            await released;
+          }
+          await adapter.updateAccess(executor, updates);
+        },
+      },
+    });
+    const first = firstNode.drain({ signal: stop.signal });
+    await reachedUpdate;
+    await test.pool.query("delete from space_permissions where space_id = $1 and principal_id = $2", [
+      target.id,
+      readerId,
+    ]);
+    await test.services.search.indexer.drain();
+    stop.abort();
+    release();
+    await first;
+
+    const pending = await test.pool.query("select 1 from search_pending_spaces where space_id = $1", [
+      target.id,
+    ]);
+    expect(pending.rows).toEqual([]);
+    const result = await test.services.search.search(reader, org.id, searchRequest(word));
+    expect(result.total).toBe(0);
+    await test.services.search.indexer.drain();
+    expect((await test.services.search.search(reader, org.id, searchRequest(word))).total).toBe(0);
+    expect((await test.services.search.search(editor, org.id, searchRequest(word))).total).toBe(1);
+  });
+
   it("leaves the item pending when indexing fails halfway and indexes it on the next run", async () => {
     const context = await setup(1);
     const adapter = new PostgresSearchAdapter();
@@ -133,6 +219,74 @@ describe.skipIf(!baseUrl)("search indexer", () => {
     ]);
     await test.services.search.indexer.drain();
     expect(await found(context)).toEqual(context.ids);
+  });
+
+  it("indexes a page with an emoji at the position where a long line is cut", async () => {
+    const context = await setup(1);
+    const [pageId] = context.ids;
+    await test.services.documents.replace(
+      context.member,
+      pageId ?? "",
+      body(`${context.word} a${"😀".repeat(1500)}`),
+    );
+    await test.pool.query("update search_pending_items set due_at = now() where item_id = $1", [pageId]);
+    const result = await test.services.search.indexer.drain();
+    expect(result.failed).toBe(0);
+    expect(await found(context)).toEqual(context.ids);
+    const chunks = await test.pool.query("select 1 from search_chunks where item_id = $1", [pageId]);
+    expect(chunks.rows.length).toBeGreaterThan(1);
+  });
+
+  it("removes an item the index refuses, with its older chunks, and indexes it again when it changes", async () => {
+    const context = await setup(2);
+    const [refusedId, healthyId] = context.ids;
+    await test.services.search.indexer.drain();
+    expect(await found(context)).toEqual([...context.ids].sort());
+    const adapter = new PostgresSearchAdapter();
+    const refusing = new SearchIndexer({
+      database: test.database,
+      adapter: {
+        ...adapter,
+        search: adapter.search.bind(adapter),
+        removeItem: adapter.removeItem.bind(adapter),
+        updateAccess: adapter.updateAccess.bind(adapter),
+        updateContextAccess: adapter.updateContextAccess.bind(adapter),
+        indexedItemsOfSpace: adapter.indexedItemsOfSpace.bind(adapter),
+        replaceItem: async (executor, item) => {
+          await adapter.replaceItem(executor, item);
+          if (item.itemId === refusedId) {
+            await executor.execute(sql`select '{"text": "\\u0000"}'::jsonb`);
+          }
+        },
+      },
+    });
+    await test.services.search.indexer.requestRebuild();
+    const lines: string[] = [];
+    const logger = createLogger({
+      service: "test",
+      level: "info",
+      destination: new Writable({
+        write(chunk, _encoding, callback) {
+          lines.push(String(chunk));
+          callback();
+        },
+      }),
+    });
+    const result = await refusing.drain({ logger });
+    expect(result.failed).toBe(1);
+    expect(await found(context)).toEqual([healthyId]);
+    const pending = await test.pool.query("select 1 from search_pending_items where item_id = $1", [
+      refusedId,
+    ]);
+    expect(pending.rows).toEqual([]);
+    const warning = lines.find((line) => line.includes("refused by the search index"));
+    expect(warning).toContain(refusedId);
+    expect(warning).not.toContain(context.word);
+
+    await test.services.documents.replace(context.member, refusedId ?? "", body(`${context.word} changed`));
+    await test.pool.query("update search_pending_items set due_at = now() where item_id = $1", [refusedId]);
+    await test.services.search.indexer.drain();
+    expect(await found(context)).toEqual([...context.ids].sort());
   });
 
   it("retries a failing item later without holding up the others", async () => {

@@ -232,6 +232,7 @@ export class SearchService {
       viewer,
       query,
       prefixLastTerm: quick && !/\s$/.test(request.query),
+      usageBoost: quick,
       filters,
       visibleSpaceIds: [...spaces.keys()],
       sort: request.sort,

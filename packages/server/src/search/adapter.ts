@@ -76,6 +76,7 @@ export interface AdapterSearch {
   viewer: SearchViewer;
   query: ParsedQuery;
   prefixLastTerm: boolean;
+  usageBoost: boolean;
   filters: SearchFilters;
   visibleSpaceIds: string[];
   sort: SearchSort;

@@ -317,8 +317,8 @@ describe("watching from a notification", () => {
     ];
     const status = (state: string) => ({
       body: {
-        own: { state, keepMentions: true, automatic: false },
-        effective: { state, keepMentions: true, source: "target" },
+        own: { state, keepActionable: true, automatic: false },
+        effective: { state, keepActionable: true, source: "target" },
       },
     });
     const { requests } = mockApi({

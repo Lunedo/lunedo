@@ -11,7 +11,7 @@ test("watching and notification settings pass the accessibility check in every a
   const space = await collaborationSpace(page, organization);
   const { id: pageId, path: pagePath } = await vpnPage(page, space);
   await commentOnVpnPage(page, pageId);
-  await callApi(page, "PUT", `/api/v1/spaces/${space.id}/watch`, { state: "muted", keepMentions: true });
+  await callApi(page, "PUT", `/api/v1/spaces/${space.id}/watch`, { state: "muted", keepActionable: true });
   await sweepAppearances(page, "notification-settings", async () => {
     await page.goto("/settings/notifications");
     await expect(page.getByRole("list", { name: /^(Events|Ereignisse)$/ })).toBeVisible();

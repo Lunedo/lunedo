@@ -148,7 +148,7 @@ export class SavedSearchesController {
   }
 
   @Post(":organizationId/search/recent")
-  @Permission("organization.search", organization)
+  @Permission("organization.search.manage", organization)
   @ApiRoute({
     summary: "Remember a search",
     description: `Adds a search to the caller's recent searches, or moves it to the top when it is there already. Only the last ${RECENT_SEARCH_LIMIT} are kept. An empty query is not remembered.`,
@@ -166,7 +166,7 @@ export class SavedSearchesController {
   }
 
   @Delete(":organizationId/search/recent")
-  @Permission("organization.search", organization)
+  @Permission("organization.search.manage", organization)
   @ApiRoute({
     summary: "Clear your recent searches",
     description: "Deletes all recent searches of the caller in the organization.",
@@ -178,7 +178,7 @@ export class SavedSearchesController {
   }
 
   @Delete(":organizationId/search/recent/:searchId")
-  @Permission("organization.search", organization)
+  @Permission("organization.search.manage", organization)
   @ApiRoute({
     summary: "Delete a recent search",
     description: "Deletes one of the caller's recent searches.",
@@ -208,7 +208,7 @@ export class SavedSearchesController {
   }
 
   @Post(":organizationId/search/saved")
-  @Permission("organization.search", organization)
+  @Permission("organization.search.manage", organization)
   @ApiRoute({
     summary: "Save a search",
     description: `Saves a query with its filters under a name for the caller. Running it later shows what the caller can read at that time. Up to ${SAVED_SEARCH_LIMIT} per person and organization.`,
@@ -229,7 +229,7 @@ export class SavedSearchesController {
   }
 
   @Patch(":organizationId/search/saved/:searchId")
-  @Permission("organization.search", organization)
+  @Permission("organization.search.manage", organization)
   @ApiRoute({
     summary: "Change a saved search",
     description: "Renames a saved search of the caller or replaces its query or filters.",
@@ -252,7 +252,7 @@ export class SavedSearchesController {
   }
 
   @Delete(":organizationId/search/saved/:searchId")
-  @Permission("organization.search", organization)
+  @Permission("organization.search.manage", organization)
   @ApiRoute({
     summary: "Delete a saved search",
     description: "Deletes one of the caller's saved searches.",

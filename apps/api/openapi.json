@@ -7047,7 +7047,7 @@
                             ],
                             "description": "Watched or muted."
                           },
-                          "keepMentions": {
+                          "keepActionable": {
                             "type": "boolean",
                             "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                           },
@@ -7094,7 +7094,7 @@
                         "required": [
                           "target",
                           "state",
-                          "keepMentions",
+                          "keepActionable",
                           "automatic",
                           "title",
                           "kind",
@@ -113512,7 +113512,7 @@
                               ],
                               "description": "`watching` delivers changes and comments, `muted` silences everything from it, `notWatching` stops watching it even when its space or meeting series is watched."
                             },
-                            "keepMentions": {
+                            "keepActionable": {
                               "type": "boolean",
                               "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
@@ -113523,7 +113523,7 @@
                           },
                           "required": [
                             "state",
-                            "keepMentions",
+                            "keepActionable",
                             "automatic"
                           ],
                           "additionalProperties": false
@@ -113548,7 +113548,7 @@
                               ],
                               "description": "`watching` delivers changes and comments, `muted` silences everything from it, `notWatching` stops watching it even when its space or meeting series is watched."
                             },
-                            "keepMentions": {
+                            "keepActionable": {
                               "type": "boolean",
                               "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
@@ -113564,7 +113564,7 @@
                           },
                           "required": [
                             "state",
-                            "keepMentions",
+                            "keepActionable",
                             "source"
                           ],
                           "additionalProperties": false
@@ -113587,7 +113587,7 @@
                   "own": null,
                   "effective": {
                     "state": "watching",
-                    "keepMentions": true,
+                    "keepActionable": true,
                     "source": "space"
                   }
                 }
@@ -113774,7 +113774,7 @@
                               ],
                               "description": "`watching` delivers changes and comments, `muted` silences everything from it, `notWatching` stops watching it even when its space or meeting series is watched."
                             },
-                            "keepMentions": {
+                            "keepActionable": {
                               "type": "boolean",
                               "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
@@ -113785,7 +113785,7 @@
                           },
                           "required": [
                             "state",
-                            "keepMentions",
+                            "keepActionable",
                             "automatic"
                           ],
                           "additionalProperties": false
@@ -113810,7 +113810,7 @@
                               ],
                               "description": "`watching` delivers changes and comments, `muted` silences everything from it, `notWatching` stops watching it even when its space or meeting series is watched."
                             },
-                            "keepMentions": {
+                            "keepActionable": {
                               "type": "boolean",
                               "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
@@ -113826,7 +113826,7 @@
                           },
                           "required": [
                             "state",
-                            "keepMentions",
+                            "keepActionable",
                             "source"
                           ],
                           "additionalProperties": false
@@ -113849,7 +113849,7 @@
                   "own": null,
                   "effective": {
                     "state": "watching",
-                    "keepMentions": true,
+                    "keepActionable": true,
                     "source": "space"
                   }
                 }
@@ -114022,8 +114022,8 @@
                     ],
                     "description": "`watching` delivers changes and comments, `muted` silences everything from it, `notWatching` stops watching it even when its space or meeting series is watched."
                   },
-                  "keepMentions": {
-                    "description": "For `muted`: still deliver mentions and assigned tasks. Default true.",
+                  "keepActionable": {
+                    "description": "For `muted`: still deliver mentions, assigned tasks, shares with the caller and access requests the caller can decide. Default true.",
                     "type": "boolean"
                   }
                 },
@@ -114035,7 +114035,7 @@
               },
               "example": {
                 "state": "muted",
-                "keepMentions": true
+                "keepActionable": true
               }
             }
           }
@@ -114062,7 +114062,7 @@
                               ],
                               "description": "`watching` delivers changes and comments, `muted` silences everything from it, `notWatching` stops watching it even when its space or meeting series is watched."
                             },
-                            "keepMentions": {
+                            "keepActionable": {
                               "type": "boolean",
                               "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
@@ -114073,7 +114073,7 @@
                           },
                           "required": [
                             "state",
-                            "keepMentions",
+                            "keepActionable",
                             "automatic"
                           ],
                           "additionalProperties": false
@@ -114098,7 +114098,7 @@
                               ],
                               "description": "`watching` delivers changes and comments, `muted` silences everything from it, `notWatching` stops watching it even when its space or meeting series is watched."
                             },
-                            "keepMentions": {
+                            "keepActionable": {
                               "type": "boolean",
                               "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
@@ -114114,7 +114114,7 @@
                           },
                           "required": [
                             "state",
-                            "keepMentions",
+                            "keepActionable",
                             "source"
                           ],
                           "additionalProperties": false
@@ -114137,7 +114137,7 @@
                   "own": null,
                   "effective": {
                     "state": "watching",
-                    "keepMentions": true,
+                    "keepActionable": true,
                     "source": "space"
                   }
                 }
@@ -143341,12 +143341,12 @@
       "delete": {
         "operationId": "savedSearches.forgetAll",
         "summary": "Clear your recent searches",
-        "description": "Deletes all recent searches of the caller in the organization.\n\nRequires the permission `organization.search` on the organization in `organizationId`.",
+        "description": "Deletes all recent searches of the caller in the organization.\n\nRequires the permission `organization.search.manage` on the organization in `organizationId`.",
         "tags": [
           "Search"
         ],
         "x-pagehall-permission": {
-          "action": "organization.search",
+          "action": "organization.search.manage",
           "resource": "organization",
           "parameter": "organizationId"
         },
@@ -143836,12 +143836,12 @@
       "post": {
         "operationId": "savedSearches.remember",
         "summary": "Remember a search",
-        "description": "Adds a search to the caller's recent searches, or moves it to the top when it is there already. Only the last 10 are kept. An empty query is not remembered.\n\nRequires the permission `organization.search` on the organization in `organizationId`.",
+        "description": "Adds a search to the caller's recent searches, or moves it to the top when it is there already. Only the last 10 are kept. An empty query is not remembered.\n\nRequires the permission `organization.search.manage` on the organization in `organizationId`.",
         "tags": [
           "Search"
         ],
         "x-pagehall-permission": {
-          "action": "organization.search",
+          "action": "organization.search.manage",
           "resource": "organization",
           "parameter": "organizationId"
         },
@@ -144154,12 +144154,12 @@
       "delete": {
         "operationId": "savedSearches.forget",
         "summary": "Delete a recent search",
-        "description": "Deletes one of the caller's recent searches.\n\nRequires the permission `organization.search` on the organization in `organizationId`.",
+        "description": "Deletes one of the caller's recent searches.\n\nRequires the permission `organization.search.manage` on the organization in `organizationId`.",
         "tags": [
           "Search"
         ],
         "x-pagehall-permission": {
-          "action": "organization.search",
+          "action": "organization.search.manage",
           "resource": "organization",
           "parameter": "organizationId"
         },
@@ -144674,12 +144674,12 @@
       "post": {
         "operationId": "savedSearches.save",
         "summary": "Save a search",
-        "description": "Saves a query with its filters under a name for the caller. Running it later shows what the caller can read at that time. Up to 100 per person and organization.\n\nRequires the permission `organization.search` on the organization in `organizationId`.",
+        "description": "Saves a query with its filters under a name for the caller. Running it later shows what the caller can read at that time. Up to 100 per person and organization.\n\nRequires the permission `organization.search.manage` on the organization in `organizationId`.",
         "tags": [
           "Search"
         ],
         "x-pagehall-permission": {
-          "action": "organization.search",
+          "action": "organization.search.manage",
           "resource": "organization",
           "parameter": "organizationId"
         },
@@ -145206,12 +145206,12 @@
       "delete": {
         "operationId": "savedSearches.remove",
         "summary": "Delete a saved search",
-        "description": "Deletes one of the caller's saved searches.\n\nRequires the permission `organization.search` on the organization in `organizationId`.",
+        "description": "Deletes one of the caller's saved searches.\n\nRequires the permission `organization.search.manage` on the organization in `organizationId`.",
         "tags": [
           "Search"
         ],
         "x-pagehall-permission": {
-          "action": "organization.search",
+          "action": "organization.search.manage",
           "resource": "organization",
           "parameter": "organizationId"
         },
@@ -145378,12 +145378,12 @@
       "patch": {
         "operationId": "savedSearches.update",
         "summary": "Change a saved search",
-        "description": "Renames a saved search of the caller or replaces its query or filters.\n\nRequires the permission `organization.search` on the organization in `organizationId`.",
+        "description": "Renames a saved search of the caller or replaces its query or filters.\n\nRequires the permission `organization.search.manage` on the organization in `organizationId`.",
         "tags": [
           "Search"
         ],
         "x-pagehall-permission": {
-          "action": "organization.search",
+          "action": "organization.search.manage",
           "resource": "organization",
           "parameter": "organizationId"
         },
@@ -196805,7 +196805,7 @@
                               ],
                               "description": "`watching` delivers changes and comments, `muted` silences everything from it, `notWatching` stops watching it even when its space or meeting series is watched."
                             },
-                            "keepMentions": {
+                            "keepActionable": {
                               "type": "boolean",
                               "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
@@ -196816,7 +196816,7 @@
                           },
                           "required": [
                             "state",
-                            "keepMentions",
+                            "keepActionable",
                             "automatic"
                           ],
                           "additionalProperties": false
@@ -196841,7 +196841,7 @@
                               ],
                               "description": "`watching` delivers changes and comments, `muted` silences everything from it, `notWatching` stops watching it even when its space or meeting series is watched."
                             },
-                            "keepMentions": {
+                            "keepActionable": {
                               "type": "boolean",
                               "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
@@ -196857,7 +196857,7 @@
                           },
                           "required": [
                             "state",
-                            "keepMentions",
+                            "keepActionable",
                             "source"
                           ],
                           "additionalProperties": false
@@ -196880,7 +196880,7 @@
                   "own": null,
                   "effective": {
                     "state": "watching",
-                    "keepMentions": true,
+                    "keepActionable": true,
                     "source": "space"
                   }
                 }
@@ -197067,7 +197067,7 @@
                               ],
                               "description": "`watching` delivers changes and comments, `muted` silences everything from it, `notWatching` stops watching it even when its space or meeting series is watched."
                             },
-                            "keepMentions": {
+                            "keepActionable": {
                               "type": "boolean",
                               "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
@@ -197078,7 +197078,7 @@
                           },
                           "required": [
                             "state",
-                            "keepMentions",
+                            "keepActionable",
                             "automatic"
                           ],
                           "additionalProperties": false
@@ -197103,7 +197103,7 @@
                               ],
                               "description": "`watching` delivers changes and comments, `muted` silences everything from it, `notWatching` stops watching it even when its space or meeting series is watched."
                             },
-                            "keepMentions": {
+                            "keepActionable": {
                               "type": "boolean",
                               "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
@@ -197119,7 +197119,7 @@
                           },
                           "required": [
                             "state",
-                            "keepMentions",
+                            "keepActionable",
                             "source"
                           ],
                           "additionalProperties": false
@@ -197142,7 +197142,7 @@
                   "own": null,
                   "effective": {
                     "state": "watching",
-                    "keepMentions": true,
+                    "keepActionable": true,
                     "source": "space"
                   }
                 }
@@ -197270,7 +197270,7 @@
       "put": {
         "operationId": "watches.watchSpace",
         "summary": "Watch, mute or stop watching a space",
-        "description": "Watching a space delivers changes and comments on everything in it the caller can read. Muting it silences everything from it, except mentions, assigned tasks, shares with the caller and access requests the caller can decide when `keepMentions` is true.\n\nRequires the permission `space.view` on the space in `spaceId`.",
+        "description": "Watching a space delivers changes and comments on everything in it the caller can read. Muting it silences everything from it, except mentions, assigned tasks, shares with the caller and access requests the caller can decide when `keepActionable` is true.\n\nRequires the permission `space.view` on the space in `spaceId`.",
         "tags": [
           "Watching"
         ],
@@ -197315,8 +197315,8 @@
                     ],
                     "description": "`watching` delivers changes and comments, `muted` silences everything from it, `notWatching` stops watching it even when its space or meeting series is watched."
                   },
-                  "keepMentions": {
-                    "description": "For `muted`: still deliver mentions and assigned tasks. Default true.",
+                  "keepActionable": {
+                    "description": "For `muted`: still deliver mentions, assigned tasks, shares with the caller and access requests the caller can decide. Default true.",
                     "type": "boolean"
                   }
                 },
@@ -197354,7 +197354,7 @@
                               ],
                               "description": "`watching` delivers changes and comments, `muted` silences everything from it, `notWatching` stops watching it even when its space or meeting series is watched."
                             },
-                            "keepMentions": {
+                            "keepActionable": {
                               "type": "boolean",
                               "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
@@ -197365,7 +197365,7 @@
                           },
                           "required": [
                             "state",
-                            "keepMentions",
+                            "keepActionable",
                             "automatic"
                           ],
                           "additionalProperties": false
@@ -197390,7 +197390,7 @@
                               ],
                               "description": "`watching` delivers changes and comments, `muted` silences everything from it, `notWatching` stops watching it even when its space or meeting series is watched."
                             },
-                            "keepMentions": {
+                            "keepActionable": {
                               "type": "boolean",
                               "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
@@ -197406,7 +197406,7 @@
                           },
                           "required": [
                             "state",
-                            "keepMentions",
+                            "keepActionable",
                             "source"
                           ],
                           "additionalProperties": false
@@ -197429,7 +197429,7 @@
                   "own": null,
                   "effective": {
                     "state": "watching",
-                    "keepMentions": true,
+                    "keepActionable": true,
                     "source": "space"
                   }
                 }

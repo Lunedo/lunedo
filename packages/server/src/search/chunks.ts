@@ -1,4 +1,5 @@
 import { type DocumentJson, extractSections } from "@pagehall/editor-schema";
+import { codePointBoundary } from "./extraction/text.js";
 
 export const MAX_CHUNK_LENGTH = 2000;
 export const MAX_CHUNKS_PER_SOURCE = 500;
@@ -10,7 +11,9 @@ export interface ChunkText {
 }
 
 export function cleanText(text: string): string {
-  return text.replace(/\p{Cc}/gu, (character) => (character === "\n" ? character : " "));
+  return text.replace(/[\p{Cc}\p{Cs}]/gu, (character) =>
+    character === "\n" ? character : /\p{Cs}/u.test(character) ? "�" : " ",
+  );
 }
 
 export function splitText(text: string, maximum: number = MAX_CHUNK_LENGTH): string[] {
@@ -24,7 +27,7 @@ export function splitText(text: string, maximum: number = MAX_CHUNK_LENGTH): str
     let rest = line;
     while (rest.length > maximum) {
       const cut = rest.lastIndexOf(" ", maximum);
-      const at = cut > maximum / 2 ? cut : maximum;
+      const at = cut > maximum / 2 ? cut : codePointBoundary(rest, maximum);
       flush();
       pieces.push(rest.slice(0, at).trim());
       rest = rest.slice(at);

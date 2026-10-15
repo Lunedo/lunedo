@@ -2617,7 +2617,7 @@
       "mutedViaSeries": "Muted through its meeting series.",
       "muteTitle": "Mute {name}?",
       "muteDescription": "You get no notifications from {name} anymore, also not about changes and comments. You can unmute it at any time.",
-      "keepMentions": "Still notify me about mentions, tasks assigned to me, pages shared with me and access requests I can decide",
+      "keepActionable": "Still notify me about mentions, tasks assigned to me, pages shared with me and access requests I can decide",
       "muteConfirm": "Mute",
       "cancel": "Cancel",
       "menuWatched": "Watching options for {name}: watched",

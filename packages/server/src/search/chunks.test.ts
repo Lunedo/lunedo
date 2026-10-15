@@ -12,6 +12,19 @@ describe("chunks", () => {
 
   it("removes control characters but keeps line breaks", () => {
     expect(cleanText("a\u0001b\nc\u0002")).toBe("a b\nc ");
+    expect(cleanText("a\u0000b")).toBe("a b");
+  });
+
+  it("replaces split surrogate pairs and keeps whole ones", () => {
+    expect(cleanText("a\ud83db\ude00c😀")).toBe("a�b�c😀");
+  });
+
+  it("cuts long lines only between code points", () => {
+    const line = `a${"😀".repeat(1500)}`;
+    const pieces = splitText(line);
+    expect(pieces.length).toBeGreaterThan(1);
+    expect(pieces.every((piece) => piece.isWellFormed())).toBe(true);
+    expect(pieces.join("")).toBe(line);
   });
 
   it("gives every heading its own chunk and keeps a chunk for an empty page", () => {

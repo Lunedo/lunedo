@@ -118,6 +118,43 @@ describe.skipIf(!databaseBaseUrl)("search through the API", () => {
     expect(broken.statusCode).toBe(400);
   });
 
+  it("answers crafted cursors with invalid input and pages with real ones", async () => {
+    const { editor, reader, word, spaceId } = await setup();
+    const second = await editor.client.post(`/api/v1/spaces/${spaceId}/items`, {
+      kind: "page",
+      title: "Second printer",
+      parentId: null,
+      mode: "live",
+    });
+    await editor.client.put(`/api/v1/pages/${second.json().id}/content`, {
+      document: documentWith(`Another ${word} printer`),
+    });
+    await test.runtime.services.search.indexer.drain();
+    const search = (query: string) =>
+      reader.client.get(
+        `/api/v1/organizations/${organizationId}/search?q=${word}&sort=newest&limit=1${query}`,
+      );
+    const first = await search("");
+    expect(first.json().total).toBe(2);
+    const next = await search(`&cursor=${first.json().nextCursor}`);
+    expect(next.statusCode, next.body).toBe(200);
+    expect(next.json().results.map((hit: { id: string }) => hit.id)).not.toContain(
+      first.json().results[0].id,
+    );
+    const id = first.json().results[0].id as string;
+    for (const time of [
+      "garbage",
+      "2026-02-30T00:00:00Z",
+      "0000-01-01T00:00:00Z",
+      "2026-01-01T00:00:00+16:00",
+    ]) {
+      const cursor = Buffer.from(JSON.stringify([1, time, id])).toString("base64url");
+      const crafted = await search(`&cursor=${cursor}`);
+      expect(crafted.statusCode, time).toBe(400);
+      expect(crafted.json()).toMatchObject({ code: "invalidInput" });
+    }
+  });
+
   it("returns attachments with their file and accepts the new types as filters", async () => {
     const { editor, reader, word, pageId } = await setup();
     const attachment = await test.runtime.services.attachments.upload(accountPrincipal(editor.id), pageId, {
@@ -233,5 +270,50 @@ describe.skipIf(!databaseBaseUrl)("search through the API", () => {
       "Printer pages",
     ]);
     expect((await reader.client.delete(`${base}/${saved.id}`)).statusCode).toBe(204);
+  });
+
+  it("lets read-only API tokens list recent and saved searches, but not change them", async () => {
+    const { reader, word } = await setup();
+    const base = `/api/v1/organizations/${organizationId}/search`;
+    const saved = (
+      await reader.client.post(`${base}/saved`, { name: "Printers", query: word, filters: {} })
+    ).json();
+    expect((await reader.client.post(`${base}/recent`, { query: word, filters: {} })).statusCode).toBe(204);
+    const recentId = (await reader.client.get(`${base}/recent`)).json()[0].id as string;
+    const token = async (level: string) => {
+      const created = await reader.client.post("/api/v1/account/tokens", {
+        name: `Search ${level}`,
+        scopes: { organization: { spaces: level } },
+      });
+      expect(created.statusCode, created.body).toBe(201);
+      return { authorization: `Bearer ${created.json().token as string}` };
+    };
+    const script = new TestClient(test.app);
+    const viewing = await token("view");
+    expect((await script.get(`${base}?q=${word}`, viewing)).statusCode).toBe(200);
+    expect((await script.get(`${base}/recent`, viewing)).statusCode).toBe(200);
+    expect((await script.get(`${base}/saved`, viewing)).statusCode).toBe(200);
+    expect((await script.post(`${base}/recent`, { query: "other", filters: {} }, viewing)).statusCode).toBe(
+      403,
+    );
+    expect((await script.delete(`${base}/recent/${recentId}`, viewing)).statusCode).toBe(403);
+    expect((await script.delete(`${base}/recent`, viewing)).statusCode).toBe(403);
+    expect(
+      (await script.post(`${base}/saved`, { name: "Other", query: "x", filters: {} }, viewing)).statusCode,
+    ).toBe(403);
+    expect((await script.patch(`${base}/saved/${saved.id}`, { name: "Renamed" }, viewing)).statusCode).toBe(
+      403,
+    );
+    expect((await script.delete(`${base}/saved/${saved.id}`, viewing)).statusCode).toBe(403);
+    expect((await reader.client.get(`${base}/saved`)).json()).toEqual([
+      expect.objectContaining({ name: "Printers" }),
+    ]);
+    expect((await reader.client.get(`${base}/recent`)).json()).toHaveLength(1);
+
+    const managing = await token("manage");
+    expect((await script.patch(`${base}/saved/${saved.id}`, { name: "Renamed" }, managing)).statusCode).toBe(
+      200,
+    );
+    expect((await script.delete(`${base}/recent`, managing)).statusCode).toBe(204);
   });
 });

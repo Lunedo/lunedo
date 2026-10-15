@@ -12,7 +12,9 @@ import {
 } from "./watching-api.js";
 
 export function previousChange(status: WatchStatus | undefined): WatchChange {
-  return status?.own ? { state: status.own.state, keepMentions: status.own.keepMentions } : { state: null };
+  return status?.own
+    ? { state: status.own.state, keepActionable: status.own.keepActionable }
+    : { state: null };
 }
 
 export function WatchMenu({ target, name }: { target: WatchTarget; name: string }) {
@@ -22,7 +24,7 @@ export function WatchMenu({ target, name }: { target: WatchTarget; name: string 
   const status = useWatchStatus(target);
   const change = useChangeWatch();
   const [muting, setMuting] = useState(false);
-  const [keepMentions, setKeepMentions] = useState(true);
+  const [keepActionable, setKeepActionable] = useState(true);
   const effective = status.data?.effective ?? null;
   const own = status.data?.own ?? null;
   const watching = effective?.state === "watching";
@@ -89,7 +91,7 @@ export function WatchMenu({ target, name }: { target: WatchTarget; name: string 
             label: t("notifications.watching.mute"),
             icon: BellOff,
             onSelect: () => {
-              setKeepMentions(true);
+              setKeepActionable(true);
               setMuting(true);
             },
           },
@@ -127,7 +129,7 @@ export function WatchMenu({ target, name }: { target: WatchTarget; name: string 
               variant="primary"
               onClick={() => {
                 setMuting(false);
-                apply({ state: "muted", keepMentions }, t("notifications.watching.mutedToast", { name }));
+                apply({ state: "muted", keepActionable }, t("notifications.watching.mutedToast", { name }));
               }}
             >
               {t("notifications.watching.muteConfirm")}
@@ -136,9 +138,9 @@ export function WatchMenu({ target, name }: { target: WatchTarget; name: string 
         }
       >
         <Checkbox
-          checked={keepMentions}
-          onCheckedChange={setKeepMentions}
-          label={t("notifications.watching.keepMentions")}
+          checked={keepActionable}
+          onCheckedChange={setKeepActionable}
+          label={t("notifications.watching.keepActionable")}
         />
       </Dialog>
     </>
