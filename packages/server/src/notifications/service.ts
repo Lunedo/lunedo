@@ -6,10 +6,11 @@ import { accountScopeChain } from "../accounts/scope.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import type { MailService } from "../mail/mail-service.js";
+import { hasPushDevice, queuePush } from "../push/outbox.js";
 import type { SettingsService } from "../settings/service.js";
 import type { NotificationRegistry, NotificationSubject, NotificationTypeDefinition } from "./registry.js";
 import { notifications } from "./schema.js";
-import { notificationEventSettings, notificationRetentionSetting } from "./types.js";
+import { browserPushSetting, notificationEventSettings, notificationRetentionSetting } from "./types.js";
 import { effectiveWatches } from "./watches.js";
 
 export const NOTIFICATIONS_CHANNEL = "pagehall_notifications";
@@ -49,6 +50,13 @@ export interface NotificationItem {
   createdAt: Date;
   updatedAt: Date;
   readAt: Date | null;
+}
+
+export interface VisibilityEntry {
+  type: string;
+  organizationId: string | null;
+  targetId: string | null;
+  params: unknown;
 }
 
 export type NotificationCursor = [updatedAt: string, id: string];
@@ -155,6 +163,7 @@ export class NotificationService {
     const candidates = [...new Set(input.recipients)].filter((id) => !ownAction(id));
     const muted = await this.#muted(tx, definition, event, input, params, candidates);
     const mailMethod = await this.#mail.configuredMethod(tx);
+    const pushEnabled = await this.#settings.get(browserPushSetting, {}, { executor: tx });
     const mailIds: string[] = [];
     let reached = 0;
     for (const recipientId of candidates) {
@@ -191,7 +200,19 @@ export class NotificationService {
           }),
         );
       }
-      if (inApp || email !== "off") reached += 1;
+      const push = pushEnabled && (await this.#settings.get(settings.push, chain, { executor: tx }));
+      if (push && !combined && (await hasPushDevice(tx, recipientId))) {
+        await queuePush(tx, {
+          recipientId,
+          organizationId: input.organizationId,
+          type: input.type,
+          targetId: input.targetId,
+          actorId: actor?.id ?? actorIds[0] ?? null,
+          actorCount: actorIds.length,
+          params,
+        });
+      }
+      if (inApp || email !== "off" || push) reached += 1;
     }
     return { mailIds, recipients: reached };
   }
@@ -297,7 +318,7 @@ export class NotificationService {
   #visibility(recipientId: string) {
     const cache = new Map<string, Promise<boolean>>();
     const principal = accountPrincipal(recipientId);
-    return (row: ListRow): Promise<boolean> => {
+    return (row: VisibilityEntry): Promise<boolean> => {
       const key = JSON.stringify([row.type, row.organizationId, row.targetId, row.params]);
       let decision = cache.get(key);
       if (!decision) {
@@ -319,6 +340,10 @@ export class NotificationService {
       }
       return decision;
     };
+  }
+
+  async visibleTo(recipientId: string, entry: VisibilityEntry): Promise<boolean> {
+    return this.#visibility(recipientId)(entry);
   }
 
   #select() {

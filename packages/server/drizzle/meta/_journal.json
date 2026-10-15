@@ -435,6 +435,13 @@
       "when": 1792008297997,
       "tag": "0061_watching_and_preferences",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1792048822001,
+      "tag": "0062_push_and_chat_channels",
+      "breakpoints": true
     }
   ]
 }

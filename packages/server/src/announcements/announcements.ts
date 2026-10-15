@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { AuthorizationService } from "../authorization/service.js";
+import type { ChatChannelService } from "../chat/channels.js";
 import type { Database, Executor } from "../database/database.js";
 import { OrganizationError } from "../organizations/organizations.js";
 import { INSTANCE_SCOPE_ID } from "../settings/service.js";
@@ -133,6 +134,8 @@ export class AnnouncementService {
   readonly #people: PeopleService;
   readonly #clock: () => Date;
 
+  #chat: ChatChannelService | undefined;
+
   constructor(options: {
     database: Database;
     authorization: AuthorizationService;
@@ -145,6 +148,10 @@ export class AnnouncementService {
     this.#audit = options.audit;
     this.#people = options.people;
     this.#clock = options.clock ?? (() => new Date());
+  }
+
+  useChat(chat: ChatChannelService): void {
+    this.#chat = chat;
   }
 
   async get(viewer: Principal, organizationId: string | null): Promise<ManagedAnnouncement | null> {
@@ -179,15 +186,16 @@ export class AnnouncementService {
     await this.#database.transaction(async (tx) => {
       const scopeId = organizationId ?? INSTANCE_SCOPE_ID;
       await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`announcement:${scopeId}`}, 0))`);
-      const previous = await tx.execute<{ id: string }>(
-        sql`select id from announcements where scope_id = ${scopeId}`,
+      const previous = await tx.execute<{ id: string; text: string }>(
+        sql`select id, text from announcements where scope_id = ${scopeId}`,
       );
       const actorId = actor.type === "account" ? actor.id : null;
       const id = previous.rows[0]?.id ?? uuidv7();
+      const version = uuidv7();
       await tx.execute(sql`
         insert into announcements (id, scope_id, organization_id, version, severity, text, link_url, link_label,
           starts_at, ends_at, updated_by)
-        values (${id}, ${scopeId}, ${organizationId}, ${uuidv7()}, ${input.severity}, ${text}, ${link?.url ?? null},
+        values (${id}, ${scopeId}, ${organizationId}, ${version}, ${input.severity}, ${text}, ${link?.url ?? null},
           ${link?.label ?? null}, ${startsAt}, ${input.endsAt}, ${actorId})
         on conflict (scope_id) do update set version = excluded.version, severity = excluded.severity,
           text = excluded.text, link_url = excluded.link_url, link_label = excluded.link_label,
@@ -210,6 +218,9 @@ export class AnnouncementService {
         scope: auditScopeOf({ organizationId }),
       });
       await this.#signal(tx, organizationId);
+      if (organizationId && previous.rows[0]?.text !== text) {
+        await this.#chat?.announcementChanged(tx, organizationId, { id, version, startsAt });
+      }
     });
     const saved = await this.get(actor, organizationId);
     if (!saved) throw new Error("The announcement was not saved");

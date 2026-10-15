@@ -462,7 +462,16 @@ export {
   TopicService,
   type TopicSummary,
 } from "./meetings/topics.js";
+export {
+  type ChatChannel,
+  ChatChannelError,
+  type ChatChannelSaved,
+  ChatChannelService,
+  type ChatScope,
+  type ChatTestResult,
+} from "./chat/channels.js";
 export { NotificationHub } from "./notifications/hub.js";
+export { type PushDevice, PushService, PushSubscriptionError } from "./push/push-service.js";
 export {
   defineNotificationType,
   NotificationRegistry,
@@ -480,6 +489,7 @@ export {
   type NotifyInput,
 } from "./notifications/service.js";
 export {
+  browserPushSetting,
   builtinNotificationTypes,
   digestTimeSetting,
   notificationEventSettings,
