@@ -972,8 +972,15 @@ export class MailService {
     let secret: string | null = null;
     if (oauth2Secret !== undefined) {
       secret = this.#oauth2SecretOf(oauth2, oauth2Secret);
-    } else if (sameOAuth2Client((await this.smtpConfiguration())?.oauth2 ?? null, oauth2)) {
-      secret = await this.#readSecret(SMTP_OAUTH_SECRET);
+    } else {
+      const stored = await this.smtpConfiguration();
+      const sameServer =
+        stored !== null &&
+        stored.host.toLowerCase() === configuration.host.toLowerCase() &&
+        stored.port === configuration.port &&
+        stored.username?.toLowerCase() === configuration.username.toLowerCase();
+      if (sameServer && sameOAuth2Client(stored.oauth2, oauth2))
+        secret = await this.#readSecret(SMTP_OAUTH_SECRET);
     }
     if (secret === null) {
       throw new SmtpConfigurationError(

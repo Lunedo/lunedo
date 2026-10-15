@@ -327,6 +327,25 @@ describe.skipIf(!baseUrl)("SMTP with OAuth2", () => {
     expect(endpoint.calls[0]?.form.get("client_secret")).toBe("typed-secret");
   });
 
+  it("never sends a token from the stored secret to another server or mailbox in a test", async () => {
+    const endpoint = tokenEndpoint([{ status: 200, body: { access_token: "t", expires_in: 3600 } }]);
+    const { mail, used } = service({ fetcher: endpoint.fetcher });
+    await mail.configureSmtp(generic, undefined, { oauth2Secret: "stored-secret" });
+    for (const configuration of [
+      { ...generic, host: "attacker.example" },
+      { ...generic, port: 2525 },
+      { ...generic, username: "boss@example.org" },
+    ]) {
+      await expect(
+        runWithRequestContext({ requestId: "t", actor: { type: "anonymous" } }, () =>
+          mail.sendTest("admin@example.org", "en", { configuration, password: undefined }),
+        ),
+      ).rejects.toBeInstanceOf(SmtpConfigurationError);
+    }
+    expect(endpoint.calls).toEqual([]);
+    expect(used).toEqual([]);
+  });
+
   it("never sends the stored secret to another client in a test", async () => {
     const endpoint = tokenEndpoint([{ status: 200, body: { access_token: "t", expires_in: 3600 } }]);
     const { mail } = service({ fetcher: endpoint.fetcher });
