@@ -1,3 +1,4 @@
+import { connect, type Socket } from "node:net";
 import { smtpSecurityModes } from "@pagehall/shared";
 import { createTransport } from "nodemailer";
 
@@ -67,6 +68,37 @@ function classifyTimeout(error: unknown): SmtpTimeoutError | null {
   return new SmtpTimeoutError("SMTP_SEND_TIMEOUT", "The mail server stopped answering while sending");
 }
 
+const DNS_ERRORS = new Set(["ENOTFOUND", "EAI_AGAIN", "ENODATA"]);
+
+function openSocket(
+  host: string,
+  port: number,
+  timeoutMs: number,
+  opened: (socket: Socket) => void,
+): Promise<Socket> {
+  return new Promise((resolve, reject) => {
+    const socket = connect({ host, port });
+    opened(socket);
+    const timer = setTimeout(() => {
+      socket.destroy();
+      reject(Object.assign(new Error("Connection timeout"), { code: "ETIMEDOUT" }));
+    }, timeoutMs);
+    socket.once("error", (error: NodeJS.ErrnoException) => {
+      clearTimeout(timer);
+      reject(
+        Object.assign(new Error(error.message), {
+          code: DNS_ERRORS.has(error.code ?? "") ? "EDNS" : "ECONNECTION",
+        }),
+      );
+    });
+    socket.once("connect", () => {
+      clearTimeout(timer);
+      socket.removeAllListeners("error");
+      resolve(socket);
+    });
+  });
+}
+
 export class SmtpTransport implements MailTransport {
   readonly #options: SmtpOptions;
   readonly #timeouts: SmtpTimeouts;
@@ -78,6 +110,7 @@ export class SmtpTransport implements MailTransport {
 
   async send(message: MailMessage): Promise<void> {
     const { host, port, security, username, password, accessToken, from } = this.#options;
+    const sockets: Socket[] = [];
     const transport = createTransport({
       host,
       port,
@@ -89,6 +122,12 @@ export class SmtpTransport implements MailTransport {
       greetingTimeout: this.#timeouts.greetingMs,
       socketTimeout: this.#timeouts.idleMs,
       dnsTimeout: this.#timeouts.connectMs,
+      getSocket: (_options, callback) => {
+        openSocket(host, port, this.#timeouts.connectMs, (socket) => sockets.push(socket)).then(
+          (connection) => callback(null, { connection }),
+          (error: Error) => callback(error),
+        );
+      },
       ...(username && accessToken
         ? { auth: { type: "OAuth2" as const, user: username, accessToken } }
         : username
@@ -109,6 +148,7 @@ export class SmtpTransport implements MailTransport {
         }),
         new Promise<never>((_resolve, reject) => {
           deadline = setTimeout(() => {
+            for (const socket of sockets) socket.destroy();
             reject(new SmtpTimeoutError("SMTP_SEND_TIMEOUT", "Sending the e-mail took too long"));
           }, this.#timeouts.sendMs);
         }),
