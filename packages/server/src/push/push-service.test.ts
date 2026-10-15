@@ -6,12 +6,17 @@ import { uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accountPrincipal } from "../accounts/principal.js";
+import { sessionIdleTimeoutSetting } from "../auth/settings.js";
+import type { NotificationListener } from "../database/notifications.js";
+import type { JobHandler, JobQueue } from "../jobs/job-queue.js";
+import { createLogger } from "../logging/logger.js";
 import { browserPushSetting, notificationEventSettings } from "../notifications/types.js";
 import { outboundPolicy } from "../outbound/guarded-request.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
+import { testJobContext } from "../testing/jobs.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { spaceFixtures } from "../testing/spaces.js";
-import { PushSubscriptionError } from "./push-service.js";
+import { PushSubscriptionError, pushDeliveryJob, startPushDelivery } from "./push-service.js";
 
 const baseUrl = testDatabaseBaseUrl();
 
@@ -227,6 +232,74 @@ describe.skipIf(!baseUrl)("browser push", () => {
       test.services.sessions.endAll(tx, context.readerId, { keep: phone }),
     );
     expect(await test.services.push.devices(context.readerId, null)).toEqual([]);
+  });
+
+  it("sends nothing to devices whose session ended under the organization's limits or was revoked", async () => {
+    await enable();
+    const context = await setup();
+    await test.settings.set(sessionIdleTimeoutSetting, { organization: context.org.id }, "organization", 30);
+    const idle = await device(context.readerId);
+    const revoked = await device(context.readerId);
+    const active = await device(context.readerId);
+    await test.database.execute(
+      sql`update sessions set last_used_at = now() - interval '31 minutes' where id = ${idle.sessionId}`,
+    );
+    expect(await test.services.sessions.end(context.readerId, revoked.sessionId, "endedByAccount")).toBe(
+      true,
+    );
+    expect((await test.services.push.devices(context.readerId, null)).map((entry) => entry.id)).toEqual([
+      idle.id,
+      active.id,
+    ]);
+    received.length = 0;
+    answer = 201;
+    await mentionedIn(context);
+    await deliverAll();
+    expect(received.map((entry) => entry.path)).toEqual([new URL(active.endpoint).pathname]);
+    expect((await test.services.push.devices(context.readerId, null)).map((entry) => entry.id)).toEqual([
+      active.id,
+    ]);
+    const left = await test.database.execute(sql`select 1 from sessions where id = ${idle.sessionId}`);
+    expect(left.rows).toEqual([]);
+  });
+
+  it("drops a message when its job ends for good, and abandoned messages as well", async () => {
+    await enable();
+    const context = await setup();
+    const phone = await device(context.readerId);
+    const handlers = new Map<string, JobHandler<unknown>>();
+    const jobs = {
+      work: async (definition: { name: string }, handler: JobHandler<unknown>) => {
+        handlers.set(definition.name, handler);
+      },
+      enqueue: async () => randomUUID(),
+      schedule: async () => undefined,
+    } as unknown as JobQueue;
+    const listener = { listen: async () => undefined, onReconnect: () => undefined };
+    await startPushDelivery({
+      jobs,
+      listener: listener as unknown as NotificationListener,
+      push: test.services.push,
+      logger: createLogger({ service: "test", level: "silent" }),
+    });
+    const deliver = handlers.get(pushDeliveryJob.name);
+    await test.database.execute(
+      sql`update push_subscriptions set subscription = '\\x00' where id = ${phone.id}`,
+    );
+    await mentionedIn(context);
+    const [entryId] = await queued(context.readerId);
+    const payload = { entryId: entryId ?? "" };
+    await expect(deliver?.(testJobContext(pushDeliveryJob.name, payload, 0))).rejects.toThrow();
+    expect(await queued(context.readerId)).toEqual([entryId]);
+    await deliver?.(testJobContext(pushDeliveryJob.name, payload, pushDeliveryJob.retryLimit));
+    expect(await queued(context.readerId)).toEqual([]);
+
+    await mentionedIn(context);
+    await test.database.execute(
+      sql`update push_outbox set queued_at = now() - interval '2 hours' where recipient_id = ${context.readerId}`,
+    );
+    expect(await test.services.push.dropAbandoned()).toBe(1);
+    expect(await queued(context.readerId)).toEqual([]);
   });
 
   it("sends the event text, title and link encrypted to every device and follows the preference", async () => {

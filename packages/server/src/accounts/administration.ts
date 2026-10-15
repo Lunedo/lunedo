@@ -295,6 +295,7 @@ export class AccountAdministrationService {
         mailId = await this.#mail.queue(tx, {
           to: target.email,
           template: "secondFactorReset",
+          security: true,
           language: await this.#mail.languageOf(accountId),
           params: { reason },
           organizationId: target.home,

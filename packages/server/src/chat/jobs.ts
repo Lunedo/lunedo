@@ -23,6 +23,8 @@ export const chatDispatchJob = defineJob({
 
 const DISPATCH_DELAY_MS = 100;
 
+export const CHAT_WATCHDOG_SCHEDULE = "*/10 * * * *";
+
 export class ChatDeliveryRetry extends Error {
   override name = "ChatDeliveryRetry";
 
@@ -39,13 +41,20 @@ export async function startChatDelivery(options: {
 }): Promise<void> {
   const { jobs, listener, channels, logger } = options;
   await jobs.work(chatDeliveryJob, async (job) => {
-    const result = await channels.deliver(
-      job.payload.deliveryId,
-      job.retryCount >= chatDeliveryJob.retryLimit,
-    );
+    const lastAttempt = job.retryCount >= chatDeliveryJob.retryLimit;
+    let result: Awaited<ReturnType<ChatChannelService["deliver"]>>;
+    try {
+      result = await channels.deliver(job.payload.deliveryId, lastAttempt);
+    } catch (error) {
+      if (!lastAttempt) throw error;
+      await channels.failDelivery(job.payload.deliveryId);
+      logger.warn({ err: error }, "A chat message failed for good");
+      return;
+    }
     if (result === "retry") throw new ChatDeliveryRetry();
   });
   await jobs.work(chatDispatchJob, async () => {
+    await channels.failAbandoned();
     await channels.queuePending(async (deliveryId, startAfter) => {
       await jobs.enqueue(chatDeliveryJob, { deliveryId }, { idempotencyKey: deliveryId, startAfter });
     });
@@ -64,4 +73,5 @@ export async function startChatDelivery(options: {
   await listener.listen(CHAT_DELIVERIES_CHANNEL, request);
   listener.onReconnect(request);
   await jobs.enqueue(chatDispatchJob, {});
+  await jobs.schedule(chatDispatchJob, CHAT_WATCHDOG_SCHEDULE, {}, { key: "watchdog" });
 }

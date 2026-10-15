@@ -64,4 +64,42 @@ describe("SMTP time limits", () => {
     expect(error.code).toBe("SMTP_SEND_TIMEOUT");
     expect(Date.now() - started).toBeLessThan(2000);
   });
+
+  it("drops the connection at the overall limit so the server cannot accept the mail afterwards", async () => {
+    let closed: Promise<void> = Promise.resolve();
+    let received = "";
+    const port = await listen((socket) => {
+      closed = new Promise((resolve) => socket.once("close", () => resolve()));
+      socket.write("220 slow.example.org ESMTP\r\n");
+      let data = false;
+      socket.on("data", (chunk: Buffer) => {
+        const text = chunk.toString("utf8");
+        if (data) {
+          received += text;
+          return;
+        }
+        if (/^EHLO/i.test(text)) socket.write("250 slow.example.org\r\n");
+        else if (/^DATA/i.test(text)) {
+          data = true;
+          socket.write("354 go ahead\r\n");
+        } else socket.write("250 ok\r\n");
+      });
+    });
+    const error = await new SmtpTransport(options(port), { sendMs: 300 }).send(message).catch((e) => e);
+    expect(error.code).toBe("SMTP_SEND_TIMEOUT");
+    expect(received).toContain("\r\n.\r\n");
+    const outcome = await Promise.race([
+      closed.then(() => "closed"),
+      new Promise((resolve) => setTimeout(() => resolve("open"), 500)),
+    ]);
+    expect(outcome).toBe("closed");
+  });
+
+  it("names a refused connection as a connection failure", async () => {
+    const port = await listen((socket) => socket.destroy());
+    servers[0]?.close();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const error = await new SmtpTransport(options(port)).send(message).catch((e) => e);
+    expect(error.code).toBe("ECONNECTION");
+  });
 });

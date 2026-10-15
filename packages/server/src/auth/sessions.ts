@@ -6,6 +6,7 @@ import { accountScopeChain } from "../accounts/scope.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { SignInMethod } from "../audit/catalog.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
+import { settingValues } from "../settings/schema.js";
 import type { SettingsService } from "../settings/service.js";
 import { sessions } from "./schema.js";
 import {
@@ -209,7 +210,9 @@ export class SessionService {
       .where(eq(sessions.id, sessionId));
     if (!row) return false;
     const { accountState, ...session } = row;
-    return accountState === "active" && !(await this.#expired(session, this.#clock()));
+    if (accountState === "active" && !(await this.#expired(session, this.#clock()))) return true;
+    await this.#database.delete(sessions).where(eq(sessions.id, session.id));
+    return false;
   }
 
   async isRecentlyAuthenticated(session: Session): Promise<boolean> {
@@ -292,16 +295,41 @@ export class SessionService {
   }
 
   async cleanup(): Promise<number> {
-    const idle = await this.#settings.get(sessionIdleTimeoutSetting, {});
-    const lifetime = await this.#settings.get(sessionLifetimeSetting, {});
+    let removed = await this.#removeExpired(null);
+    const organizations = await this.#database
+      .selectDistinct({ id: settingValues.scopeId })
+      .from(settingValues)
+      .where(
+        and(
+          eq(settingValues.level, "organization"),
+          inArray(settingValues.key, [sessionIdleTimeoutSetting.key, sessionLifetimeSetting.key]),
+        ),
+      );
+    for (const organization of organizations) removed += await this.#removeExpired(organization.id);
+    const inactive = await this.#database
+      .delete(sessions)
+      .where(
+        sql`not exists (select 1 from ${accounts} where ${accounts.id} = ${sessions.accountId} and ${accounts.state} = 'active')`,
+      );
+    return removed + (inactive.rowCount ?? 0);
+  }
+
+  async #removeExpired(organizationId: string | null): Promise<number> {
+    const chain = organizationId ? { organization: organizationId } : {};
+    const idle = await this.#settings.get(sessionIdleTimeoutSetting, chain);
+    const lifetime = await this.#settings.get(sessionLifetimeSetting, chain);
     const now = this.#clock().getTime();
     const deleted = await this.#database
       .delete(sessions)
       .where(
-        or(
-          lt(sessions.lastUsedAt, new Date(now - idle * MINUTE)),
-          lt(sessions.createdAt, new Date(now - lifetime * MINUTE)),
-          sql`not exists (select 1 from ${accounts} where ${accounts.id} = ${sessions.accountId} and ${accounts.state} = 'active')`,
+        and(
+          or(
+            lt(sessions.lastUsedAt, new Date(now - idle * MINUTE)),
+            lt(sessions.createdAt, new Date(now - lifetime * MINUTE)),
+          ),
+          organizationId
+            ? sql`${sessions.accountId} in (select ${accounts.id} from ${accounts} where ${accounts.homeOrganizationId} = ${organizationId})`
+            : undefined,
         ),
       );
     return deleted.rowCount ?? 0;

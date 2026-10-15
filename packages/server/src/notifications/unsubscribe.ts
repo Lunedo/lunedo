@@ -1,9 +1,10 @@
 import { timingSafeEqual } from "node:crypto";
 import { notificationEvents } from "@pagehall/shared";
 import { eq } from "drizzle-orm";
+import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { accounts } from "../accounts/schema.js";
 import { accountScopeChain } from "../accounts/scope.js";
-import type { Database } from "../database/database.js";
+import type { Database, Executor } from "../database/database.js";
 import type { SettingsService } from "../settings/service.js";
 import { SettingLockedError } from "../settings/service.js";
 import type { ValueSigner } from "../sharing/signer.js";
@@ -15,6 +16,15 @@ const TOKEN =
   /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.([A-Za-z0-9]{1,64})\.([A-Za-z0-9_-]{43})$/;
 
 export type UnsubscribeScope = { kind: "event"; event: string } | { kind: "digest" };
+
+export interface UnsubscribeLinks {
+  page: string;
+  oneClick: string;
+}
+
+export function isSecurityEvent(eventId: string): boolean {
+  return notificationEvents.some((event) => event.id === eventId && event.security);
+}
 
 export interface UnsubscribeState {
   scope: UnsubscribeScope;
@@ -45,6 +55,21 @@ export class UnsubscribeService {
     return `${accountId}.${name}.${(await this.#mac(accountId, name)).toString("base64url")}`;
   }
 
+  async links(
+    accountId: string,
+    scope: UnsubscribeScope,
+    executor: Executor = this.#database,
+  ): Promise<UnsubscribeLinks | null> {
+    if (scope.kind === "event" && isSecurityEvent(scope.event)) return null;
+    const url = await this.#settings.get(instanceUrlSetting, {}, { executor });
+    if (!url) return null;
+    const token = await this.token(accountId, scope);
+    return {
+      page: `${url}/unsubscribe/${token}`,
+      oneClick: `${url}/api/v1/notifications/unsubscribe/${token}`,
+    };
+  }
+
   async #verify(token: string): Promise<{ accountId: string; scope: UnsubscribeScope } | null> {
     const match = TOKEN.exec(token);
     if (!match?.[1] || !match[2] || !match[3]) return null;
@@ -52,7 +77,7 @@ export class UnsubscribeService {
     const scope: UnsubscribeScope | null =
       name === DIGEST
         ? { kind: "digest" }
-        : notificationEvents.some((event) => event.id === name)
+        : notificationEvents.some((event) => event.id === name && !event.security)
           ? { kind: "event", event: name }
           : null;
     if (!scope) return null;

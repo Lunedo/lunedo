@@ -165,6 +165,14 @@ describe("the e-mail settings", () => {
     ]);
   });
 
+  it("says that Graph keeps no copy in the Sent Items and sends no unsubscribe header", async () => {
+    api({});
+    await renderMail();
+    await userEvent.click(await screen.findByRole("radio", { name: "Microsoft Graph" }));
+    const note = screen.getByText(/^Mails sent through Microsoft Graph are not kept in the Sent Items/);
+    expect(note.textContent).toContain("through the link in the mail only");
+  });
+
   it("says that Microsoft 365 only accepted the test mail and where a failed delivery shows", async () => {
     api({
       "POST /api/v1/instance/mail/graph/test": () => ({ body: { delivered: true, error: null } }),

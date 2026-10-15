@@ -1,5 +1,15 @@
 import { sql } from "drizzle-orm";
-import { check, index, pgEnum, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  check,
+  index,
+  pgEnum,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { accounts } from "../accounts/schema.js";
 import { primaryId, timestamps } from "../database/columns.js";
 import { organizations } from "../organizations/schema.js";
@@ -23,6 +33,7 @@ export const announcements = pgTable(
     linkLabel: text(),
     startsAt: timestampColumn().notNull(),
     endsAt: timestampColumn().notNull(),
+    startSignaled: boolean().notNull().default(true),
     updatedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
     ...timestamps(),
   },

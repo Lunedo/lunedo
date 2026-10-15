@@ -309,6 +309,7 @@ export class SignInService {
         await this.#mail.queue(tx, {
           to: address,
           template: "emergencySignIn",
+          security: true,
           language,
           params: {
             accountName: account.name,
@@ -586,6 +587,7 @@ export class SignInService {
             await this.#mail.queue(tx, {
               to: account.email,
               template: "recoveryCodeUsed",
+              security: true,
               language: await this.#mail.languageOf(account.id),
               params: { remaining },
             }),

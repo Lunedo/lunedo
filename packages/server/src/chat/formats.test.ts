@@ -110,8 +110,14 @@ describe("chatRequest", () => {
       `https://matrix.example.org/_matrix/client/v3/rooms/!abc%3Aexample.org/send/m.room.message/${delivery.id}`,
     );
     expect(request.headers.authorization).toBe("Bearer syt_token");
-    const body = bodyOf(request) as { msgtype: string; formatted_body: string; body: string };
+    const body = bodyOf(request) as {
+      msgtype: string;
+      formatted_body: string;
+      body: string;
+      "m.mentions": unknown;
+    };
     expect(body.msgtype).toBe("m.notice");
+    expect(body["m.mentions"]).toEqual({});
     expect(body.formatted_body).toContain("Published by Anna &lt;script&gt;");
     expect(body.formatted_body).not.toContain("<script>");
     expect(body.body).toContain(message.link?.url);

@@ -1,5 +1,5 @@
 import { type NotificationEvent, notificationEventOf } from "@pagehall/shared";
-import { and, desc, eq, isNull, lte, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, lte, sql } from "drizzle-orm";
 import { accountPrincipal, type Principal } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";
 import { accountScopeChain } from "../accounts/scope.js";
@@ -8,9 +8,11 @@ import type { Database, Executor, Transaction } from "../database/database.js";
 import type { MailService } from "../mail/mail-service.js";
 import { hasPushDevice, queuePush } from "../push/outbox.js";
 import type { SettingsService } from "../settings/service.js";
+import { mailWording } from "./mail-texts.js";
 import type { NotificationRegistry, NotificationSubject, NotificationTypeDefinition } from "./registry.js";
 import { notifications } from "./schema.js";
 import { browserPushSetting, notificationEventSettings, notificationRetentionSetting } from "./types.js";
+import type { UnsubscribeService } from "./unsubscribe.js";
 import { effectiveWatches } from "./watches.js";
 
 export const NOTIFICATIONS_CHANNEL = "pagehall_notifications";
@@ -23,6 +25,7 @@ const MAX_ACTORS = 50;
 const SCAN_BATCH = 100;
 const SCAN_LIMIT = 1000;
 const UNREAD_LIMIT = 1000;
+const MARK_BATCH = 500;
 
 export interface NotifyInput {
   type: string;
@@ -125,6 +128,7 @@ export class NotificationService {
   readonly #mail: MailService;
   readonly #authorization: AuthorizationService;
   readonly #registry: NotificationRegistry;
+  readonly #unsubscribe: UnsubscribeService;
 
   constructor(options: {
     database: Database;
@@ -132,12 +136,14 @@ export class NotificationService {
     mail: MailService;
     authorization: AuthorizationService;
     registry: NotificationRegistry;
+    unsubscribe: UnsubscribeService;
   }) {
     this.#database = options.database;
     this.#settings = options.settings;
     this.#mail = options.mail;
     this.#authorization = options.authorization;
     this.#registry = options.registry;
+    this.#unsubscribe = options.unsubscribe;
   }
 
   get registry(): NotificationRegistry {
@@ -200,6 +206,7 @@ export class NotificationService {
           dateFormat: await this.#mail.dateFormatOf(recipientId, tx),
         };
         const mail = definition.mail(params, locale);
+        const links = await this.#unsubscribe.links(recipientId, { kind: "event", event: event.id }, tx);
         mailIds.push(
           await this.#mail.queue(tx, {
             to: account.email,
@@ -208,6 +215,8 @@ export class NotificationService {
             params: mail.params,
             organizationId: input.organizationId,
             notification: true,
+            unsubscribe: links ? { label: mailWording[locale.language].unsubscribeEvent, ...links } : null,
+            security: event.security,
           }),
         );
       }
@@ -447,45 +456,56 @@ export class NotificationService {
   }
 
   async markRead(recipientId: string, id: string): Promise<boolean> {
-    return this.#database.transaction(async (tx) => {
-      const [row] = await tx
-        .select({ readAt: notifications.readAt })
-        .from(notifications)
-        .where(
-          and(
-            eq(notifications.id, id),
-            eq(notifications.recipientId, recipientId),
-            eq(notifications.inApp, true),
-          ),
-        );
-      if (!row) return false;
-      if (row.readAt) return true;
-      await tx
-        .update(notifications)
-        .set({ readAt: sql`now()` })
-        .where(and(eq(notifications.id, id), isNull(notifications.readAt)));
-      await this.#announce(tx, recipientId);
-      return true;
-    });
-  }
-
-  async markAllRead(recipientId: string, before?: Date): Promise<number> {
-    return this.#database.transaction(async (tx) => {
+    const item = await this.get(recipientId, id);
+    if (!item) return false;
+    if (item.readAt) return true;
+    await this.#database.transaction(async (tx) => {
       const updated = await tx
         .update(notifications)
         .set({ readAt: sql`now()` })
+        .where(and(eq(notifications.id, id), isNull(notifications.readAt)))
+        .returning({ id: notifications.id });
+      if (updated.length > 0) await this.#announce(tx, recipientId);
+    });
+    return true;
+  }
+
+  async markAllRead(recipientId: string, before?: Date): Promise<number> {
+    const visible = this.visibility(recipientId);
+    let cursor: NotificationCursor | undefined;
+    let marked = 0;
+    for (;;) {
+      const rows: ListRow[] = await this.#select()
         .where(
           and(
             eq(notifications.recipientId, recipientId),
             eq(notifications.inApp, true),
             isNull(notifications.readAt),
             before ? lte(notifications.updatedAt, before) : undefined,
+            cursor
+              ? sql`(${notifications.updatedAt}, ${notifications.id}) < (${cursor[0]}::timestamptz, ${cursor[1]}::uuid)`
+              : undefined,
           ),
         )
-        .returning({ id: notifications.id });
-      if (updated.length > 0) await this.#announce(tx, recipientId);
-      return updated.length;
-    });
+        .orderBy(desc(notifications.updatedAt), desc(notifications.id))
+        .limit(MARK_BATCH);
+      const ids: string[] = [];
+      for (const row of rows) {
+        cursor = [row.updatedAtText, row.id];
+        if (await visible(row)) ids.push(row.id);
+      }
+      if (ids.length > 0) {
+        const updated = await this.#database
+          .update(notifications)
+          .set({ readAt: sql`now()` })
+          .where(and(inArray(notifications.id, ids), isNull(notifications.readAt)))
+          .returning({ id: notifications.id });
+        marked += updated.length;
+      }
+      if (rows.length < MARK_BATCH) break;
+    }
+    if (marked > 0) await this.#announce(this.#database, recipientId);
+    return marked;
   }
 
   async applyRetention(): Promise<number> {

@@ -1,10 +1,12 @@
 import { uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
+import { z } from "zod";
 import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { ChatChannelService } from "../chat/channels.js";
 import type { Database, Executor } from "../database/database.js";
+import { defineJob } from "../jobs/job-queue.js";
 import { OrganizationError } from "../organizations/organizations.js";
 import { INSTANCE_SCOPE_ID } from "../settings/service.js";
 import { auditScopeOf } from "../spaces/common.js";
@@ -124,6 +126,15 @@ function cleanLink(link: { url: string; label: string } | null): { url: string; 
   return { url: parsed.href, label: cleanText(link.label, ANNOUNCEMENT_LINK_LABEL_MAX_LENGTH, "link text") };
 }
 
+export const announcementStartsJob = defineJob({
+  name: "announcements.signal-starts",
+  payload: z.object({}),
+  retryLimit: 1,
+  expireInSeconds: 5 * 60,
+});
+
+export const ANNOUNCEMENT_STARTS_SCHEDULE = "* * * * *";
+
 const COLUMNS = sql`a.id, a.organization_id, a.version, a.severity, a.text, a.link_url, a.link_label, a.starts_at,
   a.ends_at`;
 
@@ -194,13 +205,13 @@ export class AnnouncementService {
       const version = uuidv7();
       await tx.execute(sql`
         insert into announcements (id, scope_id, organization_id, version, severity, text, link_url, link_label,
-          starts_at, ends_at, updated_by)
+          starts_at, ends_at, start_signaled, updated_by)
         values (${id}, ${scopeId}, ${organizationId}, ${version}, ${input.severity}, ${text}, ${link?.url ?? null},
-          ${link?.label ?? null}, ${startsAt}, ${input.endsAt}, ${actorId})
+          ${link?.label ?? null}, ${startsAt}, ${input.endsAt}, ${startsAt.getTime() <= now.getTime()}, ${actorId})
         on conflict (scope_id) do update set version = excluded.version, severity = excluded.severity,
           text = excluded.text, link_url = excluded.link_url, link_label = excluded.link_label,
-          starts_at = excluded.starts_at, ends_at = excluded.ends_at, updated_by = excluded.updated_by,
-          updated_at = now()`);
+          starts_at = excluded.starts_at, ends_at = excluded.ends_at, start_signaled = excluded.start_signaled,
+          updated_by = excluded.updated_by, updated_at = now()`);
       await this.#audit.record(tx, {
         name: "announcement.changed",
         actor,
@@ -218,8 +229,13 @@ export class AnnouncementService {
         scope: auditScopeOf({ organizationId }),
       });
       await this.#signal(tx, organizationId);
-      if (organizationId && previous.rows[0]?.text !== text) {
-        await this.#chat?.announcementChanged(tx, organizationId, { id, version, startsAt });
+      if (organizationId) {
+        await this.#chat?.announcementChanged(tx, organizationId, {
+          id,
+          version,
+          startsAt,
+          textChanged: previous.rows[0]?.text !== text,
+        });
       }
     });
     const saved = await this.get(actor, organizationId);
@@ -247,6 +263,17 @@ export class AnnouncementService {
       });
       await this.#signal(tx, organizationId);
       return true;
+    });
+  }
+
+  async signalStarted(): Promise<number> {
+    return this.#database.transaction(async (tx) => {
+      const started = await tx.execute<{ organization_id: string | null }>(sql`
+        update announcements set start_signaled = true
+        where not start_signaled and starts_at <= ${this.#clock()}::timestamptz
+        returning organization_id`);
+      for (const row of started.rows) await this.#signal(tx, row.organization_id);
+      return started.rows.length;
     });
   }
 
@@ -280,7 +307,7 @@ export class AnnouncementService {
       select ${COLUMNS}, (d.version is not distinct from a.version) as dismissed
       from announcements a
       left join announcement_dismissals d on d.announcement_id = a.id and d.account_id = ${viewer.id}
-      where a.ends_at > ${this.#clock()}::timestamptz
+      where a.starts_at <= ${this.#clock()}::timestamptz and a.ends_at > ${this.#clock()}::timestamptz
         and (a.organization_id is null or a.organization_id = any(${sql.param(organizations)}::uuid[]))
       order by a.organization_id nulls first, a.id`);
     return result.rows.map((row) => ({ ...toAnnouncement(row), dismissed: row.dismissed }));

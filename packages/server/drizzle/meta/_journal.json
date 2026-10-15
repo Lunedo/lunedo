@@ -463,6 +463,13 @@
       "when": 1792075636364,
       "tag": "0065_search_item_terms",
       "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1792084965162,
+      "tag": "0066_announcement_start_signal",
+      "breakpoints": true
     }
   ]
 }

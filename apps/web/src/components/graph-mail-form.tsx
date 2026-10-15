@@ -220,6 +220,7 @@ export function GraphMailForm({
           <Input value={values.senderName} onChange={(event) => set({ senderName: event.target.value })} />
         </Field>
       </div>
+      <p className="text-sm text-text-muted">{t("mail.graph.sentItems")}</p>
       <div className="flex flex-col gap-2">
         <span className="font-medium">{t("mail.graph.credentials")}</span>
         {credentials.length === 0 ? (

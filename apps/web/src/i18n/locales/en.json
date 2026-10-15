@@ -2763,6 +2763,7 @@
       "senderHint": "The mailbox Pagehall sends as.",
       "senderName": "Sender name",
       "senderNameHint": "Optional. Without it, the name of the mailbox is shown.",
+      "sentItems": "Mails sent through Microsoft Graph are not kept in the Sent Items of the sender mailbox. Graph cannot add the one-click unsubscribe header, so notification mails offer unsubscribing through the link in the mail only. Through SMTP, they carry the header as well.",
       "credentials": "Client secret or certificate",
       "noCredentials": "None yet. Add a client secret or create a certificate before Pagehall can send.",
       "kinds": {

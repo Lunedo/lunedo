@@ -49,6 +49,7 @@ export const PAGE_CHANGES_COMBINE_MINUTES = 60;
 export const DECISION_SETTLE_MINUTES = 5;
 const MAX_CHANNELS = 20;
 const DELIVERY_RETENTION_DAYS = 14;
+const ABANDONED_MINUTES = 60;
 const DECISION_TEXT_LIMIT = 1000;
 const ANNOUNCEMENT_PREVIEW_LIMIT = 300;
 const MAX_ACTORS = 20;
@@ -730,17 +731,18 @@ export class ChatChannelService {
   async announcementChanged(
     tx: Transaction,
     organizationId: string,
-    announcement: { id: string; version: string; startsAt: Date },
+    announcement: { id: string; version: string; startsAt: Date; textChanged: boolean },
   ): Promise<void> {
     const channels = await tx.execute<{ id: string }>(sql`
       select c.id from chat_channels c where c.organization_id = ${organizationId} and c.space_id is null
         and 'announcementPublished' = any(c.events) and c.state = 'working'`);
     if (channels.rows.length === 0) return;
     for (const channel of channels.rows) {
-      await tx.execute(sql`
+      const replaced = await tx.execute(sql`
         update chat_deliveries set state = 'skipped', updated_at = now()
         where channel_id = ${channel.id} and combine_key = ${`announcement:${announcement.id}`}
           and state = 'pending'`);
+      if (!announcement.textChanged && !replaced.rowCount) continue;
       await tx.insert(chatDeliveries).values({
         channelId: channel.id,
         event: "announcementPublished",
@@ -914,12 +916,18 @@ export class ChatChannelService {
       return state;
     };
     if (row.state === "failing" || row.confidential) return finish("skipped");
+    const claimed = await this.#database.execute<{ data: Record<string, unknown>; count: number }>(sql`
+      update chat_deliveries set combine_key = null, updated_at = now()
+      where id = ${deliveryId} and state = 'pending'
+      returning data, count`);
+    const current = claimed.rows[0];
+    if (!current) return "skipped";
     const message = await this.#message(this.#database, row, {
       id: row.delivery_id,
       event: row.event,
       subject_id: row.subject_id,
-      data: row.data,
-      count: row.count,
+      data: current.data,
+      count: current.count,
     });
     if (!message) return finish("skipped");
     const target = targetSchemaOf(row.kind).parse(
@@ -995,6 +1003,21 @@ export class ChatChannelService {
       { channelId: channel.id, reason: failure.reason, status: failure.status },
       "A chat channel stopped accepting messages",
     );
+  }
+
+  async failDelivery(deliveryId: string): Promise<void> {
+    await this.#database
+      .update(chatDeliveries)
+      .set({ state: "failed", updatedAt: new Date() })
+      .where(and(eq(chatDeliveries.id, deliveryId), eq(chatDeliveries.state, "pending")));
+  }
+
+  async failAbandoned(): Promise<number> {
+    const failed = await this.#database.execute(sql`
+      update chat_deliveries set state = 'failed', updated_at = now()
+      where state = 'pending' and queued_at is not null
+        and greatest(queued_at, not_before) < now() - make_interval(mins => ${ABANDONED_MINUTES})`);
+    return failed.rowCount ?? 0;
   }
 
   async removeOldDeliveries(): Promise<number> {

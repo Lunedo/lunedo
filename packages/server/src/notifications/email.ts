@@ -17,6 +17,7 @@ import {
   type MailSection,
   renderContent,
   templateSubject,
+  unsubscribeHeaders,
 } from "../mail/templates.js";
 import type { MailMessage } from "../mail/transport.js";
 import { timeZoneSetting } from "../settings/builtin.js";
@@ -30,7 +31,7 @@ import {
   type NotificationService,
 } from "./service.js";
 import { digestEnabledSetting, digestTimeSetting, notificationEventSettings } from "./types.js";
-import type { UnsubscribeScope, UnsubscribeService } from "./unsubscribe.js";
+import { isSecurityEvent, type UnsubscribeScope, type UnsubscribeService } from "./unsubscribe.js";
 
 export const notificationEmailJob = defineJob({
   name: "notifications.send-emails",
@@ -383,20 +384,6 @@ export class NotificationMailer {
     return plain.trim() ? excerptOf(plain, EXCERPT_LENGTH) : null;
   }
 
-  async #unsubscribeLinks(
-    tx: Transaction,
-    recipient: Recipient,
-    scope: UnsubscribeScope,
-  ): Promise<{ page: string; oneClick: string } | null> {
-    const url = await this.#settings.get(instanceUrlSetting, {}, { executor: tx });
-    if (!url) return null;
-    const token = await this.#unsubscribe.token(recipient.id, scope);
-    return {
-      page: `${url}/unsubscribe/${token}`,
-      oneClick: `${url}/api/v1/notifications/unsubscribe/${token}`,
-    };
-  }
-
   async #render(
     tx: Transaction,
     recipient: Recipient,
@@ -405,7 +392,7 @@ export class NotificationMailer {
     scope: UnsubscribeScope,
   ): Promise<MailMessage> {
     const wording = mailWording[recipient.language];
-    const links = await this.#unsubscribeLinks(tx, recipient, scope);
+    const links = await this.#unsubscribe.links(recipient.id, scope, tx);
     const branding = await this.#mail.branding(tx, { organizationId, notification: true });
     const instanceName = await this.#settings.get(instanceNameSetting, {}, { executor: tx });
     const message = renderContent(recipient.language, content, instanceName, recipient.email, {
@@ -416,16 +403,9 @@ export class NotificationMailer {
             url: links.page,
           }
         : null,
+      security: scope.kind === "event" && isSecurityEvent(scope.event),
     });
-    return links
-      ? {
-          ...message,
-          headers: {
-            "List-Unsubscribe": `<${links.oneClick}>`,
-            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-          },
-        }
-      : message;
+    return links ? { ...message, headers: unsubscribeHeaders(links.oneClick) } : message;
   }
 
   async #queueSingle(tx: Transaction, recipient: Recipient, prepared: Prepared): Promise<string> {

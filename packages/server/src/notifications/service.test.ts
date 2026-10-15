@@ -138,6 +138,26 @@ describe.skipIf(!baseUrl)("notifications", () => {
     expect((await test.services.notifications.list(administrator.id, { limit: 10 })).items).toEqual([]);
   });
 
+  it("treats hidden notifications like unknown ones when marking them as read", async () => {
+    const org = await organization();
+    const administrator = await standard(org.id);
+    const assignment = await test.services.roles.assign(SYSTEM, {
+      scope: "organization",
+      organizationId: org.id,
+      role: { builtIn: "administrator" },
+      principal: { kind: "account", id: administrator.id },
+    });
+    await notify(guestNotice(org.id, [administrator.id]));
+    await notify(guestNotice(org.id, [administrator.id]));
+    const [hidden] = (await test.services.notifications.list(administrator.id, { limit: 10 })).items;
+    await test.services.roles.unassign(SYSTEM, "organization", org.id, assignment.id);
+
+    expect(await test.services.notifications.markRead(administrator.id, hidden?.id ?? "")).toBe(false);
+    expect(await test.services.notifications.markRead(administrator.id, randomUUID())).toBe(false);
+    expect(await test.services.notifications.markAllRead(administrator.id)).toBe(0);
+    expect((await rows(administrator.id)).every((row) => row.read_at === null)).toBe(true);
+  });
+
   it("shows guest notices to the guest's responsible person without administrator rights", async () => {
     const org = await organization();
     const responsible = await standard(org.id);
@@ -278,6 +298,46 @@ describe.skipIf(!baseUrl)("notifications", () => {
     await deliverPendingMail(test.services, test.database);
     const own = test.mail.sent.filter((entry) => entry.to === org.owner.email).at(-1);
     expect(own?.text).toContain("20.10.2026");
+    await test.settings.set(smtpSetting, {}, "instance", null);
+  });
+
+  it("offers a one-click unsubscribe in administration mails and none in security mails", async () => {
+    const org = await organization();
+    await test.settings.set(smtpSetting, {}, "instance", SMTP);
+    await notify(guestNotice(org.id, [org.owner.id]));
+    await notify({
+      type: "signIn.newBrowser",
+      recipients: [org.owner.id],
+      organizationId: null,
+      targetId: randomUUID(),
+      params: { browser: "Firefox", operatingSystem: "Linux", clientIp: "192.0.2.1" },
+    });
+    await deliverPendingMail(test.services, test.database);
+    const [guest, security] = test.mail.sent.filter((entry) => entry.to === org.owner.email).slice(-2);
+
+    const oneClick = /^<https:\/\/wiki\.example\.org\/api\/v1\/notifications\/unsubscribe\/([^>]+)>$/.exec(
+      guest?.headers?.["List-Unsubscribe"] ?? "",
+    );
+    expect(guest?.headers?.["List-Unsubscribe-Post"]).toBe("List-Unsubscribe=One-Click");
+    expect(guest?.text).toContain(
+      `Stop e-mails like this: https://wiki.example.org/unsubscribe/${oneClick?.[1]}`,
+    );
+    expect(guest?.text).not.toContain("for your account's security");
+    expect(await test.services.unsubscribe.describe(oneClick?.[1] ?? "")).toEqual({
+      scope: { kind: "event", event: "guestExpiring" },
+      off: false,
+    });
+
+    expect(security?.headers).toBeUndefined();
+    expect(security?.text).not.toContain("/unsubscribe/");
+    expect(security?.text).toContain("You receive this mail for your account's security.");
+    expect(security?.html).toContain("You receive this mail for your account&#39;s security.");
+    const forged = await test.services.unsubscribe.token(org.owner.id, {
+      kind: "event",
+      event: "signInNewBrowser",
+    });
+    expect(await test.services.unsubscribe.describe(forged)).toBeNull();
+    expect(await test.services.unsubscribe.apply(forged)).toBeNull();
     await test.settings.set(smtpSetting, {}, "instance", null);
   });
 

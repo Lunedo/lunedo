@@ -23,6 +23,7 @@ import {
   withoutStableIds,
   withSeriesTaskReport,
 } from "./meeting-document.js";
+import { reminderOffset } from "./reminders.js";
 import {
   firstStart,
   nextOccurrence,
@@ -682,7 +683,23 @@ export class MeetingService {
       update meetings set recurrence_id = ${at.recurrenceId}, starts_at = ${at.startsAt},
         duration_minutes = ${series.duration_minutes}, updated_at = now()
       where item_id = ${meeting.item_id}`);
+    await this.#remindAgain(tx, series, meeting, at.startsAt);
     await this.#retitle(tx, actor, series, meeting, at.startsAt);
+  }
+
+  async #remindAgain(
+    tx: Transaction,
+    series: SeriesRow,
+    meeting: MeetingRow,
+    startsAt: Date | null,
+  ): Promise<void> {
+    const previous = toDate(meeting.starts_at);
+    if (!startsAt || !previous) return;
+    if (localDate(previous, series.time_zone) === localDate(startsAt, series.time_zone)) return;
+    await tx.execute(sql`
+      update meetings m set reminded_at = null from meeting_series ms
+      where m.item_id = ${meeting.item_id} and ms.item_id = m.series_id and m.reminded_at is not null
+        and ms.reminder <> 'off' and m.starts_at - ${reminderOffset(sql`ms`)} > ${this.#clock()}::timestamptz`);
   }
 
   async #retitle(
@@ -970,6 +987,7 @@ export class MeetingService {
       await tx.execute(
         sql`update meetings set starts_at = ${startsAt}, updated_at = now() where item_id = ${meetingId}`,
       );
+      await this.#remindAgain(tx, series, meeting, startsAt);
       const recurrenceId = toDate(meeting.recurrence_id);
       if (recurrenceId) {
         await tx.execute(sql`

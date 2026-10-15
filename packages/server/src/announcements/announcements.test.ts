@@ -122,12 +122,30 @@ describe.skipIf(!baseUrl)("announcements", () => {
     expect(await announcements.shown(context.member)).toEqual([]);
   });
 
-  it("includes banners that start later and drops them at their end", async () => {
+  it("shows banners only from their start, signals the start once and drops them at their end", async () => {
     const context = await setup();
     const announcements = service();
     const startsAt = new Date(now.getTime() + DAY);
     const endsAt = new Date(now.getTime() + 2 * DAY);
     await announcements.set(context.admin, context.org.id, banner({ startsAt, endsAt }));
+    expect(await announcements.shown(context.member)).toEqual([]);
+    expect(await announcements.signalStarted()).toBe(0);
+    expect((await announcements.get(context.admin, context.org.id))?.startsAt).toEqual(startsAt);
+
+    const listened: string[] = [];
+    const client = await test.pool.connect();
+    try {
+      await client.query("listen pagehall_announcement_changes");
+      client.on("notification", (message) => listened.push(message.payload ?? ""));
+      now = new Date(startsAt.getTime() + 1);
+      expect(await announcements.signalStarted()).toBe(1);
+      expect(await announcements.signalStarted()).toBe(0);
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      expect(listened).toEqual([JSON.stringify({ scope: "organization", organizationId: context.org.id })]);
+    } finally {
+      await client.query("unlisten pagehall_announcement_changes");
+      client.release();
+    }
     expect((await announcements.shown(context.member))[0]).toMatchObject({ startsAt, endsAt });
     now = new Date(endsAt.getTime() + 1);
     expect(await announcements.shown(context.member)).toEqual([]);

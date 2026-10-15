@@ -107,13 +107,13 @@ describe.skipIf(!baseUrl)("e-mail through Microsoft Graph", () => {
     expect(JSON.stringify(events.rows)).not.toContain(GRAPH_CLIENT_SECRET);
   });
 
-  it("sends mails with list headers as MIME, with a text and an HTML part", async () => {
+  it("sends notification mails as JSON so that no copy stays in the Sent Items", async () => {
     await test.database.transaction((tx) =>
       test.services.mail.queueMessage(tx, "notification", {
         to: "reader@example.net",
         subject: "Ada mentioned you",
         text: "Ada mentioned you in Runbook",
-        html: "<p>Ada mentioned you in Runbook</p>",
+        html: '<p>Ada mentioned you in Runbook</p><a href="https://wiki.example.org/unsubscribe/token">Stop</a>',
         headers: {
           "List-Unsubscribe": "<https://wiki.example.org/api/v1/notifications/unsubscribe/token>",
           "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
@@ -121,15 +121,10 @@ describe.skipIf(!baseUrl)("e-mail through Microsoft Graph", () => {
       }),
     );
     await deliverPendingMail(test.services, test.database);
-    const mime = (graph.sentMail.at(-1)?.mime ?? "").replace(/\r\n[ \t]+/g, " ");
-    expect(mime).toContain(
-      "List-Unsubscribe: <https://wiki.example.org/api/v1/notifications/unsubscribe/token>",
-    );
-    expect(mime).toContain("List-Unsubscribe-Post: List-Unsubscribe=One-Click");
-    expect(mime).toContain("Content-Type: text/plain");
-    expect(mime).toContain("Content-Type: text/html");
-    expect(mime).toMatch(/^From: Pagehall <alice@example\.org>/m);
-    expect(mime).toMatch(/^Message-ID: <[0-9a-f-]+@/m);
+    const sent = graph.sentMail.at(-1);
+    expect(sent?.saveToSentItems).toBe(false);
+    expect(sent?.mime).toBeUndefined();
+    expect(sent?.message.body.content).toContain("https://wiki.example.org/unsubscribe/token");
   });
 
   it("explains a mailbox outside the scope of the app, an unknown mailbox and an expired secret", async () => {

@@ -115,6 +115,15 @@ describe.skipIf(!baseUrl)("SignInService", () => {
 
     await expect(concurrentChange).resolves.toBeUndefined();
     await expect(signIn).resolves.toMatchObject({ status: "signedIn" });
+    const notice = await test.pool.query<{ message: Buffer; id: string }>(
+      "select id, message from mail_outbox where template = 'recoveryCodeUsed' order by created_at desc limit 1",
+    );
+    const stored = notice.rows[0];
+    const message = JSON.parse(
+      test.encryption.decryptString(stored?.message ?? Buffer.alloc(0), `mail_outbox.message:${stored?.id}`),
+    );
+    expect(message.text).toContain("You receive this mail for your account's security.");
+    expect(message.headers).toBeUndefined();
   });
 
   it("tells the account about a sign-in from a browser it has not used before", async () => {

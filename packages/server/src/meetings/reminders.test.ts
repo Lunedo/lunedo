@@ -138,6 +138,21 @@ describe.skipIf(!baseUrl)("meeting reminders", () => {
     expect(await reminded(context.meetingId)).toHaveLength(3);
   });
 
+  it("reminds again after a move to another day whose reminder time is still ahead", async () => {
+    const context = await setup();
+    expect(await remindersAt(before(context.startsAt, 23)).sendDue()).toBe(3);
+
+    const sameDay = new Date(context.startsAt.getTime() + 2 * HOUR);
+    await test.services.meetings.move(context.lead, context.meetingId, sameDay);
+    expect(await remindersAt(before(sameDay, 1)).sendDue()).toBe(0);
+
+    const otherDay = new Date(context.startsAt.getTime() + 3 * 24 * HOUR);
+    await test.services.meetings.move(context.lead, context.meetingId, otherDay);
+    expect(await remindersAt(before(otherDay, 25)).sendDue()).toBe(0);
+    expect(await remindersAt(before(otherDay, 23)).sendDue()).toBe(3);
+    expect(await remindersAt(before(otherDay, 22)).sendDue()).toBe(0);
+  });
+
   it("sends a reminder that became due by a move at once, and never after the start", async () => {
     const context = await setup();
     const sooner = new Date(context.startsAt.getTime() - 24 * HOUR);

@@ -1,5 +1,4 @@
 import type { GraphMailConfiguration, GraphMailErrorCode } from "@pagehall/shared";
-import { createTransport } from "nodemailer";
 import { type GraphClientCredential, requestGraphToken } from "../identity/graph-token.js";
 import type { MailMessage, MailTransport } from "./transport.js";
 
@@ -142,39 +141,23 @@ export class GraphMailTransport implements MailTransport {
     throw failure ?? new GraphMailError("graphCredentialInvalid", null, "No access token was issued");
   }
 
-  async #mime(message: MailMessage): Promise<string> {
-    const config = this.#configuration;
-    const composed = await createTransport({ streamTransport: true, buffer: true }).sendMail({
-      from: config.senderName ? { name: config.senderName, address: config.sender } : config.sender,
-      to: message.to,
-      subject: message.subject,
-      text: message.text,
-      html: message.html,
-      ...(message.headers ? { headers: message.headers } : {}),
-      ...(message.messageId ? { messageId: message.messageId } : {}),
-    });
-    return Buffer.from(composed.message as Buffer).toString("base64");
-  }
-
   async send(message: MailMessage): Promise<void> {
     const config = this.#configuration;
     const token = await this.#token();
-    const request = message.headers
-      ? { type: "text/plain", content: await this.#mime(message) }
-      : {
-          type: "application/json",
-          content: JSON.stringify({
-            message: {
-              subject: message.subject,
-              body: { contentType: "HTML", content: message.html },
-              toRecipients: [{ emailAddress: { address: message.to } }],
-              ...(config.senderName
-                ? { from: { emailAddress: { address: config.sender, name: config.senderName } } }
-                : {}),
-            },
-            saveToSentItems: false,
-          }),
-        };
+    const request = {
+      type: "application/json",
+      content: JSON.stringify({
+        message: {
+          subject: message.subject,
+          body: { contentType: "HTML", content: message.html },
+          toRecipients: [{ emailAddress: { address: message.to } }],
+          ...(config.senderName
+            ? { from: { emailAddress: { address: config.sender, name: config.senderName } } }
+            : {}),
+        },
+        saveToSentItems: false,
+      }),
+    };
     const response = await this.#request(
       `${config.graphUrl}/v1.0/users/${encodeURIComponent(config.sender)}/sendMail`,
       {

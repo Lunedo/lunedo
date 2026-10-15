@@ -50,6 +50,7 @@ import {
   type MailTemplate,
   type MailTemplates,
   renderMail,
+  unsubscribeHeaders,
 } from "./templates.js";
 import {
   describeMailError,
@@ -326,20 +327,31 @@ export class MailService {
       params: Omit<MailTemplates[T], "instanceName">;
       organizationId?: string | null;
       notification?: boolean;
+      unsubscribe?: { label: string; page: string; oneClick: string } | null;
+      security?: boolean;
     },
   ): Promise<string> {
     const instanceName = await this.#settings.get(instanceNameSetting, {}, { executor: tx });
+    const branding = await this.branding(tx, {
+      organizationId: mail.organizationId ?? null,
+      notification: mail.notification ?? false,
+    });
     const message = renderMail(
       mail.template,
       mail.language,
       { ...mail.params, instanceName } as MailTemplates[T],
       mail.to,
-      await this.branding(tx, {
-        organizationId: mail.organizationId ?? null,
-        notification: mail.notification ?? false,
-      }),
+      {
+        ...branding,
+        unsubscribe: mail.unsubscribe ? { label: mail.unsubscribe.label, url: mail.unsubscribe.page } : null,
+        security: mail.security ?? false,
+      },
     );
-    return this.queueMessage(tx, mail.template, message);
+    return this.queueMessage(
+      tx,
+      mail.template,
+      mail.unsubscribe ? { ...message, headers: unsubscribeHeaders(mail.unsubscribe.oneClick) } : message,
+    );
   }
 
   async queueMessage(tx: Transaction, template: string, message: MailMessage): Promise<string> {
