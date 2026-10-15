@@ -166,6 +166,7 @@ export function SearchScreen() {
               type="search"
               aria-label={t("search.field")}
               placeholder={t("search.placeholder")}
+              title={t("search.placeholder")}
               value={text}
               onChange={(event) => setText(event.target.value)}
               className="h-control-lg w-full rounded-md border border-control-border bg-control pr-3 pl-10 text-content text-text placeholder:text-text-muted focus-visible:focus-ring"

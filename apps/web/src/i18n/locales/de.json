@@ -7607,7 +7607,7 @@
     "title": "Suche",
     "titleWithQuery": "Suche: {query}",
     "field": "Suchbegriff",
-    "placeholder": "Seiten, Blogbeiträge, Kommentare, Anhänge und Besprechungsthemen durchsuchen, zum Beispiel vpn -legacy",
+    "placeholder": "Seiten, Blogbeiträge, Kommentare, Anhänge und Besprechungen durchsuchen",
     "submit": "Suchen",
     "results": "Ergebnisse",
     "total": "{count, plural, one {# Ergebnis} other {# Ergebnisse}}",
@@ -7724,7 +7724,7 @@
       "filtersHint": "Die Filter tun dasselbe, ohne dass du etwas tippen musst."
     },
     "firstUse": {
-      "title": "Seiten, Blogbeiträge und Kommentare durchsuchen",
+      "title": "Seiten, Blogbeiträge, Kommentare, Anhänge und Besprechungen durchsuchen",
       "description": "Die Ergebnisse enthalten nur Inhalte, die du lesen darfst. Grenze sie mit Filtern ein und speichere Suchen, die du oft brauchst."
     },
     "recent": {

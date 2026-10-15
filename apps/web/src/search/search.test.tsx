@@ -405,7 +405,13 @@ describe("the search page", () => {
 
   it("explains the first use and offers ways out when nothing is found", async () => {
     await renderApp("/search", () => ({ body: response([]) }));
-    expect(await screen.findByText("Search pages, blog posts and comments")).toBeTruthy();
+    const field = await screen.findByRole("searchbox", { name: "Search" });
+    const promise = field.getAttribute("placeholder");
+    expect(promise).toBe("Search pages, blog posts, comments, attachments and meetings");
+    expect(await screen.findByText(promise ?? "")).toBeTruthy();
+    const filters = screen.getByRole("complementary", { name: "Filters" });
+    expect(within(filters).getByRole("checkbox", { name: "Page" })).toBeTruthy();
+    expect(within(filters).getByRole("radio", { name: "Last 7 days" })).toBeTruthy();
     expect(await screen.findByRole("button", { name: "tls certificate" })).toBeTruthy();
     window.history.replaceState(null, "", "/");
   });

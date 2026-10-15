@@ -7607,7 +7607,7 @@
     "title": "Search",
     "titleWithQuery": "Search: {query}",
     "field": "Search",
-    "placeholder": "Search pages, blog posts, comments, attachments and meeting topics, for example vpn -legacy",
+    "placeholder": "Search pages, blog posts, comments, attachments and meetings",
     "submit": "Search",
     "results": "Results",
     "total": "{count, plural, one {# result} other {# results}}",
@@ -7724,7 +7724,7 @@
       "filtersHint": "The filters do the same without typing."
     },
     "firstUse": {
-      "title": "Search pages, blog posts and comments",
+      "title": "Search pages, blog posts, comments, attachments and meetings",
       "description": "Results only include content you can read. Narrow them down with filters and save searches you run often."
     },
     "recent": {
