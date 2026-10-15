@@ -48,7 +48,17 @@ Every event has one setting per channel: `notifications.<event>.inApp` (true or 
 
 Shipped defaults: every event in the app; e-mail immediately for mentions, tasks, shares and access requests; comments and new blog posts in the daily digest; everything else in the app only. Administration events keep e-mail on.
 
-E-mail is sent only when the person chose `immediately`, the account has an address, a mail server (SMTP or Microsoft Graph) is configured and the type has a mail. `digest` is stored now; the digest itself is sent at `notifications.digestTime` (default 08:00 in the person's time zone, instance, organization and user level).
+`notifications.digestTime` (default 08:00 in the person's time zone) and `notifications.digestEnabled` (default on) apply at instance, organization and user level. Without an app channel, a notification is still stored for e-mail but never shown in the app (`in_app` is false).
+
+## E-mail
+
+A notification is marked for e-mail when, at the event, the person chose `immediately` or `digest`, the account has an address and a mail server (SMTP or Microsoft Graph) is configured. Everything else is decided again when the mail is built: the preference at that moment, an active account with an address, an active membership in the organization of the notification, and the visibility rule of the type. A notification the person can no longer see, has read in the app or no longer wants by e-mail is left out and marked `skipped`; one whose preference changed between immediately and the digest moves to the other. Titles are read again at that moment, and mails contain short excerpts only of what the person can read then: the task text, the message of an access request and the text of a comment the person may view.
+
+- Immediately, content events: the job `notifications.send-emails` runs every minute and sends a notification once nothing was combined into it for the 30 minutes of the combining window, or 24 hours after it started. A burst of changes therefore becomes one mail, as it becomes one notification. The job locks the rows it sends (`for update skip locked`) and writes the mail to the outbox and the notification as `sent` in one transaction, so two nodes and a restart never send a notification twice.
+- Immediately, administration events (such as a new browser, emergency sign-in or break-glass access) are sent at once, as before, because they are not bursts and are urgent.
+- Daily digest: the same job sends, per person, every notification marked for the digest since before the last digest time in the person's time zone, in one mail, and only when something is left after the checks. Entries are grouped by space and by item, newest first. A per-person advisory lock keeps two nodes from sending two digests. With `notifications.digestEnabled` off, digest notifications stay in the app only.
+
+Each mail links to the notification (`/notifications/{id}` in the web client, which marks it as read and opens what it is about) and to the notification settings. It carries `List-Unsubscribe` and `List-Unsubscribe-Post: List-Unsubscribe=One-Click` (RFC 8058) and an unsubscribe link in the footer. The link holds the account ID, the event (or `digest`) and an HMAC with the instance's signing key; it works without signing in, does not expire and only sets the e-mail preference of that event to `off`, or `notifications.digestEnabled` to false, for that account. `POST /api/v1/notifications/unsubscribe/{token}` is the one-click target and is exempt from the request header check; `GET` on the same path says what the link turns off, and the page `/unsubscribe/{token}` asks before turning it off. A value the organization locked is not changed; the page says so.
 
 `notifications.retentionDays` (instance, default 90, overridable per organization) sets how long notifications are kept. A daily job removes older ones.
 
@@ -76,7 +86,7 @@ Deliveries are stored in `chat_deliveries` and sent by the worker with up to fiv
 
 People watch pages, blog posts, meeting series and spaces. A watch row holds one of three states for one item or space: `watching`, `muted` (with `keepMentions`, true by default) or `notWatching`. People who create, edit or comment on an item watch it automatically unless `notifications.watchAutomatically` is off for them or they chose a state for it before.
 
-The state that applies to an item comes from the item, then its meeting series, then its space; the most specific row wins, except that an automatic watch never overrides a mute further up. Muting silences every event about the item or space; mentions and assigned tasks still arrive when `keepMentions` is true.
+The state that applies to an item comes from the item, then its meeting series, then its space; the most specific row wins, except that an automatic watch never overrides a mute further up. Muting silences every event about the item or space; mentions, assigned tasks, shares with the person and access requests they can decide still arrive when `keepMentions` is true, which is the default.
 
 Watching never grants anything. Delivery checks that the watcher can read the item; while they cannot, nothing arrives and the watch stays, so delivery resumes when access returns.
 
@@ -86,12 +96,14 @@ A committed notification sends a PostgreSQL notification on the channel `pagehal
 
 ## Endpoints
 
-These endpoints are internal and need a signed-in session. Chat channels are part of the public API under `/api/v1/spaces/{spaceId}/chat-channels` (space administrators) and `/api/v1/organizations/{organizationId}/chat-channels` (integrations area). Watching is part of the public API: `GET`, `PUT` and `DELETE` on `/api/v1/items/{itemId}/watch` and `/api/v1/spaces/{spaceId}/watch` need read access to the item or space.
+These endpoints are internal and need a signed-in session, except the unsubscribe endpoints. Chat channels are part of the public API under `/api/v1/spaces/{spaceId}/chat-channels` (space administrators) and `/api/v1/organizations/{organizationId}/chat-channels` (integrations area). Watching is part of the public API: `GET`, `PUT` and `DELETE` on `/api/v1/items/{itemId}/watch` and `/api/v1/spaces/{spaceId}/watch` need read access to the item or space.
 
 | Endpoint | Purpose |
 |---|---|
 | `GET /api/v1/notifications?cursor=&limit=&unread=true` | Own notifications, most recently changed first |
 | `GET /api/v1/notifications/unread-count` | Unread notifications the caller may see |
+| `GET /api/v1/notifications/{notificationId}` | One own notification the caller may still see |
+| `GET`, `POST /api/v1/notifications/unsubscribe/{token}` | Public: show or apply an unsubscribe link |
 | `POST /api/v1/notifications/{notificationId}/read` | Mark one as read |
 | `POST /api/v1/notifications/read-all` | Mark all as read, optionally only those changed before `before` |
 | `GET /api/v1/account/watches` | Own watched and muted items the caller can still open, with counts |

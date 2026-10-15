@@ -27,6 +27,7 @@ const SMTP = {
   security: "none" as const,
   username: null,
   from: "w@example.org",
+  oauth2: null,
 };
 
 describe.skipIf(!baseUrl)("notifications", () => {

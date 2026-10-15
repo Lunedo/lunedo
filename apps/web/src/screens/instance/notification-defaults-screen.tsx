@@ -38,7 +38,7 @@ export function InstanceNotificationDefaultsScreen() {
       <Section title={t("notifications.delivery")}>
         <SettingsList
           settings={settings.data}
-          keys={["notifications.digestTime"]}
+          keys={["notifications.digestEnabled", "notifications.digestTime"]}
           level="instance"
           canManage={() => editable}
           onChange={async (key, change) => {

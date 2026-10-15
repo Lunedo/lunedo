@@ -129,8 +129,11 @@ function administrationEvent(id: string, types: readonly string[], email: EmailD
 export const notificationEvents: readonly NotificationEvent[] = [
   contentEvent("mentions", ["content.mentioned"], "immediately", { keptWhenMuted: true, push: true }),
   contentEvent("tasks", ["task.assigned"], "immediately", { keptWhenMuted: true, push: true }),
-  contentEvent("shares", ["page.shared", "access.requestDecided"], "immediately", { push: true }),
-  contentEvent("accessRequests", ["access.requested"], "immediately", { push: true }),
+  contentEvent("shares", ["page.shared", "access.requestDecided"], "immediately", {
+    keptWhenMuted: true,
+    push: true,
+  }),
+  contentEvent("accessRequests", ["access.requested"], "immediately", { keptWhenMuted: true, push: true }),
   contentEvent("comments", ["comment.created"], "digest"),
   contentEvent("changes", ["content.changed"], "off"),
   contentEvent("blogPosts", ["blogPost.published"], "digest"),

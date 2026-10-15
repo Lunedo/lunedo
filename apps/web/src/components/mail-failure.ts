@@ -11,6 +11,13 @@ type Cause =
   | "socket"
   | "tls"
   | "auth"
+  | "authToken"
+  | "tokenUnreachable"
+  | "clientRejected"
+  | "notAuthorized"
+  | "scopeRejected"
+  | "tokenRefused"
+  | "keyInvalid"
   | "envelope"
   | "refused"
   | "deferred"
@@ -39,19 +46,40 @@ const CAUSES: Record<string, Cause> = {
   EAUTH: "auth",
   ENOAUTH: "auth",
   EENVELOPE: "envelope",
+  oauthTokenUnreachable: "tokenUnreachable",
+  oauthClientRejected: "clientRejected",
+  oauthNotAuthorized: "notAuthorized",
+  oauthScopeRejected: "scopeRejected",
+  oauthTokenRefused: "tokenRefused",
+  oauthKeyInvalid: "keyInvalid",
 };
+
+const STEPS = ["token", "connect", "authenticate", "send"] as const;
+
+export interface MailFailureDetails {
+  code: string | null;
+  responseCode: number | null;
+  step?: string | null;
+}
 
 export function mailFailure(
   t: TFunction,
-  error: { code: string | null; responseCode: number | null } | null,
+  error: MailFailureDetails | null,
+  options: { oauth2?: boolean } = {},
 ): { cause: string; details: string | null } {
   const code = error?.code ?? null;
   const response = error?.responseCode ?? null;
   let cause: Cause = (code ? CAUSES[code] : undefined) ?? "unknown";
   if (cause === "unknown" && response !== null) cause = response >= 500 ? "refused" : "deferred";
+  if (cause === "auth" && options.oauth2) cause = "authToken";
+  const step = STEPS.find((entry) => entry === error?.step);
   const parts = [code, response === null ? null : String(response)].filter((part) => part !== null);
+  const details = [
+    step ? t("mail.failureStep", { step: t(`mail.failureSteps.${step}`) }) : null,
+    parts.length > 0 ? t("mail.failureCode", { code: parts.join(" ") }) : null,
+  ].filter((part) => part !== null);
   return {
     cause: translateKey(t, `mail.failureCauses.${cause}`, { response: response ?? "" }),
-    details: parts.length > 0 ? t("mail.failureCode", { code: parts.join(" ") }) : null,
+    details: details.length > 0 ? details.join(" · ") : null,
   };
 }

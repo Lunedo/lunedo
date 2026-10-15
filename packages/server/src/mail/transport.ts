@@ -6,6 +6,8 @@ export interface MailMessage {
   subject: string;
   text: string;
   html: string;
+  headers?: Record<string, string>;
+  messageId?: string;
 }
 
 export interface MailTransport {
@@ -21,6 +23,7 @@ export interface SmtpOptions {
   security: SmtpSecurity;
   username: string | null;
   password: string | null;
+  accessToken?: string | null;
   from: string;
 }
 
@@ -74,7 +77,7 @@ export class SmtpTransport implements MailTransport {
   }
 
   async send(message: MailMessage): Promise<void> {
-    const { host, port, security, username, password, from } = this.#options;
+    const { host, port, security, username, password, accessToken, from } = this.#options;
     const transport = createTransport({
       host,
       port,
@@ -86,7 +89,11 @@ export class SmtpTransport implements MailTransport {
       greetingTimeout: this.#timeouts.greetingMs,
       socketTimeout: this.#timeouts.idleMs,
       dnsTimeout: this.#timeouts.connectMs,
-      ...(username ? { auth: { user: username, pass: password ?? "" } } : {}),
+      ...(username && accessToken
+        ? { auth: { type: "OAuth2" as const, user: username, accessToken } }
+        : username
+          ? { auth: { user: username, pass: password ?? "" } }
+          : {}),
     });
     let deadline: NodeJS.Timeout | undefined;
     try {
@@ -97,6 +104,8 @@ export class SmtpTransport implements MailTransport {
           subject: message.subject,
           text: message.text,
           html: message.html,
+          ...(message.headers ? { headers: message.headers } : {}),
+          ...(message.messageId ? { messageId: message.messageId } : {}),
         }),
         new Promise<never>((_resolve, reject) => {
           deadline = setTimeout(() => {
@@ -111,6 +120,23 @@ export class SmtpTransport implements MailTransport {
       transport.close();
     }
   }
+}
+
+const CONNECT_CODES = new Set([
+  "ECONNECTION",
+  "ESOCKET",
+  "EDNS",
+  "ETLS",
+  "ETIMEDOUT",
+  "SMTP_CONNECT_TIMEOUT",
+  "SMTP_GREETING_TIMEOUT",
+]);
+const AUTHENTICATE_CODES = new Set(["EAUTH", "ENOAUTH"]);
+
+export function smtpStepOf(code: string | null): "connect" | "authenticate" | "send" {
+  if (code && CONNECT_CODES.has(code)) return "connect";
+  if (code && AUTHENTICATE_CODES.has(code)) return "authenticate";
+  return "send";
 }
 
 export function describeMailError(error: unknown): { code: string | null; responseCode: number | null } {

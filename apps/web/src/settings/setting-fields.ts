@@ -119,6 +119,7 @@ const fields: SettingField[] = [
   { key: "trash.firstStageMinimumDays", type: days(1, 3650, [1, 30, 90]) },
   { key: "trash.secondStageMinimumDays", type: days(1, 3650, [1, 30, 45]) },
   { key: "notifications.retentionDays", type: days(1, 3650, [30, 90, 365]) },
+  { key: "notifications.digestEnabled", type: { kind: "boolean" } },
   { key: "notifications.digestTime", type: { kind: "time" } },
   { key: "notifications.watchAutomatically", type: { kind: "boolean" } },
   {

@@ -7,8 +7,10 @@ import { api } from "../../api/client.js";
 import { instanceKeys, mailQuery } from "../../api/instance-queries.js";
 import { request } from "../../api/request.js";
 import { GraphMailForm } from "../../components/graph-mail-form.js";
+import { mailFailure } from "../../components/mail-failure.js";
 import { SmtpForm } from "../../components/smtp-form.js";
 import { LoadError } from "../../errors/failure.js";
+import { useFormat } from "../../preferences/preferences-provider.js";
 import { useOrganizationState, useSession } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
 
@@ -16,6 +18,7 @@ type Method = "smtp" | "graph";
 
 export function InstanceMailScreen() {
   const { t } = useTranslation();
+  const format = useFormat();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const session = useSession();
@@ -60,6 +63,7 @@ export function InstanceMailScreen() {
               <SmtpForm
                 initial={data.smtp}
                 passwordSet={data.passwordSet}
+                oauth2SecretSet={data.oauth2SecretSet}
                 saveLabel={t("common.save")}
                 defaultRecipient={session.account?.email ?? ""}
                 onSave={async (input) => {
@@ -98,6 +102,41 @@ export function InstanceMailScreen() {
               <p className="text-text-muted">{data.graph ? data.graph.sender : t("mail.notConfigured")}</p>
             )}
           </div>
+        </Section>
+      ) : null}
+      {data ? (
+        <Section title={t("mail.delivery.title")}>
+          <SettingRow
+            label={t("mail.delivery.lastFailure")}
+            description={data.delivery.lastFailure ? t("mail.delivery.retry") : undefined}
+            control={
+              <span className="text-sm">
+                {data.delivery.lastFailure
+                  ? [
+                      t("mail.delivery.lastFailureAt", {
+                        date: format.dateTime(data.delivery.lastFailure.at),
+                        cause: mailFailure(t, data.delivery.lastFailure, {
+                          oauth2: data.method === "smtp" && data.smtp?.oauth2 != null,
+                        }).cause,
+                      }),
+                      mailFailure(t, data.delivery.lastFailure).details,
+                    ]
+                      .filter((part) => part !== null)
+                      .join(" · ")
+                  : t("mail.delivery.noFailure")}
+              </span>
+            }
+          />
+          <SettingRow
+            label={t("mail.delivery.lastSuccess")}
+            control={
+              <span className="text-sm">
+                {data.delivery.lastSuccessAt
+                  ? format.dateTime(data.delivery.lastSuccessAt)
+                  : t("mail.delivery.never")}
+              </span>
+            }
+          />
         </Section>
       ) : null}
     </SettingsPage>

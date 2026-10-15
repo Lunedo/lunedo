@@ -372,13 +372,37 @@ describe.skipIf(!baseUrl)("watching", () => {
       expect(await notificationsOf(context.editorId)).toEqual([]);
     });
 
-    it("silences access requests for a muted space", async () => {
+    it("keeps access requests the person can decide from a muted space by default", async () => {
       const context = await setup();
       const requesterId = await member(context.org.id, "member", "Requester");
       await test.services.watches.set(
         context.adminId,
         { type: "space", id: context.space.id },
         { state: "muted" },
+      );
+      const page = await publishedPage(context);
+      await test.services.accessRequests.requestPage(accountPrincipal(requesterId), page.id, "Please");
+      expect(await notificationsOf(context.adminId, "access.requested")).toHaveLength(1);
+    });
+
+    it("keeps shares with the person from a muted space by default", async () => {
+      const context = await setup();
+      const guestId = await member(context.org.id, "member", "Shared person");
+      await test.services.watches.set(guestId, { type: "space", id: context.space.id }, { state: "muted" });
+      const page = await publishedPage(context);
+      await test.services.pageAccess.change(context.editor, page.id, [
+        { action: "share", holderKind: "account", holderId: guestId, role: "reader" },
+      ]);
+      expect(await notificationsOf(guestId, "page.shared")).toHaveLength(1);
+    });
+
+    it("silences access requests for a muted space when the person chooses so", async () => {
+      const context = await setup();
+      const requesterId = await member(context.org.id, "member", "Requester");
+      await test.services.watches.set(
+        context.adminId,
+        { type: "space", id: context.space.id },
+        { state: "muted", keepMentions: false },
       );
       const page = await publishedPage(context);
       await test.services.accessRequests.requestPage(accountPrincipal(requesterId), page.id, "Please");

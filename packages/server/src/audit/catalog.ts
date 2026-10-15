@@ -1,4 +1,4 @@
-import { chatChannelKinds } from "@pagehall/shared";
+import { chatChannelKinds, smtpOAuth2Providers } from "@pagehall/shared";
 import { z } from "zod";
 import type { PrincipalType } from "../accounts/principal.js";
 
@@ -597,6 +597,9 @@ export const auditCatalog = {
       username: z.string().nullable(),
       passwordChanged: z.boolean(),
       from: z.string(),
+      oauth2Provider: z.enum(smtpOAuth2Providers).nullable().optional(),
+      oauth2ClientId: z.string().nullable().optional(),
+      oauth2CredentialChanged: z.boolean().optional(),
     }),
     visibility: "instance",
   }),

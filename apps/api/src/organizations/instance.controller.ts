@@ -30,6 +30,7 @@ import {
   idSchema,
   instanceUrlSchema,
   type MailMethod,
+  mailDeliverySteps,
   mailMethods,
   smtpConfigurationSchema,
   smtpInputSchema,
@@ -314,11 +315,31 @@ const mailSettingsSchema = z
   .object({
     smtp: smtpConfigurationSchema.nullable(),
     passwordSet: z.boolean(),
+    oauth2SecretSet: z
+      .boolean()
+      .describe("Whether a client secret or service account key for SMTP with OAuth2 is stored."),
     method: z.enum(mailMethods).describe("How e-mail is sent."),
     graph: graphMailSchema.nullable(),
     graphCredentials: z
       .array(mailCredentialSchema)
       .describe("Credentials of the app registration, newest first."),
+    delivery: z
+      .object({
+        lastSuccessAt: z.iso.datetime().nullable().describe("When the last e-mail was handed to the server."),
+        lastFailure: z
+          .object({
+            at: z.iso.datetime(),
+            code: z.string().nullable().describe("Error code of the mail server or token endpoint."),
+            responseCode: z.number().int().nullable().describe("Status or SMTP reply code, if any."),
+            step: z
+              .enum(mailDeliverySteps)
+              .nullable()
+              .describe("The step that failed: access token, connection, sign-in or sending."),
+          })
+          .nullable()
+          .describe("The last failed delivery attempt."),
+      })
+      .describe("Outcome of the last deliveries of queued e-mails."),
   })
   .describe("The e-mail settings.");
 
@@ -455,9 +476,11 @@ export class InstanceController {
     return {
       smtp: await mail.smtpConfiguration(),
       passwordSet: await mail.hasSmtpPassword(),
+      oauth2SecretSet: await mail.hasSmtpOAuth2Secret(),
       method: await mail.method(),
       graph: await mail.graphConfiguration(),
       graphCredentials: await mail.graphCredentials(),
+      delivery: await mail.deliveryState(),
     };
   }
 
@@ -585,8 +608,8 @@ export class InstanceController {
     errors: ["invalidSmtpConfiguration"],
   })
   async configureMail(@Body() body: z.output<typeof smtpInputSchema>) {
-    const { password, ...configuration } = body;
-    await this.#services.mail.configureSmtp(configuration, password);
+    const { password, oauth2Secret, ...configuration } = body;
+    await this.#services.mail.configureSmtp(configuration, password, { oauth2Secret });
   }
 
   @Post("mail/test")
@@ -601,8 +624,8 @@ export class InstanceController {
     errors: ["invalidSmtpConfiguration"],
   })
   async testMail(@Body() body: z.output<typeof smtpTestInputSchema>) {
-    const { to, language, password, ...configuration } = body;
-    return this.#services.mail.sendTest(to, language, { configuration, password });
+    const { to, language, password, oauth2Secret, ...configuration } = body;
+    return this.#services.mail.sendTest(to, language, { configuration, password, oauth2Secret });
   }
 
   @Get("organizations")

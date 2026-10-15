@@ -11,6 +11,7 @@ const OLIVIA = {
   name: "Olivia Owner",
 };
 const TENANT = "3f2a9c1e-7b4d-4e8a-9c21-5d6f0a8b2e17";
+const NO_DELIVERY = { lastSuccessAt: null, lastFailure: null };
 
 type Handler = (request: RecordedRequest) => { status?: number; body?: unknown };
 
@@ -61,7 +62,15 @@ function api(overrides: Record<string, Handler> = {}) {
     "GET /api/v1/account/preferences": () => ({ body: [] }),
     "GET /api/v1/notifications/unread-count": () => ({ body: { count: 0 } }),
     "GET /api/v1/instance/mail": () => ({
-      body: { smtp: null, passwordSet: false, method: "smtp", graph: null, graphCredentials: [] },
+      body: {
+        smtp: null,
+        passwordSet: false,
+        oauth2SecretSet: false,
+        method: "smtp",
+        graph: null,
+        graphCredentials: [],
+        delivery: NO_DELIVERY,
+      },
     }),
     ...overrides,
   });
@@ -91,6 +100,8 @@ describe("the e-mail settings", () => {
         body: {
           smtp: null,
           passwordSet: false,
+          oauth2SecretSet: false,
+          delivery: NO_DELIVERY,
           method: "smtp",
           graph: null,
           graphCredentials: [
@@ -195,6 +206,117 @@ describe("the e-mail settings", () => {
       "look for a non-delivery report in the mailbox of the sender address",
     );
   });
+  it("sets up SMTP with OAuth2 for Microsoft 365 and shows what to do in Exchange first", async () => {
+    const { requests } = api({
+      "POST /api/v1/instance/mail/test": () => ({
+        body: { delivered: false, error: { code: "oauthClientRejected", responseCode: 401, step: "token" } },
+      }),
+      "PUT /api/v1/instance/mail": () => ({ status: 204 }),
+    });
+    await renderMail();
+    await userEvent.click(await screen.findByRole("combobox", { name: "Service" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Microsoft 365" }));
+    expect(
+      (screen.getByRole("radio", { name: "OAuth2" }) as HTMLInputElement).getAttribute("aria-checked"),
+    ).toBe("true");
+    expect(screen.getByText("Set up in Microsoft 365 first")).toBeTruthy();
+    await userEvent.type(screen.getByLabelText("Mailbox"), "wiki@contoso.com");
+    expect(
+      screen.getByText("Set-CASMailbox -Identity wiki@contoso.com -SmtpClientAuthenticationDisabled $false"),
+    ).toBeTruthy();
+    await userEvent.type(screen.getByLabelText("Sender address"), "wiki@contoso.com");
+
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByText(/Enter the tenant ID/)).toBeTruthy();
+    expect(document.activeElement).toBe(screen.getByLabelText("Tenant ID"));
+    expect(requests.some((request) => request.method === "PUT")).toBe(false);
+
+    await userEvent.type(screen.getByLabelText("Tenant ID"), TENANT);
+    await userEvent.type(
+      screen.getByLabelText("Application (client) ID"),
+      "1b6f0c2e-4d3a-4f5b-8c7d-9e0f1a2b3c4d",
+    );
+    await userEvent.type(screen.getByLabelText("Client secret"), "app-secret");
+    await userEvent.click(screen.getByRole("button", { name: "Send test mail" }));
+    expect(await screen.findByText(/did not accept the client ID or the client secret/)).toBeTruthy();
+    expect(screen.getByText(/Failed step: getting an access token/)).toBeTruthy();
+
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(
+        requests.find((request) => request.method === "PUT" && request.path === "/api/v1/instance/mail")
+          ?.body,
+      ).toEqual({
+        host: "smtp.office365.com",
+        port: 587,
+        security: "starttls",
+        username: "wiki@contoso.com",
+        from: "wiki@contoso.com",
+        oauth2: {
+          provider: "microsoft365",
+          tenantId: TENANT,
+          clientId: "1b6f0c2e-4d3a-4f5b-8c7d-9e0f1a2b3c4d",
+          authority: "https://login.microsoftonline.com",
+        },
+        oauth2Secret: "app-secret",
+      }),
+    );
+  });
+
+  it("reads the Google key file in the browser and shows the client ID for the delegation", async () => {
+    api();
+    await renderMail();
+    await userEvent.click(await screen.findByRole("combobox", { name: "Service" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Google Workspace" }));
+    expect(screen.getByText("https://mail.google.com/")).toBeTruthy();
+    const key = JSON.stringify({
+      type: "service_account",
+      client_email: "mailer@project.iam.gserviceaccount.com",
+      client_id: "1234567890",
+      private_key: "-----BEGIN PRIVATE KEY-----",
+    });
+    await userEvent.upload(
+      screen.getByLabelText("Key file of the service account"),
+      new File([key], "key.json", { type: "application/json" }),
+    );
+    expect(
+      await screen.findByText("Service account mailer@project.iam.gserviceaccount.com, client ID 1234567890"),
+    ).toBeTruthy();
+    await userEvent.upload(
+      screen.getByLabelText("Key file of the service account"),
+      new File(["{}"], "other.json", { type: "application/json" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByText(/not a JSON key of a Google service account/)).toBeTruthy();
+  });
+
+  it("shows the last delivery error with its cause and step", async () => {
+    api({
+      "GET /api/v1/instance/mail": () => ({
+        body: {
+          smtp: null,
+          passwordSet: false,
+          oauth2SecretSet: false,
+          method: "smtp",
+          graph: null,
+          graphCredentials: [],
+          delivery: {
+            lastSuccessAt: null,
+            lastFailure: {
+              at: "2026-10-15T08:00:00.000Z",
+              code: "ECONNECTION",
+              responseCode: null,
+              step: "connect",
+            },
+          },
+        },
+      }),
+    });
+    await renderMail();
+    expect(await screen.findByText(/Pagehall could not connect to the mail server/)).toBeTruthy();
+    expect(screen.getByText(/Failed step: connecting to the mail server/)).toBeTruthy();
+    expect(screen.getByText("Not yet")).toBeTruthy();
+  });
 });
 
 describe("the instance overview", () => {
@@ -227,6 +349,8 @@ describe("the instance overview", () => {
             from: "wiki@example.org",
           },
           passwordSet: false,
+          oauth2SecretSet: false,
+          delivery: NO_DELIVERY,
           method: "smtp",
           graph: null,
           graphCredentials: [],

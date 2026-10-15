@@ -52,10 +52,12 @@ describe("notification events", () => {
     ).toEqual([]);
   });
 
-  it("keep only mentions and tasks from muted content", () => {
+  it("keep mentions, tasks, shares and access requests from muted content", () => {
     expect(notificationEvents.filter((event) => event.keptWhenMuted).map((event) => event.id)).toEqual([
       "mentions",
       "tasks",
+      "shares",
+      "accessRequests",
     ]);
   });
 

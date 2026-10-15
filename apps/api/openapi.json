@@ -7049,7 +7049,7 @@
                           },
                           "keepMentions": {
                             "type": "boolean",
-                            "description": "Whether mentions and assigned tasks still arrive while muted."
+                            "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                           },
                           "automatic": {
                             "type": "boolean",
@@ -97969,6 +97969,106 @@
                               "type": "string",
                               "maxLength": 254,
                               "format": "email"
+                            },
+                            "oauth2": {
+                              "default": null,
+                              "anyOf": [
+                                {
+                                  "oneOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "provider": {
+                                          "type": "string",
+                                          "const": "microsoft365"
+                                        },
+                                        "tenantId": {
+                                          "type": "string",
+                                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                                        },
+                                        "clientId": {
+                                          "type": "string",
+                                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                                        },
+                                        "authority": {
+                                          "default": "https://login.microsoftonline.com",
+                                          "type": "string",
+                                          "enum": [
+                                            "https://login.microsoftonline.com",
+                                            "https://login.microsoftonline.us",
+                                            "https://login.partner.microsoftonline.cn"
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "provider",
+                                        "tenantId",
+                                        "clientId",
+                                        "authority"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "provider": {
+                                          "type": "string",
+                                          "const": "google"
+                                        },
+                                        "serviceAccount": {
+                                          "type": "string",
+                                          "maxLength": 254,
+                                          "format": "email"
+                                        },
+                                        "clientId": {
+                                          "type": "string",
+                                          "pattern": "^\\d{1,40}$"
+                                        }
+                                      },
+                                      "required": [
+                                        "provider",
+                                        "serviceAccount",
+                                        "clientId"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "provider": {
+                                          "type": "string",
+                                          "const": "generic"
+                                        },
+                                        "tokenUrl": {
+                                          "type": "string",
+                                          "maxLength": 2048,
+                                          "format": "uri"
+                                        },
+                                        "clientId": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 500
+                                        },
+                                        "scope": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 1000
+                                        }
+                                      },
+                                      "required": [
+                                        "provider",
+                                        "tokenUrl",
+                                        "clientId",
+                                        "scope"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
                             }
                           },
                           "required": [
@@ -97976,7 +98076,8 @@
                             "port",
                             "security",
                             "username",
-                            "from"
+                            "from",
+                            "oauth2"
                           ],
                           "additionalProperties": false
                         },
@@ -97987,6 +98088,10 @@
                     },
                     "passwordSet": {
                       "type": "boolean"
+                    },
+                    "oauth2SecretSet": {
+                      "type": "boolean",
+                      "description": "Whether a client secret or service account key for SMTP with OAuth2 is stored."
                     },
                     "method": {
                       "type": "string",
@@ -98099,14 +98204,100 @@
                         "description": "A credential of the app registration."
                       },
                       "description": "Credentials of the app registration, newest first."
+                    },
+                    "delivery": {
+                      "type": "object",
+                      "properties": {
+                        "lastSuccessAt": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "When the last e-mail was handed to the server."
+                        },
+                        "lastFailure": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "at": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                },
+                                "code": {
+                                  "description": "Error code of the mail server or token endpoint.",
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "responseCode": {
+                                  "anyOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "Status or SMTP reply code, if any."
+                                },
+                                "step": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "token",
+                                        "connect",
+                                        "authenticate",
+                                        "send"
+                                      ]
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "The step that failed: access token, connection, sign-in or sending."
+                                }
+                              },
+                              "required": [
+                                "at",
+                                "code",
+                                "responseCode",
+                                "step"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "The last failed delivery attempt."
+                        }
+                      },
+                      "required": [
+                        "lastSuccessAt",
+                        "lastFailure"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Outcome of the last deliveries of queued e-mails."
                     }
                   },
                   "required": [
                     "smtp",
                     "passwordSet",
+                    "oauth2SecretSet",
                     "method",
                     "graph",
-                    "graphCredentials"
+                    "graphCredentials",
+                    "delivery"
                   ],
                   "additionalProperties": false,
                   "description": "The e-mail settings."
@@ -98263,6 +98454,105 @@
                     "maxLength": 254,
                     "format": "email"
                   },
+                  "oauth2": {
+                    "default": null,
+                    "anyOf": [
+                      {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "provider": {
+                                "type": "string",
+                                "const": "microsoft365"
+                              },
+                              "tenantId": {
+                                "type": "string",
+                                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                              },
+                              "clientId": {
+                                "type": "string",
+                                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                              },
+                              "authority": {
+                                "default": "https://login.microsoftonline.com",
+                                "type": "string",
+                                "enum": [
+                                  "https://login.microsoftonline.com",
+                                  "https://login.microsoftonline.us",
+                                  "https://login.partner.microsoftonline.cn"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "provider",
+                              "tenantId",
+                              "clientId"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "provider": {
+                                "type": "string",
+                                "const": "google"
+                              },
+                              "serviceAccount": {
+                                "type": "string",
+                                "maxLength": 254,
+                                "format": "email"
+                              },
+                              "clientId": {
+                                "type": "string",
+                                "pattern": "^\\d{1,40}$"
+                              }
+                            },
+                            "required": [
+                              "provider",
+                              "serviceAccount",
+                              "clientId"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "provider": {
+                                "type": "string",
+                                "const": "generic"
+                              },
+                              "tokenUrl": {
+                                "type": "string",
+                                "maxLength": 2048,
+                                "format": "uri"
+                              },
+                              "clientId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 500
+                              },
+                              "scope": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 1000
+                              }
+                            },
+                            "required": [
+                              "provider",
+                              "tokenUrl",
+                              "clientId",
+                              "scope"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "password": {
                     "anyOf": [
                       {
@@ -98273,6 +98563,11 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "oauth2Secret": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 20000
                   }
                 },
                 "required": [
@@ -99244,11 +99539,29 @@
                                   "type": "null"
                                 }
                               ]
+                            },
+                            "step": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "token",
+                                    "connect",
+                                    "authenticate",
+                                    "send"
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The step that failed: getting an access token, connecting, signing in at the server or sending."
                             }
                           },
                           "required": [
                             "code",
-                            "responseCode"
+                            "responseCode",
+                            "step"
                           ],
                           "additionalProperties": false
                         },
@@ -99575,6 +99888,105 @@
                     "maxLength": 254,
                     "format": "email"
                   },
+                  "oauth2": {
+                    "default": null,
+                    "anyOf": [
+                      {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "provider": {
+                                "type": "string",
+                                "const": "microsoft365"
+                              },
+                              "tenantId": {
+                                "type": "string",
+                                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                              },
+                              "clientId": {
+                                "type": "string",
+                                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                              },
+                              "authority": {
+                                "default": "https://login.microsoftonline.com",
+                                "type": "string",
+                                "enum": [
+                                  "https://login.microsoftonline.com",
+                                  "https://login.microsoftonline.us",
+                                  "https://login.partner.microsoftonline.cn"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "provider",
+                              "tenantId",
+                              "clientId"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "provider": {
+                                "type": "string",
+                                "const": "google"
+                              },
+                              "serviceAccount": {
+                                "type": "string",
+                                "maxLength": 254,
+                                "format": "email"
+                              },
+                              "clientId": {
+                                "type": "string",
+                                "pattern": "^\\d{1,40}$"
+                              }
+                            },
+                            "required": [
+                              "provider",
+                              "serviceAccount",
+                              "clientId"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "provider": {
+                                "type": "string",
+                                "const": "generic"
+                              },
+                              "tokenUrl": {
+                                "type": "string",
+                                "maxLength": 2048,
+                                "format": "uri"
+                              },
+                              "clientId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 500
+                              },
+                              "scope": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 1000
+                              }
+                            },
+                            "required": [
+                              "provider",
+                              "tokenUrl",
+                              "clientId",
+                              "scope"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "password": {
                     "anyOf": [
                       {
@@ -99585,6 +99997,11 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "oauth2Secret": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 20000
                   },
                   "to": {
                     "type": "string",
@@ -99646,11 +100063,29 @@
                                   "type": "null"
                                 }
                               ]
+                            },
+                            "step": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "token",
+                                    "connect",
+                                    "authenticate",
+                                    "send"
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The step that failed: getting an access token, connecting, signing in at the server or sending."
                             }
                           },
                           "required": [
                             "code",
-                            "responseCode"
+                            "responseCode",
+                            "step"
                           ],
                           "additionalProperties": false
                         },
@@ -113079,7 +113514,7 @@
                             },
                             "keepMentions": {
                               "type": "boolean",
-                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                              "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
                             "automatic": {
                               "type": "boolean",
@@ -113115,7 +113550,7 @@
                             },
                             "keepMentions": {
                               "type": "boolean",
-                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                              "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
                             "source": {
                               "type": "string",
@@ -113341,7 +113776,7 @@
                             },
                             "keepMentions": {
                               "type": "boolean",
-                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                              "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
                             "automatic": {
                               "type": "boolean",
@@ -113377,7 +113812,7 @@
                             },
                             "keepMentions": {
                               "type": "boolean",
-                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                              "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
                             "source": {
                               "type": "string",
@@ -113629,7 +114064,7 @@
                             },
                             "keepMentions": {
                               "type": "boolean",
-                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                              "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
                             "automatic": {
                               "type": "boolean",
@@ -113665,7 +114100,7 @@
                             },
                             "keepMentions": {
                               "type": "boolean",
-                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                              "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
                             "source": {
                               "type": "string",
@@ -120776,6 +121211,250 @@
         }
       }
     },
+    "/api/v1/notifications/{notificationId}": {
+      "get": {
+        "operationId": "notifications.get",
+        "summary": "Get a notification",
+        "description": "Notifications the caller can no longer see answer like unknown ones.\n\nNeeds a signed-in session.",
+        "tags": [
+          "Notifications"
+        ],
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "notificationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The notification.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "type": {
+                      "type": "string"
+                    },
+                    "organizationId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "target": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "id"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "actor": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string"
+                            },
+                            "id": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "name": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "actorCount": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of different people whose actions are combined in this notification."
+                    },
+                    "params": {
+                      "$ref": "#/components/schemas/Schema113ae44d8375"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "readAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "type",
+                    "organizationId",
+                    "target",
+                    "actor",
+                    "actorCount",
+                    "params",
+                    "count",
+                    "createdAt",
+                    "updatedAt",
+                    "readAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/notifications/{notificationId}/read": {
       "post": {
         "operationId": "notifications.read",
@@ -121159,6 +121838,287 @@
                       "title": "This endpoint needs a signed-in session",
                       "status": 403,
                       "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/unsubscribe/{token}": {
+      "get": {
+        "operationId": "notifications.describeUnsubscribe",
+        "summary": "Show what an unsubscribe link turns off",
+        "description": "Works without signing in. The token comes from the link in a notification e-mail.",
+        "tags": [
+          "Notifications"
+        ],
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "description": "The signed token from the link in the e-mail.",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The e-mails the link turns off.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "scope": {
+                      "type": "string",
+                      "enum": [
+                        "event",
+                        "digest"
+                      ],
+                      "description": "Whether the link turns off e-mail for one event or the daily summary."
+                    },
+                    "event": {
+                      "description": "The event whose e-mails the link turns off, null for the summary.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "off": {
+                      "type": "boolean",
+                      "description": "Whether these e-mails are turned off now."
+                    }
+                  },
+                  "required": [
+                    "scope",
+                    "event",
+                    "off"
+                  ],
+                  "additionalProperties": false,
+                  "description": "What an unsubscribe link turns off."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid. `invalidToken`: The link or code is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidToken",
+                      "title": "The link or code is not valid",
+                      "status": 400,
+                      "code": "invalidToken"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "notifications.unsubscribe",
+        "summary": "Turn off e-mails with an unsubscribe link",
+        "description": "Works without signing in and is the target of the `List-Unsubscribe` header, so mail programs can unsubscribe with one click. It turns off e-mail for the event of the link, or the daily summary, for the person the link was sent to and changes nothing else.",
+        "tags": [
+          "Notifications"
+        ],
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "description": "The signed token from the link in the e-mail.",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "List-Unsubscribe": {
+                    "description": "`One-Click`, as mail programs send it for one-click unsubscribe (RFC 8058).",
+                    "type": "string",
+                    "maxLength": 100
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The e-mails the link turned off.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "scope": {
+                      "type": "string",
+                      "enum": [
+                        "event",
+                        "digest"
+                      ],
+                      "description": "Whether the link turns off e-mail for one event or the daily summary."
+                    },
+                    "event": {
+                      "description": "The event whose e-mails the link turns off, null for the summary.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "off": {
+                      "type": "boolean",
+                      "description": "Whether these e-mails are turned off now."
+                    }
+                  },
+                  "required": [
+                    "scope",
+                    "event",
+                    "off"
+                  ],
+                  "additionalProperties": false,
+                  "description": "What an unsubscribe link turns off."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalidInput`: The request is not valid. `invalidToken`: The link or code is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidToken",
+                      "title": "The link or code is not valid",
+                      "status": 400,
+                      "code": "invalidToken"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`settingLocked`: A higher level locked the setting.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "settingLocked": {
+                    "value": {
+                      "type": "urn:pagehall:problem:settingLocked",
+                      "title": "A higher level locked the setting",
+                      "status": 409,
+                      "code": "settingLocked"
                     }
                   }
                 }
@@ -195823,7 +196783,7 @@
                             },
                             "keepMentions": {
                               "type": "boolean",
-                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                              "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
                             "automatic": {
                               "type": "boolean",
@@ -195859,7 +196819,7 @@
                             },
                             "keepMentions": {
                               "type": "boolean",
-                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                              "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
                             "source": {
                               "type": "string",
@@ -196085,7 +197045,7 @@
                             },
                             "keepMentions": {
                               "type": "boolean",
-                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                              "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
                             "automatic": {
                               "type": "boolean",
@@ -196121,7 +197081,7 @@
                             },
                             "keepMentions": {
                               "type": "boolean",
-                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                              "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
                             "source": {
                               "type": "string",
@@ -196286,7 +197246,7 @@
       "put": {
         "operationId": "watches.watchSpace",
         "summary": "Watch, mute or stop watching a space",
-        "description": "Watching a space delivers changes and comments on everything in it the caller can read. Muting it silences everything from it, except mentions and assigned tasks when `keepMentions` is true.\n\nRequires the permission `space.view` on the space in `spaceId`.",
+        "description": "Watching a space delivers changes and comments on everything in it the caller can read. Muting it silences everything from it, except mentions, assigned tasks, shares with the caller and access requests the caller can decide when `keepMentions` is true.\n\nRequires the permission `space.view` on the space in `spaceId`.",
         "tags": [
           "Watching"
         ],
@@ -196372,7 +197332,7 @@
                             },
                             "keepMentions": {
                               "type": "boolean",
-                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                              "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
                             "automatic": {
                               "type": "boolean",
@@ -196408,7 +197368,7 @@
                             },
                             "keepMentions": {
                               "type": "boolean",
-                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                              "description": "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."
                             },
                             "source": {
                               "type": "string",

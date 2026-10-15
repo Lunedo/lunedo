@@ -45,6 +45,7 @@ export interface FakeSentMail {
     from?: { emailAddress: { address: string; name?: string } };
   };
   saveToSentItems: boolean;
+  mime?: string;
 }
 
 export const GRAPH_TENANT_ID = "0f1e2d3c-4b5a-4968-8776-655443322110";
@@ -309,10 +310,25 @@ export async function startFakeGraph(
             "Access to OData is disabled: [RAOP] : Blocked by tenant configured AppOnly AccessPolicy settings.",
           );
         }
-        sentMail.push({
-          mailbox: user.mail ?? user.userPrincipalName,
-          ...jsonBody<Omit<FakeSentMail, "mailbox">>(request),
-        });
+        const mailbox = user.mail ?? user.userPrincipalName;
+        if (request.headers["content-type"]?.startsWith("text/plain")) {
+          const mime = Buffer.from(request.body, "base64").toString("utf8");
+          if (!mime.includes(String.fromCharCode(13, 10, 13, 10))) {
+            return graphError(
+              400,
+              "ErrorMimeContentInvalidBase64String",
+              "Invalid base64 string for MIME content.",
+            );
+          }
+          sentMail.push({
+            mailbox,
+            mime,
+            saveToSentItems: true,
+            message: { subject: "", body: { contentType: "MIME", content: mime }, toRecipients: [] },
+          });
+          return { status: 202 };
+        }
+        sentMail.push({ mailbox, ...jsonBody<Omit<FakeSentMail, "mailbox">>(request) });
         return { status: 202 };
       }
       if (relation === "memberOf" || relation === "transitiveMemberOf") {

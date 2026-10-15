@@ -30,7 +30,7 @@ describe("watch menu", () => {
     await userEvent.click(screen.getByRole("button", { name: "Watching options for Runbook" }));
     await userEvent.click(await screen.findByRole("menuitem", { name: "Mute…" }));
     const keep = await screen.findByRole("checkbox", {
-      name: "Still notify me about mentions and tasks assigned to me",
+      name: "Still notify me about mentions, tasks assigned to me, pages shared with me and access requests I can decide",
     });
     expect(keep.getAttribute("aria-checked")).toBe("true");
     await userEvent.click(screen.getByRole("button", { name: "Mute" }));

@@ -40,7 +40,11 @@ const watchStatusSchema = z
     own: z
       .object({
         state: stateSchema,
-        keepMentions: z.boolean().describe("Whether mentions and assigned tasks still arrive while muted."),
+        keepMentions: z
+          .boolean()
+          .describe(
+            "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted.",
+          ),
         automatic: z
           .boolean()
           .describe("True when the caller watches because they created, edited or commented on it."),
@@ -50,7 +54,11 @@ const watchStatusSchema = z
     effective: z
       .object({
         state: stateSchema,
-        keepMentions: z.boolean().describe("Whether mentions and assigned tasks still arrive while muted."),
+        keepMentions: z
+          .boolean()
+          .describe(
+            "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted.",
+          ),
         source: z
           .enum(["target", "series", "space"])
           .describe("Where the state comes from: the item or space itself, its meeting series or its space."),
@@ -74,7 +82,11 @@ const watchedSchema = z
       })
       .describe("What is watched or muted."),
     state: z.enum(["watching", "muted"]).describe("Watched or muted."),
-    keepMentions: z.boolean().describe("Whether mentions and assigned tasks still arrive while muted."),
+    keepMentions: z
+      .boolean()
+      .describe(
+        "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted.",
+      ),
     automatic: z
       .boolean()
       .describe("True when it is watched because the caller created, edited or commented."),
@@ -198,7 +210,7 @@ export class WatchesController {
   @ApiRoute({
     summary: "Watch, mute or stop watching a space",
     description:
-      "Watching a space delivers changes and comments on everything in it the caller can read. Muting it silences everything from it, except mentions and assigned tasks when `keepMentions` is true.",
+      "Watching a space delivers changes and comments on everything in it the caller can read. Muting it silences everything from it, except mentions, assigned tasks, shares with the caller and access requests the caller can decide when `keepMentions` is true.",
     tags: [TAG],
     params: spaceParams,
     body: watchUpdateSchema,

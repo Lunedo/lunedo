@@ -65,6 +65,14 @@ export const digestTimeSetting = defineSetting({
   lockable: false,
 });
 
+export const digestEnabledSetting = defineSetting({
+  key: "notifications.digestEnabled",
+  schema: z.boolean(),
+  default: true,
+  levels: PREFERENCE_LEVELS,
+  lockable: false,
+});
+
 export const watchAutomaticallySetting = defineSetting({
   key: "notifications.watchAutomatically",
   schema: z.boolean(),
@@ -90,6 +98,7 @@ export const notificationSettings = [
   browserPushSetting,
   notificationRetentionSetting,
   digestTimeSetting,
+  digestEnabledSetting,
   watchAutomaticallySetting,
 ];
 

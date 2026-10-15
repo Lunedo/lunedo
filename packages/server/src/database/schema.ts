@@ -110,6 +110,7 @@ export {
   instanceSecrets,
   mailCredentialKind,
   mailCredentials,
+  mailDeliveryStatus,
   mailOutbox,
   mailStatus,
 } from "../mail/schema.js";
@@ -130,7 +131,13 @@ export {
   topicOutcome,
   topicStatus,
 } from "../meetings/schema.js";
-export { knownDevices, notifications, watches, watchState } from "../notifications/schema.js";
+export {
+  knownDevices,
+  notificationEmailStatus,
+  notifications,
+  watches,
+  watchState,
+} from "../notifications/schema.js";
 export {
   breakGlassAccesses,
   builtInRole,

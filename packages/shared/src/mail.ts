@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ENTRA_AUTHORITY, MICROSOFT_GRAPH } from "./identity-providers.js";
-import { emailSchema } from "./validation.js";
+import { emailSchema, type SmtpOAuth2Provider } from "./validation.js";
 
 export const mailMethods = ["smtp", "graph"] as const;
 export type MailMethod = (typeof mailMethods)[number];
@@ -47,9 +47,26 @@ export interface SmtpPreset {
   host: string;
   port: number;
   security: "tls" | "starttls";
+  oauth2?: SmtpOAuth2Provider;
 }
 
 export const smtpPresets: readonly SmtpPreset[] = [
+  {
+    id: "microsoft365",
+    name: "Microsoft 365",
+    host: "smtp.office365.com",
+    port: 587,
+    security: "starttls",
+    oauth2: "microsoft365",
+  },
+  {
+    id: "googleWorkspace",
+    name: "Google Workspace",
+    host: "smtp.gmail.com",
+    port: 465,
+    security: "tls",
+    oauth2: "google",
+  },
   { id: "sendgrid", name: "SendGrid", host: "smtp.sendgrid.net", port: 587, security: "starttls" },
   { id: "mailgun", name: "Mailgun (US)", host: "smtp.mailgun.org", port: 587, security: "starttls" },
   { id: "mailgunEu", name: "Mailgun (EU)", host: "smtp.eu.mailgun.org", port: 587, security: "starttls" },

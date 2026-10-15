@@ -2171,6 +2171,10 @@
       "notifications_browserPush": {
         "label": "Browser push",
         "description": "Lets people receive notifications through the push services of browser makers."
+      },
+      "notifications_digestEnabled": {
+        "label": "Send a daily summary by e-mail",
+        "description": "Collects the notifications whose e-mail is set to the daily summary. Turned off, they appear only in the app."
       }
     },
     "disabled": {
@@ -2505,7 +2509,7 @@
         "muted": "Muted",
         "notWatching": "Not watching"
       },
-      "keepsMentions": "Mentions and tasks still arrive",
+      "keepsMentions": "Mentions, tasks, shares and access requests still arrive",
       "automatic": "Because you created, edited or commented on it",
       "inSpace": "in {space}",
       "kinds": {
@@ -2535,7 +2539,7 @@
       "mutedViaSeries": "Muted through its meeting series.",
       "muteTitle": "Mute {name}?",
       "muteDescription": "You get no notifications from {name} anymore, also not about changes and comments. You can unmute it at any time.",
-      "keepMentions": "Still notify me about mentions and tasks assigned to me",
+      "keepMentions": "Still notify me about mentions, tasks assigned to me, pages shared with me and access requests I can decide",
       "muteConfirm": "Mute",
       "cancel": "Cancel"
     },
@@ -2575,6 +2579,23 @@
       "enableConfirm": "Turn on browser push",
       "organizationOn": "Turned on for this instance. People choose it per event and turn it on per device.",
       "organizationOff": "Turned off for this instance. Instance administrators can turn it on."
+    },
+    "open": {
+      "loading": "Opening the notification",
+      "gone": "This notification is no longer available",
+      "goneCause": "It was removed after its retention period, or you can no longer open what it was about.",
+      "toNotifications": "Show my notifications"
+    },
+    "unsubscribe": {
+      "title": "Stop e-mails",
+      "loading": "Checking the link",
+      "event": "You get e-mails about {event}.",
+      "digest": "You get a daily summary of your notifications by e-mail.",
+      "confirm": "Stop these e-mails",
+      "eventOff": "You no longer get e-mails about {event}. Notifications still appear in the app.",
+      "digestOff": "You no longer get the daily summary. Notifications still appear in the app.",
+      "settings": "Change notification settings",
+      "failed": "The e-mails could not be stopped"
     }
   },
   "mail": {
@@ -2619,7 +2640,14 @@
       "envelope": "The mail server did not accept the sender or the recipient. Many servers only allow the address of the account that signs in as sender.",
       "refused": "The mail server refused the message.",
       "deferred": "The mail server cannot take the message right now. Try again in a few minutes.",
-      "unknown": "The mail server did not accept the message."
+      "unknown": "The mail server did not accept the message.",
+      "authToken": "The mail server did not accept the access token. Check that the app may use this mailbox and that SMTP sign-in is allowed for it.",
+      "tokenUnreachable": "The token endpoint could not be reached or is not available. Check the network connection to it and try again later.",
+      "clientRejected": "The token endpoint did not accept the client ID or the client secret. Check both, and whether the secret has expired.",
+      "notAuthorized": "The app may not get a token for this mailbox. Check the permission and admin consent, or the domain-wide delegation with its scope.",
+      "scopeRejected": "The token endpoint did not accept the scope. Check the scope and the permissions of the app.",
+      "tokenRefused": "The token endpoint refused the request. Check the tenant, the client and the token endpoint.",
+      "keyInvalid": "The stored key of the service account cannot be read. Choose the key file again."
     },
     "testFailedAction": "Check the server, port, connection security and credentials, then send the test again.",
     "preset": "Service",
@@ -2627,7 +2655,7 @@
     "presetCustom": "Own mail server",
     "methodTitle": "Sending method",
     "method": "Method",
-    "methodHint": "Pagehall sends through {method} now. Exchange Online is moving away from SMTP with passwords; for Microsoft 365, use Microsoft Graph. A method takes effect when you save its settings.",
+    "methodHint": "Pagehall sends through {method} now. Exchange Online is moving away from SMTP with passwords; for Microsoft 365, use SMTP with OAuth2 or Microsoft Graph. A method takes effect when you save its settings.",
     "methods": {
       "smtp": "SMTP",
       "graph": "Microsoft Graph"
@@ -2712,6 +2740,91 @@
         "cause": "Microsoft Graph refused the e-mail.",
         "action": "Check the sender mailbox and the recipient, then test again."
       }
+    },
+    "authentication": "Sign-in",
+    "authenticationHint": "OAuth2 signs in with an access token that Pagehall gets and renews by itself, instead of a password.",
+    "authenticationModes": {
+      "password": "Password",
+      "oauth2": "OAuth2"
+    },
+    "mailbox": "Mailbox",
+    "mailboxHint": "The mailbox Pagehall signs in as. Usually also the sender address.",
+    "failureStep": "Failed step: {step}",
+    "failureSteps": {
+      "token": "getting an access token",
+      "connect": "connecting to the mail server",
+      "authenticate": "signing in at the mail server",
+      "send": "sending the message"
+    },
+    "oauth2": {
+      "provider": "Provider",
+      "providers": {
+        "microsoft365": "Microsoft 365",
+        "google": "Google Workspace",
+        "generic": "Other token endpoint"
+      },
+      "tenantId": "Tenant ID",
+      "clientId": "Application (client) ID",
+      "cloud": "Microsoft cloud",
+      "clouds": {
+        "global": "Global",
+        "usGovernment": "US Government",
+        "china": "China (21Vianet)"
+      },
+      "clientSecret": "Client secret",
+      "secretKept": "Leave empty to keep the stored secret.",
+      "keyFile": "Key file of the service account",
+      "keyFileHint": "The JSON key from Google Cloud. Pagehall stores only the private key, encrypted.",
+      "keyKept": "A key is stored. Choose a file only to replace it.",
+      "serviceAccount": "Service account {email}, client ID {clientId}",
+      "tokenUrl": "Token endpoint",
+      "genericClientId": "Client ID",
+      "scope": "Scope",
+      "copyValue": "Copy {name}",
+      "errors": {
+        "tenantId": "Enter the tenant ID, a value like 8a9c5e1f-…, from the overview of Microsoft Entra ID.",
+        "clientId": "Enter the application (client) ID from the overview of the app registration.",
+        "clientSecret": "Enter the client secret. A stored secret is kept only while the app stays the same.",
+        "keyFile": "Choose the JSON key file of the service account.",
+        "keyFileInvalid": "This file is not a JSON key of a Google service account. Download a new key in Google Cloud under Service accounts, Keys.",
+        "tokenUrl": "Enter the address of the token endpoint, starting with https://.",
+        "genericClientId": "Enter the client ID.",
+        "scope": "Enter the scope the mail server expects.",
+        "mailbox": "Enter the mailbox Pagehall signs in as.",
+        "tls": "OAuth2 needs a TLS or STARTTLS connection."
+      },
+      "steps": {
+        "title": "Set up in {provider} first",
+        "microsoft365": {
+          "register": "Register an app in Microsoft Entra ID that is only for e-mail.",
+          "permission": "Under API permissions, add Office 365 Exchange Online, application permission SMTP.SendAsApp, and grant admin consent.",
+          "secret": "Create a client secret and enter it below with the tenant ID and the application ID.",
+          "exchange": "In Exchange Online PowerShell, register the app, let it use the mailbox and allow SMTP sign-in for the mailbox. Use the object ID from Enterprise applications, not from App registrations:"
+        },
+        "google": {
+          "account": "In Google Cloud, create a service account and a JSON key for it, and choose the key file below.",
+          "delegation": "In the Google Admin console, open Security, Access and data control, API controls, Manage domain-wide delegation, and add the client ID of the service account with this scope:",
+          "delay": "Google may need a few minutes, rarely up to 24 hours, before the delegation works."
+        },
+        "generic": {
+          "grant": "The token endpoint must issue access tokens with the client credentials grant, and the mail server must accept them through XOAUTH2."
+        }
+      },
+      "placeholders": {
+        "mailbox": "<mailbox>",
+        "application": "<application ID>",
+        "objectId": "<object ID>"
+      },
+      "advanced": "Advanced: other Microsoft cloud"
+    },
+    "delivery": {
+      "title": "Delivery",
+      "lastFailure": "Last delivery error",
+      "lastFailureAt": "{date}: {cause}",
+      "noFailure": "No delivery error so far.",
+      "lastSuccess": "Last e-mail handed to the server",
+      "never": "Not yet",
+      "retry": "Pagehall retries each e-mail for several hours. Fix the cause and send a test mail to check."
     }
   },
   "organization": {
@@ -3914,7 +4027,9 @@
     "finishProviderSetup": "The setup could not be finished",
     "removeDraft": "The draft could not be removed",
     "loadDrafts": "The drafts could not be loaded",
-    "changeAddress": "The address was not changed"
+    "changeAddress": "The address was not changed",
+    "unsubscribeLink": "Checking the unsubscribe link failed",
+    "openNotification": "Opening the notification failed"
   },
   "lifecycle": {
     "placeholder": {

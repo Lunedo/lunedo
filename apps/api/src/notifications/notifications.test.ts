@@ -113,6 +113,54 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
     expect((await owner.get("/api/v1/notifications/unread-count")).json()).toEqual({ count: 0 });
   });
 
+  it("returns one own notification and answers like an unknown one for others", async () => {
+    await notice([ownerId]);
+    const [item] = (await owner.get("/api/v1/notifications")).json().items;
+    expect((await owner.get(`/api/v1/notifications/${item.id}`)).json()).toMatchObject({ id: item.id });
+    const other = await createAccount(test, "other.opener@example.org");
+    const client = await signedInClient(test, other.email, other.password);
+    expect((await client.get(`/api/v1/notifications/${item.id}`)).statusCode).toBe(404);
+    expect((await owner.get(`/api/v1/notifications/${randomUUID()}`)).statusCode).toBe(404);
+    await owner.post("/api/v1/notifications/read-all", {});
+  });
+
+  it("unsubscribes with one click from a mail program, without a session or request header", async () => {
+    const token = await test.runtime.services.unsubscribe.token(ownerId, {
+      kind: "event",
+      event: "mentions",
+    });
+    const anonymous = new TestClient(test.app);
+    expect((await anonymous.get(`/api/v1/notifications/unsubscribe/${token}`)).json()).toEqual({
+      scope: "event",
+      event: "mentions",
+      off: false,
+    });
+    const oneClick = await test.app.inject({
+      method: "POST",
+      url: `/api/v1/notifications/unsubscribe/${token}`,
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      payload: "List-Unsubscribe=One-Click",
+    });
+    expect(oneClick.statusCode).toBe(200);
+    expect(oneClick.json()).toEqual({ scope: "event", event: "mentions", off: true });
+
+    const forged = await test.app.inject({
+      method: "POST",
+      url: `/api/v1/notifications/unsubscribe/${ownerId}.tasks.${token.split(".")[2]}`,
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      payload: "List-Unsubscribe=One-Click",
+    });
+    expect(forged.json()).toMatchObject({ code: "invalidToken" });
+    expect((await anonymous.get("/api/v1/notifications/unsubscribe/forged")).statusCode).toBe(400);
+    const stillOn = await test.app.inject({
+      method: "POST",
+      url: "/api/v1/notifications/read-all",
+      headers: { "content-type": "application/json" },
+      payload: "{}",
+    });
+    expect(stillOn.statusCode).not.toBe(200);
+  });
+
   it("never shows one account the notifications of another", async () => {
     const other = await createAccount(test, "other.reader@example.org");
     const client = await signedInClient(test, other.email, other.password);

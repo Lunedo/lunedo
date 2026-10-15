@@ -11,6 +11,7 @@ import {
   PASSWORD_MAX_LENGTH,
   slugSchema,
   smtpConfigurationSchema,
+  smtpOAuth2SecretSchema,
   smtpPasswordSchema,
   timeZoneSchema,
   totpCodeSchema,
@@ -33,15 +34,28 @@ export const setupOrganizationSchema = z.object({
 });
 
 export const smtpInputSchema = smtpConfigurationSchema
-  .extend({ password: smtpPasswordSchema.optional() })
+  .extend({ password: smtpPasswordSchema.optional(), oauth2Secret: smtpOAuth2SecretSchema.optional() })
   .strict();
 export const smtpTestInputSchema = smtpInputSchema.extend({
   to: emailSchema,
   language: languageSchema.default("en"),
 });
+export const mailDeliverySteps = ["token", "connect", "authenticate", "send"] as const;
+export type MailDeliveryStep = (typeof mailDeliverySteps)[number];
 export const smtpTestResultSchema = z.object({
   delivered: z.boolean(),
-  error: z.object({ code: z.string().nullable(), responseCode: z.number().int().nullable() }).nullable(),
+  error: z
+    .object({
+      code: z.string().nullable(),
+      responseCode: z.number().int().nullable(),
+      step: z
+        .enum(mailDeliverySteps)
+        .nullable()
+        .describe(
+          "The step that failed: getting an access token, connecting, signing in at the server or sending.",
+        ),
+    })
+    .nullable(),
 });
 
 export const setupStepSchemas = {
