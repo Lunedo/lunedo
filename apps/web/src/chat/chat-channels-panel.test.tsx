@@ -25,7 +25,7 @@ function channel(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function panel(props: { unavailable?: string } = {}) {
+function panel(props: { unavailable?: string; secondaryAction?: boolean } = {}) {
   return (
     <PreferencesProvider>
       <ChatChannelsPanel
@@ -35,6 +35,7 @@ function panel(props: { unavailable?: string } = {}) {
         description="Only content every space member can read is posted."
         canManage
         unavailable={props.unavailable}
+        secondaryAction={props.secondaryAction}
       />
     </PreferencesProvider>
   );
@@ -103,6 +104,64 @@ describe("chat channels", () => {
       events: ["pagePublished", "blogPostPublished", "decisionRecorded"],
       target: { url: "https://hooks.example.com/x" },
     });
+  });
+
+  it("shows a refused address at its field with the reason and moves the focus there", async () => {
+    let answer = problem(400, "invalidChatAddress", { fields: ["body.target.url"], problem: "unresolvable" });
+    mockApi({
+      "GET /api/v1/auth/session": () => problem(401, "notSignedIn"),
+      [`GET ${base}`]: () => ({ body: { items: [] } }),
+      [`POST ${base}/test`]: () => answer,
+      [`POST ${base}`]: () => answer,
+    });
+    await renderWithProviders(panel());
+    await userEvent.click(await screen.findByRole("button", { name: "Connect a channel" }));
+    const dialog = await screen.findByRole("dialog", { name: "Connect a channel" });
+    const address = within(dialog).getByRole("textbox", { name: "Webhook address" });
+    await userEvent.type(address, "hooks.invalid/workflows/abc");
+    await userEvent.type(within(dialog).getByRole("textbox", { name: "Name in Pagehall" }), "IT-Ops");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Connect" }));
+    const reason =
+      "Pagehall could not find this host. Check the address for typos, and that this server can reach the internet.";
+    expect(await within(dialog).findByText(reason)).toBeTruthy();
+    expect(address.getAttribute("aria-invalid")).toBe("true");
+    await waitFor(() => expect(document.activeElement).toBe(address));
+    expect(within(dialog).queryByRole("alert")).toBeNull();
+    await userEvent.type(address, "x");
+    expect(within(dialog).queryByText(reason)).toBeNull();
+
+    answer = problem(503, "busy");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Send test message" }));
+    const notice = await within(dialog).findByRole("alert");
+    expect(within(notice).getByText("The test message was not delivered")).toBeTruthy();
+    await waitFor(() => expect(notice.parentElement?.contains(document.activeElement)).toBe(true));
+  });
+
+  it("tells untested channels and failed tests from working ones", async () => {
+    mockApi({
+      "GET /api/v1/auth/session": () => problem(401, "notSignedIn"),
+      [`GET ${base}`]: () => ({
+        body: {
+          items: [
+            channel({ id: "a", name: "#new" }),
+            channel({
+              id: "b",
+              name: "#tested",
+              failure: { reason: "unreachable", status: null, code: null, at: "2026-10-15T08:00:00.000Z" },
+            }),
+            channel({ id: "c", name: "#used", lastDeliveredAt: "2026-10-15T08:00:00.000Z" }),
+          ],
+        },
+      }),
+    });
+    await renderWithProviders(panel({ secondaryAction: true }));
+    const list = await screen.findByRole("list", { name: "Chat channels" });
+    const rows = within(list).getAllByRole("listitem");
+    expect(within(rows[0] as HTMLElement).getByText("Not tested yet")).toBeTruthy();
+    expect(within(rows[1] as HTMLElement).getByText("Last test failed")).toBeTruthy();
+    expect(within(rows[1] as HTMLElement).getByText(/Pagehall could not reach Slack/)).toBeTruthy();
+    expect(within(rows[2] as HTMLElement).getByText("Working")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Connect a channel" }).className).not.toContain("bg-accent");
   });
 
   it("marks failing channels and says why and what to do", async () => {

@@ -12,22 +12,28 @@ afterEach(() => {
 
 describe("watch menu", () => {
   it("watches an item and mutes it with mentions kept by default", async () => {
+    let current: unknown = { own: null, effective: null };
     const api = mockApi({
-      [`GET /api/v1/items/${ITEM}/watch`]: () => ({ body: { own: null, effective: null } }),
-      [`PUT /api/v1/items/${ITEM}/watch`]: (request) => ({
-        body: {
+      [`GET /api/v1/items/${ITEM}/watch`]: () => ({ body: current }),
+      [`PUT /api/v1/items/${ITEM}/watch`]: (request) => {
+        current = {
           own: { ...(request.body as object), keepActionable: true, automatic: false },
           effective: { ...(request.body as object), keepActionable: true, source: "target" },
-        },
-      }),
+        };
+        return { body: current };
+      },
     });
     await renderWithProviders(<WatchMenu target={{ type: "item", id: ITEM }} name="Runbook" />);
-    await userEvent.click(screen.getByRole("button", { name: "Watching options for Runbook" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Watching options for Runbook: not watched" }),
+    );
     await userEvent.click(await screen.findByRole("menuitem", { name: "Watch" }));
     await screen.findByText("You now watch Runbook.");
     expect(api.requests.find((request) => request.method === "PUT")?.body).toEqual({ state: "watching" });
 
-    await userEvent.click(screen.getByRole("button", { name: "Watching options for Runbook" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Watching options for Runbook: watched" }),
+    );
     await userEvent.click(await screen.findByRole("menuitem", { name: "Mute…" }));
     const keep = await screen.findByRole("checkbox", {
       name: "Still notify me about mentions, tasks assigned to me, pages shared with me and access requests I can decide",
@@ -40,6 +46,7 @@ describe("watch menu", () => {
         keepActionable: true,
       }),
     );
+    expect(await screen.findByRole("button", { name: "Watching options for Runbook: muted" })).toBeTruthy();
   });
 
   it("names the space or series a state comes from and stops watching only this item", async () => {
@@ -53,7 +60,9 @@ describe("watch menu", () => {
     });
     await renderWithProviders(<WatchMenu target={{ type: "item", id: ITEM }} name="Runbook" />);
     await waitFor(() => expect(api.requests.length).toBeGreaterThan(0));
-    await userEvent.click(screen.getByRole("button", { name: "Watching options for Runbook" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Watching options for Runbook: watched" }),
+    );
     expect(await screen.findByText("You watch this through its space.")).toBeTruthy();
     await userEvent.click(screen.getByRole("menuitem", { name: "Stop watching" }));
     await waitFor(() =>

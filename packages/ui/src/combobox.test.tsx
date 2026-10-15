@@ -176,3 +176,15 @@ describe("Combobox", () => {
     expect(content?.className).toContain("min-w-popover-trigger");
   });
 });
+
+describe("Combobox hit area", () => {
+  it("opens and focuses the input when the area around it is pressed", async () => {
+    renderUi(<Single />);
+    const input = screen.getByRole("combobox", { name: "Person" });
+    const area = input.closest<HTMLElement>("[data-combobox]");
+    expect(area?.className).toContain("after:h-hit");
+    if (area) await userEvent.pointer({ keys: "[MouseLeft]", target: area });
+    expect(document.activeElement).toBe(input);
+    expect(await screen.findByRole("option", { name: /Anna Roth/ })).toBeTruthy();
+  });
+});

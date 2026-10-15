@@ -9,9 +9,10 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { completeWebAddress, isWebAddress } from "../../forms/addresses.js";
 import { PreferencesProvider } from "../../preferences/preferences-provider.js";
 import { mockApi, problem, renderWithProviders } from "../../testing/render.js";
-import { isShortcutUrl, SpaceShortcutsScreen } from "../settings/space-shortcuts-screen.js";
+import { SpaceShortcutsScreen } from "../settings/space-shortcuts-screen.js";
 import { SpaceContext, type SpaceContextValue } from "../space-context.js";
 import type { SpaceWithRole } from "../space-queries.js";
 import { shortcutHref } from "./shortcut-queries.js";
@@ -84,10 +85,11 @@ afterEach(() => {
 
 describe("shortcut targets", () => {
   it("accept only complete web addresses and resolve content to its path", () => {
-    expect(isShortcutUrl("https://status.example.org")).toBe(true);
-    expect(isShortcutUrl("http://intranet.local/rota")).toBe(true);
-    for (const value of ["javascript:alert(1)", "data:text/html,x", "/spaces/X", "status.example.org"]) {
-      expect(isShortcutUrl(value)).toBe(false);
+    expect(isWebAddress(completeWebAddress("https://status.example.org"))).toBe(true);
+    expect(isWebAddress(completeWebAddress("http://intranet.local/rota"))).toBe(true);
+    expect(completeWebAddress("status.example.org/vpn")).toBe("https://status.example.org/vpn");
+    for (const value of ["javascript:alert(1)", "data:text/html,x", "/spaces/X"]) {
+      expect(isWebAddress(completeWebAddress(value))).toBe(false);
     }
     expect(shortcutHref(rota)).toEqual({
       href: `/spaces/ITOPS/pages/${PAGE}/on-call-rota-2026`,
@@ -166,6 +168,19 @@ describe("the shortcut settings", () => {
     expect(within(rows[0] as HTMLElement).getByText("On-call rota 2026 · ITOPS")).toBeTruthy();
   });
 
+  it("asks only for content when a label may stay empty", async () => {
+    api();
+    await renderWithProviders(inRouter(<SpaceShortcutsScreen />));
+    await userEvent.click(await screen.findByRole("button", { name: "Add shortcut" }));
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Add shortcut" }));
+    expect(await within(dialog).findByText("Choose the content the shortcut leads to.")).toBeTruthy();
+    expect(within(dialog).queryByText("Enter a label.")).toBeNull();
+    expect(within(dialog).getByText(/Empty uses the title of the content/)).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole("radio", { name: "Website" }));
+    expect(within(dialog).queryByText(/Empty uses the title of the content/)).toBeNull();
+  });
+
   it("validates a new shortcut on save and adds it", async () => {
     const { requests } = api();
     await renderWithProviders(inRouter(<SpaceShortcutsScreen />));
@@ -175,13 +190,14 @@ describe("the shortcut settings", () => {
     await userEvent.type(within(dialog).getByRole("textbox", { name: "Address" }), "javascript:alert(1)");
     await userEvent.click(within(dialog).getByRole("button", { name: "Add shortcut" }));
     expect(
-      await within(dialog).findByText("Enter a complete address starting with https:// or http://."),
+      await within(dialog).findByText("Enter a web address, for example status.example.org."),
     ).toBeTruthy();
+    expect(within(dialog).getByText("Enter a label.")).toBeTruthy();
     expect(requests.some((request) => request.method === "POST")).toBe(false);
 
     const address = within(dialog).getByRole("textbox", { name: "Address" });
     await userEvent.clear(address);
-    await userEvent.type(address, "https://wiki.example.org/handbook");
+    await userEvent.type(address, "wiki.example.org/handbook");
     await userEvent.type(within(dialog).getByRole("textbox", { name: "Label" }), "Handbook");
     await userEvent.click(within(dialog).getByRole("button", { name: "Add shortcut" }));
     await waitFor(() =>

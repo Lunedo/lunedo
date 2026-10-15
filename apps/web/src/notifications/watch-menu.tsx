@@ -99,7 +99,13 @@ export function WatchMenu({ target, name }: { target: WatchTarget; name: string 
   ];
 
   const icon = muted ? BellOff : watching ? BellRing : Bell;
-  const label = t("notifications.watching.menu", { name });
+  const label = !status.data
+    ? t("notifications.watching.menu", { name })
+    : muted
+      ? t("notifications.watching.menuMuted", { name })
+      : watching
+        ? t("notifications.watching.menuWatched", { name })
+        : t("notifications.watching.menuNotWatched", { name });
   return (
     <>
       <Menu

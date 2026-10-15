@@ -215,7 +215,10 @@ describe("page header", () => {
       }),
     );
     await renderAt(`/spaces/ITOPS/pages/${VPN}/vpn-access`);
-    await userEvent.click(await screen.findByRole("button", { name: "Transfer ownership" }));
+    const transfer = await screen.findByRole("button", { name: "Transfer ownership" });
+    expect(transfer.parentElement?.className).toContain("whitespace-nowrap");
+    expect(transfer.parentElement?.textContent).toBe("·Transfer ownership");
+    await userEvent.click(transfer);
     const dialog = await screen.findByRole("dialog");
     await userEvent.click(within(dialog).getByRole("button", { name: "Transfer ownership" }));
     expect(await within(dialog).findByText("Choose the new owner.")).toBeTruthy();

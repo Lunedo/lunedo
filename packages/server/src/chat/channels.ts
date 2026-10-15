@@ -36,6 +36,9 @@ import {
   classifyError,
   classifyResponse,
   type MatrixTarget,
+  matrixInputSchema,
+  parseRoomAddress,
+  roomDirectoryRequest,
   targetSchemaOf,
 } from "./formats.js";
 import { chatChannels, chatDeliveries } from "./schema.js";
@@ -97,13 +100,31 @@ export type ChatChannelErrorCode =
   | "confidentialSpace"
   | "tooManyChannels";
 
+export type ChatAddressField = "target.url" | "target.homeserver" | "target.roomId" | "target.accessToken";
+
+export type ChatAddressProblem =
+  | "notUrl"
+  | "unresolvable"
+  | "roomAddress"
+  | "roomNotFound"
+  | "unauthorized"
+  | "unreachable";
+
 export class ChatChannelError extends Error {
   override name = "ChatChannelError";
   readonly code: ChatChannelErrorCode;
+  readonly field: ChatAddressField | null;
+  readonly problem: ChatAddressProblem | null;
 
-  constructor(code: ChatChannelErrorCode, message: string) {
+  constructor(
+    code: ChatChannelErrorCode,
+    message: string,
+    at: { field: ChatAddressField; problem?: ChatAddressProblem } | null = null,
+  ) {
     super(message);
     this.code = code;
+    this.field = at?.field ?? null;
+    this.problem = at?.problem ?? null;
   }
 }
 
@@ -142,15 +163,14 @@ function toChannel(row: ChannelRow): ChatChannel {
     name: row.name,
     events: row.events,
     state: row.state,
-    failure:
-      row.state === "failing" && row.failure_reason
-        ? {
-            reason: row.failure_reason,
-            status: row.failure_status,
-            code: row.failure_code,
-            at: date(row.failed_at) ?? new Date(row.created_at),
-          }
-        : null,
+    failure: row.failure_reason
+      ? {
+          reason: row.failure_reason,
+          status: row.failure_status,
+          code: row.failure_code,
+          at: date(row.failed_at) ?? new Date(row.created_at),
+        }
+      : null,
     lastAttemptAt: date(row.last_attempt_at),
     lastDeliveredAt: date(row.last_delivered_at),
     createdAt: new Date(row.created_at),
@@ -260,11 +280,12 @@ export class ChatChannelService {
   }
 
   async #target(kind: ChatChannelKind, value: unknown): Promise<ChatTarget> {
-    const parsed = targetSchemaOf(kind).safeParse(value);
+    const parsed = (kind === "matrix" ? matrixInputSchema : targetSchemaOf(kind)).safeParse(value);
     if (!parsed.success)
       throw new ChatChannelError("invalidChannel", "The connection details are incomplete");
     const target = parsed.data;
     const address = kind === "matrix" ? (target as MatrixTarget).homeserver : (target as { url: string }).url;
+    const field = kind === "matrix" ? "target.homeserver" : "target.url";
     try {
       const url = parseOutboundUrl(address);
       const host = url.hostname.replace(/^\[|\]$/g, "");
@@ -277,17 +298,67 @@ export class ChatChannelService {
       for (const entry of addresses) checkAddress(this.#policy, entry.address, url.protocol === "https:");
     } catch (error) {
       if (error instanceof OutboundError && error.reason === "blockedAddress") {
-        throw new ChatChannelError("blockedAddress", error.message);
+        throw new ChatChannelError("blockedAddress", error.message, { field });
       }
       if (error instanceof OutboundError && error.reason === "insecureAddress") {
-        throw new ChatChannelError("insecureAddress", error.message);
+        throw new ChatChannelError("insecureAddress", error.message, { field });
       }
       throw new ChatChannelError(
         "invalidAddress",
         error instanceof Error ? error.message : "Invalid address",
+        {
+          field,
+          problem:
+            error instanceof OutboundError && error.reason === "unresolvable" ? "unresolvable" : "notUrl",
+        },
       );
     }
-    return target;
+    return kind === "matrix" ? this.#room(target as MatrixTarget) : target;
+  }
+
+  async #room(target: MatrixTarget): Promise<MatrixTarget> {
+    const room = parseRoomAddress(target.roomId);
+    if (!room) {
+      throw new ChatChannelError("invalidAddress", "The room address is not valid", {
+        field: "target.roomId",
+        problem: "roomAddress",
+      });
+    }
+    if ("roomId" in room) return { ...target, roomId: room.roomId };
+    let response: Awaited<ReturnType<typeof sendOutbound>>;
+    try {
+      response = await sendOutbound(
+        this.#policy,
+        roomDirectoryRequest(target.homeserver, room.alias, target.accessToken),
+      );
+    } catch (error) {
+      if (error instanceof OutboundError && error.reason === "blockedAddress") {
+        throw new ChatChannelError("blockedAddress", error.message, { field: "target.homeserver" });
+      }
+      throw new ChatChannelError("invalidAddress", "The homeserver could not be reached", {
+        field: "target.homeserver",
+        problem: "unreachable",
+      });
+    }
+    if (response.status === 401 || response.status === 403) {
+      throw new ChatChannelError("invalidAddress", "The homeserver did not accept the access token", {
+        field: "target.accessToken",
+        problem: "unauthorized",
+      });
+    }
+    let roomId: unknown = null;
+    try {
+      roomId = (JSON.parse(response.body) as { room_id?: unknown }).room_id;
+    } catch {
+      roomId = null;
+    }
+    if (response.status !== 200 || typeof roomId !== "string" || !/^![^:\s]+:\S+$/.test(roomId)) {
+      throw new ChatChannelError("invalidAddress", "The homeserver does not know this room", {
+        field: "target.roomId",
+        problem: "roomNotFound",
+      });
+    }
+    return { ...target, roomId };
   }
 
   async list(scope: ChatScope): Promise<ChatChannel[]> {
@@ -534,6 +605,16 @@ export class ChatChannelService {
         .where(eq(chatChannels.id, id));
       return { delivered: true };
     }
+    await this.#database
+      .update(chatChannels)
+      .set({
+        failureReason: failure.reason,
+        failureStatus: failure.status,
+        failureCode: failure.code,
+        failedAt: new Date(),
+        lastAttemptAt: new Date(),
+      })
+      .where(eq(chatChannels.id, id));
     const { permanent: _permanent, ...rest } = failure;
     return { delivered: false, failure: rest };
   }
@@ -863,8 +944,14 @@ export class ChatChannelService {
     if (!failure) {
       await this.#database
         .update(chatChannels)
-        .set({ lastDeliveredAt: new Date() })
-        .where(eq(chatChannels.id, row.id));
+        .set({
+          lastDeliveredAt: new Date(),
+          failureReason: null,
+          failureStatus: null,
+          failureCode: null,
+          failedAt: null,
+        })
+        .where(and(eq(chatChannels.id, row.id), eq(chatChannels.state, "working")));
       return finish("delivered");
     }
     if (!failure.permanent && !lastAttempt) {

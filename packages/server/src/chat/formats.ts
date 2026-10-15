@@ -10,12 +10,44 @@ export const matrixTargetSchema = z.object({
   accessToken: z.string().min(1).max(2000),
 });
 
+export const matrixInputSchema = matrixTargetSchema.extend({ roomId: z.string().min(1).max(500) });
+
 export type WebhookTarget = z.infer<typeof webhookTargetSchema>;
 export type MatrixTarget = z.infer<typeof matrixTargetSchema>;
 export type ChatTarget = WebhookTarget | MatrixTarget;
 
 export function targetSchemaOf(kind: ChatChannelKind): z.ZodType<ChatTarget> {
   return kind === "matrix" ? matrixTargetSchema : webhookTargetSchema;
+}
+
+export type RoomAddress = { roomId: string } | { alias: string };
+
+export function parseRoomAddress(value: string): RoomAddress | null {
+  let text = value.trim();
+  const link = /^https:\/\/matrix\.to\/#\/(.+)$/i.exec(text);
+  if (link?.[1]) {
+    try {
+      text = decodeURIComponent(link[1].split("?")[0] ?? "");
+    } catch {
+      return null;
+    }
+  }
+  if (/^![^:\s]+:\S+$/.test(text)) return { roomId: text };
+  if (/^#[^:\s]+:\S+$/.test(text)) return { alias: text };
+  return null;
+}
+
+export function roomDirectoryRequest(
+  homeserver: string,
+  alias: string,
+  accessToken: string,
+): OutboundRequest {
+  return {
+    url: `${homeserver.replace(/\/+$/, "")}/_matrix/client/v3/directory/room/${encodeURIComponent(alias)}`,
+    method: "GET",
+    headers: { "user-agent": USER_AGENT, authorization: `Bearer ${accessToken}` },
+    body: "",
+  };
 }
 
 export interface ChatMessage {

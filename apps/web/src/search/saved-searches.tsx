@@ -6,7 +6,6 @@ import {
   IconButton,
   Input,
   Menu,
-  Notice,
   useToast,
 } from "@pagehall/ui";
 import { Link, useRouter } from "@tanstack/react-router";
@@ -14,7 +13,9 @@ import { Bookmark, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { isApiError } from "../api/request.js";
+import { ActionFailure } from "../errors/failure.js";
 import { problemMessage } from "../errors/problem-message.js";
+import { serverFieldErrors } from "../forms/use-schema-form.js";
 import {
   filtersOf,
   type SavedSearch,
@@ -61,9 +62,15 @@ function NameDialog({
       await onSubmit(name.trim());
       onOpenChange(false);
     } catch (caught) {
-      setFailure(
-        isApiError(caught, "tooManySavedSearches") ? t("search.saved.tooMany") : problemMessage(t, caught),
-      );
+      const field = serverFieldErrors(t, caught).name;
+      if (field) {
+        setError(field);
+        focusFirstInvalidSoon();
+      } else {
+        setFailure(
+          isApiError(caught, "tooManySavedSearches") ? t("search.saved.tooMany") : problemMessage(t, caught),
+        );
+      }
     } finally {
       setBusy(false);
     }
@@ -79,11 +86,7 @@ function NameDialog({
           void submit();
         }}
       >
-        {failure ? (
-          <Notice variant="danger" title={t("search.saved.failed")}>
-            {failure}
-          </Notice>
-        ) : null}
+        {failure ? <ActionFailure title={t("search.saved.failed")} message={failure} /> : null}
         <Field label={t("search.saved.name")} hint={t("search.saved.nameHint")} {...(error ? { error } : {})}>
           <Input
             autoFocus

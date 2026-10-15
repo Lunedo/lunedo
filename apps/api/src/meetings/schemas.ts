@@ -152,9 +152,16 @@ const memberSchema = z
   .object({
     id: uuid("Account ID."),
     name: z.string().nullable().describe("Name, or null when the caller may not see the person."),
+    active: z
+      .boolean()
+      .describe(
+        "Whether the person can still take part: false when the account is deactivated, not set up yet or no longer a member of the organization. Always true for people the caller may not see.",
+      ),
     canRead: z
       .boolean()
-      .describe("Whether the person can read the series. Members without access are shown with a warning."),
+      .describe(
+        "Whether the person can read the series. Active members without access are shown with a warning.",
+      ),
   })
   .describe("A member of the series.");
 
@@ -237,7 +244,7 @@ export const exampleSeries = {
   parentId: null,
   archived: false,
   oneOnOne: false,
-  members: [{ id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20", name: "Anna Berger", canRead: true }],
+  members: [{ id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20", name: "Anna Berger", active: true, canRead: true }],
   schedule: {
     rhythm: { frequency: "weekly", interval: 1, weekdays: ["MO"] },
     recurrence: "FREQ=WEEKLY;BYDAY=MO",
@@ -313,6 +320,11 @@ export const meetingSchema = z
               .describe(
                 "Whether the person is a member of the series, or null when the caller cannot read it.",
               ),
+            active: z
+              .boolean()
+              .describe(
+                "Whether the person can still take part: false when the account is deactivated, not set up yet or no longer a member of the organization. Always true for people the caller may not see.",
+              ),
             canRead: z.boolean().describe("Whether the person can read the meeting page."),
           })
           .describe("An attendee."),
@@ -343,6 +355,7 @@ export const exampleMeeting = {
       name: "Anna Berger",
       attendance: "present",
       member: true,
+      active: true,
       canRead: true,
     },
   ],

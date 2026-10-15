@@ -178,7 +178,7 @@ function guardedLookup(policy: OutboundPolicy, secure: boolean): LookupFunction 
 
 export interface OutboundRequest {
   url: string;
-  method: "POST" | "PUT";
+  method: "GET" | "POST" | "PUT";
   headers: Record<string, string>;
   body: Buffer | string;
   timeoutMs?: number;

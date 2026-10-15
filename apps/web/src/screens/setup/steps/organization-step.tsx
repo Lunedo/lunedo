@@ -63,8 +63,7 @@ export function OrganizationStep({
       await runSetupAction("organization", "save", values);
       await onDone();
     } catch (failure) {
-      if (!applyServerFieldErrors(form, failure, t("validation.invalid")))
-        setError(problemMessage(t, failure));
+      if (!applyServerFieldErrors(form, t, failure)) setError(problemMessage(t, failure));
     }
   });
   return (

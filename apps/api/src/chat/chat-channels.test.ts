@@ -73,7 +73,16 @@ describe.skipIf(!databaseBaseUrl)("chat channels and browser push through the AP
       target: { url: "http://127.0.0.1/hook" },
     });
     expect(blocked.statusCode).toBe(400);
-    expect(blocked.json()).toMatchObject({ code: "chatAddressBlocked" });
+    expect(blocked.json()).toMatchObject({ code: "chatAddressBlocked", fields: ["body.target.url"] });
+    const malformed = await context.admin.client.post(path, {
+      ...channel,
+      target: { url: "http://hooks example" },
+    });
+    expect(malformed.json()).toMatchObject({
+      code: "invalidChatAddress",
+      fields: ["body.target.url"],
+      problem: "notUrl",
+    });
 
     const created = await context.admin.client.post(path, channel);
     expect(created.statusCode, created.body).toBe(201);

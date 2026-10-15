@@ -1098,7 +1098,12 @@
     "pages": "Seiten",
     "searchFor": "Alle Ergebnisse für „{query}“ anzeigen",
     "fuzzyHint": "Die Buchstaben in der richtigen Reihenfolge genügen.",
-    "opensAnywhere": "öffnet diese Palette überall"
+    "opensAnywhere": "öffnet diese Palette überall",
+    "scopes": {
+      "personal": "Persönlich",
+      "organization": "Organisation",
+      "instance": "Instanz"
+    }
   },
   "shortcuts": {
     "title": "Tastenkürzel",
@@ -1415,7 +1420,82 @@
     "tooManyChatChannels": "Es gibt schon 20 Kanäle. Trenne einen, bevor du einen weiteren verbindest.",
     "pushDisabled": "Browser-Push ist für diese Instanz ausgeschaltet. Die Instanz-Administration kann es einschalten.",
     "invalidPushSubscription": "Der Browser hat eine unvollständige Push-Anmeldung gesendet. Lade die Seite neu und versuche es erneut.",
-    "tooManyPushDevices": "Du hast 20 Geräte mit Browser-Push. Entferne eines, bevor du ein weiteres hinzufügst."
+    "tooManyPushDevices": "Du hast 20 Geräte mit Browser-Push. Entferne eines, bevor du ein weiteres hinzufügst.",
+    "settingBelowMinimum": "Der Wert liegt unter dem Mindestwert, den die Instanz vorgibt. Wähle einen höheren Wert.",
+    "settingManagedElsewhere": "Diese Einstellung hat einen eigenen Bereich. Ändere sie dort.",
+    "ambiguousCredentials": "Sende entweder eine Sitzung oder ein API-Token, nicht beides.",
+    "accountRequired": "Das können nur Personen, keine API-Tokens von Dienstkonten. Melde dich mit deinem eigenen Konto an.",
+    "invalidKind": "Blogbeiträge entstehen im Blog eines Space, Besprechungsserien und Themen bei seinen Besprechungen. Lege den Inhalt dort an.",
+    "invalidNote": "Eine Notiz zur Version darf bis zu 500 Zeichen haben. Kürze sie und versuche es erneut.",
+    "reasonRequired": "Nenne den Grund in 1 bis 500 Zeichen. Er wird im Audit-Log festgehalten.",
+    "invalidTemplateName": "Der Name braucht 1 bis 100 Zeichen. Ändere ihn und speichere erneut.",
+    "invalidTemplateFields": "Jedes Eingabefeld braucht einen eindeutigen Schlüssel, eine Bezeichnung und einen Typ. Ergänze die Felder und speichere erneut.",
+    "unknownTemplateField": "Der Inhalt oder der Titel verwendet ein Eingabefeld, das die Vorlage nicht festlegt. Füge das Feld hinzu oder entferne es aus dem Inhalt.",
+    "invalidTemplateValues": "Fülle jedes Pflichtfeld mit einem gültigen Wert aus und versuche es erneut.",
+    "skipNotConfirmed": "Ohne Token oder Benutzerliste wird jede Person bis zum Hochladen einer Benutzerliste zum Platzhalter. Bestätige das, um fortzufahren.",
+    "invalidAtlassianSite": "Gib die Adresse deiner Confluence-Cloud-Site ein, zum Beispiel example.atlassian.net. Andere Sites muss zuerst die Instanz-Administration erlauben.",
+    "invalidAtlassianEmail": "Gib die E-Mail-Adresse des Atlassian-Kontos ein, das das API-Token erstellt hat.",
+    "invalidAtlassianToken": "Füge das API-Token genau so ein, wie Atlassian es angezeigt hat, ohne Leerzeichen.",
+    "atlassianUnauthorized": "Die E-Mail-Adresse oder das API-Token ist falsch, oder das Token ist abgelaufen. Prüfe beides oder erstelle in deinem Atlassian-Konto ein neues Token.",
+    "userListInvalid": "Pagehall konnte aus dieser Datei keine Personen lesen. Exportiere die Benutzerliste in der Atlassian-Administration als CSV und lade sie unverändert hoch.",
+    "invalidMapping": "Jede Person kann nur einmal zugeordnet werden und nicht sich selbst. Prüfe die gewählten Personen und versuche es erneut.",
+    "invalidMappingTarget": "Wähle ein aktives Mitglied der Organisation. Lade die Person zuerst ein, wenn sie noch kein Konto hat.",
+    "invalidApiToken": "Das Token ist falsch, abgelaufen oder wurde widerrufen. Erstelle ein neues Token und verwende es stattdessen.",
+    "sessionRequired": "API-Tokens können das nicht. Melde dich bei Pagehall an und erledige es dort.",
+    "methodNotAllowed": "Diese Adresse nimmt diese Art von Anfrage nicht an. Lade die Seite neu und versuche es erneut.",
+    "unknownSetupAction": "Der Einrichtungsschritt hat sich vielleicht durch ein Update geändert. Lade die Seite neu und setze die Einrichtung fort.",
+    "peopleSourceMissing": "Wähle, wie Pagehall Personen erkennt: mit einem API-Token, einer Benutzerliste oder ohne, mit Bestätigung. Starte dann den Import.",
+    "importNotResolvable": "Warte, bis der Import abgeschlossen ist, und ordne dann Personen und Gruppen in seinem Bericht zu.",
+    "groupAlreadyMapped": "Jemand hat diese Gruppe inzwischen zugeordnet. Lade die Liste neu.",
+    "userListTooLarge": "Die Benutzerliste darf bis zu 10 MB groß sein. Exportiere nur die Personen dieser Site und lade die kleinere Datei hoch.",
+    "atlassianRateLimited": "Atlassian begrenzt, wie oft Pagehall fragen darf. Warte eine Minute und versuche es erneut.",
+    "atlassianUnreachable": "Pagehall konnte die Personen dieser Confluence-Site nicht lesen. Prüfe die Adresse und versuche es erneut.",
+    "spaceHasMembers": "Solange aktive Mitglieder bleiben, entscheiden nur sie über den Space. Bitte sie, ihn zu löschen.",
+    "confidentialVisibility": "Ein vertraulicher Space ist immer privat. Lass ihn privat oder verschiebe den Inhalt in einen Space, der nicht vertraulich ist.",
+    "confidentialScope": "In einem vertraulichen Space kann ein Link nur mit bestimmten Personen geteilt werden. Wähle sie unter „Wer ihn öffnen kann“.",
+    "seriesEnded": "Hole die Serie aus dem Archiv zurück, um Besprechungen zu planen oder Themen hinzuzufügen.",
+    "meetingClosed": "Jemand hat diese Besprechung inzwischen abgeschlossen. Lade die Seite neu.",
+    "meetingNotClosed": "Jemand hat diese Besprechung inzwischen wieder geöffnet. Lade die Seite neu.",
+    "meetingNotUpcoming": "Nur die anstehende Besprechung kann verschoben oder übersprungen werden. Lade die Seite neu, um den aktuellen Stand zu sehen.",
+    "meetingNotEditable": "Du kannst die Notizen dieser Besprechung nicht bearbeiten. Bitte jemanden, der sie bearbeiten kann.",
+    "nextDateRequired": "Die Serie hat keinen festen Rhythmus. Wähle das Datum der nächsten Besprechung.",
+    "startRequired": "Wähle das neue Datum und die neue Uhrzeit der Besprechung.",
+    "attendeeNotFound": "Die Person wurde inzwischen aus der Besprechung entfernt. Lade die Seite neu.",
+    "invalidMember": "Wähle Personen, die du sehen kannst. In einem vertraulichen Space müssen sie zuerst Mitglieder des Space sein.",
+    "tooManyMembers": "Eine Serie kann bis zu 100 Mitglieder haben. Entferne zuerst einige.",
+    "tooManyAttendees": "Eine Besprechung kann bis zu 200 Teilnehmende haben. Entferne zuerst einige.",
+    "invalidDuration": "Wähle eine Dauer zwischen 5 Minuten und 24 Stunden.",
+    "invalidRhythm": "Wähle mindestens einen Wochentag oder einen Tag im Monat und speichere erneut.",
+    "invalidSchedule": "Gib das erste Datum und eine Uhrzeit wie 09:30 ein.",
+    "invalidSeriesDefaults": "Wähle einen Rhythmus und eine Dauer zwischen 5 Minuten und 24 Stunden.",
+    "topicClosed": "Jemand hat dieses Thema inzwischen abgeschlossen. Lade die Seite neu.",
+    "invalidStatement": "Eine Entscheidung darf bis zu 2.000 Zeichen haben. Kürze sie und versuche es erneut.",
+    "notesNeedAccount": "API-Tokens von Dienstkonten haben keine privaten Notizen. Melde dich mit deinem eigenen Konto an.",
+    "notesTooLarge": "Private Notizen dürfen bis zu 512 KB groß sein. Verschiebe einen Teil an einen anderen Ort und speichere erneut.",
+    "notesChanged": "Deine Notizen wurden in einem anderen Fenster geändert. Lade die neueren Notizen, bevor du weitermachst.",
+    "oneOnOneNeedsAccount": "API-Tokens von Dienstkonten können nicht teilnehmen. Melde dich mit deinem eigenen Konto an.",
+    "noSharedOrganization": "Ein 1:1 braucht eine Organisation, in der ihr beide Mitglied seid. Wähle eine Person aus deiner Organisation.",
+    "notOneOnOne": "Nur bei einem 1:1 lässt sich eine der beiden Personen ändern. Lade die Seite neu.",
+    "notOneOnOneMember": "Nur die Person, die im 1:1 bleibt, kann wählen, wer es fortführt. Bitte sie darum.",
+    "notHeld": "Jemand hat den Blogbeitrag inzwischen freigegeben oder geändert. Lade die Seite neu.",
+    "tooManySavedSearches": "Du hast bereits die höchstens möglichen 100 Suchen gespeichert. Lösche eine, die du nicht mehr brauchst, und speichere dann erneut.",
+    "notPublishMode": "Seiten im Live-Modus zeigen jede Änderung sofort und haben keinen Entwurf. Lade die Seite neu.",
+    "nothingToDiscard": "Der Entwurf entspricht bereits der veröffentlichten Version. Es ist nichts zu ändern.",
+    "draftPending": "Im Live-Modus sehen Leser den Entwurf sofort. Bestätige den Wechsel oder veröffentliche oder verwirf den Entwurf zuerst.",
+    "notArchived": "Jemand hat den Inhalt inzwischen aus dem Archiv zurückgeholt. Lade die Seite neu.",
+    "discardedDraftNotFound": "Der verworfene Entwurf wurde inzwischen wiederhergestellt oder ersetzt. Lade die Seite neu.",
+    "trashEntryNotFound": "Jemand hat den Eintrag inzwischen wiederhergestellt oder gelöscht. Lade den Papierkorb neu.",
+    "templateNotFound": "Die Vorlage wurde inzwischen gelöscht. Lade neu und wähle eine andere Vorlage.",
+    "accountHasOrganization": "Dieses Konto ist bereits Mitglied einer Organisation. Lade die Seite neu.",
+    "unsupportedMediaType": "Pagehall kann diese Art von Datei oder Daten nicht lesen. Wähle eine Datei des erwarteten Typs und versuche es erneut.",
+    "chatAddress": {
+      "notUrl": "Das ist keine vollständige Adresse. Kopiere die ganze Adresse aus dem Chat-Dienst, beginnend mit https://.",
+      "unresolvable": "Pagehall findet diesen Host nicht. Prüfe die Adresse auf Tippfehler und ob dieser Server das Internet erreicht.",
+      "roomAddress": "Gib den Raum so ein, wie Matrix ihn zeigt, zum Beispiel #ops:example.org oder einen matrix.to-Link.",
+      "roomNotFound": "Der Homeserver kennt diesen Raum nicht. Prüfe die Adresse des Raums und ob der Bot in den Raum eingeladen ist.",
+      "unauthorized": "Der Homeserver hat das Zugriffstoken nicht angenommen. Kopiere das Token des Bots erneut.",
+      "unreachable": "Pagehall erreicht den Homeserver nicht. Prüfe seine Adresse und ob dieser Server ihn erreicht."
+    }
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -2319,7 +2399,6 @@
     "markRead": "Als gelesen markieren",
     "unreadLabel": "Ungelesen",
     "none": "Keine Benachrichtigungen",
-    "noneUnread": "Keine ungelesenen Benachrichtigungen",
     "noneDescription": "Hier erscheinen Erinnerungen und Hinweise zu deinen Organisationen.",
     "more": "Mehr anzeigen",
     "times": "{count, plural, one {einmal} other {# Mal}}",
@@ -2462,7 +2541,6 @@
       "digest": "Täglich gesammelt"
     },
     "reset": "Zurücksetzen",
-    "resetEvent": "{event} auf den Standard zurücksetzen",
     "source": {
       "organization": "Standard von {name}",
       "instance": "Standard dieser Instanz",
@@ -2541,7 +2619,10 @@
       "muteDescription": "Du bekommst keine Benachrichtigungen mehr aus {name}, auch nicht zu Änderungen und Kommentaren. Du kannst die Stummschaltung jederzeit aufheben.",
       "keepActionable": "Weiter benachrichtigen bei Erwähnungen, mir zugewiesenen Aufgaben, für mich freigegebenen Seiten und Zugriffsanfragen, über die ich entscheide",
       "muteConfirm": "Stummschalten",
-      "cancel": "Abbrechen"
+      "cancel": "Abbrechen",
+      "menuWatched": "Beobachtungsoptionen für {name}: beobachtet",
+      "menuMuted": "Beobachtungsoptionen für {name}: stummgeschaltet",
+      "menuNotWatched": "Beobachtungsoptionen für {name}: nicht beobachtet"
     },
     "push": {
       "title": "Browser-Push",
@@ -2596,7 +2677,13 @@
       "digestOff": "Du bekommst keine tägliche Zusammenfassung mehr. Benachrichtigungen erscheinen weiter in der App.",
       "settings": "Benachrichtigungseinstellungen ändern",
       "failed": "Die E-Mails konnten nicht abbestellt werden"
-    }
+    },
+    "allRead": "Du hast alles gelesen.",
+    "showAll": "Alle anzeigen",
+    "notWatched": "Nicht beobachtet",
+    "watchAgain": "Wieder beobachten",
+    "watchingAgain": "Du beobachtest {name} wieder.",
+    "resetChannel": "{channel} für {event} auf den geerbten Wert zurücksetzen"
   },
   "mail": {
     "title": "E-Mail",
@@ -6386,7 +6473,8 @@
       "oneDay": "1 Tag vorher",
       "twoDays": "2 Tage vorher",
       "oneWeek": "1 Woche vorher"
-    }
+    },
+    "inactive": "Inaktiv"
   },
   "confidential": {
     "badge": "Vertraulich",
@@ -7521,7 +7609,7 @@
     "title": "Suche",
     "titleWithQuery": "Suche: {query}",
     "field": "Suchbegriff",
-    "placeholder": "Seiten, Blogbeiträge, Kommentare, Anhänge und Besprechungsthemen durchsuchen, zum Beispiel vpn -legacy",
+    "placeholder": "Seiten, Blogbeiträge, Kommentare, Anhänge und Besprechungen durchsuchen",
     "submit": "Suchen",
     "results": "Ergebnisse",
     "total": "{count, plural, one {# Ergebnis} other {# Ergebnisse}}",
@@ -7638,7 +7726,7 @@
       "filtersHint": "Die Filter tun dasselbe, ohne dass du etwas tippen musst."
     },
     "firstUse": {
-      "title": "Seiten, Blogbeiträge und Kommentare durchsuchen",
+      "title": "Seiten, Blogbeiträge, Kommentare, Anhänge und Besprechungen durchsuchen",
       "description": "Die Ergebnisse enthalten nur Inhalte, die du lesen darfst. Grenze sie mit Filtern ein und speichere Suchen, die du oft brauchst."
     },
     "recent": {
@@ -7684,10 +7772,10 @@
     "textRequired": "Gib den Text des Banners ein.",
     "textTooLong": "Der Text darf höchstens {max} Zeichen haben.",
     "linkUrl": "Link-Adresse",
-    "linkUrlHint": "Optional, beginnend mit https:// oder http://.",
+    "linkUrlHint": "Optional, zum Beispiel wiki.example.org/maintenance. Pagehall ergänzt https://, wenn es fehlt.",
     "linkLabel": "Link-Text",
     "linkLabelExample": "Zum Beispiel: Zum Beitrag",
-    "linkInvalid": "Gib eine vollständige Adresse ein, die mit https:// oder http:// beginnt.",
+    "linkInvalid": "Gib eine Webadresse ein, zum Beispiel wiki.example.org/maintenance.",
     "linkMissing": "Gib die Adresse des Links ein oder entferne den Link-Text.",
     "linkLabelMissing": "Gib den Text des Links ein oder entferne die Adresse.",
     "linkLabelTooLong": "Der Link-Text darf höchstens {max} Zeichen haben.",
@@ -7742,8 +7830,8 @@
     "noMatch": "Kein passender Inhalt",
     "hiddenTargetKept": "Der bisherige Inhalt bleibt, außer du wählst einen anderen.",
     "url": "Adresse",
-    "urlHint": "Beginnend mit https:// oder http://.",
-    "urlInvalid": "Gib eine vollständige Adresse ein, die mit https:// oder http:// beginnt.",
+    "urlHint": "Zum Beispiel status.example.org. Pagehall ergänzt https://, wenn es fehlt.",
+    "urlInvalid": "Gib eine Webadresse ein, zum Beispiel status.example.org.",
     "label": "Bezeichnung",
     "labelHint": "Wird in der Seitenleiste angezeigt, höchstens {max} Zeichen. Leer verwendet den Titel des Inhalts.",
     "labelExample": "Zum Beispiel: Bereitschaftsplan",
@@ -7767,7 +7855,8 @@
     "removed": "Verknüpfung „{label}“ entfernt.",
     "removeFailed": "Die Verknüpfung konnte nicht entfernt werden. Prüfe deine Verbindung und versuche es noch einmal.",
     "restoreFailed": "Die Verknüpfung konnte nicht wiederhergestellt werden. Füge sie erneut hinzu.",
-    "reorderFailed": "Die Reihenfolge konnte nicht gespeichert werden. Prüfe deine Verbindung und versuche es noch einmal."
+    "reorderFailed": "Die Reihenfolge konnte nicht gespeichert werden. Prüfe deine Verbindung und versuche es noch einmal.",
+    "labelHintWebsite": "Wird in der Seitenleiste angezeigt, höchstens {max} Zeichen."
   },
   "chatChannels": {
     "title": "Chat-Kanäle",
@@ -7832,7 +7921,7 @@
       },
       "matrix": {
         "1": "Lege auf deinem Homeserver ein Bot-Konto an und lade es in den Raum ein.",
-        "2": "Kopiere in den Raumeinstellungen die Raum-ID.",
+        "2": "Kopiere in den Raumeinstellungen die Adresse des Raums oder seinen matrix.to-Link.",
         "3": "Melde dich als Bot an und kopiere sein Zugriffstoken."
       },
       "discord": {
@@ -7846,7 +7935,7 @@
     },
     "homeserver": "Adresse des Homeservers",
     "homeserverHint": "Zum Beispiel https://matrix.example.org.",
-    "roomId": "Raum-ID",
+    "roomId": "Raum",
     "accessToken": "Zugriffstoken des Bots",
     "address": "Webhook-Adresse",
     "secretHint": "Verschlüsselt gespeichert. Nach dem Speichern nie wieder angezeigt.",
@@ -7858,7 +7947,7 @@
     "newSecret": "Neues Signatur-Secret erstellen",
     "newSecretDescription": "Das bisherige Secret gilt nach dem Speichern nicht mehr. Das neue wird einmal angezeigt.",
     "homeserverInvalid": "Gib die Adresse des Homeservers ein, beginnend mit https://.",
-    "roomIdInvalid": "Gib die Raum-ID ein, zum Beispiel !abc123:example.org.",
+    "roomIdInvalid": "Gib den Raum ein, zum Beispiel #ops:example.org.",
     "tokenRequired": "Gib das Zugriffstoken des Bots ein.",
     "addressInvalid": "Gib die Webhook-Adresse ein, beginnend mit https://.",
     "nameRequired": "Gib einen Namen ein.",
@@ -7900,6 +7989,11 @@
       "unreachable": "Pagehall konnte {service} nicht erreichen. Prüfe die Adresse und ob dieser Server das Internet erreicht, und sende dann eine Testnachricht.",
       "blockedAddress": "Die Adresse zeigt in ein privates Netz. Verwende eine öffentliche Adresse oder bitte die Instanz-Administration, dieses Netz zu erlauben.",
       "insecureAddress": "Die Adresse muss mit https:// beginnen."
-    }
+    },
+    "testNotDelivered": "Die Testnachricht wurde nicht zugestellt",
+    "roomIdHint": "So wie dein Matrix-Client ihn zeigt, zum Beispiel #ops:example.org oder ein matrix.to-Link.",
+    "notTested": "Noch nicht getestet",
+    "lastTestFailed": "Letzter Test fehlgeschlagen",
+    "testFailedAt": "letzter Test fehlgeschlagen {time}"
   }
 }

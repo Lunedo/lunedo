@@ -1,5 +1,5 @@
-import { ErrorState, useToast } from "@pagehall/ui";
-import { useCallback } from "react";
+import { ErrorState, Notice, useToast } from "@pagehall/ui";
+import { useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { ApiError } from "../api/request.js";
 import { problemMessage } from "./problem-message.js";
@@ -46,6 +46,21 @@ export function FailureNotice({
       cause={problemMessage(t, error)}
       {...(onRetry && isRetryable(error) ? { onRetry } : {})}
     />
+  );
+}
+
+export function ActionFailure({ title, message }: { title: string; message: string }) {
+  const notice = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!message) return;
+    notice.current?.focus();
+  }, [message]);
+  return (
+    <div ref={notice} tabIndex={-1} className="rounded-md focus-visible:focus-ring">
+      <Notice variant="danger" title={title}>
+        {message}
+      </Notice>
+    </div>
   );
 }
 

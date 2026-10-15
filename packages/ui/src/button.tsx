@@ -3,6 +3,7 @@ import { LoaderCircle } from "lucide-react";
 import { Slot } from "radix-ui";
 import type { ComponentProps, ReactNode } from "react";
 import { classNames } from "./class-names.js";
+import { HIT_AREA, WIDE_HIT_AREA } from "./hit-area.js";
 import { Icon } from "./icon.js";
 import { useUiLabels } from "./labels.js";
 import { Tooltip } from "./tooltip.js";
@@ -12,9 +13,6 @@ export type ButtonSize = "sm" | "md" | "lg";
 
 const BASE =
   "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md border font-medium transition-colors focus-visible:focus-ring disabled:cursor-not-allowed disabled:border-dashed disabled:border-control-border disabled:bg-surface-sunken disabled:text-text-muted aria-busy:cursor-progress motion-reduce:transition-none";
-
-const HIT_AREA =
-  "after:absolute after:top-1/2 after:left-1/2 after:size-hit after:-translate-x-1/2 after:-translate-y-1/2";
 
 const VARIANTS: Record<ButtonVariant, string> = {
   primary:
@@ -42,7 +40,7 @@ export function buttonClassName({
   block?: boolean;
   className?: string | undefined;
 }): string {
-  return classNames(BASE, VARIANTS[variant], SIZES[size], block && "w-full", className);
+  return classNames(BASE, WIDE_HIT_AREA, VARIANTS[variant], SIZES[size], block && "w-full", className);
 }
 
 export interface ButtonProps extends ComponentProps<"button"> {
@@ -153,7 +151,7 @@ export function IconButton({
     <button
       type={type}
       aria-label={label}
-      className={classNames(BASE, "relative", HIT_AREA, ICON_VARIANTS[variant], ICON_SIZES[size], className)}
+      className={classNames(BASE, HIT_AREA, ICON_VARIANTS[variant], ICON_SIZES[size], className)}
       {...props}
     >
       <Icon icon={icon} size={size === "lg" ? "lg" : "md"} />

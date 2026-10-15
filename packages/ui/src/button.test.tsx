@@ -96,3 +96,17 @@ describe("IconButton", () => {
     expect(screen.getByRole("button", { name: "More" }).className).toContain("after:size-hit");
   });
 });
+
+describe("Button hit area", () => {
+  it("extends small buttons to the minimum target height and width", () => {
+    renderUi(
+      <Button size="sm" variant="secondary">
+        Mark all as read
+      </Button>,
+    );
+    const button = screen.getByRole("button", { name: "Mark all as read" });
+    expect(button.className).toContain("h-control-sm");
+    expect(button.className).toContain("after:h-hit");
+    expect(button.className).toContain("after:min-w-hit");
+  });
+});

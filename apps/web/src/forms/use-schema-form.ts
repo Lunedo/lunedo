@@ -1,4 +1,5 @@
 import { toNestErrors } from "@hookform/resolvers";
+import type { TFunction } from "i18next";
 import { useCallback, useEffect, useRef } from "react";
 import {
   type DefaultValues,
@@ -11,7 +12,8 @@ import {
 } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import type { z } from "zod";
-import { isApiError } from "../api/request.js";
+import { ApiError } from "../api/request.js";
+import { problemMessage } from "../errors/problem-message.js";
 import { type FieldMessages, issueMessage, issuePath } from "./validation.js";
 
 export function schemaResolver<TInput extends FieldValues, TOutput>(
@@ -69,18 +71,24 @@ export function submitWith<T>(handler: (event?: T) => Promise<void>): (event: T)
   };
 }
 
+export function serverFieldErrors(t: TFunction, error: unknown): Record<string, string> {
+  if (!(error instanceof ApiError) || error.fields.length === 0) return {};
+  const message = error.code === "invalidInput" ? t("validation.invalid") : problemMessage(t, error);
+  return Object.fromEntries(
+    error.fields.map((field) => [field.replace(/^(body|query|params)\./, ""), message] as const),
+  );
+}
+
 export function applyServerFieldErrors<TInput extends FieldValues>(
   form: UseFormReturn<TInput, unknown, unknown>,
+  t: TFunction,
   error: unknown,
-  message: string,
 ): boolean {
-  if (!isApiError(error, "invalidInput") || error.fields.length === 0) return false;
   const names = Object.keys(form.getValues());
   let applied = false;
-  for (const field of error.fields) {
-    const path = field.replace(/^(body|query|params)\./, "");
+  for (const [path, message] of Object.entries(serverFieldErrors(t, error))) {
     if (names.includes(path.split(".")[0] ?? "")) {
-      form.setError(path as Path<TInput>, { type: "server", message });
+      form.setError(path as Path<TInput>, { type: "server", message }, { shouldFocus: !applied });
       applied = true;
     }
   }

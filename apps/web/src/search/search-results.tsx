@@ -105,7 +105,11 @@ export function SearchResult({ hit }: { hit: SearchHit }) {
   const title = hitTitle(t, hit);
   const target = hitTarget(hit);
   return (
-    <article className="flex gap-3 border-b border-border py-4">
+    <article
+      data-search-result=""
+      tabIndex={-1}
+      className="flex gap-3 border-b border-border py-4 outline-none"
+    >
       <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-surface-sunken text-text-muted">
         <Icon aria-hidden="true" className="size-icon" />
       </span>

@@ -2,6 +2,7 @@ import {
   Button,
   Drawer,
   EmptyState,
+  focusWhenShown,
   IconButton,
   Notice,
   PageHeader,
@@ -13,7 +14,7 @@ import {
 import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
 import { CircleHelp, Clock, Search, SearchX, SlidersHorizontal, X } from "lucide-react";
-import { type FormEvent, type ReactNode, useEffect, useState } from "react";
+import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
@@ -120,6 +121,16 @@ export function SearchScreen() {
     show(trimmed, filters);
   };
 
+  const list = useRef<HTMLDivElement>(null);
+  const loadMore = async () => {
+    const before = list.current?.querySelectorAll("[data-search-result]").length ?? 0;
+    await results.fetchNextPage();
+    focusWhenShown(() => {
+      const added = list.current?.querySelectorAll<HTMLElement>("[data-search-result]")[before];
+      return added?.querySelector<HTMLElement>("h3 a") ?? added;
+    });
+  };
+
   const first = results.data?.pages[0];
   const hits = results.data?.pages.flatMap((page) => page.results) ?? [];
   const count = activeFilterCount(filters);
@@ -155,6 +166,7 @@ export function SearchScreen() {
               type="search"
               aria-label={t("search.field")}
               placeholder={t("search.placeholder")}
+              title={t("search.placeholder")}
               value={text}
               onChange={(event) => setText(event.target.value)}
               className="h-control-lg w-full rounded-md border border-control-border bg-control pr-3 pl-10 text-content text-text placeholder:text-text-muted focus-visible:focus-ring"
@@ -218,7 +230,10 @@ export function SearchScreen() {
             />
           ) : (
             <>
-              <div className={results.isPlaceholderData ? "opacity-60 transition-opacity" : undefined}>
+              <div
+                ref={list}
+                className={results.isPlaceholderData ? "opacity-60 transition-opacity" : undefined}
+              >
                 {hits.map((hit) => (
                   <SearchResult key={`${hit.type}:${hit.id}`} hit={hit} />
                 ))}
@@ -234,7 +249,7 @@ export function SearchScreen() {
               ) : null}
               {results.hasNextPage ? (
                 <div className="flex justify-center pt-4">
-                  <Button loading={results.isFetchingNextPage} onClick={() => void results.fetchNextPage()}>
+                  <Button loading={results.isFetchingNextPage} onClick={() => void loadMore()}>
                     {t("search.loadMore")}
                   </Button>
                 </div>

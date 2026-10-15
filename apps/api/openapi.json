@@ -114363,14 +114363,19 @@
                               "null"
                             ]
                           },
+                          "active": {
+                            "type": "boolean",
+                            "description": "Whether the person can still take part: false when the account is deactivated, not set up yet or no longer a member of the organization. Always true for people the caller may not see."
+                          },
                           "canRead": {
                             "type": "boolean",
-                            "description": "Whether the person can read the series. Members without access are shown with a warning."
+                            "description": "Whether the person can read the series. Active members without access are shown with a warning."
                           }
                         },
                         "required": [
                           "id",
                           "name",
+                          "active",
                           "canRead"
                         ],
                         "additionalProperties": false,
@@ -114653,6 +114658,7 @@
                     {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                       "name": "Anna Berger",
+                      "active": true,
                       "canRead": true
                     }
                   ],
@@ -115058,14 +115064,19 @@
                               "null"
                             ]
                           },
+                          "active": {
+                            "type": "boolean",
+                            "description": "Whether the person can still take part: false when the account is deactivated, not set up yet or no longer a member of the organization. Always true for people the caller may not see."
+                          },
                           "canRead": {
                             "type": "boolean",
-                            "description": "Whether the person can read the series. Members without access are shown with a warning."
+                            "description": "Whether the person can read the series. Active members without access are shown with a warning."
                           }
                         },
                         "required": [
                           "id",
                           "name",
+                          "active",
                           "canRead"
                         ],
                         "additionalProperties": false,
@@ -115348,6 +115359,7 @@
                     {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                       "name": "Anna Berger",
+                      "active": true,
                       "canRead": true
                     }
                   ],
@@ -117920,6 +117932,10 @@
                               "null"
                             ]
                           },
+                          "active": {
+                            "type": "boolean",
+                            "description": "Whether the person can still take part: false when the account is deactivated, not set up yet or no longer a member of the organization. Always true for people the caller may not see."
+                          },
                           "canRead": {
                             "type": "boolean",
                             "description": "Whether the person can read the meeting page."
@@ -117930,6 +117946,7 @@
                           "name",
                           "attendance",
                           "member",
+                          "active",
                           "canRead"
                         ],
                         "additionalProperties": false,
@@ -117987,6 +118004,7 @@
                       "name": "Anna Berger",
                       "attendance": "present",
                       "member": true,
+                      "active": true,
                       "canRead": true
                     }
                   ],
@@ -127836,7 +127854,7 @@
                                   "at": {
                                     "type": "string",
                                     "format": "date-time",
-                                    "description": "When the channel started failing. ISO 8601 timestamp in UTC."
+                                    "description": "When the channel started failing or the last test failed. ISO 8601 timestamp in UTC."
                                   }
                                 },
                                 "required": [
@@ -127851,7 +127869,7 @@
                                 "type": "null"
                               }
                             ],
-                            "description": "Why the channel is failing, or null."
+                            "description": "Why the channel is failing, or, while it is `working`, why the last test failed. Null once a message was accepted again."
                           },
                           "lastAttemptAt": {
                             "anyOf": [
@@ -128151,7 +128169,7 @@
                             "type": "string",
                             "minLength": 1,
                             "maxLength": 500,
-                            "description": "Room ID, for example `!abc:example.org`."
+                            "description": "Room as people see it in their client: an alias such as `#ops:example.org`, a matrix.to link or a room ID such as `!abc:example.org`. Aliases and links are resolved to the room ID when saving."
                           },
                           "accessToken": {
                             "type": "string",
@@ -128291,7 +128309,7 @@
                                 "at": {
                                   "type": "string",
                                   "format": "date-time",
-                                  "description": "When the channel started failing. ISO 8601 timestamp in UTC."
+                                  "description": "When the channel started failing or the last test failed. ISO 8601 timestamp in UTC."
                                 }
                               },
                               "required": [
@@ -128306,7 +128324,7 @@
                               "type": "null"
                             }
                           ],
-                          "description": "Why the channel is failing, or null."
+                          "description": "Why the channel is failing, or, while it is `working`, why the last test failed. Null once a message was accepted again."
                         },
                         "lastAttemptAt": {
                           "anyOf": [
@@ -128853,7 +128871,7 @@
                             "type": "string",
                             "minLength": 1,
                             "maxLength": 500,
-                            "description": "Room ID, for example `!abc:example.org`."
+                            "description": "Room as people see it in their client: an alias such as `#ops:example.org`, a matrix.to link or a room ID such as `!abc:example.org`. Aliases and links are resolved to the room ID when saving."
                           },
                           "accessToken": {
                             "type": "string",
@@ -128983,7 +129001,7 @@
                                 "at": {
                                   "type": "string",
                                   "format": "date-time",
-                                  "description": "When the channel started failing. ISO 8601 timestamp in UTC."
+                                  "description": "When the channel started failing or the last test failed. ISO 8601 timestamp in UTC."
                                 }
                               },
                               "required": [
@@ -128998,7 +129016,7 @@
                               "type": "null"
                             }
                           ],
-                          "description": "Why the channel is failing, or null."
+                          "description": "Why the channel is failing, or, while it is `working`, why the last test failed. Null once a message was accepted again."
                         },
                         "lastAttemptAt": {
                           "anyOf": [
@@ -129627,7 +129645,7 @@
                             "type": "string",
                             "minLength": 1,
                             "maxLength": 500,
-                            "description": "Room ID, for example `!abc:example.org`."
+                            "description": "Room as people see it in their client: an alias such as `#ops:example.org`, a matrix.to link or a room ID such as `!abc:example.org`. Aliases and links are resolved to the room ID when saving."
                           },
                           "accessToken": {
                             "type": "string",
@@ -178288,7 +178306,7 @@
                                   "at": {
                                     "type": "string",
                                     "format": "date-time",
-                                    "description": "When the channel started failing. ISO 8601 timestamp in UTC."
+                                    "description": "When the channel started failing or the last test failed. ISO 8601 timestamp in UTC."
                                   }
                                 },
                                 "required": [
@@ -178303,7 +178321,7 @@
                                 "type": "null"
                               }
                             ],
-                            "description": "Why the channel is failing, or null."
+                            "description": "Why the channel is failing, or, while it is `working`, why the last test failed. Null once a message was accepted again."
                           },
                           "lastAttemptAt": {
                             "anyOf": [
@@ -178603,7 +178621,7 @@
                             "type": "string",
                             "minLength": 1,
                             "maxLength": 500,
-                            "description": "Room ID, for example `!abc:example.org`."
+                            "description": "Room as people see it in their client: an alias such as `#ops:example.org`, a matrix.to link or a room ID such as `!abc:example.org`. Aliases and links are resolved to the room ID when saving."
                           },
                           "accessToken": {
                             "type": "string",
@@ -178745,7 +178763,7 @@
                                 "at": {
                                   "type": "string",
                                   "format": "date-time",
-                                  "description": "When the channel started failing. ISO 8601 timestamp in UTC."
+                                  "description": "When the channel started failing or the last test failed. ISO 8601 timestamp in UTC."
                                 }
                               },
                               "required": [
@@ -178760,7 +178778,7 @@
                               "type": "null"
                             }
                           ],
-                          "description": "Why the channel is failing, or null."
+                          "description": "Why the channel is failing, or, while it is `working`, why the last test failed. Null once a message was accepted again."
                         },
                         "lastAttemptAt": {
                           "anyOf": [
@@ -179307,7 +179325,7 @@
                             "type": "string",
                             "minLength": 1,
                             "maxLength": 500,
-                            "description": "Room ID, for example `!abc:example.org`."
+                            "description": "Room as people see it in their client: an alias such as `#ops:example.org`, a matrix.to link or a room ID such as `!abc:example.org`. Aliases and links are resolved to the room ID when saving."
                           },
                           "accessToken": {
                             "type": "string",
@@ -179440,7 +179458,7 @@
                                 "at": {
                                   "type": "string",
                                   "format": "date-time",
-                                  "description": "When the channel started failing. ISO 8601 timestamp in UTC."
+                                  "description": "When the channel started failing or the last test failed. ISO 8601 timestamp in UTC."
                                 }
                               },
                               "required": [
@@ -179455,7 +179473,7 @@
                               "type": "null"
                             }
                           ],
-                          "description": "Why the channel is failing, or null."
+                          "description": "Why the channel is failing, or, while it is `working`, why the last test failed. Null once a message was accepted again."
                         },
                         "lastAttemptAt": {
                           "anyOf": [
@@ -180104,7 +180122,7 @@
                             "type": "string",
                             "minLength": 1,
                             "maxLength": 500,
-                            "description": "Room ID, for example `!abc:example.org`."
+                            "description": "Room as people see it in their client: an alias such as `#ops:example.org`, a matrix.to link or a room ID such as `!abc:example.org`. Aliases and links are resolved to the room ID when saving."
                           },
                           "accessToken": {
                             "type": "string",
@@ -185556,14 +185574,19 @@
                               "null"
                             ]
                           },
+                          "active": {
+                            "type": "boolean",
+                            "description": "Whether the person can still take part: false when the account is deactivated, not set up yet or no longer a member of the organization. Always true for people the caller may not see."
+                          },
                           "canRead": {
                             "type": "boolean",
-                            "description": "Whether the person can read the series. Members without access are shown with a warning."
+                            "description": "Whether the person can read the series. Active members without access are shown with a warning."
                           }
                         },
                         "required": [
                           "id",
                           "name",
+                          "active",
                           "canRead"
                         ],
                         "additionalProperties": false,
@@ -185846,6 +185869,7 @@
                     {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                       "name": "Anna Berger",
+                      "active": true,
                       "canRead": true
                     }
                   ],
@@ -200967,7 +200991,7 @@
             "description": "The last part of `type`, for clients that prefer a short key."
           },
           "fields": {
-            "description": "Invalid fields, for `invalidInput`.",
+            "description": "Invalid fields, for `invalidInput` and the codes about the address of a chat channel.",
             "type": "array",
             "items": {
               "type": "string",
@@ -200989,7 +201013,7 @@
             "maximum": 9007199254740991
           },
           "problem": {
-            "description": "Which password rule failed, for `passwordPolicy`.",
+            "description": "Which password rule failed, for `passwordPolicy`; why the address of a chat channel was refused, for `invalidChatAddress`.",
             "type": "string"
           },
           "minLength": {

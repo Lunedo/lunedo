@@ -105,6 +105,7 @@ export {
   highlightParts,
   type MatchRange,
 } from "./fuzzy.js";
+export { HIT_AREA, WIDE_HIT_AREA } from "./hit-area.js";
 export { Icon, type IconSize } from "./icon.js";
 export { type UiLabels, UiProvider, useUiLabels } from "./labels.js";
 export {
@@ -139,7 +140,7 @@ export {
   type RailLinkProps,
   type RailProps,
 } from "./rail.js";
-export { focusMainHeading, mainHeading } from "./return-focus.js";
+export { focusMainHeading, focusWhenShown, mainHeading, useOpener } from "./return-focus.js";
 export {
   ScrollArea,
   type ScrollAreaProps,

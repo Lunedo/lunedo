@@ -33,4 +33,8 @@
     outline: var(--ph-focus-width) solid var(--ph-color-accent);
     outline-offset: var(--ph-focus-offset);
   }
+
+  [data-quiet-focus]:focus-visible {
+    outline: none;
+  }
 }

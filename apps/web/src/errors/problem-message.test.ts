@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { ApiError } from "../api/request.js";
 import { initI18n } from "../i18n/index.js";
@@ -24,6 +26,28 @@ describe("messages for refused shares", () => {
     );
     expect(problemMessage(t, problem("ownShare"))).toBe(
       "You cannot change access that you hold yourself or through one of your groups. Ask someone else who can share the page.",
+    );
+  });
+});
+
+describe("problem texts", () => {
+  it("exist in every language for every problem the API can answer with", async () => {
+    const source = readFileSync(path.resolve("../api/src/http/problems.ts"), "utf8");
+    const codes = [...source.matchAll(/^ {2}(\w+): \{ status/gm)].map((match) => match[1] ?? "");
+    expect(codes.length).toBeGreaterThan(200);
+    for (const language of ["en", "de"]) {
+      const { t } = await initI18n([language]);
+      const missing = codes.filter(
+        (code) => problemMessage(t, problem(code)) === problemMessage(t, problem("unknownCode")),
+      );
+      expect(missing, language).toEqual([]);
+    }
+  });
+
+  it("explain why a chat address was refused instead of reporting an unexpected answer", async () => {
+    const { t } = await initI18n(["en"]);
+    expect(problemMessage(t, problem("chatAddressBlocked"))).toBe(
+      "The address points to a private network. Use a public address, or ask your instance administrators to allow this network.",
     );
   });
 });

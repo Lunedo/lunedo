@@ -172,8 +172,7 @@ function OwnerForm({ back, onSaved }: { back: StepProps<"owner">["back"]; onSave
       });
       await onSaved();
     } catch (failure) {
-      if (!applyServerFieldErrors(form, failure, t("validation.invalid")))
-        setError(problemMessage(t, failure));
+      if (!applyServerFieldErrors(form, t, failure)) setError(problemMessage(t, failure));
     }
   });
   return (

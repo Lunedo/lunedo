@@ -9,7 +9,6 @@ import {
   Field,
   focusFirstInvalidSoon,
   Icon,
-  Notice,
   Popover,
   useToast,
 } from "@pagehall/ui";
@@ -19,6 +18,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { request } from "../../api/request.js";
+import { ActionFailure } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { spaceKeys } from "../space-queries.js";
 import { ownershipKeys } from "./ownership-queries.js";
@@ -119,7 +119,7 @@ export function OwnerLine({
       </span>
       {owner && !owner.active ? <Badge variant="warning">{t("ownership.ownerLeft")}</Badge> : null}
       {transferable ? (
-        <>
+        <span data-owner-action="" className="inline-flex items-center gap-2 whitespace-nowrap">
           <span aria-hidden="true">·</span>
           <button
             type="button"
@@ -128,7 +128,7 @@ export function OwnerLine({
           >
             {owner ? t("ownership.transfer") : t("ownership.assign")}
           </button>
-        </>
+        </span>
       ) : null}
       {transferring ? (
         <TransferOwnerDialog
@@ -214,11 +214,7 @@ export function TransferOwnerDialog({
       size="md"
     >
       <div className="flex flex-col gap-4">
-        {error ? (
-          <Notice variant="danger" title={t("ownership.transferFailed")}>
-            {error}
-          </Notice>
-        ) : null}
+        {error ? <ActionFailure title={t("ownership.transferFailed")} message={error} /> : null}
         <Field
           label={t("ownership.newOwner")}
           hint={t("ownership.newOwnerHint")}

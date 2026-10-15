@@ -9,6 +9,7 @@ import {
   splitDuration,
 } from "./duration.js";
 import { controlClassName, OutsideField, useFieldControl } from "./field.js";
+import { WIDE_HIT_AREA } from "./hit-area.js";
 import { useUiLabels } from "./labels.js";
 
 export interface DurationInputProps {
@@ -134,7 +135,10 @@ export function DurationInput({
                 aria-pressed={current === choice}
                 {...(disabled !== undefined ? { disabled } : {})}
                 onClick={() => change(String(parts.amount), parts.unit, true)}
-                className="h-control-sm rounded-sm border border-border bg-surface px-2 text-sm text-text hover:bg-hover focus-visible:focus-ring disabled:cursor-not-allowed disabled:border-dashed disabled:bg-surface-sunken disabled:text-text-muted aria-pressed:border-accent aria-pressed:bg-accent-soft"
+                className={classNames(
+                  WIDE_HIT_AREA,
+                  "h-control-sm rounded-sm border border-border bg-surface px-2 text-sm text-text hover:bg-hover focus-visible:focus-ring disabled:cursor-not-allowed disabled:border-dashed disabled:bg-surface-sunken disabled:text-text-muted aria-pressed:border-accent aria-pressed:bg-accent-soft",
+                )}
               >
                 {formatDuration(choice, locale)}
               </button>

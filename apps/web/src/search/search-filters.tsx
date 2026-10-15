@@ -143,7 +143,9 @@ export function SearchFilterPanel({
             label={
               <span className="flex items-baseline gap-2">
                 {typeLabel(t, type)}
-                <span className="text-sm text-text-muted tabular-nums">{typeCounts.get(type) ?? 0}</span>
+                {facets ? (
+                  <span className="text-sm text-text-muted tabular-nums">{typeCounts.get(type) ?? 0}</span>
+                ) : null}
               </span>
             }
           />
@@ -166,9 +168,11 @@ export function SearchFilterPanel({
               label: (
                 <span className="flex items-baseline gap-2">
                   {rangeLabel(range)}
-                  <span className="text-sm text-text-muted tabular-nums">
-                    {updatedCounts.get(range) ?? 0}
-                  </span>
+                  {facets ? (
+                    <span className="text-sm text-text-muted tabular-nums">
+                      {updatedCounts.get(range) ?? 0}
+                    </span>
+                  ) : null}
                 </span>
               ),
             })),
