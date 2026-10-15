@@ -22,6 +22,8 @@ import { request } from "../../api/request.js";
 import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { instantToZoned, zonedToInstant } from "../../format/zoned.js";
+import { completeWebAddress, isWebAddress } from "../../forms/addresses.js";
+import { serverFieldErrors } from "../../forms/use-schema-form.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { AnnouncementBanner, announcementKeys } from "../../shell/announcement-banners.js";
 
@@ -54,6 +56,14 @@ interface Draft {
 
 type Errors = Partial<Record<"text" | "linkUrl" | "linkLabel" | "start" | "end", string>>;
 
+const SERVER_FIELDS: Record<string, keyof Errors> = {
+  text: "text",
+  "link.url": "linkUrl",
+  "link.label": "linkLabel",
+  startsAt: "start",
+  endsAt: "end",
+};
+
 function draftOf(saved: Saved | null, timeZone: string): Draft {
   if (!saved) {
     const end = instantToZoned(new Date(Date.now() + 7 * DAY), timeZone);
@@ -82,15 +92,6 @@ function draftOf(saved: Saved | null, timeZone: string): Draft {
   };
 }
 
-function isWebAddress(value: string): boolean {
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" || url.protocol === "http:";
-  } catch {
-    return false;
-  }
-}
-
 export function validateAnnouncement(
   draft: Draft,
   timeZone: string,
@@ -101,7 +102,7 @@ export function validateAnnouncement(
   const text = draft.text.replace(/\s+/g, " ").trim();
   if (text.length === 0) errors.text = t("announcements.textRequired");
   else if (text.length > TEXT_MAX) errors.text = t("announcements.textTooLong", { max: TEXT_MAX });
-  const url = draft.linkUrl.trim();
+  const url = completeWebAddress(draft.linkUrl);
   const label = draft.linkLabel.trim();
   if (url && !isWebAddress(url)) errors.linkUrl = t("announcements.linkInvalid");
   if (label && !url) errors.linkUrl = t("announcements.linkMissing");
@@ -244,14 +245,25 @@ function AnnouncementForm({
       await put({
         severity: draft.severity,
         text: draft.text.trim(),
-        link: draft.linkUrl.trim() ? { url: draft.linkUrl.trim(), label: draft.linkLabel.trim() } : null,
+        link: draft.linkUrl.trim()
+          ? { url: completeWebAddress(draft.linkUrl), label: draft.linkLabel.trim() }
+          : null,
         startsAt: checked.startsAt?.toISOString() ?? null,
         endsAt: checked.endsAt.toISOString(),
       });
       toast({ variant: "success", title: t("announcements.saved") });
       await refresh();
     } catch (error) {
-      setFailure(problemMessage(t, error));
+      const fields = Object.entries(serverFieldErrors(t, error)).flatMap(([path, message]) => {
+        const field = SERVER_FIELDS[path];
+        return field ? [[field, message] as const] : [];
+      });
+      if (fields.length > 0) {
+        setErrors(Object.fromEntries(fields));
+        focusFirstInvalidSoon(form.current ?? undefined);
+      } else {
+        setFailure(problemMessage(t, error));
+      }
     } finally {
       setBusy(false);
     }
@@ -393,6 +405,9 @@ function AnnouncementForm({
                 value={draft.linkUrl}
                 readOnly={!editable}
                 onChange={(event) => update({ linkUrl: event.target.value })}
+                onBlur={() => {
+                  if (editable) update({ linkUrl: completeWebAddress(draft.linkUrl) });
+                }}
               />
             </Field>
             <Field label={t("announcements.linkLabel")} error={errors.linkLabel}>

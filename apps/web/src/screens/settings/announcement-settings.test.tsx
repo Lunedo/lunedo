@@ -41,7 +41,7 @@ describe("announcement validation", () => {
     const now = Date.parse("2026-10-14T08:00:00.000Z");
     expect(validateAnnouncement(draft, "UTC", now, t).errors).toEqual({
       text: "Enter the text of the banner.",
-      linkUrl: "Enter a complete address starting with https:// or http://.",
+      linkUrl: "Enter a web address, for example wiki.example.org/maintenance.",
       linkLabel: "Enter the text of the link, or remove the address.",
       end: "Choose an end after the start.",
     });
@@ -54,7 +54,7 @@ describe("announcement validation", () => {
       ).errors,
     ).toEqual({ end: "Choose an end in the future." });
     const linked = validateAnnouncement(
-      { ...draft, text: "Maintenance", linkUrl: "https://status.example.org", linkLabel: "Status" },
+      { ...draft, text: "Maintenance", linkUrl: "wiki.example.org/maintenance", linkLabel: "Read the plan" },
       "UTC",
       now,
       t,

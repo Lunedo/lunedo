@@ -162,8 +162,7 @@ function CreateServiceAccountDialog({
         params: { organizationId, serviceAccountId: created.id },
       });
     } catch (failure) {
-      if (!applyServerFieldErrors(form, failure, t("validation.invalid")))
-        setError(problemMessage(t, failure));
+      if (!applyServerFieldErrors(form, t, failure)) setError(problemMessage(t, failure));
     }
   });
   return (

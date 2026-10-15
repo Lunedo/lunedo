@@ -389,8 +389,7 @@ export function RoleEditorDialog({
     try {
       await onSave({ name: input.name, areas });
     } catch (failure) {
-      if (!applyServerFieldErrors(form, failure, t("validation.invalid")))
-        setError(problemMessage(t, failure));
+      if (!applyServerFieldErrors(form, t, failure)) setError(problemMessage(t, failure));
     }
   });
   return (
