@@ -25,7 +25,7 @@ function channel(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function panel(props: { unavailable?: string } = {}) {
+function panel(props: { unavailable?: string; secondaryAction?: boolean } = {}) {
   return (
     <PreferencesProvider>
       <ChatChannelsPanel
@@ -35,6 +35,7 @@ function panel(props: { unavailable?: string } = {}) {
         description="Only content every space member can read is posted."
         canManage
         unavailable={props.unavailable}
+        secondaryAction={props.secondaryAction}
       />
     </PreferencesProvider>
   );
@@ -134,6 +135,33 @@ describe("chat channels", () => {
     const notice = await within(dialog).findByRole("alert");
     expect(within(notice).getByText("The test message was not delivered")).toBeTruthy();
     await waitFor(() => expect(notice.parentElement?.contains(document.activeElement)).toBe(true));
+  });
+
+  it("tells untested channels and failed tests from working ones", async () => {
+    mockApi({
+      "GET /api/v1/auth/session": () => problem(401, "notSignedIn"),
+      [`GET ${base}`]: () => ({
+        body: {
+          items: [
+            channel({ id: "a", name: "#new" }),
+            channel({
+              id: "b",
+              name: "#tested",
+              failure: { reason: "unreachable", status: null, code: null, at: "2026-10-15T08:00:00.000Z" },
+            }),
+            channel({ id: "c", name: "#used", lastDeliveredAt: "2026-10-15T08:00:00.000Z" }),
+          ],
+        },
+      }),
+    });
+    await renderWithProviders(panel({ secondaryAction: true }));
+    const list = await screen.findByRole("list", { name: "Chat channels" });
+    const rows = within(list).getAllByRole("listitem");
+    expect(within(rows[0] as HTMLElement).getByText("Not tested yet")).toBeTruthy();
+    expect(within(rows[1] as HTMLElement).getByText("Last test failed")).toBeTruthy();
+    expect(within(rows[1] as HTMLElement).getByText(/Pagehall could not reach Slack/)).toBeTruthy();
+    expect(within(rows[2] as HTMLElement).getByText("Working")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Connect a channel" }).className).not.toContain("bg-accent");
   });
 
   it("marks failing channels and says why and what to do", async () => {

@@ -490,6 +490,28 @@ We move the backup to Sunday`);
       expect(requests).toHaveLength(1);
     });
 
+    it("keeps a failed test of a working channel until a message is accepted, without pausing it", async () => {
+      const context = await setup();
+      const channel = await connect(context, ["pagePublished"]);
+      respond = () => ({ status: 403, body: "invalid_token" });
+      await test.services.chatChannels.testSaved(context.scope, channel.channel.id);
+      const [tested] = await test.services.chatChannels.list(context.scope);
+      expect(tested).toMatchObject({
+        state: "working",
+        failure: { reason: "unauthorized", status: 403, code: "invalid_token" },
+        lastDeliveredAt: null,
+      });
+      expect(await failingNotices(context.adminId)).toEqual([]);
+
+      respond = () => ({ status: 200 });
+      await page(context);
+      const [pending] = await due(channel.channel.id);
+      expect(await test.services.chatChannels.deliver(pending?.id ?? "", false)).toBe("delivered");
+      const [delivered] = await test.services.chatChannels.list(context.scope);
+      expect(delivered?.failure).toBeNull();
+      expect(delivered?.lastDeliveredAt).toBeInstanceOf(Date);
+    });
+
     it("retries, then marks the channel failing and tells its space administrators once", async () => {
       const context = await setup();
       const channel = await connect(context, ["pagePublished"]);

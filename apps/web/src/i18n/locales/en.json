@@ -7989,6 +7989,9 @@
       "insecureAddress": "The address needs to start with https://."
     },
     "testNotDelivered": "The test message was not delivered",
-    "roomIdHint": "As your Matrix client shows it, for example #ops:example.org or a matrix.to link."
+    "roomIdHint": "As your Matrix client shows it, for example #ops:example.org or a matrix.to link.",
+    "notTested": "Not tested yet",
+    "lastTestFailed": "Last test failed",
+    "testFailedAt": "last test failed {time}"
   }
 }

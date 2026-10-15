@@ -162,15 +162,14 @@ function toChannel(row: ChannelRow): ChatChannel {
     name: row.name,
     events: row.events,
     state: row.state,
-    failure:
-      row.state === "failing" && row.failure_reason
-        ? {
-            reason: row.failure_reason,
-            status: row.failure_status,
-            code: row.failure_code,
-            at: date(row.failed_at) ?? new Date(row.created_at),
-          }
-        : null,
+    failure: row.failure_reason
+      ? {
+          reason: row.failure_reason,
+          status: row.failure_status,
+          code: row.failure_code,
+          at: date(row.failed_at) ?? new Date(row.created_at),
+        }
+      : null,
     lastAttemptAt: date(row.last_attempt_at),
     lastDeliveredAt: date(row.last_delivered_at),
     createdAt: new Date(row.created_at),
@@ -605,6 +604,16 @@ export class ChatChannelService {
         .where(eq(chatChannels.id, id));
       return { delivered: true };
     }
+    await this.#database
+      .update(chatChannels)
+      .set({
+        failureReason: failure.reason,
+        failureStatus: failure.status,
+        failureCode: failure.code,
+        failedAt: new Date(),
+        lastAttemptAt: new Date(),
+      })
+      .where(eq(chatChannels.id, id));
     const { permanent: _permanent, ...rest } = failure;
     return { delivered: false, failure: rest };
   }
@@ -927,8 +936,14 @@ export class ChatChannelService {
     if (!failure) {
       await this.#database
         .update(chatChannels)
-        .set({ lastDeliveredAt: new Date() })
-        .where(eq(chatChannels.id, row.id));
+        .set({
+          lastDeliveredAt: new Date(),
+          failureReason: null,
+          failureStatus: null,
+          failureCode: null,
+          failedAt: null,
+        })
+        .where(and(eq(chatChannels.id, row.id), eq(chatChannels.state, "working")));
       return finish("delivered");
     }
     if (!failure.permanent && !lastAttempt) {

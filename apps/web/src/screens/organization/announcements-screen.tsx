@@ -35,6 +35,7 @@ export function OrganizationAnnouncementsScreen() {
         title={t("chatChannels.announcementsTitle")}
         description={t("chatChannels.announcementsDescription")}
         canManage={state.can("organization.integrations.manage")}
+        secondaryAction
       />
     </SettingsPage>
   );

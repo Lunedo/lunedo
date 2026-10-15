@@ -117,9 +117,11 @@ const channelSchema = z
       "`failing` when the service stopped accepting messages; nothing is posted until the channel is fixed.",
     ),
     failure: failureSchema
-      .extend({ at: timestamp("When the channel started failing.") })
+      .extend({ at: timestamp("When the channel started failing or the last test failed.") })
       .nullable()
-      .describe("Why the channel is failing, or null."),
+      .describe(
+        "Why the channel is failing, or, while it is `working`, why the last test failed. Null once a message was accepted again.",
+      ),
     lastAttemptAt: timestamp("When a message was last sent.").nullable(),
     lastDeliveredAt: timestamp("When a message was last accepted.").nullable(),
     createdAt: timestamp("When the channel was connected."),

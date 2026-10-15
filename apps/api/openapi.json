@@ -127836,7 +127836,7 @@
                                   "at": {
                                     "type": "string",
                                     "format": "date-time",
-                                    "description": "When the channel started failing. ISO 8601 timestamp in UTC."
+                                    "description": "When the channel started failing or the last test failed. ISO 8601 timestamp in UTC."
                                   }
                                 },
                                 "required": [
@@ -127851,7 +127851,7 @@
                                 "type": "null"
                               }
                             ],
-                            "description": "Why the channel is failing, or null."
+                            "description": "Why the channel is failing, or, while it is `working`, why the last test failed. Null once a message was accepted again."
                           },
                           "lastAttemptAt": {
                             "anyOf": [
@@ -128291,7 +128291,7 @@
                                 "at": {
                                   "type": "string",
                                   "format": "date-time",
-                                  "description": "When the channel started failing. ISO 8601 timestamp in UTC."
+                                  "description": "When the channel started failing or the last test failed. ISO 8601 timestamp in UTC."
                                 }
                               },
                               "required": [
@@ -128306,7 +128306,7 @@
                               "type": "null"
                             }
                           ],
-                          "description": "Why the channel is failing, or null."
+                          "description": "Why the channel is failing, or, while it is `working`, why the last test failed. Null once a message was accepted again."
                         },
                         "lastAttemptAt": {
                           "anyOf": [
@@ -128983,7 +128983,7 @@
                                 "at": {
                                   "type": "string",
                                   "format": "date-time",
-                                  "description": "When the channel started failing. ISO 8601 timestamp in UTC."
+                                  "description": "When the channel started failing or the last test failed. ISO 8601 timestamp in UTC."
                                 }
                               },
                               "required": [
@@ -128998,7 +128998,7 @@
                               "type": "null"
                             }
                           ],
-                          "description": "Why the channel is failing, or null."
+                          "description": "Why the channel is failing, or, while it is `working`, why the last test failed. Null once a message was accepted again."
                         },
                         "lastAttemptAt": {
                           "anyOf": [
@@ -178288,7 +178288,7 @@
                                   "at": {
                                     "type": "string",
                                     "format": "date-time",
-                                    "description": "When the channel started failing. ISO 8601 timestamp in UTC."
+                                    "description": "When the channel started failing or the last test failed. ISO 8601 timestamp in UTC."
                                   }
                                 },
                                 "required": [
@@ -178303,7 +178303,7 @@
                                 "type": "null"
                               }
                             ],
-                            "description": "Why the channel is failing, or null."
+                            "description": "Why the channel is failing, or, while it is `working`, why the last test failed. Null once a message was accepted again."
                           },
                           "lastAttemptAt": {
                             "anyOf": [
@@ -178745,7 +178745,7 @@
                                 "at": {
                                   "type": "string",
                                   "format": "date-time",
-                                  "description": "When the channel started failing. ISO 8601 timestamp in UTC."
+                                  "description": "When the channel started failing or the last test failed. ISO 8601 timestamp in UTC."
                                 }
                               },
                               "required": [
@@ -178760,7 +178760,7 @@
                               "type": "null"
                             }
                           ],
-                          "description": "Why the channel is failing, or null."
+                          "description": "Why the channel is failing, or, while it is `working`, why the last test failed. Null once a message was accepted again."
                         },
                         "lastAttemptAt": {
                           "anyOf": [
@@ -179440,7 +179440,7 @@
                                 "at": {
                                   "type": "string",
                                   "format": "date-time",
-                                  "description": "When the channel started failing. ISO 8601 timestamp in UTC."
+                                  "description": "When the channel started failing or the last test failed. ISO 8601 timestamp in UTC."
                                 }
                               },
                               "required": [
@@ -179455,7 +179455,7 @@
                               "type": "null"
                             }
                           ],
-                          "description": "Why the channel is failing, or null."
+                          "description": "Why the channel is failing, or, while it is `working`, why the last test failed. Null once a message was accepted again."
                         },
                         "lastAttemptAt": {
                           "anyOf": [
