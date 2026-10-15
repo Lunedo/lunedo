@@ -126,6 +126,7 @@ jobs:
         image: axllent/mailpit:v1.31.3
         env:
           MP_DISABLE_VERSION_CHECK: "true"
+          MP_DATABASE: "file::memory:"
         ports:
           - 1025
           - 8025
@@ -283,6 +284,7 @@ jobs:
         image: axllent/mailpit:v1.31.3
         env:
           MP_DISABLE_VERSION_CHECK: "true"
+          MP_DATABASE: "file::memory:"
       valkey:
         image: valkey/valkey:8-alpine
         options: >-
