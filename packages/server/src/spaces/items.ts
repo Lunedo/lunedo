@@ -24,7 +24,7 @@ import type { PeopleService } from "./people.js";
 import type { BuiltInPageStatus, PageMode, PageStatusColor, PageWidth, TreeItemKind } from "./schema.js";
 import { defaultPageModeSetting } from "./settings.js";
 import { signalSpaceChange } from "./signals.js";
-import { type PageStatus, pageStatusEnabledCondition } from "./status.js";
+import { carryStatusesInto, type PageStatus, pageStatusEnabledCondition } from "./status.js";
 import { insertFirstVersion, type VersionService } from "./versions.js";
 import { publishedFor, refreshReaderVisibility, visibleItem } from "./visibility.js";
 
@@ -394,7 +394,8 @@ export class TreeService {
         sv.color as status_color, t.created_at, t.updated_at, t.content_updated_at
       from tree_items t
       join spaces ts on ts.id = t.space_id
-      left join page_status_values sv on sv.id = t.status_id and ${pageStatusEnabledCondition(sql`ts`)}
+      left join page_status_values sv on sv.id = t.status_id and sv.space_id = t.space_id
+        and ${pageStatusEnabledCondition(sql`ts`)}
       left join tree_items lt on lt.id = t.link_item_id
       left join spaces ls on ls.id = lt.space_id`;
   }
@@ -859,6 +860,7 @@ export class TreeService {
         from tree_items r
         where r.id = e.root_item_id and e.space_id = ${sourceSpaceId} and e.kind = 'items'
           and ${itemId}::uuid = any(r.path)`);
+      await carryStatusesInto(tx, itemId, targetSpaceId, actorIdOf(actor));
       await signalSpaceChange(tx, { spaceId: targetSpaceId, kind: "tree", itemId });
     }
     await this.#activity.revealed(tx, await refreshReaderVisibility(tx, [itemId]));

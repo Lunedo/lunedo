@@ -186504,7 +186504,7 @@
                             "type": "integer",
                             "minimum": -9007199254740991,
                             "maximum": 9007199254740991,
-                            "description": "Number of pages with this status, without pages in the trash."
+                            "description": "Number of pages with this status that the caller can view, without pages in the trash."
                           }
                         },
                         "required": [
@@ -186792,7 +186792,7 @@
                       "type": "integer",
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991,
-                      "description": "Number of pages with this status, without pages in the trash."
+                      "description": "Number of pages with this status that the caller can view, without pages in the trash."
                     }
                   },
                   "required": [
@@ -187328,7 +187328,7 @@
                       "type": "integer",
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991,
-                      "description": "Number of pages with this status, without pages in the trash."
+                      "description": "Number of pages with this status that the caller can view, without pages in the trash."
                     }
                   },
                   "required": [
@@ -187642,7 +187642,7 @@
                         "type": "integer",
                         "minimum": -9007199254740991,
                         "maximum": 9007199254740991,
-                        "description": "Number of pages with this status, without pages in the trash."
+                        "description": "Number of pages with this status that the caller can view, without pages in the trash."
                       }
                     },
                     "required": [

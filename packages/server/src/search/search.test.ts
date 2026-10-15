@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { DocumentJson, NodeJson } from "@pagehall/editor-schema";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { accountPrincipal, type Principal } from "../accounts/principal.js";
+import { accountPrincipal, type Principal, SYSTEM } from "../accounts/principal.js";
 import { pageStatusEnabledSetting } from "../spaces/settings.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
@@ -376,8 +376,8 @@ describe.skipIf(!baseUrl)("search", () => {
   it("looks up status names in spaces the person can see only", async () => {
     const w = await world();
     const statuses = test.services.pageStatus;
-    const [, , , sharedVerified] = await statuses.values(w.shared.id);
-    const [, , , hiddenVerified] = await statuses.values(w.hidden.id);
+    const [, , , sharedVerified] = await statuses.values(SYSTEM, w.shared.id);
+    const [, , , hiddenVerified] = await statuses.values(SYSTEM, w.hidden.id);
     await statuses.update(w.author, w.shared.id, sharedVerified?.id ?? "", { name: `Classified ${w.word}` });
     await statuses.update(w.author, w.hidden.id, hiddenVerified?.id ?? "", { name: `Secret ${w.word}` });
     const { service, requests } = recordingSearch();
@@ -441,8 +441,8 @@ describe.skipIf(!baseUrl)("search", () => {
   it("filters by page status and follows changes of status, values and the space setting", async () => {
     const w = await world();
     const statuses = test.services.pageStatus;
-    const [, inProgress, , verified] = await statuses.values(w.shared.id);
-    const [, , , secondVerified] = await statuses.values(w.second.id);
+    const [, inProgress, , verified] = await statuses.values(SYSTEM, w.shared.id);
+    const [, , , secondVerified] = await statuses.values(SYSTEM, w.second.id);
     await statuses.set(w.author, w.alpha, verified?.id ?? "");
     await statuses.set(w.author, w.beta, inProgress?.id ?? "");
     await statuses.set(w.author, w.gamma, secondVerified?.id ?? "");
@@ -495,6 +495,35 @@ describe.skipIf(!baseUrl)("search", () => {
     await test.settings.set(pageStatusEnabledSetting, { space: w.second.id }, "space", true);
     await drain();
     expect(await ids(w.other, w.org.id, w.word, { statusIds: [secondVerified?.id] })).toEqual([w.gamma]);
+  });
+
+  it("indexes a page moved to another space with the status of that space", async () => {
+    const w = await world();
+    const statuses = test.services.pageStatus;
+    const [, sharedInProgress] = await statuses.values(SYSTEM, w.shared.id);
+    const [, secondInProgress] = await statuses.values(SYSTEM, w.second.id);
+    const hold = await statuses.add(w.author, w.shared.id, { name: `Hold ${w.word}`, color: "danger" });
+    await statuses.set(w.author, w.alpha, hold.id);
+    await statuses.set(w.author, w.beta, sharedInProgress?.id ?? "");
+    await drain();
+    for (const itemId of [w.alpha, w.beta]) {
+      const impact = await test.services.tree.moveImpact(w.author, itemId, {
+        spaceId: w.second.id,
+        parentId: null,
+      });
+      await test.services.tree.move(w.author, itemId, {
+        spaceId: w.second.id,
+        parentId: null,
+        confirmation: impact.confirmation ?? "",
+      });
+    }
+    await drain();
+
+    expect(await ids(w.author, w.org.id, w.word, { statusIds: [secondInProgress?.id] })).toEqual([w.beta]);
+    expect(await ids(w.author, w.org.id, w.word, { statusIds: [sharedInProgress?.id] })).toEqual([]);
+    expect(await ids(w.author, w.org.id, w.word, { statusIds: [hold.id] })).toEqual([]);
+    const moved = await find(w.author, w.org.id, w.word, { spaceIds: [w.second.id] });
+    expect(moved.results.find((hit) => hit.itemId === w.alpha)?.status).toBeNull();
   });
 
   it("finds pages of personal spaces for their owner and for people they are shared with", async () => {

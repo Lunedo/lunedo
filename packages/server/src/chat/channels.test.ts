@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { DocumentJson, NodeJson } from "@pagehall/editor-schema";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { accountPrincipal } from "../accounts/principal.js";
+import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import type { NotificationListener } from "../database/notifications.js";
 import type { JobHandler, JobQueue } from "../jobs/job-queue.js";
 import { createLogger } from "../logging/logger.js";
@@ -345,7 +345,7 @@ describe.skipIf(!baseUrl)("chat channels", () => {
       const runbook = await page(context);
       await edit(context, runbook.id, "Second");
       await edit(context, runbook.id, "Third");
-      const [value] = await test.services.pageStatus.values(context.space.id);
+      const [value] = await test.services.pageStatus.values(SYSTEM, context.space.id);
       await test.services.pageStatus.set(context.editor, runbook.id, value?.id ?? "");
 
       expect((await deliveries(published.channel.id)).map((row) => row.event)).toEqual(["pagePublished"]);

@@ -3,7 +3,7 @@ import { Readable } from "node:stream";
 import type { NodeJson } from "@pagehall/editor-schema";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { accountPrincipal } from "../accounts/principal.js";
+import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import { createLogger } from "../logging/logger.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { testJobContext } from "../testing/jobs.js";
@@ -369,7 +369,7 @@ describe.skipIf(!baseUrl)("Confluence imports", () => {
       });
       expect(await status(PAGE.zeta)).toBeNull();
       expect(await status(PAGE.aardvark)).toBeNull();
-      const values = await test.services.pageStatus.values(spaceId);
+      const values = await test.services.pageStatus.values(SYSTEM, spaceId);
       expect(values.map((value) => value.builtIn ?? value.name)).toEqual([
         "roughDraft",
         "inProgress",
