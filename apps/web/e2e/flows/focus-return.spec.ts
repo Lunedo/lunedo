@@ -73,3 +73,21 @@ test("loading more search results moves the focus to the first new result", asyn
   await page.getByRole("button", { name: "Load more results" }).click();
   await expect(results.getByRole("link").nth(before)).toBeFocused();
 });
+
+test("the page title shows a focus ring only after keyboard navigation", async ({ page, organization }) => {
+  const { pagePath } = await place(page, organization, "Quiet title");
+  await page.goto(pagePath);
+  const title = page.getByRole("heading", { name: "Quiet title", level: 1 });
+  await expect(title).toBeVisible();
+  const ring = () =>
+    page.evaluate(() => {
+      const active = document.activeElement;
+      return active && active.tagName === "H1" ? getComputedStyle(active).outlineStyle : "not focused";
+    });
+  expect(["none", "not focused"]).toContain(await ring());
+
+  await page.keyboard.press("g");
+  await page.keyboard.press("s");
+  await expect(page.getByRole("heading", { level: 1 })).toBeFocused();
+  expect(await ring()).not.toBe("none");
+});

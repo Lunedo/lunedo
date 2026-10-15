@@ -1,6 +1,24 @@
 import { useCallback, useLayoutEffect, useRef } from "react";
 
 let menuOpener: HTMLElement | null = null;
+let keyboardUsed = false;
+
+if (typeof document !== "undefined") {
+  document.addEventListener(
+    "keydown",
+    (event) => {
+      if (!event.ctrlKey && !event.metaKey && !event.altKey) keyboardUsed = true;
+    },
+    true,
+  );
+  document.addEventListener(
+    "pointerdown",
+    () => {
+      keyboardUsed = false;
+    },
+    true,
+  );
+}
 
 export function rememberMenuOpener(trigger: HTMLElement | null): void {
   menuOpener = trigger;
@@ -17,6 +35,11 @@ export function focusMainHeading(root: ParentNode = document): boolean {
   const heading = mainHeading(root);
   if (!heading) return false;
   if (!heading.hasAttribute("tabindex")) heading.setAttribute("tabindex", "-1");
+  if (keyboardUsed) heading.removeAttribute("data-quiet-focus");
+  else {
+    heading.setAttribute("data-quiet-focus", "");
+    heading.addEventListener("blur", () => heading.removeAttribute("data-quiet-focus"), { once: true });
+  }
   heading.focus({ preventScroll: true });
   return true;
 }

@@ -6,7 +6,7 @@ import { Button } from "./button.js";
 import { ConfirmDialog, Dialog, Drawer } from "./dialog.js";
 import { Input } from "./field.js";
 import { Menu } from "./overlays.js";
-import { focusWhenShown, useOpener } from "./return-focus.js";
+import { focusMainHeading, focusWhenShown, useOpener } from "./return-focus.js";
 import { renderUi } from "./testing/render.js";
 
 function DialogProbe({ onOpenChange }: { onOpenChange?: (open: boolean) => void }) {
@@ -362,5 +362,25 @@ describe("returning focus from panels and replaced controls", () => {
     await waitFor(() =>
       expect(document.activeElement).toBe(screen.getByRole("button", { name: "Save changes" })),
     );
+  });
+});
+
+describe("focus on the main heading", () => {
+  it("hides the ring after a pointer press and shows it after keyboard use", async () => {
+    renderUi(
+      <main>
+        <h1>Restart the VPN gateway</h1>
+      </main>,
+    );
+    const heading = screen.getByRole("heading", { name: "Restart the VPN gateway" });
+    await userEvent.pointer({ keys: "[MouseLeft]", target: document.body });
+    focusMainHeading();
+    expect(document.activeElement).toBe(heading);
+    expect(heading.hasAttribute("data-quiet-focus")).toBe(true);
+    heading.blur();
+    expect(heading.hasAttribute("data-quiet-focus")).toBe(false);
+    await userEvent.keyboard("g");
+    focusMainHeading();
+    expect(heading.hasAttribute("data-quiet-focus")).toBe(false);
   });
 });
