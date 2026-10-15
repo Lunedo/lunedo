@@ -11,7 +11,7 @@ import {
   useToast,
 } from "@pagehall/ui";
 import type { TFunction } from "i18next";
-import { useEffect, useEffectEvent, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { problemMessage } from "../errors/problem-message.js";
 import { translateKey } from "../i18n/translate.js";
@@ -88,7 +88,6 @@ export function ChannelDialog({
     events.filter((event) => (channel ? channel.events.includes(event) : DEFAULT_EVENTS.has(event))),
   );
   const [newSecret, setNewSecret] = useState(false);
-  const [errors, setErrors] = useState<Errors>({});
   const [attempted, setAttempted] = useState<"save" | "test" | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [tested, setTested] = useState<ChatTestResult | null>(null);
@@ -120,15 +119,11 @@ export function ChannelDialog({
     return next;
   };
 
-  const live = useEffectEvent(() => {
-    if (attempted) setErrors(check(attempted === "test"));
-  });
-  useEffect(() => live(), [kind, url, homeserver, roomId, accessToken, name, chosen, attempted]);
+  const errors: Errors = attempted ? check(attempted === "test") : {};
 
   const validate = (forTest: boolean): boolean => {
     const next = check(forTest);
     setAttempted(forTest ? "test" : "save");
-    setErrors(next);
     if (Object.keys(next).length > 0) {
       focusFirstInvalidSoon();
       return false;
@@ -188,10 +183,7 @@ export function ChannelDialog({
         ? events.filter((entry) => entry === event || current.includes(entry))
         : current.filter((entry) => entry !== event),
     );
-    clear("events");
   };
-
-  const clear = (field: keyof Errors) => setErrors(({ [field]: _removed, ...rest }) => rest);
 
   return (
     <Dialog
@@ -250,7 +242,6 @@ export function ChannelDialog({
             value={kind}
             onValueChange={(value) => {
               setKind(value as ChatChannelKind);
-              setErrors({});
               setTested(null);
             }}
             options={chatChannelKinds.map((value) => ({ value, label: kindLabel(t, value) }))}
@@ -264,9 +255,11 @@ export function ChannelDialog({
             {t("chatChannels.stepsTitle", { service })}
           </h3>
           <ol className="list-decimal space-y-1 ps-5 text-sm">
-            {Array.from({ length: STEPS[kind] }, (_, index) => (
-              <li key={index}>{translateKey(t, `chatChannels.steps.${kind}.${index + 1}`)}</li>
-            ))}
+            {Array.from({ length: STEPS[kind] }, (_, index) => `chatChannels.steps.${kind}.${index + 1}`).map(
+              (key) => (
+                <li key={key}>{translateKey(t, key)}</li>
+              ),
+            )}
           </ol>
         </section>
         {kind === "matrix" ? (
@@ -283,7 +276,6 @@ export function ChannelDialog({
                 value={homeserver}
                 onChange={(event) => {
                   setHomeserver(event.target.value);
-                  clear("homeserver");
                 }}
               />
             </Field>
@@ -293,7 +285,6 @@ export function ChannelDialog({
                 value={roomId}
                 onChange={(event) => {
                   setRoomId(event.target.value);
-                  clear("roomId");
                 }}
               />
             </Field>
@@ -309,7 +300,6 @@ export function ChannelDialog({
                 value={accessToken}
                 onChange={(event) => {
                   setAccessToken(event.target.value);
-                  clear("accessToken");
                 }}
               />
             </Field>
@@ -329,7 +319,6 @@ export function ChannelDialog({
               placeholder={kind === "teams" ? "https://…logic.azure.com/workflows/…" : "https://…"}
               onChange={(event) => {
                 setUrl(event.target.value);
-                clear("url");
                 setTested(null);
               }}
             />
@@ -345,7 +334,6 @@ export function ChannelDialog({
             placeholder={t("chatChannels.namePlaceholder")}
             onChange={(event) => {
               setName(event.target.value);
-              clear("name");
             }}
           />
         </Field>
