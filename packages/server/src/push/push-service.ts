@@ -7,6 +7,7 @@ import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { accounts } from "../accounts/schema.js";
 import { accountScopeChain } from "../accounts/scope.js";
 import { sessions } from "../auth/schema.js";
+import type { SessionService } from "../auth/sessions.js";
 import type { Encryption } from "../crypto/envelope.js";
 import type { Database } from "../database/database.js";
 import type { NotificationListener } from "../database/notifications.js";
@@ -134,6 +135,7 @@ export class PushService {
   readonly #settings: SettingsService;
   readonly #notifications: NotificationService;
   readonly #mail: MailService;
+  readonly #sessions: SessionService;
   readonly #policy: OutboundPolicy;
   readonly #logger: Logger;
 
@@ -143,6 +145,7 @@ export class PushService {
     settings: SettingsService;
     notifications: NotificationService;
     mail: MailService;
+    sessions: SessionService;
     policy: OutboundPolicy;
     logger: Logger;
   }) {
@@ -151,6 +154,7 @@ export class PushService {
     this.#settings = options.settings;
     this.#notifications = options.notifications;
     this.#mail = options.mail;
+    this.#sessions = options.sessions;
     this.#policy = options.policy;
     this.#logger = options.logger;
   }
@@ -347,13 +351,21 @@ export class PushService {
       return;
     }
     const rows = await this.#database
-      .select({ id: pushSubscriptions.id, subscription: pushSubscriptions.subscription })
+      .select({
+        id: pushSubscriptions.id,
+        sessionId: pushSubscriptions.sessionId,
+        subscription: pushSubscriptions.subscription,
+      })
       .from(pushSubscriptions)
       .where(eq(pushSubscriptions.accountId, built.recipientId));
     const keys = await this.#keys();
     const subject = (await this.#settings.get(instanceUrlSetting, {})) || "mailto:noreply@localhost";
     let retry = false;
     for (const row of rows) {
+      if (!(await this.#sessions.isActive(row.sessionId))) {
+        await this.#database.delete(pushSubscriptions).where(eq(pushSubscriptions.id, row.id));
+        continue;
+      }
       const stored = storedSubscription.parse(
         JSON.parse(this.#encryption.decryptString(row.subscription, subscriptionContext(row.id))),
       );

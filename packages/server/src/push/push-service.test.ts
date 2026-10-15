@@ -6,6 +6,7 @@ import { uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accountPrincipal } from "../accounts/principal.js";
+import { sessionIdleTimeoutSetting } from "../auth/settings.js";
 import { browserPushSetting, notificationEventSettings } from "../notifications/types.js";
 import { outboundPolicy } from "../outbound/guarded-request.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
@@ -227,6 +228,35 @@ describe.skipIf(!baseUrl)("browser push", () => {
       test.services.sessions.endAll(tx, context.readerId, { keep: phone }),
     );
     expect(await test.services.push.devices(context.readerId, null)).toEqual([]);
+  });
+
+  it("sends nothing to devices whose session ended under the organization's limits or was revoked", async () => {
+    await enable();
+    const context = await setup();
+    await test.settings.set(sessionIdleTimeoutSetting, { organization: context.org.id }, "organization", 30);
+    const idle = await device(context.readerId);
+    const revoked = await device(context.readerId);
+    const active = await device(context.readerId);
+    await test.database.execute(
+      sql`update sessions set last_used_at = now() - interval '31 minutes' where id = ${idle.sessionId}`,
+    );
+    expect(await test.services.sessions.end(context.readerId, revoked.sessionId, "endedByAccount")).toBe(
+      true,
+    );
+    expect((await test.services.push.devices(context.readerId, null)).map((entry) => entry.id)).toEqual([
+      idle.id,
+      active.id,
+    ]);
+    received.length = 0;
+    answer = 201;
+    await mentionedIn(context);
+    await deliverAll();
+    expect(received.map((entry) => entry.path)).toEqual([new URL(active.endpoint).pathname]);
+    expect((await test.services.push.devices(context.readerId, null)).map((entry) => entry.id)).toEqual([
+      active.id,
+    ]);
+    const left = await test.database.execute(sql`select 1 from sessions where id = ${idle.sessionId}`);
+    expect(left.rows).toEqual([]);
   });
 
   it("sends the event text, title and link encrypted to every device and follows the preference", async () => {

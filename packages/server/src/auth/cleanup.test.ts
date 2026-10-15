@@ -1,11 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
+import { spaceFixtures } from "../testing/spaces.js";
+import { sessionIdleTimeoutSetting, sessionLifetimeSetting } from "./settings.js";
 
 const baseUrl = testDatabaseBaseUrl();
 
 describe.skipIf(!baseUrl)("cleanup of authentication data", () => {
   let test: TestServices;
+  const fixtures = spaceFixtures(() => test);
 
   beforeAll(async () => {
     test = await createTestServices(baseUrl ?? "");
@@ -81,6 +84,49 @@ describe.skipIf(!baseUrl)("cleanup of authentication data", () => {
     expect(await count("auth_challenges")).toBe(1);
     expect(await count("account_tokens")).toBe(1);
     expect(await count("setup_sessions")).toBe(1);
+  });
+
+  it("removes sessions by the idle time and lifetime of the account's organization", async () => {
+    const { services, database, pool } = test;
+    const organization = await fixtures.organization();
+    await test.settings.set(sessionIdleTimeoutSetting, { organization: organization.id }, "organization", 30);
+    await test.settings.set(sessionLifetimeSetting, { organization: organization.id }, "organization", 120);
+    const create = async (email: string, homeOrganizationId: string | null) => {
+      const account = await database.transaction((tx) =>
+        services.accounts.createStandard(tx, {
+          email,
+          name: email,
+          password: "a long cleanup passphrase",
+          homeOrganizationId,
+        }),
+      );
+      const ids: string[] = [];
+      for (let i = 0; i < 3; i++) {
+        const created = await database.transaction((tx) =>
+          services.sessions.create(tx, {
+            accountId: account.id,
+            kind: "full",
+            methods: ["password"],
+            client: {},
+          }),
+        );
+        ids.push(created.session.id);
+      }
+      await pool.query("update sessions set last_used_at = now() - interval '31 minutes' where id = $1", [
+        ids[0],
+      ]);
+      await pool.query("update sessions set created_at = now() - interval '121 minutes' where id = $1", [
+        ids[1],
+      ]);
+      return ids;
+    };
+    const member = await create("short@example.org", organization.id);
+    const other = await create("long@example.org", null);
+    await services.sessions.cleanup();
+    const left = await pool.query<{ id: string }>("select id from sessions where id = any($1)", [
+      [...member, ...other],
+    ]);
+    expect(left.rows.map((row) => row.id).sort()).toEqual([member[2], ...other].sort());
   });
 
   it("removes sessions of accounts that are no longer active", async () => {

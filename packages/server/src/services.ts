@@ -611,6 +611,7 @@ export function createAccountServices(options: {
     settings,
     notifications,
     mail,
+    sessions,
     logger,
     policy: options.pushPolicy ?? outboundPolicy([]),
   });
