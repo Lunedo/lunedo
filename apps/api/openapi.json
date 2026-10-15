@@ -114365,7 +114365,7 @@
                           },
                           "active": {
                             "type": "boolean",
-                            "description": "Whether the person can still take part: false when the account is deactivated, not set up yet or no longer a member of the organization."
+                            "description": "Whether the person can still take part: false when the account is deactivated, not set up yet or no longer a member of the organization. Always true for people the caller may not see."
                           },
                           "canRead": {
                             "type": "boolean",
@@ -115066,7 +115066,7 @@
                           },
                           "active": {
                             "type": "boolean",
-                            "description": "Whether the person can still take part: false when the account is deactivated, not set up yet or no longer a member of the organization."
+                            "description": "Whether the person can still take part: false when the account is deactivated, not set up yet or no longer a member of the organization. Always true for people the caller may not see."
                           },
                           "canRead": {
                             "type": "boolean",
@@ -117934,7 +117934,7 @@
                           },
                           "active": {
                             "type": "boolean",
-                            "description": "Whether the person can still take part: false when the account is deactivated, not set up yet or no longer a member of the organization."
+                            "description": "Whether the person can still take part: false when the account is deactivated, not set up yet or no longer a member of the organization. Always true for people the caller may not see."
                           },
                           "canRead": {
                             "type": "boolean",
@@ -185576,7 +185576,7 @@
                           },
                           "active": {
                             "type": "boolean",
-                            "description": "Whether the person can still take part: false when the account is deactivated, not set up yet or no longer a member of the organization."
+                            "description": "Whether the person can still take part: false when the account is deactivated, not set up yet or no longer a member of the organization. Always true for people the caller may not see."
                           },
                           "canRead": {
                             "type": "boolean",

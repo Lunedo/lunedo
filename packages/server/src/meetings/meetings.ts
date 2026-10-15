@@ -559,7 +559,7 @@ export class MeetingService {
       members.push({
         id: row.account_id,
         name: row.name,
-        active: row.active,
+        active: row.name === null || row.active,
         canRead: await this.#authorization.authorize(accountPrincipal(row.account_id), "item.view", {
           type: "item",
           id: series.item_id,
@@ -778,7 +778,7 @@ export class MeetingService {
         name: row.name,
         attendance: row.attendance,
         member: seriesVisible ? row.member : null,
-        active: row.active,
+        active: row.name === null || row.active,
         canRead: await this.#authorization.authorize(accountPrincipal(row.account_id), "item.view", {
           type: "item",
           id: meetingId,

@@ -135,6 +135,15 @@ describe.skipIf(!baseUrl)("meeting series", () => {
       expect(outsider).toMatchObject({ active: true, canRead: false });
       const editor = meeting.attendees.find((attendee) => attendee.id === context.editorId);
       expect(editor).toMatchObject({ active: false });
+
+      await test.database.execute(sql`delete from memberships where account_id = ${context.editorId}`);
+      await test.database.execute(
+        sql`delete from space_permissions where principal_kind = 'account' and principal_id = ${context.editorId}`,
+      );
+      const hidden = (await test.services.meetings.details(context.lead, created.id)).members.find(
+        (member) => member.id === context.editorId,
+      );
+      expect(hidden).toMatchObject({ name: null, active: true });
     });
   });
 

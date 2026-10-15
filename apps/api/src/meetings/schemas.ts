@@ -155,7 +155,7 @@ const memberSchema = z
     active: z
       .boolean()
       .describe(
-        "Whether the person can still take part: false when the account is deactivated, not set up yet or no longer a member of the organization.",
+        "Whether the person can still take part: false when the account is deactivated, not set up yet or no longer a member of the organization. Always true for people the caller may not see.",
       ),
     canRead: z
       .boolean()
@@ -323,7 +323,7 @@ export const meetingSchema = z
             active: z
               .boolean()
               .describe(
-                "Whether the person can still take part: false when the account is deactivated, not set up yet or no longer a member of the organization.",
+                "Whether the person can still take part: false when the account is deactivated, not set up yet or no longer a member of the organization. Always true for people the caller may not see.",
               ),
             canRead: z.boolean().describe("Whether the person can read the meeting page."),
           })
