@@ -11,16 +11,17 @@ import {
   type SettingChangeSignal,
   type SpaceChangeSignal,
   type SyncRunSignal,
+  type UnsubscribeState,
 } from "@pagehall/server";
 import { idSchema } from "@pagehall/shared";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
-import { InternalRoute, SessionRoute } from "../access/route-access.js";
+import { InternalRoute, PublicRoute, SessionRoute } from "../access/route-access.js";
 import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
 import { decodeCursor, encodeCursor, pageQuery, pageSchema } from "../http/pagination.js";
-import { notFound } from "../http/problems.js";
+import { notFound, ProblemException } from "../http/problems.js";
 import { sessionOf } from "../http/request.js";
 import { SpaceSignals } from "./space-signals.js";
 
@@ -97,6 +98,35 @@ const notificationSchema = z.object({
 });
 
 const idParams = z.object({ notificationId: idSchema }).strict();
+const unsubscribeParams = z
+  .object({ token: z.string().max(200).describe("The signed token from the link in the e-mail.") })
+  .strict();
+const oneClickSchema = z
+  .object({
+    "List-Unsubscribe": z
+      .string()
+      .max(100)
+      .optional()
+      .describe("`One-Click`, as mail programs send it for one-click unsubscribe (RFC 8058)."),
+  })
+  .optional();
+const unsubscribeSchema = z
+  .object({
+    scope: z
+      .enum(["event", "digest"])
+      .describe("Whether the link turns off e-mail for one event or the daily summary."),
+    event: z.string().nullable().describe("The event whose e-mails the link turns off, null for the summary."),
+    off: z.boolean().describe("Whether these e-mails are turned off now."),
+  })
+  .describe("What an unsubscribe link turns off.");
+
+function unsubscribeView(state: UnsubscribeState) {
+  return {
+    scope: state.scope.kind,
+    event: state.scope.kind === "event" ? state.scope.event : null,
+    off: state.off,
+  };
+}
 const readAllSchema = z.object({ before: z.iso.datetime().optional() }).strict();
 const countSchema = z.object({ count: z.number().int() });
 const markedSchema = z.object({ marked: z.number().int() });
@@ -156,6 +186,62 @@ export class NotificationsController {
   async readAll(@Req() request: FastifyRequest, @Body() body: z.output<typeof readAllSchema>) {
     const before = body.before ? new Date(body.before) : undefined;
     return { marked: await this.#notifications.markAllRead(sessionOf(request).accountId, before) };
+  }
+
+  @Get("unsubscribe/:token")
+  @PublicRoute()
+  @ApiRoute({
+    summary: "Show what an unsubscribe link turns off",
+    description: "Works without signing in. The token comes from the link in a notification e-mail.",
+    tags: [TAG],
+    params: unsubscribeParams,
+    response: { description: "The e-mails the link turns off.", schema: unsubscribeSchema },
+    errors: ["invalidToken"],
+  })
+  async describeUnsubscribe(@Param("token") token: string) {
+    const state = await servicesOf(this.context).unsubscribe.describe(token);
+    if (!state) throw new ProblemException("invalidToken", "The unsubscribe link is not valid");
+    return unsubscribeView(state);
+  }
+
+  @Post("unsubscribe/:token")
+  @PublicRoute()
+  @ApiRoute({
+    summary: "Turn off e-mails with an unsubscribe link",
+    description:
+      "Works without signing in and is the target of the `List-Unsubscribe` header, so mail programs can unsubscribe with one click. It turns off e-mail for the event of the link, or the daily summary, for the person the link was sent to and changes nothing else.",
+    tags: [TAG],
+    status: 200,
+    params: unsubscribeParams,
+    body: oneClickSchema,
+    response: { description: "The e-mails the link turned off.", schema: unsubscribeSchema },
+    errors: ["invalidToken", "settingLocked"],
+  })
+  async unsubscribe(@Param("token") token: string) {
+    const result = await servicesOf(this.context).unsubscribe.apply(token);
+    if (!result) throw new ProblemException("invalidToken", "The unsubscribe link is not valid");
+    if (!result.applied) {
+      throw new ProblemException(
+        "settingLocked",
+        "Your organization requires these e-mails. Ask an administrator of your organization to change it.",
+      );
+    }
+    return unsubscribeView(result.state);
+  }
+
+  @Get(":notificationId")
+  @SessionRoute()
+  @ApiRoute({
+    summary: "Get a notification",
+    description: "Notifications the caller can no longer see answer like unknown ones.",
+    tags: [TAG],
+    params: idParams,
+    response: { description: "The notification.", schema: notificationSchema },
+  })
+  async get(@Param("notificationId") id: string, @Req() request: FastifyRequest) {
+    const item = await this.#notifications.get(sessionOf(request).accountId, id);
+    if (!item) throw notFound();
+    return item;
   }
 
   @Post(":notificationId/read")

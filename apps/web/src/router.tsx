@@ -163,6 +163,12 @@ const secondFactorSetupRoute = createRoute({
   ),
 });
 
+const unsubscribeRoute = createRoute({
+  getParentRoute: () => publicRoute,
+  path: "/unsubscribe/$token",
+  component: lazyRouteComponent(() => import("./notifications/unsubscribe-screen.js"), "UnsubscribeScreen"),
+});
+
 const appRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: "app",
@@ -186,6 +192,16 @@ const forYouRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/home",
   component: lazyRouteComponent(() => import("./collaboration/home-screen.js"), "HomeScreen"),
+});
+
+const openNotificationRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/notifications/$notificationId",
+  params: { parse: (params) => ({ notificationId: idSchema.parse(params.notificationId) }) },
+  component: lazyRouteComponent(
+    () => import("./notifications/open-notification-screen.js"),
+    "OpenNotificationScreen",
+  ),
 });
 
 const searchRoute = createRoute({
@@ -798,10 +814,12 @@ const routeTree = rootRoute.addChildren([
     registerRoute,
     completeRegistrationRoute,
     secondFactorSetupRoute,
+    unsubscribeRoute,
   ]),
   appRoute.addChildren([
     homeRoute,
     forYouRoute,
+    openNotificationRoute,
     searchRoute,
     myTasksRoute,
     blogRoute,

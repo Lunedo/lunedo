@@ -18,7 +18,21 @@ SMTP is an instance setting, configured in the setup assistant, in the instance 
 
 Certificates are always verified.
 
-Services such as SendGrid, Mailgun, Amazon SES, Postmark and Brevo are used through SMTP. The settings offer presets for them that fill in server, port and connection security, nothing else; user name, password or API key and sender stay as entered.
+Services such as SendGrid, Mailgun, Amazon SES, Postmark and Brevo are used through SMTP. The settings offer presets for them that fill in server, port and connection security, nothing else; user name, password or API key and sender stay as entered. The presets for Microsoft 365 and Google Workspace also choose OAuth2.
+
+### SMTP with OAuth2
+
+Instead of a password, SMTP can sign in with an access token through SASL XOAUTH2 (`oauth2` in the SMTP configuration). The user name is the mailbox Pagehall signs in as. OAuth2 needs TLS or STARTTLS.
+
+| Provider | Grant | Pagehall stores |
+|---|---|---|
+| `microsoft365` | Client credentials at `{authority}/{tenant}/oauth2/v2.0/token` with the scope `https://outlook.office365.com/.default` | Tenant ID, application ID, Microsoft cloud; the client secret |
+| `google` | Signed JWT assertion of a service account with domain-wide delegation, subject the mailbox, scope `https://mail.google.com/`, at `https://oauth2.googleapis.com/token` | Service account and its client ID; only the private key of the uploaded key file |
+| `generic` | Client credentials at a token endpoint (HTTPS) with a scope | Token endpoint, client ID, scope; the client secret |
+
+Setup in Microsoft 365: register an app, add the application permission `SMTP.SendAsApp` of Office 365 Exchange Online with admin consent, create a client secret, then in Exchange Online PowerShell register the service principal (`New-ServicePrincipal -AppId … -ObjectId …`, with the object ID from Enterprise applications), give it the mailbox (`Add-MailboxPermission -Identity … -User … -AccessRights FullAccess`) and allow SMTP sign-in for it (`Set-CASMailbox -Identity … -SmtpClientAuthenticationDisabled $false`). Setup in Google Workspace: create a service account with a JSON key, then add its client ID with the scope `https://mail.google.com/` under domain-wide delegation in the Admin console. The settings show these steps and the values to copy before the fields. Google advises against service account keys; rotate the key regularly and upload the new one.
+
+Secrets and access tokens are stored with envelope encryption and never returned or logged. Pagehall fetches a token when it needs one and keeps it, shared by all nodes, until five minutes before it expires; when the mail server refuses a stored token, it fetches a new one once. Changing the SMTP configuration drops the stored token; a new OAuth2 client needs its secret again, and switching back to a password removes the OAuth2 secret. A test mail fetches a fresh token and names the step that failed (`token`, `connect`, `authenticate`, `send`); token errors are `oauthTokenUnreachable`, `oauthClientRejected`, `oauthNotAuthorized`, `oauthScopeRejected`, `oauthTokenRefused` and `oauthKeyInvalid`.
 
 ## Microsoft Graph
 
@@ -45,7 +59,7 @@ The authority and the Graph endpoint default to the global Microsoft cloud; othe
 | `graphTenantUnknown`, `graphApplicationUnknown` | Wrong tenant or client ID. |
 | `graphUnreachable`, `graphRefused` | Graph could not be reached, was busy or refused the mail. |
 
-Delivery through Graph is retried like delivery through SMTP.
+Delivery through Graph is retried like delivery through SMTP. Mails with list headers, which all notification mails have, are sent in MIME format with a text and an HTML part, because Graph accepts other headers only that way; Graph then keeps a copy in the Sent Items of the sender mailbox, which a retention policy can clean up.
 
 Graph accepts a mail with `202 Accepted` and delivers it later, so a successful test only means that Microsoft 365 accepted it. A delivery failure arrives as a non-delivery report in the sender mailbox, for example `550 5.7.233` when a new or trial tenant may not send to external recipients yet. Pagehall sends with `saveToSentItems: false`, so the sent mail itself does not appear in Sent Items; the message trace in the Exchange admin center shows what happened to it.
 
@@ -53,11 +67,13 @@ Graph accepts a mail with `202 Accepted` and delivers it later, so a successful 
 
 A mail is written to the outbox in the same transaction as the change that causes it, encrypted because it can contain links with tokens. A job delivers it and deletes it afterwards. Failed deliveries are retried eight times with growing delays; after the last attempt the mail is marked as failed and its content is removed. A job queues mails whose delivery was never started, for example after a crash right after the commit, every minute.
 
+Before sending, a node claims the mail (`sending`), so two nodes never send it at the same time. A claim older than ten minutes, left by a node that stopped while sending, is handed to the next run. Each mail carries a `Message-ID` derived from its ID, so a mail that is sent again after such a stop has the same ID and mail systems can recognize it. Delivery runs in its own jobs with time limits, so a failing mail server never blocks other jobs or requests. The e-mail settings show the last delivery error with its step and the last successful delivery (`delivery` in `GET /api/v1/instance/mail`).
+
 Logs name the mail ID, template and error code, never recipients, content, secrets or tokens.
 
 Mails are written in the language of the account, inherited from its home organization unless the account chose one, in English or German. Dates in notification mails use the date format and time zone of the account. Mails to people without an account use the language of the organization.
 
-Every mail has a plain-text and an HTML version with a fixed layout: the organization's logo, or its name, at the top, its accent color, the text, at most one action button followed by its address in plain text, and a footer with the instance name. Notification mails add a link to the notification preferences. Logo and color come from the organization the mail is about; everything else, including links and codes, is set by the template and cannot be changed by organizations.
+Every mail has a plain-text and an HTML version with a fixed layout: the organization's logo, or its name, at the top, its accent color, the text, at most one action button followed by its address in plain text, and a footer with the instance name. Notification mails add a link to the notification preferences and an unsubscribe link, see [notifications.md](notifications.md#e-mail). Logo and color come from the organization the mail is about; everything else, including links and codes, is set by the template and cannot be changed by organizations.
 
 ## Development
 

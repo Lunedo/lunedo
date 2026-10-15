@@ -2151,6 +2151,10 @@
         "label": "Inhaltssprache",
         "description": "Sprache der Seiten in diesem Space. Die Suche findet damit Wörter in allen Formen, zum Beispiel Häuser bei der Suche nach Haus. Jede Seite kann eine andere Sprache verwenden."
       },
+      "notifications_digestEnabled": {
+        "label": "Tägliche Zusammenfassung per E-Mail senden",
+        "description": "Sammelt die Benachrichtigungen, deren E-Mail auf die tägliche Zusammenfassung steht. Ausgeschaltet erscheinen sie nur in der App."
+      },
       "notifications_digestTime": {
         "label": "Zusammenfassung senden um",
         "description": "In der Zeitzone der jeweiligen Person. Wird nur gesendet, wenn etwas passiert ist."
@@ -2521,6 +2525,23 @@
       "keepMentions": "Weiter benachrichtigen bei Erwähnungen, mir zugewiesenen Aufgaben, für mich freigegebenen Seiten und Zugriffsanfragen, über die ich entscheide",
       "muteConfirm": "Stummschalten",
       "cancel": "Abbrechen"
+    },
+    "open": {
+      "loading": "Benachrichtigung wird geöffnet",
+      "gone": "Diese Benachrichtigung ist nicht mehr verfügbar",
+      "goneCause": "Sie wurde nach ihrer Aufbewahrungsfrist entfernt, oder du kannst nicht mehr öffnen, worum es ging.",
+      "toNotifications": "Meine Benachrichtigungen anzeigen"
+    },
+    "unsubscribe": {
+      "title": "E-Mails abbestellen",
+      "loading": "Link wird geprüft",
+      "event": "Du bekommst E-Mails zu {event}.",
+      "digest": "Du bekommst eine tägliche Zusammenfassung deiner Benachrichtigungen per E-Mail.",
+      "confirm": "Diese E-Mails abbestellen",
+      "eventOff": "Du bekommst keine E-Mails mehr zu {event}. Benachrichtigungen erscheinen weiter in der App.",
+      "digestOff": "Du bekommst keine tägliche Zusammenfassung mehr. Benachrichtigungen erscheinen weiter in der App.",
+      "settings": "Benachrichtigungseinstellungen ändern",
+      "failed": "Die E-Mails konnten nicht abbestellt werden"
     }
   },
   "mail": {
@@ -2565,7 +2586,14 @@
       "envelope": "Der Mailserver hat Absender oder Empfänger nicht akzeptiert. Viele Server erlauben als Absender nur die Adresse des Kontos, das sich anmeldet.",
       "refused": "Der Mailserver hat die Nachricht abgelehnt.",
       "deferred": "Der Mailserver kann die Nachricht gerade nicht annehmen. Versuche es in ein paar Minuten erneut.",
-      "unknown": "Der Mailserver hat die Nachricht nicht angenommen."
+      "unknown": "Der Mailserver hat die Nachricht nicht angenommen.",
+      "authToken": "Der Mailserver hat das Zugriffstoken nicht akzeptiert. Prüfe, ob die App dieses Postfach nutzen darf und ob die SMTP-Anmeldung dafür erlaubt ist.",
+      "tokenUnreachable": "Der Token-Endpunkt war nicht erreichbar oder nicht verfügbar. Prüfe die Netzwerkverbindung dorthin und versuche es später erneut.",
+      "clientRejected": "Der Token-Endpunkt hat Client-ID oder Client-Secret nicht akzeptiert. Prüfe beides und ob das Secret abgelaufen ist.",
+      "notAuthorized": "Die App darf für dieses Postfach kein Token bekommen. Prüfe Berechtigung und Administratorzustimmung oder die domainweite Delegierung mit ihrem Scope.",
+      "scopeRejected": "Der Token-Endpunkt hat den Scope nicht akzeptiert. Prüfe den Scope und die Berechtigungen der App.",
+      "tokenRefused": "Der Token-Endpunkt hat die Anfrage abgelehnt. Prüfe Mandant, Client und Token-Endpunkt.",
+      "keyInvalid": "Der gespeicherte Schlüssel des Dienstkontos lässt sich nicht lesen. Wähle die Schlüsseldatei erneut."
     },
     "testFailedAction": "Prüfe Server, Port, Verbindungssicherheit und Zugangsdaten und sende den Test dann erneut.",
     "preset": "Dienst",
@@ -2573,7 +2601,7 @@
     "presetCustom": "Eigener Mailserver",
     "methodTitle": "Versandart",
     "method": "Versandart",
-    "methodHint": "Pagehall sendet derzeit über {method}. Exchange Online rückt von SMTP mit Passwörtern ab; für Microsoft 365 nutze Microsoft Graph. Eine Versandart gilt, sobald du ihre Einstellungen speicherst.",
+    "methodHint": "Pagehall sendet derzeit über {method}. Exchange Online rückt von SMTP mit Passwörtern ab; für Microsoft 365 nutze SMTP mit OAuth2 oder Microsoft Graph. Eine Versandart gilt, sobald du ihre Einstellungen speicherst.",
     "methods": {
       "smtp": "SMTP",
       "graph": "Microsoft Graph"
@@ -2658,6 +2686,91 @@
         "cause": "Microsoft Graph hat die E-Mail abgelehnt.",
         "action": "Prüfe Absenderpostfach und Empfänger und teste erneut."
       }
+    },
+    "authentication": "Anmeldung",
+    "authenticationHint": "OAuth2 meldet sich mit einem Zugriffstoken an, das Pagehall selbst holt und erneuert, statt mit einem Passwort.",
+    "authenticationModes": {
+      "password": "Passwort",
+      "oauth2": "OAuth2"
+    },
+    "mailbox": "Postfach",
+    "mailboxHint": "Das Postfach, als das sich Pagehall anmeldet. Meist auch die Absenderadresse.",
+    "failureStep": "Fehlgeschlagener Schritt: {step}",
+    "failureSteps": {
+      "token": "Zugriffstoken holen",
+      "connect": "Verbindung zum Mailserver",
+      "authenticate": "Anmeldung am Mailserver",
+      "send": "Nachricht senden"
+    },
+    "oauth2": {
+      "provider": "Anbieter",
+      "providers": {
+        "microsoft365": "Microsoft 365",
+        "google": "Google Workspace",
+        "generic": "Anderer Token-Endpunkt"
+      },
+      "tenantId": "Mandanten-ID",
+      "clientId": "Anwendungs-ID (Client-ID)",
+      "cloud": "Microsoft-Cloud",
+      "clouds": {
+        "global": "Global",
+        "usGovernment": "US Government",
+        "china": "China (21Vianet)"
+      },
+      "clientSecret": "Client-Secret",
+      "secretKept": "Leer lassen, um das gespeicherte Secret zu behalten.",
+      "keyFile": "Schlüsseldatei des Dienstkontos",
+      "keyFileHint": "Der JSON-Schlüssel aus Google Cloud. Pagehall speichert nur den privaten Schlüssel, verschlüsselt.",
+      "keyKept": "Ein Schlüssel ist gespeichert. Wähle nur eine Datei, um ihn zu ersetzen.",
+      "serviceAccount": "Dienstkonto {email}, Client-ID {clientId}",
+      "tokenUrl": "Token-Endpunkt",
+      "genericClientId": "Client-ID",
+      "scope": "Scope",
+      "copyValue": "{name} kopieren",
+      "errors": {
+        "tenantId": "Gib die Mandanten-ID ein, einen Wert wie 8a9c5e1f-…, aus der Übersicht von Microsoft Entra ID.",
+        "clientId": "Gib die Anwendungs-ID (Client-ID) aus der Übersicht der App-Registrierung ein.",
+        "clientSecret": "Gib das Client-Secret ein. Ein gespeichertes Secret bleibt nur erhalten, solange die App dieselbe bleibt.",
+        "keyFile": "Wähle die JSON-Schlüsseldatei des Dienstkontos.",
+        "keyFileInvalid": "Diese Datei ist kein JSON-Schlüssel eines Google-Dienstkontos. Lade in Google Cloud unter Dienstkonten, Schlüssel einen neuen herunter.",
+        "tokenUrl": "Gib die Adresse des Token-Endpunkts ein, beginnend mit https://.",
+        "genericClientId": "Gib die Client-ID ein.",
+        "scope": "Gib den Scope ein, den der Mailserver erwartet.",
+        "mailbox": "Gib das Postfach ein, als das sich Pagehall anmeldet.",
+        "tls": "OAuth2 braucht eine TLS- oder STARTTLS-Verbindung."
+      },
+      "steps": {
+        "title": "Zuerst in {provider} einrichten",
+        "microsoft365": {
+          "register": "Registriere in Microsoft Entra ID eine App nur für E-Mail.",
+          "permission": "Füge unter API-Berechtigungen Office 365 Exchange Online, Anwendungsberechtigung SMTP.SendAsApp, hinzu und erteile die Administratorzustimmung.",
+          "secret": "Erstelle ein Client-Secret und trage es unten mit Mandanten-ID und Anwendungs-ID ein.",
+          "exchange": "Registriere die App in der Exchange Online PowerShell, erlaube ihr das Postfach und erlaube die SMTP-Anmeldung für das Postfach. Nimm die Objekt-ID aus Unternehmensanwendungen, nicht aus App-Registrierungen:"
+        },
+        "google": {
+          "account": "Erstelle in Google Cloud ein Dienstkonto und einen JSON-Schlüssel dafür und wähle die Schlüsseldatei unten aus.",
+          "delegation": "Öffne in der Google Admin-Konsole Sicherheit, Zugriffs- und Datenverwaltung, API-Steuerung, Domainweite Delegierung verwalten, und füge die Client-ID des Dienstkontos mit diesem Scope hinzu:",
+          "delay": "Google braucht oft einige Minuten, selten bis zu 24 Stunden, bis die Delegierung wirkt."
+        },
+        "generic": {
+          "grant": "Der Token-Endpunkt muss Zugriffstokens mit dem Client-Credentials-Grant ausstellen, und der Mailserver muss sie über XOAUTH2 annehmen."
+        }
+      },
+      "placeholders": {
+        "mailbox": "<Postfach>",
+        "application": "<Anwendungs-ID>",
+        "objectId": "<Objekt-ID>"
+      },
+      "advanced": "Erweitert: andere Microsoft-Cloud"
+    },
+    "delivery": {
+      "title": "Zustellung",
+      "lastFailure": "Letzter Zustellfehler",
+      "lastFailureAt": "{date}: {cause}",
+      "noFailure": "Bisher kein Zustellfehler.",
+      "lastSuccess": "Letzte E-Mail an den Server übergeben",
+      "never": "Noch nie",
+      "retry": "Pagehall versucht jede E-Mail mehrere Stunden lang erneut. Behebe die Ursache und prüfe es mit einer Test-E-Mail."
     }
   },
   "organization": {
@@ -3854,7 +3967,9 @@
     "finishProviderSetup": "Die Einrichtung konnte nicht abgeschlossen werden",
     "removeDraft": "Der Entwurf konnte nicht entfernt werden",
     "loadDrafts": "Die Entwürfe konnten nicht geladen werden",
-    "changeAddress": "Die Adresse wurde nicht geändert"
+    "changeAddress": "Die Adresse wurde nicht geändert",
+    "unsubscribeLink": "Der Abmeldelink konnte nicht geprüft werden",
+    "openNotification": "Die Benachrichtigung konnte nicht geöffnet werden"
   },
   "lifecycle": {
     "placeholder": {

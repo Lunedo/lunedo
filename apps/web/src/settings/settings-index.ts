@@ -103,6 +103,7 @@ const notificationEvents = (): IndexEntry[] =>
   );
 
 export const NOTIFICATION_DELIVERY_KEYS = [
+  "notifications.digestEnabled",
   "notifications.digestTime",
   "notifications.retentionDays",
 ] as const;
@@ -182,7 +183,10 @@ export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
   ],
   "account.notifications": [
     section("notifications.eventTypes", notificationEvents()),
-    section("notifications.digest.title", [setting("notifications.digestTime")]),
+    section("notifications.digest.title", [
+      setting("notifications.digestEnabled"),
+      setting("notifications.digestTime"),
+    ]),
     section("notifications.watching.title", [
       setting("notifications.watchAutomatically"),
       row("watched", "notifications.watching.watched"),
@@ -256,7 +260,10 @@ export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
   ],
   "instance.notifications": [
     section("notifications.eventTypes", notificationEvents()),
-    section("notifications.delivery", [setting("notifications.digestTime")]),
+    section("notifications.delivery", [
+      setting("notifications.digestEnabled"),
+      setting("notifications.digestTime"),
+    ]),
   ],
   "instance.announcements": [
     section("announcements.banner", [

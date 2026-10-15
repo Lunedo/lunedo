@@ -435,6 +435,13 @@
       "when": 1792008297997,
       "tag": "0061_watching_and_preferences",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1792048805050,
+      "tag": "0062_notification_email",
+      "breakpoints": true
     }
   ]
 }

@@ -43,7 +43,7 @@ export function NotificationPreferencesScreen() {
       <Section title={t("notifications.digest.title")}>
         <SettingsList
           settings={list.data}
-          keys={["notifications.digestTime"]}
+          keys={["notifications.digestEnabled", "notifications.digestTime"]}
           level="user"
           {...organizationName}
           canManage={() => true}

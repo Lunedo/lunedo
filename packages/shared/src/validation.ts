@@ -102,6 +102,43 @@ export const responsibleAccountIdsSchema = z.array(idSchema).max(20);
 export const breakGlassReasonSchema = z.string().trim().min(10).max(2000);
 
 export const smtpSecurityModes = ["tls", "starttls", "none"] as const;
+export const smtpOAuth2Providers = ["microsoft365", "google", "generic"] as const;
+export const microsoftAuthorities = [
+  "https://login.microsoftonline.com",
+  "https://login.microsoftonline.us",
+  "https://login.partner.microsoftonline.cn",
+] as const;
+export type SmtpOAuth2Provider = (typeof smtpOAuth2Providers)[number];
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+export const smtpOAuth2Schema = z.discriminatedUnion("provider", [
+  z
+    .object({
+      provider: z.literal("microsoft365"),
+      tenantId: z.string().trim().toLowerCase().regex(uuidPattern, "must be the tenant ID"),
+      clientId: z.string().trim().toLowerCase().regex(uuidPattern, "must be the application ID"),
+      authority: z.enum(microsoftAuthorities).default("https://login.microsoftonline.com"),
+    })
+    .strict(),
+  z
+    .object({
+      provider: z.literal("google"),
+      serviceAccount: z.email().max(254),
+      clientId: z
+        .string()
+        .trim()
+        .regex(/^\d{1,40}$/, "must be the numeric client ID"),
+    })
+    .strict(),
+  z
+    .object({
+      provider: z.literal("generic"),
+      tokenUrl: z.url({ protocol: /^https?$/ }).max(2048),
+      clientId: z.string().trim().min(1).max(500),
+      scope: z.string().trim().min(1).max(1000),
+    })
+    .strict(),
+]);
+export type SmtpOAuth2Configuration = z.output<typeof smtpOAuth2Schema>;
 export const smtpConfigurationSchema = z
   .object({
     host: z.string().trim().min(1).max(253),
@@ -109,10 +146,13 @@ export const smtpConfigurationSchema = z
     security: z.enum(smtpSecurityModes),
     username: z.string().min(1).max(256).nullable(),
     from: z.email().max(254),
+    oauth2: smtpOAuth2Schema.nullable().default(null),
   })
   .strict();
-export type SmtpConfiguration = z.infer<typeof smtpConfigurationSchema>;
+export type SmtpConfiguration = z.output<typeof smtpConfigurationSchema>;
+export type SmtpConfigurationInput = z.input<typeof smtpConfigurationSchema>;
 export const smtpPasswordSchema = z.string().max(1024).nullable();
+export const smtpOAuth2SecretSchema = z.string().min(1).max(20_000);
 
 export const accessLevels = ["view", "manage"] as const;
 export type AccessLevel = (typeof accessLevels)[number];

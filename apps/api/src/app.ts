@@ -56,7 +56,14 @@ function isSamlResponse(request: FastifyRequest): boolean {
   return request.method === "POST" && SAML_RESPONSE.test(request.url.split("?")[0] ?? "");
 }
 
-const TOKEN_SEGMENTS = /^(\/api\/v1\/share-links\/|\/api\/v1\/files\/|\/s\/)[^/]+/;
+const ONE_CLICK_UNSUBSCRIBE = /^\/api\/v1\/notifications\/unsubscribe\/[^/]+$/;
+
+function isOneClickUnsubscribe(request: FastifyRequest): boolean {
+  return request.method === "POST" && ONE_CLICK_UNSUBSCRIBE.test(request.url.split("?")[0] ?? "");
+}
+
+const TOKEN_SEGMENTS =
+  /^(\/api\/v1\/share-links\/|\/api\/v1\/files\/|\/api\/v1\/notifications\/unsubscribe\/|\/unsubscribe\/|\/s\/)[^/]+/;
 
 export function withoutTokens(path: string): string {
   return path.replace(TOKEN_SEGMENTS, "$1:token");
@@ -99,7 +106,7 @@ export async function configureApp(app: NestFastifyApplication, context: ApiCont
       if (!carriesCookieCredentials(request)) return;
     }
     if (isBackchannelLogout(request) && !carriesCookieCredentials(request)) return;
-    if (isSamlResponse(request)) return;
+    if (isSamlResponse(request) || isOneClickUnsubscribe(request)) return;
     if (!changesState(request) || isCsrfSafe(request, await allowedOrigins(request, context))) return;
     const moved = await movedTo(request, context);
     if (moved) {
