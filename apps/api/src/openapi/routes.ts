@@ -4,6 +4,7 @@ import { INTERNAL_ROUTE, ROUTE_ACCESS, type RouteAccess } from "../access/route-
 import { AuditController } from "../audit/audit.controller.js";
 import { AccountController } from "../auth/account.controller.js";
 import { AuthController } from "../auth/auth.controller.js";
+import { ChatChannelsController } from "../chat/chat-channels.controller.js";
 import { BlogController } from "../collaboration/blog.controller.js";
 import { CommentsController } from "../collaboration/comments.controller.js";
 import { HomeController } from "../collaboration/home.controller.js";
@@ -20,6 +21,7 @@ import { ImportsController } from "../imports/imports.controller.js";
 import { MeetingsController } from "../meetings/meetings.controller.js";
 import { OneOnOnesController } from "../meetings/one-on-ones.controller.js";
 import { NotificationsController } from "../notifications/notifications.controller.js";
+import { PushController } from "../notifications/push.controller.js";
 import { AccountWatchesController, WatchesController } from "../notifications/watches.controller.js";
 import { AccountsController } from "../organizations/accounts.controller.js";
 import { AnnouncementsController } from "../organizations/announcements.controller.js";
@@ -60,6 +62,8 @@ export const apiControllers = (): Type[] => [
   NotificationsController,
   WatchesController,
   AccountWatchesController,
+  PushController,
+  ChatChannelsController,
   IdentityProvidersController,
   ProviderAuthController,
   ProviderGroupsController,

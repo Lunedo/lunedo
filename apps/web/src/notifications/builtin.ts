@@ -14,6 +14,7 @@ import {
   Lock,
   Mail,
   MessageSquare,
+  MessagesSquare,
   Newspaper,
   NotebookPen,
   Share2,
@@ -190,5 +191,15 @@ notificationTypes.register(
     id: "space.confidentialWithoutAdministrator",
     icon: Lock,
     link: (item) => inOrganization(item, "/spaces"),
+  },
+  {
+    id: "chatChannel.failing",
+    icon: MessagesSquare,
+    link: (item) => {
+      const spaceKey = (item.params as { spaceKey?: string | null }).spaceKey;
+      return spaceKey
+        ? { to: `/spaces/${encodeURIComponent(spaceKey)}/settings/chat` }
+        : inOrganization(item, "/announcements");
+    },
   },
 );

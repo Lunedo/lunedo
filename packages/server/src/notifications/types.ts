@@ -15,6 +15,7 @@ import { defineNotificationType, type MailLocale, type VisibilityContext } from 
 export interface EventSettings {
   inApp: SettingDefinition<boolean>;
   email: SettingDefinition<EmailDelivery>;
+  push: SettingDefinition<boolean>;
 }
 
 const PREFERENCE_LEVELS = ["instance", "organization", "user"] as const;
@@ -34,6 +35,13 @@ export const notificationEventSettings = new Map<string, EventSettings>(
         key: notificationChannelSettingKey(event.id, "email"),
         schema: z.enum(emailDeliveries),
         default: event.defaults.email,
+        levels: PREFERENCE_LEVELS,
+        lockable: true,
+      }),
+      push: defineSetting({
+        key: notificationChannelSettingKey(event.id, "push"),
+        schema: z.boolean(),
+        default: event.defaults.push,
         levels: PREFERENCE_LEVELS,
         lockable: true,
       }),
@@ -65,8 +73,21 @@ export const watchAutomaticallySetting = defineSetting({
   lockable: false,
 });
 
+export const browserPushSetting = defineSetting({
+  key: "notifications.browserPush",
+  schema: z.boolean(),
+  default: false,
+  levels: ["instance"],
+  lockable: false,
+});
+
 export const notificationSettings = [
-  ...[...notificationEventSettings.values()].flatMap((settings) => [settings.inApp, settings.email]),
+  ...[...notificationEventSettings.values()].flatMap((settings) => [
+    settings.inApp,
+    settings.email,
+    settings.push,
+  ]),
+  browserPushSetting,
   notificationRetentionSetting,
   digestTimeSetting,
   watchAutomaticallySetting,

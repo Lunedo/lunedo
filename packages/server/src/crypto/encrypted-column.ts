@@ -26,12 +26,15 @@ export interface EncryptedColumn {
  */
 export const encryptedColumns: readonly EncryptedColumn[] = [
   { table: "audit_subject_keys", idColumn: "subject_id", column: "key" },
+  { table: "chat_channels", idColumn: "id", column: "target" },
+  { table: "chat_channels", idColumn: "id", column: "signing_secret" },
   { table: "identity_provider_credentials", idColumn: "id", column: "secret" },
   { table: "identity_provider_secrets", idColumn: "provider_id", column: "directory_key" },
   { table: "import_credentials", idColumn: "import_id", column: "token" },
   { table: "instance_secrets", idColumn: "name", column: "value" },
   { table: "mail_credentials", idColumn: "id", column: "secret" },
   { table: "mail_outbox", idColumn: "id", column: "message" },
+  { table: "push_subscriptions", idColumn: "id", column: "subscription" },
   { table: "share_links", idColumn: "id", column: "secret" },
   { table: "totp_credentials", idColumn: "id", column: "secret" },
 ];

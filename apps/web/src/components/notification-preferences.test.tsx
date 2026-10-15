@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { SettingEntry } from "../api/organization-queries.js";
@@ -35,6 +35,7 @@ function entry(
 const settings = [
   entry("notifications.mentions.inApp", true),
   entry("notifications.mentions.email", "immediately", { organization: "off" }),
+  entry("notifications.mentions.push", true),
   entry("notifications.changes.inApp", true, { user: false }),
   entry("notifications.changes.email", "off"),
   entry("notifications.apiTokenExpiring.inApp", true),
@@ -59,6 +60,7 @@ describe("notification preferences", () => {
         organizationName="Northwind"
         editable
         emailMethod="smtp"
+        browserPush={false}
         onChange={onChange}
       />,
     );
@@ -96,10 +98,45 @@ describe("notification preferences", () => {
         level="user"
         editable
         emailMethod={null}
+        browserPush={false}
         onChange={async () => undefined}
       />,
     );
     expect(screen.getByText("E-mail is not set up")).toBeTruthy();
     expect(screen.getByText(/Notifications stay in the app/)).toBeTruthy();
+  });
+
+  it("show the browser push column only while push is on for the instance", async () => {
+    const onChange = vi.fn(async () => undefined);
+    await renderWithProviders(
+      <NotificationPreferences
+        settings={settings}
+        loading={false}
+        level="user"
+        editable
+        emailMethod="smtp"
+        browserPush={false}
+        onChange={onChange}
+      />,
+    );
+    expect(screen.queryByRole("switch", { name: "Mentions of me: Browser push" })).toBeNull();
+    cleanup();
+
+    await renderWithProviders(
+      <NotificationPreferences
+        settings={settings}
+        loading={false}
+        level="user"
+        editable
+        emailMethod="smtp"
+        browserPush
+        onChange={onChange}
+      />,
+    );
+    const push = screen.getByRole("switch", { name: "Mentions of me: Browser push" });
+    expect(push.getAttribute("aria-checked")).toBe("true");
+    await userEvent.click(push);
+    expect(onChange).toHaveBeenCalledWith("notifications.mentions.push", false);
+    expect(screen.queryByRole("switch", { name: "Changes to content I watch: Browser push" })).toBeNull();
   });
 });

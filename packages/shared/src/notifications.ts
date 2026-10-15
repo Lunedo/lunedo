@@ -1,7 +1,8 @@
 import { z } from "zod";
+import { chatChannelKinds, chatFailureReasons } from "./chat.js";
 import { idSchema } from "./validation.js";
 
-export const notificationChannels = ["inApp", "email"] as const;
+export const notificationChannels = ["inApp", "email", "push"] as const;
 export type NotificationChannel = (typeof notificationChannels)[number];
 
 export const emailDeliveries = ["off", "immediately", "digest"] as const;
@@ -96,7 +97,7 @@ export interface NotificationEvent {
   id: string;
   group: NotificationEventGroup;
   types: readonly string[];
-  defaults: { inApp: boolean; email: EmailDelivery };
+  defaults: { inApp: boolean; email: EmailDelivery; push: boolean };
   keptWhenMuted: boolean;
 }
 
@@ -104,20 +105,32 @@ function contentEvent(
   id: string,
   types: readonly string[],
   email: EmailDelivery,
-  keptWhenMuted = false,
+  options: { keptWhenMuted?: boolean; push?: boolean } = {},
 ): NotificationEvent {
-  return { id, group: "content", types, defaults: { inApp: true, email }, keptWhenMuted };
+  return {
+    id,
+    group: "content",
+    types,
+    defaults: { inApp: true, email, push: options.push ?? false },
+    keptWhenMuted: options.keptWhenMuted ?? false,
+  };
 }
 
 function administrationEvent(id: string, types: readonly string[], email: EmailDelivery): NotificationEvent {
-  return { id, group: "administration", types, defaults: { inApp: true, email }, keptWhenMuted: false };
+  return {
+    id,
+    group: "administration",
+    types,
+    defaults: { inApp: true, email, push: false },
+    keptWhenMuted: false,
+  };
 }
 
 export const notificationEvents: readonly NotificationEvent[] = [
-  contentEvent("mentions", ["content.mentioned"], "immediately", true),
-  contentEvent("tasks", ["task.assigned"], "immediately", true),
-  contentEvent("shares", ["page.shared", "access.requestDecided"], "immediately"),
-  contentEvent("accessRequests", ["access.requested"], "immediately"),
+  contentEvent("mentions", ["content.mentioned"], "immediately", { keptWhenMuted: true, push: true }),
+  contentEvent("tasks", ["task.assigned"], "immediately", { keptWhenMuted: true, push: true }),
+  contentEvent("shares", ["page.shared", "access.requestDecided"], "immediately", { push: true }),
+  contentEvent("accessRequests", ["access.requested"], "immediately", { push: true }),
   contentEvent("comments", ["comment.created"], "digest"),
   contentEvent("changes", ["content.changed"], "off"),
   contentEvent("blogPosts", ["blogPost.published"], "digest"),
@@ -129,7 +142,12 @@ export const notificationEvents: readonly NotificationEvent[] = [
   ),
   administrationEvent(
     "spaceAdministration",
-    ["restriction.orphaned", "space.confidentialWithoutAdministrator", "blogPost.scheduleHeld"],
+    [
+      "restriction.orphaned",
+      "space.confidentialWithoutAdministrator",
+      "blogPost.scheduleHeld",
+      "chatChannel.failing",
+    ],
     "off",
   ),
   administrationEvent(
@@ -279,6 +297,14 @@ export const contentNotificationParamSchemas = {
     expiresAt: z.iso.datetime(),
   }),
   "export.failed": z.object({ name: z.string(), scope: z.enum(["space", "pages"]), errorCode: z.string() }),
+  "chatChannel.failing": z.object({
+    channelName: z.string(),
+    kind: z.enum(chatChannelKinds),
+    reason: z.enum(chatFailureReasons),
+    spaceId: idSchema.nullable(),
+    spaceKey: z.string().nullable(),
+    organizationId: idSchema,
+  }),
   "oneOnOne.started": z.object({
     itemTitle: z.string(),
     spaceKey: z.string(),

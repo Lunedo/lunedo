@@ -5,6 +5,7 @@ import { AuditLog, auditSettingChanges } from "../audit/audit-log.js";
 import { auditRetentionSetting } from "../audit/retention.js";
 import { authSettings } from "../auth/settings.js";
 import { checkRestoreComplete } from "../backup/restore-marker.js";
+import { startChatDelivery } from "../chat/jobs.js";
 import { startBlogAnnouncements } from "../collaboration/jobs.js";
 import { collaborationSettings } from "../collaboration/settings.js";
 import { ensureSecretFile, generateToken } from "../config/generated-secrets.js";
@@ -42,6 +43,7 @@ import { NotificationHub } from "../notifications/hub.js";
 import { notificationSettings } from "../notifications/types.js";
 import { Metrics } from "../observability/metrics.js";
 import { organizationSettings } from "../organizations/settings.js";
+import { startPushDelivery } from "../push/push-service.js";
 import { startSearchIndexing } from "../search/jobs.js";
 import { searchSettings } from "../search/languages.js";
 import { type AccountServices, createAccountServices, workAccountJobs } from "../services.js";
@@ -215,6 +217,7 @@ export async function createServerRuntime(options: {
       configuredInstanceUrl: config.instanceUrl,
       passwordHashConcurrency: config.passwordHashConcurrency,
       insecureIdentityProviders: config.insecureIdentityProviders,
+      outboundAllowedNetworks: config.outboundAllowedNetworks,
       ...(options.mailTransport ? { mailTransport: options.mailTransport } : {}),
     });
 
@@ -225,6 +228,8 @@ export async function createServerRuntime(options: {
         await workAccountJobs(jobs, services, settings);
         await startSearchIndexing({ jobs, listener, indexer: services.search.indexer, logger });
         await startBlogAnnouncements({ jobs, listener, subscriptions: services.blogSubscriptions, logger });
+        await startPushDelivery({ jobs, listener, push: services.push, logger });
+        await startChatDelivery({ jobs, listener, channels: services.chatChannels, logger });
         metrics.observeJobQueue(jobs);
         await jobs.work(rotateDataKeysJob, keyRotation.run);
         await jobs.work(cleanupJobProgressJob, async () => {

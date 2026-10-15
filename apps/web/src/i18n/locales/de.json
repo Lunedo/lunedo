@@ -1406,7 +1406,16 @@
     "tooManyShortcuts": "Der Space hat die höchste erlaubte Zahl an Verknüpfungen. Entferne eine, bevor du eine neue hinzufügst.",
     "invalidAnnouncement": "Die Ankündigung ist ungültig. Prüfe den Text, den Link und das Ende.",
     "announcementNotDismissible": "Eine Warnung bleibt bis zu ihrem Ende und kann nicht ausgeblendet werden.",
-    "announcementChanged": "Die Ankündigung wurde inzwischen geändert. Lies den neuen Text und blende sie dann erneut aus."
+    "announcementChanged": "Die Ankündigung wurde inzwischen geändert. Lies den neuen Text und blende sie dann erneut aus.",
+    "invalidChatChannel": "Dem Kanal fehlen ein Name, ein Ereignis oder Verbindungsdaten. Prüfe das Formular und versuche es erneut.",
+    "invalidChatAddress": "Die Adresse kann nicht verwendet werden. Prüfe, ob sie vollständig ist und mit https:// beginnt.",
+    "chatAddressBlocked": "Die Adresse zeigt in ein privates Netz. Verwende eine öffentliche Adresse oder bitte die Instanz-Administration, dieses Netz zu erlauben.",
+    "chatAddressInsecure": "Die Adresse muss mit https:// beginnen.",
+    "confidentialSpace": "Vertrauliche Spaces können nicht in Chat-Kanäle posten.",
+    "tooManyChatChannels": "Es gibt schon 20 Kanäle. Trenne einen, bevor du einen weiteren verbindest.",
+    "pushDisabled": "Browser-Push ist für diese Instanz ausgeschaltet. Die Instanz-Administration kann es einschalten.",
+    "invalidPushSubscription": "Der Browser hat eine unvollständige Push-Anmeldung gesendet. Lade die Seite neu und versuche es erneut.",
+    "tooManyPushDevices": "Du hast 20 Geräte mit Browser-Push. Entferne eines, bevor du ein weiteres hinzufügst."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -2158,6 +2167,10 @@
       "notifications_watchAutomatically": {
         "label": "Beobachten, was ich erstelle, bearbeite oder kommentiere",
         "description": "Du bekommst Änderungen und Kommentare zu diesen Inhalten."
+      },
+      "notifications_browserPush": {
+        "label": "Browser-Push",
+        "description": "Erlaubt Benachrichtigungen über die Push-Dienste der Browserhersteller."
       }
     },
     "disabled": {
@@ -2321,7 +2334,8 @@
     "noEventTypes": "Es gibt keine Ereignisse zum Einstellen.",
     "channels": {
       "inApp": "In der App",
-      "email": "E-Mail"
+      "email": "E-Mail",
+      "push": "Browser-Push"
     },
     "events": {
       "identityProviderCredentialExpiring": "Zugang eines Identitätsanbieters läuft bald ab",
@@ -2432,6 +2446,9 @@
       },
       "comment": {
         "created": "{actorCount, plural, =0 {Jemand hat {itemTitle} kommentiert} one {{actor} hat {itemTitle} kommentiert} other {{actor} und {others, plural, one {# weitere Person} other {# weitere Personen}} haben {itemTitle} kommentiert}}"
+      },
+      "chatChannel": {
+        "failing": "Der Chat-Kanal {channelName} nimmt keine Nachrichten mehr an, deshalb wird dort nichts gepostet. Öffne seine Einstellungen, um den Grund zu sehen und ihn zu beheben."
       }
     },
     "channelFor": "{event}: {channel}",
@@ -2521,6 +2538,43 @@
       "keepMentions": "Bei Erwähnungen und mir zugewiesenen Aufgaben weiter benachrichtigen",
       "muteConfirm": "Stummschalten",
       "cancel": "Abbrechen"
+    },
+    "push": {
+      "title": "Browser-Push",
+      "thisDevice": "Benachrichtigungen auf diesem Gerät",
+      "explanation": "Push-Nachrichten werden über den Push-Dienst deines Browserherstellers zugestellt. Ihr Inhalt ist verschlüsselt, sie verlassen aber diesen Server. Beim Einschalten fragt dein Browser nach der Erlaubnis.",
+      "unsupported": "Dieser Browser kann keine Push-Nachrichten empfangen. Verwende eine aktuelle Version von Firefox, Chrome, Edge oder Safari.",
+      "instanceOff": "Für diese Instanz ausgeschaltet. Die Instanz-Administration kann es einschalten.",
+      "off": "Aus",
+      "on": "An",
+      "turnOn": "Für dieses Gerät einschalten",
+      "turnOff": "Auf diesem Gerät ausschalten",
+      "devices": "Geräte mit Browser-Push",
+      "deviceName": "{browser} auf {system}",
+      "unknownDevice": "Unbekanntes Gerät",
+      "current": "Dieses Gerät",
+      "deviceAdded": "Hinzugefügt am {added}",
+      "deviceSeen": "Hinzugefügt am {added} · letzte Nachricht {delivered}",
+      "remove": "Entfernen",
+      "removeDevice": "{device} entfernen",
+      "removeTitle": "{device} entfernen?",
+      "removeEffect": "Dieses Gerät bekommt dann keinen Browser-Push mehr. Damit dort wieder Nachrichten ankommen, schalte es auf dem Gerät erneut ein.",
+      "removeConfirm": "Gerät entfernen",
+      "failed": "Browser-Push konnte nicht eingeschaltet werden",
+      "permissionDenied": "Dein Browser blockiert Benachrichtigungen von Pagehall. Erlaube sie in den Website-Einstellungen deines Browsers und versuche es erneut.",
+      "browserFailed": "Der Browser oder sein Push-Dienst hat nicht geantwortet. Prüfe deine Internetverbindung und versuche es erneut.",
+      "loadFailed": "Browser-Push konnte nicht geladen werden",
+      "instanceLabel": "Browser-Push für diese Instanz",
+      "instanceDescription": "Personen können Benachrichtigungen je Gerät einschalten. Die Nachrichten laufen über die Push-Dienste der Browserhersteller.",
+      "instanceReadOnly": "Nur Instanz-Administratoren, die Einstellungen verwalten, können das ändern.",
+      "enableTitle": "Browser-Push einschalten?",
+      "enableDescription": "Lies das, bevor du es einschaltest:",
+      "enableEncrypted": "Nachrichten werden über die Push-Dienste der Browserhersteller zugestellt, etwa von Google, Mozilla, Apple und Microsoft. Sie verlassen diesen Server.",
+      "enableContent": "Ihr Inhalt ist zwischen diesem Server und dem Browser verschlüsselt. Die Push-Dienste sehen nur, wann eine Nachricht an welchen Browser geht.",
+      "enablePerDevice": "Es wird nichts gesendet, bis Personen es für ihre eigenen Geräte einschalten.",
+      "enableConfirm": "Browser-Push einschalten",
+      "organizationOn": "Für diese Instanz eingeschaltet. Personen wählen es je Ereignis und schalten es je Gerät ein.",
+      "organizationOff": "Für diese Instanz ausgeschaltet. Die Instanz-Administration kann es einschalten."
     }
   },
   "mail": {
@@ -3459,6 +3513,11 @@
       "announcement": {
         "changed": "Ankündigungsbanner gesetzt",
         "removed": "Ankündigungsbanner entfernt"
+      },
+      "chatChannel": {
+        "connected": "Chat-Kanal verbunden",
+        "changed": "Chat-Kanal geändert",
+        "removed": "Chat-Kanal entfernt"
       }
     },
     "action": "Aktion",
@@ -3504,7 +3563,8 @@
       "page": "Seite",
       "trashEntry": "Papierkorbeintrag",
       "template": "Vorlage",
-      "announcement": "Ankündigung"
+      "announcement": "Ankündigung",
+      "chatChannel": "Chat-Kanal"
     },
     "properties": {
       "value": "Wert",
@@ -7592,5 +7652,138 @@
     "removeFailed": "Die Verknüpfung konnte nicht entfernt werden. Prüfe deine Verbindung und versuche es noch einmal.",
     "restoreFailed": "Die Verknüpfung konnte nicht wiederhergestellt werden. Füge sie erneut hinzu.",
     "reorderFailed": "Die Reihenfolge konnte nicht gespeichert werden. Prüfe deine Verbindung und versuche es noch einmal."
+  },
+  "chatChannels": {
+    "title": "Chat-Kanäle",
+    "spaceDescription": "Poste, was in diesem Space passiert, in Microsoft Teams, Slack, Matrix, Discord oder jeden Dienst, der Webhooks annimmt.",
+    "spacePanelDescription": "Gepostet werden nur Inhalte, die alle Mitglieder des Space lesen können. Beschränkte Seiten, ihre Kommentare und Entwürfe nie.",
+    "announcementsTitle": "Ankündigungen im Chat posten",
+    "announcementsDescription": "Poste die Ankündigung dieser Organisation in Chat-Kanäle, sobald sie beginnt.",
+    "confidential": "Vertrauliche Spaces können nicht in Chat-Kanäle posten, damit ihr Inhalt bei ihren Mitgliedern bleibt.",
+    "personal": "Persönliche Spaces können nicht in Chat-Kanäle posten.",
+    "unavailableTitle": "Hier nicht verfügbar",
+    "adminsOnly": "Nur Administratoren können Chat-Kanäle verbinden.",
+    "connectAction": "Kanal verbinden",
+    "loadFailed": "Chat-Kanäle konnten nicht geladen werden",
+    "empty": "Noch keine Kanäle. Verbinde einen, um Neuigkeiten dort zu posten.",
+    "working": "Funktioniert",
+    "failing": "Fehlerhaft",
+    "lastDelivered": "zuletzt zugestellt {time}",
+    "failingSince": "fehlerhaft seit {time}",
+    "nothingYet": "noch nichts gepostet",
+    "sendTestShort": "Test senden",
+    "sendTestTo": "Testnachricht an {name} senden",
+    "edit": "{name} bearbeiten",
+    "disconnect": "{name} trennen",
+    "failingTitle": "{service} nimmt keine Nachrichten mehr für {name} an",
+    "fix": "Bearbeiten",
+    "notDelivered": "Nachrichten seitdem wurden nicht gepostet.",
+    "disconnectTitle": "{name} trennen?",
+    "disconnectEffect": "Dort wird nichts mehr gepostet, und die gespeicherte Adresse wird gelöscht. Um den Kanal wieder zu verbinden, brauchst du eine neue Adresse aus {service}.",
+    "disconnectConfirm": "Kanal trennen",
+    "disconnected": "{name} getrennt",
+    "disconnectFailed": "Der Kanal konnte nicht getrennt werden",
+    "secretTitle": "Signatur-Secret für {name}",
+    "secretOnce": "Kopiere es jetzt. Es wird nur einmal angezeigt.",
+    "secretDescription": "Pagehall signiert jede Anfrage mit diesem Secret. Der Header X-Pagehall-Signature enthält sha256= und danach den HMAC-SHA256 aus dem Header X-Pagehall-Timestamp, einem Punkt und dem Body. Prüfe ihn, bevor du einer Anfrage vertraust.",
+    "secretLabel": "Signatur-Secret",
+    "secretDone": "Fertig",
+    "testSent": "Testnachricht gesendet",
+    "testSentDescription": "Sieh im Kanal in {service} nach.",
+    "testFailed": "{service} hat die Testnachricht nicht angenommen",
+    "connectTitle": "Kanal verbinden",
+    "editTitle": "{name} bearbeiten",
+    "dialogDescription": "Richte zuerst den anderen Dienst ein und füge dann hier ein, was er dir anzeigt.",
+    "sendTest": "Testnachricht senden",
+    "save": "Speichern",
+    "connect": "Verbinden",
+    "saveFailed": "Der Kanal konnte nicht gespeichert werden",
+    "connectFailed": "Der Kanal konnte nicht verbunden werden",
+    "saved": "{name} gespeichert",
+    "connected": "{name} verbunden",
+    "service": "Dienst",
+    "stepsTitle": "In {service}",
+    "steps": {
+      "teams": {
+        "1": "Öffne in Teams den Kanal und wähle ··· › Workflows.",
+        "2": "Wähle „Bei Empfang einer Webhookanforderung in einem Kanal posten“.",
+        "3": "Schließe den Workflow ab und kopiere die angezeigte Adresse."
+      },
+      "slack": {
+        "1": "Erstelle in Slack eine App mit Incoming Webhooks.",
+        "2": "Füge einen Webhook für den Kanal hinzu.",
+        "3": "Kopiere die Webhook-Adresse."
+      },
+      "matrix": {
+        "1": "Lege auf deinem Homeserver ein Bot-Konto an und lade es in den Raum ein.",
+        "2": "Kopiere in den Raumeinstellungen die Raum-ID.",
+        "3": "Melde dich als Bot an und kopiere sein Zugriffstoken."
+      },
+      "discord": {
+        "1": "Öffne in den Kanaleinstellungen Integrationen › Webhooks.",
+        "2": "Erstelle einen Webhook und kopiere seine Adresse."
+      },
+      "webhook": {
+        "1": "Pagehall sendet für jedes Ereignis eine JSON-POST-Anfrage.",
+        "2": "Die Anfragen sind signiert; das Secret wird nach dem Speichern einmal angezeigt."
+      }
+    },
+    "homeserver": "Adresse des Homeservers",
+    "homeserverHint": "Zum Beispiel https://matrix.example.org.",
+    "roomId": "Raum-ID",
+    "accessToken": "Zugriffstoken des Bots",
+    "address": "Webhook-Adresse",
+    "secretHint": "Verschlüsselt gespeichert. Nach dem Speichern nie wieder angezeigt.",
+    "storedHint": "Verschlüsselt gespeichert und nicht angezeigt. Leer lassen, um sie zu behalten.",
+    "name": "Name in Pagehall",
+    "nameHint": "Wird in dieser Liste angezeigt, zum Beispiel der Name des Kanals.",
+    "namePlaceholder": "IT-Ops · Allgemein",
+    "postWhen": "Posten, wenn",
+    "newSecret": "Neues Signatur-Secret erstellen",
+    "newSecretDescription": "Das bisherige Secret gilt nach dem Speichern nicht mehr. Das neue wird einmal angezeigt.",
+    "homeserverInvalid": "Gib die Adresse des Homeservers ein, beginnend mit https://.",
+    "roomIdInvalid": "Gib die Raum-ID ein, zum Beispiel !abc123:example.org.",
+    "tokenRequired": "Gib das Zugriffstoken des Bots ein.",
+    "addressInvalid": "Gib die Webhook-Adresse ein, beginnend mit https://.",
+    "nameRequired": "Gib einen Namen ein.",
+    "nameTooLong": "Verwende höchstens {max} Zeichen.",
+    "eventsRequired": "Wähle mindestens ein Ereignis.",
+    "events": {
+      "pagePublished": "Eine Seite veröffentlicht wird",
+      "pageChanged": "Eine Seite geändert wird (pro Stunde zusammengefasst)",
+      "blogPostPublished": "Ein Blogbeitrag veröffentlicht wird",
+      "decisionRecorded": "In einer Besprechung eine Entscheidung festgehalten wird",
+      "pageStatusChanged": "Sich der Status einer Seite ändert",
+      "commentCreated": "Jemand kommentiert",
+      "announcementPublished": "Eine Ankündigung beginnt"
+    },
+    "short": {
+      "pagePublished": "neue Seiten",
+      "pageChanged": "Seitenänderungen",
+      "blogPostPublished": "Blogbeiträge",
+      "decisionRecorded": "Entscheidungen",
+      "pageStatusChanged": "Statusänderungen",
+      "commentCreated": "Kommentare",
+      "announcementPublished": "Ankündigungen"
+    },
+    "kinds": {
+      "teams": "Microsoft Teams (Workflows)",
+      "slack": "Slack",
+      "matrix": "Matrix",
+      "discord": "Discord",
+      "webhook": "Andere (Webhook)"
+    },
+    "answerCode": "Der Dienst hat „{code}“ geantwortet.",
+    "answerStatus": "Der Dienst hat mit Status {status} geantwortet.",
+    "failures": {
+      "addressGone": "Die Adresse wurde wahrscheinlich in {service} entfernt. Erstelle dort eine neue und füge sie unter Bearbeiten ein.",
+      "unauthorized": "{service} hat die Nachricht abgelehnt. Erstelle dort eine neue Adresse und füge sie unter Bearbeiten ein.",
+      "unauthorizedMatrix": "Matrix hat die Nachricht abgelehnt. Prüfe, ob der Bot noch im Raum ist und sein Zugriffstoken gilt, und gib das Token unter Bearbeiten ein.",
+      "rejected": "{service} hat die Nachricht nicht angenommen. Prüfe, ob die Adresse zu einem eingehenden Webhook von {service} gehört.",
+      "unavailable": "{service} hat nach mehreren Versuchen nicht geantwortet. Sende eine Testnachricht, um es erneut zu versuchen.",
+      "unreachable": "Pagehall konnte {service} nicht erreichen. Prüfe die Adresse und ob dieser Server das Internet erreicht, und sende dann eine Testnachricht.",
+      "blockedAddress": "Die Adresse zeigt in ein privates Netz. Verwende eine öffentliche Adresse oder bitte die Instanz-Administration, dieses Netz zu erlauben.",
+      "insecureAddress": "Die Adresse muss mit https:// beginnen."
+    }
   }
 }

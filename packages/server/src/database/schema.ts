@@ -29,6 +29,13 @@ export {
   webauthnCredentials,
 } from "../auth/schema.js";
 export {
+  chatChannelKind,
+  chatChannelState,
+  chatChannels,
+  chatDeliveries,
+  chatDeliveryState,
+} from "../chat/schema.js";
+export {
   blogPostAnnouncements,
   blogPosts,
   blogSubscriptions,
@@ -140,6 +147,7 @@ export {
   roleScope,
 } from "../organizations/access-schema.js";
 export { organizationDomains, organizationLogos, organizations } from "../organizations/schema.js";
+export { pushOutbox, pushSubscriptions } from "../push/schema.js";
 export {
   recentSearches,
   savedSearches,

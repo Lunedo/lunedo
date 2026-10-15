@@ -1,3 +1,4 @@
+import { chatChannelKinds } from "@pagehall/shared";
 import { z } from "zod";
 import type { PrincipalType } from "../accounts/principal.js";
 
@@ -24,6 +25,7 @@ export const auditTargetTypes = [
   "accessRequest",
   "import",
   "announcement",
+  "chatChannel",
 ] as const;
 export type AuditTargetType = (typeof auditTargetTypes)[number];
 
@@ -1269,6 +1271,36 @@ export const auditCatalog = {
       startsAt: z.iso.datetime(),
       endsAt: z.iso.datetime(),
     }),
+    visibility: "organization",
+  }),
+  "chatChannel.connected": event({
+    actor: ["account"],
+    target: "chatChannel",
+    fields: z.object({
+      spaceId: z.uuid().nullable(),
+      kind: z.enum(chatChannelKinds),
+      name: z.string(),
+      events: z.array(z.string()),
+    }),
+    visibility: "organization",
+  }),
+  "chatChannel.changed": event({
+    actor: ["account"],
+    target: "chatChannel",
+    fields: z.object({
+      spaceId: z.uuid().nullable(),
+      kind: z.enum(chatChannelKinds),
+      name: z.string(),
+      events: z.array(z.string()),
+      addressChanged: z.boolean(),
+      signingKeyReplaced: z.boolean(),
+    }),
+    visibility: "organization",
+  }),
+  "chatChannel.removed": event({
+    actor: ["account"],
+    target: "chatChannel",
+    fields: z.object({ spaceId: z.uuid().nullable(), kind: z.enum(chatChannelKinds), name: z.string() }),
     visibility: "organization",
   }),
   "announcement.removed": event({
