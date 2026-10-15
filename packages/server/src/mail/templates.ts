@@ -1,5 +1,6 @@
 import designTokens from "@pagehall/tokens/design-tokens.json" with { type: "json" };
 import type { supportedLanguages } from "../settings/builtin.js";
+import { storageCleared, storageReached, storageTest } from "./storage-texts.js";
 import type { MailMessage } from "./transport.js";
 
 export type Language = (typeof supportedLanguages)[number];
@@ -49,6 +50,24 @@ export interface MailTemplates {
     reason: "providerRule" | "manual";
   };
   mailCredentialExpiring: { instanceName: string; date: string };
+  storageLevelReached: {
+    instanceName: string;
+    level: 1 | 2 | 3;
+    percent: string;
+    used: string;
+    total: string;
+    store: "local" | "s3";
+    reminder: boolean;
+    link: string | null;
+  };
+  storageLevelCleared: {
+    instanceName: string;
+    level: 0 | 1 | 2;
+    percent: string;
+    store: "local" | "s3";
+    link: string | null;
+  };
+  storageTest: { instanceName: string; link: string | null };
   accountRolesWithheld: { instanceName: string; accountName: string; providerName: string; roles: number };
   accountWithoutOrganization: {
     instanceName: string;
@@ -255,6 +274,9 @@ const catalogs: Record<Language, Catalog> = {
         "The home organization decides whose administrators manage the account and whose defaults apply to its settings.",
       ],
     }),
+    storageLevelReached: (params) => storageReached("en", params),
+    storageLevelCleared: (params) => storageCleared("en", params),
+    storageTest: (params) => storageTest("en", params),
     mailCredentialExpiring: ({ instanceName, date }) => ({
       subject: `E-mail on ${instanceName} stops on ${date}`,
       paragraphs: [
@@ -433,6 +455,9 @@ const catalogs: Record<Language, Catalog> = {
         "Die Heimatorganisation bestimmt, wessen Administration das Konto verwaltet und wessen Standards für seine Einstellungen gelten.",
       ],
     }),
+    storageLevelReached: (params) => storageReached("de", params),
+    storageLevelCleared: (params) => storageCleared("de", params),
+    storageTest: (params) => storageTest("de", params),
     mailCredentialExpiring: ({ instanceName, date }) => ({
       subject: `E-Mail-Versand auf ${instanceName} endet am ${date}`,
       paragraphs: [
@@ -484,25 +509,33 @@ export interface MailBranding {
   preferencesUrl: string | null;
   unsubscribe?: { label: string; url: string } | null;
   security?: boolean;
+  operations?: boolean;
 }
 
 const NEUTRAL = designTokens.color.light;
 
 const FOOTER: Record<
   Language,
-  { sentBy: (instanceName: string) => string; preferences: string; security: string }
+  { sentBy: (instanceName: string) => string; preferences: string; security: string; operations: string }
 > = {
   en: {
     sentBy: (instanceName) => `Sent by ${instanceName}.`,
     preferences: "Choose which notifications you receive",
     security: "You receive this mail for your account's security.",
+    operations: "You receive this mail as an instance administrator or operations contact.",
   },
   de: {
     sentBy: (instanceName) => `Gesendet von ${instanceName}.`,
     preferences: "Wählen Sie, welche Benachrichtigungen Sie erhalten",
     security: "Sie erhalten diese E-Mail zur Sicherheit Ihres Kontos.",
+    operations: "Sie erhalten diese E-Mail als Instanzadministration oder Betriebskontakt.",
   },
 };
+
+function footerReason(language: Language, branding: MailBranding): string | null {
+  if (branding.operations) return FOOTER[language].operations;
+  return branding.security ? FOOTER[language].security : null;
+}
 
 export function unsubscribeHeaders(oneClickUrl: string): Record<string, string> {
   return {
@@ -557,7 +590,7 @@ function layout(language: Language, content: Content, instanceName: string, bran
   }
   const footer = [
     escapeHtml(FOOTER[language].sentBy(instanceName)),
-    ...(branding.security ? [escapeHtml(FOOTER[language].security)] : []),
+    ...(footerReason(language, branding) ? [escapeHtml(footerReason(language, branding) ?? "")] : []),
     ...(branding.preferencesUrl
       ? [
           `<a href="${escapeHtml(branding.preferencesUrl)}" style="color:${NEUTRAL.textMuted}">${escapeHtml(FOOTER[language].preferences)}</a>`,
@@ -625,7 +658,7 @@ export function renderContent(
     ...(content.action ? [`${content.action.label}: ${content.action.url}`] : []),
     ...sections,
     FOOTER[language].sentBy(instanceName),
-    ...(branding.security ? [FOOTER[language].security] : []),
+    ...(footerReason(language, branding) ? [footerReason(language, branding) ?? ""] : []),
     ...(branding.preferencesUrl ? [`${FOOTER[language].preferences}: ${branding.preferencesUrl}`] : []),
     ...(branding.unsubscribe ? [`${branding.unsubscribe.label}: ${branding.unsubscribe.url}`] : []),
   ]

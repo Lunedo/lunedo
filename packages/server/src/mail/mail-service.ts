@@ -329,6 +329,7 @@ export class MailService {
       notification?: boolean;
       unsubscribe?: { label: string; page: string; oneClick: string } | null;
       security?: boolean;
+      operations?: boolean;
     },
   ): Promise<string> {
     const instanceName = await this.#settings.get(instanceNameSetting, {}, { executor: tx });
@@ -345,6 +346,7 @@ export class MailService {
         ...branding,
         unsubscribe: mail.unsubscribe ? { label: mail.unsubscribe.label, url: mail.unsubscribe.page } : null,
         security: mail.security ?? false,
+        operations: mail.operations ?? false,
       },
     );
     return this.queueMessage(

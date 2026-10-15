@@ -2,9 +2,10 @@ import { createHash } from "node:crypto";
 import { Readable } from "node:stream";
 import type { NodeJson } from "@pagehall/editor-schema";
 import { sql } from "drizzle-orm";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import { createLogger } from "../logging/logger.js";
+import { LARGE_WRITE_REFUSED } from "../storage/errors.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { testJobContext } from "../testing/jobs.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
@@ -203,6 +204,30 @@ describe.skipIf(!baseUrl)("Confluence imports", () => {
       expect((after.counts.people ?? 0) - (after.counts.peopleMatched ?? 0)).toBe(3);
     },
   );
+
+  describe("while the storage is almost full", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("refuses to start an import and to begin an upload, and starts again once there is room", async () => {
+      const id = await prepared(syntheticExport(), { key: "FULL" });
+      vi.spyOn(test.services.files.store, "capacity").mockResolvedValue({ free: 90, total: 1000 });
+      await expect(test.services.imports.start(as(admin), id)).rejects.toMatchObject({
+        name: "StorageFullError",
+        refusal: "largeWrite",
+        message: LARGE_WRITE_REFUSED,
+      });
+      await expect(
+        test.services.importUploads.create(as(admin), organizationId, { name: "export.zip", size: 1000 }),
+      ).rejects.toMatchObject({ name: "StorageFullError" });
+      expect(await test.services.imports.get(as(admin), id)).toMatchObject({ state: "ready" });
+      vi.mocked(test.services.files.store.capacity).mockResolvedValue({ free: 400, total: 1000 });
+      await test.services.imports.start(as(admin), id);
+      await drive(id);
+      expect(await test.services.imports.get(as(admin), id)).toMatchObject({ state: "review" });
+    });
+  });
 
   it("reports an export of the other format at the file step", async () => {
     const imports = test.services.imports;

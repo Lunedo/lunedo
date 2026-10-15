@@ -555,6 +555,18 @@ export class ChatChannelService {
     }
   }
 
+  async checkWebhookAddress(kind: "teams", url: string): Promise<string> {
+    const target = await this.#target(kind, { url });
+    return (target as { url: string }).url;
+  }
+
+  async postWebhook(kind: "teams", url: string, message: ChatMessage): Promise<ChatTestResult> {
+    const failure = await this.#send(uuidv7(), kind, { url }, null, message);
+    if (!failure) return { delivered: true };
+    const { permanent: _permanent, ...rest } = failure;
+    return { delivered: false, failure: rest };
+  }
+
   async test(scope: ChatScope, input: ChatChannelInput): Promise<ChatTestResult> {
     const name = this.#name(input.name);
     const target = await this.#target(input.kind, input.target);

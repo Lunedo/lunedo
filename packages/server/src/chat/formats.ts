@@ -51,14 +51,14 @@ export function roomDirectoryRequest(
 }
 
 export interface ChatMessage {
-  event: ChatEvent | "test";
+  event: ChatEvent | "test" | "storage";
   heading: string;
   title: string;
   detail: string | null;
   link: { url: string; label: string } | null;
   occurredAt: Date;
   space: { id: string; key: string; name: string } | null;
-  organizationId: string;
+  organizationId: string | null;
   item: { id: string; kind: string } | null;
   actor: string | null;
 }

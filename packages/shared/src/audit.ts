@@ -76,6 +76,7 @@ export const auditEventNames = [
   "mail.graphChanged",
   "mail.credentialAdded",
   "mail.credentialRemoved",
+  "storage.contactsChanged",
   "settings.changed",
   "organization.created",
   "organization.updated",

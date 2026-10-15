@@ -212,5 +212,6 @@ export {
   treeItems,
   versionReason,
 } from "../spaces/schema.js";
+export { storageState } from "../storage/schema.js";
 export { pageTemplates, templateCategory, templateLevel } from "../templates/schema.js";
 export { apiTokens, serviceAccountResponsibles, serviceAccounts } from "../tokens/schema.js";

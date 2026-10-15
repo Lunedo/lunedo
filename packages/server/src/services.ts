@@ -183,6 +183,15 @@ import { SpaceService } from "./spaces/spaces.js";
 import { PageStatusService } from "./spaces/status.js";
 import { TrashService } from "./spaces/trash.js";
 import { VersionService } from "./spaces/versions.js";
+import {
+  STORAGE_CHECK_SCHEDULE,
+  STORAGE_RECONCILE_SCHEDULE,
+  storageCheckJob,
+  storageReconcileJob,
+} from "./storage/jobs.js";
+import { storageNotificationTypes } from "./storage/notifications.js";
+import { StorageService } from "./storage/storage.js";
+import { StorageUsage } from "./storage/usage.js";
 import { TemplateService } from "./templates/templates.js";
 import { API_TOKEN_EXPIRY_SCHEDULE, ApiTokenService, apiTokenExpiryJob } from "./tokens/api-tokens.js";
 import { ServiceAccountService } from "./tokens/service-accounts.js";
@@ -263,6 +272,7 @@ export interface AccountServices {
   accessExplanations: AccessExplanationService;
   giveAccessDrafts: GiveAccessDraftService;
   files: FileService;
+  storage: StorageService;
   attachments: AttachmentService;
   guestShares: GuestShareService;
   confidentialSpaces: ConfidentialSpaceService;
@@ -360,6 +370,7 @@ export function createAccountServices(options: {
       ...spaceNotificationTypes,
       ...exportNotificationTypes,
       ...chatNotificationTypes,
+      ...storageNotificationTypes,
     ),
     unsubscribe,
   });
@@ -642,14 +653,29 @@ export function createAccountServices(options: {
   });
   const accessExplanations = new AccessExplanationService({ database, authorization, people, audit });
   const giveAccessDrafts = new GiveAccessDraftService({ database });
+  const storageUsage = new StorageUsage({ database });
   const files = new FileService({
     database,
     store: options.fileStore ?? new LocalFileStore(options.filesDir),
     keyRing: options.keyRing,
     logger,
     signer,
+    usage: storageUsage,
   });
-  const attachments = new AttachmentService({ database, files, settings, people, audit });
+  const storage = new StorageService({
+    database,
+    store: files.store,
+    usage: storageUsage,
+    settings,
+    notifications,
+    mail,
+    chat: chatChannels,
+    encryption,
+    audit,
+    jobs,
+    logger,
+  });
+  const attachments = new AttachmentService({ database, files, settings, people, audit, storage });
   const searchAdapter = new PostgresSearchAdapter();
   const search = new SearchService({
     database,
@@ -709,7 +735,7 @@ export function createAccountServices(options: {
     people,
     notifications,
   });
-  const importUploads = new UploadService({ database, files, settings, authorization });
+  const importUploads = new UploadService({ database, files, settings, authorization, storage });
   const atlassian = new AtlassianDirectory(options.atlassianFetch ? { fetch: options.atlassianFetch } : {});
   const importReaders = new ImportReaderRegistry().register(
     new ConfluenceXmlReader(),
@@ -725,6 +751,7 @@ export function createAccountServices(options: {
     atlassian,
     groups,
     uploads: importUploads,
+    storage,
     jobs,
     importDir: options.importDir ?? "/data/import",
     holders: spacePermissions.holders,
@@ -758,6 +785,7 @@ export function createAccountServices(options: {
     settings,
     mail,
     files,
+    storage,
     documents,
     attachments,
     reports,
@@ -864,6 +892,7 @@ export function createAccountServices(options: {
     accessExplanations,
     giveAccessDrafts,
     files,
+    storage,
     attachments,
     guestShares,
     confidentialSpaces,
@@ -985,6 +1014,12 @@ export async function workAccountJobs(
     }
     if (removed > 0) job.logger.info({ removed }, "Expired exports removed");
   });
+  await jobs.work(storageCheckJob, async () => {
+    await services.storage.check();
+  });
+  await jobs.work(storageReconcileJob, async () => {
+    await services.storage.reconcile();
+  });
   await jobs.work(fileCleanupJob, async (job) => {
     let removed = 0;
     for (;;) {
@@ -1030,6 +1065,8 @@ export async function workAccountJobs(
   await jobs.schedule(dispatchPendingMailJob, DISPATCH_PENDING_MAIL_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(trashRetentionJob, TRASH_RETENTION_SCHEDULE, {}, { key: "hourly" });
   await jobs.schedule(fileCleanupJob, FILE_CLEANUP_SCHEDULE, {}, { key: "hourly" });
+  await jobs.schedule(storageCheckJob, STORAGE_CHECK_SCHEDULE, {}, { key: "minutely" });
+  await jobs.schedule(storageReconcileJob, STORAGE_RECONCILE_SCHEDULE, {}, { key: "daily" });
   await jobs.schedule(importWatchdogJob, IMPORT_WATCHDOG_SCHEDULE, {}, { key: "regular" });
   await jobs.schedule(importCleanupJob, IMPORT_CLEANUP_SCHEDULE, {}, { key: "hourly" });
   await jobs.schedule(exportWatchdogJob, EXPORT_WATCHDOG_SCHEDULE, {}, { key: "regular" });

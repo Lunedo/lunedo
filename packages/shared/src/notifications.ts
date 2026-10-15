@@ -64,6 +64,19 @@ export const notificationParamSchemas = {
     reason: z.enum(["providerRule", "manual"]),
   }),
   "mail.credentialExpiring": z.object({ expiresAt: instant }),
+  "storage.levelReached": z.object({
+    level: z.number().int().min(1).max(3),
+    percent: z.number(),
+    usedBytes: z.number(),
+    totalBytes: z.number(),
+    store: z.enum(["local", "s3"]),
+    reminder: z.boolean(),
+  }),
+  "storage.levelCleared": z.object({
+    level: z.number().int().min(0).max(2),
+    percent: z.number(),
+    store: z.enum(["local", "s3"]),
+  }),
   "identityProvider.credentialExpiring": z.object({
     providerName: z.string(),
     expiresAt: instant,
@@ -127,6 +140,11 @@ export const securityNotificationTypes: ReadonlySet<NotificationType> = new Set<
   "identityProvider.credentialExpiring",
 ]);
 
+export const operationsNotificationTypes: ReadonlySet<NotificationType> = new Set<NotificationType>([
+  "storage.levelReached",
+  "storage.levelCleared",
+]);
+
 function administrationEvent(
   id: string,
   types: readonly string[],
@@ -180,7 +198,7 @@ export const notificationEvents: readonly NotificationEvent[] = [
       notificationSettingKey(type).slice("notifications.".length),
       [type],
       "immediately",
-      securityNotificationTypes.has(type),
+      securityNotificationTypes.has(type) || operationsNotificationTypes.has(type),
     ),
   ),
 ];

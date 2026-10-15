@@ -16,6 +16,7 @@ import { signalSpaceChange } from "../spaces/signals.js";
 import { cleanKey, type HolderValidation, insertGrants, SPACE_NAME_MAX_LENGTH } from "../spaces/spaces.js";
 import type { VersionService } from "../spaces/versions.js";
 import { visibleItem } from "../spaces/visibility.js";
+import type { StorageService } from "../storage/storage.js";
 import { type AtlassianDirectory, atlassianHostsSetting, atlassianSite } from "./atlassian.js";
 import { deleteCredentials, tokenContext } from "./credentials.js";
 import { ImportError } from "./errors.js";
@@ -269,6 +270,7 @@ export class ImportService {
   readonly #audit: AuditLog;
   readonly #settings: SettingsService;
   readonly #uploads: UploadService;
+  readonly #storage: StorageService;
   readonly #jobs: JobQueue | undefined;
   readonly #folder: ImportFolder;
   readonly #holders: HolderValidation;
@@ -287,6 +289,7 @@ export class ImportService {
     atlassian: AtlassianDirectory;
     groups: GroupService;
     uploads: UploadService;
+    storage: StorageService;
     jobs: JobQueue | undefined;
     importDir: string;
     holders: HolderValidation;
@@ -301,6 +304,7 @@ export class ImportService {
     this.#audit = options.audit;
     this.#settings = options.settings;
     this.#uploads = options.uploads;
+    this.#storage = options.storage;
     this.#jobs = options.jobs;
     this.#folder = new ImportFolder(options.importDir);
     this.#holders = options.holders;
@@ -821,6 +825,7 @@ export class ImportService {
 
   async start(actor: Principal, importId: string): Promise<ImportView> {
     await this.#authorization.require(actor, "import.manage", { type: "import", id: importId });
+    await this.#storage.requireLargeWrite();
     await this.#database.transaction(async (tx) => {
       const row = await this.#locked(tx, importId);
       if (row.state !== "ready") {

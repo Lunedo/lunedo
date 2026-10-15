@@ -603,6 +603,12 @@ export const auditCatalog = {
     }),
     visibility: "instance",
   }),
+  "storage.contactsChanged": event({
+    actor: ["account"],
+    target: "instance",
+    fields: z.object({ addresses: z.number().int(), teamsWebhook: z.enum(["unchanged", "set", "removed"]) }),
+    visibility: "instance",
+  }),
   "mail.methodChanged": event({
     actor: ["account", "system"],
     target: "instance",

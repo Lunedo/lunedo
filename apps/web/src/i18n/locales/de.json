@@ -3546,6 +3546,9 @@
         "credentialAdded": "E-Mail-Zugangsdaten hinzugefügt",
         "credentialRemoved": "E-Mail-Zugangsdaten entfernt"
       },
+      "storage": {
+        "contactsChanged": "Betriebskontakte geändert"
+      },
       "settings": {
         "changed": "Einstellung geändert"
       },

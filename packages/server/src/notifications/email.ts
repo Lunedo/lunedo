@@ -31,7 +31,12 @@ import {
   type NotificationService,
 } from "./service.js";
 import { digestEnabledSetting, digestTimeSetting, notificationEventSettings } from "./types.js";
-import { isSecurityEvent, type UnsubscribeScope, type UnsubscribeService } from "./unsubscribe.js";
+import {
+  isOperationsEvent,
+  isSecurityEvent,
+  type UnsubscribeScope,
+  type UnsubscribeService,
+} from "./unsubscribe.js";
 
 export const notificationEmailJob = defineJob({
   name: "notifications.send-emails",
@@ -403,7 +408,8 @@ export class NotificationMailer {
             url: links.page,
           }
         : null,
-      security: scope.kind === "event" && isSecurityEvent(scope.event),
+      security: scope.kind === "event" && isSecurityEvent(scope.event) && !isOperationsEvent(scope.event),
+      operations: scope.kind === "event" && isOperationsEvent(scope.event),
     });
     return links ? { ...message, headers: unsubscribeHeaders(links.oneClick) } : message;
   }

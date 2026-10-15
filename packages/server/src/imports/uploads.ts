@@ -10,6 +10,7 @@ import { cleanFileName } from "../files/names.js";
 import { MEGABYTE } from "../files/settings.js";
 import type { SettingsService } from "../settings/service.js";
 import { actorIdOf } from "../spaces/common.js";
+import type { StorageService } from "../storage/storage.js";
 import { ImportError } from "./errors.js";
 import type { ByteSource } from "./formats/bytes.js";
 import { maxUploadSetting } from "./settings.js";
@@ -81,17 +82,20 @@ export class UploadService {
   readonly #files: FileService;
   readonly #settings: SettingsService;
   readonly #authorization: AuthorizationService;
+  readonly #storage: StorageService;
 
   constructor(options: {
     database: Database;
     files: FileService;
     settings: SettingsService;
     authorization: AuthorizationService;
+    storage: StorageService;
   }) {
     this.#database = options.database;
     this.#files = options.files;
     this.#settings = options.settings;
     this.#authorization = options.authorization;
+    this.#storage = options.storage;
   }
 
   async maxBytes(): Promise<number> {
@@ -113,6 +117,7 @@ export class UploadService {
     }
     const limit = await this.maxBytes();
     if (input.size > limit) throw new UploadTooLargeError(limit);
+    await this.#storage.requireLargeWrite(input.size);
     const result = await this.#database.execute<UploadRow>(sql`
       insert into import_uploads (id, organization_id, created_by, name, size, part_size, expires_at)
       values (${uuidv7()}, ${organizationId}, ${actorIdOf(actor)}, ${name}, ${input.size}, ${UPLOAD_PART_BYTES},
@@ -148,6 +153,12 @@ export class UploadService {
     if (input.contentLength !== undefined && input.contentLength !== expected) {
       input.body.resume();
       throw new ImportError("invalidUploadPart", `The part must be exactly ${expected} bytes long.`);
+    }
+    try {
+      await this.#storage.requireLargeWrite(expected);
+    } catch (error) {
+      input.body.resume();
+      throw error;
     }
     const hashing = new Hashing();
     input.body.on("error", (error) => hashing.destroy(error));

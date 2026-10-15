@@ -3546,6 +3546,9 @@
         "credentialAdded": "E-mail credential added",
         "credentialRemoved": "E-mail credential removed"
       },
+      "storage": {
+        "contactsChanged": "Operations contacts changed"
+      },
       "settings": {
         "changed": "Setting changed"
       },
