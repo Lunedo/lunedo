@@ -1,5 +1,5 @@
 import { commentText, type DocumentJson } from "@pagehall/editor-schema";
-import { type DateFormat, formatDate, notificationEventOf } from "@pagehall/shared";
+import { type DateFormat, formatDate, notificationEventOf, notificationEvents } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
 import { Temporal } from "temporal-polyfill";
 import { z } from "zod";
@@ -23,7 +23,12 @@ import { timeZoneSetting } from "../settings/builtin.js";
 import type { ScopeChain, SettingsService } from "../settings/service.js";
 import { contentLine, excerptOf, type LineContext, mailWording } from "./mail-texts.js";
 import type { NotificationRegistry, NotificationSubject } from "./registry.js";
-import { COMBINE_MAX_HOURS, COMBINE_WINDOW_MINUTES, type NotificationService } from "./service.js";
+import {
+  ACTIONABLE_MAIL_DELAY_MINUTES,
+  COMBINE_MAX_HOURS,
+  COMBINE_WINDOW_MINUTES,
+  type NotificationService,
+} from "./service.js";
 import { digestEnabledSetting, digestTimeSetting, notificationEventSettings } from "./types.js";
 import type { UnsubscribeScope, UnsubscribeService } from "./unsubscribe.js";
 
@@ -37,6 +42,7 @@ export const notificationEmailJob = defineJob({
 export const NOTIFICATION_EMAIL_SCHEDULE = "* * * * *";
 
 const BATCH = 50;
+const ACTIONABLE_TYPES = notificationEvents.flatMap((event) => (event.keptWhenMuted ? [...event.types] : []));
 const DIGEST_LIMIT = 200;
 const EXCERPT_LENGTH = 200;
 const SUBJECT_LENGTH = 150;
@@ -160,7 +166,9 @@ export class NotificationMailer {
   async #immediateBatch(now: Date): Promise<{ rows: number; mailIds: string[] }> {
     return this.#database.transaction(async (tx) => {
       const settled = sql`n.email_status = 'immediate'
-        and (n.updated_at <= ${now.toISOString()}::timestamptz - make_interval(mins => ${COMBINE_WINDOW_MINUTES})
+        and ((n.type = any(${sql.param(ACTIONABLE_TYPES)}::text[])
+            and n.email_pending_since <= ${now.toISOString()}::timestamptz - make_interval(mins => ${ACTIONABLE_MAIL_DELAY_MINUTES}))
+          or n.updated_at <= ${now.toISOString()}::timestamptz - make_interval(mins => ${COMBINE_WINDOW_MINUTES})
           or n.created_at <= ${now.toISOString()}::timestamptz - make_interval(hours => ${COMBINE_MAX_HOURS}))`;
       const rows = await tx.execute<PendingRow>(
         sql`${pendingSelect(settled)} order by n.email_pending_since, n.id limit ${BATCH} for update of n skip locked`,

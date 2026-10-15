@@ -30,7 +30,7 @@ export function useWatchStatus(target: WatchTarget) {
 
 export interface WatchChange {
   state: WatchState | null;
-  keepMentions?: boolean;
+  keepActionable?: boolean;
 }
 
 export function changeWatch(target: WatchTarget, change: WatchChange) {
@@ -43,7 +43,7 @@ export function changeWatch(target: WatchTarget, change: WatchChange) {
   }
   const body = {
     state: change.state,
-    ...(change.keepMentions === undefined ? {} : { keepMentions: change.keepMentions }),
+    ...(change.keepActionable === undefined ? {} : { keepActionable: change.keepActionable }),
   };
   return target.type === "item"
     ? request(() =>

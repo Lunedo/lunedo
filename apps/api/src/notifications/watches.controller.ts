@@ -27,10 +27,12 @@ const stateSchema = z
 const watchUpdateSchema = z
   .object({
     state: stateSchema,
-    keepMentions: z
+    keepActionable: z
       .boolean()
       .optional()
-      .describe("For `muted`: still deliver mentions and assigned tasks. Default true."),
+      .describe(
+        "For `muted`: still deliver mentions, assigned tasks, shares with the caller and access requests the caller can decide. Default true.",
+      ),
   })
   .strict()
   .describe("The new state.");
@@ -40,7 +42,7 @@ const watchStatusSchema = z
     own: z
       .object({
         state: stateSchema,
-        keepMentions: z
+        keepActionable: z
           .boolean()
           .describe(
             "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted.",
@@ -54,7 +56,7 @@ const watchStatusSchema = z
     effective: z
       .object({
         state: stateSchema,
-        keepMentions: z
+        keepActionable: z
           .boolean()
           .describe(
             "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted.",
@@ -70,7 +72,7 @@ const watchStatusSchema = z
 
 const exampleStatus = {
   own: null,
-  effective: { state: "watching", keepMentions: true, source: "space" },
+  effective: { state: "watching", keepActionable: true, source: "space" },
 };
 
 const watchedSchema = z
@@ -82,7 +84,7 @@ const watchedSchema = z
       })
       .describe("What is watched or muted."),
     state: z.enum(["watching", "muted"]).describe("Watched or muted."),
-    keepMentions: z
+    keepActionable: z
       .boolean()
       .describe(
         "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted.",
@@ -164,7 +166,7 @@ export class WatchesController {
     tags: [TAG],
     params: itemParams,
     body: watchUpdateSchema,
-    bodyExample: { state: "muted", keepMentions: true },
+    bodyExample: { state: "muted", keepActionable: true },
     response: { description: "The new watch state.", schema: watchStatusSchema, example: exampleStatus },
   })
   async watchItem(
@@ -210,7 +212,7 @@ export class WatchesController {
   @ApiRoute({
     summary: "Watch, mute or stop watching a space",
     description:
-      "Watching a space delivers changes and comments on everything in it the caller can read. Muting it silences everything from it, except mentions, assigned tasks, shares with the caller and access requests the caller can decide when `keepMentions` is true.",
+      "Watching a space delivers changes and comments on everything in it the caller can read. Muting it silences everything from it, except mentions, assigned tasks, shares with the caller and access requests the caller can decide when `keepActionable` is true.",
     tags: [TAG],
     params: spaceParams,
     body: watchUpdateSchema,

@@ -125,7 +125,7 @@ describe.skipIf(!baseUrl)("watching", () => {
         (await test.services.watches.status(context.editorId, { type: "item", id: page.id })).own,
       ).toEqual({
         state: "watching",
-        keepMentions: true,
+        keepActionable: true,
         automatic: true,
       });
 
@@ -361,7 +361,7 @@ describe.skipIf(!baseUrl)("watching", () => {
       await test.services.watches.set(
         context.editorId,
         { type: "item", id: page.id },
-        { state: "muted", keepMentions: false },
+        { state: "muted", keepActionable: false },
       );
       await test.services.documents.replace(
         context.secondEditor,
@@ -402,7 +402,7 @@ describe.skipIf(!baseUrl)("watching", () => {
       await test.services.watches.set(
         context.adminId,
         { type: "space", id: context.space.id },
-        { state: "muted", keepMentions: false },
+        { state: "muted", keepActionable: false },
       );
       const page = await publishedPage(context);
       await test.services.accessRequests.requestPage(accountPrincipal(requesterId), page.id, "Please");
