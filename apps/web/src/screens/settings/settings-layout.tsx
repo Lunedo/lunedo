@@ -11,6 +11,7 @@ import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { StorageBanner } from "../../components/storage-banner.js";
 import { translateKey } from "../../i18n/translate.js";
 import {
   isNavigationVisible,
@@ -143,6 +144,7 @@ export function SettingsLayout() {
             />
           </div>
         ) : null}
+        <StorageBanner />
         {query.trim() ? (
           <SettingsSearchResults
             query={query}

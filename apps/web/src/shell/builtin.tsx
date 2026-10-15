@@ -7,6 +7,7 @@ import {
   FileArchive,
   FileClock,
   Globe,
+  HardDrive,
   Import,
   KeyRound,
   Languages,
@@ -300,6 +301,15 @@ navigationItems.register(
     icon: Mail,
     labelKey: "navigation.mail",
     to: `${INSTANCE}/mail`,
+    permission: "instance.settings.view",
+  },
+  {
+    id: "instance.storage",
+    order: 65,
+    section: "instance",
+    icon: HardDrive,
+    labelKey: "navigation.storage",
+    to: `${INSTANCE}/storage`,
     permission: "instance.settings.view",
   },
   {

@@ -9,6 +9,7 @@ import {
   FileArchive,
   FileInput,
   FilePen,
+  HardDrive,
   KeyRound,
   ListChecks,
   Lock,
@@ -96,6 +97,8 @@ notificationTypes.register(
       item.organizationId ? inOrganization(item, "/members") : { to: "/settings/preferences" },
   },
   { id: "mail.credentialExpiring", icon: Mail, link: () => ({ to: "/settings/instance/mail" }) },
+  { id: "storage.levelReached", icon: HardDrive, link: () => ({ to: "/settings/instance/storage" }) },
+  { id: "storage.levelCleared", icon: HardDrive, link: () => ({ to: "/settings/instance/storage" }) },
   {
     id: "identityProvider.syncHeld",
     icon: ShieldAlert,

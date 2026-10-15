@@ -1,5 +1,7 @@
 import { accentColors, colorModes, densities, fonts } from "@pagehall/shared";
 
+const storageReminders = ["off", "daily", "weekly", "monthly"] as const;
+
 export type SettingFieldType =
   | { kind: "boolean" }
   | {
@@ -54,6 +56,10 @@ const fields: SettingField[] = [
   {
     key: "files.keepVersions",
     type: { kind: "number", min: 1, max: 1_000_000, unit: "versions", unlimited: true },
+  },
+  {
+    key: "storage.reminder",
+    type: { kind: "enum", values: storageReminders, labelPrefix: "settings.values.storageReminder" },
   },
   { key: "sharing.shareLinks", type: { kind: "boolean" } },
   { key: "sharing.anyoneLinks", type: { kind: "boolean" } },

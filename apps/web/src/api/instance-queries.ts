@@ -14,6 +14,7 @@ export const instanceKeys = {
   mail: ["instance", "mail"] as const,
   breakGlass: ["instance", "breakGlass"] as const,
   address: ["instance", "address"] as const,
+  storage: ["instance", "storage"] as const,
 };
 
 export const instanceAddressQuery = queryOptions({
@@ -69,6 +70,13 @@ export const mailQuery = queryOptions({
   queryKey: instanceKeys.mail,
   queryFn: () => request(() => api.GET("/api/v1/instance/mail")),
 });
+
+export const storageQuery = queryOptions({
+  queryKey: instanceKeys.storage,
+  queryFn: () => request(() => api.GET("/api/v1/instance/storage")),
+});
+
+export type StorageStatus = Awaited<ReturnType<NonNullable<(typeof storageQuery)["queryFn"]>>>;
 
 export const breakGlassQuery = queryOptions({
   queryKey: instanceKeys.breakGlass,
