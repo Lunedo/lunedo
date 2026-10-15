@@ -10,6 +10,7 @@ import { NotificationPanel } from "../notifications/notification-panel.js";
 import { useNotificationStream } from "../notifications/notifications-api.js";
 import { preferenceKeys, useUpdatePreference } from "../preferences/preferences.js";
 import { useFormat, usePreferences } from "../preferences/preferences-provider.js";
+import "../notifications/browser-push.js";
 import "../notifications/builtin.js";
 import "./builtin.js";
 import { QuickSearchHost } from "../search/quick-search.js";

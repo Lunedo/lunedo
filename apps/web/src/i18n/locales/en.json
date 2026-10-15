@@ -1406,7 +1406,16 @@
     "tooManyShortcuts": "The space has the most shortcuts allowed. Remove one before adding another.",
     "invalidAnnouncement": "The announcement is not valid. Check the text, the link and the end.",
     "announcementNotDismissible": "A warning stays until its end and cannot be dismissed.",
-    "announcementChanged": "The announcement changed in the meantime. Read the new text and dismiss it again."
+    "announcementChanged": "The announcement changed in the meantime. Read the new text and dismiss it again.",
+    "invalidChatChannel": "The channel is missing a name, an event or connection details. Check the form and try again.",
+    "invalidChatAddress": "The address cannot be used. Check that it is complete and starts with https://.",
+    "chatAddressBlocked": "The address points to a private network. Use a public address, or ask your instance administrators to allow this network.",
+    "chatAddressInsecure": "The address needs to start with https://.",
+    "confidentialSpace": "Confidential spaces cannot post to chat channels.",
+    "tooManyChatChannels": "There are already 20 channels. Disconnect one before you connect another.",
+    "pushDisabled": "Browser push is turned off for this instance. Instance administrators can turn it on.",
+    "invalidPushSubscription": "The browser sent an incomplete push registration. Reload the page and try again.",
+    "tooManyPushDevices": "You have 20 devices with browser push. Remove one before you add another."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -2158,6 +2167,10 @@
       "notifications_watchAutomatically": {
         "label": "Watch what I create, edit or comment on",
         "description": "You get changes and comments on these items."
+      },
+      "notifications_browserPush": {
+        "label": "Browser push",
+        "description": "Lets people receive notifications through the push services of browser makers."
       }
     },
     "disabled": {
@@ -2321,7 +2334,8 @@
     "noEventTypes": "There are no events to configure.",
     "channels": {
       "inApp": "In the app",
-      "email": "E-mail"
+      "email": "E-mail",
+      "push": "Browser push"
     },
     "events": {
       "identityProviderCredentialExpiring": "Provider credential expires soon",
@@ -2432,6 +2446,9 @@
       },
       "comment": {
         "created": "{actorCount, plural, =0 {Someone commented on {itemTitle}} one {{actor} commented on {itemTitle}} other {{actor} and {others, plural, one {# other} other {# others}} commented on {itemTitle}}}"
+      },
+      "chatChannel": {
+        "failing": "The chat channel {channelName} stopped accepting messages, so nothing is posted there. Open its settings to see why and fix it."
       }
     },
     "channelFor": "{event}: {channel}",
@@ -2521,6 +2538,43 @@
       "keepMentions": "Still notify me about mentions and tasks assigned to me",
       "muteConfirm": "Mute",
       "cancel": "Cancel"
+    },
+    "push": {
+      "title": "Browser push",
+      "thisDevice": "Notifications on this device",
+      "explanation": "Push messages are delivered through your browser maker's push service. Their content is encrypted, but they leave this server. Turning it on asks your browser for permission.",
+      "unsupported": "This browser cannot receive push messages. Use a current version of Firefox, Chrome, Edge or Safari.",
+      "instanceOff": "Turned off for this instance. Instance administrators can turn it on.",
+      "off": "Off",
+      "on": "On",
+      "turnOn": "Turn on for this device",
+      "turnOff": "Turn off on this device",
+      "devices": "Devices with browser push",
+      "deviceName": "{browser} on {system}",
+      "unknownDevice": "Unknown device",
+      "current": "This device",
+      "deviceAdded": "Added {added}",
+      "deviceSeen": "Added {added} · last message {delivered}",
+      "remove": "Remove",
+      "removeDevice": "Remove {device}",
+      "removeTitle": "Remove {device}?",
+      "removeEffect": "This device stops receiving browser push. To get messages there again, turn it on again on that device.",
+      "removeConfirm": "Remove device",
+      "failed": "Browser push could not be turned on",
+      "permissionDenied": "Your browser blocked notifications for Pagehall. Allow notifications in the site settings of your browser, then try again.",
+      "browserFailed": "The browser or its push service did not answer. Check your internet connection and try again.",
+      "loadFailed": "Browser push could not be loaded",
+      "instanceLabel": "Browser push for this instance",
+      "instanceDescription": "People can turn on notifications per device. Messages go through the push services of browser makers.",
+      "instanceReadOnly": "Only instance administrators who manage settings can change this.",
+      "enableTitle": "Turn on browser push?",
+      "enableDescription": "Read this before you turn it on:",
+      "enableEncrypted": "Messages are delivered through the push services of browser makers, such as Google, Mozilla, Apple and Microsoft. They leave this server.",
+      "enableContent": "Their content is encrypted between this server and the browser. The push services only see when a message goes to which browser.",
+      "enablePerDevice": "Nothing is sent until people turn it on for their own devices.",
+      "enableConfirm": "Turn on browser push",
+      "organizationOn": "Turned on for this instance. People choose it per event and turn it on per device.",
+      "organizationOff": "Turned off for this instance. Instance administrators can turn it on."
     }
   },
   "mail": {
@@ -3459,6 +3513,11 @@
       "announcement": {
         "changed": "Announcement banner set",
         "removed": "Announcement banner removed"
+      },
+      "chatChannel": {
+        "connected": "Chat channel connected",
+        "changed": "Chat channel changed",
+        "removed": "Chat channel removed"
       }
     },
     "action": "Action",
@@ -3504,7 +3563,8 @@
       "page": "Page",
       "trashEntry": "Trash entry",
       "template": "Template",
-      "announcement": "Announcement"
+      "announcement": "Announcement",
+      "chatChannel": "Chat channel"
     },
     "properties": {
       "value": "Value",
@@ -7592,5 +7652,138 @@
     "removeFailed": "The shortcut could not be removed. Check your connection and try again.",
     "restoreFailed": "The shortcut could not be restored. Add it again.",
     "reorderFailed": "The order could not be saved. Check your connection and try again."
+  },
+  "chatChannels": {
+    "title": "Chat channels",
+    "spaceDescription": "Post what happens in this space to Microsoft Teams, Slack, Matrix, Discord or any service that accepts webhooks.",
+    "spacePanelDescription": "Only content every space member can read is posted. Restricted pages, their comments and drafts never are.",
+    "announcementsTitle": "Post announcements to chat",
+    "announcementsDescription": "Post the announcement of this organization to chat channels when it starts.",
+    "confidential": "Confidential spaces cannot post to chat channels, so their content stays with their members.",
+    "personal": "Personal spaces cannot post to chat channels.",
+    "unavailableTitle": "Not available here",
+    "adminsOnly": "Only administrators can connect chat channels.",
+    "connectAction": "Connect a channel",
+    "loadFailed": "Chat channels could not be loaded",
+    "empty": "No channels yet. Connect one to post updates there.",
+    "working": "Working",
+    "failing": "Failing",
+    "lastDelivered": "last delivered {time}",
+    "failingSince": "failing since {time}",
+    "nothingYet": "nothing posted yet",
+    "sendTestShort": "Send test",
+    "sendTestTo": "Send a test message to {name}",
+    "edit": "Edit {name}",
+    "disconnect": "Disconnect {name}",
+    "failingTitle": "{service} stopped accepting messages for {name}",
+    "fix": "Edit",
+    "notDelivered": "Messages since then were not posted.",
+    "disconnectTitle": "Disconnect {name}?",
+    "disconnectEffect": "Nothing more is posted there, and the stored address is deleted. To connect it again, you need a new address from {service}.",
+    "disconnectConfirm": "Disconnect channel",
+    "disconnected": "{name} disconnected",
+    "disconnectFailed": "The channel could not be disconnected",
+    "secretTitle": "Signing secret for {name}",
+    "secretOnce": "Copy it now. It is shown only once.",
+    "secretDescription": "Pagehall signs every request with this secret. The header X-Pagehall-Signature holds sha256= followed by the HMAC-SHA256 of the X-Pagehall-Timestamp header, a dot and the body. Check it before you trust a request.",
+    "secretLabel": "Signing secret",
+    "secretDone": "Done",
+    "testSent": "Test message sent",
+    "testSentDescription": "Check the channel in {service}.",
+    "testFailed": "{service} did not accept the test message",
+    "connectTitle": "Connect a channel",
+    "editTitle": "Edit {name}",
+    "dialogDescription": "Set up the other service first, then paste what it gives you here.",
+    "sendTest": "Send test message",
+    "save": "Save",
+    "connect": "Connect",
+    "saveFailed": "The channel could not be saved",
+    "connectFailed": "The channel could not be connected",
+    "saved": "{name} saved",
+    "connected": "{name} connected",
+    "service": "Service",
+    "stepsTitle": "In {service}",
+    "steps": {
+      "teams": {
+        "1": "In Teams, open the channel and choose ··· › Workflows.",
+        "2": "Pick “Post to a channel when a webhook request is received”.",
+        "3": "Finish the workflow and copy the address it shows."
+      },
+      "slack": {
+        "1": "In Slack, create an app with Incoming Webhooks.",
+        "2": "Add a webhook for the channel.",
+        "3": "Copy the webhook address."
+      },
+      "matrix": {
+        "1": "Create a bot account on your homeserver and invite it to the room.",
+        "2": "In the room settings, copy the room ID.",
+        "3": "Sign in as the bot and copy its access token."
+      },
+      "discord": {
+        "1": "In the channel settings, open Integrations › Webhooks.",
+        "2": "Create a webhook and copy its address."
+      },
+      "webhook": {
+        "1": "Pagehall sends a JSON POST request for every event.",
+        "2": "Requests are signed; the secret is shown once after saving."
+      }
+    },
+    "homeserver": "Homeserver address",
+    "homeserverHint": "For example https://matrix.example.org.",
+    "roomId": "Room ID",
+    "accessToken": "Access token of the bot",
+    "address": "Webhook address",
+    "secretHint": "Stored encrypted. Never shown again after saving.",
+    "storedHint": "Stored encrypted and not shown. Leave it empty to keep it.",
+    "name": "Name in Pagehall",
+    "nameHint": "Shown in this list, for example the name of the channel.",
+    "namePlaceholder": "IT-Ops · General",
+    "postWhen": "Post when",
+    "newSecret": "Create a new signing secret",
+    "newSecretDescription": "The current secret stops working when you save. The new one is shown once.",
+    "homeserverInvalid": "Enter the address of the homeserver, starting with https://.",
+    "roomIdInvalid": "Enter the room ID, for example !abc123:example.org.",
+    "tokenRequired": "Enter the access token of the bot.",
+    "addressInvalid": "Enter the webhook address, starting with https://.",
+    "nameRequired": "Enter a name.",
+    "nameTooLong": "Use at most {max} characters.",
+    "eventsRequired": "Choose at least one event.",
+    "events": {
+      "pagePublished": "A page is published",
+      "pageChanged": "A page changes (combined per hour)",
+      "blogPostPublished": "A blog post is published",
+      "decisionRecorded": "A decision is recorded in a meeting",
+      "pageStatusChanged": "A page status changes",
+      "commentCreated": "Someone comments",
+      "announcementPublished": "An announcement starts"
+    },
+    "short": {
+      "pagePublished": "new pages",
+      "pageChanged": "page changes",
+      "blogPostPublished": "blog posts",
+      "decisionRecorded": "decisions",
+      "pageStatusChanged": "status changes",
+      "commentCreated": "comments",
+      "announcementPublished": "announcements"
+    },
+    "kinds": {
+      "teams": "Microsoft Teams (Workflows)",
+      "slack": "Slack",
+      "matrix": "Matrix",
+      "discord": "Discord",
+      "webhook": "Other (webhook)"
+    },
+    "answerCode": "The service answered “{code}”.",
+    "answerStatus": "The service answered with status {status}.",
+    "failures": {
+      "addressGone": "The address was probably removed in {service}. Create a new one there and paste it in Edit.",
+      "unauthorized": "{service} refused the message. Create a new address there and paste it in Edit.",
+      "unauthorizedMatrix": "Matrix refused the message. Check that the bot is still in the room and its access token is valid, then enter the token in Edit.",
+      "rejected": "{service} did not accept the message. Check that the address belongs to an incoming webhook of {service}.",
+      "unavailable": "{service} did not respond after several attempts. Send a test message to try again.",
+      "unreachable": "Pagehall could not reach {service}. Check the address and whether this server can reach the internet, then send a test message.",
+      "blockedAddress": "The address points to a private network. Use a public address, or ask your instance administrators to allow this network.",
+      "insecureAddress": "The address needs to start with https://."
+    }
   }
 }

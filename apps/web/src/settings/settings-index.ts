@@ -183,6 +183,9 @@ export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
   "account.notifications": [
     section("notifications.eventTypes", notificationEvents()),
     section("notifications.digest.title", [setting("notifications.digestTime")]),
+    section("notifications.push.title", [
+      row("browserPush", "notifications.push.thisDevice", "notifications.push.explanation"),
+    ]),
     section("notifications.watching.title", [
       setting("notifications.watchAutomatically"),
       row("watched", "notifications.watching.watched"),
@@ -215,6 +218,9 @@ export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
   "organization.announcements": [
     section("announcements.banner", [
       row("announcement", "announcements.title", "announcements.organizationDescription"),
+    ]),
+    section("chatChannels.announcementsTitle", [
+      row("chatChannels", "chatChannels.announcementsTitle", "chatChannels.announcementsDescription"),
     ]),
   ],
   "organization.spaces": [
@@ -257,6 +263,7 @@ export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
   "instance.notifications": [
     section("notifications.eventTypes", notificationEvents()),
     section("notifications.delivery", [setting("notifications.digestTime")]),
+    section("notifications.push.title", [setting("notifications.browserPush")]),
   ],
   "instance.announcements": [
     section("announcements.banner", [

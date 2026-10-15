@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { FollowedBlogs } from "../../collaboration/blog/followed-blogs.js";
 import { NotificationPreferences } from "../../components/notification-preferences.js";
 import { SettingsList } from "../../components/settings-list.js";
+import { BrowserPushSection } from "../../notifications/browser-push-section.js";
 import { useNotificationDelivery, useWatchedList } from "../../notifications/watching-api.js";
 import { usePreferenceList, useUpdatePreference } from "../../preferences/preferences.js";
 import type { SettingChange } from "../../settings/setting-mutations.js";
@@ -38,6 +39,7 @@ export function NotificationPreferencesScreen() {
         {...organizationName}
         editable
         emailMethod={delivery.data?.emailMethod}
+        browserPush={delivery.data?.browserPush ?? false}
         onChange={(key, value) => update.mutateAsync({ key, value })}
       />
       <Section title={t("notifications.digest.title")}>
@@ -50,6 +52,7 @@ export function NotificationPreferencesScreen() {
           onChange={save}
         />
       </Section>
+      <BrowserPushSection />
       <Section title={t("notifications.watching.title")}>
         <SettingsList
           settings={list.data}

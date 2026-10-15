@@ -14,6 +14,7 @@ export type SpaceSettingsTab =
   | "content"
   | "status"
   | "shortcuts"
+  | "chat"
   | "templates"
   | "export";
 
@@ -24,6 +25,7 @@ const TAB_PATHS = {
   content: "/spaces/$spaceKey/settings/content",
   status: "/spaces/$spaceKey/settings/status",
   shortcuts: "/spaces/$spaceKey/settings/shortcuts",
+  chat: "/spaces/$spaceKey/settings/chat",
   templates: "/spaces/$spaceKey/settings/templates",
   export: "/spaces/$spaceKey/settings/export",
 } as const;
@@ -67,6 +69,7 @@ export function SpaceSettingsPage({
           { value: "content", label: t("content.title") },
           { value: "status", label: t("pageStatus.settingsTitle") },
           { value: "shortcuts", label: t("spaceShortcuts.title") },
+          { value: "chat", label: t("chatChannels.title") },
           { value: "templates", label: t("templates.title") },
           { value: "export", label: t("exports.settings.tab") },
         ]}

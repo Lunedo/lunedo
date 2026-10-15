@@ -1,8 +1,10 @@
+import { organizationChatEvents } from "@pagehall/shared";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { Megaphone } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { organizationQuery } from "../../api/organization-queries.js";
+import { ChatChannelsPanel } from "../../chat/chat-channels-panel.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { AnnouncementSettings } from "../settings/announcement-settings.js";
 import { SettingsPage } from "../settings/settings-page.js";
@@ -26,6 +28,13 @@ export function OrganizationAnnouncementsScreen() {
         organizationId={organizationId}
         organizationName={organization.data?.name}
         editable={state.can("organization.settings.manage")}
+      />
+      <ChatChannelsPanel
+        owner={{ kind: "organization", organizationId }}
+        events={organizationChatEvents}
+        title={t("chatChannels.announcementsTitle")}
+        description={t("chatChannels.announcementsDescription")}
+        canManage={state.can("organization.integrations.manage")}
       />
     </SettingsPage>
   );

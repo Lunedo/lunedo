@@ -18,6 +18,11 @@ interface EventRow {
   event: NotificationEvent;
   inApp: SettingEntry;
   email: SettingEntry;
+  push: SettingEntry | undefined;
+}
+
+function channelsOf(row: EventRow): SettingEntry[] {
+  return row.push ? [row.inApp, row.email, row.push] : [row.inApp, row.email];
 }
 
 export function notificationRows(
@@ -29,7 +34,8 @@ export function notificationRows(
     if (event.group !== group) return [];
     const inApp = byKey.get(notificationChannelSettingKey(event.id, "inApp"));
     const email = byKey.get(notificationChannelSettingKey(event.id, "email"));
-    return inApp && email ? [{ event, inApp, email }] : [];
+    const push = byKey.get(notificationChannelSettingKey(event.id, "push"));
+    return inApp && email ? [{ event, inApp, email, push }] : [];
   });
 }
 
@@ -49,7 +55,7 @@ function RowSource({
   const { t } = useTranslation();
   const className = "inline-flex items-center gap-1 text-text-muted text-xs";
   const icon = "size-icon-sm shrink-0";
-  const locked = [row.inApp, row.email].find((entry) => entry.lockedBy && entry.lockedBy !== level);
+  const locked = channelsOf(row).find((entry) => entry.lockedBy && entry.lockedBy !== level);
   if (locked) {
     return (
       <span className={className}>
@@ -60,7 +66,7 @@ function RowSource({
       </span>
     );
   }
-  if (row.inApp.source === level || row.email.source === level) {
+  if (channelsOf(row).some((entry) => entry.source === level)) {
     return (
       <span className={className}>
         <PenLine aria-hidden="true" className={icon} />
@@ -72,9 +78,10 @@ function RowSource({
       </span>
     );
   }
-  const from = [inheritedFrom(row.inApp, level), inheritedFrom(row.email, level)].includes("organization")
+  const sources = channelsOf(row).map((entry) => inheritedFrom(entry, level));
+  const from = sources.includes("organization")
     ? "organization"
-    : [inheritedFrom(row.inApp, level), inheritedFrom(row.email, level)].includes("instance")
+    : sources.includes("instance")
       ? "instance"
       : "default";
   return (
@@ -95,6 +102,7 @@ function EventList({
   level,
   organizationName,
   editable,
+  browserPush,
   onChange,
 }: {
   rows: EventRow[];
@@ -102,6 +110,7 @@ function EventList({
   level: SettingLevel;
   organizationName?: string | undefined;
   editable: boolean;
+  browserPush: boolean;
   onChange: (key: string, value: unknown) => Promise<unknown>;
 }) {
   const { t } = useTranslation();
@@ -111,7 +120,8 @@ function EventList({
     void saveState(row.event.id).run(() => onChange(key, value));
   const current = (entry: SettingEntry) =>
     entry.source === level ? entry.value : inheritedValue(entry, level);
-  const own = (row: EventRow) => [row.inApp, row.email].filter((entry) => entry.source === level);
+  const shown = (row: EventRow) => (browserPush ? channelsOf(row) : [row.inApp, row.email]);
+  const own = (row: EventRow) => shown(row).filter((entry) => entry.source === level);
   const reset = (row: EventRow) =>
     void saveState(row.event.id).run(async () => {
       for (const entry of own(row)) await onChange(entry.key, undefined);
@@ -119,6 +129,7 @@ function EventList({
 
   const inAppLabel = t("notifications.channels.inApp");
   const emailLabel = t("notifications.channels.email");
+  const pushLabel = t("notifications.channels.push");
   return (
     <div>
       <div
@@ -128,12 +139,15 @@ function EventList({
         <span className="min-w-0 flex-1">{t("notifications.event")}</span>
         <span className="w-number-field shrink-0">{inAppLabel}</span>
         <span className="w-field shrink-0">{emailLabel}</span>
+        {browserPush ? <span className="w-number-field shrink-0">{pushLabel}</span> : null}
       </div>
       <ul aria-label={caption} className="flex flex-col divide-y divide-border">
         {rows.map((row) => {
           const inAppReason = disabledReason(t, row.inApp, level, editable, organizationName);
           const emailReason = disabledReason(t, row.email, level, editable, organizationName);
           const email = current(row.email);
+          const push = browserPush ? row.push : undefined;
+          const pushReason = push ? disabledReason(t, push, level, editable, organizationName) : undefined;
           return (
             <li key={row.event.id} className="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3">
               <div className="flex min-w-0 flex-1 basis-field flex-col gap-1">
@@ -183,6 +197,21 @@ function EventList({
                   />
                   {emailReason ? <span className="text-text-muted text-xs">{emailReason}</span> : null}
                 </div>
+                {push ? (
+                  <div className="flex items-center gap-2 md:w-number-field">
+                    <Switch
+                      label={t("notifications.channelFor", { event: label(row), channel: pushLabel })}
+                      labelHidden
+                      checked={current(push) === true}
+                      disabled={pushReason !== undefined}
+                      {...(pushReason ? { disabledReason: pushReason } : {})}
+                      onCheckedChange={(checked) => save(row, push.key, checked)}
+                    />
+                    <span aria-hidden="true" className="text-sm md:hidden">
+                      {pushLabel}
+                    </span>
+                  </div>
+                ) : null}
               </div>
             </li>
           );
@@ -199,6 +228,7 @@ export function NotificationPreferences({
   organizationName,
   editable,
   emailMethod,
+  browserPush,
   onChange,
 }: {
   settings: readonly SettingEntry[] | undefined;
@@ -207,13 +237,14 @@ export function NotificationPreferences({
   organizationName?: string;
   editable: boolean;
   emailMethod: "smtp" | "graph" | null | undefined;
+  browserPush: boolean;
   onChange: (key: string, value: unknown) => Promise<unknown>;
 }) {
   const { t } = useTranslation();
   if (loading) return <Skeleton className="h-12 w-full" />;
   const content = notificationRows(settings, "content");
   const administration = notificationRows(settings, "administration");
-  const tableProps = { level, organizationName, editable, onChange };
+  const tableProps = { level, organizationName, editable, browserPush, onChange };
   return (
     <>
       {emailMethod === null ? (

@@ -137,17 +137,20 @@ const fields: SettingField[] = [
 
 const byKey = new Map(fields.map((field) => [field.key, field]));
 
-const CHANNEL_KEY = /^notifications\.[a-zA-Z0-9]+\.(inApp|email)$/;
+const CHANNEL_KEY = /^notifications\.[a-zA-Z0-9]+\.(inApp|email|push)$/;
 
-export function notificationChannelOf(key: string): { event: string; channel: "inApp" | "email" } | null {
+export function notificationChannelOf(
+  key: string,
+): { event: string; channel: "inApp" | "email" | "push" } | null {
   const match = CHANNEL_KEY.exec(key);
   if (!match) return null;
-  return { event: key.split(".")[1] ?? "", channel: match[1] === "email" ? "email" : "inApp" };
+  const channel = match[1] === "email" ? "email" : match[1] === "push" ? "push" : "inApp";
+  return { event: key.split(".")[1] ?? "", channel };
 }
 
 export function settingField(key: string): SettingField | undefined {
   const channel = notificationChannelOf(key);
-  if (channel?.channel === "inApp") return { key, type: { kind: "boolean" } };
+  if (channel?.channel === "inApp" || channel?.channel === "push") return { key, type: { kind: "boolean" } };
   if (channel?.channel === "email") {
     return {
       key,
