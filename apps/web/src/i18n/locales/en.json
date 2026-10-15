@@ -6472,7 +6472,8 @@
       "oneDay": "1 day before",
       "twoDays": "2 days before",
       "oneWeek": "1 week before"
-    }
+    },
+    "inactive": "Inactive"
   },
   "confidential": {
     "badge": "Confidential",

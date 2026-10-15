@@ -1,8 +1,9 @@
 import type { DocumentJson } from "@pagehall/editor-schema";
 import { uuidv7 } from "@pagehall/shared";
-import { sql } from "drizzle-orm";
+import { type SQL, sql } from "drizzle-orm";
 import { accountPrincipal, type Principal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";
+import { organizationMembership } from "../authorization/space-access.js";
 import type { ContentActivity } from "../collaboration/content.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import type { NotificationService } from "../notifications/service.js";
@@ -62,9 +63,15 @@ export interface CreateSeriesInput extends SeriesScheduleInput {
   templateId: string;
 }
 
+function activeAccount(account: SQL, organizationId: string | null): SQL {
+  return sql`(${account}.state in ('active', 'invited')
+    and ${organizationMembership(sql`${organizationId}::uuid`, sql`${account}.id`)})`;
+}
+
 export interface SeriesMember {
   id: string;
   name: string | null;
+  active: boolean;
   canRead: boolean;
 }
 
@@ -109,6 +116,7 @@ export interface MeetingAttendee {
   name: string | null;
   attendance: Attendance | null;
   member: boolean | null;
+  active: boolean;
   canRead: boolean;
 }
 
@@ -537,8 +545,13 @@ export class MeetingService {
   }
 
   async #members(viewer: Principal, series: SeriesRow): Promise<SeriesMember[]> {
-    const result = await this.#database.execute<{ account_id: string; name: string | null }>(sql`
-      select mm.account_id, ${this.#people.visibleName(viewer, sql`a`)} as name
+    const result = await this.#database.execute<{
+      account_id: string;
+      name: string | null;
+      active: boolean;
+    }>(sql`
+      select mm.account_id, ${this.#people.visibleName(viewer, sql`a`)} as name,
+        ${activeAccount(sql`a`, series.organization_id)} as active
       from meeting_series_members mm join accounts a on a.id = mm.account_id
       where mm.series_id = ${series.item_id} order by mm.position, mm.account_id`);
     const members: SeriesMember[] = [];
@@ -546,6 +559,7 @@ export class MeetingService {
       members.push({
         id: row.account_id,
         name: row.name,
+        active: row.active,
         canRead: await this.#authorization.authorize(accountPrincipal(row.account_id), "item.view", {
           type: "item",
           id: series.item_id,
@@ -749,8 +763,10 @@ export class MeetingService {
       name: string | null;
       attendance: Attendance | null;
       member: boolean;
+      active: boolean;
     }>(sql`
       select a.account_id, ${this.#people.visibleName(viewer, sql`p`)} as name, a.attendance,
+        ${activeAccount(sql`p`, series.organization_id)} as active,
         exists (select 1 from meeting_series_members mm where mm.series_id = ${meeting.series_id}
           and mm.account_id = a.account_id) as member
       from meeting_attendees a join accounts p on p.id = a.account_id
@@ -762,6 +778,7 @@ export class MeetingService {
         name: row.name,
         attendance: row.attendance,
         member: seriesVisible ? row.member : null,
+        active: row.active,
         canRead: await this.#authorization.authorize(accountPrincipal(row.account_id), "item.view", {
           type: "item",
           id: meetingId,

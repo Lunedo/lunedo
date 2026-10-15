@@ -117,6 +117,27 @@ describe.skipIf(!baseUrl)("meeting series", () => {
     return (await test.services.meetings.details(context.lead, seriesId)).upcoming;
   }
 
+  describe("members", () => {
+    it("mark deactivated members and attendees as inactive instead of without access", async () => {
+      const context = await setup();
+      const created = await series(context);
+      await test.services.meetings.addAttendee(context.lead, created.firstMeetingId, context.outsiderId);
+      await test.database.execute(
+        sql`update accounts set state = 'deactivated' where id = ${context.editorId}`,
+      );
+      const details = await test.services.meetings.details(context.lead, created.id);
+      expect(details.members.map(({ id, active, canRead }) => ({ id, active, canRead }))).toEqual([
+        { id: context.leadId, active: true, canRead: true },
+        { id: context.editorId, active: false, canRead: false },
+      ]);
+      const meeting = await test.services.meetings.meeting(context.lead, created.firstMeetingId);
+      const outsider = meeting.attendees.find((attendee) => attendee.id === context.outsiderId);
+      expect(outsider).toMatchObject({ active: true, canRead: false });
+      const editor = meeting.attendees.find((attendee) => attendee.id === context.editorId);
+      expect(editor).toMatchObject({ active: false });
+    });
+  });
+
   describe("schedules", () => {
     it("create the first meeting from the template with the date, the members and the series' tasks", async () => {
       const context = await setup();

@@ -114363,14 +114363,19 @@
                               "null"
                             ]
                           },
+                          "active": {
+                            "type": "boolean",
+                            "description": "Whether the person can still take part: false when the account is deactivated, not set up yet or no longer a member of the organization."
+                          },
                           "canRead": {
                             "type": "boolean",
-                            "description": "Whether the person can read the series. Members without access are shown with a warning."
+                            "description": "Whether the person can read the series. Active members without access are shown with a warning."
                           }
                         },
                         "required": [
                           "id",
                           "name",
+                          "active",
                           "canRead"
                         ],
                         "additionalProperties": false,
@@ -114653,6 +114658,7 @@
                     {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                       "name": "Anna Berger",
+                      "active": true,
                       "canRead": true
                     }
                   ],
@@ -115058,14 +115064,19 @@
                               "null"
                             ]
                           },
+                          "active": {
+                            "type": "boolean",
+                            "description": "Whether the person can still take part: false when the account is deactivated, not set up yet or no longer a member of the organization."
+                          },
                           "canRead": {
                             "type": "boolean",
-                            "description": "Whether the person can read the series. Members without access are shown with a warning."
+                            "description": "Whether the person can read the series. Active members without access are shown with a warning."
                           }
                         },
                         "required": [
                           "id",
                           "name",
+                          "active",
                           "canRead"
                         ],
                         "additionalProperties": false,
@@ -115348,6 +115359,7 @@
                     {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                       "name": "Anna Berger",
+                      "active": true,
                       "canRead": true
                     }
                   ],
@@ -117920,6 +117932,10 @@
                               "null"
                             ]
                           },
+                          "active": {
+                            "type": "boolean",
+                            "description": "Whether the person can still take part: false when the account is deactivated, not set up yet or no longer a member of the organization."
+                          },
                           "canRead": {
                             "type": "boolean",
                             "description": "Whether the person can read the meeting page."
@@ -117930,6 +117946,7 @@
                           "name",
                           "attendance",
                           "member",
+                          "active",
                           "canRead"
                         ],
                         "additionalProperties": false,
@@ -117987,6 +118004,7 @@
                       "name": "Anna Berger",
                       "attendance": "present",
                       "member": true,
+                      "active": true,
                       "canRead": true
                     }
                   ],
@@ -185556,14 +185574,19 @@
                               "null"
                             ]
                           },
+                          "active": {
+                            "type": "boolean",
+                            "description": "Whether the person can still take part: false when the account is deactivated, not set up yet or no longer a member of the organization."
+                          },
                           "canRead": {
                             "type": "boolean",
-                            "description": "Whether the person can read the series. Members without access are shown with a warning."
+                            "description": "Whether the person can read the series. Active members without access are shown with a warning."
                           }
                         },
                         "required": [
                           "id",
                           "name",
+                          "active",
                           "canRead"
                         ],
                         "additionalProperties": false,
@@ -185846,6 +185869,7 @@
                     {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                       "name": "Anna Berger",
+                      "active": true,
                       "canRead": true
                     }
                   ],
