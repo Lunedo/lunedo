@@ -253,10 +253,8 @@ describe("audit presentation of personal and notification settings", () => {
             }),
             event({
               id: "01929b1f-5fc2-7fa6-97c3-bea0a18bd2e7",
-              target: { type: "setting", id: "notifications.guestExpiring", name: null, former: false },
-              changes: [
-                { property: "value", old: { inApp: true, email: true }, new: { inApp: true, email: false } },
-              ],
+              target: { type: "setting", id: "notifications.guestExpiring.email", name: null, former: false },
+              changes: [{ property: "value", old: "immediately", new: "digest" }],
             }),
           ],
           nextCursor: null,
@@ -277,7 +275,7 @@ describe("audit presentation of personal and notification settings", () => {
     expect(within(colorMode as HTMLElement).getByText("Color mode")).toBeTruthy();
     expect(within(colorMode as HTMLElement).getByText("Dark → Light")).toBeTruthy();
     expect(within(notification as HTMLElement).getByText(/^Notifications · /)).toBeTruthy();
-    expect(within(notification as HTMLElement).getByText("In the app, E-mail → In the app")).toBeTruthy();
+    expect(within(notification as HTMLElement).getByText("Immediately → In the daily digest")).toBeTruthy();
     expect(table.textContent).not.toMatch(/appearance\.|notifications\.guest|\{/);
   });
 });

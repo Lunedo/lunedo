@@ -3,13 +3,16 @@ import type { TFunction } from "i18next";
 import type { paths } from "../api/generated/schema.js";
 import type { Formatter } from "../format/format.js";
 import { translateKey } from "../i18n/translate.js";
-import { settingLabelKey } from "../settings/setting-fields.js";
+import { notificationChannelOf, settingLabelKey } from "../settings/setting-fields.js";
 
 export function settingLabel(t: TFunction, key: string): string {
-  if (key.startsWith("notifications.") && key !== "notifications.retentionDays")
+  const channel = notificationChannelOf(key);
+  if (channel) {
     return t("audit.notificationSetting", {
-      event: translateKey(t, `notifications.events.${key.slice("notifications.".length)}`),
+      event: translateKey(t, `notifications.events.${channel.event}`),
+      channel: t(`notifications.channels.${channel.channel}`),
     });
+  }
   return translateKey(t, settingLabelKey(key));
 }
 

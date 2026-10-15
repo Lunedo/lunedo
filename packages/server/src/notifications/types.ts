@@ -1,46 +1,76 @@
 import {
+  digestTimeSchema,
+  type EmailDelivery,
+  emailDeliveries,
   formatDate,
-  type NotificationPreference,
-  type NotificationType,
+  notificationChannelSettingKey,
+  notificationEvents,
   notificationParamSchemas,
-  notificationPreferenceSchema,
-  notificationSettingKey,
-  notificationTypes,
 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 import { defineSetting, type SettingDefinition } from "../settings/definition.js";
 import { defineNotificationType, type MailLocale, type VisibilityContext } from "./registry.js";
 
-export function notificationPreferenceSetting(type: string): SettingDefinition<NotificationPreference> {
-  return defineSetting({
-    key: notificationSettingKey(type),
-    schema: notificationPreferenceSchema,
-    default: { inApp: true, email: true },
-    levels: ["instance", "organization", "user"],
-    lockable: true,
-  });
+export interface EventSettings {
+  inApp: SettingDefinition<boolean>;
+  email: SettingDefinition<EmailDelivery>;
 }
 
-const preferenceSettings = new Map(
-  notificationTypes.map((type) => [type, notificationPreferenceSetting(type)] as const),
+const PREFERENCE_LEVELS = ["instance", "organization", "user"] as const;
+
+export const notificationEventSettings = new Map<string, EventSettings>(
+  notificationEvents.map((event) => [
+    event.id,
+    {
+      inApp: defineSetting({
+        key: notificationChannelSettingKey(event.id, "inApp"),
+        schema: z.boolean(),
+        default: event.defaults.inApp,
+        levels: PREFERENCE_LEVELS,
+        lockable: true,
+      }),
+      email: defineSetting({
+        key: notificationChannelSettingKey(event.id, "email"),
+        schema: z.enum(emailDeliveries),
+        default: event.defaults.email,
+        levels: PREFERENCE_LEVELS,
+        lockable: true,
+      }),
+    },
+  ]),
 );
-
-function settingOf(type: NotificationType): SettingDefinition<NotificationPreference> {
-  const setting = preferenceSettings.get(type);
-  if (!setting) throw new Error(`No preference setting for ${type}`);
-  return setting;
-}
 
 export const notificationRetentionSetting = defineSetting({
   key: "notifications.retentionDays",
   schema: z.number().int().min(1).max(3650),
   default: 90,
-  levels: ["instance"],
+  levels: ["instance", "organization"],
+  lockable: true,
+});
+
+export const digestTimeSetting = defineSetting({
+  key: "notifications.digestTime",
+  schema: digestTimeSchema,
+  default: "08:00",
+  levels: PREFERENCE_LEVELS,
   lockable: false,
 });
 
-export const notificationSettings = [...preferenceSettings.values(), notificationRetentionSetting];
+export const watchAutomaticallySetting = defineSetting({
+  key: "notifications.watchAutomatically",
+  schema: z.boolean(),
+  default: true,
+  levels: ["user"],
+  lockable: false,
+});
+
+export const notificationSettings = [
+  ...[...notificationEventSettings.values()].flatMap((settings) => [settings.inApp, settings.email]),
+  notificationRetentionSetting,
+  digestTimeSetting,
+  watchAutomaticallySetting,
+];
 
 export function formatDay(instant: string, locale: MailLocale): string {
   return formatDate(new Date(instant), locale.dateFormat, locale.timeZone, locale.language);
@@ -50,7 +80,6 @@ const apiTokenExpiring = defineNotificationType({
   type: "apiToken.expiring",
   targetType: "apiToken",
   params: notificationParamSchemas["apiToken.expiring"],
-  setting: settingOf("apiToken.expiring"),
   async visible(context) {
     if (!context.targetId) return false;
     const owned = await context.executor.execute(sql`
@@ -74,7 +103,6 @@ const apiTokenUnused = defineNotificationType({
   type: "apiToken.unused",
   targetType: "apiToken",
   params: notificationParamSchemas["apiToken.unused"],
-  setting: settingOf("apiToken.unused"),
   async visible(context) {
     if (!context.targetId) return false;
     const owned = await context.executor.execute(sql`
@@ -109,7 +137,6 @@ const guestExpiring = defineNotificationType({
   type: "guest.expiring",
   targetType: "account",
   params: notificationParamSchemas["guest.expiring"],
-  setting: settingOf("guest.expiring"),
   visible: (context) => responsibleOrMemberManager(context),
   mail: (params, locale) => ({
     template: "guestExpiring",
@@ -125,7 +152,6 @@ const guestInactive = defineNotificationType({
   type: "guest.inactive",
   targetType: "account",
   params: notificationParamSchemas["guest.inactive"],
-  setting: settingOf("guest.inactive"),
   visible: (context) => responsibleOrMemberManager(context),
   mail: (params) => ({ template: "guestInactive", params }),
 });
@@ -134,7 +160,6 @@ const accessExpiring = defineNotificationType({
   type: "access.expiring",
   targetType: "access",
   params: notificationParamSchemas["access.expiring"],
-  setting: settingOf("access.expiring"),
   visible: async (context) =>
     context.organizationId !== null &&
     context.can("organization.view", { type: "organization", id: context.organizationId }),
@@ -153,7 +178,6 @@ const serviceAccountUnattended = defineNotificationType({
   type: "serviceAccount.unattended",
   targetType: "serviceAccount",
   params: notificationParamSchemas["serviceAccount.unattended"],
-  setting: settingOf("serviceAccount.unattended"),
   visible: async (context) =>
     context.targetId !== null &&
     context.can("serviceAccount.view", { type: "serviceAccount", id: context.targetId }),
@@ -164,7 +188,6 @@ const breakGlassStarted = defineNotificationType({
   type: "breakGlass.started",
   targetType: "breakGlassAccess",
   params: notificationParamSchemas["breakGlass.started"],
-  setting: settingOf("breakGlass.started"),
   visible: async (context) =>
     context.organizationId !== null &&
     context.can("organization.audit.view", { type: "organization", id: context.organizationId }),
@@ -175,7 +198,6 @@ const signInNewBrowser = defineNotificationType({
   type: "signIn.newBrowser",
   targetType: "account",
   params: notificationParamSchemas["signIn.newBrowser"],
-  setting: settingOf("signIn.newBrowser"),
   visible: async (context) => context.targetId === context.recipientId,
   mail: (params) => ({ template: "signInNewBrowser", params }),
 });
@@ -184,7 +206,6 @@ const emergencySignIn = defineNotificationType({
   type: "auth.emergencySignIn",
   targetType: "account",
   params: notificationParamSchemas["auth.emergencySignIn"],
-  setting: settingOf("auth.emergencySignIn"),
   visible: async (context) => context.can("instance.signIn.view", { type: "instance" }),
   mail: (params) => ({ template: "emergencySignIn", params }),
 });
@@ -193,7 +214,6 @@ const accountRolesWithheld = defineNotificationType({
   type: "account.rolesWithheld",
   targetType: "account",
   params: notificationParamSchemas["account.rolesWithheld"],
-  setting: settingOf("account.rolesWithheld"),
   visible: async (context) => context.can("instance.accounts.view", { type: "instance" }),
   mail: (params) => ({ template: "accountRolesWithheld", params }),
 });
@@ -202,7 +222,6 @@ const accountWithoutOrganization = defineNotificationType({
   type: "account.withoutOrganization",
   targetType: "account",
   params: notificationParamSchemas["account.withoutOrganization"],
-  setting: settingOf("account.withoutOrganization"),
   visible: async (context) => context.can("instance.accounts.view", { type: "instance" }),
   mail: (params) => ({ template: "accountWithoutOrganization", params }),
 });
@@ -211,7 +230,6 @@ const providerCredentialExpiring = defineNotificationType({
   type: "identityProvider.credentialExpiring",
   targetType: "identityProvider",
   params: notificationParamSchemas["identityProvider.credentialExpiring"],
-  setting: settingOf("identityProvider.credentialExpiring"),
   visible: async (context) => context.can("instance.signIn.view", { type: "instance" }),
   mail: (params, locale) => ({
     template: "providerCredentialExpiring",
@@ -223,7 +241,6 @@ const providerSyncHeld = defineNotificationType({
   type: "identityProvider.syncHeld",
   targetType: "identityProvider",
   params: notificationParamSchemas["identityProvider.syncHeld"],
-  setting: settingOf("identityProvider.syncHeld"),
   visible: async (context) => context.can("instance.signIn.view", { type: "instance" }),
   mail: (params) => ({
     template: "providerSyncHeld",
@@ -239,7 +256,6 @@ const homeOrganizationChanged = defineNotificationType({
   type: "account.homeOrganizationChanged",
   targetType: "account",
   params: notificationParamSchemas["account.homeOrganizationChanged"],
-  setting: settingOf("account.homeOrganizationChanged"),
   async visible(context) {
     if (context.targetId === context.recipientId) return true;
     return (
@@ -254,7 +270,6 @@ const mailCredentialExpiring = defineNotificationType({
   type: "mail.credentialExpiring",
   targetType: "instance",
   params: notificationParamSchemas["mail.credentialExpiring"],
-  setting: settingOf("mail.credentialExpiring"),
   visible: async (context) => context.can("instance.settings.view", { type: "instance" }),
   mail: (params, locale) => ({
     template: "mailCredentialExpiring",

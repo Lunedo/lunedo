@@ -1,6 +1,15 @@
 import { contentNotificationParamSchemas } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
+import type { Executor } from "../database/database.js";
 import { defineNotificationType } from "../notifications/registry.js";
+
+async function requestSubject(context: { targetId: string | null; executor: Executor }) {
+  if (!context.targetId) return { spaceId: null, itemId: null };
+  const request = await context.executor.execute<{ space_id: string; item_id: string | null }>(sql`
+    select space_id, item_id from access_requests where id = ${context.targetId}`);
+  const row = request.rows[0];
+  return { spaceId: row?.space_id ?? null, itemId: row?.item_id ?? null };
+}
 
 const pageShared = defineNotificationType({
   type: "page.shared",
@@ -15,6 +24,7 @@ const accessRequested = defineNotificationType({
   type: "access.requested",
   targetType: "accessRequest",
   params: contentNotificationParamSchemas["access.requested"],
+  subject: requestSubject,
   async visible(context) {
     if (!context.targetId) return false;
     const request = await context.executor.execute<{ space_id: string; item_id: string | null }>(sql`
@@ -30,6 +40,7 @@ const accessRequestDecided = defineNotificationType({
   type: "access.requestDecided",
   targetType: "accessRequest",
   params: contentNotificationParamSchemas["access.requestDecided"],
+  subject: requestSubject,
   async visible(context) {
     if (!context.targetId) return false;
     const request = await context.executor.execute<{ requester_id: string }>(

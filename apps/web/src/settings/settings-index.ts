@@ -102,6 +102,11 @@ const notificationEvents = (): IndexEntry[] =>
     row(`notifications.${event}`, `notifications.events.${event}`),
   );
 
+export const NOTIFICATION_DELIVERY_KEYS = [
+  "notifications.digestTime",
+  "notifications.retentionDays",
+] as const;
+
 export const PAGE_MODE_KEYS = ["pages.defaultMode", "pages.liveVersionIdleMinutes"] as const;
 
 export const PAGE_STATUS_KEYS = ["pages.status"] as const;
@@ -177,6 +182,11 @@ export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
   ],
   "account.notifications": [
     section("notifications.eventTypes", notificationEvents()),
+    section("notifications.digest.title", [setting("notifications.digestTime")]),
+    section("notifications.watching.title", [
+      setting("notifications.watchAutomatically"),
+      row("watched", "notifications.watching.watched"),
+    ]),
     section("blog.followedTitle", [row("followedBlogs", "blog.followedTitle", "blog.followedDescription")]),
   ],
   "organization.general": [
@@ -198,7 +208,10 @@ export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
     section("organization.domains.registration", REGISTRATION_KEYS.map(setting)),
     section("organization.domains.guests", GUEST_KEYS.map(setting)),
   ],
-  "organization.notifications": [section("notifications.eventTypes", notificationEvents())],
+  "organization.notifications": [
+    section("notifications.eventTypes", notificationEvents()),
+    section("notifications.delivery", NOTIFICATION_DELIVERY_KEYS.map(setting)),
+  ],
   "organization.announcements": [
     section("announcements.banner", [
       row("announcement", "announcements.title", "announcements.organizationDescription"),
@@ -241,7 +254,10 @@ export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
       row("emergencyRecipients", "emergencyRecipients.title", "emergencyRecipients.description"),
     ]),
   ],
-  "instance.notifications": [section("notifications.eventTypes", notificationEvents())],
+  "instance.notifications": [
+    section("notifications.eventTypes", notificationEvents()),
+    section("notifications.delivery", [setting("notifications.digestTime")]),
+  ],
   "instance.announcements": [
     section("announcements.banner", [
       row("announcement", "announcements.title", "announcements.instanceDescription"),

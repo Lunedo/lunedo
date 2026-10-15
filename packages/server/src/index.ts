@@ -470,6 +470,7 @@ export {
   type VisibilityContext,
 } from "./notifications/registry.js";
 export {
+  COMBINE_MAX_HOURS,
   COMBINE_WINDOW_MINUTES,
   NOTIFICATIONS_CHANNEL,
   type NotificationCursor,
@@ -480,10 +481,20 @@ export {
 } from "./notifications/service.js";
 export {
   builtinNotificationTypes,
-  notificationPreferenceSetting,
+  digestTimeSetting,
+  notificationEventSettings,
   notificationRetentionSetting,
   notificationSettings,
+  watchAutomaticallySetting,
 } from "./notifications/types.js";
+export {
+  type EffectiveWatch,
+  type OwnWatch,
+  type WatchedEntry,
+  WatchService,
+  type WatchStatus,
+  type WatchTarget,
+} from "./notifications/watches.js";
 export { isAuthorizedMetricsRequest, Metrics } from "./observability/metrics.js";
 export {
   currentRequestContext,

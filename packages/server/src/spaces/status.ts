@@ -3,6 +3,7 @@ import { type SQL, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import { type AuthorizationService, ForbiddenError } from "../authorization/service.js";
+import type { ContentActivity } from "../collaboration/content.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import type { SettingsService } from "../settings/service.js";
 import { actorIdOf, auditScopeOf, SpaceError } from "./common.js";
@@ -147,6 +148,7 @@ export class PageStatusService {
   readonly #settings: SettingsService;
   readonly #people: PeopleService;
   readonly #audit: AuditLog;
+  readonly #activity: ContentActivity;
 
   constructor(options: {
     database: Database;
@@ -154,12 +156,14 @@ export class PageStatusService {
     settings: SettingsService;
     people: PeopleService;
     audit: AuditLog;
+    activity: ContentActivity;
   }) {
     this.#database = options.database;
     this.#authorization = options.authorization;
     this.#settings = options.settings;
     this.#people = options.people;
     this.#audit = options.audit;
+    this.#activity = options.activity;
   }
 
   async enabled(spaceId: string): Promise<boolean> {
@@ -411,6 +415,7 @@ export class PageStatusService {
         values (${uuidv7()}, ${itemId}, ${statusId}, ${status?.builtIn ?? null}, ${status?.name ?? null},
           ${status?.color ?? null}, ${actorId})`);
       await signalSpaceChange(tx, { spaceId: row.space_id, kind: "tree", itemId });
+      await this.#activity.statusChanged(tx, itemId, { actorId, status });
       return status;
     });
   }

@@ -338,6 +338,13 @@ export class MailService {
     return this.#settings.get(smtpSetting, {}, { executor });
   }
 
+  async configuredMethod(executor: Executor = this.#database): Promise<MailMethod | null> {
+    const method = await this.method(executor);
+    const configured =
+      method === "graph" ? await this.graphConfiguration(executor) : await this.smtpConfiguration(executor);
+    return configured ? method : null;
+  }
+
   async hasSmtpPassword(): Promise<boolean> {
     return (await this.#smtpPassword()) !== null;
   }

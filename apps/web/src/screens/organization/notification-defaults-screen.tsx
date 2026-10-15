@@ -1,10 +1,14 @@
+import { Section } from "@pagehall/ui";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { BellRing } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { organizationQuery, organizationSettingsQuery } from "../../api/organization-queries.js";
 import { NotificationPreferences } from "../../components/notification-preferences.js";
+import { SettingsList } from "../../components/settings-list.js";
+import { useNotificationDelivery } from "../../notifications/watching-api.js";
 import { useOrganizationSettingMutation } from "../../settings/setting-mutations.js";
+import { NOTIFICATION_DELIVERY_KEYS } from "../../settings/settings-index.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
 
@@ -17,10 +21,15 @@ export function OrganizationNotificationDefaultsScreen() {
   const organization = useQuery(organizationQuery(organizationId));
   const settings = useQuery(organizationSettingsQuery(organizationId));
   const mutation = useOrganizationSettingMutation(organizationId);
+  const delivery = useNotificationDelivery();
+  const editable = state.can("organization.settings.manage");
+  const organizationName = organization.data ? { organizationName: organization.data.name } : {};
   return (
     <SettingsPage
       title={t("notifications.defaultsTitle")}
-      description={t("notifications.organizationDefaultsDescription")}
+      description={t("notifications.organizationDefaultsDescription", {
+        name: organization.data?.name ?? "",
+      })}
       icon={BellRing}
       organizationId={organizationId}
     >
@@ -28,12 +37,25 @@ export function OrganizationNotificationDefaultsScreen() {
         settings={settings.data}
         loading={settings.isPending}
         level="organization"
-        {...(organization.data ? { organizationName: organization.data.name } : {})}
-        editable={state.can("organization.settings.manage")}
+        {...organizationName}
+        editable={editable}
+        emailMethod={delivery.data?.emailMethod}
         onChange={(key, value) =>
           mutation.mutateAsync({ key, change: value === undefined ? { clear: true } : { value } })
         }
       />
+      <Section title={t("notifications.delivery")}>
+        <SettingsList
+          settings={settings.data}
+          keys={NOTIFICATION_DELIVERY_KEYS}
+          level="organization"
+          {...organizationName}
+          canManage={() => editable}
+          onChange={async (key, change) => {
+            await mutation.mutateAsync({ key, change });
+          }}
+        />
+      </Section>
     </SettingsPage>
   );
 }

@@ -20,6 +20,7 @@ import { ImportsController } from "../imports/imports.controller.js";
 import { MeetingsController } from "../meetings/meetings.controller.js";
 import { OneOnOnesController } from "../meetings/one-on-ones.controller.js";
 import { NotificationsController } from "../notifications/notifications.controller.js";
+import { AccountWatchesController, WatchesController } from "../notifications/watches.controller.js";
 import { AccountsController } from "../organizations/accounts.controller.js";
 import { AnnouncementsController } from "../organizations/announcements.controller.js";
 import { GroupsController } from "../organizations/groups.controller.js";
@@ -57,6 +58,8 @@ export const apiControllers = (): Type[] => [
   TokensController,
   AuditController,
   NotificationsController,
+  WatchesController,
+  AccountWatchesController,
   IdentityProvidersController,
   ProviderAuthController,
   ProviderGroupsController,

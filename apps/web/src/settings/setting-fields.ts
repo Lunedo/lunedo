@@ -21,6 +21,7 @@ export type SettingFieldType =
   | { kind: "locale" }
   | { kind: "contentLanguage" }
   | { kind: "percent" }
+  | { kind: "time" }
   | { kind: "text"; inputType?: "url" | "text" };
 
 export interface SettingField {
@@ -118,6 +119,8 @@ const fields: SettingField[] = [
   { key: "trash.firstStageMinimumDays", type: days(1, 3650, [1, 30, 90]) },
   { key: "trash.secondStageMinimumDays", type: days(1, 3650, [1, 30, 45]) },
   { key: "notifications.retentionDays", type: days(1, 3650, [30, 90, 365]) },
+  { key: "notifications.digestTime", type: { kind: "time" } },
+  { key: "notifications.watchAutomatically", type: { kind: "boolean" } },
   {
     key: "appearance.colorMode",
     type: { kind: "enum", values: colorModes, labelPrefix: "preferences.colorModes" },
@@ -134,7 +137,23 @@ const fields: SettingField[] = [
 
 const byKey = new Map(fields.map((field) => [field.key, field]));
 
+const CHANNEL_KEY = /^notifications\.[a-zA-Z0-9]+\.(inApp|email)$/;
+
+export function notificationChannelOf(key: string): { event: string; channel: "inApp" | "email" } | null {
+  const match = CHANNEL_KEY.exec(key);
+  if (!match) return null;
+  return { event: key.split(".")[1] ?? "", channel: match[1] === "email" ? "email" : "inApp" };
+}
+
 export function settingField(key: string): SettingField | undefined {
+  const channel = notificationChannelOf(key);
+  if (channel?.channel === "inApp") return { key, type: { kind: "boolean" } };
+  if (channel?.channel === "email") {
+    return {
+      key,
+      type: { kind: "enum", values: ["off", "immediately", "digest"], labelPrefix: "notifications.email" },
+    };
+  }
   return byKey.get(key);
 }
 

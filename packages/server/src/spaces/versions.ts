@@ -378,6 +378,7 @@ export class VersionService {
     await syncCommentAnchors(tx, page.itemId, document);
     await this.#activity.readerContentChanged(tx, page.itemId, document, actorId);
     await this.#activity.revealed(tx, revealed);
+    await this.#activity.versionCreated(tx, page.itemId, version);
     return version;
   }
 
@@ -525,6 +526,7 @@ export class VersionService {
           actorId: actorIdOf(actor),
           restoredFrom: number,
         });
+        await this.#activity.versionCreated(tx, itemId, created);
       }
       await this.#audit.record(tx, {
         name: "page.versionRestored",
@@ -832,7 +834,9 @@ export class VersionService {
     return this.#database.transaction(async (tx) => {
       const page = await this.#lock(tx, itemId);
       if (page.mode !== "live" || page.revision <= page.versionedRevision) return null;
-      return this.#createVersion(tx, page, { reason: "session", actorId: null });
+      const version = await this.#createVersion(tx, page, { reason: "session", actorId: null });
+      await this.#activity.versionCreated(tx, itemId, version);
+      return version;
     });
   }
 

@@ -2048,8 +2048,8 @@
         "description": "Older events are removed."
       },
       "notifications_retentionDays": {
-        "label": "Notification retention",
-        "description": "Older notifications are removed."
+        "label": "Keep notifications for",
+        "description": "Older notifications are deleted."
       },
       "apiTokens_unusedNoticeDays": {
         "label": "Unused API tokens",
@@ -2150,6 +2150,14 @@
       "content_language": {
         "label": "Content language",
         "description": "Language of the pages in this space. Search uses it to find words in all their forms, for example houses when someone searches for house. Each page can use a different language."
+      },
+      "notifications_digestTime": {
+        "label": "Send the digest at",
+        "description": "In each person's own time zone. Only sent when something happened."
+      },
+      "notifications_watchAutomatically": {
+        "label": "Watch what I create, edit or comment on",
+        "description": "You get changes and comments on these items."
       }
     },
     "disabled": {
@@ -2306,15 +2314,14 @@
     "preferencesTitle": "Notifications",
     "preferencesDescription": "Choose how you learn about each kind of event.",
     "defaultsTitle": "Notifications",
-    "organizationDefaultsDescription": "Defaults for members. Everyone can change them for themselves unless you lock them.",
+    "organizationDefaultsDescription": "Defaults for everyone in {name}. People can change them for themselves; their own choices stay when you change a default.",
     "instanceDefaultsDescription": "Defaults for everyone on this instance.",
     "eventTypes": "Events",
     "event": "Event",
     "noEventTypes": "There are no events to configure.",
     "channels": {
       "inApp": "In the app",
-      "email": "E-mail",
-      "none": "none"
+      "email": "E-mail"
     },
     "events": {
       "identityProviderCredentialExpiring": "Provider credential expires soon",
@@ -2331,7 +2338,18 @@
       "signInNewBrowser": "Sign-in from a new browser",
       "apiTokenUnused": "API token unused",
       "accountHomeOrganizationChanged": "Home organization changed",
-      "mailCredentialExpiring": "E-mail credential expires soon"
+      "mailCredentialExpiring": "E-mail credential expires soon",
+      "mentions": "Mentions of me",
+      "tasks": "Tasks assigned to me",
+      "shares": "Pages shared with me and answers to my access requests",
+      "accessRequests": "Access requests I can decide",
+      "comments": "Comments and replies on content I watch",
+      "changes": "Changes to content I watch",
+      "blogPosts": "New posts in blogs I follow",
+      "meetings": "Meeting reminders and notes",
+      "ownershipAndStatus": "Ownership and page status changes",
+      "spaceAdministration": "Space administration",
+      "importsAndExports": "Imports and exports"
     },
     "types": {
       "identityProvider": {
@@ -2372,7 +2390,8 @@
         "credentialExpiring": "The client secret or certificate for sending e-mail through Microsoft Graph expires on {expiresAt}. Add a new one in the e-mail settings before then."
       },
       "content": {
-        "mentioned": "{actor} mentioned you in {itemTitle}"
+        "mentioned": "{actor} mentioned you in {itemTitle}",
+        "changed": "{actorCount, plural, =0 {{itemTitle} was changed} one {{actor} changed {itemTitle}} other {{actor} and {others, plural, one {# other} other {# others}} changed {itemTitle}}}"
       },
       "task": {
         "assigned": "You were assigned a task in {itemTitle}: {taskText}"
@@ -2382,10 +2401,12 @@
         "published": "New post in {spaceName}: {itemTitle}"
       },
       "page": {
-        "shared": "{actor} shared {itemTitle} with you: {role, select, editor {you can edit it} commenter {you can read and comment} other {you can read it}}{includeDescendants, select, true { together with its pages} other {}}."
+        "shared": "{actor} shared {itemTitle} with you: {role, select, editor {you can edit it} commenter {you can read and comment} other {you can read it}}{includeDescendants, select, true { together with its pages} other {}}.",
+        "statusChanged": "{status, select, none {{actor} removed the status of {itemTitle}} other {{actor} set the status of {itemTitle} to {status}}}"
       },
       "ownership": {
-        "orphaned": "{items, plural, one {# item} other {# items}} in {spaceName} no longer {items, plural, one {has} other {have}} an owner, because the owner left. Assign new owners in the space settings."
+        "orphaned": "{items, plural, one {# item} other {# items}} in {spaceName} no longer {items, plural, one {has} other {have}} an owner, because the owner left. Assign new owners in the space settings.",
+        "transferred": "{own, select, true {{actor} made you the owner of {itemTitle}} other {{actor} gave {itemTitle} a new owner}}"
       },
       "restriction": {
         "orphaned": "Nobody on the access list of the restricted page {itemTitle} in {spaceName} has an active account anymore. Review the restriction in the space settings."
@@ -2408,7 +2429,98 @@
       "export": {
         "ready": "Your export of {name} is ready to download until {expiresAt}.",
         "failed": "Your export of {name} failed. Open your exports to see why and what to do."
+      },
+      "comment": {
+        "created": "{actorCount, plural, =0 {Someone commented on {itemTitle}} one {{actor} commented on {itemTitle}} other {{actor} and {others, plural, one {# other} other {# others}} commented on {itemTitle}}}"
       }
+    },
+    "channelFor": "{event}: {channel}",
+    "email": {
+      "off": "Off",
+      "immediately": "Immediately",
+      "digest": "In the daily digest"
+    },
+    "reset": "Reset",
+    "resetEvent": "Reset {event} to the default",
+    "source": {
+      "organization": "Default of {name}",
+      "instance": "Default of this instance",
+      "default": "Default"
+    },
+    "emailMissingTitle": "E-mail is not set up",
+    "emailMissing": "Notifications stay in the app. Your e-mail choices apply once an administrator sets up e-mail.",
+    "emailMissingAdministrators": "Notifications stay in the app. The e-mail choices apply once e-mail is set up in the e-mail settings of the instance.",
+    "emailMethod": {
+      "smtp": "E-mail is sent through an SMTP server",
+      "graph": "E-mail is sent through Microsoft Graph"
+    },
+    "emailMethodDescription": "Configured by the instance administrators. Without an e-mail server, notifications stay in the app.",
+    "administrationEvents": "Administration and security",
+    "delivery": "Delivery",
+    "digest": {
+      "title": "Daily digest"
+    },
+    "counts": {
+      "content": {
+        "changed": "{count, plural, one {# change} other {# changes}}"
+      },
+      "comment": {
+        "created": "{count, plural, one {# comment} other {# comments}}"
+      }
+    },
+    "stopWatching": "Stop watching",
+    "stoppedWatching": "You no longer watch {name}.",
+    "watching": {
+      "title": "Watching",
+      "watched": "Watched and muted items",
+      "counts": "{watched, plural, one {# watched} other {# watched}} · {muted, plural, one {# muted} other {# muted}}",
+      "manage": "Manage",
+      "screenTitle": "Watched and muted items",
+      "screenDescription": "You learn about changes and comments on what you watch. Muted items and spaces stay silent.",
+      "none": "You do not watch or mute anything",
+      "noneDescription": "Watch pages, blog posts, meeting series and spaces from their menu to learn about changes and comments.",
+      "loadFailed": "The watched items could not be loaded",
+      "changeFailed": "The watch state was not changed",
+      "item": "Item",
+      "state": "State",
+      "states": {
+        "watching": "Watching",
+        "muted": "Muted",
+        "notWatching": "Not watching"
+      },
+      "keepsMentions": "Mentions and tasks still arrive",
+      "automatic": "Because you created, edited or commented on it",
+      "inSpace": "in {space}",
+      "kinds": {
+        "space": "Space",
+        "page": "Page",
+        "blogPost": "Blog post",
+        "meetingSeries": "Meeting series",
+        "meetingTopic": "Topic",
+        "folder": "Folder",
+        "link": "Link"
+      },
+      "remove": "Stop watching {name}",
+      "unmute": "Unmute {name}",
+      "removed": "You no longer watch {name}.",
+      "unmuted": "{name} is no longer muted.",
+      "watch": "Watch",
+      "watchSpace": "Watch this space",
+      "menu": "Watching options for {name}",
+      "unwatch": "Stop watching",
+      "mute": "Mute…",
+      "unmuteAction": "Unmute",
+      "started": "You now watch {name}.",
+      "mutedToast": "{name} is muted.",
+      "viaSpace": "You watch this through its space.",
+      "viaSeries": "You watch this through its meeting series.",
+      "mutedViaSpace": "Muted through its space.",
+      "mutedViaSeries": "Muted through its meeting series.",
+      "muteTitle": "Mute {name}?",
+      "muteDescription": "You get no notifications from {name} anymore, also not about changes and comments. You can unmute it at any time.",
+      "keepMentions": "Still notify me about mentions and tasks assigned to me",
+      "muteConfirm": "Mute",
+      "cancel": "Cancel"
     }
   },
   "mail": {
@@ -3071,7 +3183,7 @@
     }
   },
   "audit": {
-    "notificationSetting": "Notifications · {event}",
+    "notificationSetting": "Notifications · {event} · {channel}",
     "title": "Audit log",
     "organizationDescription": "Security-relevant changes in this organization.",
     "instanceDescription": "Security-relevant changes on the instance.",

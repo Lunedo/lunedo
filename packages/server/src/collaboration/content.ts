@@ -17,6 +17,7 @@ import { accountPrincipal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import type { NotificationService } from "../notifications/service.js";
+import type { WatchService } from "../notifications/watches.js";
 import { signalSpaceChange } from "../spaces/signals.js";
 
 function idsOf(type: string, node: NodeJson, ids: Set<string> = new Set()): Set<string> {
@@ -182,7 +183,12 @@ async function syncTopicUpdates(tx: Transaction, itemId: string, document: Docum
     where mt.series_id = ${seriesId}`);
 }
 
-export async function publishTasks(tx: Transaction, itemId: string, document: DocumentJson): Promise<void> {
+export async function publishTasks(
+  tx: Transaction,
+  itemId: string,
+  document: DocumentJson,
+  actorId: string | null = null,
+): Promise<void> {
   const tasks = extractTasks(document);
   const ids = tasks.map((task) => task.id);
   if (tasks.length > 0) {
@@ -191,7 +197,10 @@ export async function publishTasks(tx: Transaction, itemId: string, document: Do
       on conflict (id) do nothing`);
     await tx.execute(sql`
       update tasks k set published = true, assignee_id = coalesce(a.merged_into_id, a.id), due_date = s."dueDate"::date, text = s.text,
-        position = s.position, updated_at = now()
+        position = s.position, updated_at = now(),
+        assigned_by_id = case when k.assignee_id is distinct from coalesce(a.merged_into_id, a.id)
+          or k.notified_assignee_id is distinct from coalesce(a.merged_into_id, a.id)
+          then ${actorId} else k.assigned_by_id end
       from jsonb_to_recordset(${JSON.stringify(tasks)}::jsonb)
         as s(id uuid, assignee uuid, "dueDate" text, text text, position int)
       left join accounts a on a.id = s.assignee
@@ -214,15 +223,18 @@ export class ContentActivity {
   readonly #database: Database;
   readonly #notifications: NotificationService;
   readonly #authorization: AuthorizationService;
+  readonly #watches: WatchService;
 
   constructor(options: {
     database: Database;
     notifications: NotificationService;
     authorization: AuthorizationService;
+    watches: WatchService;
   }) {
     this.#database = options.database;
     this.#notifications = options.notifications;
     this.#authorization = options.authorization;
+    this.#watches = options.watches;
   }
 
   async revealed(tx: Transaction, itemIds: readonly string[]): Promise<void> {
@@ -236,7 +248,7 @@ export class ContentActivity {
     actorId: string | null,
     notify = true,
   ): Promise<void> {
-    await publishTasks(tx, itemId, document);
+    await publishTasks(tx, itemId, document, actorId);
     await syncDecisions(tx, itemId, document);
     await syncTopicUpdates(tx, itemId, document);
     const threads = [...extractInlineCommentThreads(document).keys()];
@@ -267,7 +279,7 @@ export class ContentActivity {
     commentId: string,
     body: DocumentJson,
     actorId: string | null,
-  ): Promise<void> {
+  ): Promise<string[]> {
     const mentioned = extractMentions(body).filter((id) => id !== actorId);
     if (mentioned.length > 0) {
       await tx.execute(sql`
@@ -282,6 +294,121 @@ export class ContentActivity {
         and not (account_id = any(select coalesce(a.merged_into_id, a.id) from accounts a
           where a.id = any(${sql.param(mentioned)}::uuid[])))`);
     await this.deliver(tx, [itemId]);
+    return mentioned;
+  }
+
+  async created(tx: Transaction, itemId: string, actorId: string | null): Promise<void> {
+    await this.#watches.watchAutomatically(tx, [actorId], itemId);
+  }
+
+  async #readable(tx: Transaction, itemId: string): Promise<ItemFacts | null> {
+    const shown = await tx.execute<{ shown: boolean }>(sql`
+      select t.reader_visible and t.trash_entry_id is null as shown from tree_items t where t.id = ${itemId}`);
+    if (!shown.rows[0]?.shown) return null;
+    return this.#facts(tx, itemId);
+  }
+
+  async versionCreated(tx: Transaction, itemId: string, version: number): Promise<void> {
+    const created = await tx.execute<{ created_by: string | null; contributors: string[] }>(sql`
+      select created_by, contributors from page_versions where item_id = ${itemId} and number = ${version}`);
+    const row = created.rows[0];
+    if (!row) return;
+    const actorId = row.created_by;
+    const actors = [...new Set([...(actorId ? [actorId] : []), ...row.contributors])];
+    await this.#watches.watchAutomatically(tx, actors, itemId);
+    const item = await this.#readable(tx, itemId);
+    if (!item) return;
+    const recipients = await this.#watches.audience(tx, itemId);
+    if (recipients.length === 0) return;
+    const actor = actorId ?? actors[0] ?? null;
+    await this.#notifications.notify(tx, {
+      type: "content.changed",
+      recipients,
+      organizationId: item.organizationId,
+      targetId: itemId,
+      actor: actor ? accountPrincipal(actor) : null,
+      contributors: actors,
+      params: { itemTitle: item.title, itemKind: item.kind, spaceKey: item.spaceKey, version },
+    });
+  }
+
+  async commented(
+    tx: Transaction,
+    itemId: string,
+    commentId: string,
+    actorId: string | null,
+    mentioned: readonly string[],
+  ): Promise<void> {
+    await this.#watches.watchAutomatically(tx, [actorId], itemId);
+    const item = await this.#facts(tx, itemId);
+    if (!item) return;
+    const recipients = await this.#watches.audience(tx, itemId, {
+      exclude: mentioned,
+      action: { name: "comment.view", resource: { type: "comment", id: commentId } },
+    });
+    if (recipients.length === 0) return;
+    await this.#notifications.notify(tx, {
+      type: "comment.created",
+      recipients,
+      organizationId: item.organizationId,
+      targetId: itemId,
+      actor: actorId ? accountPrincipal(actorId) : null,
+      params: { itemTitle: item.title, itemKind: item.kind, spaceKey: item.spaceKey, commentId },
+    });
+  }
+
+  async statusChanged(
+    tx: Transaction,
+    itemId: string,
+    input: { actorId: string | null; status: { builtIn: string | null; name: string | null } | null },
+  ): Promise<void> {
+    const item = await this.#readable(tx, itemId);
+    if (!item) return;
+    const recipients = await this.#watches.audience(tx, itemId);
+    if (recipients.length === 0) return;
+    await this.#notifications.notify(tx, {
+      type: "page.statusChanged",
+      recipients,
+      organizationId: item.organizationId,
+      targetId: itemId,
+      actor: input.actorId ? accountPrincipal(input.actorId) : null,
+      params: {
+        itemTitle: item.title,
+        itemKind: item.kind,
+        spaceKey: item.spaceKey,
+        statusBuiltIn: input.status?.builtIn ?? null,
+        statusName: input.status?.name ?? null,
+      },
+    });
+  }
+
+  async ownerChanged(
+    tx: Transaction,
+    itemId: string,
+    input: { actorId: string | null; ownerId: string },
+  ): Promise<void> {
+    await this.#watches.watchAutomatically(tx, [input.ownerId], itemId);
+    const item = await this.#facts(tx, itemId);
+    if (!item) return;
+    const watchers = await this.#watches.audience(tx, itemId);
+    const owner = (await this.#may(tx, input.ownerId, "item.view", { type: "item", id: itemId }))
+      ? [input.ownerId]
+      : [];
+    const recipients = [...new Set([...owner, ...watchers])];
+    if (recipients.length === 0) return;
+    await this.#notifications.notify(tx, {
+      type: "ownership.transferred",
+      recipients,
+      organizationId: item.organizationId,
+      targetId: itemId,
+      actor: input.actorId ? accountPrincipal(input.actorId) : null,
+      params: {
+        itemTitle: item.title,
+        itemKind: item.kind,
+        spaceKey: item.spaceKey,
+        ownerId: input.ownerId,
+      },
+    });
   }
 
   async #facts(executor: Executor, itemId: string): Promise<ItemFacts | null> {
@@ -333,10 +460,11 @@ export class ContentActivity {
       id: string;
       item_id: string;
       assignee_id: string;
+      assigned_by_id: string | null;
       text: string;
       due_date: string | null;
     }>(sql`
-      select k.id, k.item_id, k.assignee_id, k.text, k.due_date::text as due_date from tasks k
+      select k.id, k.item_id, k.assignee_id, k.assigned_by_id, k.text, k.due_date::text as due_date from tasks k
       join tree_items t on t.id = k.item_id
       where k.published and k.assignee_id is not null
         and k.notified_assignee_id is distinct from k.assignee_id and t.trash_entry_id is null and t.reader_visible
@@ -396,6 +524,7 @@ export class ContentActivity {
         recipients: [task.assignee_id],
         organizationId: item.organizationId,
         targetId: task.item_id,
+        actor: task.assigned_by_id ? accountPrincipal(task.assigned_by_id) : null,
         params: {
           itemTitle: item.title,
           itemKind: item.kind,

@@ -32,6 +32,7 @@ const confidentialWithoutAdministrator = defineNotificationType({
   type: "space.confidentialWithoutAdministrator",
   targetType: "space",
   params: contentNotificationParamSchemas["space.confidentialWithoutAdministrator"],
+  subject: async (context) => ({ spaceId: context.targetId, itemId: null }),
   async visible(context) {
     return (
       context.organizationId !== null &&

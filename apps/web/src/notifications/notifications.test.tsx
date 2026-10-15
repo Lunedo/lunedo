@@ -7,7 +7,7 @@ import { createFormatter } from "../format/format.js";
 import { initI18n } from "../i18n/index.js";
 import { mockApi, problem } from "../testing/render.js";
 import "./builtin.js";
-import { notificationText } from "./notification-entry.js";
+import { countText, notificationText } from "./notification-entry.js";
 import { groupByDay } from "./notification-panel.js";
 import {
   type NotificationItem,
@@ -30,6 +30,7 @@ function notification(id: string, patch: Partial<NotificationItem>): Notificatio
     organizationId: ORGANIZATION_ID,
     target: { type: "account", id: "01929b1e-0000-7000-8000-000000000001" },
     actor: null,
+    actorCount: 0,
     params: {
       organizationName: "Platform Team",
       guestName: "Gina Guest",
@@ -94,6 +95,52 @@ describe("groupByDay", () => {
 });
 
 describe("notificationText", () => {
+  it("names the people of a combined notification and what happened to the item", async () => {
+    const i18n = await initI18n(["en"]);
+    const t = i18n.getFixedT("en");
+    const format = createFormatter({
+      language: "en",
+      timeZone: "UTC",
+      dateFormat: "DD/MM/YYYY",
+      timeFormat: "24h",
+      numberFormat: "en-US",
+      firstDayOfWeek: "monday",
+    });
+    const changed = notification("c1", {
+      type: "content.changed",
+      actor: { type: "account", id: ACCOUNT.id, name: "Gaby Teller" },
+      actorCount: 3,
+      count: 7,
+      target: { type: "item", id: "01929b1e-0000-7000-8000-000000000009" },
+      params: { itemTitle: "Restart the VPN gateway", itemKind: "page", spaceKey: "IT", version: 9 },
+    });
+    expect(notificationText(t, changed, format)).toBe(
+      "Gaby Teller and 2 others changed Restart the VPN gateway",
+    );
+    expect(countText(t, changed)).toBe("7 changes");
+    const transfer = notification("c2", {
+      type: "ownership.transferred",
+      actor: { type: "account", id: "01929b1e-0000-7000-8000-000000000010", name: "Lea Maier" },
+      actorCount: 1,
+      params: { itemTitle: "Runbook", itemKind: "page", spaceKey: "IT", ownerId: ACCOUNT.id },
+    });
+    expect(notificationText(t, transfer, format, ACCOUNT.id)).toBe("Lea Maier made you the owner of Runbook");
+    expect(notificationText(t, transfer, format, "someone else")).toBe("Lea Maier gave Runbook a new owner");
+    const status = notification("c3", {
+      type: "page.statusChanged",
+      actor: { type: "account", id: "01929b1e-0000-7000-8000-000000000010", name: "Lea Maier" },
+      actorCount: 1,
+      params: {
+        itemTitle: "Runbook",
+        itemKind: "page",
+        spaceKey: "IT",
+        statusBuiltIn: "verified",
+        statusName: null,
+      },
+    });
+    expect(notificationText(t, status, format)).toBe("Lea Maier set the status of Runbook to Verified");
+  });
+
   it("shows durations readably and explains an unused token", async () => {
     const i18n = await initI18n(["en"]);
     const t = i18n.getFixedT("en");

@@ -125,22 +125,20 @@ describe.skipIf(!databaseBaseUrl)("notifications through the API", () => {
   });
 
   it("lets accounts choose channels per event type in their preferences", async () => {
-    const key = "notifications.breakGlassStarted";
+    const key = "notifications.breakGlassStarted.inApp";
     const listed = (await owner.get("/api/v1/account/preferences")).json();
     expect(listed.find((entry: { key: string }) => entry.key === key)).toMatchObject({
-      value: { inApp: true, email: true },
+      value: true,
       source: "default",
     });
     expect(
-      (await owner.put(`/api/v1/account/preferences/${key}`, { value: { inApp: false, email: true } }))
-        .statusCode,
-    ).toBe(204);
+      listed.find((entry: { key: string }) => entry.key === "notifications.breakGlassStarted.email"),
+    ).toMatchObject({ value: "immediately", source: "default" });
+    expect((await owner.put(`/api/v1/account/preferences/${key}`, { value: false })).statusCode).toBe(204);
     const before = (await owner.get("/api/v1/notifications/unread-count")).json().count;
     await notice([ownerId]);
     expect((await owner.get("/api/v1/notifications/unread-count")).json().count).toBe(before);
-    expect(
-      (await owner.put(`/api/v1/account/preferences/${key}`, { value: { inApp: "yes" } })).statusCode,
-    ).toBe(400);
+    expect((await owner.put(`/api/v1/account/preferences/${key}`, { value: "yes" })).statusCode).toBe(400);
     expect((await owner.put(`/api/v1/account/preferences/${key}`, { clear: true })).statusCode).toBe(204);
   });
 

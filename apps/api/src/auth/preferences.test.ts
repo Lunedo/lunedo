@@ -66,12 +66,12 @@ describe.skipIf(!databaseBaseUrl)("own preferences and permissions", () => {
     expect(await audited()).toEqual([]);
     expect(
       (
-        await client.put("/api/v1/account/preferences/notifications.guestExpiring", {
-          value: { inApp: true, email: false },
+        await client.put("/api/v1/account/preferences/notifications.guestExpiring.email", {
+          value: "off",
         })
       ).statusCode,
     ).toBe(204);
-    expect(await audited()).toEqual(["notifications.guestExpiring"]);
+    expect(await audited()).toEqual(["notifications.guestExpiring.email"]);
   });
 
   it("lists the settings of the user level with their source", async () => {
