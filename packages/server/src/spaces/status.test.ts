@@ -219,8 +219,9 @@ describe.skipIf(!baseUrl)("page status", () => {
     await test.services.pageAccess.change(context.editor, hidden.id, [{ action: "restrict", kind: "view" }]);
 
     const counted = async (viewer: Principal) =>
-      (await test.services.pageStatus.values(viewer, context.space.id)).find((entry) => entry.id === value?.id)
-        ?.pages;
+      (await test.services.pageStatus.values(viewer, context.space.id)).find(
+        (entry) => entry.id === value?.id,
+      )?.pages;
     expect(await counted(context.reader)).toBe(1);
     expect(await counted(context.editor)).toBe(2);
   });
