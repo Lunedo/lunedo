@@ -42,6 +42,14 @@ function iconOf(kind: string) {
   return kind in ICONS ? ICONS[kind as keyof typeof ICONS] : Webhook;
 }
 
+function ChannelBadge({ channel }: { channel: ChatChannel }) {
+  const { t } = useTranslation();
+  if (channel.state === "failing") return <Badge variant="danger">{t("chatChannels.failing")}</Badge>;
+  if (channel.failure) return <Badge variant="warning">{t("chatChannels.lastTestFailed")}</Badge>;
+  if (!channel.lastDeliveredAt) return <Badge variant="neutral">{t("chatChannels.notTested")}</Badge>;
+  return <Badge variant="success">{t("chatChannels.working")}</Badge>;
+}
+
 export function ChatChannelsPanel({
   owner,
   events,
@@ -49,6 +57,7 @@ export function ChatChannelsPanel({
   description,
   canManage,
   unavailable,
+  secondaryAction = false,
 }: {
   owner: ChatOwner;
   events: readonly ChatEventName[];
@@ -56,6 +65,7 @@ export function ChatChannelsPanel({
   description: string;
   canManage: boolean;
   unavailable?: string | undefined;
+  secondaryAction?: boolean;
 }) {
   const { t } = useTranslation();
   const format = useFormat();
@@ -97,6 +107,8 @@ export function ChatChannelsPanel({
     const parts = [kindLabel(t, channel.kind), eventSummary(t, channel.events)];
     if (channel.state === "failing" && channel.failure) {
       parts.push(t("chatChannels.failingSince", { time: format.relative(channel.failure.at) }));
+    } else if (channel.failure) {
+      parts.push(t("chatChannels.testFailedAt", { time: format.relative(channel.failure.at) }));
     } else if (channel.lastDeliveredAt) {
       parts.push(t("chatChannels.lastDelivered", { time: format.relative(channel.lastDeliveredAt) }));
     } else {
@@ -126,7 +138,12 @@ export function ChatChannelsPanel({
       title={title}
       description={description}
       actions={
-        <Button size="sm" variant="primary" icon={Plus} onClick={() => setEditing("new")}>
+        <Button
+          size="sm"
+          variant={secondaryAction ? "secondary" : "primary"}
+          icon={Plus}
+          onClick={() => setEditing("new")}
+        >
           {t("chatChannels.connectAction")}
         </Button>
       }
@@ -152,10 +169,13 @@ export function ChatChannelsPanel({
                 <div className="flex min-w-0 flex-1 basis-field flex-col">
                   <TruncatedText text={channel.name} className="font-medium" />
                   <span className="text-sm text-text-muted wrap-anywhere">{hint(channel)}</span>
+                  {channel.state === "working" && channel.failure ? (
+                    <span className="text-sm wrap-anywhere text-text">
+                      {failureText(t, channel.kind, channel.failure)}
+                    </span>
+                  ) : null}
                 </div>
-                <Badge variant={channel.state === "failing" ? "danger" : "success"}>
-                  {channel.state === "failing" ? t("chatChannels.failing") : t("chatChannels.working")}
-                </Badge>
+                <ChannelBadge channel={channel} />
                 <div className="ms-auto flex items-center gap-1">
                   <Button
                     size="sm"

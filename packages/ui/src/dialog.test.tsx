@@ -6,6 +6,7 @@ import { Button } from "./button.js";
 import { ConfirmDialog, Dialog, Drawer } from "./dialog.js";
 import { Input } from "./field.js";
 import { Menu } from "./overlays.js";
+import { focusMainHeading, focusWhenShown, useOpener } from "./return-focus.js";
 import { renderUi } from "./testing/render.js";
 
 function DialogProbe({ onOpenChange }: { onOpenChange?: (open: boolean) => void }) {
@@ -300,5 +301,86 @@ describe("returning focus", () => {
     await waitFor(() =>
       expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Platform Team" })),
     );
+  });
+});
+
+describe("returning focus from panels and replaced controls", () => {
+  function PanelProbe() {
+    const [open, setOpen] = useState(false);
+    return (
+      <main>
+        <h1>For you</h1>
+        <Button onClick={() => setOpen(true)}>Notifications</Button>
+        {open ? <Panel onClose={() => setOpen(false)} /> : null}
+      </main>
+    );
+  }
+
+  function Panel({ onClose }: { onClose: () => void }) {
+    const restore = useOpener();
+    return (
+      <aside>
+        <Button
+          onClick={() => {
+            onClose();
+            restore();
+          }}
+        >
+          Close notifications
+        </Button>
+      </aside>
+    );
+  }
+
+  it("goes back to the element that opened a panel", async () => {
+    renderUi(<PanelProbe />);
+    const bell = screen.getByRole("button", { name: "Notifications" });
+    await userEvent.click(bell);
+    await userEvent.click(screen.getByRole("button", { name: "Close notifications" }));
+    expect(document.activeElement).toBe(bell);
+  });
+
+  it("goes to a control once it is shown in place of the one that was used", async () => {
+    function Probe() {
+      const [saved, setSaved] = useState(false);
+      return saved ? (
+        <Button key="saved">Save changes</Button>
+      ) : (
+        <Button
+          key="new"
+          onClick={() => {
+            setSaved(true);
+            focusWhenShown(() => screen.queryByRole("button", { name: "Save changes" }));
+          }}
+        >
+          Show banner
+        </Button>
+      );
+    }
+    renderUi(<Probe />);
+    await userEvent.click(screen.getByRole("button", { name: "Show banner" }));
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole("button", { name: "Save changes" })),
+    );
+  });
+});
+
+describe("focus on the main heading", () => {
+  it("hides the ring after a pointer press and shows it after keyboard use", async () => {
+    renderUi(
+      <main>
+        <h1>Restart the VPN gateway</h1>
+      </main>,
+    );
+    const heading = screen.getByRole("heading", { name: "Restart the VPN gateway" });
+    await userEvent.pointer({ keys: "[MouseLeft]", target: document.body });
+    focusMainHeading();
+    expect(document.activeElement).toBe(heading);
+    expect(heading.hasAttribute("data-quiet-focus")).toBe(true);
+    heading.blur();
+    expect(heading.hasAttribute("data-quiet-focus")).toBe(false);
+    await userEvent.keyboard("g");
+    focusMainHeading();
+    expect(heading.hasAttribute("data-quiet-focus")).toBe(false);
   });
 });

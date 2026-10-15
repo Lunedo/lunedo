@@ -10,6 +10,13 @@ test("shows an account created in another session without a reload", async ({ br
   const other = await secondSession(browser, organization.admin);
   try {
     const name = `Live Placeholder ${Date.now()}`;
+    const searched = page.waitForResponse(
+      (response) =>
+        response.url().includes("/api/v1/instance/accounts?") &&
+        new URL(response.url()).searchParams.get("q") === name,
+    );
+    await page.getByRole("searchbox", { name: "Search by name or e-mail" }).fill(name);
+    await searched;
     await callApi(other, "POST", "/api/v1/instance/accounts/placeholders", {
       name,
       email: `live-${Date.now()}@import.test`,

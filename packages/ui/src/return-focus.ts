@@ -1,6 +1,24 @@
-import { useLayoutEffect, useRef } from "react";
+import { useCallback, useLayoutEffect, useRef } from "react";
 
 let menuOpener: HTMLElement | null = null;
+let keyboardUsed = false;
+
+if (typeof document !== "undefined") {
+  document.addEventListener(
+    "keydown",
+    (event) => {
+      if (!event.ctrlKey && !event.metaKey && !event.altKey) keyboardUsed = true;
+    },
+    true,
+  );
+  document.addEventListener(
+    "pointerdown",
+    () => {
+      keyboardUsed = false;
+    },
+    true,
+  );
+}
 
 export function rememberMenuOpener(trigger: HTMLElement | null): void {
   menuOpener = trigger;
@@ -17,8 +35,36 @@ export function focusMainHeading(root: ParentNode = document): boolean {
   const heading = mainHeading(root);
   if (!heading) return false;
   if (!heading.hasAttribute("tabindex")) heading.setAttribute("tabindex", "-1");
+  if (keyboardUsed) heading.removeAttribute("data-quiet-focus");
+  else {
+    heading.setAttribute("data-quiet-focus", "");
+    heading.addEventListener("blur", () => heading.removeAttribute("data-quiet-focus"), { once: true });
+  }
   heading.focus({ preventScroll: true });
   return true;
+}
+
+export function useOpener(): () => void {
+  const opener = useRef<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    const active = document.activeElement;
+    opener.current = active instanceof HTMLElement && active !== document.body ? active : null;
+  }, []);
+  return useCallback(() => {
+    const target = opener.current;
+    opener.current = null;
+    if (target?.isConnected) target.focus();
+    else focusMainHeading();
+  }, []);
+}
+
+export function focusWhenShown(find: () => HTMLElement | null | undefined, attempts = 20): void {
+  const step = (left: number) => {
+    const element = find();
+    if (element) element.focus();
+    else if (left > 0) setTimeout(() => step(left - 1), 50);
+  };
+  setTimeout(() => step(attempts), 0);
 }
 
 export function useReturnFocus(open: boolean): (event: Event) => void {

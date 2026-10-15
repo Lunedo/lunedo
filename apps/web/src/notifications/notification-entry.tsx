@@ -8,7 +8,7 @@ import { translateKey } from "../i18n/translate.js";
 import { useSession } from "../shell/shell-context.js";
 import { notificationTypes } from "./notification-types.js";
 import { type NotificationItem, useMarkRead } from "./notifications-api.js";
-import { useChangeWatch } from "./watching-api.js";
+import { useChangeWatch, useKnownWatchStatus } from "./watching-api.js";
 
 function statusLabel(t: Parameters<typeof translateKey>[0], params: Record<string, unknown>): string {
   if (typeof params.statusName === "string") return params.statusName;
@@ -79,6 +79,8 @@ export function NotificationEntry({
   const text = notificationText(t, item, format, session.account?.id);
   const itemTitle = String((item.params as Record<string, unknown> | null)?.itemTitle ?? "");
   const watchedItem = definition?.watched && item.target.id ? item.target.id : null;
+  const known = useKnownWatchStatus({ type: "item", id: watchedItem ?? item.id }).data;
+  const stillWatched = known === undefined || known.effective?.state === "watching";
 
   const open = () => {
     if (unread) markRead.mutate(item.id);
@@ -103,6 +105,17 @@ export function NotificationEntry({
     );
   };
 
+  const watchAgain = (itemId: string) => {
+    const target = { type: "item" as const, id: itemId };
+    changeWatch.mutate(
+      { target, change: { state: "watching" } },
+      {
+        onSuccess: () => toast({ title: t("notifications.watchingAgain", { name: itemTitle }) }),
+        onError: (error) => failed(t("notifications.watching.changeFailed"), error, () => watchAgain(itemId)),
+      },
+    );
+  };
+
   return (
     <li className="group relative flex items-start gap-3 rounded-md px-2 py-2 hover:bg-hover">
       <span
@@ -113,6 +126,7 @@ export function NotificationEntry({
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <button
           type="button"
+          data-notification=""
           onClick={open}
           className="min-w-0 text-start focus-visible:outline-2 focus-visible:outline-accent"
         >
@@ -123,10 +137,18 @@ export function NotificationEntry({
           </span>
           {unread ? <span className="sr-only">{t("notifications.unreadLabel")}</span> : null}
         </button>
-        {watchedItem ? (
+        {watchedItem && stillWatched ? (
           <div>
             <Button variant="secondary" size="sm" icon={BellOff} onClick={() => stopWatching(watchedItem)}>
               {t("notifications.stopWatching")}
+            </Button>
+          </div>
+        ) : null}
+        {watchedItem && !stillWatched ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-text-muted">{t("notifications.notWatched")}</span>
+            <Button variant="secondary" size="sm" icon={Bell} onClick={() => watchAgain(watchedItem)}>
+              {t("notifications.watchAgain")}
             </Button>
           </div>
         ) : null}

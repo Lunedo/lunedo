@@ -21,10 +21,6 @@ interface EventRow {
   push: SettingEntry | undefined;
 }
 
-function channelsOf(row: EventRow): SettingEntry[] {
-  return row.push ? [row.inApp, row.email, row.push] : [row.inApp, row.email];
-}
-
 export function notificationRows(
   settings: readonly SettingEntry[] | undefined,
   group: NotificationEventGroup,
@@ -43,47 +39,52 @@ function isDelivery(value: unknown): value is EmailDelivery {
   return typeof value === "string" && (emailDeliveries as readonly string[]).includes(value);
 }
 
-function RowSource({
-  row,
+function ChannelSource({
+  entry,
   level,
   organizationName,
+  resetLabel,
+  onReset,
 }: {
-  row: EventRow;
+  entry: SettingEntry;
   level: SettingLevel;
   organizationName?: string | undefined;
+  resetLabel: string;
+  onReset?: (() => void) | undefined;
 }) {
   const { t } = useTranslation();
   const className = "inline-flex items-center gap-1 text-text-muted text-xs";
   const icon = "size-icon-sm shrink-0";
-  const locked = channelsOf(row).find((entry) => entry.lockedBy && entry.lockedBy !== level);
-  if (locked) {
+  if (entry.lockedBy && entry.lockedBy !== level) {
     return (
       <span className={className}>
         <Lock aria-hidden="true" className={icon} />
-        {locked.lockedBy === "instance"
+        {entry.lockedBy === "instance"
           ? t("settings.source.lockedByInstance")
           : t("settings.source.lockedByOrganization", { name: organizationName ?? "" })}
       </span>
     );
   }
-  if (channelsOf(row).some((entry) => entry.source === level)) {
+  if (entry.source === level) {
     return (
-      <span className={className}>
-        <PenLine aria-hidden="true" className={icon} />
-        {level === "user"
-          ? t("settings.source.setByYou")
-          : level === "organization"
-            ? t("settings.source.setForOrganization", { name: organizationName ?? "" })
-            : t("settings.source.setForInstance")}
+      <span className="flex flex-wrap items-center gap-2">
+        <span className={className}>
+          <PenLine aria-hidden="true" className={icon} />
+          {level === "user"
+            ? t("settings.source.setByYou")
+            : level === "organization"
+              ? t("settings.source.setForOrganization", { name: organizationName ?? "" })
+              : t("settings.source.setForInstance")}
+        </span>
+        {onReset ? (
+          <Button variant="outline" size="sm" aria-label={resetLabel} onClick={onReset}>
+            {t("notifications.reset")}
+          </Button>
+        ) : null}
       </span>
     );
   }
-  const sources = channelsOf(row).map((entry) => inheritedFrom(entry, level));
-  const from = sources.includes("organization")
-    ? "organization"
-    : sources.includes("instance")
-      ? "instance"
-      : "default";
+  const from = inheritedFrom(entry, level);
   return (
     <span className={className}>
       {from === "organization" ? (
@@ -91,7 +92,9 @@ function RowSource({
       ) : (
         <Server aria-hidden="true" className={icon} />
       )}
-      {t(`notifications.source.${from}`, { name: organizationName ?? "" })}
+      {t(`notifications.source.${from === "organization" || from === "instance" ? from : "default"}`, {
+        name: organizationName ?? "",
+      })}
     </span>
   );
 }
@@ -120,12 +123,15 @@ function EventList({
     void saveState(row.event.id).run(() => onChange(key, value));
   const current = (entry: SettingEntry) =>
     entry.source === level ? entry.value : inheritedValue(entry, level);
-  const shown = (row: EventRow) => (browserPush ? channelsOf(row) : [row.inApp, row.email]);
-  const own = (row: EventRow) => shown(row).filter((entry) => entry.source === level);
-  const reset = (row: EventRow) =>
-    void saveState(row.event.id).run(async () => {
-      for (const entry of own(row)) await onChange(entry.key, undefined);
-    });
+  const source = (row: EventRow, entry: SettingEntry, channel: string) => (
+    <ChannelSource
+      entry={entry}
+      level={level}
+      organizationName={organizationName}
+      resetLabel={t("notifications.resetChannel", { event: label(row), channel })}
+      onReset={editable ? () => save(row, entry.key, undefined) : undefined}
+    />
+  );
 
   const inAppLabel = t("notifications.channels.inApp");
   const emailLabel = t("notifications.channels.email");
@@ -152,34 +158,24 @@ function EventList({
             <li key={row.event.id} className="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3">
               <div className="flex min-w-0 flex-1 basis-field flex-col gap-1">
                 <span className="font-medium wrap-anywhere">{label(row)}</span>
-                <span className="flex flex-wrap items-center gap-2">
-                  <RowSource row={row} level={level} organizationName={organizationName} />
-                  {editable && own(row).length > 0 ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      aria-label={t("notifications.resetEvent", { event: label(row) })}
-                      onClick={() => reset(row)}
-                    >
-                      {t("notifications.reset")}
-                    </Button>
-                  ) : null}
-                </span>
                 <SaveIndicator tracker={saveState(row.event.id)} />
               </div>
-              <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center md:gap-4">
-                <div className="flex items-center gap-2 md:w-number-field">
-                  <Switch
-                    label={t("notifications.channelFor", { event: label(row), channel: inAppLabel })}
-                    labelHidden
-                    checked={current(row.inApp) === true}
-                    disabled={inAppReason !== undefined}
-                    {...(inAppReason ? { disabledReason: inAppReason } : {})}
-                    onCheckedChange={(checked) => save(row, row.inApp.key, checked)}
-                  />
-                  <span aria-hidden="true" className="text-sm md:hidden">
-                    {inAppLabel}
-                  </span>
+              <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-start md:gap-4">
+                <div className="flex flex-col gap-1 md:w-number-field">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      label={t("notifications.channelFor", { event: label(row), channel: inAppLabel })}
+                      labelHidden
+                      checked={current(row.inApp) === true}
+                      disabled={inAppReason !== undefined}
+                      {...(inAppReason ? { disabledReason: inAppReason } : {})}
+                      onCheckedChange={(checked) => save(row, row.inApp.key, checked)}
+                    />
+                    <span aria-hidden="true" className="text-sm md:hidden">
+                      {inAppLabel}
+                    </span>
+                  </div>
+                  {source(row, row.inApp, inAppLabel)}
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col gap-1 md:w-field md:flex-none">
                   <span aria-hidden="true" className="text-sm md:hidden">
@@ -196,20 +192,24 @@ function EventList({
                     onValueChange={(next) => save(row, row.email.key, next)}
                   />
                   {emailReason ? <span className="text-text-muted text-xs">{emailReason}</span> : null}
+                  {source(row, row.email, emailLabel)}
                 </div>
                 {push ? (
-                  <div className="flex items-center gap-2 md:w-number-field">
-                    <Switch
-                      label={t("notifications.channelFor", { event: label(row), channel: pushLabel })}
-                      labelHidden
-                      checked={current(push) === true}
-                      disabled={pushReason !== undefined}
-                      {...(pushReason ? { disabledReason: pushReason } : {})}
-                      onCheckedChange={(checked) => save(row, push.key, checked)}
-                    />
-                    <span aria-hidden="true" className="text-sm md:hidden">
-                      {pushLabel}
-                    </span>
+                  <div className="flex flex-col gap-1 md:w-number-field">
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        label={t("notifications.channelFor", { event: label(row), channel: pushLabel })}
+                        labelHidden
+                        checked={current(push) === true}
+                        disabled={pushReason !== undefined}
+                        {...(pushReason ? { disabledReason: pushReason } : {})}
+                        onCheckedChange={(checked) => save(row, push.key, checked)}
+                      />
+                      <span aria-hidden="true" className="text-sm md:hidden">
+                        {pushLabel}
+                      </span>
+                    </div>
+                    {source(row, push, pushLabel)}
                   </div>
                 ) : null}
               </div>

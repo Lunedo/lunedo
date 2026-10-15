@@ -138,3 +138,30 @@ describe("Checkbox and radio borders", () => {
     expect(screen.getByRole("radio", { name: "30 days" }).className).toContain("border-control-border");
   });
 });
+
+describe("Hit areas of small controls", () => {
+  it("reach the minimum target size without growing the control", () => {
+    renderUi(
+      <>
+        <Checkbox checked={false} onCheckedChange={() => {}} label="Notify me" />
+        <Switch checked={false} onCheckedChange={() => {}} label="Reading-friendly font" />
+        <RadioGroup
+          label="Expiry"
+          value="never"
+          onValueChange={() => {}}
+          options={[{ value: "never", label: "No expiry" }]}
+        />
+      </>,
+    );
+    for (const control of [
+      screen.getByRole("checkbox", { name: "Notify me" }),
+      screen.getByRole("radio", { name: "No expiry" }),
+    ]) {
+      expect(control.className).toContain("after:size-hit");
+      expect(control.className).toContain("size-4");
+    }
+    const toggle = screen.getByRole("switch", { name: "Reading-friendly font" });
+    expect(toggle.className).toContain("after:h-hit");
+    expect(toggle.className).toContain("after:min-w-hit");
+  });
+});

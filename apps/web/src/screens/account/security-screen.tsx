@@ -171,8 +171,7 @@ function ChangePasswordDialog({
       form.reset();
       onOpenChange(false);
     } catch (failure) {
-      if (!applyServerFieldErrors(form, failure, t("validation.invalid")))
-        setError(problemMessage(t, failure));
+      if (!applyServerFieldErrors(form, t, failure)) setError(problemMessage(t, failure));
     }
   });
   return (
@@ -222,8 +221,7 @@ function ChangeEmailDialog({ open, onOpenChange }: { open: boolean; onOpenChange
       form.reset();
       onOpenChange(false);
     } catch (failure) {
-      if (!applyServerFieldErrors(form, failure, t("validation.invalid")))
-        setError(problemMessage(t, failure));
+      if (!applyServerFieldErrors(form, t, failure)) setError(problemMessage(t, failure));
     }
   });
   return (

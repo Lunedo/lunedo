@@ -57,8 +57,7 @@ export function DomainsScreen() {
       form.reset();
       await queryClient.invalidateQueries({ queryKey: organizationKeys.domains(organizationId) });
     } catch (failure) {
-      if (!applyServerFieldErrors(form, failure, t("validation.invalid")))
-        setError(problemMessage(t, failure));
+      if (!applyServerFieldErrors(form, t, failure)) setError(problemMessage(t, failure));
     }
   });
   const onChange = async (key: string, change: Parameters<typeof mutation.mutateAsync>[0]["change"]) => {

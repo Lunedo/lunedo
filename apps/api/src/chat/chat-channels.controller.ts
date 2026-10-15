@@ -50,7 +50,13 @@ const targetSchema = z
     z
       .object({
         homeserver: z.string().min(1).max(2000).describe("Address of the Matrix homeserver."),
-        roomId: z.string().min(1).max(500).describe("Room ID, for example `!abc:example.org`."),
+        roomId: z
+          .string()
+          .min(1)
+          .max(500)
+          .describe(
+            "Room as people see it in their client: an alias such as `#ops:example.org`, a matrix.to link or a room ID such as `!abc:example.org`. Aliases and links are resolved to the room ID when saving.",
+          ),
         accessToken: z
           .string()
           .min(1)
@@ -111,9 +117,11 @@ const channelSchema = z
       "`failing` when the service stopped accepting messages; nothing is posted until the channel is fixed.",
     ),
     failure: failureSchema
-      .extend({ at: timestamp("When the channel started failing.") })
+      .extend({ at: timestamp("When the channel started failing or the last test failed.") })
       .nullable()
-      .describe("Why the channel is failing, or null."),
+      .describe(
+        "Why the channel is failing, or, while it is `working`, why the last test failed. Null once a message was accepted again.",
+      ),
     lastAttemptAt: timestamp("When a message was last sent.").nullable(),
     lastDeliveredAt: timestamp("When a message was last accepted.").nullable(),
     createdAt: timestamp("When the channel was connected."),

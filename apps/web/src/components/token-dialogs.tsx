@@ -164,8 +164,7 @@ export function CreateTokenDialog({
       });
       setSecret(created.token);
     } catch (failure) {
-      if (!applyServerFieldErrors(form, failure, t("validation.invalid")))
-        setError(problemMessage(t, failure));
+      if (!applyServerFieldErrors(form, t, failure)) setError(problemMessage(t, failure));
     }
   });
 

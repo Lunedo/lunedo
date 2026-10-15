@@ -296,3 +296,31 @@ describe("the web client", () => {
     });
   });
 });
+
+describe("the command palette", () => {
+  it("names the scope of settings pages that share a name", async () => {
+    api({
+      "GET /api/v1/auth/session": () => ({ body: SESSION }),
+      "GET /api/v1/account/permissions": () => ({
+        body: {
+          instance: ["instance.settings.view"],
+          organization: ["organization.view", "organization.settings.view"],
+        },
+      }),
+      "GET /api/v1/search/quick": () => ({ body: { results: [] } }),
+    });
+    await renderApp("/settings/preferences");
+    await screen.findByRole("heading", { name: "Preferences", level: 1 });
+    await userEvent.keyboard("{Control>}k{/Control}");
+    await userEvent.type(await screen.findByRole("combobox"), "notifcations");
+    await waitFor(() =>
+      expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual(
+        expect.arrayContaining([
+          "Notifications · Personal",
+          "Notifications · Organization",
+          "Notifications · Instance",
+        ]),
+      ),
+    );
+  });
+});

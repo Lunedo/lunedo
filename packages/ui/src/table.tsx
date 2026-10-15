@@ -12,6 +12,7 @@ import { Button, IconButton } from "./button.js";
 import { classNames } from "./class-names.js";
 import { SkeletonText } from "./feedback.js";
 import { controlClassName } from "./field.js";
+import { WIDE_HIT_AREA } from "./hit-area.js";
 import { Icon } from "./icon.js";
 import { useUiLabels } from "./labels.js";
 import { ScrollArea } from "./scroll-area.js";
@@ -121,7 +122,10 @@ export function Table<T>({
                         <button
                           type="button"
                           onClick={() => onSortChange({ key: column.key, direction: next })}
-                          className="-mx-1 inline-flex items-center gap-1 rounded-sm px-1 hover:text-text focus-visible:focus-ring"
+                          className={classNames(
+                            WIDE_HIT_AREA,
+                            "-mx-1 inline-flex items-center gap-1 rounded-sm px-1 hover:text-text focus-visible:focus-ring",
+                          )}
                         >
                           {column.header}
                           <Icon

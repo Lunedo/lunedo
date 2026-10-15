@@ -13,6 +13,7 @@ import {
 import { classNames } from "./class-names.js";
 import { Spinner } from "./feedback.js";
 import { controlClassName, useFieldControl } from "./field.js";
+import { HIT_AREA, WIDE_HIT_AREA } from "./hit-area.js";
 import { Icon } from "./icon.js";
 import { useUiLabels } from "./labels.js";
 
@@ -264,11 +265,20 @@ export function Combobox(props: ComboboxProps) {
   return (
     <PopoverPrimitive.Root open={open && !disabled} onOpenChange={(next) => (next ? setOpen(true) : close())}>
       <PopoverPrimitive.Anchor asChild>
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: the area around the input only forwards pointer presses to it; keyboard users reach the input directly */}
         <div
           ref={wrapperRef}
           data-combobox=""
+          data-hit-area=""
+          onMouseDown={(event) => {
+            if (event.target !== event.currentTarget || disabled) return;
+            event.preventDefault();
+            inputRef.current?.focus();
+            setOpen(true);
+          }}
           className={classNames(
             controlClassName,
+            WIDE_HIT_AREA,
             "flex min-h-control-field w-full flex-wrap items-center gap-1 py-1",
             disabled && "cursor-not-allowed border-dashed bg-surface-sunken text-text-muted",
           )}
@@ -286,7 +296,10 @@ export function Combobox(props: ComboboxProps) {
                     disabled={disabled}
                     aria-label={labels.removeItem.replace("{item}", labelOf(value))}
                     onClick={() => remove(value)}
-                    className="inline-flex rounded-sm text-text-muted hover:text-text focus-visible:focus-ring"
+                    className={classNames(
+                      HIT_AREA,
+                      "z-10 inline-flex rounded-sm text-text-muted hover:text-text focus-visible:focus-ring",
+                    )}
                   >
                     <Icon icon={X} size="sm" />
                   </button>
@@ -316,7 +329,7 @@ export function Combobox(props: ComboboxProps) {
             onClick={() => setOpen(true)}
             onKeyDown={onKeyDown}
             className={classNames(
-              "h-control-sm min-w-0 flex-1 bg-transparent outline-none placeholder:text-text-muted",
+              "relative z-10 h-control-sm min-w-0 flex-1 bg-transparent outline-none placeholder:text-text-muted",
               muted && !open && "text-text-muted",
             )}
           />

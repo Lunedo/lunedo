@@ -13,7 +13,10 @@ import {
 import type { TFunction } from "i18next";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ActionFailure } from "../errors/failure.js";
 import { problemMessage } from "../errors/problem-message.js";
+import { completeWebAddress, isWebAddress } from "../forms/addresses.js";
+import { serverFieldErrors } from "../forms/use-schema-form.js";
 import { translateKey } from "../i18n/translate.js";
 import {
   type ChatChannel,
@@ -43,12 +46,7 @@ function kindOf(value: string): ChatChannelKind {
 }
 
 function isAddress(value: string): boolean {
-  try {
-    const url = new URL(value.trim());
-    return url.protocol === "https:" || url.protocol === "http:";
-  } catch {
-    return false;
-  }
+  return isWebAddress(completeWebAddress(value));
 }
 
 interface Errors {
@@ -59,6 +57,15 @@ interface Errors {
   name?: string;
   events?: string;
 }
+
+const SERVER_FIELDS: Record<string, keyof Errors> = {
+  "target.url": "url",
+  "target.homeserver": "homeserver",
+  "target.roomId": "roomId",
+  "target.accessToken": "accessToken",
+  name: "name",
+  events: "events",
+};
 
 export function ChannelDialog({
   owner,
@@ -89,7 +96,8 @@ export function ChannelDialog({
   );
   const [newSecret, setNewSecret] = useState(false);
   const [attempted, setAttempted] = useState<"save" | "test" | null>(null);
-  const [failure, setFailure] = useState<string | null>(null);
+  const [failure, setFailure] = useState<{ action: "test" | "save"; message: string } | null>(null);
+  const [serverErrors, setServerErrors] = useState<Errors>({});
   const [tested, setTested] = useState<ChatTestResult | null>(null);
   const [busy, setBusy] = useState<"test" | "save" | null>(null);
   const service = kindLabel(t, kind);
@@ -98,15 +106,15 @@ export function ChannelDialog({
 
   const target = (): ChatTarget =>
     kind === "matrix"
-      ? { homeserver: homeserver.trim(), roomId: roomId.trim(), accessToken: accessToken.trim() }
-      : { url: url.trim() };
+      ? { homeserver: completeWebAddress(homeserver), roomId: roomId.trim(), accessToken: accessToken.trim() }
+      : { url: completeWebAddress(url) };
 
   const check = (forTest: boolean): Errors => {
     const next: Errors = {};
     if (needsAddress || forTest) {
       if (kind === "matrix") {
         if (!isAddress(homeserver)) next.homeserver = t("chatChannels.homeserverInvalid");
-        if (!/^![^:\s]+:\S+$/.test(roomId.trim())) next.roomId = t("chatChannels.roomIdInvalid");
+        if (!roomId.trim()) next.roomId = t("chatChannels.roomIdInvalid");
         if (!accessToken.trim()) next.accessToken = t("chatChannels.tokenRequired");
       } else if (!isAddress(url)) {
         next.url = t("chatChannels.addressInvalid");
@@ -119,7 +127,28 @@ export function ChannelDialog({
     return next;
   };
 
-  const errors: Errors = attempted ? check(attempted === "test") : {};
+  const errors: Errors = { ...serverErrors, ...(attempted ? check(attempted === "test") : {}) };
+
+  const clearServerError = (field: keyof Errors) =>
+    setServerErrors((current) => {
+      const { [field]: _removed, ...rest } = current;
+      return rest;
+    });
+
+  const showFailure = (action: "test" | "save", error: unknown) => {
+    const fields = serverFieldErrors(t, error);
+    const mapped: Errors = {};
+    for (const [path, message] of Object.entries(fields)) {
+      const field = SERVER_FIELDS[path];
+      if (field) mapped[field] = message;
+    }
+    if (Object.keys(mapped).length > 0) {
+      setServerErrors(mapped);
+      focusFirstInvalidSoon();
+      return;
+    }
+    setFailure({ action, message: problemMessage(t, error) });
+  };
 
   const validate = (forTest: boolean): boolean => {
     const next = check(forTest);
@@ -142,7 +171,7 @@ export function ChannelDialog({
     try {
       setTested(await testUnsaved(owner, input()));
     } catch (error) {
-      setFailure(problemMessage(t, error));
+      showFailure("test", error);
     } finally {
       setBusy(null);
     }
@@ -171,7 +200,7 @@ export function ChannelDialog({
       });
       onOpenChange(false);
     } catch (error) {
-      setFailure(problemMessage(t, error));
+      showFailure("save", error);
     } finally {
       setBusy(null);
     }
@@ -217,12 +246,16 @@ export function ChannelDialog({
         }}
       >
         {failure ? (
-          <Notice
-            variant="danger"
-            title={channel ? t("chatChannels.saveFailed") : t("chatChannels.connectFailed")}
-          >
-            {failure}
-          </Notice>
+          <ActionFailure
+            title={
+              failure.action === "test"
+                ? t("chatChannels.testNotDelivered")
+                : channel
+                  ? t("chatChannels.saveFailed")
+                  : t("chatChannels.connectFailed")
+            }
+            message={failure.message}
+          />
         ) : null}
         {tested ? (
           tested.delivered ? (
@@ -230,9 +263,10 @@ export function ChannelDialog({
               {t("chatChannels.testSentDescription", { service })}
             </Notice>
           ) : (
-            <Notice variant="danger" title={t("chatChannels.testFailed", { service })}>
-              {tested.failure ? failureText(t, kind, tested.failure) : null}
-            </Notice>
+            <ActionFailure
+              title={t("chatChannels.testFailed", { service })}
+              message={tested.failure ? failureText(t, kind, tested.failure) : ""}
+            />
           )
         ) : null}
         {channel ? null : (
@@ -243,6 +277,7 @@ export function ChannelDialog({
             onValueChange={(value) => {
               setKind(value as ChatChannelKind);
               setTested(null);
+              setServerErrors({});
             }}
             options={chatChannelKinds.map((value) => ({ value, label: kindLabel(t, value) }))}
           />
@@ -276,15 +311,21 @@ export function ChannelDialog({
                 value={homeserver}
                 onChange={(event) => {
                   setHomeserver(event.target.value);
+                  clearServerError("homeserver");
                 }}
               />
             </Field>
-            <Field label={t("chatChannels.roomId")} {...(errors.roomId ? { error: errors.roomId } : {})}>
+            <Field
+              label={t("chatChannels.roomId")}
+              hint={t("chatChannels.roomIdHint")}
+              {...(errors.roomId ? { error: errors.roomId } : {})}
+            >
               <Input
                 className="font-mono"
                 value={roomId}
                 onChange={(event) => {
                   setRoomId(event.target.value);
+                  clearServerError("roomId");
                 }}
               />
             </Field>
@@ -300,6 +341,7 @@ export function ChannelDialog({
                 value={accessToken}
                 onChange={(event) => {
                   setAccessToken(event.target.value);
+                  clearServerError("accessToken");
                 }}
               />
             </Field>
@@ -320,6 +362,7 @@ export function ChannelDialog({
               onChange={(event) => {
                 setUrl(event.target.value);
                 setTested(null);
+                clearServerError("url");
               }}
             />
           </Field>
@@ -334,6 +377,7 @@ export function ChannelDialog({
             placeholder={t("chatChannels.namePlaceholder")}
             onChange={(event) => {
               setName(event.target.value);
+              clearServerError("name");
             }}
           />
         </Field>

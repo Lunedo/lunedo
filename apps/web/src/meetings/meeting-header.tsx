@@ -1,5 +1,6 @@
 import {
   Avatar,
+  Badge,
   Button,
   Combobox,
   type ComboboxItem,
@@ -30,6 +31,7 @@ import { LoadError } from "../errors/failure.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { translateKey } from "../i18n/translate.js";
 import { useFormat } from "../preferences/preferences-provider.js";
+import { peopleWithoutAccess } from "./access.js";
 import {
   MeetingDateDialog,
   type MeetingTarget,
@@ -83,7 +85,7 @@ export function MeetingHeader({
     ? new Date(new Date(data.startsAt).getTime() + data.durationMinutes * 60_000)
     : null;
   const closable = writable && data.current;
-  const missingAccess = data.attendees.filter((attendee) => !attendee.canRead);
+  const missingAccess = peopleWithoutAccess(data.attendees);
   return (
     <section
       aria-label={t("meetings.meeting.label")}
@@ -241,6 +243,7 @@ function Attendees({ meeting, writable }: { meeting: Meeting; writable: boolean 
               <span className="max-w-card truncate" title={name}>
                 {name}
               </span>
+              {attendee.active ? null : <Badge variant="neutral">{t("meetings.inactive")}</Badge>}
               {writable ? (
                 <Menu
                   trigger={

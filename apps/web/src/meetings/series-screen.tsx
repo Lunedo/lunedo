@@ -44,6 +44,7 @@ import { itemSlug } from "../spaces/item-paths.js";
 import { spaceDisplayName } from "../spaces/space-badge.js";
 import { useSpace } from "../spaces/space-context.js";
 import { pagePath } from "../spaces/space-queries.js";
+import { peopleWithoutAccess } from "./access.js";
 import { DecisionsSection } from "./decisions-section.js";
 import { MeetingDateDialog, type MeetingTarget, useCloseMeeting } from "./meeting-actions.js";
 import { MeetingsList } from "./meetings-list.js";
@@ -113,7 +114,7 @@ function SeriesView({ series }: { series: Series }) {
   const writable = canEdit && !series.archived;
   const upcoming = series.upcoming;
   const target = upcoming ? targetOf(series, upcoming) : null;
-  const withoutAccess = series.members.filter((member) => !member.canRead);
+  const withoutAccess = peopleWithoutAccess(series.members);
   const rhythm = describeRhythm(t, series.schedule.rhythm as Rhythm | null, i18n.language);
 
   const setEnded = async (ended: boolean) => {
@@ -206,7 +207,11 @@ function SeriesView({ series }: { series: Series }) {
           >
             <Avatar name={member.name ?? "?"} size="sm" decorative />
             <span>{member.name ?? t("meetings.unknownPerson")}</span>
-            {member.canRead ? null : <Badge variant="warning">{t("meetings.series.noAccess")}</Badge>}
+            {!member.active ? (
+              <Badge variant="neutral">{t("meetings.inactive")}</Badge>
+            ) : member.canRead ? null : (
+              <Badge variant="warning">{t("meetings.series.noAccess")}</Badge>
+            )}
           </li>
         ))}
       </ul>

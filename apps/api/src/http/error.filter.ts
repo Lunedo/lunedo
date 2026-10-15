@@ -167,7 +167,14 @@ function map(error: unknown): Mapped | null {
       confidentialSpace: "confidentialSpace",
       tooManyChannels: "tooManyChatChannels",
     } as const;
-    return { code: codes[error.code], detail: error.message };
+    return {
+      code: codes[error.code],
+      detail: error.message,
+      extensions: {
+        ...(error.field ? { fields: [`body.${error.field}`] } : {}),
+        ...(error.problem ? { problem: error.problem } : {}),
+      },
+    };
   }
   if (error instanceof PushSubscriptionError) {
     const codes = {

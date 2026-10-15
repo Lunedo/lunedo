@@ -11,6 +11,7 @@ export interface CommandItem {
   id: string;
   label: string;
   labelContent?: ReactNode;
+  scope?: string;
   description?: ReactNode;
   icon?: LucideIcon;
   shortcut?: string[];
@@ -155,8 +156,12 @@ export function CommandPalette({
                       >
                         {item.icon && <Icon icon={item.icon} className="shrink-0 text-text-muted" />}
                         <span className="flex min-w-0 flex-1 flex-col">
-                          <span className="truncate" title={item.label}>
+                          <span
+                            className="truncate"
+                            title={item.scope ? `${item.label} · ${item.scope}` : item.label}
+                          >
                             {item.labelContent ?? item.label}
+                            {item.scope ? <span className="text-text-muted"> · {item.scope}</span> : null}
                           </span>
                           {item.description ? (
                             <span className="line-clamp-1 text-sm text-text-muted">{item.description}</span>

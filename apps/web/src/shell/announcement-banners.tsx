@@ -1,4 +1,4 @@
-import { classNames, IconButton, useToast } from "@pagehall/ui";
+import { classNames, focusMainHeading, IconButton, useToast } from "@pagehall/ui";
 import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Megaphone, TriangleAlert, X } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -173,7 +173,14 @@ export function AnnouncementBanners() {
               ? t("announcements.fromInstance")
               : (organization.organization?.name ?? t("announcements.fromOrganization"))
           }
-          onDismiss={announcement.severity === "information" ? () => dismiss.mutate(announcement) : undefined}
+          onDismiss={
+            announcement.severity === "information"
+              ? () => {
+                  dismiss.mutate(announcement);
+                  focusMainHeading();
+                }
+              : undefined
+          }
         />
       ))}
     </div>

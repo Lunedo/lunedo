@@ -6,7 +6,6 @@ import {
   focusFirstInvalidSoon,
   IconButton,
   Input,
-  Notice,
   SegmentedControl,
   Skeleton,
   TruncatedText,
@@ -19,8 +18,10 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { request } from "../../api/request.js";
-import { LoadError } from "../../errors/failure.js";
+import { ActionFailure, LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
+import { completeWebAddress, isWebAddress } from "../../forms/addresses.js";
+import { serverFieldErrors } from "../../forms/use-schema-form.js";
 import { managedShortcutsQuery, type Shortcut, shortcutKeys } from "../shortcuts/shortcut-queries.js";
 import { useSpace } from "../space-context.js";
 import { Panel } from "./panel.js";
@@ -35,15 +36,6 @@ function useRefresh() {
   const { space } = useSpace();
   const queryClient = useQueryClient();
   return () => queryClient.invalidateQueries({ queryKey: shortcutKeys.list(space.id) });
-}
-
-export function isShortcutUrl(value: string): boolean {
-  try {
-    const url = new URL(value.trim());
-    return url.protocol === "https:" || url.protocol === "http:";
-  } catch {
-    return false;
-  }
 }
 
 function ShortcutDialog({
@@ -72,18 +64,21 @@ function ShortcutDialog({
 
   const save = async () => {
     const next: { label?: string; target?: string } = {};
-    const cleaned = label.replace(/\s+/g, " ").trim() || (kind === "item" ? (item?.label ?? "") : "");
-    if (cleaned.length === 0) next.label = t("spaceShortcuts.labelRequired");
+    const typed = label.replace(/\s+/g, " ").trim();
+    const cleaned = typed || (kind === "item" ? (item?.label ?? "") : "");
+    const address = completeWebAddress(url);
+    if (kind === "url" && typed.length === 0) next.label = t("spaceShortcuts.labelRequired");
     else if (cleaned.length > LABEL_MAX) next.label = t("spaceShortcuts.labelTooLong", { max: LABEL_MAX });
     if (kind === "item" && !item && !keepsHiddenTarget) next.target = t("spaceShortcuts.itemRequired");
-    if (kind === "url" && !isShortcutUrl(url)) next.target = t("spaceShortcuts.urlInvalid");
+    if (kind === "url" && !isWebAddress(address)) next.target = t("spaceShortcuts.urlInvalid");
+    if (kind === "url") setUrl(address);
     setErrors(next);
     if (Object.keys(next).length > 0) {
       focusFirstInvalidSoon();
       return;
     }
     const target: Target | undefined =
-      kind === "url" ? { url: url.trim() } : item ? { itemId: item.value } : undefined;
+      kind === "url" ? { url: address } : item ? { itemId: item.value } : undefined;
     setBusy(true);
     setFailure(null);
     try {
@@ -111,7 +106,14 @@ function ShortcutDialog({
       });
       onOpenChange(false);
     } catch (error) {
-      setFailure(problemMessage(t, error));
+      const fields = serverFieldErrors(t, error);
+      const target = fields["target.url"] ?? fields["target.itemId"] ?? fields.target;
+      if (fields.label || target) {
+        setErrors({ ...(fields.label ? { label: fields.label } : {}), ...(target ? { target } : {}) });
+        focusFirstInvalidSoon();
+      } else {
+        setFailure(problemMessage(t, error));
+      }
     } finally {
       setBusy(false);
     }
@@ -143,12 +145,10 @@ function ShortcutDialog({
         }}
       >
         {failure ? (
-          <Notice
-            variant="danger"
+          <ActionFailure
             title={shortcut ? t("spaceShortcuts.saveFailed") : t("spaceShortcuts.addFailed")}
-          >
-            {failure}
-          </Notice>
+            message={failure}
+          />
         ) : null}
         <SegmentedControl
           label={t("spaceShortcuts.target")}
@@ -207,12 +207,18 @@ function ShortcutDialog({
                 setUrl(event.target.value);
                 setErrors({});
               }}
+              onBlur={() => setUrl(completeWebAddress(url))}
             />
           </Field>
         )}
         <Field
           label={t("spaceShortcuts.label")}
-          hint={t("spaceShortcuts.labelHint", { max: LABEL_MAX })}
+          required={kind === "url"}
+          hint={
+            kind === "url"
+              ? t("spaceShortcuts.labelHintWebsite", { max: LABEL_MAX })
+              : t("spaceShortcuts.labelHint", { max: LABEL_MAX })
+          }
           {...(errors.label ? { error: errors.label } : {})}
         >
           <Input
