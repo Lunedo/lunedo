@@ -1404,6 +1404,7 @@
     "exportDisabled": "Export is turned off for this space. A space admin can turn it on in the space settings.",
     "exportRunning": "Another export of yours is still running. Wait until it is done, or stop it under Settings › Exports.",
     "nothingToExport": "There is nothing to export yet. Publish the page first.",
+    "exportStorageFull": "The storage for exports is full. Try again later, when earlier downloads have expired, or ask the person who runs Pagehall to raise the limit.",
     "tooManyExports": "You already keep 5 exports. Delete one you no longer need under Settings › Exports, then try again.",
     "invalidShortcut": "The shortcut is not valid. Check the label and the address.",
     "shortcutNotFound": "The shortcut does not exist anymore. Reload the list.",
@@ -2219,6 +2220,14 @@
       "spaces_membersCreateConfidentialSpaces": {
         "label": "Members create confidential spaces",
         "description": "Members may create confidential spaces and one-on-ones that administrators cannot read. Administrators always can."
+      },
+      "exports_maxSizeMegabytes": {
+        "label": "Largest export",
+        "description": "An export of a space or of a page with its subpages stops when it grows beyond this size, and the person sees why. Single pages downloaded directly are not limited."
+      },
+      "exports_storageMegabytes": {
+        "label": "Storage for exports",
+        "description": "The downloads of all people together may take up this much space. When it is full, the oldest expired downloads are removed first; if that is not enough, new exports are refused with a message to try again later."
       },
       "imports_maxUploadMegabytes": {
         "label": "Largest export to upload",
@@ -5072,6 +5081,8 @@
     "collaborationSection": "Collaboration",
     "sharingSection": "Sharing",
     "filesSection": "Files",
+    "exportsSection": "Exports",
+    "exportsSectionDescription": "Limits for the downloads people build from spaces and pages. Each download is kept for 7 days.",
     "importsSection": "Imports",
     "importsSectionDescription": "Limits for imports from Confluence. The import folder itself is set by the person who runs the server.",
     "searchSection": "Search"
@@ -7587,6 +7598,8 @@
       "failed": "Failed"
     },
     "errors": {
+      "tooLarge": "The export grew larger than this instance allows. Export a smaller part, such as a page with its subpages, or ask the person who runs Pagehall to raise the limit.",
+      "storageFull": "The storage for exports filled up while the export was built. Start it again later, when earlier downloads have expired.",
       "exportDisabled": "Export was turned off for the space. Ask a space admin to turn it on, then export again.",
       "noAccess": "You can no longer read what was exported, or it was deleted. Export again what you can read.",
       "tokenRevoked": "The API token that started the export was revoked or expired. Start the export again.",

@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { Readable } from "node:stream";
 import { buffer } from "node:stream/consumers";
 import { sql } from "drizzle-orm";
@@ -11,6 +12,7 @@ import { testJobContext } from "../testing/jobs.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { spaceFixtures } from "../testing/spaces.js";
 import { type ExportFile, MAX_EXPORT_ATTEMPTS } from "./exports.js";
+import { exportMaxSizeSetting, exportStorageSetting } from "./settings.js";
 
 const baseUrl = testDatabaseBaseUrl();
 const INSTANCE = "https://wiki.example.org";
@@ -646,6 +648,112 @@ describe.skipIf(!baseUrl)("exports", () => {
       });
     });
   });
+  describe("size limits", () => {
+    const MEGABYTE = 1024 * 1024;
+
+    async function withLarge(context: Context, size: number) {
+      await test.services.attachments.upload(context.admin, context.pages.welcome.id, {
+        name: "dump.bin",
+        body: Readable.from([randomBytes(size)]),
+        contentLength: size,
+      });
+    }
+
+    async function storedMegabytes(except: readonly string[] = []): Promise<number> {
+      const result = await test.database.execute<{ bytes: string }>(sql`
+        select coalesce(sum(size), 0) as bytes from exports
+        where state = 'ready' and not (id = any(${sql.param([...except])}::uuid[]))`);
+      return Math.ceil(Number(result.rows[0]?.bytes ?? 0) / MEGABYTE);
+    }
+
+    async function storedFiles(): Promise<number> {
+      const result = await test.database.execute<{ count: number }>(
+        sql`select count(*)::int as count from stored_files`,
+      );
+      return Number(result.rows[0]?.count ?? 0);
+    }
+
+    async function failsWith(context: Context, code: string) {
+      const started = await test.services.exports.start(context.reader, { spaceId: context.space.id });
+      const files = await storedFiles();
+      await run(started.id);
+      expect(await test.services.exports.get(context.reader, started.id)).toMatchObject({
+        state: "failed",
+        errorCode: code,
+        fileName: null,
+        size: null,
+      });
+      expect(await storedFiles()).toBe(files);
+      const notification = await test.database.execute<{ type: string; params: { errorCode: string } }>(sql`
+        select type, params from notifications where recipient_id = ${context.readerId} and target_id = ${started.id}`);
+      expect(notification.rows).toMatchObject([{ type: "export.failed", params: { errorCode: code } }]);
+    }
+
+    it("stop an export larger than the largest export size and leave no file", async () => {
+      const context = await setup();
+      await withLarge(context, MEGABYTE + MEGABYTE / 4);
+      await test.settings.set(exportMaxSizeSetting, {}, "instance", 1);
+      try {
+        await failsWith(context, "tooLarge");
+      } finally {
+        await test.settings.clear(exportMaxSizeSetting, {}, "instance");
+      }
+      await exported(context.reader, { spaceId: context.space.id });
+    });
+
+    it("stop an export that would fill the storage for exports", async () => {
+      const context = await setup();
+      await withLarge(context, 2 * MEGABYTE + MEGABYTE / 4);
+      await test.settings.set(exportStorageSetting, {}, "instance", (await storedMegabytes()) + 1);
+      try {
+        await failsWith(context, "storageFull");
+      } finally {
+        await test.settings.clear(exportStorageSetting, {}, "instance");
+      }
+    });
+
+    it("refuse new exports while the storage is full and make room by removing expired downloads first", async () => {
+      const context = await setup();
+      const kept = await exported(context.reader, { spaceId: context.space.id });
+      const expired = await exported(context.insider, { spaceId: context.space.id });
+      const expiredFile = await test.database.execute<{ file_id: string }>(
+        sql`select file_id from exports where id = ${expired.id}`,
+      );
+      const others = await storedMegabytes([kept.id, expired.id]);
+      await test.settings.set(exportStorageSetting, {}, "instance", others + 4);
+      try {
+        await test.database.execute(sql`update exports set size = ${2 * MEGABYTE} where id = ${kept.id}`);
+        await test.database.execute(sql`update exports set size = ${3 * MEGABYTE} where id = ${expired.id}`);
+        await expect(
+          test.services.exports.start(context.admin, { spaceId: context.space.id }),
+        ).rejects.toMatchObject({ code: "exportStorageFull" });
+        await expect(
+          test.services.exports.start(context.editor, { pageId: context.pages.welcome.id }),
+        ).rejects.toMatchObject({ code: "exportStorageFull" });
+        const page = await test.services.exports.page(context.editor, context.pages.welcome.id, "zip");
+        expect((await unzip(await bytesOf(page))).has("notes.txt")).toBe(true);
+
+        await test.database.execute(
+          sql`update exports set expires_at = now() - interval '1 second' where id = ${expired.id}`,
+        );
+        await expect(
+          test.services.exports.start(context.admin, { spaceId: context.space.id }),
+        ).resolves.toMatchObject({ state: "queued" });
+        expect(
+          (await test.database.execute(sql`select id from exports where id = ${expired.id}`)).rows,
+        ).toEqual([]);
+        const file = await test.database.execute<{ state: string }>(
+          sql`select state from stored_files where id = ${expiredFile.rows[0]?.file_id ?? null}`,
+        );
+        expect(file.rows.map((row) => row.state)).toEqual(["orphaned"]);
+        expect((await test.services.exports.get(context.reader, kept.id)).state).toBe("ready");
+      } finally {
+        await test.database.execute(sql`update exports set size = 0 where id = ${kept.id}`);
+        await test.settings.clear(exportStorageSetting, {}, "instance");
+      }
+    });
+  });
+
   describe("blog posts in a space export", () => {
     async function blogSetup() {
       const context = await setup();

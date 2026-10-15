@@ -12,7 +12,8 @@ import type { TaskService } from "../collaboration/tasks.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import type { DatabasePool } from "../database/pool.js";
 import type { AttachmentService } from "../files/attachments.js";
-import type { FileService } from "../files/files.js";
+import { type FileService, FileTooLargeError } from "../files/files.js";
+import { MEGABYTE } from "../files/settings.js";
 import type { JobContext, JobQueue } from "../jobs/job-queue.js";
 import type { Logger } from "../logging/logger.js";
 import type { MailService } from "../mail/mail-service.js";
@@ -43,6 +44,7 @@ import {
   type PreparedPage,
 } from "./renderer.js";
 import type { ExportScope, ExportState } from "./schema.js";
+import { exportMaxSizeSetting, exportStorageSetting } from "./settings.js";
 import { exportTexts } from "./texts.js";
 
 export const EXPORT_RETENTION_DAYS = 7;
@@ -50,18 +52,24 @@ export const MAX_EXPORT_ATTEMPTS = 3;
 const STALE_MINUTES = 10;
 const BLOG_FOLDER_ID = "blog";
 const HEARTBEAT_MS = 5_000;
-const MAX_EXPORT_BYTES = Number.MAX_SAFE_INTEGER;
 const MAX_LISTED_EXPORTS = 50;
 export const MAX_KEPT_EXPORTS = 5;
 
 export type PageExportFormat = "markdown" | "html" | "zip";
 
-export type ExportErrorCode = "exportNotFound" | "exportRunning" | "nothingToExport" | "tooManyExports";
+export type ExportErrorCode =
+  | "exportNotFound"
+  | "exportRunning"
+  | "exportStorageFull"
+  | "nothingToExport"
+  | "tooManyExports";
 
 export type ExportFailureCode =
   | "exportDisabled"
   | "noAccess"
   | "tokenRevoked"
+  | "tooLarge"
+  | "storageFull"
   | "interrupted"
   | "internalError";
 
@@ -176,6 +184,17 @@ function failureOf(error: ForbiddenError): ExportFailureCode {
 }
 
 const SAFE_LINK = /^(https?:|mailto:)/i;
+
+async function lockStorage(tx: Transaction): Promise<void> {
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended('pagehall.exports.storage', 0))`);
+}
+
+async function storedBytes(executor: Executor, except: string | null = null): Promise<number> {
+  const result = await executor.execute<{ bytes: string | number }>(sql`
+    select coalesce(sum(size), 0) as bytes from exports
+    where state = 'ready' and file_id is not null and id is distinct from ${except}`);
+  return Number(result.rows[0]?.bytes ?? 0);
+}
 
 function owned(actor: Extract<Principal, { type: "account" }>): ReturnType<typeof sql> {
   const organizationId = actor.token?.organizationId;
@@ -396,6 +415,7 @@ export class ExportService {
             `You can keep up to ${MAX_KEPT_EXPORTS} exports. Delete one you no longer need first.`,
           );
         }
+        await this.#makeRoom(tx);
         await tx.execute(sql`
           insert into exports (id, account_id, token_id, started_with_token, organization_id, scope, space_id,
             root_item_id, name)
@@ -475,6 +495,36 @@ export class ExportService {
       rootItemId: target.pageId,
       name: readable.title,
     };
+  }
+
+  async #storageLimit(): Promise<number> {
+    return (await this.#settings.get(exportStorageSetting, {})) * MEGABYTE;
+  }
+
+  async #makeRoom(tx: Transaction): Promise<void> {
+    await lockStorage(tx);
+    const limit = await this.#storageLimit();
+    let used = await storedBytes(tx);
+    if (used < limit) return;
+    const expired = await tx.execute<{ id: string; size: string | number }>(sql`
+      select id, size from exports
+      where state = 'ready' and file_id is not null and expires_at <= now()
+      order by expires_at, id`);
+    const removable: string[] = [];
+    for (const row of expired.rows) {
+      if (used < limit) break;
+      removable.push(row.id);
+      used -= Number(row.size ?? 0);
+    }
+    if (removable.length > 0) {
+      await this.#delete(tx, sql`id = any(${sql.param(removable)}::uuid[])`);
+    }
+    if (used >= limit) {
+      throw new ExportError(
+        "exportStorageFull",
+        "The storage for exports is full. Try again later, when earlier downloads have expired.",
+      );
+    }
   }
 
   async #enqueue(id: string): Promise<void> {
@@ -838,21 +888,36 @@ export class ExportService {
     const abort = () =>
       archive.destroy(signal.reason instanceof Error ? signal.reason : new Error("Aborted"));
     signal.addEventListener("abort", abort, { once: true });
+    const maxSize = (await this.#settings.get(exportMaxSizeSetting, {})) * MEGABYTE;
+    const room = (await this.#storageLimit()) - (await storedBytes(this.#database, row.id));
+    if (room <= 0) throw new ExportFailure("storageFull");
     let stored: Awaited<ReturnType<FileService["write"]>>;
     try {
-      stored = await this.#files.write(archive, { name: fileName, maxBytes: MAX_EXPORT_BYTES });
+      stored = await this.#files.write(archive, { name: fileName, maxBytes: Math.min(maxSize, room) });
+    } catch (error) {
+      if (error instanceof FileTooLargeError) {
+        throw new ExportFailure(maxSize <= room ? "tooLarge" : "storageFull");
+      }
+      throw error;
     } finally {
       signal.removeEventListener("abort", abort);
     }
-    const mailIds = await this.#database.transaction(async (tx) => {
+    const outcome = await this.#database.transaction(async (tx) => {
       const locked = await tx.execute<{ state: ExportState }>(
         sql`select state from exports where id = ${row.id} for update`,
       );
-      if (locked.rows[0]?.state !== "running") {
-        await tx.execute(
+      const orphan = () =>
+        tx.execute(
           sql`update stored_files set state = 'orphaned', updated_at = now() where id = ${stored.id}`,
         );
-        return [];
+      if (locked.rows[0]?.state !== "running") {
+        await orphan();
+        return { mailIds: [] };
+      }
+      await lockStorage(tx);
+      if ((await storedBytes(tx, row.id)) + stored.size > (await this.#storageLimit())) {
+        await orphan();
+        return { full: true, mailIds: [] };
       }
       await this.#files.commit(tx, stored.id);
       const updated = await tx.execute<{ expires_at: Date | string }>(sql`
@@ -869,9 +934,10 @@ export class ExportService {
         targetId: row.id,
         params: { name: row.name, scope: row.scope, expiresAt: expiresAt.toISOString() },
       });
-      return notified.mailIds;
+      return { mailIds: notified.mailIds };
     });
-    await this.#notifications.dispatch(mailIds);
+    if ("full" in outcome) throw new ExportFailure("storageFull");
+    await this.#notifications.dispatch(outcome.mailIds);
   }
 
   #index(plan: ExportPlan, name: string, renderer: PageExportRenderer, language: string, now: Date): string {

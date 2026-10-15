@@ -22328,6 +22328,8 @@
                               "exportDisabled",
                               "noAccess",
                               "tokenRevoked",
+                              "tooLarge",
+                              "storageFull",
                               "interrupted",
                               "internalError"
                             ]
@@ -22336,7 +22338,7 @@
                             "type": "null"
                           }
                         ],
-                        "description": "Why a failed export stopped: export was turned off for the space, access to the space or page was lost, the API token that started it was revoked, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
+                        "description": "Why a failed export stopped: export was turned off for the space, access to the space or page was lost, the API token that started it was revoked, the archive grew beyond the largest export size of the instance, the storage for exports of the instance filled up, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
                       },
                       "createdAt": {
                         "type": "string",
@@ -22807,6 +22809,8 @@
                             "exportDisabled",
                             "noAccess",
                             "tokenRevoked",
+                            "tooLarge",
+                            "storageFull",
                             "interrupted",
                             "internalError"
                           ]
@@ -22815,7 +22819,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Why a failed export stopped: export was turned off for the space, access to the space or page was lost, the API token that started it was revoked, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
+                      "description": "Why a failed export stopped: export was turned off for the space, access to the space or page was lost, the API token that started it was revoked, the archive grew beyond the largest export size of the instance, the storage for exports of the instance filled up, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
                     },
                     "createdAt": {
                       "type": "string",
@@ -161743,6 +161747,8 @@
                             "exportDisabled",
                             "noAccess",
                             "tokenRevoked",
+                            "tooLarge",
+                            "storageFull",
                             "interrupted",
                             "internalError"
                           ]
@@ -161751,7 +161757,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Why a failed export stopped: export was turned off for the space, access to the space or page was lost, the API token that started it was revoked, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
+                      "description": "Why a failed export stopped: export was turned off for the space, access to the space or page was lost, the API token that started it was revoked, the archive grew beyond the largest export size of the instance, the storage for exports of the instance filled up, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
                     },
                     "createdAt": {
                       "type": "string",
@@ -161984,6 +161990,26 @@
                       "title": "Too many requests",
                       "status": 429,
                       "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`exportStorageFull`: The storage for exports is full.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "exportStorageFull": {
+                    "value": {
+                      "type": "urn:pagehall:problem:exportStorageFull",
+                      "title": "The storage for exports is full",
+                      "status": 503,
+                      "code": "exportStorageFull"
                     }
                   }
                 }
@@ -180971,6 +180997,8 @@
                             "exportDisabled",
                             "noAccess",
                             "tokenRevoked",
+                            "tooLarge",
+                            "storageFull",
                             "interrupted",
                             "internalError"
                           ]
@@ -180979,7 +181007,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Why a failed export stopped: export was turned off for the space, access to the space or page was lost, the API token that started it was revoked, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
+                      "description": "Why a failed export stopped: export was turned off for the space, access to the space or page was lost, the API token that started it was revoked, the archive grew beyond the largest export size of the instance, the storage for exports of the instance filled up, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
                     },
                     "createdAt": {
                       "type": "string",
@@ -181204,6 +181232,26 @@
                       "title": "Too many requests",
                       "status": 429,
                       "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`exportStorageFull`: The storage for exports is full.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "exportStorageFull": {
+                    "value": {
+                      "type": "urn:pagehall:problem:exportStorageFull",
+                      "title": "The storage for exports is full",
+                      "status": 503,
+                      "code": "exportStorageFull"
                     }
                   }
                 }

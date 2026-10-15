@@ -44,6 +44,8 @@ const fields: SettingField[] = [
   { key: "instance.name", type: { kind: "text" } },
   { key: "reactions.enabled", type: { kind: "boolean" } },
   { key: "files.maxFileSizeMegabytes", type: { kind: "number", min: 1, max: 100_000, unit: "megabytes" } },
+  { key: "exports.maxSizeMegabytes", type: { kind: "number", min: 1, max: 1_000_000, unit: "megabytes" } },
+  { key: "exports.storageMegabytes", type: { kind: "number", min: 1, max: 100_000_000, unit: "megabytes" } },
   { key: "imports.maxUploadMegabytes", type: { kind: "number", min: 1, max: 1_000_000, unit: "megabytes" } },
   { key: "imports.folderEnabled", type: { kind: "boolean" } },
   { key: "imports.atlassianHosts", type: { kind: "text" } },

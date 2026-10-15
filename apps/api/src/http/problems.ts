@@ -149,6 +149,7 @@ export const problems = {
   restrictionPending: { status: 409, title: "The restriction from the source is not applied yet" },
   exportDisabled: { status: 403, title: "Export is turned off for this space" },
   exportRunning: { status: 409, title: "Another export of yours is still running" },
+  exportStorageFull: { status: 503, title: "The storage for exports is full" },
   nothingToExport: { status: 409, title: "There is nothing to export" },
   tooManyExports: { status: 409, title: "You keep as many exports as allowed" },
   holderNotInPagehall: { status: 409, title: "The person or group is not in Pagehall yet" },

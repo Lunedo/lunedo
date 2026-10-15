@@ -139,6 +139,15 @@ describe("page export", () => {
     expect(screen.getByRole("button", { name: "Start export" })).toBeTruthy();
   });
 
+  it("asks to try again later when the storage for exports is full", async () => {
+    api({ [`POST /api/v1/pages/${PAGE}/exports`]: () => problem(503, "exportStorageFull") });
+    await dialog();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("radio", { name: /ZIP with subpages/ }));
+    await user.click(screen.getByRole("button", { name: "Start export" }));
+    expect(await screen.findByText(/The storage for exports is full. Try again later/)).toBeTruthy();
+  });
+
   it("says where the button would be that export is turned off, with the way to turn it on for admins", async () => {
     await dialog({ exportEnabled: false, admin: true });
     expect(await screen.findByText("Export is turned off for this space")).toBeTruthy();
@@ -166,6 +175,25 @@ describe("the list of exports", () => {
       within(list).getByRole("progressbar", { name: "Progress of the export of Runbooks" }),
     ).toBeTruthy();
     expect(within(list).getAllByRole("link", { name: "Download" })).toHaveLength(1);
+  });
+
+  it("explains an export that grew beyond the largest size", async () => {
+    api({
+      "GET /api/v1/exports": () => ({
+        body: [
+          exportEntry({
+            id: FAILED,
+            state: "failed",
+            errorCode: "tooLarge",
+            fileName: null,
+            expiresAt: null,
+          }),
+        ],
+      }),
+    });
+    await renderWithProviders(inRouter(<ExportsList />));
+    const list = await screen.findByRole("list", { name: "Your exports" });
+    expect(within(list).getByText(/Export a smaller part, such as a page with its subpages/)).toBeTruthy();
   });
 
   it("deletes an export after asking", async () => {

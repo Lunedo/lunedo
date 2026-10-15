@@ -1404,6 +1404,7 @@
     "exportDisabled": "Der Export ist für diesen Space ausgeschaltet. Ein Space-Admin kann ihn in den Space-Einstellungen einschalten.",
     "exportRunning": "Ein anderer Export von dir läuft noch. Warte, bis er fertig ist, oder brich ihn unter Einstellungen › Exporte ab.",
     "nothingToExport": "Es gibt noch nichts zu exportieren. Veröffentliche die Seite zuerst.",
+    "exportStorageFull": "Der Speicher für Exporte ist voll. Versuche es später erneut, wenn frühere Downloads abgelaufen sind, oder bitte die Person, die Pagehall betreibt, das Limit zu erhöhen.",
     "tooManyExports": "Du hast bereits 5 Exporte. Lösche unter Einstellungen › Exporte einen, den du nicht mehr brauchst, und versuche es erneut.",
     "invalidShortcut": "Die Verknüpfung ist ungültig. Prüfe die Bezeichnung und die Adresse.",
     "shortcutNotFound": "Die Verknüpfung gibt es nicht mehr. Lade die Liste neu.",
@@ -2219,6 +2220,14 @@
       "spaces_membersCreateConfidentialSpaces": {
         "label": "Mitglieder legen vertrauliche Spaces an",
         "description": "Mitglieder dürfen vertrauliche Spaces und 1:1-Gespräche anlegen, die Admins nicht lesen können. Admins dürfen das immer."
+      },
+      "exports_maxSizeMegabytes": {
+        "label": "Größter Export",
+        "description": "Ein Export eines Space oder einer Seite mit Unterseiten bricht ab, wenn er größer wird, und die Person sieht den Grund. Einzelne Seiten, die direkt heruntergeladen werden, sind nicht begrenzt."
+      },
+      "exports_storageMegabytes": {
+        "label": "Speicher für Exporte",
+        "description": "So viel Platz dürfen die Downloads aller Personen zusammen belegen. Ist er voll, werden zuerst die ältesten abgelaufenen Downloads entfernt; reicht das nicht, werden neue Exporte mit dem Hinweis abgelehnt, es später erneut zu versuchen."
       },
       "imports_maxUploadMegabytes": {
         "label": "Größter hochladbarer Export",
@@ -5072,6 +5081,8 @@
     "collaborationSection": "Zusammenarbeit",
     "sharingSection": "Freigabe",
     "filesSection": "Dateien",
+    "exportsSection": "Exporte",
+    "exportsSectionDescription": "Limits für die Downloads, die Personen aus Spaces und Seiten erstellen. Jeder Download wird 7 Tage aufbewahrt.",
     "importsSection": "Importe",
     "importsSectionDescription": "Grenzen für Importe aus Confluence. Den Import-Ordner selbst legt die Person fest, die den Server betreibt.",
     "searchSection": "Suche"
@@ -7587,6 +7598,8 @@
       "failed": "Fehlgeschlagen"
     },
     "errors": {
+      "tooLarge": "Der Export wurde größer, als diese Instanz erlaubt. Exportiere einen kleineren Teil, etwa eine Seite mit ihren Unterseiten, oder bitte die Person, die Pagehall betreibt, das Limit zu erhöhen.",
+      "storageFull": "Der Speicher für Exporte wurde voll, während der Export erstellt wurde. Starte ihn später erneut, wenn frühere Downloads abgelaufen sind.",
       "exportDisabled": "Der Export wurde für den Space ausgeschaltet. Bitte einen Space-Admin, ihn einzuschalten, und exportiere dann erneut.",
       "noAccess": "Du kannst das Exportierte nicht mehr lesen, oder es wurde gelöscht. Exportiere erneut, was du lesen kannst.",
       "tokenRevoked": "Das API-Token, das den Export gestartet hat, wurde widerrufen oder ist abgelaufen. Starte den Export erneut.",

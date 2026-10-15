@@ -89,7 +89,7 @@ export class ExportsController {
       schema: exportSchema,
       example: { ...exampleExport, scope: "pages", state: "queued", progress: { done: 0, total: 0 } },
     },
-    errors: ["exportDisabled", "exportRunning", "tooManyExports", "nothingToExport"],
+    errors: ["exportDisabled", "exportRunning", "tooManyExports", "exportStorageFull", "nothingToExport"],
   })
   async exportPages(@Param("pageId") pageId: string, @Req() request: FastifyRequest) {
     return this.#services.exports.start(actorOf(request), { pageId });
@@ -108,7 +108,7 @@ export class ExportsController {
       schema: exportSchema,
       example: { ...exampleExport, state: "queued", progress: { done: 0, total: 0 } },
     },
-    errors: ["exportDisabled", "exportRunning", "tooManyExports"],
+    errors: ["exportDisabled", "exportRunning", "tooManyExports", "exportStorageFull"],
   })
   async exportSpace(@Param("spaceId") spaceId: string, @Req() request: FastifyRequest) {
     return this.#services.exports.start(actorOf(request), { spaceId });
