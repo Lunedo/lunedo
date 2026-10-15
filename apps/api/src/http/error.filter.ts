@@ -2,6 +2,7 @@ import { type ArgumentsHost, Catch, type ExceptionFilter, HttpException, Inject 
 import {
   AuthError,
   BusyError,
+  ChatChannelError,
   CommentInvalidError,
   DocumentInvalidError,
   EmailInUseError,
@@ -12,6 +13,7 @@ import {
   OrganizationError,
   PasswordPolicyError,
   ProviderResponseError,
+  PushSubscriptionError,
   RelyingPartyError,
   SavedSearchLimitError,
   SavedSearchNameError,
@@ -154,6 +156,26 @@ function map(error: unknown): Mapped | null {
       ? "notFound"
       : error.code;
     return { code: codeOf(code, "invalidInput"), detail: error.message, extensions: error.details };
+  }
+  if (error instanceof ChatChannelError) {
+    const codes = {
+      channelNotFound: "notFound",
+      invalidChannel: "invalidChatChannel",
+      invalidAddress: "invalidChatAddress",
+      blockedAddress: "chatAddressBlocked",
+      insecureAddress: "chatAddressInsecure",
+      confidentialSpace: "confidentialSpace",
+      tooManyChannels: "tooManyChatChannels",
+    } as const;
+    return { code: codes[error.code], detail: error.message };
+  }
+  if (error instanceof PushSubscriptionError) {
+    const codes = {
+      invalidSubscription: "invalidPushSubscription",
+      pushDisabled: "pushDisabled",
+      tooManyDevices: "tooManyPushDevices",
+    } as const;
+    return { code: codes[error.code], detail: error.message };
   }
   if (error instanceof SpaceError) {
     const code = NOT_FOUND_CODES.has(error.code) ? "notFound" : error.code;
