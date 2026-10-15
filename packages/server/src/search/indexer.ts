@@ -651,6 +651,10 @@ export class SearchIndexer {
       const seen = new Set<string>();
       for (const row of result.rows) {
         seen.add(row.id);
+        if (row.space_id !== spaceId && row.indexable) {
+          missing.push(row.id);
+          continue;
+        }
         if (row.meeting) {
           contexts.push({
             itemId: row.id,
