@@ -128,6 +128,8 @@ const english: Record<ContentNotificationType, Line> = {
     `Your export of ${text(p.name)} failed. Open your exports to see why and what to do.`,
   "oneOnOne.started": (p, c) =>
     `${c.actor ?? "Someone"} started a one-on-one with you: ${text(p.itemTitle)}.`,
+  "chatChannel.failing": (p) =>
+    `The chat channel ${text(p.channelName)} stopped accepting messages, so nothing is posted there. Open its settings to see why and fix it.`,
 };
 
 const german: Record<ContentNotificationType, Line> = {
@@ -208,6 +210,8 @@ const german: Record<ContentNotificationType, Line> = {
     `Ihr Export von ${text(p.name)} ist fehlgeschlagen. Öffnen Sie Ihre Exporte, um zu sehen, warum und was zu tun ist.`,
   "oneOnOne.started": (p, c) =>
     `${c.actor ?? "Jemand"} hat ein 1:1 mit Ihnen gestartet: ${text(p.itemTitle)}.`,
+  "chatChannel.failing": (p) =>
+    `Der Chat-Kanal ${text(p.channelName)} nimmt keine Nachrichten mehr an, deshalb wird dort nichts gepostet. Öffnen Sie seine Einstellungen, um den Grund zu sehen und ihn zu beheben.`,
 };
 
 const lines: Record<Language, Record<string, Line>> = { en: english, de: german };
