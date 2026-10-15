@@ -138,6 +138,26 @@ describe.skipIf(!baseUrl)("notifications", () => {
     expect((await test.services.notifications.list(administrator.id, { limit: 10 })).items).toEqual([]);
   });
 
+  it("treats hidden notifications like unknown ones when marking them as read", async () => {
+    const org = await organization();
+    const administrator = await standard(org.id);
+    const assignment = await test.services.roles.assign(SYSTEM, {
+      scope: "organization",
+      organizationId: org.id,
+      role: { builtIn: "administrator" },
+      principal: { kind: "account", id: administrator.id },
+    });
+    await notify(guestNotice(org.id, [administrator.id]));
+    await notify(guestNotice(org.id, [administrator.id]));
+    const [hidden] = (await test.services.notifications.list(administrator.id, { limit: 10 })).items;
+    await test.services.roles.unassign(SYSTEM, "organization", org.id, assignment.id);
+
+    expect(await test.services.notifications.markRead(administrator.id, hidden?.id ?? "")).toBe(false);
+    expect(await test.services.notifications.markRead(administrator.id, randomUUID())).toBe(false);
+    expect(await test.services.notifications.markAllRead(administrator.id)).toBe(0);
+    expect((await rows(administrator.id)).every((row) => row.read_at === null)).toBe(true);
+  });
+
   it("shows guest notices to the guest's responsible person without administrator rights", async () => {
     const org = await organization();
     const responsible = await standard(org.id);
