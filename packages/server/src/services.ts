@@ -21,6 +21,9 @@ import { WebAuthnService } from "./auth/webauthn.js";
 import { AuthorizationRegistry } from "./authorization/registry.js";
 import { resourceTypes } from "./authorization/resources.js";
 import { AuthorizationService } from "./authorization/service.js";
+import { ChatChannelService } from "./chat/channels.js";
+import { chatNotificationTypes } from "./chat/notifications.js";
+import { organizationAdministrators } from "./chat/recipients.js";
 import { BlogService } from "./collaboration/blog.js";
 import { BlogSubscriptionService } from "./collaboration/blog-subscriptions.js";
 import { CommentService } from "./collaboration/comments.js";
@@ -136,6 +139,8 @@ import {
 import { MembershipService } from "./organizations/memberships.js";
 import { OrganizationService } from "./organizations/organizations.js";
 import { RoleService } from "./organizations/roles.js";
+import { type OutboundPolicy, outboundPolicy } from "./outbound/guarded-request.js";
+import { PushService } from "./push/push-service.js";
 import { SearchIndexer } from "./search/indexer.js";
 import { PostgresSearchAdapter } from "./search/postgres-adapter.js";
 import { SavedSearchService } from "./search/saved-searches.js";
@@ -179,6 +184,8 @@ import { API_TOKEN_EXPIRY_SCHEDULE, ApiTokenService, apiTokenExpiryJob } from ".
 import { ServiceAccountService } from "./tokens/service-accounts.js";
 
 export interface AccountServices {
+  push: PushService;
+  chatChannels: ChatChannelService;
   audit: AuditLog;
   instanceAddress: InstanceAddressService;
   accounts: AccountService;
@@ -288,6 +295,9 @@ export function createAccountServices(options: {
   mailTransport?: (options: SmtpOptions) => MailTransport;
   mailFetch?: typeof fetch;
   atlassianFetch?: typeof fetch;
+  outboundAllowedNetworks?: readonly string[];
+  chatPolicy?: OutboundPolicy;
+  pushPolicy?: OutboundPolicy;
   nodeId?: string;
 }): AccountServices {
   const { database, settings, audit, encryption, jobs, logger } = options;
@@ -343,6 +353,7 @@ export function createAccountServices(options: {
       ...importNotificationTypes,
       ...spaceNotificationTypes,
       ...exportNotificationTypes,
+      ...chatNotificationTypes,
     ),
   });
   mail.useNotifications(notifications);
@@ -579,6 +590,30 @@ export function createAccountServices(options: {
   const blogSubscriptions = new BlogSubscriptionService({ database, authorization, notifications });
   const home = new HomeService({ database, authorization, settings, tasks, blog, people });
   const pageAccess = new PageAccessService({ database, authorization, audit, people, notifications });
+  const chatChannels = new ChatChannelService({
+    database,
+    encryption,
+    settings,
+    notifications,
+    audit,
+    logger,
+    policy: options.chatPolicy ?? outboundPolicy(options.outboundAllowedNetworks ?? []),
+    recipients: {
+      space: (executor, spaceId) => pageAccess.spaceAdministrators(executor, spaceId),
+      organization: (executor, organizationId) => organizationAdministrators(executor, organizationId),
+    },
+  });
+  activity.useChat(chatChannels);
+  announcements.useChat(chatChannels);
+  const push = new PushService({
+    database,
+    encryption,
+    settings,
+    notifications,
+    mail,
+    logger,
+    policy: options.pushPolicy ?? outboundPolicy([]),
+  });
   const shareLinks = new ShareLinkService({
     database,
     authorization,
@@ -748,6 +783,8 @@ export function createAccountServices(options: {
     }),
   );
   return {
+    push,
+    chatChannels,
     watches,
     notificationMailer,
     unsubscribe,
@@ -972,6 +1009,7 @@ export async function workAccountJobs(
     const removed = {
       views: await services.home.removeOldViews(),
       commentBodies: await services.comments.removeDeletedBodies(),
+      chatDeliveries: await services.chatChannels.removeOldDeliveries(),
     };
     job.logger.debug(removed, "Collaboration data cleaned up");
   });

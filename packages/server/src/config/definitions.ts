@@ -153,6 +153,26 @@ export const configSettings = [
     "Proxies whose forwarding headers are trusted for the client address and protocol.",
   ),
   setting(
+    "PAGEHALL_OUTBOUND_ALLOWED_NETWORKS",
+    z
+      .string()
+      .trim()
+      .optional()
+      .transform((value) =>
+        value
+          ? value
+              .split(",")
+              .map((entry) => entry.trim())
+              .filter(Boolean)
+          : [],
+      )
+      .refine(
+        (entries) => entries.every(isAddressOrRange),
+        "must be a comma-separated list of IP addresses and CIDR ranges",
+      ),
+    "Private networks that chat channels may reach. Requests to private, loopback and link-local addresses are refused otherwise.",
+  ),
+  setting(
     "PAGEHALL_PASSWORD_HASH_CONCURRENCY",
     positiveInt.max(64).default(4),
     "Password hashes computed at once per process; each needs about 19 MiB of memory.",

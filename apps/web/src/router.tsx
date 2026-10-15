@@ -446,6 +446,12 @@ const spaceShortcutsRoute = createRoute({
   ),
 });
 
+const spaceChatRoute = createRoute({
+  getParentRoute: () => spaceSettingsRoute,
+  path: "/chat",
+  component: lazyRouteComponent(() => import("./spaces/settings/space-chat-screen.js"), "SpaceChatScreen"),
+});
+
 const spaceExportRoute = createRoute({
   getParentRoute: () => spaceSettingsRoute,
   path: "/export",
@@ -849,6 +855,7 @@ const routeTree = rootRoute.addChildren([
         spaceContentRoute,
         spaceStatusRoute,
         spaceShortcutsRoute,
+        spaceChatRoute,
         spaceTemplatesRoute,
         spaceExportRoute,
       ]),

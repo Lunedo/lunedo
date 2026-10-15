@@ -121,6 +121,7 @@ const deliverySchema = z
       .enum(["smtp", "graph"])
       .nullable()
       .describe("How the instance sends e-mail, or null when no mail server is set up."),
+    browserPush: z.boolean().describe("Whether browser push is turned on for the instance."),
   })
   .describe("Which notification channels the instance can deliver.");
 
@@ -278,10 +279,14 @@ export class AccountWatchesController {
     response: {
       description: "The available channels.",
       schema: deliverySchema,
-      example: { emailMethod: null },
+      example: { emailMethod: null, browserPush: false },
     },
   })
   async delivery() {
-    return { emailMethod: await servicesOf(this.context).mail.configuredMethod() };
+    const services = servicesOf(this.context);
+    return {
+      emailMethod: await services.mail.configuredMethod(),
+      browserPush: await services.push.enabled(),
+    };
   }
 }

@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { instanceSettingsQuery } from "../../api/instance-queries.js";
 import { NotificationPreferences } from "../../components/notification-preferences.js";
 import { SettingsList } from "../../components/settings-list.js";
+import { BrowserPushSetting } from "../../notifications/browser-push-setting.js";
 import { useNotificationDelivery } from "../../notifications/watching-api.js";
 import { useInstanceSettingMutation } from "../../settings/setting-mutations.js";
 import { useOrganizationState } from "../../shell/shell-context.js";
@@ -29,6 +30,7 @@ export function InstanceNotificationDefaultsScreen() {
         level="instance"
         editable={editable}
         emailMethod={delivery.data?.emailMethod}
+        browserPush={delivery.data?.browserPush ?? false}
         onChange={(key, value) =>
           mutation.mutateAsync({ key, change: value === undefined ? { clear: true } : { value } })
         }
@@ -44,6 +46,7 @@ export function InstanceNotificationDefaultsScreen() {
           }}
         />
       </Section>
+      <BrowserPushSetting settings={settings.data} editable={editable} />
     </SettingsPage>
   );
 }

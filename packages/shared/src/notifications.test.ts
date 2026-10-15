@@ -34,16 +34,22 @@ describe("notification events", () => {
         .map((event) => [event.id, event.defaults]),
     );
     expect(defaults).toEqual({
-      mentions: { inApp: true, email: "immediately" },
-      tasks: { inApp: true, email: "immediately" },
-      shares: { inApp: true, email: "immediately" },
-      accessRequests: { inApp: true, email: "immediately" },
-      comments: { inApp: true, email: "digest" },
-      changes: { inApp: true, email: "off" },
-      blogPosts: { inApp: true, email: "digest" },
-      meetings: { inApp: true, email: "off" },
-      ownershipAndStatus: { inApp: true, email: "off" },
+      mentions: { inApp: true, email: "immediately", push: true },
+      tasks: { inApp: true, email: "immediately", push: true },
+      shares: { inApp: true, email: "immediately", push: true },
+      accessRequests: { inApp: true, email: "immediately", push: true },
+      comments: { inApp: true, email: "digest", push: false },
+      changes: { inApp: true, email: "off", push: false },
+      blogPosts: { inApp: true, email: "digest", push: false },
+      meetings: { inApp: true, email: "off", push: false },
+      ownershipAndStatus: { inApp: true, email: "off", push: false },
     });
+  });
+
+  it("leave browser push off for administration events", () => {
+    expect(
+      notificationEvents.filter((event) => event.group === "administration" && event.defaults.push),
+    ).toEqual([]);
   });
 
   it("keep mentions, tasks, shares and access requests from muted content", () => {

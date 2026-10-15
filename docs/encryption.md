@@ -71,8 +71,10 @@ Every `encrypted()` column is listed in `encryptedColumns` in `packages/server/s
 
 ```ts
 export const encryptedColumns: readonly EncryptedColumn[] = [
+  { table: "chat_channels", idColumn: "id", column: "target" },
   { table: "instance_secrets", idColumn: "name", column: "value" },
   { table: "mail_outbox", idColumn: "id", column: "message" },
+  { table: "push_subscriptions", idColumn: "id", column: "subscription" },
   { table: "totp_credentials", idColumn: "id", column: "secret" },
 ];
 ```

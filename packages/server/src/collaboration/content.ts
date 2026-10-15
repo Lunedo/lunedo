@@ -15,6 +15,7 @@ import { uuidv7 } from "@pagehall/shared";
 import { type SQL, sql } from "drizzle-orm";
 import { accountPrincipal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";
+import type { ChatChannelService } from "../chat/channels.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import type { NotificationService } from "../notifications/service.js";
 import type { WatchService } from "../notifications/watches.js";
@@ -131,13 +132,21 @@ export async function syncCommentAnchors(
   }
 }
 
-export async function syncDecisions(tx: Transaction, itemId: string, document: DocumentJson): Promise<void> {
+export async function syncDecisions(
+  tx: Transaction,
+  itemId: string,
+  document: DocumentJson,
+): Promise<string[]> {
   const decisions = extractDecisions(document);
   const ids = decisions.map((decision) => decision.id);
+  let published: string[] = [];
   if (decisions.length > 0) {
     await tx.execute(sql`
       insert into decisions (id, item_id) select unnest(${sql.param(ids)}::uuid[]), ${itemId}
       on conflict (id) do nothing`);
+    const hidden = await tx.execute<{ id: string }>(sql`
+      select id from decisions where id = any(${sql.param(ids)}::uuid[]) and item_id = ${itemId} and not published`);
+    published = hidden.rows.map((row) => row.id);
     await tx.execute(sql`
       update decisions d set published = true, topic_id = topic.id, statement = s.statement, text = s.text,
         position = s.position, updated_at = now()
@@ -149,6 +158,7 @@ export async function syncDecisions(tx: Transaction, itemId: string, document: D
   await tx.execute(sql`
     update decisions set published = false, updated_at = now()
     where item_id = ${itemId} and published and not (id = any(${sql.param(ids)}::uuid[]))`);
+  return published;
 }
 
 async function syncTopicUpdates(tx: Transaction, itemId: string, document: DocumentJson): Promise<void> {
@@ -224,6 +234,7 @@ export class ContentActivity {
   readonly #notifications: NotificationService;
   readonly #authorization: AuthorizationService;
   readonly #watches: WatchService;
+  #chat: ChatChannelService | undefined;
 
   constructor(options: {
     database: Database;
@@ -235,6 +246,10 @@ export class ContentActivity {
     this.#notifications = options.notifications;
     this.#authorization = options.authorization;
     this.#watches = options.watches;
+  }
+
+  useChat(chat: ChatChannelService): void {
+    this.#chat = chat;
   }
 
   async revealed(tx: Transaction, itemIds: readonly string[]): Promise<void> {
@@ -249,7 +264,8 @@ export class ContentActivity {
     notify = true,
   ): Promise<void> {
     await publishTasks(tx, itemId, document, actorId);
-    await syncDecisions(tx, itemId, document);
+    const decided = await syncDecisions(tx, itemId, document);
+    if (notify) await this.#chat?.decisionsRecorded(tx, itemId, decided);
     await syncTopicUpdates(tx, itemId, document);
     const threads = [...extractInlineCommentThreads(document).keys()];
     if (threads.length > 0) {
@@ -318,6 +334,7 @@ export class ContentActivity {
     await this.#watches.watchAutomatically(tx, actors, itemId);
     const item = await this.#readable(tx, itemId);
     if (!item) return;
+    await this.#chat?.versionCreated(tx, itemId, version, actorId ?? actors[0] ?? null);
     const recipients = await this.#watches.audience(tx, itemId);
     if (recipients.length === 0) return;
     const actor = actorId ?? actors[0] ?? null;
@@ -340,6 +357,7 @@ export class ContentActivity {
     mentioned: readonly string[],
   ): Promise<void> {
     await this.#watches.watchAutomatically(tx, [actorId], itemId);
+    await this.#chat?.commented(tx, itemId, commentId, actorId);
     const item = await this.#facts(tx, itemId);
     if (!item) return;
     const recipients = await this.#watches.audience(tx, itemId, {
@@ -364,6 +382,10 @@ export class ContentActivity {
   ): Promise<void> {
     const item = await this.#readable(tx, itemId);
     if (!item) return;
+    await this.#chat?.contentEvent(tx, "pageStatusChanged", itemId, {
+      actorId: input.actorId,
+      data: { statusBuiltIn: input.status?.builtIn ?? null, statusName: input.status?.name ?? null },
+    });
     const recipients = await this.#watches.audience(tx, itemId);
     if (recipients.length === 0) return;
     await this.#notifications.notify(tx, {

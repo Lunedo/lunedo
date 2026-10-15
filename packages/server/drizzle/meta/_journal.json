@@ -439,8 +439,15 @@
     {
       "idx": 62,
       "version": "7",
-      "when": 1792048805050,
-      "tag": "0062_notification_email",
+      "when": 1792048822001,
+      "tag": "0062_push_and_chat_channels",
+      "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1792054375244,
+      "tag": "0063_notification_email",
       "breakpoints": true
     }
   ]

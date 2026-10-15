@@ -44,7 +44,7 @@ Permissions are checked when notifications are created and whenever they are lis
 
 ## Preferences
 
-Every event has one setting per channel: `notifications.<event>.inApp` (true or false) and `notifications.<event>.email` (`off`, `immediately` or `digest`). They apply at instance, organization and user level and can be locked. Each channel inherits on its own, so a person who changes the e-mail choice keeps following the organization's default for the app. A new channel adds its own settings and needs no migration of stored values.
+Every event has one setting per channel: `notifications.<event>.inApp` (true or false), `notifications.<event>.email` (`off`, `immediately` or `digest`) and `notifications.<event>.push` (true or false). They apply at instance, organization and user level and can be locked. Each channel inherits on its own, so a person who changes the e-mail choice keeps following the organization's default for the app. A new channel adds its own settings and needs no migration of stored values.
 
 Shipped defaults: every event in the app; e-mail immediately for mentions, tasks, shares and access requests; comments and new blog posts in the daily digest; everything else in the app only. Administration events keep e-mail on.
 
@@ -62,6 +62,26 @@ Each mail links to the notification (`/notifications/{id}` in the web client, wh
 
 `notifications.retentionDays` (instance, default 90, overridable per organization) sets how long notifications are kept. A daily job removes older ones.
 
+## Browser push
+
+Browser push is off until an instance administrator turns on `notifications.browserPush`. Messages then go through the push services of browser makers; their content is encrypted with Web Push encryption (RFC 8291) and signed with VAPID (RFC 8292), but they leave the instance. The VAPID key pair is created once per instance on first use and stored encrypted in `instance_secrets`.
+
+People turn push on per device. The browser asks for permission only then. The subscription belongs to the session it was created in: signing out, ending the session or its expiry deletes it, and so does a push service that answers 404 or 410. Push is on by default for mentions, tasks, shares and access requests.
+
+A new notification for which the person chose push is written to `push_outbox` in the same transaction. A worker sends it after commit and checks first that the account is active, push is still on and the person can still read the item. The payload holds the event text, the item title and a link, nothing else. A notification that is combined into an existing one in the app is not pushed again. Push services that are busy or unreachable are retried with backoff; the browser replaces repeated messages with the same tag.
+
+## Chat channels
+
+Space administrators connect a space to Microsoft Teams (a Workflows webhook with an Adaptive Card), Slack and Discord webhooks, a Matrix room (homeserver, room ID and the access token of a bot) or a generic webhook. Organization administrators with the integrations area connect channels for the organization announcement. Addresses, tokens and the signing secret of generic webhooks are stored encrypted and are never returned; the signing secret is shown once after saving. Generic webhooks get a JSON body with the headers `X-Pagehall-Event`, `X-Pagehall-Delivery`, `X-Pagehall-Timestamp` and `X-Pagehall-Signature` (`sha256=` and the HMAC-SHA256 of the timestamp, a dot and the body).
+
+Events: `pagePublished` (first version of a page), `pageChanged` (later versions, combined per page for one hour), `blogPostPublished`, `decisionRecorded` (sent five minutes after the decision appears, with its text at that time), `pageStatusChanged`, `commentCreated` and, for organizations, `announcementPublished` (sent when the announcement starts).
+
+Only content every member of the space can read is posted: the item is published, not in the trash or archived, and neither it nor a page above it has a view restriction. Comments on such pages are posted unless they belong to a hidden inline comment. Confidential and personal spaces cannot have chat channels. The check runs when the event happens and again when the message is sent.
+
+Requests go to public addresses only. Private, loopback and link-local addresses are refused unless they are in `PAGEHALL_OUTBOUND_ALLOWED_NETWORKS`; the address is checked for every connection, so redirects and changed DNS answers cannot reach other networks. Redirects keep the Matrix token only on the same origin.
+
+Deliveries are stored in `chat_deliveries` and sent by the worker with up to five retries and backoff. A channel whose service keeps failing, or answers that the address is gone or not allowed, is marked failing with the reason, its administrators are notified once, and nothing more is posted until a test message succeeds or the address is changed. Finished deliveries are deleted after 14 days.
+
 ## Watching
 
 People watch pages, blog posts, meeting series and spaces. A watch row holds one of three states for one item or space: `watching`, `muted` (with `keepMentions`, true by default) or `notWatching`. People who create, edit or comment on an item watch it automatically unless `notifications.watchAutomatically` is off for them or they chose a state for it before.
@@ -76,7 +96,7 @@ A committed notification sends a PostgreSQL notification on the channel `pagehal
 
 ## Endpoints
 
-These endpoints are internal and need a signed-in session, except the unsubscribe endpoints. Watching is part of the public API: `GET`, `PUT` and `DELETE` on `/api/v1/items/{itemId}/watch` and `/api/v1/spaces/{spaceId}/watch` need read access to the item or space.
+These endpoints are internal and need a signed-in session, except the unsubscribe endpoints. Chat channels are part of the public API under `/api/v1/spaces/{spaceId}/chat-channels` (space administrators) and `/api/v1/organizations/{organizationId}/chat-channels` (integrations area). Watching is part of the public API: `GET`, `PUT` and `DELETE` on `/api/v1/items/{itemId}/watch` and `/api/v1/spaces/{spaceId}/watch` need read access to the item or space.
 
 | Endpoint | Purpose |
 |---|---|
@@ -87,7 +107,10 @@ These endpoints are internal and need a signed-in session, except the unsubscrib
 | `POST /api/v1/notifications/{notificationId}/read` | Mark one as read |
 | `POST /api/v1/notifications/read-all` | Mark all as read, optionally only those changed before `before` |
 | `GET /api/v1/account/watches` | Own watched and muted items the caller can still open, with counts |
-| `GET /api/v1/account/notification-delivery` | Whether e-mail can be delivered and how |
+| `GET /api/v1/account/notification-delivery` | Whether e-mail can be delivered and how, and whether browser push is on |
+| `GET /api/v1/account/push` | Whether browser push is on, the public key and the caller's devices |
+| `POST /api/v1/account/push/devices` | Turn push on for the device of the current session |
+| `DELETE /api/v1/account/push/devices/{deviceId}` | Turn push off for a device |
 | `GET /api/v1/notifications/stream` | Server-sent events: `notifications` with `{ "unreadCount": n }` at the start and after every change; `settings` with `{ "key", "level", "organizationId" }` when a setting changes whose value may change for the caller; a comment every 25 seconds; the stream ends when the session ends |
 
 A setting change reaches every node through PostgreSQL notifications. A node sends `settings` to a connection when the change is at the user level of its account, at the instance level, or at the level of an organization the account belongs to, unless a lower level of the account (its home organization or the account itself) overrides the value and the changed level does not lock it. Locking and unlocking always count, and so does a new value of a locked setting, because it applies regardless of lower levels. Clients reload the named setting.

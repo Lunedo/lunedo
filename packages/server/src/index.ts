@@ -143,6 +143,14 @@ export {
 export { BackupConfigurationError, type DatabaseArchiver, PostgresArchiver } from "./backup/postgres.js";
 export { checkRestoreComplete, IncompleteRestoreError } from "./backup/restore-marker.js";
 export {
+  type ChatChannel,
+  ChatChannelError,
+  type ChatChannelSaved,
+  ChatChannelService,
+  type ChatScope,
+  type ChatTestResult,
+} from "./chat/channels.js";
+export {
   type BlogCursor,
   type BlogPost,
   BlogService,
@@ -487,6 +495,7 @@ export {
   type NotifyInput,
 } from "./notifications/service.js";
 export {
+  browserPushSetting,
   builtinNotificationTypes,
   digestEnabledSetting,
   digestTimeSetting,
@@ -536,6 +545,7 @@ export {
 export type { CustomRole, RoleAssignment } from "./organizations/roles.js";
 export { roleNameSchema } from "./organizations/roles.js";
 export * from "./organizations/settings.js";
+export { type PushDevice, PushService, PushSubscriptionError } from "./push/push-service.js";
 export {
   createServerRuntime,
   type ProcessRole,

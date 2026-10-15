@@ -1,4 +1,4 @@
-import { Section } from "@pagehall/ui";
+import { Badge, Section, SettingRow } from "@pagehall/ui";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { BellRing } from "lucide-react";
@@ -40,6 +40,7 @@ export function OrganizationNotificationDefaultsScreen() {
         {...organizationName}
         editable={editable}
         emailMethod={delivery.data?.emailMethod}
+        browserPush={delivery.data?.browserPush ?? false}
         onChange={(key, value) =>
           mutation.mutateAsync({ key, change: value === undefined ? { clear: true } : { value } })
         }
@@ -55,6 +56,21 @@ export function OrganizationNotificationDefaultsScreen() {
             await mutation.mutateAsync({ key, change });
           }}
         />
+        {delivery.data ? (
+          <SettingRow
+            label={t("notifications.push.title")}
+            description={
+              delivery.data.browserPush
+                ? t("notifications.push.organizationOn")
+                : t("notifications.push.organizationOff")
+            }
+            control={
+              <Badge variant={delivery.data.browserPush ? "success" : "neutral"}>
+                {delivery.data.browserPush ? t("notifications.push.on") : t("notifications.push.off")}
+              </Badge>
+            }
+          />
+        ) : null}
       </Section>
     </SettingsPage>
   );
