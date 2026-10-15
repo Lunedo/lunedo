@@ -1,4 +1,4 @@
-import type { Readable } from "node:stream";
+import { type Readable, Transform, type TransformCallback } from "node:stream";
 import { escapeHtml } from "@pagehall/editor-schema";
 import { formatDate, uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
@@ -13,6 +13,7 @@ import type { Database, Executor, Transaction } from "../database/database.js";
 import type { DatabasePool } from "../database/pool.js";
 import type { AttachmentService } from "../files/attachments.js";
 import type { FileService } from "../files/files.js";
+import type { ByteRange } from "../files/store.js";
 import type { JobContext, JobQueue } from "../jobs/job-queue.js";
 import type { Logger } from "../logging/logger.js";
 import type { MailService } from "../mail/mail-service.js";
@@ -46,22 +47,35 @@ import type { ExportScope, ExportState } from "./schema.js";
 import { exportTexts } from "./texts.js";
 
 export const EXPORT_RETENTION_DAYS = 7;
+export const DOWNLOADED_RETENTION_HOURS = 24;
+export const MIN_FREE_SHARE_AT_START = 0.1;
+export const MIN_FREE_SHARE_WHILE_WRITING = 0.05;
+const FREE_SPACE_CHECK_BYTES = 16 * 1024 * 1024;
+const PAGE_OVERHEAD_BYTES = 8 * 1024;
+const EXPORT_RUNNING = "Another export of yours is still running";
+const NOT_ENOUGH_STORAGE =
+  "Not enough storage for this export. Your instance administrator needs to free up space.";
 export const MAX_EXPORT_ATTEMPTS = 3;
 const STALE_MINUTES = 10;
 const BLOG_FOLDER_ID = "blog";
 const HEARTBEAT_MS = 5_000;
-const MAX_EXPORT_BYTES = Number.MAX_SAFE_INTEGER;
 const MAX_LISTED_EXPORTS = 50;
 export const MAX_KEPT_EXPORTS = 5;
 
 export type PageExportFormat = "markdown" | "html" | "zip";
 
-export type ExportErrorCode = "exportNotFound" | "exportRunning" | "nothingToExport" | "tooManyExports";
+export type ExportErrorCode =
+  | "exportNotFound"
+  | "exportRunning"
+  | "notEnoughStorage"
+  | "nothingToExport"
+  | "tooManyExports";
 
 export type ExportFailureCode =
   | "exportDisabled"
   | "noAccess"
   | "tokenRevoked"
+  | "notEnoughStorage"
   | "interrupted"
   | "internalError";
 
@@ -102,6 +116,13 @@ export interface ExportSummary {
   createdAt: Date;
   finishedAt: Date | null;
   expiresAt: Date | null;
+}
+
+export interface ExportArchive {
+  fileName: string;
+  size: number;
+  read(range?: ByteRange): Promise<Readable>;
+  delivered(): Promise<void>;
 }
 
 export interface ExportFile {
@@ -373,10 +394,17 @@ export class ExportService {
     if ("spaceId" in target) {
       await this.#authorization.require(actor, "space.export", { type: "space", id: target.spaceId });
     } else {
-      await this.#authorization.require(actor, "item.export", { type: "item", id: target.pageId });
+      await this.#authorization.require(actor, "item.exportPages", { type: "item", id: target.pageId });
     }
     const subject = await this.#subject(target);
     if (!subject) throw new ExportError("nothingToExport", "There is nothing to export");
+    const running = await this.#database.execute(sql`
+      select 1 from exports where account_id = ${actor.id} and state in ('queued', 'running') limit 1`);
+    if (running.rows.length > 0) {
+      throw new ExportError("exportRunning", EXPORT_RUNNING);
+    }
+    const capacity = await this.#files.store.capacity();
+    const estimate = capacity ? await this.#estimate(subject.spaceId, subject.rootItemId) : 0;
     const id = uuidv7();
     try {
       await this.#database.transaction(async (tx) => {
@@ -396,11 +424,23 @@ export class ExportService {
             `You can keep up to ${MAX_KEPT_EXPORTS} exports. Delete one you no longer need first.`,
           );
         }
+        if (capacity) {
+          await tx.execute(
+            sql`select pg_advisory_xact_lock(hashtextextended('pagehall.exports.storage', 0))`,
+          );
+          const pending = await tx.execute<{ bytes: string | number }>(sql`
+            select coalesce(sum(estimated_size), 0) as bytes from exports where state in ('queued', 'running')`);
+          const left = capacity.free - Number(pending.rows[0]?.bytes ?? 0) - estimate;
+          if (left < capacity.total * MIN_FREE_SHARE_AT_START) {
+            throw new ExportError("notEnoughStorage", NOT_ENOUGH_STORAGE);
+          }
+        }
         await tx.execute(sql`
           insert into exports (id, account_id, token_id, started_with_token, organization_id, scope, space_id,
-            root_item_id, name)
+            root_item_id, name, estimated_size)
           values (${id}, ${actor.id}, ${actor.token?.id ?? null}, ${actor.token !== undefined},
-            ${subject.organizationId}, ${scope}, ${subject.spaceId}, ${subject.rootItemId}, ${subject.name})`);
+            ${subject.organizationId}, ${scope}, ${subject.spaceId}, ${subject.rootItemId}, ${subject.name},
+            ${estimate})`);
         if (scope === "space") {
           await this.#audit.record(tx, {
             name: "space.exported",
@@ -421,7 +461,7 @@ export class ExportService {
       });
     } catch (error) {
       if (isUniqueViolation(error)) {
-        throw new ExportError("exportRunning", "Another export of yours is still running");
+        throw new ExportError("exportRunning", EXPORT_RUNNING);
       }
       throw error;
     }
@@ -477,6 +517,63 @@ export class ExportService {
     };
   }
 
+  async #estimate(spaceId: string, rootItemId: string | null): Promise<number> {
+    const within = rootItemId ? sql`and ${rootItemId}::uuid = any(t.path)` : sql``;
+    const result = await this.#database.execute<{
+      attachments: string | number;
+      text: string | number;
+      pages: number;
+    }>(sql`
+      select
+        (select coalesce(sum(f.size), 0) from attachments a
+          join attachment_versions v on v.id = a.published_version_id
+          join stored_files f on f.id = v.file_id
+          join tree_items t on t.id = a.item_id
+          where t.space_id = ${spaceId} and t.trash_entry_id is null ${within}) as attachments,
+        (select coalesce(sum(octet_length(coalesce(v.document::text, d.snapshot::text, ''))), 0)
+          from tree_items t
+          left join page_versions v on v.id = t.published_version_id and t.mode = 'publish'
+          left join page_documents d on d.item_id = t.id and t.mode = 'live'
+          where t.space_id = ${spaceId} and t.kind in ('page', 'blogPost') and t.trash_entry_id is null ${within}) as text,
+        (select count(*)::int from tree_items t
+          where t.space_id = ${spaceId} and t.kind in ('page', 'blogPost') and t.trash_entry_id is null ${within}) as pages`);
+    const row = result.rows[0];
+    return (
+      Number(row?.attachments ?? 0) +
+      2 * Number(row?.text ?? 0) +
+      Number(row?.pages ?? 0) * PAGE_OVERHEAD_BYTES
+    );
+  }
+
+  #watchFreeSpace(): { stream: Transform; stopped: () => boolean } {
+    const store = this.#files.store;
+    let written = 0;
+    let checkedAt = Number.NEGATIVE_INFINITY;
+    let stopped = false;
+    const stream = new Transform({
+      transform(chunk: Buffer, _encoding, callback: TransformCallback) {
+        written += chunk.length;
+        if (written - checkedAt < FREE_SPACE_CHECK_BYTES) {
+          callback(null, chunk);
+          return;
+        }
+        checkedAt = written;
+        store.capacity().then(
+          (capacity) => {
+            if (capacity && capacity.free < capacity.total * MIN_FREE_SHARE_WHILE_WRITING) {
+              stopped = true;
+              callback(new ExportFailure("notEnoughStorage"));
+            } else {
+              callback(null, chunk);
+            }
+          },
+          (error: unknown) => callback(error as Error),
+        );
+      },
+    });
+    return { stream, stopped: () => stopped };
+  }
+
   async #enqueue(id: string): Promise<void> {
     await this.#jobs?.enqueue(exportBuildJob, { exportId: id }, { idempotencyKey: `${id}:${uuidv7()}` });
   }
@@ -518,11 +615,11 @@ export class ExportService {
       await this.#authorization.require(viewer, "space.export", { type: "space", id: row.space_id });
     } else {
       if (!row.root_item_id) throw new ExportFailure("noAccess");
-      await this.#authorization.require(viewer, "item.export", { type: "item", id: row.root_item_id });
+      await this.#authorization.require(viewer, "item.exportPages", { type: "item", id: row.root_item_id });
     }
   }
 
-  async download(actor: Principal, id: string): Promise<ExportFile> {
+  async download(actor: Principal, id: string): Promise<ExportArchive> {
     if (actor.type !== "account") throw new ExportError("exportNotFound", "The export does not exist");
     await this.#authorization.require(actor, "export.download", { type: "export", id });
     const row = await this.#owned(actor, id);
@@ -536,11 +633,17 @@ export class ExportService {
         throw new ExportError("exportNotFound", "The export does not exist");
       throw error;
     }
+    const fileId = row.file_id;
     return {
       fileName: row.file_name ?? "export.zip",
-      contentType: "application/zip",
       size: Number(row.size ?? 0),
-      body: await this.#files.read(row.file_id),
+      read: (range) => this.#files.read(fileId, range),
+      delivered: async () => {
+        await this.#database.execute(sql`
+          update exports set expires_at = least(expires_at,
+              now() + make_interval(hours => ${DOWNLOADED_RETENTION_HOURS})), updated_at = now()
+          where id = ${id} and state = 'ready'`);
+      },
     };
   }
 
@@ -834,13 +937,22 @@ export class ExportService {
       }
     }
     const fileName = `${safeName(row.name, renderer.texts.untitledPage)} ${now.toISOString().slice(0, 10)}.zip`;
+    const watch = this.#watchFreeSpace();
     const archive = zipArchive(entries);
+    archive.once("error", (error) => watch.stream.destroy(error));
+    watch.stream.once("error", (error) => archive.destroy(error));
     const abort = () =>
       archive.destroy(signal.reason instanceof Error ? signal.reason : new Error("Aborted"));
     signal.addEventListener("abort", abort, { once: true });
     let stored: Awaited<ReturnType<FileService["write"]>>;
     try {
-      stored = await this.#files.write(archive, { name: fileName, maxBytes: MAX_EXPORT_BYTES });
+      stored = await this.#files.write(archive.pipe(watch.stream), {
+        name: fileName,
+        maxBytes: Number.POSITIVE_INFINITY,
+      });
+    } catch (error) {
+      if (watch.stopped()) throw new ExportFailure("notEnoughStorage");
+      throw error;
     } finally {
       signal.removeEventListener("abort", abort);
     }

@@ -25,12 +25,14 @@ export const exportSchema = z
     fileName: z.string().nullable().describe("File name of the ZIP archive once it is ready."),
     size: z.number().int().nullable().describe("Size of the ZIP archive in bytes once it is ready."),
     errorCode: extensibleEnum(
-      ["exportDisabled", "noAccess", "tokenRevoked", "interrupted", "internalError"],
-      "Why a failed export stopped: export was turned off for the space, access to the space or page was lost, the API token that started it was revoked, the worker was interrupted too often, or an unexpected error.",
+      ["exportDisabled", "noAccess", "tokenRevoked", "notEnoughStorage", "interrupted", "internalError"],
+      "Why a failed export stopped: export was turned off for the space, the permission to export the space or page was lost, the API token that started it was revoked, the file store ran short of free space while it was written, the worker was interrupted too often, or an unexpected error.",
     ).nullable(),
     createdAt: timestamp("When the export was started."),
     finishedAt: timestamp("When the export finished or failed.").nullable(),
-    expiresAt: timestamp("When the download is deleted, 7 days after it is ready.").nullable(),
+    expiresAt: timestamp(
+      "When the download is deleted: 24 hours after its first complete download, at the latest 7 days after it is ready.",
+    ).nullable(),
   })
   .describe("An export of a space or of a page with its subpages, built in the background.");
 

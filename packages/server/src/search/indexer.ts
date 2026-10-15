@@ -386,7 +386,8 @@ export class SearchIndexer {
         v.created_at as version_created_at, d.snapshot as live_document, d.schema_version as live_schema,
         d.changed_at as live_changed_at, sv.id as status_id
       from tree_items t join spaces s on s.id = t.space_id
-      left join page_status_values sv on sv.id = t.status_id and ${pageStatusEnabledCondition(sql`s`)}
+      left join page_status_values sv on sv.id = t.status_id and sv.space_id = t.space_id
+        and ${pageStatusEnabledCondition(sql`s`)}
       left join page_versions v on v.id = t.published_version_id and t.mode = 'publish'
       left join page_documents d on d.item_id = t.id and t.mode = 'live'
       where t.id = ${itemId}`);

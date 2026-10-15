@@ -22328,6 +22328,7 @@
                               "exportDisabled",
                               "noAccess",
                               "tokenRevoked",
+                              "notEnoughStorage",
                               "interrupted",
                               "internalError"
                             ]
@@ -22336,7 +22337,7 @@
                             "type": "null"
                           }
                         ],
-                        "description": "Why a failed export stopped: export was turned off for the space, access to the space or page was lost, the API token that started it was revoked, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
+                        "description": "Why a failed export stopped: export was turned off for the space, the permission to export the space or page was lost, the API token that started it was revoked, the file store ran short of free space while it was written, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
                       },
                       "createdAt": {
                         "type": "string",
@@ -22365,7 +22366,7 @@
                             "type": "null"
                           }
                         ],
-                        "description": "When the download is deleted, 7 days after it is ready. ISO 8601 timestamp in UTC."
+                        "description": "When the download is deleted: 24 hours after its first complete download, at the latest 7 days after it is ready. ISO 8601 timestamp in UTC."
                       }
                     },
                     "required": [
@@ -22807,6 +22808,7 @@
                             "exportDisabled",
                             "noAccess",
                             "tokenRevoked",
+                            "notEnoughStorage",
                             "interrupted",
                             "internalError"
                           ]
@@ -22815,7 +22817,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Why a failed export stopped: export was turned off for the space, access to the space or page was lost, the API token that started it was revoked, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
+                      "description": "Why a failed export stopped: export was turned off for the space, the permission to export the space or page was lost, the API token that started it was revoked, the file store ran short of free space while it was written, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
                     },
                     "createdAt": {
                       "type": "string",
@@ -22844,7 +22846,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "When the download is deleted, 7 days after it is ready. ISO 8601 timestamp in UTC."
+                      "description": "When the download is deleted: 24 hours after its first complete download, at the latest 7 days after it is ready. ISO 8601 timestamp in UTC."
                     }
                   },
                   "required": [
@@ -23009,7 +23011,7 @@
       "get": {
         "operationId": "exports.download",
         "summary": "Download an export",
-        "description": "Sends the ZIP archive of a ready export. Only the person who started it can download it, for 7 days, and only while export is turned on for the space and they can still read what was exported.\n\nRequires the permission `export.download` on the export in `exportId`.",
+        "description": "Sends the ZIP archive of a ready export. Only the person who started it can download it, only while export is turned on for the space and they may still export what was exported. After the first complete download it is kept for 24 more hours; ranges are supported to resume an interrupted download.\n\nRequires the permission `export.download` on the export in `exportId`.",
         "tags": [
           "Exports"
         ],
@@ -23040,7 +23042,7 @@
         ],
         "responses": {
           "200": {
-            "description": "The ZIP archive.",
+            "description": "The ZIP archive or the requested part of it.",
             "content": {
               "application/zip": {
                 "schema": {
@@ -23049,6 +23051,20 @@
                 "example": ""
               }
             }
+          },
+          "206": {
+            "description": "Part of the file, for a request with a `Range` header.",
+            "content": {
+              "application/zip": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": ""
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified: the file matches the `If-None-Match` header."
           },
           "400": {
             "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
@@ -23148,6 +23164,26 @@
                       "title": "Not found",
                       "status": 404,
                       "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "416": {
+            "description": "`rangeNotSatisfiable`: The requested range is not available.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rangeNotSatisfiable": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rangeNotSatisfiable",
+                      "title": "The requested range is not available",
+                      "status": 416,
+                      "code": "rangeNotSatisfiable"
                     }
                   }
                 }
@@ -161604,12 +161640,12 @@
       "post": {
         "operationId": "exports.exportPages",
         "summary": "Export a page with its subpages",
-        "description": "Starts an export of the page and every subpage you can read, as a ZIP archive with the page tree as folders, each page as Markdown and HTML and the attachments next to their pages. The export runs in the background. When it is ready, you get a notification with the download; the download is kept for 7 days and only you can open it. You can run one export at a time and keep up to 5; a new export of the same space or page replaces the earlier one.\n\nRequires the permission `item.export` on the item in `pageId`.",
+        "description": "Starts an export of the page and every subpage you can read, as a ZIP archive with the page tree as folders, each page as Markdown and HTML and the attachments next to their pages. Only space administrators, and organization administrators with access to the space outside confidential spaces, can start it. It is refused when it would leave less than 10 % of the file store free, and stops when less than 5 % is left while it is written. The export runs in the background. When it is ready, you get a notification with the download; only you can open it. The download is deleted 24 hours after it was first downloaded completely, or after 7 days if it is never downloaded. You can run one export at a time and keep up to 5; a new export of the same space or page replaces the earlier one.\n\nRequires the permission `item.exportPages` on the item in `pageId`.",
         "tags": [
           "Exports"
         ],
         "x-pagehall-permission": {
-          "action": "item.export",
+          "action": "item.exportPages",
           "resource": "item",
           "parameter": "pageId"
         },
@@ -161743,6 +161779,7 @@
                             "exportDisabled",
                             "noAccess",
                             "tokenRevoked",
+                            "notEnoughStorage",
                             "interrupted",
                             "internalError"
                           ]
@@ -161751,7 +161788,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Why a failed export stopped: export was turned off for the space, access to the space or page was lost, the API token that started it was revoked, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
+                      "description": "Why a failed export stopped: export was turned off for the space, the permission to export the space or page was lost, the API token that started it was revoked, the file store ran short of free space while it was written, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
                     },
                     "createdAt": {
                       "type": "string",
@@ -161780,7 +161817,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "When the download is deleted, 7 days after it is ready. ISO 8601 timestamp in UTC."
+                      "description": "When the download is deleted: 24 hours after its first complete download, at the latest 7 days after it is ready. ISO 8601 timestamp in UTC."
                     }
                   },
                   "required": [
@@ -161984,6 +162021,26 @@
                       "title": "Too many requests",
                       "status": 429,
                       "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "507": {
+            "description": "`notEnoughStorage`: Not enough storage for this export.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notEnoughStorage": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notEnoughStorage",
+                      "title": "Not enough storage for this export",
+                      "status": 507,
+                      "code": "notEnoughStorage"
                     }
                   }
                 }
@@ -173581,6 +173638,10 @@
                             }
                           ],
                           "description": "The caller's role in the space, or null."
+                        },
+                        "mayExport": {
+                          "type": "boolean",
+                          "description": "Whether the caller may export the whole space and pages with their subpages while export is turned on: space administrators, and organization administrators with access to the space outside confidential spaces. Every reader can export single pages."
                         }
                       },
                       "required": [
@@ -173603,7 +173664,8 @@
                         "exportEnabled",
                         "createdAt",
                         "updatedAt",
-                        "role"
+                        "role",
+                        "mayExport"
                       ],
                       "additionalProperties": false,
                       "description": "A space with the caller's role."
@@ -173641,7 +173703,8 @@
                     "exportEnabled": true,
                     "createdAt": "2026-10-05T08:00:00.000Z",
                     "updatedAt": "2026-10-05T08:00:00.000Z",
-                    "role": "reader"
+                    "role": "reader",
+                    "mayExport": false
                   },
                   "redirected": false
                 }
@@ -174326,6 +174389,10 @@
                         }
                       ],
                       "description": "The caller's role in the space, or null."
+                    },
+                    "mayExport": {
+                      "type": "boolean",
+                      "description": "Whether the caller may export the whole space and pages with their subpages while export is turned on: space administrators, and organization administrators with access to the space outside confidential spaces. Every reader can export single pages."
                     }
                   },
                   "required": [
@@ -174348,7 +174415,8 @@
                     "exportEnabled",
                     "createdAt",
                     "updatedAt",
-                    "role"
+                    "role",
+                    "mayExport"
                   ],
                   "additionalProperties": false,
                   "description": "A space with the caller's role."
@@ -174373,7 +174441,8 @@
                   "exportEnabled": true,
                   "createdAt": "2026-10-05T08:00:00.000Z",
                   "updatedAt": "2026-10-05T08:00:00.000Z",
-                  "role": "editor"
+                  "role": "editor",
+                  "mayExport": false
                 }
               }
             }
@@ -180832,7 +180901,7 @@
       "post": {
         "operationId": "exports.exportSpace",
         "summary": "Export a space",
-        "description": "Starts an export of every page of the space you can read, as a ZIP archive with the page tree as folders, each page as Markdown and HTML, the attachments next to their pages and an index.html that lists the tree. Links between exported pages become relative paths. The export runs in the background. When it is ready, you get a notification with the download; the download is kept for 7 days and only you can open it. You can run one export at a time and keep up to 5; a new export of the same space or page replaces the earlier one.\n\nRequires the permission `space.export` on the space in `spaceId`.",
+        "description": "Starts an export of every page of the space you can read, as a ZIP archive with the page tree as folders, each page as Markdown and HTML, the attachments next to their pages and an index.html that lists the tree. Links between exported pages become relative paths. Only space administrators, and organization administrators with access to the space outside confidential spaces, can start it. It is refused when it would leave less than 10 % of the file store free, and stops when less than 5 % is left while it is written. The export runs in the background. When it is ready, you get a notification with the download; only you can open it. The download is deleted 24 hours after it was first downloaded completely, or after 7 days if it is never downloaded. You can run one export at a time and keep up to 5; a new export of the same space or page replaces the earlier one.\n\nRequires the permission `space.export` on the space in `spaceId`.",
         "tags": [
           "Exports"
         ],
@@ -180971,6 +181040,7 @@
                             "exportDisabled",
                             "noAccess",
                             "tokenRevoked",
+                            "notEnoughStorage",
                             "interrupted",
                             "internalError"
                           ]
@@ -180979,7 +181049,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Why a failed export stopped: export was turned off for the space, access to the space or page was lost, the API token that started it was revoked, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
+                      "description": "Why a failed export stopped: export was turned off for the space, the permission to export the space or page was lost, the API token that started it was revoked, the file store ran short of free space while it was written, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
                     },
                     "createdAt": {
                       "type": "string",
@@ -181008,7 +181078,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "When the download is deleted, 7 days after it is ready. ISO 8601 timestamp in UTC."
+                      "description": "When the download is deleted: 24 hours after its first complete download, at the latest 7 days after it is ready. ISO 8601 timestamp in UTC."
                     }
                   },
                   "required": [
@@ -181204,6 +181274,26 @@
                       "title": "Too many requests",
                       "status": 429,
                       "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "507": {
+            "description": "`notEnoughStorage`: Not enough storage for this export.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notEnoughStorage": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notEnoughStorage",
+                      "title": "Not enough storage for this export",
+                      "status": 507,
+                      "code": "notEnoughStorage"
                     }
                   }
                 }
@@ -186504,7 +186594,7 @@
                             "type": "integer",
                             "minimum": -9007199254740991,
                             "maximum": 9007199254740991,
-                            "description": "Number of pages with this status, without pages in the trash."
+                            "description": "Number of pages with this status that the caller can view, without pages in the trash."
                           }
                         },
                         "required": [
@@ -186792,7 +186882,7 @@
                       "type": "integer",
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991,
-                      "description": "Number of pages with this status, without pages in the trash."
+                      "description": "Number of pages with this status that the caller can view, without pages in the trash."
                     }
                   },
                   "required": [
@@ -187328,7 +187418,7 @@
                       "type": "integer",
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991,
-                      "description": "Number of pages with this status, without pages in the trash."
+                      "description": "Number of pages with this status that the caller can view, without pages in the trash."
                     }
                   },
                   "required": [
@@ -187642,7 +187732,7 @@
                         "type": "integer",
                         "minimum": -9007199254740991,
                         "maximum": 9007199254740991,
-                        "description": "Number of pages with this status, without pages in the trash."
+                        "description": "Number of pages with this status that the caller can view, without pages in the trash."
                       }
                     },
                     "required": [

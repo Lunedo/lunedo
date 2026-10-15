@@ -49,6 +49,7 @@ export const exports = pgTable(
     fileId: uuid().references(() => storedFiles.id, { onDelete: "set null" }),
     fileName: text(),
     size: bigint({ mode: "number" }),
+    estimatedSize: bigint({ mode: "number" }).notNull().default(0),
     errorCode: text(),
     heartbeatAt: timestampColumn(),
     finishedAt: timestampColumn(),

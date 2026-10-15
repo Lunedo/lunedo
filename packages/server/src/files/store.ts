@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
-import { mkdir, open, readdir, rename, rm, stat } from "node:fs/promises";
+import { mkdir, open, readdir, rename, rm, stat, statfs } from "node:fs/promises";
 import path from "node:path";
 import { Readable, Transform, type TransformCallback } from "node:stream";
 import { pipeline } from "node:stream/promises";
@@ -24,8 +24,14 @@ export interface StoredObject {
   size: number;
 }
 
+export interface StoreCapacity {
+  free: number;
+  total: number;
+}
+
 export interface FileStore {
   readonly kind: "local" | "s3";
+  capacity(): Promise<StoreCapacity | null>;
   write(key: string, body: Readable): Promise<number>;
   read(key: string, range?: ByteRange): Promise<Readable>;
   size(key: string): Promise<number | null>;
@@ -52,6 +58,12 @@ export class LocalFileStore implements FileStore {
 
   constructor(filesDir: string) {
     this.#root = path.join(filesDir, ATTACHMENTS_DIRECTORY);
+  }
+
+  async capacity(): Promise<StoreCapacity> {
+    await mkdir(this.#root, { recursive: true });
+    const stats = await statfs(this.#root);
+    return { free: stats.bavail * stats.bsize, total: stats.blocks * stats.bsize };
   }
 
   #path(key: string): string {
@@ -158,6 +170,10 @@ export class S3FileStore implements FileStore {
           }
         : {}),
     });
+  }
+
+  async capacity(): Promise<null> {
+    return null;
   }
 
   #name(key: string): string {

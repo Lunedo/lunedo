@@ -38,13 +38,17 @@ describe.skipIf(!databaseBaseUrl)("exports through the API", () => {
   async function setup() {
     const admin = await person();
     const reader = await person();
+    const exporter = await person();
     const outsider = await person();
     counter += 1;
     const created = await admin.client.post(`/api/v1/organizations/${organizationId}/spaces`, {
       name: `Exported ${counter}`,
       key: `EX${counter}X`,
       visibility: "private",
-      grants: [{ principalKind: "account", principalId: reader.id, role: "reader" }],
+      grants: [
+        { principalKind: "account", principalId: reader.id, role: "reader" },
+        { principalKind: "account", principalId: exporter.id, role: "admin" },
+      ],
     });
     expect(created.statusCode, created.body).toBe(201);
     const space = created.json() as { id: string; exportEnabled: boolean };
@@ -63,7 +67,7 @@ describe.skipIf(!databaseBaseUrl)("exports through the API", () => {
       },
     });
     expect(content.statusCode, content.body).toBe(200);
-    return { admin, reader, outsider, space, pageId };
+    return { admin, reader, exporter, outsider, space, pageId };
   }
 
   async function run(exportId: string) {
@@ -105,22 +109,22 @@ describe.skipIf(!databaseBaseUrl)("exports through the API", () => {
 
   it("builds a space export in the background and lets only its owner download it", async () => {
     const context = await setup();
-    const started = await context.reader.client.post(`/api/v1/spaces/${context.space.id}/exports`);
+    const started = await context.exporter.client.post(`/api/v1/spaces/${context.space.id}/exports`);
     expect(started.statusCode, started.body).toBe(202);
     const exported = started.json() as { id: string; state: string };
     expect(exported.state).toBe("queued");
 
-    const second = await context.reader.client.post(`/api/v1/pages/${context.pageId}/exports`);
+    const second = await context.exporter.client.post(`/api/v1/pages/${context.pageId}/exports`);
     expect(second.statusCode).toBe(409);
     expect(second.json()).toMatchObject({ code: "exportRunning" });
 
     await run(exported.id);
-    const ready = await context.reader.client.get(`/api/v1/exports/${exported.id}`);
+    const ready = await context.exporter.client.get(`/api/v1/exports/${exported.id}`);
     expect(ready.json()).toMatchObject({ state: "ready", scope: "space" });
-    const listed = await context.reader.client.get("/api/v1/exports");
+    const listed = await context.exporter.client.get("/api/v1/exports");
     expect((listed.json() as { id: string }[]).map((entry) => entry.id)).toContain(exported.id);
 
-    const download = await context.reader.client.get(`/api/v1/exports/${exported.id}/content`);
+    const download = await context.exporter.client.get(`/api/v1/exports/${exported.id}/content`);
     expect(download.statusCode).toBe(200);
     expect(download.headers["content-type"]).toBe("application/zip");
     expect(download.headers["content-disposition"]).toMatch(/^attachment; filename=".+\.zip"/);
@@ -132,8 +136,8 @@ describe.skipIf(!databaseBaseUrl)("exports through the API", () => {
       expect((await other.client.delete(`/api/v1/exports/${exported.id}`)).statusCode).toBe(404);
     }
 
-    expect((await context.reader.client.delete(`/api/v1/exports/${exported.id}`)).statusCode).toBe(204);
-    expect((await context.reader.client.get(`/api/v1/exports/${exported.id}`)).statusCode).toBe(404);
+    expect((await context.exporter.client.delete(`/api/v1/exports/${exported.id}`)).statusCode).toBe(204);
+    expect((await context.exporter.client.get(`/api/v1/exports/${exported.id}`)).statusCode).toBe(404);
   });
 
   it("refuses every export with a clear error while export is turned off, also for space administrators", async () => {
@@ -153,18 +157,93 @@ describe.skipIf(!databaseBaseUrl)("exports through the API", () => {
     const details = await context.reader.client.get(`/api/v1/spaces/${context.space.id}`);
     expect(details.json()).toMatchObject({ exportEnabled: false });
 
-    for (const client of [context.admin.client, context.reader.client]) {
-      for (const response of [
-        await client.get(`/api/v1/pages/${context.pageId}/export?format=markdown`),
-        await client.post(`/api/v1/pages/${context.pageId}/exports`),
-        await client.post(`/api/v1/spaces/${context.space.id}/exports`),
-      ]) {
-        expect(response.statusCode).toBe(403);
-        expect(response.json()).toMatchObject({
-          code: "exportDisabled",
-          detail: expect.stringContaining("space administrator can turn it on"),
-        });
-      }
+    for (const response of [
+      await context.reader.client.get(`/api/v1/pages/${context.pageId}/export?format=markdown`),
+      await context.admin.client.get(`/api/v1/pages/${context.pageId}/export?format=markdown`),
+      await context.admin.client.post(`/api/v1/pages/${context.pageId}/exports`),
+      await context.admin.client.post(`/api/v1/spaces/${context.space.id}/exports`),
+    ]) {
+      expect(response.statusCode).toBe(403);
+      expect(response.json()).toMatchObject({
+        code: "exportDisabled",
+        detail: expect.stringContaining("space administrator can turn it on"),
+      });
     }
+  });
+
+  it("lets only space administrators export the space and pages with their subpages", async () => {
+    const context = await setup();
+    for (const response of [
+      await context.reader.client.post(`/api/v1/spaces/${context.space.id}/exports`),
+      await context.reader.client.post(`/api/v1/pages/${context.pageId}/exports`),
+    ]) {
+      expect(response.statusCode).toBe(403);
+    }
+    const reader = await context.reader.client.get(`/api/v1/spaces/${context.space.id}`);
+    expect(reader.json()).toMatchObject({ role: "reader", mayExport: false });
+    const exporter = await context.exporter.client.get(`/api/v1/spaces/${context.space.id}`);
+    expect(exporter.json()).toMatchObject({ role: "admin", mayExport: true });
+    const started = await context.exporter.client.post(`/api/v1/pages/${context.pageId}/exports`);
+    expect(started.statusCode, started.body).toBe(202);
+  });
+
+  it("keeps a download for 24 hours after it was first sent completely, and resumes with ranges", async () => {
+    const context = await setup();
+    const started = await context.exporter.client.post(`/api/v1/spaces/${context.space.id}/exports`);
+    const { id } = started.json() as { id: string };
+    await run(id);
+    const hoursLeft = async () => {
+      const details = (await context.exporter.client.get(`/api/v1/exports/${id}`)).json() as {
+        expiresAt: string;
+        size: number;
+      };
+      return { hours: (Date.parse(details.expiresAt) - Date.now()) / 3_600_000, size: details.size };
+    };
+    const { size } = await hoursLeft();
+    const part = await context.exporter.client.get(`/api/v1/exports/${id}/content`, { range: "bytes=0-9" });
+    expect(part.statusCode).toBe(206);
+    expect(part.headers["content-range"]).toBe(`bytes 0-9/${size}`);
+    expect(part.rawPayload.length).toBe(10);
+    expect((await hoursLeft()).hours).toBeGreaterThan(24 * 6.9);
+
+    const rest = await context.exporter.client.get(`/api/v1/exports/${id}/content`, { range: "bytes=10-" });
+    expect(rest.statusCode).toBe(206);
+    expect(rest.rawPayload.length).toBe(size - 10);
+    const after = (await hoursLeft()).hours;
+    expect(after).toBeGreaterThan(23.9);
+    expect(after).toBeLessThanOrEqual(24);
+
+    const outside = await context.exporter.client.get(`/api/v1/exports/${id}/content`, {
+      range: `bytes=${size}-`,
+    });
+    expect(outside.statusCode).toBe(416);
+  });
+
+  it("accepts a single range only and refuses several or malformed ranges", async () => {
+    const context = await setup();
+    const started = await context.exporter.client.post(`/api/v1/spaces/${context.space.id}/exports`);
+    const { id } = started.json() as { id: string };
+    await run(id);
+    const details = async () =>
+      (await context.exporter.client.get(`/api/v1/exports/${id}`)).json() as {
+        expiresAt: string;
+        size: number;
+      };
+    const { size, expiresAt } = await details();
+    for (const range of [
+      "bytes=0-1,4-5",
+      "bytes=0-1, 4-5",
+      "bytes=0-,-1",
+      "bytes=5-2",
+      "bytes=-0",
+      "bytes=-",
+      "bytes=x-1",
+      "items=0-1",
+    ]) {
+      const refused = await context.exporter.client.get(`/api/v1/exports/${id}/content`, { range });
+      expect(refused.statusCode, range).toBe(416);
+      expect(refused.headers["content-range"], range).toBe(`bytes */${size}`);
+    }
+    expect((await details()).expiresAt).toBe(expiresAt);
   });
 });

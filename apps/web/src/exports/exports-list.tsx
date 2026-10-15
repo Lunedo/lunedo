@@ -15,7 +15,14 @@ import {
   isRunning,
 } from "./export-queries.js";
 
-const ERROR_CODES = new Set(["exportDisabled", "noAccess", "tokenRevoked", "interrupted", "internalError"]);
+const ERROR_CODES = new Set([
+  "exportDisabled",
+  "noAccess",
+  "tokenRevoked",
+  "notEnoughStorage",
+  "interrupted",
+  "internalError",
+]);
 
 export function ExportsList({ spaceId, emptyText }: { spaceId?: string; emptyText?: string }) {
   const { t } = useTranslation();

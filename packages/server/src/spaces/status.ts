@@ -12,6 +12,7 @@ import type { PeopleService } from "./people.js";
 import type { BuiltInPageStatus, PageStatusColor } from "./schema.js";
 import { pageStatusEnabledSetting } from "./settings.js";
 import { signalSpaceChange } from "./signals.js";
+import { visibleItem } from "./visibility.js";
 
 export const PAGE_STATUS_NAME_MAX_LENGTH = 40;
 export const MAX_PAGE_STATUS_VALUES = 20;
@@ -51,6 +52,7 @@ export interface PageStatusChange {
 }
 
 const STATUS_KINDS = ["page"] as const;
+const STATUS_CHANGE_BATCH = 1000;
 
 function cleanName(name: string): string {
   const value = name.replace(/\s+/g, " ").trim();
@@ -136,6 +138,58 @@ export async function applyImportedStatus(
     values (${uuidv7()}, ${itemId}, ${found.id}, ${found.built_in}, ${found.name}, ${found.color}, null)`);
 }
 
+export async function carryStatusesInto(
+  tx: Transaction,
+  rootId: string,
+  targetSpaceId: string,
+  actorId: string | null,
+): Promise<string[]> {
+  const moved = await tx.execute<{ id: string; built_in: string | null; name: string | null }>(sql`
+    select t.id, v.built_in, v.name from tree_items t join page_status_values v on v.id = t.status_id
+    where t.space_id = ${targetSpaceId} and v.space_id <> ${targetSpaceId}
+      and (t.id = ${rootId} or ${rootId}::uuid = any(t.path))
+    order by t.id`);
+  if (moved.rows.length === 0) return [];
+  const values = await tx.execute<{
+    id: string;
+    built_in: BuiltInPageStatus | null;
+    name: string | null;
+    color: PageStatusColor;
+  }>(sql`select id, built_in, name, color from page_status_values where space_id = ${targetSpaceId}
+    order by position, id`);
+  const groups = new Map<string | null, string[]>();
+  for (const row of moved.rows) {
+    const label = statusLabel({ builtIn: row.built_in, name: row.name }).toLowerCase();
+    const match =
+      (row.built_in !== null && values.rows.find((value) => value.built_in === row.built_in)) ||
+      values.rows.find(
+        (value) => statusLabel({ builtIn: value.built_in, name: value.name }).toLowerCase() === label,
+      );
+    const key = match ? match.id : null;
+    groups.set(key, [...(groups.get(key) ?? []), row.id]);
+  }
+  for (const [statusId, ids] of groups) {
+    const value = values.rows.find((entry) => entry.id === statusId) ?? null;
+    for (let index = 0; index < ids.length; index += STATUS_CHANGE_BATCH) {
+      const batch = ids.slice(index, index + STATUS_CHANGE_BATCH);
+      await tx.execute(sql`
+        update tree_items set status_id = ${statusId}, status_changed_at = now(), status_changed_by = ${actorId}
+        where id = any(${sql.param(batch)}::uuid[])`);
+      await tx.execute(sql`
+        insert into page_status_changes (id, item_id, status_id, built_in, name, color, actor_id)
+        values ${sql.join(
+          batch.map(
+            (id) =>
+              sql`(${uuidv7()}, ${id}, ${statusId}, ${value?.built_in ?? null}, ${value?.name ?? null},
+                ${value?.color ?? null}::page_status_color, ${actorId})`,
+          ),
+          sql`, `,
+        )}`);
+    }
+  }
+  return moved.rows.map((row) => row.id);
+}
+
 export function pageStatusEnabledCondition(space: SQL): SQL {
   return sql`coalesce((select (sv.value)::boolean from setting_values sv
     where sv.key = ${pageStatusEnabledSetting.key} and sv.level = 'space' and sv.scope_id = ${space}.id
@@ -176,7 +230,11 @@ export class PageStatusService {
     });
   }
 
-  async values(spaceId: string, executor: Executor = this.#database): Promise<PageStatusValue[]> {
+  async values(
+    viewer: Principal,
+    spaceId: string,
+    executor: Executor = this.#database,
+  ): Promise<PageStatusValue[]> {
     const result = await executor.execute<{
       id: string;
       built_in: BuiltInPageStatus | null;
@@ -186,7 +244,9 @@ export class PageStatusService {
       pages: number;
     }>(sql`
       select v.id, v.built_in, v.name, v.color, v.position,
-        (select count(*)::int from tree_items t where t.status_id = v.id and t.trash_entry_id is null) as pages
+        (select count(*)::int from tree_items t join spaces ts on ts.id = t.space_id
+          where t.status_id = v.id and t.space_id = v.space_id
+            and ${visibleItem(this.#authorization, viewer, sql`t`, sql`ts`)}) as pages
       from page_status_values v where v.space_id = ${spaceId}
       order by v.position, v.id`);
     return result.rows.map((row) => ({
@@ -246,7 +306,7 @@ export class PageStatusService {
     const id = await this.#database.transaction(async (tx) => {
       await lockSpaces(tx, [spaceId]);
       await this.#requireManage(tx, actor, spaceId);
-      const current = await this.values(spaceId, tx);
+      const current = await this.values(actor, spaceId, tx);
       if (current.length >= MAX_PAGE_STATUS_VALUES) {
         throw new SpaceError(
           "tooManyStatusValues",
@@ -264,7 +324,7 @@ export class PageStatusService {
       await this.#changed(tx, actor, spaceId, { operation: "added", valueId, name, pages: 0 });
       return valueId;
     });
-    const created = (await this.values(spaceId)).find((value) => value.id === id);
+    const created = (await this.values(actor, spaceId)).find((value) => value.id === id);
     if (!created) throw new Error("The status was not created");
     return created;
   }
@@ -290,7 +350,7 @@ export class PageStatusService {
       await this.#requireManage(tx, actor, spaceId);
       const value = await this.#value(tx, spaceId, valueId);
       if (name !== undefined) {
-        const others = (await this.values(spaceId, tx)).filter((other) => other.id !== valueId);
+        const others = (await this.values(actor, spaceId, tx)).filter((other) => other.id !== valueId);
         if (others.some((other) => statusLabel(other).toLowerCase() === name.toLowerCase())) {
           throw new SpaceError("statusExists", "A status with this name exists already");
         }
@@ -308,7 +368,7 @@ export class PageStatusService {
         pages: 0,
       });
     });
-    const updated = (await this.values(spaceId)).find((value) => value.id === valueId);
+    const updated = (await this.values(actor, spaceId)).find((value) => value.id === valueId);
     if (!updated) throw new SpaceError("statusNotFound", "The status does not exist anymore");
     return updated;
   }
@@ -317,7 +377,7 @@ export class PageStatusService {
     await this.#database.transaction(async (tx) => {
       await lockSpaces(tx, [spaceId]);
       await this.#requireManage(tx, actor, spaceId);
-      const current = await this.values(spaceId, tx);
+      const current = await this.values(actor, spaceId, tx);
       const ids = new Set(current.map((value) => value.id));
       if (
         order.length !== ids.size ||
@@ -338,7 +398,7 @@ export class PageStatusService {
         pages: 0,
       });
     });
-    return this.values(spaceId);
+    return this.values(actor, spaceId);
   }
 
   async remove(actor: Principal, spaceId: string, valueId: string, confirmedPages: number): Promise<void> {
@@ -347,13 +407,15 @@ export class PageStatusService {
       await this.#requireManage(tx, actor, spaceId);
       const value = await this.#value(tx, spaceId, valueId);
       const used = await tx.execute<{ pages: number }>(sql`
-        select count(*)::int as pages from tree_items where status_id = ${valueId} and trash_entry_id is null`);
+        select count(*)::int as pages from tree_items
+        where status_id = ${valueId} and space_id = ${spaceId} and trash_entry_id is null`);
       const pages = Number(used.rows[0]?.pages ?? 0);
-      if (pages !== confirmedPages) {
+      const shown = (await this.values(actor, spaceId, tx)).find((entry) => entry.id === valueId)?.pages ?? 0;
+      if (shown !== confirmedPages) {
         throw new SpaceError(
           "statusInUse",
-          `${pages} ${pages === 1 ? "page has" : "pages have"} this status and will lose it. Confirm with this number to remove the status.`,
-          { pages },
+          `${shown} ${shown === 1 ? "page has" : "pages have"} this status and will lose it. Confirm with this number to remove the status.`,
+          { pages: shown },
         );
       }
       await tx.execute(sql`delete from page_status_values where id = ${valueId}`);

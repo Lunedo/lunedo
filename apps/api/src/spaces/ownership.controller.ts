@@ -111,7 +111,10 @@ const exampleUnowned = {
 const statusValueSchema = pageStatusSchema
   .extend({
     position: z.number().int().describe("Place in the list, starting at 0."),
-    pages: z.number().int().describe("Number of pages with this status, without pages in the trash."),
+    pages: z
+      .number()
+      .int()
+      .describe("Number of pages with this status that the caller can view, without pages in the trash."),
   })
   .describe("A status value of a space.");
 
@@ -313,10 +316,10 @@ export class OwnershipController {
       example: { enabled: true, values: [exampleStatusValue] },
     },
   })
-  async statuses(@Param("spaceId") spaceId: string) {
+  async statuses(@Param("spaceId") spaceId: string, @Req() request: FastifyRequest) {
     return {
       enabled: await this.#services.pageStatus.enabled(spaceId),
-      values: await this.#services.pageStatus.values(spaceId),
+      values: await this.#services.pageStatus.values(actorOf(request), spaceId),
     };
   }
 

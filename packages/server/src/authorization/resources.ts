@@ -21,6 +21,20 @@ import type { ActionDefinition, ResourceType, RestrictionResult, RuleContext } f
 const ALL_MEMBERSHIPS = ["member", "collaborator", "guest"] as const;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+async function managesExports(context: RuleContext, spaceId: string | null): Promise<boolean> {
+  if (!spaceId) return false;
+  const facts = await context.spaceFacts(spaceId);
+  if (facts.account?.type !== "standard" || facts.membership === "guest" || facts.role === null) return false;
+  if (facts.role === "admin") return true;
+  const result = await context.executor.execute<{ organization_id: string | null; confidential: boolean }>(
+    sql`select organization_id, confidential from spaces where id = ${spaceId}`,
+  );
+  const row = result.rows[0];
+  if (!row?.organization_id || row.confidential) return false;
+  const organization = await context.organizationFacts(row.organization_id);
+  return organization.roles.some((role) => grantsLevel(role.areas.spaces, "manage"));
+}
+
 function instanceArea(area: ActionDefinition["area"], level: ActionDefinition["level"]): ActionDefinition {
   return { scope: "instance", area, level };
 }
@@ -272,7 +286,20 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
       "space.manage": { scope: "space", spaceRole: "admin", restriction: "present" },
       "space.trash": { scope: "space", spaceRole: "editor", restriction: "present" },
       "space.delete": { scope: "space", spaceRole: "admin", restriction: "present" },
-      "space.export": { scope: "space", spaceRole: "reader", restriction: "exportable" },
+      "space.export": {
+        scope: "space",
+        spaceRole: "reader",
+        rule: "exportManager",
+        ruleRequired: true,
+        restriction: "exportable",
+      },
+    },
+    rules: {
+      exportManager: async (context) =>
+        managesExports(
+          context,
+          context.resource.id && UUID.test(context.resource.id) ? context.resource.id.toLowerCase() : null,
+        ),
     },
     restrictions: {
       present: async (executor, id) => {
@@ -326,6 +353,13 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
       "item.approveSchedule": { scope: "space", spaceRole: "admin", restriction: "writable" },
       "item.share": { scope: "space", spaceRole: "editor", restriction: "readable" },
       "item.export": { scope: "space", spaceRole: "reader", restriction: "exportable" },
+      "item.exportPages": {
+        scope: "space",
+        spaceRole: "reader",
+        rule: "exportManager",
+        ruleRequired: true,
+        restriction: "exportable",
+      },
       "item.transferOwnership": {
         scope: "space",
         spaceRole: "admin",
@@ -334,6 +368,14 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
       },
     },
     rules: {
+      exportManager: async (context) => {
+        const id = context.resource.id;
+        if (!id || !UUID.test(id)) return false;
+        const result = await context.executor.execute<{ space_id: string }>(
+          sql`select space_id from tree_items where id = ${id.toLowerCase()}`,
+        );
+        return managesExports(context, result.rows[0]?.space_id ?? null);
+      },
       ownerOrOrganizationAdministrator: async (context) => {
         const id = context.resource.id;
         if (!id || !UUID.test(id)) return false;

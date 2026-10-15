@@ -1404,6 +1404,7 @@
     "exportDisabled": "Der Export ist für diesen Space ausgeschaltet. Ein Space-Admin kann ihn in den Space-Einstellungen einschalten.",
     "exportRunning": "Ein anderer Export von dir läuft noch. Warte, bis er fertig ist, oder brich ihn unter Einstellungen › Exporte ab.",
     "nothingToExport": "Es gibt noch nichts zu exportieren. Veröffentliche die Seite zuerst.",
+    "notEnoughStorage": "Nicht genug Speicher für diesen Export. Die Administration der Instanz muss Platz schaffen.",
     "tooManyExports": "Du hast bereits 5 Exporte. Lösche unter Einstellungen › Exporte einen, den du nicht mehr brauchst, und versuche es erneut.",
     "invalidShortcut": "Die Verknüpfung ist ungültig. Prüfe die Bezeichnung und die Adresse.",
     "shortcutNotFound": "Die Verknüpfung gibt es nicht mehr. Lade die Liste neu.",
@@ -7521,6 +7522,8 @@
       "menu": "Exportieren",
       "format": "Format",
       "scope": "Der Export enthält, was du lesen kannst: die veröffentlichte Version, ohne Kommentare, private Notizen und Verlauf.",
+      "kept": "Ein Download einer Seite mit Unterseiten wird 24 Stunden nach dem ersten vollständigen Herunterladen gelöscht, oder nach 7 Tagen, wenn du ihn nie herunterlädst.",
+      "subpagesForAdmins": "Nur Space-Admins können den ganzen Space oder eine Seite mit Unterseiten exportieren. Frag eine dieser Personen, wenn du das brauchst.",
       "start": "Export starten",
       "download": "Herunterladen",
       "failed": "„{title}“ wurde nicht exportiert",
@@ -7541,7 +7544,7 @@
         },
         "subpages": {
           "label": "ZIP mit Unterseiten",
-          "description": "Diese Seite und alle Unterseiten, die du lesen kannst, mit Anhängen. Der Export wird im Hintergrund erstellt; du bekommst eine Benachrichtigung, sobald der Download bereitsteht."
+          "description": "Diese Seite und alle Unterseiten, die du lesen kannst, mit Anhängen. Der Export wird im Hintergrund erstellt; du bekommst eine Benachrichtigung, sobald der Download bereitsteht. Er wird abgelehnt, wenn der Speicher von Pagehall fast voll ist."
         }
       }
     },
@@ -7555,7 +7558,7 @@
       "title": "{name} exportieren",
       "menu": "Space exportieren",
       "panelTitle": "Diesen Space exportieren",
-      "description": "Erstellt eine ZIP-Datei mit allen Seiten, die du lesen kannst: der Seitenbaum als Ordner, jede Seite als Markdown und HTML, Anhänge neben ihren Seiten und eine index.html mit dem Baum. Kommentare, private Notizen und Verlauf sind nicht enthalten. Der Download bleibt 7 Tage erhalten und nur du kannst ihn öffnen.",
+      "description": "Erstellt eine ZIP-Datei mit allen Seiten, die du lesen kannst: der Seitenbaum als Ordner, jede Seite als Markdown und HTML, Anhänge neben ihren Seiten und eine index.html mit dem Baum. Kommentare, private Notizen und Verlauf sind nicht enthalten. Nur du kannst den Download öffnen. Er wird 24 Stunden nach dem ersten vollständigen Herunterladen gelöscht, oder nach 7 Tagen, wenn du ihn nie herunterlädst. Der Export wird abgelehnt, wenn der Speicher von Pagehall fast voll ist.",
       "start": "Space exportieren",
       "empty": "Du hast keine Exporte dieses Space.",
       "yourExports": "Deine Exporte anzeigen"
@@ -7587,6 +7590,7 @@
       "failed": "Fehlgeschlagen"
     },
     "errors": {
+      "notEnoughStorage": "Nicht genug Speicher für diesen Export. Die Administration der Instanz muss Platz schaffen; starte ihn danach erneut.",
       "exportDisabled": "Der Export wurde für den Space ausgeschaltet. Bitte einen Space-Admin, ihn einzuschalten, und exportiere dann erneut.",
       "noAccess": "Du kannst das Exportierte nicht mehr lesen, oder es wurde gelöscht. Exportiere erneut, was du lesen kannst.",
       "tokenRevoked": "Das API-Token, das den Export gestartet hat, wurde widerrufen oder ist abgelaufen. Starte den Export erneut.",
@@ -7595,7 +7599,7 @@
     },
     "screen": {
       "title": "Exporte",
-      "description": "Downloads von Spaces und Seiten, die du exportiert hast. Jeder Download bleibt 7 Tage erhalten und nur du kannst ihn öffnen."
+      "description": "Downloads von Spaces und Seiten, die du exportiert hast. Nur du kannst sie öffnen. Jeder Download wird 24 Stunden nach dem ersten vollständigen Herunterladen gelöscht, oder nach 7 Tagen, wenn du ihn nie herunterlädst."
     },
     "settings": {
       "tab": "Export",

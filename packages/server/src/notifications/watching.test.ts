@@ -273,7 +273,7 @@ describe.skipIf(!baseUrl)("watching", () => {
       const context = await setup();
       const page = await publishedPage(context);
       await test.services.watches.set(context.readerId, { type: "item", id: page.id }, { state: "watching" });
-      const [value] = await test.services.pageStatus.values(context.space.id);
+      const [value] = await test.services.pageStatus.values(SYSTEM, context.space.id);
       await test.services.pageStatus.set(context.editor, page.id, value?.id ?? "");
       const [status] = await notificationsOf(context.readerId, "page.statusChanged");
       expect(status?.params).toMatchObject({ statusBuiltIn: "roughDraft", statusName: null });

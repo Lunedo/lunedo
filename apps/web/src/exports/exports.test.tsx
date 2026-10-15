@@ -93,12 +93,19 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function dialog(options: { exportEnabled?: boolean; publishable?: boolean; admin?: boolean } = {}) {
+function dialog(
+  options: { exportEnabled?: boolean; publishable?: boolean; admin?: boolean; mayExportPages?: boolean } = {},
+) {
   return renderWithProviders(
     inRouter(
       <PageExportDialog
         page={{ id: PAGE, title: "VPN setup", publishable: options.publishable ?? true }}
-        space={{ key: "ITOPS", exportEnabled: options.exportEnabled ?? true, admin: options.admin ?? false }}
+        space={{
+          key: "ITOPS",
+          exportEnabled: options.exportEnabled ?? true,
+          admin: options.admin ?? false,
+          mayExportPages: options.mayExportPages ?? true,
+        }}
         open
         onOpenChange={() => {}}
       />,
@@ -127,6 +134,29 @@ describe("page export", () => {
     await user.click(screen.getByRole("button", { name: "Start export" }));
     expect(await screen.findByText("Export started")).toBeTruthy();
     expect(requests.some((request) => request.method === "POST")).toBe(true);
+  });
+
+  it("offers only single pages to people who may not export subpages, and says who can", async () => {
+    await dialog({ mayExportPages: false });
+    expect(await screen.findByRole("radio", { name: /^Markdown/ })).toBeTruthy();
+    expect(screen.queryByRole("radio", { name: /ZIP with subpages/ })).toBeNull();
+    expect(
+      screen.getByText(/Only space admins can export the whole space or a page with its subpages/),
+    ).toBeTruthy();
+  });
+
+  it("says how long a download with subpages is kept", async () => {
+    await dialog();
+    expect(await screen.findByText(/deleted 24 hours after you first downloaded it completely/)).toBeTruthy();
+  });
+
+  it("says that an administrator has to free up space when the storage is almost full", async () => {
+    api({ [`POST /api/v1/pages/${PAGE}/exports`]: () => problem(507, "notEnoughStorage") });
+    await dialog();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("radio", { name: /ZIP with subpages/ }));
+    await user.click(screen.getByRole("button", { name: "Start export" }));
+    expect(await screen.findByText(/Your instance administrator needs to free up space/)).toBeTruthy();
   });
 
   it("says why an export cannot start and keeps the dialog open", async () => {
