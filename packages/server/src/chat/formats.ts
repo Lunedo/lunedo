@@ -64,10 +64,10 @@ function plainLines(message: ChatMessage): string[] {
 
 function teams(message: ChatMessage): unknown {
   const body: unknown[] = [
-    { type: "TextBlock", text: message.heading, size: "Small", isSubtle: true, wrap: true },
-    { type: "TextBlock", text: message.title, weight: "Bolder", size: "Medium", wrap: true },
+    { type: "TextBlock", text: markdownEscape(message.heading), size: "Small", isSubtle: true, wrap: true },
+    { type: "TextBlock", text: markdownEscape(message.title), weight: "Bolder", size: "Medium", wrap: true },
   ];
-  if (message.detail) body.push({ type: "TextBlock", text: message.detail, wrap: true });
+  if (message.detail) body.push({ type: "TextBlock", text: markdownEscape(message.detail), wrap: true });
   return {
     type: "message",
     attachments: [

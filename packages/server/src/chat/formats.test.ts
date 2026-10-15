@@ -47,10 +47,17 @@ describe("chatRequest", () => {
     expect(body.attachments[0]?.contentType).toBe("application/vnd.microsoft.card.adaptive");
     expect(body.attachments[0]?.content.type).toBe("AdaptiveCard");
     expect(body.attachments[0]?.content.body.map((block) => block.text)).toEqual([
-      message.heading,
-      message.title,
-      message.detail,
+      String.raw`New page in IT <Ops\> & more`,
+      String.raw`Restart \*the\* VPN \| gateway \@everyone`,
+      String.raw`Published by Anna <script\>`,
     ]);
+    const linked = chatRequest({
+      ...delivery,
+      message: { ...message, title: "[Sign in](https://phish.example)" },
+      kind: "teams",
+      target: { url: "https://prod.logic.azure.com/w" },
+    });
+    expect(String(linked.body)).not.toContain("[Sign in](https://phish.example)");
     expect(body.attachments[0]?.content.actions).toEqual([
       { type: "Action.OpenUrl", title: "Open in Pagehall", url: message.link?.url },
     ]);
