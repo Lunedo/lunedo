@@ -2541,7 +2541,6 @@
       "digest": "In the daily digest"
     },
     "reset": "Reset",
-    "resetEvent": "Reset {event} to the default",
     "source": {
       "organization": "Default of {name}",
       "instance": "Default of this instance",
@@ -2683,7 +2682,8 @@
     "showAll": "Show all",
     "notWatched": "Not watched",
     "watchAgain": "Watch again",
-    "watchingAgain": "You watch {name} again."
+    "watchingAgain": "You watch {name} again.",
+    "resetChannel": "Reset {channel} for {event} to the inherited value"
   },
   "mail": {
     "title": "E-mail",

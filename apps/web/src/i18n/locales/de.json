@@ -2541,7 +2541,6 @@
       "digest": "Täglich gesammelt"
     },
     "reset": "Zurücksetzen",
-    "resetEvent": "{event} auf den Standard zurücksetzen",
     "source": {
       "organization": "Standard von {name}",
       "instance": "Standard dieser Instanz",
@@ -2683,7 +2682,8 @@
     "showAll": "Alle anzeigen",
     "notWatched": "Nicht beobachtet",
     "watchAgain": "Wieder beobachten",
-    "watchingAgain": "Du beobachtest {name} wieder."
+    "watchingAgain": "Du beobachtest {name} wieder.",
+    "resetChannel": "{channel} für {event} auf den geerbten Wert zurücksetzen"
   },
   "mail": {
     "title": "E-Mail",

@@ -50,7 +50,7 @@ describe("notification preferences", () => {
     ]);
   });
 
-  it("show where each row comes from and reset only the person's own values", async () => {
+  it("show where each channel comes from and reset only the channel set here", async () => {
     const onChange = vi.fn(async () => undefined);
     await renderWithProviders(
       <NotificationPreferences
@@ -67,20 +67,25 @@ describe("notification preferences", () => {
     const table = screen.getByRole("list", { name: "Events" });
     const mentions = within(table).getByText("Mentions of me").closest("li") as HTMLElement;
     expect(within(mentions).getByText("Default of Northwind")).toBeTruthy();
+    expect(within(mentions).getByText("Default")).toBeTruthy();
     expect(within(mentions).queryByRole("button", { name: /Reset/ })).toBeNull();
     expect(within(mentions).getByRole("combobox", { name: "Mentions of me: E-mail" }).textContent).toContain(
       "Off",
     );
 
     const changes = within(table).getByText("Changes to content I watch").closest("li") as HTMLElement;
-    expect(within(changes).getByText("Set by you")).toBeTruthy();
+    expect(within(changes).getAllByText("Set by you")).toHaveLength(1);
+    expect(within(changes).getByText("Default")).toBeTruthy();
+    expect(within(changes).getAllByRole("button", { name: /^Reset/ })).toHaveLength(1);
     expect(
       within(changes)
         .getByRole("switch", { name: "Changes to content I watch: In the app" })
         .getAttribute("aria-checked"),
     ).toBe("false");
     await userEvent.click(
-      within(changes).getByRole("button", { name: "Reset Changes to content I watch to the default" }),
+      within(changes).getByRole("button", {
+        name: "Reset In the app for Changes to content I watch to the inherited value",
+      }),
     );
     expect(onChange).toHaveBeenCalledWith("notifications.changes.inApp", undefined);
     expect(onChange).not.toHaveBeenCalledWith("notifications.changes.email", undefined);
