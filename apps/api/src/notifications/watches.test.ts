@@ -61,8 +61,8 @@ describe.skipIf(!databaseBaseUrl)("watching through the API", () => {
     const context = await setup();
     const own = await context.author.client.get(`/api/v1/items/${context.page.id}/watch`);
     expect(own.json()).toEqual({
-      own: { state: "watching", keepMentions: true, automatic: true },
-      effective: { state: "watching", keepMentions: true, source: "target" },
+      own: { state: "watching", keepActionable: true, automatic: true },
+      effective: { state: "watching", keepActionable: true, source: "target" },
     });
 
     const watched = await context.reader.client.put(`/api/v1/spaces/${context.space.id}/watch`, {
@@ -72,14 +72,14 @@ describe.skipIf(!databaseBaseUrl)("watching through the API", () => {
     const inherited = await context.reader.client.get(`/api/v1/items/${context.page.id}/watch`);
     expect(inherited.json()).toEqual({
       own: null,
-      effective: { state: "watching", keepMentions: true, source: "space" },
+      effective: { state: "watching", keepActionable: true, source: "space" },
     });
 
     const muted = await context.reader.client.put(`/api/v1/items/${context.page.id}/watch`, {
       state: "muted",
-      keepMentions: false,
+      keepActionable: false,
     });
-    expect(muted.json()).toMatchObject({ own: { state: "muted", keepMentions: false, automatic: false } });
+    expect(muted.json()).toMatchObject({ own: { state: "muted", keepActionable: false, automatic: false } });
     const list = await context.reader.client.get("/api/v1/account/watches");
     expect(list.json()).toMatchObject({
       items: [
@@ -92,7 +92,7 @@ describe.skipIf(!databaseBaseUrl)("watching through the API", () => {
     const reset = await context.reader.client.delete(`/api/v1/items/${context.page.id}/watch`);
     expect(reset.json()).toEqual({
       own: null,
-      effective: { state: "watching", keepMentions: true, source: "space" },
+      effective: { state: "watching", keepActionable: true, source: "space" },
     });
   });
 

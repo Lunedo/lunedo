@@ -11,13 +11,13 @@ export type WatchTarget = { type: "space"; id: string } | { type: "item"; id: st
 
 export interface OwnWatch {
   state: WatchState;
-  keepMentions: boolean;
+  keepActionable: boolean;
   automatic: boolean;
 }
 
 export interface EffectiveWatch {
   state: WatchState;
-  keepMentions: boolean;
+  keepActionable: boolean;
   source: "target" | "series" | "space";
 }
 
@@ -29,7 +29,7 @@ export interface WatchStatus {
 export interface WatchedEntry {
   target: WatchTarget;
   state: Exclude<WatchState, "notWatching">;
-  keepMentions: boolean;
+  keepActionable: boolean;
   automatic: boolean;
   title: string;
   kind: string;
@@ -44,7 +44,7 @@ const LIST_LIMIT = 500;
 interface ChainRow extends Record<string, unknown> {
   account_id: string;
   state: WatchState;
-  keep_mentions: boolean;
+  keep_actionable: boolean;
   automatic: boolean;
   rank: number;
 }
@@ -57,7 +57,7 @@ function chainRows(subject: NotificationSubject, accounts: SQL): SQL {
           coalesce((select m.series_id from meetings m where m.item_id = t.id),
             (select mt.series_id from meeting_topics mt where mt.item_id = t.id)) as series_id
         from tree_items t where t.id = ${subject.itemId})
-      select w.account_id, w.state, w.keep_mentions, w.automatic,
+      select w.account_id, w.state, w.keep_actionable, w.automatic,
         case when w.item_id = c.item_id then 0 when w.item_id = c.series_id then 1 else 2 end as rank
       from watches w cross join chain c
       where (w.item_id = c.item_id or w.item_id = c.series_id or (w.item_id is null and w.space_id = c.space_id))
@@ -65,7 +65,7 @@ function chainRows(subject: NotificationSubject, accounts: SQL): SQL {
       order by w.account_id, rank`;
   }
   return sql`
-    select w.account_id, w.state, w.keep_mentions, w.automatic, 2 as rank from watches w
+    select w.account_id, w.state, w.keep_actionable, w.automatic, 2 as rank from watches w
     where w.item_id is null and w.space_id = ${subject.spaceId} and ${accounts}`;
 }
 
@@ -89,7 +89,7 @@ export async function effectiveWatches(
     if (!row) continue;
     states.set(accountId, {
       state: row.state,
-      keepMentions: row.keep_mentions,
+      keepActionable: row.keep_actionable,
       source: SOURCES[Number(row.rank)] ?? "space",
     });
   }
@@ -126,10 +126,10 @@ export class WatchService {
   async status(accountId: string, target: WatchTarget): Promise<WatchStatus> {
     const own = await this.#database.execute<{
       state: WatchState;
-      keep_mentions: boolean;
+      keep_actionable: boolean;
       automatic: boolean;
     }>(
-      sql`select state, keep_mentions, automatic from watches
+      sql`select state, keep_actionable, automatic from watches
         where account_id = ${accountId} and ${targetCondition(target)}`,
     );
     const row = own.rows[0];
@@ -137,7 +137,7 @@ export class WatchService {
       target.type === "space" ? { spaceId: target.id, itemId: null } : { spaceId: null, itemId: target.id };
     const effective = (await effectiveWatches(this.#database, subject, [accountId])).get(accountId) ?? null;
     return {
-      own: row ? { state: row.state, keepMentions: row.keep_mentions, automatic: row.automatic } : null,
+      own: row ? { state: row.state, keepActionable: row.keep_actionable, automatic: row.automatic } : null,
       effective,
     };
   }
@@ -145,7 +145,7 @@ export class WatchService {
   async set(
     accountId: string,
     target: WatchTarget,
-    input: { state: WatchState | null; keepMentions?: boolean | undefined },
+    input: { state: WatchState | null; keepActionable?: boolean | undefined },
   ): Promise<WatchStatus> {
     await this.#database.transaction(async (tx) => {
       if (input.state === null) {
@@ -155,16 +155,16 @@ export class WatchService {
         return;
       }
       const columns = targetColumns(target);
-      const keepMentions = input.keepMentions ?? true;
+      const keepActionable = input.keepActionable ?? true;
       const conflict =
         target.type === "space"
           ? sql`(account_id, space_id) where item_id is null`
           : sql`(account_id, item_id) where item_id is not null`;
       await tx.execute(sql`
-        insert into watches (id, account_id, space_id, item_id, state, keep_mentions, automatic)
+        insert into watches (id, account_id, space_id, item_id, state, keep_actionable, automatic)
         values (gen_random_uuid(), ${accountId}, ${columns.spaceId}, ${columns.itemId}, ${input.state},
-          ${keepMentions}, false)
-        on conflict ${conflict} do update set state = excluded.state, keep_mentions = excluded.keep_mentions,
+          ${keepActionable}, false)
+        on conflict ${conflict} do update set state = excluded.state, keep_actionable = excluded.keep_actionable,
           automatic = false, updated_at = now()`);
     });
     return this.status(accountId, target);
@@ -236,7 +236,7 @@ export class WatchService {
       space_id: string | null;
       item_id: string | null;
       state: "watching" | "muted";
-      keep_mentions: boolean;
+      keep_actionable: boolean;
       automatic: boolean;
       title: string;
       kind: string;
@@ -245,7 +245,7 @@ export class WatchService {
       name: string;
       updated_at: Date;
     }>(sql`
-      select w.space_id, w.item_id, w.state, w.keep_mentions, w.automatic, w.updated_at,
+      select w.space_id, w.item_id, w.state, w.keep_actionable, w.automatic, w.updated_at,
         coalesce(t.title, s.name) as title, coalesce(t.kind::text, 'space') as kind, s.id as target_space_id,
         s.key, s.name
       from watches w
@@ -266,7 +266,7 @@ export class WatchService {
       entries.push({
         target,
         state: row.state,
-        keepMentions: row.keep_mentions,
+        keepActionable: row.keep_actionable,
         automatic: row.automatic,
         title: row.title,
         kind: row.kind,

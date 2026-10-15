@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { DocumentJson, NodeJson } from "@pagehall/editor-schema";
+import { notificationEvents } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
@@ -193,6 +194,102 @@ describe.skipIf(!baseUrl)("notification e-mails", () => {
 
       expect((await test.services.notificationMailer.sendDue()).immediate).toBe(0);
       expect(await sent(context.readerId)).toHaveLength(1);
+    });
+
+    const inMinutes = (minutes: number) => new Date(Date.now() + minutes * 60_000 + 5_000);
+
+    async function notifyOf(
+      context: Context,
+      type: string,
+      params: Record<string, unknown>,
+      recipient: string,
+    ) {
+      await test.database.transaction((tx) =>
+        test.services.notifications.notify(tx, {
+          type,
+          recipients: [recipient],
+          organizationId: context.org.id,
+          targetId: context.page.id,
+          actor: accountPrincipal(context.authorId),
+          params: { itemTitle: context.page.title, itemKind: "page", spaceKey: context.space.key, ...params },
+        }),
+      );
+    }
+
+    it("sends mentions after two minutes as one mail, long before the combining window ends", async () => {
+      const context = await setup();
+      await mention(context, [context.readerId]);
+      await mention(context, [context.readerId]);
+      await mention(context, [context.readerId]);
+
+      expect((await test.services.notificationMailer.sendDue(inMinutes(1))).immediate).toBe(0);
+      expect(await sent(context.readerId)).toEqual([]);
+
+      expect((await test.services.notificationMailer.sendDue(inMinutes(2))).immediate).toBe(1);
+      const [mail, ...more] = await sent(context.readerId);
+      expect(more).toEqual([]);
+      expect(mail?.text).toContain("3 times");
+      expect((await emailRows(context.readerId)).map((row) => row.email_status)).toEqual(["sent"]);
+    });
+
+    it("sends assigned tasks and shares after two minutes", async () => {
+      const context = await setup();
+      await notifyOf(
+        context,
+        "task.assigned",
+        { taskId: randomUUID(), taskText: "Check the steps", dueDate: null },
+        context.readerId,
+      );
+      await notifyOf(context, "page.shared", { role: "reader", includeDescendants: false }, context.otherId);
+      expect((await test.services.notificationMailer.sendDue(inMinutes(1))).immediate).toBe(0);
+      expect((await test.services.notificationMailer.sendDue(inMinutes(2))).immediate).toBe(2);
+      expect(await sent(context.readerId)).toHaveLength(1);
+      expect(await sent(context.otherId)).toHaveLength(1);
+    });
+
+    it("covers exactly the mentions, tasks, shares and access requests", () => {
+      expect(
+        notificationEvents
+          .filter((event) => event.keptWhenMuted)
+          .flatMap((event) => [...event.types])
+          .sort(),
+      ).toEqual([
+        "access.requestDecided",
+        "access.requested",
+        "content.mentioned",
+        "page.shared",
+        "task.assigned",
+      ]);
+    });
+
+    it("keeps comments and changes waiting for the combining window", async () => {
+      const context = await setup();
+      await test.settings.set(
+        settingsOf("comments").email,
+        { user: context.readerId },
+        "user",
+        "immediately",
+      );
+      await comment(context, [context.readerId]);
+      expect((await test.services.notificationMailer.sendDue(inMinutes(5))).immediate).toBe(0);
+      expect((await emailRows(context.readerId)).map((row) => row.email_status)).toEqual(["immediate"]);
+      expect((await test.services.notificationMailer.sendDue(inMinutes(31))).immediate).toBe(1);
+      expect(await sent(context.readerId)).toHaveLength(1);
+    });
+
+    it("sends an action mail once with two nodes at the two-minute mark", async () => {
+      const context = await setup();
+      await mention(context, [context.readerId, context.otherId]);
+      const second = test.anotherNode();
+      const due = inMinutes(2);
+      const results = await Promise.all([
+        test.services.notificationMailer.sendDue(due),
+        second.notificationMailer.sendDue(due),
+      ]);
+      expect(results.reduce((sum, result) => sum + result.immediate, 0)).toBe(2);
+      expect((await test.services.notificationMailer.sendDue(inMinutes(3))).immediate).toBe(0);
+      expect(await sent(context.readerId)).toHaveLength(1);
+      expect(await sent(context.otherId)).toHaveLength(1);
     });
 
     it("sends after 24 hours even while events keep coming", async () => {

@@ -16,8 +16,8 @@ describe("watch menu", () => {
       [`GET /api/v1/items/${ITEM}/watch`]: () => ({ body: { own: null, effective: null } }),
       [`PUT /api/v1/items/${ITEM}/watch`]: (request) => ({
         body: {
-          own: { ...(request.body as object), keepMentions: true, automatic: false },
-          effective: { ...(request.body as object), keepMentions: true, source: "target" },
+          own: { ...(request.body as object), keepActionable: true, automatic: false },
+          effective: { ...(request.body as object), keepActionable: true, source: "target" },
         },
       }),
     });
@@ -37,7 +37,7 @@ describe("watch menu", () => {
     await waitFor(() =>
       expect(api.requests.filter((request) => request.method === "PUT").at(-1)?.body).toEqual({
         state: "muted",
-        keepMentions: true,
+        keepActionable: true,
       }),
     );
   });
@@ -45,10 +45,10 @@ describe("watch menu", () => {
   it("names the space or series a state comes from and stops watching only this item", async () => {
     const api = mockApi({
       [`GET /api/v1/items/${ITEM}/watch`]: () => ({
-        body: { own: null, effective: { state: "watching", keepMentions: true, source: "space" } },
+        body: { own: null, effective: { state: "watching", keepActionable: true, source: "space" } },
       }),
       [`PUT /api/v1/items/${ITEM}/watch`]: () => ({
-        body: { own: { state: "notWatching", keepMentions: true, automatic: false }, effective: null },
+        body: { own: { state: "notWatching", keepActionable: true, automatic: false }, effective: null },
       }),
     });
     await renderWithProviders(<WatchMenu target={{ type: "item", id: ITEM }} name="Runbook" />);
