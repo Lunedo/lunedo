@@ -290,13 +290,13 @@ export class PostgresSearchAdapter implements SearchAdapter {
       with matched as (
         select c.id, c.source, c.source_id, c.item_id, t.space_id, c.content_type, c.title, c.heading, c.anchor,
           c.labels, c.status, c.author_id, c.archived, c.attachment, c.content_updated_at, c.position, c.language,
-          ((${parts.score}) * (1 + ${usageBoost(sql`rv`)}))::float8 as score
+          (${request.usageBoost ? sql`(${parts.score}) * (1 + ${usageBoost(sql`rv`)})` : parts.score})::float8 as score
           ${sql.join(flagColumns, sql``)}
         from search_chunks c
         join tree_items t on t.id = c.item_id
         join spaces s on s.id = t.space_id
         left join search_pending_spaces p on p.space_id = c.space_id
-        left join recent_views rv on rv.account_id = ${viewer.accountId}::uuid and rv.item_id = c.item_id
+        ${request.usageBoost ? sql`left join recent_views rv on rv.account_id = ${viewer.accountId}::uuid and rv.item_id = c.item_id` : sql``}
         where ${sql.join(conditions, sql` and `)}
       ),
       candidates as (

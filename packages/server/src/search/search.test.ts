@@ -606,7 +606,7 @@ describe.skipIf(!baseUrl)("search", () => {
     expect(recent.facets?.updated).toEqual(result.facets?.updated);
   });
 
-  it("ranks content the person used recently and often slightly higher", async () => {
+  it("ranks content the person used recently and often slightly higher in quick search only", async () => {
     const w = await world();
     const text = `${w.word} identical words`;
     const create = async (title: string) => {
@@ -622,12 +622,46 @@ describe.skipIf(!baseUrl)("search", () => {
     const older = await create("Same title");
     const newer = await create("Same title");
     await drain();
-    const query = `${w.word} identical`;
-    const before = await find(w.other, w.org.id, query);
+    const query = `${w.word} identical `;
+    const quick = { mode: "quick" };
+    const before = await find(w.other, w.org.id, query, quick);
     expect(before.results.map((hit) => hit.itemId)).toEqual([newer, older]);
     for (let view = 0; view < 3; view += 1) await test.services.home.recordView(w.other, older);
-    const after = await find(w.other, w.org.id, query);
+    const after = await find(w.other, w.org.id, query, quick);
     expect(after.results.map((hit) => hit.itemId)).toEqual([older, newer]);
-    expect((await find(w.author, w.org.id, query)).results.map((hit) => hit.itemId)).toEqual([newer, older]);
+    expect((await find(w.author, w.org.id, query, quick)).results.map((hit) => hit.itemId)).toEqual([
+      newer,
+      older,
+    ]);
+    expect((await find(w.other, w.org.id, query)).results.map((hit) => hit.itemId)).toEqual([newer, older]);
+  });
+
+  it("keeps the pages of the search page stable while the person opens results", async () => {
+    const w = await world();
+    const ids: string[] = [];
+    for (let index = 0; index < 3; index += 1) {
+      const created = await test.services.tree.create(w.author, w.shared.id, {
+        kind: "page",
+        title: "Same title",
+        mode: "live",
+        placement: { parentId: null },
+        document: doc(paragraph(`${w.word} identical words`)),
+      });
+      ids.push(created.id);
+    }
+    await drain();
+    const query = `${w.word} identical`;
+    const first = await find(w.other, w.org.id, query, { limit: 1 });
+    expect(first.results.map((hit) => hit.itemId)).toEqual([ids[2]]);
+    const seen = [...first.results.map((hit) => hit.itemId)];
+    let cursor = first.nextCursor;
+    for (const opened of [ids[0], ids[2]]) {
+      for (let view = 0; view < 5; view += 1) await test.services.home.recordView(w.other, opened as string);
+      const page = await find(w.other, w.org.id, query, { limit: 1, cursor });
+      seen.push(...page.results.map((hit) => hit.itemId));
+      cursor = page.nextCursor;
+    }
+    expect(cursor).toBeNull();
+    expect(seen).toEqual([ids[2], ids[1], ids[0]]);
   });
 });
