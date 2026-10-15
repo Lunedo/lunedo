@@ -656,6 +656,26 @@ describe.skipIf(!baseUrl)("exports", () => {
       expect(Number(row.rows[0]?.estimated_size)).toBeGreaterThan(3 * MEGABYTE);
     });
 
+    it("refuses a second export of the same person before it estimates the size", async () => {
+      const context = await setup();
+      await test.services.exports.start(context.steward, { spaceId: context.space.id });
+      const checked = capacity(() => 500 * MEGABYTE);
+      await expect(
+        test.services.exports.start(context.steward, { pageId: context.pages.welcome.id }),
+      ).rejects.toMatchObject({ code: "exportRunning" });
+      expect(checked).not.toHaveBeenCalled();
+    });
+
+    it("skips the estimate when the file store cannot report its free space", async () => {
+      const context = await setup();
+      vi.spyOn(test.services.files.store, "capacity").mockResolvedValue(null);
+      const started = await test.services.exports.start(context.steward, { spaceId: context.space.id });
+      const row = await test.database.execute<{ estimated_size: string }>(
+        sql`select estimated_size from exports where id = ${started.id}`,
+      );
+      expect(Number(row.rows[0]?.estimated_size)).toBe(0);
+    });
+
     it("stops cleanly while writing when less than a twentieth is left, and leaves no file", async () => {
       const context = await setup();
       let free = 500 * MEGABYTE;

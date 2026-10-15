@@ -52,6 +52,7 @@ export const MIN_FREE_SHARE_AT_START = 0.1;
 export const MIN_FREE_SHARE_WHILE_WRITING = 0.05;
 const FREE_SPACE_CHECK_BYTES = 16 * 1024 * 1024;
 const PAGE_OVERHEAD_BYTES = 8 * 1024;
+const EXPORT_RUNNING = "Another export of yours is still running";
 const NOT_ENOUGH_STORAGE =
   "Not enough storage for this export. Your instance administrator needs to free up space.";
 export const MAX_EXPORT_ATTEMPTS = 3;
@@ -397,8 +398,13 @@ export class ExportService {
     }
     const subject = await this.#subject(target);
     if (!subject) throw new ExportError("nothingToExport", "There is nothing to export");
-    const estimate = await this.#estimate(subject.spaceId, subject.rootItemId);
+    const running = await this.#database.execute(sql`
+      select 1 from exports where account_id = ${actor.id} and state in ('queued', 'running') limit 1`);
+    if (running.rows.length > 0) {
+      throw new ExportError("exportRunning", EXPORT_RUNNING);
+    }
     const capacity = await this.#files.store.capacity();
+    const estimate = capacity ? await this.#estimate(subject.spaceId, subject.rootItemId) : 0;
     const id = uuidv7();
     try {
       await this.#database.transaction(async (tx) => {
@@ -455,7 +461,7 @@ export class ExportService {
       });
     } catch (error) {
       if (isUniqueViolation(error)) {
-        throw new ExportError("exportRunning", "Another export of yours is still running");
+        throw new ExportError("exportRunning", EXPORT_RUNNING);
       }
       throw error;
     }
