@@ -123,7 +123,7 @@ export {
   topicOutcome,
   topicStatus,
 } from "../meetings/schema.js";
-export { knownDevices, notifications } from "../notifications/schema.js";
+export { knownDevices, notifications, watches, watchState } from "../notifications/schema.js";
 export {
   breakGlassAccesses,
   builtInRole,

@@ -1,8 +1,23 @@
+import { watchStates } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
-import { index, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  check,
+  index,
+  integer,
+  jsonb,
+  pgEnum,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { accounts } from "../accounts/schema.js";
-import { bytes, primaryId } from "../database/columns.js";
+import { bytes, primaryId, timestamps } from "../database/columns.js";
 import { organizations } from "../organizations/schema.js";
+import { spaces, treeItems } from "../spaces/schema.js";
 
 const timestampColumn = () => timestamp({ withTimezone: true, mode: "date" });
 
@@ -19,6 +34,7 @@ export const notifications = pgTable(
     targetId: text(),
     actorType: text(),
     actorId: uuid(),
+    actorIds: uuid().array().notNull().default(sql`'{}'::uuid[]`),
     params: jsonb().notNull(),
     groupKey: text().notNull(),
     count: integer().notNull().default(1),
@@ -45,4 +61,33 @@ export const knownDevices = pgTable(
     firstSeenAt: timestampColumn().notNull().defaultNow(),
   },
   (table) => [primaryKey({ columns: [table.accountId, table.deviceHash] })],
+);
+
+export const watchState = pgEnum("watch_state", watchStates);
+
+export const watches = pgTable(
+  "watches",
+  {
+    id: primaryId(),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    spaceId: uuid().references(() => spaces.id, { onDelete: "cascade" }),
+    itemId: uuid().references(() => treeItems.id, { onDelete: "cascade" }),
+    state: watchState().notNull(),
+    keepMentions: boolean().notNull().default(true),
+    automatic: boolean().notNull().default(false),
+    ...timestamps(),
+  },
+  (table) => [
+    uniqueIndex("watches_account_space_index")
+      .on(table.accountId, table.spaceId)
+      .where(sql`${table.itemId} is null`),
+    uniqueIndex("watches_account_item_index")
+      .on(table.accountId, table.itemId)
+      .where(sql`${table.itemId} is not null`),
+    index().on(table.spaceId, table.state),
+    index().on(table.itemId, table.state),
+    check("watches_one_target", sql`(${table.spaceId} is null) <> (${table.itemId} is null)`),
+  ],
 );

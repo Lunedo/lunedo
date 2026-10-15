@@ -335,7 +335,8 @@ export class CommentService {
       } else {
         await this.#anchor(tx, actor, itemId, id, anchor, body);
       }
-      await this.#activity.commentMentions(tx, itemId, id, body, actorId);
+      const mentioned = await this.#activity.commentMentions(tx, itemId, id, body, actorId);
+      await this.#activity.commented(tx, itemId, id, actorId, mentioned);
       await signalSpaceChange(tx, { spaceId: item.space_id, kind: "comments", itemId });
       return id;
     });
@@ -403,7 +404,8 @@ export class CommentService {
       await tx.execute(sql`
         insert into comments (id, item_id, parent_id, author_id, body)
         values (${id}, ${parent.itemId}, ${rootId}, ${actorId}, ${JSON.stringify(body)}::jsonb)`);
-      await this.#activity.commentMentions(tx, parent.itemId, id, body, actorId);
+      const mentioned = await this.#activity.commentMentions(tx, parent.itemId, id, body, actorId);
+      await this.#activity.commented(tx, parent.itemId, id, actorId, mentioned);
       await signalSpaceChange(tx, { spaceId: parent.spaceId, kind: "comments", itemId: parent.itemId });
       return id;
     });

@@ -13,6 +13,7 @@ import type { PeopleService } from "../spaces/people.js";
 import { signalSpaceChange } from "../spaces/signals.js";
 import type { VersionService } from "../spaces/versions.js";
 import { refreshReaderVisibility, spaceKeyFor, spaceNameFor, visibleItem } from "../spaces/visibility.js";
+import type { ContentActivity } from "./content.js";
 
 export const EXCERPT_MAX_LENGTH = 500;
 export const MAX_BLOG_PAGE = 100;
@@ -124,6 +125,7 @@ export class BlogService {
   readonly #audit: AuditLog;
   readonly #people: PeopleService;
   readonly #notifications: NotificationService;
+  readonly #activity: ContentActivity;
 
   constructor(options: {
     database: Database;
@@ -132,6 +134,7 @@ export class BlogService {
     audit: AuditLog;
     people: PeopleService;
     notifications: NotificationService;
+    activity: ContentActivity;
   }) {
     this.#database = options.database;
     this.#authorization = options.authorization;
@@ -139,6 +142,7 @@ export class BlogService {
     this.#audit = options.audit;
     this.#people = options.people;
     this.#notifications = options.notifications;
+    this.#activity = options.activity;
   }
 
   #select(viewer: Principal, pinned: SQL): SQL {
@@ -195,6 +199,7 @@ export class BlogService {
       await insertInitialDocument(tx, itemId, actorId);
       await tx.execute(sql`insert into blog_posts (item_id, excerpt) values (${itemId}, ${excerpt})`);
       await refreshReaderVisibility(tx, [itemId]);
+      await this.#activity.created(tx, itemId, actorId);
       await signalSpaceChange(tx, { spaceId, kind: "blog", itemId });
       return itemId;
     });

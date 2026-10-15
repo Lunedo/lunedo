@@ -135,6 +135,10 @@
     {
       "name": "Versions",
       "description": "Drafts, publishing, editing modes, versions, comparison and restoring of pages."
+    },
+    {
+      "name": "Watching",
+      "description": "Watching and muting pages, blog posts, meeting series and spaces."
     }
   ],
   "paths": {
@@ -2291,6 +2295,99 @@
                       "title": "The last way to sign in cannot be removed",
                       "status": 409,
                       "code": "lastSignInMethod"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/account/notification-delivery": {
+      "get": {
+        "operationId": "accountWatches.delivery",
+        "summary": "Show which notification channels are available",
+        "tags": [
+          "Watching"
+        ],
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The available channels.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "emailMethod": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "smtp",
+                            "graph"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "How the instance sends e-mail, or null when no mail server is set up."
+                    }
+                  },
+                  "required": [
+                    "emailMethod"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Which notification channels the instance can deliver."
+                },
+                "example": {
+                  "emailMethod": null
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
                     }
                   }
                 }
@@ -6366,6 +6463,217 @@
                       "code": "reauthenticationRequired"
                     }
                   },
+                  "sessionRequired": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sessionRequired",
+                      "title": "This endpoint needs a signed-in session",
+                      "status": 403,
+                      "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/account/watches": {
+      "get": {
+        "operationId": "accountWatches.list",
+        "summary": "List own watched and muted items",
+        "tags": [
+          "Watching"
+        ],
+        "x-pagehall-internal": true,
+        "x-stability-level": "alpha",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Watched and muted items and spaces.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "target": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "item",
+                                  "space"
+                                ],
+                                "description": "Kind of target."
+                              },
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "ID of the item or space."
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "id"
+                            ],
+                            "additionalProperties": false,
+                            "description": "What is watched or muted."
+                          },
+                          "state": {
+                            "type": "string",
+                            "enum": [
+                              "watching",
+                              "muted"
+                            ],
+                            "description": "Watched or muted."
+                          },
+                          "keepMentions": {
+                            "type": "boolean",
+                            "description": "Whether mentions and assigned tasks still arrive while muted."
+                          },
+                          "automatic": {
+                            "type": "boolean",
+                            "description": "True when it is watched because the caller created, edited or commented."
+                          },
+                          "title": {
+                            "type": "string",
+                            "description": "Title of the item, or name of the space."
+                          },
+                          "kind": {
+                            "type": "string",
+                            "description": "Kind of the item, or `space`. New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
+                              "page",
+                              "folder",
+                              "link",
+                              "blogPost",
+                              "meetingSeries",
+                              "meetingTopic",
+                              "space"
+                            ]
+                          },
+                          "spaceId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "The space."
+                          },
+                          "spaceKey": {
+                            "type": "string",
+                            "description": "Key of the space."
+                          },
+                          "spaceName": {
+                            "type": "string",
+                            "description": "Name of the space."
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "When the state was last set. ISO 8601 timestamp in UTC."
+                          }
+                        },
+                        "required": [
+                          "target",
+                          "state",
+                          "keepMentions",
+                          "automatic",
+                          "title",
+                          "kind",
+                          "spaceId",
+                          "spaceKey",
+                          "spaceName",
+                          "updatedAt"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A watched or muted item or space."
+                      },
+                      "description": "Watched and muted items and spaces, most recently changed first."
+                    },
+                    "counts": {
+                      "type": "object",
+                      "properties": {
+                        "watchedItems": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Watched items."
+                        },
+                        "watchedSpaces": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Watched spaces."
+                        },
+                        "mutedItems": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Muted items."
+                        },
+                        "mutedSpaces": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Muted spaces."
+                        }
+                      },
+                      "required": [
+                        "watchedItems",
+                        "watchedSpaces",
+                        "mutedItems",
+                        "mutedSpaces"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Numbers per kind."
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "counts"
+                  ],
+                  "additionalProperties": false,
+                  "description": "What the caller watches and muted. Items the caller can no longer open are left out."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`sessionRequired`: This endpoint needs a signed-in session.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
                   "sessionRequired": {
                     "value": {
                       "type": "urn:pagehall:problem:sessionRequired",
@@ -112204,6 +112512,820 @@
         }
       }
     },
+    "/api/v1/items/{itemId}/watch": {
+      "delete": {
+        "operationId": "watches.resetItem",
+        "summary": "Remove the watch state of an item",
+        "description": "The item then follows its meeting series and its space again.\n\nRequires the permission `item.view` on the item in `itemId`.",
+        "tags": [
+          "Watching"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.view",
+          "resource": "item",
+          "parameter": "itemId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the page, blog post, meeting series or meeting topic.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The watch state that applies now.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "own": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "state": {
+                              "type": "string",
+                              "enum": [
+                                "watching",
+                                "muted",
+                                "notWatching"
+                              ],
+                              "description": "`watching` delivers changes and comments, `muted` silences everything from it, `notWatching` stops watching it even when its space or meeting series is watched."
+                            },
+                            "keepMentions": {
+                              "type": "boolean",
+                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                            },
+                            "automatic": {
+                              "type": "boolean",
+                              "description": "True when the caller watches because they created, edited or commented on it."
+                            }
+                          },
+                          "required": [
+                            "state",
+                            "keepMentions",
+                            "automatic"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The state the caller set for this item or space, or null."
+                    },
+                    "effective": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "state": {
+                              "type": "string",
+                              "enum": [
+                                "watching",
+                                "muted",
+                                "notWatching"
+                              ],
+                              "description": "`watching` delivers changes and comments, `muted` silences everything from it, `notWatching` stops watching it even when its space or meeting series is watched."
+                            },
+                            "keepMentions": {
+                              "type": "boolean",
+                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                            },
+                            "source": {
+                              "type": "string",
+                              "enum": [
+                                "target",
+                                "series",
+                                "space"
+                              ],
+                              "description": "Where the state comes from: the item or space itself, its meeting series or its space."
+                            }
+                          },
+                          "required": [
+                            "state",
+                            "keepMentions",
+                            "source"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The state that applies, or null when nothing is set."
+                    }
+                  },
+                  "required": [
+                    "own",
+                    "effective"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Whether the caller watches or muted the item or space."
+                },
+                "example": {
+                  "own": null,
+                  "effective": {
+                    "state": "watching",
+                    "keepMentions": true,
+                    "source": "space"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "watches.itemStatus",
+        "summary": "Get the watch state of an item",
+        "description": "Shows the state the caller set for the item and the state that applies, which can come from the item's meeting series or space.\n\nRequires the permission `item.view` on the item in `itemId`.",
+        "tags": [
+          "Watching"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.view",
+          "resource": "item",
+          "parameter": "itemId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the page, blog post, meeting series or meeting topic.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The caller's watch state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "own": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "state": {
+                              "type": "string",
+                              "enum": [
+                                "watching",
+                                "muted",
+                                "notWatching"
+                              ],
+                              "description": "`watching` delivers changes and comments, `muted` silences everything from it, `notWatching` stops watching it even when its space or meeting series is watched."
+                            },
+                            "keepMentions": {
+                              "type": "boolean",
+                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                            },
+                            "automatic": {
+                              "type": "boolean",
+                              "description": "True when the caller watches because they created, edited or commented on it."
+                            }
+                          },
+                          "required": [
+                            "state",
+                            "keepMentions",
+                            "automatic"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The state the caller set for this item or space, or null."
+                    },
+                    "effective": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "state": {
+                              "type": "string",
+                              "enum": [
+                                "watching",
+                                "muted",
+                                "notWatching"
+                              ],
+                              "description": "`watching` delivers changes and comments, `muted` silences everything from it, `notWatching` stops watching it even when its space or meeting series is watched."
+                            },
+                            "keepMentions": {
+                              "type": "boolean",
+                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                            },
+                            "source": {
+                              "type": "string",
+                              "enum": [
+                                "target",
+                                "series",
+                                "space"
+                              ],
+                              "description": "Where the state comes from: the item or space itself, its meeting series or its space."
+                            }
+                          },
+                          "required": [
+                            "state",
+                            "keepMentions",
+                            "source"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The state that applies, or null when nothing is set."
+                    }
+                  },
+                  "required": [
+                    "own",
+                    "effective"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Whether the caller watches or muted the item or space."
+                },
+                "example": {
+                  "own": null,
+                  "effective": {
+                    "state": "watching",
+                    "keepMentions": true,
+                    "source": "space"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "watches.watchItem",
+        "summary": "Watch, mute or stop watching an item",
+        "description": "Watching never grants access: while the caller cannot read the item, nothing is delivered, and delivery resumes when access returns.\n\nRequires the permission `item.view` on the item in `itemId`.",
+        "tags": [
+          "Watching"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.view",
+          "resource": "item",
+          "parameter": "itemId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the page, blog post, meeting series or meeting topic.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "watching",
+                      "muted",
+                      "notWatching"
+                    ],
+                    "description": "`watching` delivers changes and comments, `muted` silences everything from it, `notWatching` stops watching it even when its space or meeting series is watched."
+                  },
+                  "keepMentions": {
+                    "description": "For `muted`: still deliver mentions and assigned tasks. Default true.",
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "state"
+                ],
+                "additionalProperties": false,
+                "description": "The new state."
+              },
+              "example": {
+                "state": "muted",
+                "keepMentions": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The new watch state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "own": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "state": {
+                              "type": "string",
+                              "enum": [
+                                "watching",
+                                "muted",
+                                "notWatching"
+                              ],
+                              "description": "`watching` delivers changes and comments, `muted` silences everything from it, `notWatching` stops watching it even when its space or meeting series is watched."
+                            },
+                            "keepMentions": {
+                              "type": "boolean",
+                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                            },
+                            "automatic": {
+                              "type": "boolean",
+                              "description": "True when the caller watches because they created, edited or commented on it."
+                            }
+                          },
+                          "required": [
+                            "state",
+                            "keepMentions",
+                            "automatic"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The state the caller set for this item or space, or null."
+                    },
+                    "effective": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "state": {
+                              "type": "string",
+                              "enum": [
+                                "watching",
+                                "muted",
+                                "notWatching"
+                              ],
+                              "description": "`watching` delivers changes and comments, `muted` silences everything from it, `notWatching` stops watching it even when its space or meeting series is watched."
+                            },
+                            "keepMentions": {
+                              "type": "boolean",
+                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                            },
+                            "source": {
+                              "type": "string",
+                              "enum": [
+                                "target",
+                                "series",
+                                "space"
+                              ],
+                              "description": "Where the state comes from: the item or space itself, its meeting series or its space."
+                            }
+                          },
+                          "required": [
+                            "state",
+                            "keepMentions",
+                            "source"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The state that applies, or null when nothing is set."
+                    }
+                  },
+                  "required": [
+                    "own",
+                    "effective"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Whether the caller watches or muted the item or space."
+                },
+                "example": {
+                  "own": null,
+                  "effective": {
+                    "state": "watching",
+                    "keepMentions": true,
+                    "source": "space"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/meeting-series/{seriesId}": {
       "get": {
         "operationId": "meetings.series",
@@ -119012,6 +120134,12 @@
                               }
                             ]
                           },
+                          "actorCount": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Number of different people whose actions are combined in this notification."
+                          },
                           "params": {
                             "$ref": "#/components/schemas/Schema113ae44d8375"
                           },
@@ -119046,6 +120174,7 @@
                           "organizationId",
                           "target",
                           "actor",
+                          "actorCount",
                           "params",
                           "count",
                           "createdAt",
@@ -189495,6 +190624,819 @@
                       "after": "reader"
                     }
                   ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/spaces/{spaceId}/watch": {
+      "delete": {
+        "operationId": "watches.resetSpace",
+        "summary": "Remove the watch state of a space",
+        "description": "The caller then neither watches nor mutes the space; pages keep their own states.\n\nRequires the permission `space.view` on the space in `spaceId`.",
+        "tags": [
+          "Watching"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.view",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the space.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The watch state that applies now.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "own": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "state": {
+                              "type": "string",
+                              "enum": [
+                                "watching",
+                                "muted",
+                                "notWatching"
+                              ],
+                              "description": "`watching` delivers changes and comments, `muted` silences everything from it, `notWatching` stops watching it even when its space or meeting series is watched."
+                            },
+                            "keepMentions": {
+                              "type": "boolean",
+                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                            },
+                            "automatic": {
+                              "type": "boolean",
+                              "description": "True when the caller watches because they created, edited or commented on it."
+                            }
+                          },
+                          "required": [
+                            "state",
+                            "keepMentions",
+                            "automatic"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The state the caller set for this item or space, or null."
+                    },
+                    "effective": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "state": {
+                              "type": "string",
+                              "enum": [
+                                "watching",
+                                "muted",
+                                "notWatching"
+                              ],
+                              "description": "`watching` delivers changes and comments, `muted` silences everything from it, `notWatching` stops watching it even when its space or meeting series is watched."
+                            },
+                            "keepMentions": {
+                              "type": "boolean",
+                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                            },
+                            "source": {
+                              "type": "string",
+                              "enum": [
+                                "target",
+                                "series",
+                                "space"
+                              ],
+                              "description": "Where the state comes from: the item or space itself, its meeting series or its space."
+                            }
+                          },
+                          "required": [
+                            "state",
+                            "keepMentions",
+                            "source"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The state that applies, or null when nothing is set."
+                    }
+                  },
+                  "required": [
+                    "own",
+                    "effective"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Whether the caller watches or muted the item or space."
+                },
+                "example": {
+                  "own": null,
+                  "effective": {
+                    "state": "watching",
+                    "keepMentions": true,
+                    "source": "space"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "watches.spaceStatus",
+        "summary": "Get the watch state of a space",
+        "description": "Shows whether the caller watches or muted the space.\n\nRequires the permission `space.view` on the space in `spaceId`.",
+        "tags": [
+          "Watching"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.view",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the space.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The caller's watch state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "own": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "state": {
+                              "type": "string",
+                              "enum": [
+                                "watching",
+                                "muted",
+                                "notWatching"
+                              ],
+                              "description": "`watching` delivers changes and comments, `muted` silences everything from it, `notWatching` stops watching it even when its space or meeting series is watched."
+                            },
+                            "keepMentions": {
+                              "type": "boolean",
+                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                            },
+                            "automatic": {
+                              "type": "boolean",
+                              "description": "True when the caller watches because they created, edited or commented on it."
+                            }
+                          },
+                          "required": [
+                            "state",
+                            "keepMentions",
+                            "automatic"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The state the caller set for this item or space, or null."
+                    },
+                    "effective": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "state": {
+                              "type": "string",
+                              "enum": [
+                                "watching",
+                                "muted",
+                                "notWatching"
+                              ],
+                              "description": "`watching` delivers changes and comments, `muted` silences everything from it, `notWatching` stops watching it even when its space or meeting series is watched."
+                            },
+                            "keepMentions": {
+                              "type": "boolean",
+                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                            },
+                            "source": {
+                              "type": "string",
+                              "enum": [
+                                "target",
+                                "series",
+                                "space"
+                              ],
+                              "description": "Where the state comes from: the item or space itself, its meeting series or its space."
+                            }
+                          },
+                          "required": [
+                            "state",
+                            "keepMentions",
+                            "source"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The state that applies, or null when nothing is set."
+                    }
+                  },
+                  "required": [
+                    "own",
+                    "effective"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Whether the caller watches or muted the item or space."
+                },
+                "example": {
+                  "own": null,
+                  "effective": {
+                    "state": "watching",
+                    "keepMentions": true,
+                    "source": "space"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "watches.watchSpace",
+        "summary": "Watch, mute or stop watching a space",
+        "description": "Watching a space delivers changes and comments on everything in it the caller can read. Muting it silences everything from it, except mentions and assigned tasks when `keepMentions` is true.\n\nRequires the permission `space.view` on the space in `spaceId`.",
+        "tags": [
+          "Watching"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.view",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the space.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "watching",
+                      "muted",
+                      "notWatching"
+                    ],
+                    "description": "`watching` delivers changes and comments, `muted` silences everything from it, `notWatching` stops watching it even when its space or meeting series is watched."
+                  },
+                  "keepMentions": {
+                    "description": "For `muted`: still deliver mentions and assigned tasks. Default true.",
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "state"
+                ],
+                "additionalProperties": false,
+                "description": "The new state."
+              },
+              "example": {
+                "state": "watching"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The new watch state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "own": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "state": {
+                              "type": "string",
+                              "enum": [
+                                "watching",
+                                "muted",
+                                "notWatching"
+                              ],
+                              "description": "`watching` delivers changes and comments, `muted` silences everything from it, `notWatching` stops watching it even when its space or meeting series is watched."
+                            },
+                            "keepMentions": {
+                              "type": "boolean",
+                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                            },
+                            "automatic": {
+                              "type": "boolean",
+                              "description": "True when the caller watches because they created, edited or commented on it."
+                            }
+                          },
+                          "required": [
+                            "state",
+                            "keepMentions",
+                            "automatic"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The state the caller set for this item or space, or null."
+                    },
+                    "effective": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "state": {
+                              "type": "string",
+                              "enum": [
+                                "watching",
+                                "muted",
+                                "notWatching"
+                              ],
+                              "description": "`watching` delivers changes and comments, `muted` silences everything from it, `notWatching` stops watching it even when its space or meeting series is watched."
+                            },
+                            "keepMentions": {
+                              "type": "boolean",
+                              "description": "Whether mentions and assigned tasks still arrive while muted."
+                            },
+                            "source": {
+                              "type": "string",
+                              "enum": [
+                                "target",
+                                "series",
+                                "space"
+                              ],
+                              "description": "Where the state comes from: the item or space itself, its meeting series or its space."
+                            }
+                          },
+                          "required": [
+                            "state",
+                            "keepMentions",
+                            "source"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The state that applies, or null when nothing is set."
+                    }
+                  },
+                  "required": [
+                    "own",
+                    "effective"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Whether the caller watches or muted the item or space."
+                },
+                "example": {
+                  "own": null,
+                  "effective": {
+                    "state": "watching",
+                    "keepMentions": true,
+                    "source": "space"
+                  }
                 }
               }
             }

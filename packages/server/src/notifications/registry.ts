@@ -1,8 +1,7 @@
-import type { DateFormat, NotificationPreference } from "@pagehall/shared";
+import type { DateFormat } from "@pagehall/shared";
 import type { z } from "zod";
 import type { Executor } from "../database/database.js";
 import type { Language, MailTemplate, MailTemplates } from "../mail/templates.js";
-import type { SettingDefinition } from "../settings/definition.js";
 
 export interface VisibilityContext<P> {
   recipientId: string;
@@ -24,11 +23,16 @@ export interface NotificationMail {
   params: Omit<MailTemplates[MailTemplate], "instanceName">;
 }
 
+export interface NotificationSubject {
+  spaceId: string | null;
+  itemId: string | null;
+}
+
 export interface NotificationTypeDefinition<P = unknown> {
   type: string;
   targetType: string;
   params: z.ZodType<P>;
-  setting?: SettingDefinition<NotificationPreference>;
+  subject?(context: { targetId: string | null; params: P; executor: Executor }): Promise<NotificationSubject>;
   visible(context: VisibilityContext<P>): Promise<boolean>;
   mail?(params: P, locale: MailLocale): NotificationMail;
 }

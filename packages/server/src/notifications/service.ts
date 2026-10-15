@@ -1,3 +1,4 @@
+import { type NotificationEvent, notificationEventOf } from "@pagehall/shared";
 import { and, desc, eq, isNull, lte, sql } from "drizzle-orm";
 import { accountPrincipal, type Principal } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";
@@ -6,13 +7,16 @@ import type { AuthorizationService } from "../authorization/service.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import type { MailService } from "../mail/mail-service.js";
 import type { SettingsService } from "../settings/service.js";
-import type { NotificationRegistry, NotificationTypeDefinition } from "./registry.js";
+import type { NotificationRegistry, NotificationSubject, NotificationTypeDefinition } from "./registry.js";
 import { notifications } from "./schema.js";
-import { notificationRetentionSetting } from "./types.js";
+import { notificationEventSettings, notificationRetentionSetting } from "./types.js";
+import { effectiveWatches } from "./watches.js";
 
 export const NOTIFICATIONS_CHANNEL = "pagehall_notifications";
 
-export const COMBINE_WINDOW_MINUTES = 15;
+export const COMBINE_WINDOW_MINUTES = 30;
+export const COMBINE_MAX_HOURS = 24;
+const MAX_ACTORS = 50;
 
 const SCAN_BATCH = 100;
 const SCAN_LIMIT = 1000;
@@ -24,6 +28,7 @@ export interface NotifyInput {
   organizationId: string | null;
   targetId: string | null;
   actor?: Principal | null;
+  contributors?: readonly string[];
   params: unknown;
 }
 
@@ -38,6 +43,7 @@ export interface NotificationItem {
   organizationId: string | null;
   target: { type: string; id: string | null };
   actor: { type: string; id: string | null; name: string | null } | null;
+  actorCount: number;
   params: unknown;
   count: number;
   createdAt: Date;
@@ -61,6 +67,7 @@ const listColumns = {
   actorType: notifications.actorType,
   actorId: notifications.actorId,
   actorName: accounts.name,
+  actorCount: sql<number>`cardinality(${notifications.actorIds})`,
   params: notifications.params,
   count: notifications.count,
   createdAt: notifications.createdAt,
@@ -78,6 +85,7 @@ type ListRow = {
   actorType: string | null;
   actorId: string | null;
   actorName: string | null;
+  actorCount: number;
   params: unknown;
   count: number;
   createdAt: Date;
@@ -93,6 +101,7 @@ function toItem(row: ListRow): NotificationItem {
     organizationId: row.organizationId,
     target: { type: row.targetType, id: row.targetId },
     actor: row.actorType ? { type: row.actorType, id: row.actorId, name: row.actorName } : null,
+    actorCount: Number(row.actorCount),
     params: row.params,
     count: row.count,
     createdAt: row.createdAt,
@@ -134,13 +143,22 @@ export class NotificationService {
 
   async notify(tx: Transaction, input: NotifyInput): Promise<NotifyResult> {
     const definition = this.#definition(input.type);
+    const event = notificationEventOf(input.type);
+    const settings = event ? notificationEventSettings.get(event.id) : undefined;
+    if (!event || !settings) throw new Error(`Notification type ${input.type} belongs to no event`);
     const params = definition.params.parse(input.params);
     const groupKey = `${input.type}:${input.targetId ?? ""}`;
     const actor = input.actor?.type === "account" ? input.actor : null;
-    const smtp = await this.#mail.smtpConfiguration(tx);
+    const actorIds = [...new Set([...(actor ? [actor.id] : []), ...(input.contributors ?? [])])];
+    const ownAction = (recipientId: string) =>
+      event.group === "content" && actorIds.length > 0 && actorIds.every((id) => id === recipientId);
+    const candidates = [...new Set(input.recipients)].filter((id) => !ownAction(id));
+    const muted = await this.#muted(tx, definition, event, input, params, candidates);
+    const mailMethod = await this.#mail.configuredMethod(tx);
     const mailIds: string[] = [];
     let reached = 0;
-    for (const recipientId of new Set(input.recipients)) {
+    for (const recipientId of candidates) {
+      if (muted.has(recipientId)) continue;
       const [account] = await tx
         .select({ email: accounts.email, state: accounts.state })
         .from(accounts)
@@ -149,14 +167,13 @@ export class NotificationService {
       const chain = input.organizationId
         ? { organization: input.organizationId, user: recipientId }
         : { ...(await accountScopeChain(tx, recipientId)), user: recipientId };
-      const preference = definition.setting
-        ? await this.#settings.get(definition.setting, chain, { executor: tx })
-        : { inApp: true, email: false };
+      const inApp = await this.#settings.get(settings.inApp, chain, { executor: tx });
+      const email = await this.#settings.get(settings.email, chain, { executor: tx });
       let combined = false;
-      if (preference.inApp) {
-        combined = await this.#store(tx, recipientId, groupKey, definition, input, actor, params);
+      if (inApp) {
+        combined = await this.#store(tx, recipientId, groupKey, definition, input, actor, actorIds, params);
       }
-      if (preference.email && !combined && account.email && smtp && definition.mail) {
+      if (email === "immediately" && !combined && account.email && mailMethod && definition.mail) {
         const locale = {
           language: await this.#mail.languageOf(recipientId, tx),
           timeZone: await this.#mail.timeZoneOf(recipientId, tx),
@@ -174,9 +191,39 @@ export class NotificationService {
           }),
         );
       }
-      if (preference.inApp || preference.email) reached += 1;
+      if (inApp || email !== "off") reached += 1;
     }
     return { mailIds, recipients: reached };
+  }
+
+  async #subject(
+    tx: Transaction,
+    definition: NotificationTypeDefinition,
+    input: NotifyInput,
+    params: unknown,
+  ): Promise<NotificationSubject | null> {
+    if (definition.subject) return definition.subject({ targetId: input.targetId, params, executor: tx });
+    if (definition.targetType === "item" && input.targetId) return { spaceId: null, itemId: input.targetId };
+    return null;
+  }
+
+  async #muted(
+    tx: Transaction,
+    definition: NotificationTypeDefinition,
+    event: NotificationEvent,
+    input: NotifyInput,
+    params: unknown,
+    recipients: readonly string[],
+  ): Promise<Set<string>> {
+    if (recipients.length === 0) return new Set();
+    const subject = await this.#subject(tx, definition, input, params);
+    if (!subject) return new Set();
+    const states = await effectiveWatches(tx, subject, recipients);
+    const muted = new Set<string>();
+    for (const [accountId, watch] of states) {
+      if (watch.state === "muted" && !(event.keptWhenMuted && watch.keepMentions)) muted.add(accountId);
+    }
+    return muted;
   }
 
   async #store(
@@ -186,6 +233,7 @@ export class NotificationService {
     definition: NotificationTypeDefinition,
     input: NotifyInput,
     actor: { type: "account"; id: string } | null,
+    actorIds: readonly string[],
     params: unknown,
   ): Promise<boolean> {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`${recipientId}:${groupKey}`}, 0))`);
@@ -198,19 +246,25 @@ export class NotificationService {
           eq(notifications.groupKey, groupKey),
           isNull(notifications.readAt),
           sql`${notifications.updatedAt} > now() - make_interval(mins => ${COMBINE_WINDOW_MINUTES})`,
+          sql`${notifications.createdAt} > now() - make_interval(hours => ${COMBINE_MAX_HOURS})`,
         ),
       )
       .orderBy(desc(notifications.updatedAt))
       .limit(1)
       .for("update");
+    const latest = actor?.id ?? actorIds[0] ?? null;
     if (open) {
       await tx
         .update(notifications)
         .set({
           count: sql`${notifications.count} + 1`,
           params,
-          actorType: actor?.type ?? null,
-          actorId: actor?.id ?? null,
+          actorType: latest ? "account" : null,
+          actorId: latest,
+          actorIds: sql`(select coalesce(array_agg(a.id order by a.first), '{}'::uuid[]) from (
+            select id, min(position) as first
+            from unnest(${notifications.actorIds} || ${sql.param([...actorIds])}::uuid[]) with ordinality as u(id, position)
+            group by id order by first limit ${MAX_ACTORS}) a)`,
           updatedAt: sql`now()`,
         })
         .where(eq(notifications.id, open.id));
@@ -221,8 +275,9 @@ export class NotificationService {
         type: input.type,
         targetType: definition.targetType,
         targetId: input.targetId,
-        actorType: actor?.type ?? null,
-        actorId: actor?.id ?? null,
+        actorType: latest ? "account" : null,
+        actorId: latest,
+        actorIds: actorIds.slice(0, MAX_ACTORS),
         params,
         groupKey,
       });
@@ -353,11 +408,23 @@ export class NotificationService {
   }
 
   async applyRetention(): Promise<number> {
-    const days = await this.#settings.get(notificationRetentionSetting, {});
-    const deleted = await this.#database
-      .delete(notifications)
-      .where(sql`${notifications.updatedAt} < now() - make_interval(days => ${days})`)
-      .returning({ id: notifications.id });
-    return deleted.length;
+    const organizations = await this.#database
+      .selectDistinct({ id: notifications.organizationId })
+      .from(notifications);
+    let deleted = 0;
+    for (const { id } of organizations) {
+      const days = await this.#settings.get(notificationRetentionSetting, id ? { organization: id } : {});
+      const removed = await this.#database
+        .delete(notifications)
+        .where(
+          and(
+            id ? eq(notifications.organizationId, id) : isNull(notifications.organizationId),
+            sql`${notifications.updatedAt} < now() - make_interval(days => ${days})`,
+          ),
+        )
+        .returning({ id: notifications.id });
+      deleted += removed.length;
+    }
+    return deleted;
   }
 }

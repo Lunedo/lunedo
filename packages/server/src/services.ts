@@ -115,6 +115,7 @@ import { NotificationRegistry } from "./notifications/registry.js";
 import { NOTIFICATION_RETENTION_SCHEDULE, notificationRetentionJob } from "./notifications/retention.js";
 import { NotificationService } from "./notifications/service.js";
 import { builtinNotificationTypes } from "./notifications/types.js";
+import { WatchService } from "./notifications/watches.js";
 import { BreakGlassService } from "./organizations/break-glass.js";
 import { GroupService } from "./organizations/groups.js";
 import { HomeOrganizationService } from "./organizations/home.js";
@@ -205,6 +206,7 @@ export interface AccountServices {
   serviceAccounts: ServiceAccountService;
   apiTokens: ApiTokenService;
   notifications: NotificationService;
+  watches: WatchService;
   identityProviders: IdentityProviderService;
   providerSignIn: ProviderSignInService;
   groupMapping: GroupMappingService;
@@ -508,7 +510,8 @@ export function createAccountServices(options: {
     people,
   });
   const personalSpaces = new PersonalSpaceService({ database, audit, authorization, spaces });
-  const activity = new ContentActivity({ database, notifications, authorization });
+  const watches = new WatchService({ database, authorization, settings });
+  const activity = new ContentActivity({ database, notifications, authorization, watches });
   const documents = new PageDocumentService({
     database,
     authorization,
@@ -526,9 +529,10 @@ export function createAccountServices(options: {
     people,
     audit,
     notifications,
+    activity,
     administrators: (executor, spaceId) => pageAccess.spaceAdministrators(executor, spaceId),
   });
-  const pageStatus = new PageStatusService({ database, authorization, settings, people, audit });
+  const pageStatus = new PageStatusService({ database, authorization, settings, people, audit, activity });
   const shortcuts = new ShortcutService({ database, authorization, audit });
   const announcements = new AnnouncementService({ database, authorization, audit, people });
   const tree = new TreeService({
@@ -554,7 +558,7 @@ export function createAccountServices(options: {
     audit,
   });
   const tasks = new TaskService({ database, authorization, settings, people });
-  const blog = new BlogService({ database, authorization, versions, audit, people, notifications });
+  const blog = new BlogService({ database, authorization, versions, audit, people, notifications, activity });
   const blogSubscriptions = new BlogSubscriptionService({ database, authorization, notifications });
   const home = new HomeService({ database, authorization, settings, tasks, blog, people });
   const pageAccess = new PageAccessService({ database, authorization, audit, people, notifications });
@@ -634,7 +638,7 @@ export function createAccountServices(options: {
     activity,
   });
   const meetingReminders = new MeetingReminders({ database, authorization, notifications });
-  const topics = new TopicService({ database, authorization, people, documents, meetings });
+  const topics = new TopicService({ database, authorization, people, documents, meetings, activity });
   const decisions = new DecisionService({ database, authorization });
   const reports = new ReportService({ database, authorization, people });
   const privateNotes = new PrivateNotesService({ database, authorization });
@@ -727,6 +731,7 @@ export function createAccountServices(options: {
     }),
   );
   return {
+    watches,
     audit,
     instanceAddress,
     accounts,

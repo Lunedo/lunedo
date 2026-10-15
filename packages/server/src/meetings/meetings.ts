@@ -445,6 +445,7 @@ export class MeetingService {
           values (${id}, ${accountId}, ${position})`);
       }
       await refreshReaderVisibility(tx, [id]);
+      await this.#activity.created(tx, id, actorId);
       const series = await this.#series(tx, id, true);
       const start = firstStart(schedule);
       const first = schedule.recurrence

@@ -4,6 +4,9 @@ import { idSchema } from "./validation.js";
 export const notificationChannels = ["inApp", "email"] as const;
 export type NotificationChannel = (typeof notificationChannels)[number];
 
+export const emailDeliveries = ["off", "immediately", "digest"] as const;
+export type EmailDelivery = (typeof emailDeliveries)[number];
+
 const instant = z.iso.datetime();
 
 export const notificationParamSchemas = {
@@ -82,13 +85,79 @@ export type NotificationType = keyof typeof notificationParamSchemas;
 export type NotificationParams<T extends NotificationType> = z.output<(typeof notificationParamSchemas)[T]>;
 export const notificationTypes = Object.keys(notificationParamSchemas) as NotificationType[];
 
-export const notificationPreferenceSchema = z.object({ inApp: z.boolean(), email: z.boolean() }).strict();
-export type NotificationPreference = z.output<typeof notificationPreferenceSchema>;
-
 export function notificationSettingKey(type: string): string {
   const [first = "", ...rest] = type.split(".");
   return `notifications.${first}${rest.map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join("")}`;
 }
+
+export type NotificationEventGroup = "content" | "administration";
+
+export interface NotificationEvent {
+  id: string;
+  group: NotificationEventGroup;
+  types: readonly string[];
+  defaults: { inApp: boolean; email: EmailDelivery };
+  keptWhenMuted: boolean;
+}
+
+function contentEvent(
+  id: string,
+  types: readonly string[],
+  email: EmailDelivery,
+  keptWhenMuted = false,
+): NotificationEvent {
+  return { id, group: "content", types, defaults: { inApp: true, email }, keptWhenMuted };
+}
+
+function administrationEvent(id: string, types: readonly string[], email: EmailDelivery): NotificationEvent {
+  return { id, group: "administration", types, defaults: { inApp: true, email }, keptWhenMuted: false };
+}
+
+export const notificationEvents: readonly NotificationEvent[] = [
+  contentEvent("mentions", ["content.mentioned"], "immediately", true),
+  contentEvent("tasks", ["task.assigned"], "immediately", true),
+  contentEvent("shares", ["page.shared", "access.requestDecided"], "immediately"),
+  contentEvent("accessRequests", ["access.requested"], "immediately"),
+  contentEvent("comments", ["comment.created"], "digest"),
+  contentEvent("changes", ["content.changed"], "off"),
+  contentEvent("blogPosts", ["blogPost.published"], "digest"),
+  contentEvent("meetings", ["meeting.reminder", "meeting.notesAvailable", "oneOnOne.started"], "off"),
+  contentEvent(
+    "ownershipAndStatus",
+    ["ownership.transferred", "page.statusChanged", "ownership.orphaned"],
+    "off",
+  ),
+  administrationEvent(
+    "spaceAdministration",
+    ["restriction.orphaned", "space.confidentialWithoutAdministrator", "blogPost.scheduleHeld"],
+    "off",
+  ),
+  administrationEvent(
+    "importsAndExports",
+    ["import.finished", "import.failed", "import.held", "export.ready", "export.failed"],
+    "off",
+  ),
+  ...notificationTypes.map((type) =>
+    administrationEvent(notificationSettingKey(type).slice("notifications.".length), [type], "immediately"),
+  ),
+];
+
+const eventsByType = new Map(
+  notificationEvents.flatMap((event) => event.types.map((type) => [type, event] as const)),
+);
+
+export function notificationEventOf(type: string): NotificationEvent | undefined {
+  return eventsByType.get(type);
+}
+
+export function notificationChannelSettingKey(eventId: string, channel: NotificationChannel): string {
+  return `notifications.${eventId}.${channel}`;
+}
+
+export const digestTimeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
+
+export const watchStates = ["watching", "muted", "notWatching"] as const;
+export type WatchState = (typeof watchStates)[number];
 
 const contentKind = z.enum(["page", "blogPost", "meetingTopic"]);
 const shareRole = z.enum(["reader", "commenter", "editor"]);
@@ -122,6 +191,31 @@ export const contentNotificationParamSchemas = {
     spaceKey: z.string(),
     role: shareRole,
     includeDescendants: z.boolean(),
+  }),
+  "comment.created": z.object({
+    itemTitle: z.string(),
+    itemKind: contentKind,
+    spaceKey: z.string(),
+    commentId: idSchema,
+  }),
+  "content.changed": z.object({
+    itemTitle: z.string(),
+    itemKind: contentKind,
+    spaceKey: z.string(),
+    version: z.number().int().positive(),
+  }),
+  "ownership.transferred": z.object({
+    itemTitle: z.string(),
+    itemKind: contentKind,
+    spaceKey: z.string(),
+    ownerId: idSchema,
+  }),
+  "page.statusChanged": z.object({
+    itemTitle: z.string(),
+    itemKind: contentKind,
+    spaceKey: z.string(),
+    statusBuiltIn: z.string().nullable(),
+    statusName: z.string().nullable(),
   }),
   "access.requested": z.object({
     requestId: idSchema,

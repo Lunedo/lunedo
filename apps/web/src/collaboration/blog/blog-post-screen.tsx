@@ -41,6 +41,7 @@ import { CoverEditor, CoverImage } from "../../files/cover.js";
 import { AttachmentPreviewProvider } from "../../files/preview-host.js";
 import { UploadsProvider } from "../../files/uploads.js";
 import { instantToZoned, zonedToInstant } from "../../format/zoned.js";
+import { WatchMenu } from "../../notifications/watch-menu.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { useDocumentTitle } from "../../screens/settings/settings-page.js";
 import { useDeleteItem } from "../../spaces/content-actions.js";
@@ -432,6 +433,7 @@ function BlogPostArticle({ item, post, lostEdit }: { item: ItemDetails; post: Bl
                 <FollowBlogButton spaceId={space.id} spaceName={spaceDisplayName(t, space)} />
               ) : null}
               <StarButton target={{ itemId: item.id }} title={title} />
+              <WatchMenu target={{ type: "item", id: item.id }} name={title} />
               {collaboration.commentsButton}
               <Menu trigger={<IconButton label={t("page.more")} icon={MoreHorizontal} />} items={menuItems} />
             </>

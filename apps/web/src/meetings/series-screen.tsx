@@ -35,6 +35,7 @@ import { ApiError, request } from "../api/request.js";
 import { TaskTable } from "../collaboration/task-table.js";
 import { LoadError } from "../errors/failure.js";
 import { problemMessage } from "../errors/problem-message.js";
+import { WatchMenu } from "../notifications/watch-menu.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { useDocumentTitle } from "../screens/settings/settings-page.js";
 import { GiveAccessButton } from "../sharing/give-access.js";
@@ -182,6 +183,7 @@ function SeriesView({ series }: { series: Series }) {
         ]}
         actions={
           <>
+            <WatchMenu target={{ type: "item", id: series.id }} name={series.title} />
             {writable ? (
               <Button variant="secondary" icon={Settings} onClick={() => setSettings(true)}>
                 {t("meetings.series.settings")}

@@ -44,9 +44,29 @@ const blogPostPublished = defineNotificationType({
   },
 });
 
+const commentCreated = defineNotificationType({
+  type: "comment.created",
+  targetType: "item",
+  params: contentNotificationParamSchemas["comment.created"],
+  async visible(context) {
+    return context.targetId !== null && context.can("item.view", { type: "item", id: context.targetId });
+  },
+});
+
+const contentChanged = defineNotificationType({
+  type: "content.changed",
+  targetType: "item",
+  params: contentNotificationParamSchemas["content.changed"],
+  async visible(context) {
+    return context.targetId !== null && context.can("item.view", { type: "item", id: context.targetId });
+  },
+});
+
 export const collaborationNotificationTypes = [
   contentMentioned,
   taskAssigned,
   scheduleHeld,
   blogPostPublished,
+  commentCreated,
+  contentChanged,
 ];
