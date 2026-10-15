@@ -21,6 +21,13 @@ import { spaces, treeItems } from "../spaces/schema.js";
 
 const timestampColumn = () => timestamp({ withTimezone: true, mode: "date" });
 
+export const notificationEmailStatus = pgEnum("notification_email_status", [
+  "immediate",
+  "digest",
+  "sent",
+  "skipped",
+]);
+
 export const notifications = pgTable(
   "notifications",
   {
@@ -41,9 +48,15 @@ export const notifications = pgTable(
     createdAt: timestampColumn().notNull().defaultNow(),
     updatedAt: timestampColumn().notNull().defaultNow(),
     readAt: timestampColumn(),
+    inApp: boolean().notNull().default(true),
+    emailStatus: notificationEmailStatus(),
+    emailPendingSince: timestampColumn(),
   },
   (table) => [
     index().on(table.recipientId, table.updatedAt, table.id),
+    index("notifications_email_pending_index")
+      .on(table.recipientId, table.emailPendingSince)
+      .where(sql`${table.emailStatus} in ('immediate', 'digest')`),
     index("notifications_unread_group_index")
       .on(table.recipientId, table.groupKey, table.updatedAt)
       .where(sql`${table.readAt} is null`),

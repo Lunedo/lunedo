@@ -407,6 +407,8 @@ export {
   graphMailSetting,
   type MailCredentialInput,
   type MailCredentialSummary,
+  type MailDeliveryState,
+  type MailFailure,
   MailNotConfiguredError,
   type MailTestResult,
   mailMethodSetting,
@@ -462,6 +464,11 @@ export {
   TopicService,
   type TopicSummary,
 } from "./meetings/topics.js";
+export {
+  NOTIFICATION_EMAIL_SCHEDULE,
+  NotificationMailer,
+  notificationEmailJob,
+} from "./notifications/email.js";
 export { NotificationHub } from "./notifications/hub.js";
 export {
   defineNotificationType,
@@ -481,12 +488,19 @@ export {
 } from "./notifications/service.js";
 export {
   builtinNotificationTypes,
+  digestEnabledSetting,
   digestTimeSetting,
   notificationEventSettings,
   notificationRetentionSetting,
   notificationSettings,
   watchAutomaticallySetting,
 } from "./notifications/types.js";
+export {
+  type UnsubscribeResult,
+  type UnsubscribeScope,
+  UnsubscribeService,
+  type UnsubscribeState,
+} from "./notifications/unsubscribe.js";
 export {
   type EffectiveWatch,
   type OwnWatch,

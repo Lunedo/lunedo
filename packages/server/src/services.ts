@@ -111,10 +111,16 @@ import { OneOnOneService } from "./meetings/one-on-ones.js";
 import { PrivateNotesService } from "./meetings/private-notes.js";
 import { MEETING_REMINDERS_SCHEDULE, MeetingReminders, meetingRemindersJob } from "./meetings/reminders.js";
 import { TopicService } from "./meetings/topics.js";
+import {
+  NOTIFICATION_EMAIL_SCHEDULE,
+  NotificationMailer,
+  notificationEmailJob,
+} from "./notifications/email.js";
 import { NotificationRegistry } from "./notifications/registry.js";
 import { NOTIFICATION_RETENTION_SCHEDULE, notificationRetentionJob } from "./notifications/retention.js";
 import { NotificationService } from "./notifications/service.js";
 import { builtinNotificationTypes } from "./notifications/types.js";
+import { UnsubscribeService } from "./notifications/unsubscribe.js";
 import { WatchService } from "./notifications/watches.js";
 import { BreakGlassService } from "./organizations/break-glass.js";
 import { GroupService } from "./organizations/groups.js";
@@ -206,6 +212,8 @@ export interface AccountServices {
   serviceAccounts: ServiceAccountService;
   apiTokens: ApiTokenService;
   notifications: NotificationService;
+  notificationMailer: NotificationMailer;
+  unsubscribe: UnsubscribeService;
   watches: WatchService;
   identityProviders: IdentityProviderService;
   providerSignIn: ProviderSignInService;
@@ -523,6 +531,15 @@ export function createAccountServices(options: {
   const trash = new TrashService({ database, audit, settings, people, activity, authorization, logger });
   const archive = new ArchiveService({ database, audit, authorization, activity, trash });
   const signer = new ValueSigner({ database, encryption });
+  const unsubscribe = new UnsubscribeService({ database, settings, signer });
+  const notificationMailer = new NotificationMailer({
+    database,
+    settings,
+    mail,
+    notifications,
+    authorization,
+    unsubscribe,
+  });
   const ownership = new OwnershipService({
     database,
     authorization,
@@ -732,6 +749,8 @@ export function createAccountServices(options: {
   );
   return {
     watches,
+    notificationMailer,
+    unsubscribe,
     audit,
     instanceAddress,
     accounts,
@@ -945,6 +964,10 @@ export async function workAccountJobs(
     const sent = await services.meetingReminders.sendDue();
     if (sent > 0) job.logger.info({ sent }, "Meeting reminders sent");
   });
+  await jobs.work(notificationEmailJob, async (job) => {
+    const sent = await services.notificationMailer.sendDue();
+    if (sent.immediate + sent.digests > 0) job.logger.info(sent, "Notification e-mails queued");
+  });
   await jobs.work(collaborationCleanupJob, async (job) => {
     const removed = {
       views: await services.home.removeOldViews(),
@@ -954,6 +977,7 @@ export async function workAccountJobs(
   });
   await jobs.schedule(scheduledBlogPostsJob, SCHEDULED_BLOG_POSTS_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(meetingRemindersJob, MEETING_REMINDERS_SCHEDULE, {}, { key: "minutely" });
+  await jobs.schedule(notificationEmailJob, NOTIFICATION_EMAIL_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(collaborationCleanupJob, COLLABORATION_CLEANUP_SCHEDULE, {}, { key: "hourly" });
   await jobs.schedule(dispatchPendingMailJob, DISPATCH_PENDING_MAIL_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(trashRetentionJob, TRASH_RETENTION_SCHEDULE, {}, { key: "hourly" });

@@ -3,8 +3,11 @@ import {
   type DateFormat,
   type GraphMailConfiguration,
   graphMailConfigurationSchema,
+  type MailDeliveryStep,
   type MailMethod,
   mailMethods,
+  type SmtpConfigurationInput,
+  type SmtpOAuth2Configuration,
   smtpConfigurationSchema,
   uuidv7,
 } from "@pagehall/shared";
@@ -31,7 +34,16 @@ import { defineSetting } from "../settings/definition.js";
 import { accentColorSetting, dateFormatSetting } from "../settings/preferences.js";
 import type { SettingsService } from "../settings/service.js";
 import { GraphMailError, GraphMailTransport } from "./graph.js";
-import { instanceSecrets, mailCredentials, mailOutbox } from "./schema.js";
+import {
+  checkOAuth2Configuration,
+  MailOAuth2ConfigurationError,
+  MailTokenError,
+  MICROSOFT_AUTHORITIES,
+  parseServiceAccountKey,
+  requestMailToken,
+  tokenFingerprint,
+} from "./oauth2.js";
+import { instanceSecrets, mailCredentials, mailDeliveryStatus, mailOutbox } from "./schema.js";
 import {
   type Language,
   type MailBranding,
@@ -45,6 +57,7 @@ import {
   type MailTransport,
   type SmtpOptions,
   SmtpTransport,
+  smtpStepOf,
 } from "./transport.js";
 
 export { smtpConfigurationSchema };
@@ -83,11 +96,6 @@ export const mailCredentialReminderJob = defineJob({
 
 export const MAIL_CREDENTIAL_REMINDER_SCHEDULE = "43 * * * *";
 
-const MICROSOFT_AUTHORITIES: readonly string[] = [
-  "https://login.microsoftonline.com",
-  "https://login.microsoftonline.us",
-  "https://login.partner.microsoftonline.cn",
-];
 const DAY_MS = 24 * 60 * 60 * 1000;
 const REMINDER_THRESHOLDS = [
   { days: 30, column: "notifiedThirtyDaysAt" },
@@ -106,12 +114,36 @@ export interface MailCredentialSummary {
   createdAt: Date;
 }
 
+export interface MailFailure {
+  code: string | null;
+  responseCode: number | null;
+  step: MailDeliveryStep | null;
+}
+
 export interface MailTestResult {
   delivered: boolean;
-  error: { code: string | null; responseCode: number | null } | null;
+  error: MailFailure | null;
+}
+
+export interface MailDeliveryState {
+  lastSuccessAt: Date | null;
+  lastFailure: (MailFailure & { at: Date }) | null;
 }
 
 const SMTP_PASSWORD = "mail.smtpPassword";
+const SMTP_OAUTH_SECRET = "mail.smtpOAuthSecret";
+const SMTP_OAUTH_TOKEN = "mail.smtpOAuthToken";
+const TOKEN_MARGIN_MS = 5 * 60 * 1000;
+const CLAIM_SECONDS = 10 * 60;
+const GRAPH_TOKEN_CODES = new Set([
+  "graphCredentialExpired",
+  "graphCredentialInvalid",
+  "graphCredentialMissing",
+  "graphTenantUnknown",
+  "graphApplicationUnknown",
+]);
+
+const storedToken = z.object({ fingerprint: z.string(), token: z.string(), expiresAt: z.number() });
 
 export const deliverMailJob = defineJob({
   name: "mail.deliver",
@@ -130,7 +162,13 @@ export const dispatchPendingMailJob = defineJob({
 
 export const DISPATCH_PENDING_MAIL_SCHEDULE = "* * * * *";
 
-const storedMessage = z.object({ to: z.string(), subject: z.string(), text: z.string(), html: z.string() });
+const storedMessage = z.object({
+  to: z.string(),
+  subject: z.string(),
+  text: z.string(),
+  html: z.string(),
+  headers: z.record(z.string(), z.string()).optional(),
+});
 
 function messageContext(id: string): string {
   return `mail_outbox.message:${id}`;
@@ -144,10 +182,24 @@ function credentialContext(id: string): string {
   return `mail_credentials.secret:${id}`;
 }
 
-function describeFailure(error: unknown): { code: string | null; responseCode: number | null } {
-  if (error instanceof MailNotConfiguredError) return { code: "notConfigured", responseCode: null };
-  if (error instanceof GraphMailError) return { code: error.code, responseCode: error.status };
-  return describeMailError(error);
+export function describeFailure(error: unknown): MailFailure {
+  if (error instanceof MailNotConfiguredError)
+    return { code: "notConfigured", responseCode: null, step: null };
+  if (error instanceof MailTokenError)
+    return { code: error.code, responseCode: error.responseCode, step: "token" };
+  if (error instanceof GraphMailError) {
+    return {
+      code: error.code,
+      responseCode: error.status,
+      step: GRAPH_TOKEN_CODES.has(error.code)
+        ? "token"
+        : error.code === "graphUnreachable"
+          ? "connect"
+          : "send",
+    };
+  }
+  const details = describeMailError(error);
+  return { ...details, step: smtpStepOf(details.code) };
 }
 
 export class MailNotConfiguredError extends Error {
@@ -166,6 +218,21 @@ function checkSmtpCredentials(configuration: SmtpConfiguration, hasPassword: boo
   if (configuration.security === "none" && (configuration.username !== null || hasPassword)) {
     throw new SmtpConfigurationError("SMTP credentials require a TLS connection");
   }
+  if (configuration.oauth2 && configuration.username === null) {
+    throw new SmtpConfigurationError("OAuth2 needs the mailbox as user name");
+  }
+}
+
+function sameOAuth2Client(a: SmtpOAuth2Configuration | null, b: SmtpOAuth2Configuration | null): boolean {
+  if (!a || !b || a.provider !== b.provider) return false;
+  if (a.provider === "microsoft365" && b.provider === "microsoft365") {
+    return a.tenantId === b.tenantId && a.clientId === b.clientId && a.authority === b.authority;
+  }
+  if (a.provider === "google" && b.provider === "google") return a.serviceAccount === b.serviceAccount;
+  if (a.provider === "generic" && b.provider === "generic") {
+    return a.tokenUrl === b.tokenUrl && a.clientId === b.clientId;
+  }
+  return false;
 }
 
 export class MailService {
@@ -272,10 +339,14 @@ export class MailService {
         notification: mail.notification ?? false,
       }),
     );
+    return this.queueMessage(tx, mail.template, message);
+  }
+
+  async queueMessage(tx: Transaction, template: string, message: MailMessage): Promise<string> {
     const id = uuidv7();
     await tx.insert(mailOutbox).values({
       id,
-      template: mail.template,
+      template,
       message: this.#encryption.encrypt(JSON.stringify(message), messageContext(id)),
     });
     return id;
@@ -296,7 +367,15 @@ export class MailService {
     const pending = await this.#database
       .select({ id: mailOutbox.id })
       .from(mailOutbox)
-      .where(and(eq(mailOutbox.status, "pending"), lt(mailOutbox.createdAt, new Date(Date.now() - 60_000))))
+      .where(
+        or(
+          and(eq(mailOutbox.status, "pending"), lt(mailOutbox.createdAt, new Date(Date.now() - 60_000))),
+          and(
+            eq(mailOutbox.status, "sending"),
+            lt(mailOutbox.updatedAt, new Date(Date.now() - CLAIM_SECONDS * 1000)),
+          ),
+        ),
+      )
       .limit(1000);
     await this.dispatch(pending.map((row) => row.id));
     return pending.length;
@@ -305,25 +384,39 @@ export class MailService {
   deliver = async (job: JobContext<{ mailId: string }>): Promise<void> => {
     const { mailId } = job.payload;
     const [row] = await this.#database
-      .select({ template: mailOutbox.template, message: mailOutbox.message, status: mailOutbox.status })
-      .from(mailOutbox)
-      .where(eq(mailOutbox.id, mailId));
-    if (!row?.message || row.status !== "pending") return;
+      .update(mailOutbox)
+      .set({ status: "sending", updatedAt: new Date() })
+      .where(
+        and(
+          eq(mailOutbox.id, mailId),
+          or(
+            eq(mailOutbox.status, "pending"),
+            and(
+              eq(mailOutbox.status, "sending"),
+              lt(mailOutbox.updatedAt, new Date(Date.now() - CLAIM_SECONDS * 1000)),
+            ),
+          ),
+        ),
+      )
+      .returning({ template: mailOutbox.template, message: mailOutbox.message });
+    if (!row?.message) return;
     const message = storedMessage.parse(
       JSON.parse(this.#encryption.decryptString(row.message, messageContext(mailId))),
     );
     try {
-      await (await this.#transportOrThrow()).send(message);
+      await this.#send({ ...message, messageId: await this.#messageId(mailId) });
     } catch (error) {
       const last = job.retryCount >= deliverMailJob.retryLimit;
       await this.#database
         .update(mailOutbox)
         .set({
           attempts: job.retryCount + 1,
-          ...(last ? { status: "failed" as const, message: null } : {}),
+          updatedAt: new Date(),
+          ...(last ? { status: "failed" as const, message: null } : { status: "pending" as const }),
         })
         .where(eq(mailOutbox.id, mailId));
       const details = describeFailure(error);
+      await this.#recordDelivery(details);
       job.logger.warn(
         { mailId, template: row.template, attempt: job.retryCount + 1, ...details },
         last ? "Mail delivery failed for good" : "Mail delivery failed",
@@ -332,7 +425,45 @@ export class MailService {
       throw new Error("Mail delivery failed");
     }
     await this.#database.delete(mailOutbox).where(eq(mailOutbox.id, mailId));
+    await this.#recordDelivery(null);
   };
+
+  async #messageId(mailId: string): Promise<string> {
+    const url = await this.#settings.get(instanceUrlSetting, {});
+    const host = url ? new URL(url).hostname : "pagehall.invalid";
+    return `<${mailId}@${host}>`;
+  }
+
+  async #recordDelivery(failure: MailFailure | null): Promise<void> {
+    const now = new Date();
+    const values = failure
+      ? {
+          lastFailureAt: now,
+          lastFailureCode: failure.code,
+          lastFailureResponseCode: failure.responseCode,
+          lastFailureStep: failure.step,
+        }
+      : { lastSuccessAt: now };
+    await this.#database
+      .insert(mailDeliveryStatus)
+      .values({ id: 1, ...values })
+      .onConflictDoUpdate({ target: mailDeliveryStatus.id, set: values });
+  }
+
+  async deliveryState(): Promise<MailDeliveryState> {
+    const [row] = await this.#database.select().from(mailDeliveryStatus);
+    return {
+      lastSuccessAt: row?.lastSuccessAt ?? null,
+      lastFailure: row?.lastFailureAt
+        ? {
+            at: row.lastFailureAt,
+            code: row.lastFailureCode,
+            responseCode: row.lastFailureResponseCode,
+            step: (row.lastFailureStep as MailDeliveryStep | null) ?? null,
+          }
+        : null,
+    };
+  }
 
   async smtpConfiguration(executor: Executor = this.#database): Promise<SmtpConfiguration | null> {
     return this.#settings.get(smtpSetting, {}, { executor });
@@ -349,6 +480,10 @@ export class MailService {
     return (await this.#smtpPassword()) !== null;
   }
 
+  async hasSmtpOAuth2Secret(): Promise<boolean> {
+    return (await this.#readSecret(SMTP_OAUTH_SECRET)) !== null;
+  }
+
   async method(executor: Executor = this.#database): Promise<MailMethod> {
     return this.#settings.get(mailMethodSetting, {}, { executor });
   }
@@ -357,15 +492,81 @@ export class MailService {
     return this.#settings.get(graphMailSetting, {}, { executor });
   }
 
-  async #transportOrThrow(): Promise<MailTransport> {
+  async #send(message: MailMessage): Promise<void> {
     if ((await this.method()) === "graph") {
       const graph = await this.graphConfiguration();
       if (!graph) throw new MailNotConfiguredError();
-      return this.#graphTransport(graph);
+      await (await this.#graphTransport(graph)).send(message);
+      return;
     }
     const configuration = await this.smtpConfiguration();
     if (!configuration) throw new MailNotConfiguredError();
-    return this.#transport({ ...configuration, password: await this.#smtpPassword() });
+    const { oauth2, ...smtp } = configuration;
+    if (!oauth2) {
+      await this.#transport({ ...smtp, password: await this.#smtpPassword() }).send(message);
+      return;
+    }
+    const token = await this.#smtpAccessToken(configuration, false);
+    try {
+      await this.#transport({ ...smtp, password: null, accessToken: token.token }).send(message);
+    } catch (error) {
+      if (!token.cached || describeMailError(error).code !== "EAUTH") throw error;
+      const fresh = await this.#smtpAccessToken(configuration, true);
+      await this.#transport({ ...smtp, password: null, accessToken: fresh.token }).send(message);
+    }
+  }
+
+  async #smtpAccessToken(
+    configuration: SmtpConfiguration,
+    refresh: boolean,
+  ): Promise<{ token: string; cached: boolean }> {
+    const oauth2 = configuration.oauth2;
+    const secret = await this.#readSecret(SMTP_OAUTH_SECRET);
+    if (!oauth2 || !configuration.username || !secret) throw new MailNotConfiguredError();
+    const fingerprint = tokenFingerprint(oauth2, configuration.username, secret);
+    if (!refresh) {
+      const stored = await this.#readSecret(SMTP_OAUTH_TOKEN);
+      const parsed = stored ? storedToken.safeParse(JSON.parse(stored)) : null;
+      if (
+        parsed?.success &&
+        parsed.data.fingerprint === fingerprint &&
+        parsed.data.expiresAt - TOKEN_MARGIN_MS > Date.now()
+      ) {
+        return { token: parsed.data.token, cached: true };
+      }
+    }
+    const fresh = await requestMailToken({
+      configuration: oauth2,
+      mailbox: configuration.username,
+      secret,
+      ...(this.#fetch ? { fetch: this.#fetch } : {}),
+    });
+    await this.#writeSecret(
+      this.#database,
+      SMTP_OAUTH_TOKEN,
+      JSON.stringify({ fingerprint, token: fresh.token, expiresAt: fresh.expiresAt }),
+    );
+    return { token: fresh.token, cached: false };
+  }
+
+  async #readSecret(name: string, executor: Executor = this.#database): Promise<string | null> {
+    const [row] = await executor
+      .select({ value: instanceSecrets.value })
+      .from(instanceSecrets)
+      .where(eq(instanceSecrets.name, name));
+    return row ? this.#encryption.decryptString(row.value, secretContext(name)) : null;
+  }
+
+  async #writeSecret(executor: Executor, name: string, plain: string): Promise<void> {
+    const value = this.#encryption.encrypt(plain, secretContext(name));
+    await executor
+      .insert(instanceSecrets)
+      .values({ name, value })
+      .onConflictDoUpdate({ target: instanceSecrets.name, set: { value, updatedAt: new Date() } });
+  }
+
+  async #deleteSecret(executor: Executor, name: string): Promise<void> {
+    await executor.delete(instanceSecrets).where(eq(instanceSecrets.name, name));
   }
 
   async #graphTransport(
@@ -675,28 +876,72 @@ export class MailService {
     return row ? this.#encryption.decryptString(row.value, secretContext(SMTP_PASSWORD)) : null;
   }
 
-  async configureSmtp(
-    configuration: SmtpConfiguration,
-    password: string | null | undefined,
-    options: { tx?: Transaction } = {},
-  ): Promise<void> {
+  #parseSmtp(configuration: SmtpConfigurationInput): SmtpConfiguration {
     const parsed = smtpConfigurationSchema.parse(configuration);
+    if (parsed.oauth2) {
+      try {
+        checkOAuth2Configuration(parsed.oauth2, { allowInsecure: this.#allowInsecure });
+      } catch (error) {
+        if (error instanceof MailOAuth2ConfigurationError) throw new SmtpConfigurationError(error.message);
+        throw error;
+      }
+    }
+    return parsed;
+  }
+
+  #oauth2SecretOf(oauth2: SmtpOAuth2Configuration, input: string): string {
+    if (oauth2.provider !== "google") return input;
+    try {
+      const key = parseServiceAccountKey(input);
+      if (key.clientEmail !== oauth2.serviceAccount.toLowerCase()) {
+        throw new SmtpConfigurationError("The key file belongs to another service account");
+      }
+      return key.privateKey;
+    } catch (error) {
+      if (error instanceof MailOAuth2ConfigurationError) throw new SmtpConfigurationError(error.message);
+      throw error;
+    }
+  }
+
+  async configureSmtp(
+    configuration: SmtpConfigurationInput,
+    password: string | null | undefined,
+    options: { tx?: Transaction; oauth2Secret?: string | undefined } = {},
+  ): Promise<void> {
+    const parsed = this.#parseSmtp(configuration);
+    const oauth2 = parsed.oauth2;
+    const oauth2Secret =
+      oauth2 && options.oauth2Secret !== undefined
+        ? this.#oauth2SecretOf(oauth2, options.oauth2Secret)
+        : null;
     const run = async (tx: Transaction) => {
-      if (password === null || (password !== undefined && parsed.username === null)) {
-        await tx.delete(instanceSecrets).where(eq(instanceSecrets.name, SMTP_PASSWORD));
+      const previous = await this.smtpConfiguration(tx);
+      await this.#deleteSecret(tx, SMTP_OAUTH_TOKEN);
+      if (oauth2) {
+        await this.#deleteSecret(tx, SMTP_PASSWORD);
+        if (oauth2Secret !== null) {
+          await this.#writeSecret(tx, SMTP_OAUTH_SECRET, oauth2Secret);
+        } else if (
+          !sameOAuth2Client(previous?.oauth2 ?? null, oauth2) ||
+          (await this.#readSecret(SMTP_OAUTH_SECRET, tx)) === null
+        ) {
+          throw new SmtpConfigurationError(
+            oauth2.provider === "google"
+              ? "Upload the key file of the service account"
+              : "Enter the client secret",
+          );
+        }
+      } else {
+        await this.#deleteSecret(tx, SMTP_OAUTH_SECRET);
+        if (password === null || (password !== undefined && parsed.username === null)) {
+          await this.#deleteSecret(tx, SMTP_PASSWORD);
+        }
+        if (password !== undefined && password !== null && parsed.username !== null) {
+          await this.#writeSecret(tx, SMTP_PASSWORD, password);
+        }
       }
-      if (password !== undefined && password !== null && parsed.username !== null) {
-        const value = this.#encryption.encrypt(password, secretContext(SMTP_PASSWORD));
-        await tx
-          .insert(instanceSecrets)
-          .values({ name: SMTP_PASSWORD, value })
-          .onConflictDoUpdate({ target: instanceSecrets.name, set: { value, updatedAt: new Date() } });
-      }
-      const [stored] = await tx
-        .select({ name: instanceSecrets.name })
-        .from(instanceSecrets)
-        .where(eq(instanceSecrets.name, SMTP_PASSWORD));
-      checkSmtpCredentials(parsed, stored !== undefined);
+      const hasPassword = !oauth2 && (await this.#readSecret(SMTP_PASSWORD, tx)) !== null;
+      checkSmtpCredentials(parsed, hasPassword);
       await this.#settings.set(smtpSetting, {}, "instance", parsed, { tx, audit: false });
       await this.#audit.record(tx, {
         name: "mail.smtpChanged",
@@ -708,20 +953,56 @@ export class MailService {
           username: parsed.username,
           passwordChanged: password !== undefined,
           from: parsed.from,
+          oauth2Provider: oauth2?.provider ?? null,
+          oauth2ClientId: oauth2
+            ? oauth2.provider === "google"
+              ? oauth2.serviceAccount
+              : oauth2.clientId
+            : null,
+          oauth2CredentialChanged: oauth2Secret !== null,
         },
       });
     };
     await (options.tx ? run(options.tx) : this.#database.transaction(run));
   }
 
+  async #adHocToken(configuration: SmtpConfiguration, oauth2Secret: string | undefined): Promise<string> {
+    const oauth2 = configuration.oauth2;
+    if (!oauth2 || !configuration.username) throw new MailNotConfiguredError();
+    let secret: string | null = null;
+    if (oauth2Secret !== undefined) {
+      secret = this.#oauth2SecretOf(oauth2, oauth2Secret);
+    } else if (sameOAuth2Client((await this.smtpConfiguration())?.oauth2 ?? null, oauth2)) {
+      secret = await this.#readSecret(SMTP_OAUTH_SECRET);
+    }
+    if (secret === null) {
+      throw new SmtpConfigurationError(
+        oauth2.provider === "google"
+          ? "Upload the key file of the service account"
+          : "Enter the client secret",
+      );
+    }
+    const token = await requestMailToken({
+      configuration: oauth2,
+      mailbox: configuration.username,
+      secret,
+      ...(this.#fetch ? { fetch: this.#fetch } : {}),
+    });
+    return token.token;
+  }
+
   async sendTest(
     to: string,
     language: Language,
-    smtp?: { configuration: SmtpConfiguration; password: string | null | undefined },
-  ): Promise<{ delivered: boolean; error: { code: string | null; responseCode: number | null } | null }> {
+    smtp?: {
+      configuration: SmtpConfigurationInput;
+      password: string | null | undefined;
+      oauth2Secret?: string | undefined;
+    },
+  ): Promise<MailTestResult> {
     const instanceName = await this.#settings.get(instanceNameSetting, {});
     const message: MailMessage = renderMail("smtpTest", language, { instanceName }, to);
-    const adHoc = smtp ? smtpConfigurationSchema.parse(smtp.configuration) : undefined;
+    const adHoc = smtp ? this.#parseSmtp(smtp.configuration) : undefined;
     const stored = adHoc && smtp?.password === undefined ? await this.smtpConfiguration() : null;
     const sameServer =
       stored !== null &&
@@ -730,7 +1011,7 @@ export class MailService {
       stored.port === adHoc.port &&
       stored.username === adHoc.username;
     const password =
-      adHoc?.username === null
+      adHoc?.username === null || adHoc?.oauth2
         ? null
         : smtp?.password === undefined
           ? !adHoc || sameServer
@@ -738,15 +1019,18 @@ export class MailService {
             : null
           : smtp.password;
     if (adHoc) checkSmtpCredentials(adHoc, password !== null);
-    let error: { code: string | null; responseCode: number | null } | null = null;
+    let error: MailFailure | null = null;
     try {
-      const transport = adHoc ? this.#transport({ ...adHoc, password }) : await this.#transportOrThrow();
-      await transport.send(message);
+      if (!adHoc) {
+        await this.#send(message);
+      } else {
+        const { oauth2, ...options } = adHoc;
+        const accessToken = oauth2 ? await this.#adHocToken(adHoc, smtp?.oauth2Secret) : null;
+        await this.#transport({ ...options, password, accessToken }).send(message);
+      }
     } catch (failure) {
-      error =
-        failure instanceof MailNotConfiguredError
-          ? { code: "notConfigured", responseCode: null }
-          : describeMailError(failure);
+      if (failure instanceof SmtpConfigurationError) throw failure;
+      error = describeFailure(failure);
       this.#logger.warn({ template: "smtpTest", ...error }, "Test mail failed");
     }
     await this.#audit.recordAlone({

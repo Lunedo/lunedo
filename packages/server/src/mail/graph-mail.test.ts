@@ -107,11 +107,36 @@ describe.skipIf(!baseUrl)("e-mail through Microsoft Graph", () => {
     expect(JSON.stringify(events.rows)).not.toContain(GRAPH_CLIENT_SECRET);
   });
 
+  it("sends mails with list headers as MIME, with a text and an HTML part", async () => {
+    await test.database.transaction((tx) =>
+      test.services.mail.queueMessage(tx, "notification", {
+        to: "reader@example.net",
+        subject: "Ada mentioned you",
+        text: "Ada mentioned you in Runbook",
+        html: "<p>Ada mentioned you in Runbook</p>",
+        headers: {
+          "List-Unsubscribe": "<https://wiki.example.org/api/v1/notifications/unsubscribe/token>",
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
+      }),
+    );
+    await deliverPendingMail(test.services, test.database);
+    const mime = (graph.sentMail.at(-1)?.mime ?? "").replace(/\r\n[ \t]+/g, " ");
+    expect(mime).toContain(
+      "List-Unsubscribe: <https://wiki.example.org/api/v1/notifications/unsubscribe/token>",
+    );
+    expect(mime).toContain("List-Unsubscribe-Post: List-Unsubscribe=One-Click");
+    expect(mime).toContain("Content-Type: text/plain");
+    expect(mime).toContain("Content-Type: text/html");
+    expect(mime).toMatch(/^From: Pagehall <alice@example\.org>/m);
+    expect(mime).toMatch(/^Message-ID: <[0-9a-f-]+@/m);
+  });
+
   it("explains a mailbox outside the scope of the app, an unknown mailbox and an expired secret", async () => {
     graph.data.mailScope = ["bob@example.org"];
     expect(await test.services.mail.sendGraphTest(actor(), "reader@example.net", "en")).toEqual({
       delivered: false,
-      error: { code: "graphMailboxNotAllowed", responseCode: 403 },
+      error: { code: "graphMailboxNotAllowed", responseCode: 403, step: "send" },
     });
     graph.data.mailScope = null;
     expect(
@@ -121,13 +146,13 @@ describe.skipIf(!baseUrl)("e-mail through Microsoft Graph", () => {
         "en",
         configuration("nobody@example.org"),
       ),
-    ).toEqual({ delivered: false, error: { code: "graphMailboxUnknown", responseCode: 404 } });
+    ).toEqual({ delivered: false, error: { code: "graphMailboxUnknown", responseCode: 404, step: "send" } });
 
     graph.data.secretExpired = true;
     const other = test.anotherNode();
     expect(await other.mail.sendGraphTest(actor(), "reader@example.net", "en")).toEqual({
       delivered: false,
-      error: { code: "graphCredentialExpired", responseCode: 401 },
+      error: { code: "graphCredentialExpired", responseCode: 401, step: "token" },
     });
   });
 
@@ -139,7 +164,7 @@ describe.skipIf(!baseUrl)("e-mail through Microsoft Graph", () => {
     });
     expect(other).toEqual({
       delivered: false,
-      error: { code: "graphCredentialMissing", responseCode: null },
+      error: { code: "graphCredentialMissing", responseCode: null, step: "token" },
     });
     expect(graph.requests.length).toBe(before);
   });

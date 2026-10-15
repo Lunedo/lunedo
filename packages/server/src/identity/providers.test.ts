@@ -608,6 +608,7 @@ describe.skipIf(!baseUrl)("IdentityProviderService", () => {
       security: "none",
       username: null,
       from: "wiki@example.org",
+      oauth2: null,
     });
     try {
       expect(await test.services.emergencyRecipients.get()).toEqual({

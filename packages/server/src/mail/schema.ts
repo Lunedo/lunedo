@@ -1,8 +1,9 @@
-import { index, integer, pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { check, index, integer, pgEnum, pgTable, smallint, text, timestamp } from "drizzle-orm/pg-core";
 import { encrypted } from "../crypto/encrypted-column.js";
 import { primaryId, timestamps } from "../database/columns.js";
 
-export const mailStatus = pgEnum("mail_status", ["pending", "failed"]);
+export const mailStatus = pgEnum("mail_status", ["pending", "sending", "failed"]);
 
 export const mailOutbox = pgTable(
   "mail_outbox",
@@ -39,4 +40,17 @@ export const mailCredentials = pgTable(
     createdAt: timestamp({ withTimezone: true, mode: "date" }).notNull().defaultNow(),
   },
   (table) => [index().on(table.expiresAt)],
+);
+
+export const mailDeliveryStatus = pgTable(
+  "mail_delivery_status",
+  {
+    id: smallint().primaryKey().default(1),
+    lastSuccessAt: timestamp({ withTimezone: true, mode: "date" }),
+    lastFailureAt: timestamp({ withTimezone: true, mode: "date" }),
+    lastFailureCode: text(),
+    lastFailureResponseCode: integer(),
+    lastFailureStep: text(),
+  },
+  (table) => [check("mail_delivery_status_single_row", sql`${table.id} = 1`)],
 );

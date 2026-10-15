@@ -73,10 +73,23 @@ export interface MailTemplates {
 
 export type MailTemplate = keyof MailTemplates;
 
-interface Content {
+export interface MailEntry {
+  text: string;
+  excerpt: string | null;
+  meta: string | null;
+  url: string | null;
+}
+
+export interface MailSection {
+  heading: string;
+  entries: MailEntry[];
+}
+
+export interface Content {
   subject: string;
   paragraphs: string[];
   action?: { label: string; url: string };
+  sections?: MailSection[];
 }
 
 function describeBrowser(
@@ -469,6 +482,7 @@ export interface MailBranding {
   logoUrl: string | null;
   accentColor: string;
   preferencesUrl: string | null;
+  unsubscribe?: { label: string; url: string } | null;
 }
 
 const NEUTRAL = designTokens.color.light;
@@ -511,11 +525,33 @@ function layout(language: Language, content: Content, instanceName: string, bran
       `<p style="margin:0 0 16px;font-size:13px;color:${NEUTRAL.textMuted};word-break:break-all">${url}</p>`,
     );
   }
+  for (const section of content.sections ?? []) {
+    body.push(
+      `<h2 style="margin:24px 0 8px;font-size:15px;line-height:1.3">${escapeHtml(section.heading)}</h2>`,
+      ...section.entries.map((entry) => {
+        const label = entry.url
+          ? `<a href="${escapeHtml(entry.url)}" style="color:${NEUTRAL.text}">${escapeHtml(entry.text)}</a>`
+          : escapeHtml(entry.text);
+        const excerpt = entry.excerpt
+          ? `<br><span style="color:${NEUTRAL.textMuted}">${escapeHtml(entry.excerpt)}</span>`
+          : "";
+        const meta = entry.meta
+          ? `<br><span style="font-size:13px;color:${NEUTRAL.textMuted}">${escapeHtml(entry.meta)}</span>`
+          : "";
+        return `<p style="margin:0 0 12px;padding-left:12px;border-left:2px solid ${NEUTRAL.border}">${label}${excerpt}${meta}</p>`;
+      }),
+    );
+  }
   const footer = [
     escapeHtml(FOOTER[language].sentBy(instanceName)),
     ...(branding.preferencesUrl
       ? [
           `<a href="${escapeHtml(branding.preferencesUrl)}" style="color:${NEUTRAL.textMuted}">${escapeHtml(FOOTER[language].preferences)}</a>`,
+        ]
+      : []),
+    ...(branding.unsubscribe
+      ? [
+          `<a href="${escapeHtml(branding.unsubscribe.url)}" style="color:${NEUTRAL.textMuted}">${escapeHtml(branding.unsubscribe.label)}</a>`,
         ]
       : []),
   ].join(" ");
@@ -542,11 +578,41 @@ export function renderMail<T extends MailTemplate>(
   branding: MailBranding = defaultBranding,
 ): MailMessage {
   const content = (catalogs[language][template] as (params: MailTemplates[T]) => Content)(params);
+  return renderContent(language, content, params.instanceName, to, branding);
+}
+
+export function templateSubject<T extends MailTemplate>(
+  template: T,
+  language: Language,
+  params: MailTemplates[T],
+): string {
+  return (catalogs[language][template] as (params: MailTemplates[T]) => Content)(params).subject;
+}
+
+export function renderContent(
+  language: Language,
+  content: Content,
+  instanceName: string,
+  to: string,
+  branding: MailBranding = defaultBranding,
+): MailMessage {
+  const sections = (content.sections ?? []).map((section) =>
+    [
+      section.heading,
+      ...section.entries.map((entry) =>
+        [`- ${entry.text}`, entry.excerpt, entry.meta, entry.url]
+          .filter((part): part is string => part !== null)
+          .join("\n  "),
+      ),
+    ].join("\n"),
+  );
   const text = [
     ...content.paragraphs,
     ...(content.action ? [`${content.action.label}: ${content.action.url}`] : []),
-    FOOTER[language].sentBy(params.instanceName),
+    ...sections,
+    FOOTER[language].sentBy(instanceName),
     ...(branding.preferencesUrl ? [`${FOOTER[language].preferences}: ${branding.preferencesUrl}`] : []),
+    ...(branding.unsubscribe ? [`${branding.unsubscribe.label}: ${branding.unsubscribe.url}`] : []),
   ]
     .join("\n\n")
     .concat("\n");
@@ -554,6 +620,6 @@ export function renderMail<T extends MailTemplate>(
     to,
     subject: content.subject,
     text,
-    html: layout(language, content, params.instanceName, branding),
+    html: layout(language, content, instanceName, branding),
   };
 }

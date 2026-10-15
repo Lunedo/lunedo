@@ -169,11 +169,21 @@ export class NotificationService {
         : { ...(await accountScopeChain(tx, recipientId)), user: recipientId };
       const inApp = await this.#settings.get(settings.inApp, chain, { executor: tx });
       const email = await this.#settings.get(settings.email, chain, { executor: tx });
+      const mailable = email !== "off" && account.email !== null && mailMethod !== null;
+      const direct =
+        mailable &&
+        email === "immediately" &&
+        event.group === "administration" &&
+        definition.mail !== undefined;
+      const deferred = mailable && !direct ? (email === "digest" ? "digest" : "immediate") : null;
       let combined = false;
-      if (inApp) {
-        combined = await this.#store(tx, recipientId, groupKey, definition, input, actor, actorIds, params);
+      if (inApp || deferred) {
+        combined = await this.#store(tx, recipientId, groupKey, definition, input, actor, actorIds, params, {
+          inApp,
+          email: deferred,
+        });
       }
-      if (email === "immediately" && !combined && account.email && mailMethod && definition.mail) {
+      if (direct && !combined && account.email && definition.mail) {
         const locale = {
           language: await this.#mail.languageOf(recipientId, tx),
           timeZone: await this.#mail.timeZoneOf(recipientId, tx),
@@ -235,6 +245,7 @@ export class NotificationService {
     actor: { type: "account"; id: string } | null,
     actorIds: readonly string[],
     params: unknown,
+    channels: { inApp: boolean; email: "immediate" | "digest" | null },
   ): Promise<boolean> {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`${recipientId}:${groupKey}`}, 0))`);
     const [open] = await tx
@@ -244,6 +255,7 @@ export class NotificationService {
         and(
           eq(notifications.recipientId, recipientId),
           eq(notifications.groupKey, groupKey),
+          eq(notifications.inApp, channels.inApp),
           isNull(notifications.readAt),
           sql`${notifications.updatedAt} > now() - make_interval(mins => ${COMBINE_WINDOW_MINUTES})`,
           sql`${notifications.createdAt} > now() - make_interval(hours => ${COMBINE_MAX_HOURS})`,
@@ -266,6 +278,13 @@ export class NotificationService {
             from unnest(${notifications.actorIds} || ${sql.param([...actorIds])}::uuid[]) with ordinality as u(id, position)
             group by id order by first limit ${MAX_ACTORS}) a)`,
           updatedAt: sql`now()`,
+          ...(channels.email
+            ? {
+                emailStatus: channels.email,
+                emailPendingSince: sql`case when ${notifications.emailStatus} in ('immediate', 'digest')
+                  then ${notifications.emailPendingSince} else now() end`,
+              }
+            : {}),
         })
         .where(eq(notifications.id, open.id));
     } else {
@@ -280,9 +299,12 @@ export class NotificationService {
         actorIds: actorIds.slice(0, MAX_ACTORS),
         params,
         groupKey,
+        inApp: channels.inApp,
+        emailStatus: channels.email,
+        emailPendingSince: channels.email ? sql`now()` : null,
       });
     }
-    await this.#announce(tx, recipientId);
+    if (channels.inApp) await this.#announce(tx, recipientId);
     return open !== undefined;
   }
 
@@ -294,10 +316,15 @@ export class NotificationService {
     await this.#mail.dispatch(mailIds);
   }
 
-  #visibility(recipientId: string) {
+  visibility(recipientId: string, executor: Executor = this.#database) {
     const cache = new Map<string, Promise<boolean>>();
     const principal = accountPrincipal(recipientId);
-    return (row: ListRow): Promise<boolean> => {
+    return (row: {
+      type: string;
+      organizationId: string | null;
+      targetId: string | null;
+      params: unknown;
+    }): Promise<boolean> => {
       const key = JSON.stringify([row.type, row.organizationId, row.targetId, row.params]);
       let decision = cache.get(key);
       if (!decision) {
@@ -310,9 +337,16 @@ export class NotificationService {
                 organizationId: row.organizationId,
                 targetId: row.targetId,
                 params: parsed.data,
-                executor: this.#database,
+                executor,
                 can: async (action, resource) =>
-                  (await this.#authorization.explain(principal, action, resource)).allowed,
+                  (
+                    await this.#authorization.explain(
+                      principal,
+                      action,
+                      resource,
+                      executor === this.#database ? undefined : { executor, fresh: true },
+                    )
+                  ).allowed,
               })
             : Promise.resolve(false);
         cache.set(key, decision);
@@ -332,7 +366,7 @@ export class NotificationService {
     recipientId: string,
     request: { after?: NotificationCursor | undefined; limit: number; unreadOnly?: boolean },
   ): Promise<NotificationPage> {
-    const visible = this.#visibility(recipientId);
+    const visible = this.visibility(recipientId);
     const items: NotificationItem[] = [];
     let cursor = request.after;
     let scanned = 0;
@@ -341,6 +375,7 @@ export class NotificationService {
         .where(
           and(
             eq(notifications.recipientId, recipientId),
+            eq(notifications.inApp, true),
             request.unreadOnly ? isNull(notifications.readAt) : undefined,
             cursor
               ? sql`(${notifications.updatedAt}, ${notifications.id}) < (${cursor[0]}::timestamptz, ${cursor[1]}::uuid)`
@@ -361,10 +396,28 @@ export class NotificationService {
     }
   }
 
+  async get(recipientId: string, id: string): Promise<NotificationItem | null> {
+    const [row]: ListRow[] = await this.#select().where(
+      and(
+        eq(notifications.id, id),
+        eq(notifications.recipientId, recipientId),
+        eq(notifications.inApp, true),
+      ),
+    );
+    if (!row || !(await this.visibility(recipientId)(row))) return null;
+    return toItem(row);
+  }
+
   async unreadCount(recipientId: string): Promise<number> {
-    const visible = this.#visibility(recipientId);
+    const visible = this.visibility(recipientId);
     const rows: ListRow[] = await this.#select()
-      .where(and(eq(notifications.recipientId, recipientId), isNull(notifications.readAt)))
+      .where(
+        and(
+          eq(notifications.recipientId, recipientId),
+          eq(notifications.inApp, true),
+          isNull(notifications.readAt),
+        ),
+      )
       .orderBy(desc(notifications.updatedAt))
       .limit(UNREAD_LIMIT);
     let count = 0;
@@ -377,7 +430,13 @@ export class NotificationService {
       const [row] = await tx
         .select({ readAt: notifications.readAt })
         .from(notifications)
-        .where(and(eq(notifications.id, id), eq(notifications.recipientId, recipientId)));
+        .where(
+          and(
+            eq(notifications.id, id),
+            eq(notifications.recipientId, recipientId),
+            eq(notifications.inApp, true),
+          ),
+        );
       if (!row) return false;
       if (row.readAt) return true;
       await tx
@@ -397,6 +456,7 @@ export class NotificationService {
         .where(
           and(
             eq(notifications.recipientId, recipientId),
+            eq(notifications.inApp, true),
             isNull(notifications.readAt),
             before ? lte(notifications.updatedAt, before) : undefined,
           ),
