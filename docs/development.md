@@ -107,7 +107,7 @@ Microsoft Graph and the Google Directory API are replaced in tests by small loca
 
 ## Operations
 
-All settings are described in [configuration.md](configuration.md). The database conventions are in [database.md](database.md), encryption and key rotation in [encryption.md](encryption.md), backups in [backup.md](backup.md). Setup is described in [setup.md](setup.md), sign-in and sessions in [authentication.md](authentication.md), the audit log in [audit.md](audit.md) and e-mail in [email.md](email.md).
+All settings are described in [configuration.md](configuration.md). The database conventions are in [database.md](database.md), encryption and key rotation in [encryption.md](encryption.md), backups in [backup.md](backup.md). Setup is described in [setup.md](setup.md), sign-in and sessions in [authentication.md](authentication.md), the audit log in [audit.md](audit.md) e-mail in [email.md](email.md) and the storage warnings in [storage.md](storage.md).
 
 Every process exposes `GET /health/live`, `GET /health/ready` and `GET /metrics`. Readiness covers the database, the migration state and the master key; metrics require the metrics token. Logs are JSON lines on stdout and carry the request ID, also in jobs enqueued by a request.
 

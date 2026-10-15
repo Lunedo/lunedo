@@ -17,6 +17,8 @@ The notification center is the core channel: it always works, also without a mai
 | `auth.emergencySignIn` | Instance owner and instance administrators | The owner account |
 | `identityProvider.credentialExpiring` | Instance owner for instance providers, owners of the organization for organization providers | The identity provider |
 | `identityProvider.syncHeld` | Instance owner and instance administrators | The identity provider |
+| `storage.levelReached` | Instance owner and instance administrators, and the operations contacts by e-mail and Teams | The instance |
+| `storage.levelCleared` | As above | The instance |
 
 Content events reach people who watch the content, see [Watching](#watching): `content.changed` (a new version, published or saved at the end of a live editing session), `comment.created` (a comment or reply), `page.statusChanged` and `ownership.transferred` (also to the new owner). Mentions, assigned tasks, shares and access requests reach the person concerned.
 
