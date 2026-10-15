@@ -49,6 +49,10 @@ interface Expansions {
   corrections: Map<string, string>;
 }
 
+function termsOf(chunk: SQL): SQL {
+  return sql`to_tsvector('simple', ${chunk}.title || ' ' || ${chunk}.heading || ' ' || ${chunk}.body)`;
+}
+
 function prefixWord(text: string): string {
   return text.replace(/[^\p{L}\p{N}]/gu, "");
 }
@@ -65,7 +69,11 @@ function weighted(chunk: IndexedChunk): { first: string; second: string; labels:
 export class PostgresSearchAdapter implements SearchAdapter {
   async replaceItem(executor: Executor, item: IndexedItem): Promise<void> {
     await executor.execute(sql`delete from search_chunks where item_id = ${item.itemId}`);
-    if (item.chunks.length === 0) return;
+    if (item.chunks.length > 0) await this.#insertChunks(executor, item);
+    await this.#replaceTerms(executor, item.itemId, item.organizationId);
+  }
+
+  async #insertChunks(executor: Executor, item: IndexedItem): Promise<void> {
     const rows = item.chunks.map((chunk) => ({
       id: uuidv7(),
       ...weighted(chunk),
@@ -105,19 +113,40 @@ export class PostgresSearchAdapter implements SearchAdapter {
         position integer, content_type text, title text, heading text, anchor text, body text, author_id uuid,
         content_created_at timestamptz, content_updated_at timestamptz, context_item_id uuid, context_readers text[],
         context_restrictions uuid[], attachment jsonb, first text, second text, labels boolean)`);
-    if (item.organizationId === null) return;
+  }
+
+  async #replaceTerms(executor: Executor, itemId: string, organizationId: string | null): Promise<void> {
+    if (organizationId === null) {
+      await executor.execute(sql`delete from search_item_terms where item_id = ${itemId}`);
+      return;
+    }
+    await executor.execute(
+      sql`select pg_advisory_xact_lock(hashtextextended(${`pagehall.search.terms:${organizationId}`}, 0))`,
+    );
     await executor.execute(sql`
+      with words as (
+        select distinct word from (
+          select unnest(tsvector_to_array(${termsOf(sql`c`)})) as word
+          from search_chunks c where c.item_id = ${itemId}) found
+        where length(word) between ${MIN_TYPO_LENGTH} and 40 and word ~ '^[[:alpha:]]+$'
+      ),
+      removed as (
+        delete from search_item_terms i where i.item_id = ${itemId}
+          and (i.organization_id <> ${organizationId}::uuid or i.word not in (select word from words))
+      ),
+      added as (
+        insert into search_item_terms (organization_id, word, item_id)
+        select ${organizationId}::uuid, word, ${itemId}::uuid from words order by word
+        on conflict do nothing
+      )
       insert into search_terms (organization_id, word)
-      select distinct ${item.organizationId}::uuid, word from (
-        select unnest(tsvector_to_array(to_tsvector('simple', c.title || ' ' || c.heading || ' ' || c.body))) as word
-        from search_chunks c where c.item_id = ${item.itemId}) words
-      where length(word) between ${MIN_TYPO_LENGTH} and 40 and word ~ '^[[:alpha:]]+$'
-      order by word
+      select ${organizationId}::uuid, word from words order by word
       on conflict (organization_id, word) do nothing`);
   }
 
   async removeItem(executor: Executor, itemId: string): Promise<void> {
     await executor.execute(sql`delete from search_chunks where item_id = ${itemId}`);
+    await executor.execute(sql`delete from search_item_terms where item_id = ${itemId}`);
   }
 
   async updateAccess(executor: Executor, updates: ItemAccess[]): Promise<void> {
@@ -261,13 +290,13 @@ export class PostgresSearchAdapter implements SearchAdapter {
       with matched as (
         select c.id, c.source, c.source_id, c.item_id, t.space_id, c.content_type, c.title, c.heading, c.anchor,
           c.labels, c.status, c.author_id, c.archived, c.attachment, c.content_updated_at, c.position, c.language,
-          ((${parts.score}) * (1 + ${usageBoost(sql`rv`)}))::float8 as score
+          (${request.usageBoost ? sql`(${parts.score}) * (1 + ${usageBoost(sql`rv`)})` : parts.score})::float8 as score
           ${sql.join(flagColumns, sql``)}
         from search_chunks c
         join tree_items t on t.id = c.item_id
         join spaces s on s.id = t.space_id
         left join search_pending_spaces p on p.space_id = c.space_id
-        left join recent_views rv on rv.account_id = ${viewer.accountId}::uuid and rv.item_id = c.item_id
+        ${request.usageBoost ? sql`left join recent_views rv on rv.account_id = ${viewer.accountId}::uuid and rv.item_id = c.item_id` : sql``}
         where ${sql.join(conditions, sql` and `)}
       ),
       candidates as (
@@ -373,7 +402,7 @@ export class PostgresSearchAdapter implements SearchAdapter {
       ),
     ];
     if (terms.length === 0) return { alternatives: new Map(), corrections: new Map() };
-    const visibleWord = (word: SQL) => sql`exists (select 1 from search_chunks c
+    const visibleWord = (word: SQL, exact: boolean) => sql`exists (select 1 from search_chunks c
       join tree_items t on t.id = c.item_id
       join spaces s on s.id = t.space_id
       left join search_pending_spaces p on p.space_id = c.space_id
@@ -383,12 +412,12 @@ export class PostgresSearchAdapter implements SearchAdapter {
             sql`(c.config = ${config} and c.document @@ plainto_tsquery(${config}::regconfig, ${word}))`,
         ),
         sql` or `,
-      )}))`;
+      )}) ${exact ? sql`and ${termsOf(sql`c`)} @@ plainto_tsquery('simple', ${word})` : sql``})`;
     const result = await executor.execute<{ term: string; known: boolean; words: string[] }>(sql`
-      select q.term, ${visibleWord(sql`q.term`)} as known,
+      select q.term, ${visibleWord(sql`q.term`, false)} as known,
         array(select w.word from search_terms w
           where w.organization_id = ${viewer.organizationId} and w.word % q.term and w.word <> q.term
-            and similarity(w.word, q.term) >= ${TYPO_SIMILARITY} and ${visibleWord(sql`w.word`)}
+            and similarity(w.word, q.term) >= ${TYPO_SIMILARITY} and ${visibleWord(sql`w.word`, true)}
           order by similarity(w.word, q.term) desc, w.word limit ${TYPO_ALTERNATIVES}) as words
       from unnest(${sql.param(terms)}::text[]) as q(term)`);
     const alternatives = new Map<string, string[]>();
