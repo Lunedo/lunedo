@@ -51,14 +51,15 @@ test("the component page does not scroll sideways at 390 pixels in German", asyn
 test("every control on the component page has a hit area of at least 44 pixels", async ({ page }) => {
   await page.goto("/dev/components?mode=light");
   await expect(page.getByRole("main")).toBeVisible();
-  const small = await page.evaluate(() => {
+  const { checked, small } = await page.evaluate(() => {
     const controls = document.querySelectorAll<HTMLElement>(
       "main button, main [role='checkbox'], main [role='radio'], main [role='switch'], main [role='tab'], main [role='combobox']",
     );
-    return Array.from(controls).flatMap((control) => {
-      const box = control.getBoundingClientRect();
+    const found = Array.from(controls).flatMap((control) => {
+      const area = (control.matches("input") && control.closest<HTMLElement>("[data-hit-area]")) || control;
+      const box = area.getBoundingClientRect();
       if (box.width === 0 || box.height === 0 || control.closest("[aria-hidden='true']")) return [];
-      const after = getComputedStyle(control, "::after");
+      const after = getComputedStyle(area, "::after");
       const extended = after.position === "absolute";
       const width = Math.max(box.width, extended ? Number.parseFloat(after.width) || 0 : 0);
       const height = Math.max(box.height, extended ? Number.parseFloat(after.height) || 0 : 0);
@@ -66,6 +67,8 @@ test("every control on the component page has a hit area of at least 44 pixels",
       const name = control.getAttribute("aria-label") ?? control.textContent?.trim() ?? control.tagName;
       return [`${name} (${Math.round(width)} × ${Math.round(height)})`];
     });
+    return { checked: controls.length, small: found };
   });
+  expect(checked).toBeGreaterThan(30);
   expect(small).toEqual([]);
 });

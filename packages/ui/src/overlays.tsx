@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import { DropdownMenu, Popover as PopoverPrimitive, Tabs as TabsPrimitive } from "radix-ui";
 import { type ReactNode, useRef } from "react";
 import { classNames } from "./class-names.js";
+import { WIDE_HIT_AREA } from "./hit-area.js";
 import { Icon } from "./icon.js";
 import { rememberMenuOpener } from "./return-focus.js";
 import { ScrollArea } from "./scroll-area.js";
@@ -144,7 +145,10 @@ export function Tabs({ value, onValueChange, tabs, label, children }: TabsProps)
             <TabsPrimitive.Trigger
               key={tab.value}
               value={tab.value}
-              className="-mb-px inline-flex h-control-field items-center gap-2 border-b-2 border-transparent px-3 font-medium whitespace-nowrap text-text-muted hover:text-text focus-visible:focus-ring aria-selected:border-accent aria-selected:text-text"
+              className={classNames(
+                WIDE_HIT_AREA,
+                "-mb-px inline-flex h-control-field items-center gap-2 border-b-2 border-transparent px-3 font-medium whitespace-nowrap text-text-muted hover:text-text focus-visible:focus-ring aria-selected:border-accent aria-selected:text-text",
+              )}
             >
               {tab.label}
               {tab.count !== undefined && <span className="text-text-muted">{tab.count}</span>}

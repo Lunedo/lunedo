@@ -69,7 +69,8 @@ export function Select({
       {...(props["aria-label"] ? { "aria-label": props["aria-label"] } : {})}
       className={classNames(
         controlClassName,
-        "inline-flex h-control-field items-center justify-between gap-2 overflow-hidden text-left",
+        WIDE_HIT_AREA,
+        "inline-flex h-control-field items-center justify-between gap-2 text-left",
         muted && "text-text-muted",
         className,
       )}
