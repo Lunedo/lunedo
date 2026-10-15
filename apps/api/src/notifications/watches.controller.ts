@@ -40,7 +40,11 @@ const watchStatusSchema = z
     own: z
       .object({
         state: stateSchema,
-        keepMentions: z.boolean().describe("Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."),
+        keepMentions: z
+          .boolean()
+          .describe(
+            "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted.",
+          ),
         automatic: z
           .boolean()
           .describe("True when the caller watches because they created, edited or commented on it."),
@@ -50,7 +54,11 @@ const watchStatusSchema = z
     effective: z
       .object({
         state: stateSchema,
-        keepMentions: z.boolean().describe("Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."),
+        keepMentions: z
+          .boolean()
+          .describe(
+            "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted.",
+          ),
         source: z
           .enum(["target", "series", "space"])
           .describe("Where the state comes from: the item or space itself, its meeting series or its space."),
@@ -74,7 +82,11 @@ const watchedSchema = z
       })
       .describe("What is watched or muted."),
     state: z.enum(["watching", "muted"]).describe("Watched or muted."),
-    keepMentions: z.boolean().describe("Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted."),
+    keepMentions: z
+      .boolean()
+      .describe(
+        "Whether mentions, assigned tasks, shares with the person and access requests they can decide still arrive while muted.",
+      ),
     automatic: z
       .boolean()
       .describe("True when it is watched because the caller created, edited or commented."),

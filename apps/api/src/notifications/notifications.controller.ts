@@ -115,7 +115,10 @@ const unsubscribeSchema = z
     scope: z
       .enum(["event", "digest"])
       .describe("Whether the link turns off e-mail for one event or the daily summary."),
-    event: z.string().nullable().describe("The event whose e-mails the link turns off, null for the summary."),
+    event: z
+      .string()
+      .nullable()
+      .describe("The event whose e-mails the link turns off, null for the summary."),
     off: z.boolean().describe("Whether these e-mails are turned off now."),
   })
   .describe("What an unsubscribe link turns off.");
