@@ -37,6 +37,7 @@ interface Entry {
   id: string;
   label: string;
   heading: string;
+  scope?: string;
   icon?: LucideIcon;
   shortcut?: string[];
   keywords: string[];
@@ -63,6 +64,7 @@ function rank(
             id: entry.id,
             label: entry.label,
             labelContent: <Highlighted parts={highlightParts(entry.label, match.ranges)} />,
+            ...(entry.scope ? { scope: entry.scope } : {}),
             ...(entry.icon ? { icon: entry.icon } : {}),
             ...(entry.shortcut ? { shortcut: entry.shortcut } : {}),
           },
@@ -110,12 +112,13 @@ function Palette({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
 
   const close = () => onOpenChange(false);
   const sections = [
-    { section: "account", heading: t("navigation.myAccount") },
+    { section: "account", heading: t("navigation.myAccount"), scope: t("commands.scopes.personal") },
     {
       section: "organization",
       heading: organization.organization?.name ?? t("navigation.organization"),
+      scope: t("commands.scopes.organization"),
     },
-    { section: "instance", heading: t("navigation.instance") },
+    { section: "instance", heading: t("navigation.instance"), scope: t("commands.scopes.instance") },
   ] as const;
 
   const entries: Entry[] = [
@@ -130,16 +133,17 @@ function Palette({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
         keywords: command.keywords ?? [],
         run: () => command.run(shell),
       })),
-    ...sections.flatMap(({ section, heading }) =>
+    ...sections.flatMap(({ section, heading, scope }) =>
       navigation
         .filter((item) => item.section === section && isNavigationVisible(item, shell))
         .map((item) => ({
           id: item.id,
           label: translateKey(t, item.labelKey),
           heading,
+          scope,
           icon: item.icon,
           ...(item.shortcut ? { shortcut: item.shortcut } : {}),
-          keywords: [heading],
+          keywords: [heading, scope],
           run: () =>
             shell.navigate(item.to, shell.organizationId ? { organizationId: shell.organizationId } : {}),
         })),
@@ -171,6 +175,7 @@ function Palette({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
     item: {
       id: entry.id,
       label: entry.label,
+      ...(entry.scope ? { scope: entry.scope } : {}),
       ...(entry.icon ? { icon: entry.icon } : {}),
       ...(entry.shortcut ? { shortcut: entry.shortcut } : {}),
     },
