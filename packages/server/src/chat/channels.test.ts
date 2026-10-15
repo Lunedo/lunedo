@@ -387,6 +387,46 @@ We move the backup to Sunday`);
         ),
       );
     });
+
+    it("still posts an announcement whose start, severity or link changed, at its current start", async () => {
+      const context = await setup();
+      const owner = accountPrincipal(context.org.owner);
+      const scope: ChatScope = { kind: "organization", organizationId: context.org.id };
+      const channel = await test.services.chatChannels.create(owner, scope, {
+        kind: "webhook",
+        name: "All hands",
+        events: ["announcementPublished"],
+        target: { url: hook("announcements") },
+      });
+      const input = {
+        severity: "information" as const,
+        text: "Maintenance tonight",
+        link: null,
+        startsAt: new Date(Date.now() + 60 * 60_000),
+        endsAt: new Date(Date.now() + 3 * 60 * 60_000),
+      };
+      await test.services.announcements.set(owner, context.org.id, input);
+      const later = new Date(Date.now() + 2 * 60 * 60_000);
+      await test.services.announcements.set(owner, context.org.id, {
+        ...input,
+        severity: "warning",
+        link: { url: "https://status.example.org", label: "Status" },
+        startsAt: later,
+      });
+      const rows = await deliveries(channel.channel.id);
+      expect(rows.map((row) => row.state)).toEqual(["skipped", "pending"]);
+      expect(rows[1]?.not_before.getTime()).toBe(later.getTime());
+
+      await due(channel.channel.id);
+      expect(await test.services.chatChannels.deliver(rows[1]?.id ?? "", false)).toBe("delivered");
+      expect(requests).toHaveLength(1);
+
+      await test.services.announcements.set(owner, context.org.id, { ...input, startsAt: later });
+      expect((await deliveries(channel.channel.id)).map((row) => row.state)).toEqual([
+        "skipped",
+        "delivered",
+      ]);
+    });
   });
 
   describe("delivery", () => {

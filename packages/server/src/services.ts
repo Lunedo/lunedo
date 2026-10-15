@@ -4,7 +4,11 @@ import { AccountAdministrationService } from "./accounts/administration.js";
 import { InstanceAddressService } from "./accounts/instance-address.js";
 import { AccountLifecycleService } from "./accounts/lifecycle.js";
 import { AccountOverviewService } from "./accounts/overview.js";
-import { AnnouncementService } from "./announcements/announcements.js";
+import {
+  ANNOUNCEMENT_STARTS_SCHEDULE,
+  AnnouncementService,
+  announcementStartsJob,
+} from "./announcements/announcements.js";
 import { AuditLog } from "./audit/audit-log.js";
 import { AuditReader } from "./audit/reader.js";
 import { AUDIT_RETENTION_SCHEDULE, applyAuditRetention, auditRetentionJob } from "./audit/retention.js";
@@ -999,6 +1003,9 @@ export async function workAccountJobs(
     const published = await services.blog.publishDue();
     if (published > 0) job.logger.info({ published }, "Scheduled blog posts published");
   });
+  await jobs.work(announcementStartsJob, async () => {
+    await services.announcements.signalStarted();
+  });
   await jobs.work(meetingRemindersJob, async (job) => {
     const sent = await services.meetingReminders.sendDue();
     if (sent > 0) job.logger.info({ sent }, "Meeting reminders sent");
@@ -1017,6 +1024,7 @@ export async function workAccountJobs(
   });
   await jobs.schedule(scheduledBlogPostsJob, SCHEDULED_BLOG_POSTS_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(meetingRemindersJob, MEETING_REMINDERS_SCHEDULE, {}, { key: "minutely" });
+  await jobs.schedule(announcementStartsJob, ANNOUNCEMENT_STARTS_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(notificationEmailJob, NOTIFICATION_EMAIL_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(collaborationCleanupJob, COLLABORATION_CLEANUP_SCHEDULE, {}, { key: "hourly" });
   await jobs.schedule(dispatchPendingMailJob, DISPATCH_PENDING_MAIL_SCHEDULE, {}, { key: "minutely" });

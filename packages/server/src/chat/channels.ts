@@ -649,17 +649,18 @@ export class ChatChannelService {
   async announcementChanged(
     tx: Transaction,
     organizationId: string,
-    announcement: { id: string; version: string; startsAt: Date },
+    announcement: { id: string; version: string; startsAt: Date; textChanged: boolean },
   ): Promise<void> {
     const channels = await tx.execute<{ id: string }>(sql`
       select c.id from chat_channels c where c.organization_id = ${organizationId} and c.space_id is null
         and 'announcementPublished' = any(c.events) and c.state = 'working'`);
     if (channels.rows.length === 0) return;
     for (const channel of channels.rows) {
-      await tx.execute(sql`
+      const replaced = await tx.execute(sql`
         update chat_deliveries set state = 'skipped', updated_at = now()
         where channel_id = ${channel.id} and combine_key = ${`announcement:${announcement.id}`}
           and state = 'pending'`);
+      if (!announcement.textChanged && !replaced.rowCount) continue;
       await tx.insert(chatDeliveries).values({
         channelId: channel.id,
         event: "announcementPublished",

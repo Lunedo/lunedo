@@ -72,7 +72,7 @@ const shownSchema = z
       .describe("An announcement."),
   )
   .describe(
-    "Announcements of the instance and of the caller's organizations that have not ended, including ones that start later. The instance announcement comes first.",
+    "Announcements of the instance and of the caller's organizations that have started and not ended. The instance announcement comes first.",
   );
 
 const setSchema = z
@@ -144,7 +144,7 @@ export class AnnouncementsController {
   @ApiRoute({
     summary: "List the announcements shown to you",
     description:
-      "Returns the announcements of the instance and of the caller's organizations that have not ended. Show those that have started, and hide dismissed information.",
+      "Returns the announcements of the instance and of the caller's organizations that have started and not ended. Scheduled announcements appear once they start; administrators see them in the announcement settings. Hide dismissed information.",
     tags: [TAG],
     response: {
       description: "The announcements.",
