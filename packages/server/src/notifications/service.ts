@@ -8,9 +8,11 @@ import type { Database, Executor, Transaction } from "../database/database.js";
 import type { MailService } from "../mail/mail-service.js";
 import { hasPushDevice, queuePush } from "../push/outbox.js";
 import type { SettingsService } from "../settings/service.js";
+import { mailWording } from "./mail-texts.js";
 import type { NotificationRegistry, NotificationSubject, NotificationTypeDefinition } from "./registry.js";
 import { notifications } from "./schema.js";
 import { browserPushSetting, notificationEventSettings, notificationRetentionSetting } from "./types.js";
+import type { UnsubscribeService } from "./unsubscribe.js";
 import { effectiveWatches } from "./watches.js";
 
 export const NOTIFICATIONS_CHANNEL = "pagehall_notifications";
@@ -126,6 +128,7 @@ export class NotificationService {
   readonly #mail: MailService;
   readonly #authorization: AuthorizationService;
   readonly #registry: NotificationRegistry;
+  readonly #unsubscribe: UnsubscribeService;
 
   constructor(options: {
     database: Database;
@@ -133,12 +136,14 @@ export class NotificationService {
     mail: MailService;
     authorization: AuthorizationService;
     registry: NotificationRegistry;
+    unsubscribe: UnsubscribeService;
   }) {
     this.#database = options.database;
     this.#settings = options.settings;
     this.#mail = options.mail;
     this.#authorization = options.authorization;
     this.#registry = options.registry;
+    this.#unsubscribe = options.unsubscribe;
   }
 
   get registry(): NotificationRegistry {
@@ -201,6 +206,7 @@ export class NotificationService {
           dateFormat: await this.#mail.dateFormatOf(recipientId, tx),
         };
         const mail = definition.mail(params, locale);
+        const links = await this.#unsubscribe.links(recipientId, { kind: "event", event: event.id }, tx);
         mailIds.push(
           await this.#mail.queue(tx, {
             to: account.email,
@@ -209,6 +215,8 @@ export class NotificationService {
             params: mail.params,
             organizationId: input.organizationId,
             notification: true,
+            unsubscribe: links ? { label: mailWording[locale.language].unsubscribeEvent, ...links } : null,
+            security: event.security,
           }),
         );
       }

@@ -483,20 +483,33 @@ export interface MailBranding {
   accentColor: string;
   preferencesUrl: string | null;
   unsubscribe?: { label: string; url: string } | null;
+  security?: boolean;
 }
 
 const NEUTRAL = designTokens.color.light;
 
-const FOOTER: Record<Language, { sentBy: (instanceName: string) => string; preferences: string }> = {
+const FOOTER: Record<
+  Language,
+  { sentBy: (instanceName: string) => string; preferences: string; security: string }
+> = {
   en: {
     sentBy: (instanceName) => `Sent by ${instanceName}.`,
     preferences: "Choose which notifications you receive",
+    security: "You receive this mail for your account's security.",
   },
   de: {
     sentBy: (instanceName) => `Gesendet von ${instanceName}.`,
     preferences: "Wählen Sie, welche Benachrichtigungen Sie erhalten",
+    security: "Sie erhalten diese E-Mail zur Sicherheit Ihres Kontos.",
   },
 };
+
+export function unsubscribeHeaders(oneClickUrl: string): Record<string, string> {
+  return {
+    "List-Unsubscribe": `<${oneClickUrl}>`,
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  };
+}
 
 export const defaultBranding: MailBranding = {
   organizationName: null,
@@ -544,6 +557,7 @@ function layout(language: Language, content: Content, instanceName: string, bran
   }
   const footer = [
     escapeHtml(FOOTER[language].sentBy(instanceName)),
+    ...(branding.security ? [escapeHtml(FOOTER[language].security)] : []),
     ...(branding.preferencesUrl
       ? [
           `<a href="${escapeHtml(branding.preferencesUrl)}" style="color:${NEUTRAL.textMuted}">${escapeHtml(FOOTER[language].preferences)}</a>`,
@@ -611,6 +625,7 @@ export function renderContent(
     ...(content.action ? [`${content.action.label}: ${content.action.url}`] : []),
     ...sections,
     FOOTER[language].sentBy(instanceName),
+    ...(branding.security ? [FOOTER[language].security] : []),
     ...(branding.preferencesUrl ? [`${FOOTER[language].preferences}: ${branding.preferencesUrl}`] : []),
     ...(branding.unsubscribe ? [`${branding.unsubscribe.label}: ${branding.unsubscribe.url}`] : []),
   ]

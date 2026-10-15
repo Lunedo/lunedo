@@ -340,6 +340,8 @@ export function createAccountServices(options: {
   const overview = new AccountOverviewService({ database, accounts });
   const roles = new RoleService({ database, audit, authorization });
   const groups = new GroupService({ database, audit, authorization });
+  const signer = new ValueSigner({ database, encryption });
+  const unsubscribe = new UnsubscribeService({ database, settings, signer });
   const notifications = new NotificationService({
     database,
     settings,
@@ -355,6 +357,7 @@ export function createAccountServices(options: {
       ...exportNotificationTypes,
       ...chatNotificationTypes,
     ),
+    unsubscribe,
   });
   mail.useNotifications(notifications);
   const homeOrganizations = new HomeOrganizationService({ database, audit, authorization, notifications });
@@ -541,8 +544,6 @@ export function createAccountServices(options: {
   const versions = new VersionService({ database, audit, documents, people, settings, activity });
   const trash = new TrashService({ database, audit, settings, people, activity, authorization, logger });
   const archive = new ArchiveService({ database, audit, authorization, activity, trash });
-  const signer = new ValueSigner({ database, encryption });
-  const unsubscribe = new UnsubscribeService({ database, settings, signer });
   const notificationMailer = new NotificationMailer({
     database,
     settings,

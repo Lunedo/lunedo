@@ -99,6 +99,7 @@ export interface NotificationEvent {
   types: readonly string[];
   defaults: { inApp: boolean; email: EmailDelivery; push: boolean };
   keptWhenMuted: boolean;
+  security: boolean;
 }
 
 function contentEvent(
@@ -113,16 +114,32 @@ function contentEvent(
     types,
     defaults: { inApp: true, email, push: options.push ?? false },
     keptWhenMuted: options.keptWhenMuted ?? false,
+    security: false,
   };
 }
 
-function administrationEvent(id: string, types: readonly string[], email: EmailDelivery): NotificationEvent {
+export const securityNotificationTypes: ReadonlySet<NotificationType> = new Set<NotificationType>([
+  "signIn.newBrowser",
+  "auth.emergencySignIn",
+  "breakGlass.started",
+  "apiToken.expiring",
+  "mail.credentialExpiring",
+  "identityProvider.credentialExpiring",
+]);
+
+function administrationEvent(
+  id: string,
+  types: readonly string[],
+  email: EmailDelivery,
+  security = false,
+): NotificationEvent {
   return {
     id,
     group: "administration",
     types,
     defaults: { inApp: true, email, push: false },
     keptWhenMuted: false,
+    security,
   };
 }
 
@@ -159,7 +176,12 @@ export const notificationEvents: readonly NotificationEvent[] = [
     "off",
   ),
   ...notificationTypes.map((type) =>
-    administrationEvent(notificationSettingKey(type).slice("notifications.".length), [type], "immediately"),
+    administrationEvent(
+      notificationSettingKey(type).slice("notifications.".length),
+      [type],
+      "immediately",
+      securityNotificationTypes.has(type),
+    ),
   ),
 ];
 

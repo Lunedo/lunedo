@@ -61,6 +61,17 @@ describe("notification events", () => {
     ]);
   });
 
+  it("mark only events about sign-in and credentials as security events", () => {
+    expect(notificationEvents.filter((event) => event.security).map((event) => event.id)).toEqual([
+      "apiTokenExpiring",
+      "breakGlassStarted",
+      "authEmergencySignIn",
+      "mailCredentialExpiring",
+      "identityProviderCredentialExpiring",
+      "signInNewBrowser",
+    ]);
+  });
+
   it("find the event of a type", () => {
     expect(notificationEventOf("content.changed")?.id).toBe("changes");
     expect(notificationEventOf("apiToken.expiring")?.id).toBe("apiTokenExpiring");

@@ -426,6 +426,7 @@ export class AccountSecurityService {
         id = await this.#mail.queue(tx, {
           to: email,
           template: "emailChangeAddressInUse",
+          security: true,
           language,
           params: {},
         });
@@ -468,6 +469,7 @@ export class AccountSecurityService {
       const id = await this.#mail.queue(tx, {
         to: previousEmail,
         template: "emailChangeNotice",
+        security: true,
         language: await this.#mail.languageOf(accountId),
         params: { newEmail },
       });

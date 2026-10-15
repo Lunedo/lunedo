@@ -301,6 +301,46 @@ describe.skipIf(!baseUrl)("notifications", () => {
     await test.settings.set(smtpSetting, {}, "instance", null);
   });
 
+  it("offers a one-click unsubscribe in administration mails and none in security mails", async () => {
+    const org = await organization();
+    await test.settings.set(smtpSetting, {}, "instance", SMTP);
+    await notify(guestNotice(org.id, [org.owner.id]));
+    await notify({
+      type: "signIn.newBrowser",
+      recipients: [org.owner.id],
+      organizationId: null,
+      targetId: randomUUID(),
+      params: { browser: "Firefox", operatingSystem: "Linux", clientIp: "192.0.2.1" },
+    });
+    await deliverPendingMail(test.services, test.database);
+    const [guest, security] = test.mail.sent.filter((entry) => entry.to === org.owner.email).slice(-2);
+
+    const oneClick = /^<https:\/\/wiki\.example\.org\/api\/v1\/notifications\/unsubscribe\/([^>]+)>$/.exec(
+      guest?.headers?.["List-Unsubscribe"] ?? "",
+    );
+    expect(guest?.headers?.["List-Unsubscribe-Post"]).toBe("List-Unsubscribe=One-Click");
+    expect(guest?.text).toContain(
+      `Stop e-mails like this: https://wiki.example.org/unsubscribe/${oneClick?.[1]}`,
+    );
+    expect(guest?.text).not.toContain("for your account's security");
+    expect(await test.services.unsubscribe.describe(oneClick?.[1] ?? "")).toEqual({
+      scope: { kind: "event", event: "guestExpiring" },
+      off: false,
+    });
+
+    expect(security?.headers).toBeUndefined();
+    expect(security?.text).not.toContain("/unsubscribe/");
+    expect(security?.text).toContain("You receive this mail for your account's security.");
+    expect(security?.html).toContain("You receive this mail for your account&#39;s security.");
+    const forged = await test.services.unsubscribe.token(org.owner.id, {
+      kind: "event",
+      event: "signInNewBrowser",
+    });
+    expect(await test.services.unsubscribe.describe(forged)).toBeNull();
+    expect(await test.services.unsubscribe.apply(forged)).toBeNull();
+    await test.settings.set(smtpSetting, {}, "instance", null);
+  });
+
   it("skips deactivated recipients", async () => {
     const org = await organization();
     const person = await standard(org.id);
