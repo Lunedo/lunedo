@@ -4,6 +4,7 @@ import {
   DangerZone,
   Field,
   focusFirstInvalidSoon,
+  focusWhenShown,
   Input,
   Notice,
   RadioGroup,
@@ -90,6 +91,13 @@ function draftOf(saved: Saved | null, timeZone: string): Draft {
     endDate: end.date,
     endTime: end.time,
   };
+}
+
+function focusSubmitOfNextForm(used: Element | null): void {
+  focusWhenShown(() => {
+    const next = document.querySelector<HTMLElement>("[data-announcement-submit]");
+    return next && next !== used ? next : null;
+  });
 }
 
 export function validateAnnouncement(
@@ -234,6 +242,7 @@ function AnnouncementForm({
       : request(() => api.PUT("/api/v1/instance/announcement", { body }));
 
   const save = async () => {
+    const used = document.activeElement;
     const checked = validateAnnouncement(draft, timeZone, Date.now(), t);
     setErrors(checked.errors);
     if (Object.keys(checked.errors).length > 0 || !checked.endsAt) {
@@ -253,6 +262,7 @@ function AnnouncementForm({
       });
       toast({ variant: "success", title: t("announcements.saved") });
       await refresh();
+      focusSubmitOfNextForm(used);
     } catch (error) {
       const fields = Object.entries(serverFieldErrors(t, error)).flatMap(([path, message]) => {
         const field = SERVER_FIELDS[path];
@@ -282,7 +292,9 @@ function AnnouncementForm({
       } else {
         await request(() => api.DELETE("/api/v1/instance/announcement"));
       }
+      const used = document.activeElement;
       await refresh();
+      focusSubmitOfNextForm(used);
       const restorable = Date.parse(saved.endsAt) > Date.now();
       toast({
         title: t("announcements.removed"),
@@ -505,7 +517,7 @@ function AnnouncementForm({
               >
                 {t("common.cancel")}
               </Button>
-              <Button type="submit" variant="primary" icon={Save} loading={busy}>
+              <Button type="submit" variant="primary" icon={Save} loading={busy} data-announcement-submit="">
                 {saved ? t("announcements.saveChanges") : t("announcements.publish")}
               </Button>
             </div>

@@ -113,6 +113,7 @@ export function NotificationEntry({
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <button
           type="button"
+          data-notification=""
           onClick={open}
           className="min-w-0 text-start focus-visible:outline-2 focus-visible:outline-accent"
         >

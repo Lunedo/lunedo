@@ -140,7 +140,7 @@ export {
   type RailLinkProps,
   type RailProps,
 } from "./rail.js";
-export { focusMainHeading, mainHeading } from "./return-focus.js";
+export { focusMainHeading, focusWhenShown, mainHeading, useOpener } from "./return-focus.js";
 export {
   ScrollArea,
   type ScrollAreaProps,

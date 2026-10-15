@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from "react";
+import { useCallback, useLayoutEffect, useRef } from "react";
 
 let menuOpener: HTMLElement | null = null;
 
@@ -19,6 +19,29 @@ export function focusMainHeading(root: ParentNode = document): boolean {
   if (!heading.hasAttribute("tabindex")) heading.setAttribute("tabindex", "-1");
   heading.focus({ preventScroll: true });
   return true;
+}
+
+export function useOpener(): () => void {
+  const opener = useRef<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    const active = document.activeElement;
+    opener.current = active instanceof HTMLElement && active !== document.body ? active : null;
+  }, []);
+  return useCallback(() => {
+    const target = opener.current;
+    opener.current = null;
+    if (target?.isConnected) target.focus();
+    else focusMainHeading();
+  }, []);
+}
+
+export function focusWhenShown(find: () => HTMLElement | null | undefined, attempts = 20): void {
+  const step = (left: number) => {
+    const element = find();
+    if (element) element.focus();
+    else if (left > 0) setTimeout(() => step(left - 1), 50);
+  };
+  setTimeout(() => step(attempts), 0);
 }
 
 export function useReturnFocus(open: boolean): (event: Event) => void {

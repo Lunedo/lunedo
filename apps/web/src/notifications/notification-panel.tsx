@@ -1,7 +1,16 @@
-import { Button, EmptyState, IconButton, SegmentedControl, Skeleton, Spinner } from "@pagehall/ui";
+import {
+  Button,
+  EmptyState,
+  focusWhenShown,
+  IconButton,
+  SegmentedControl,
+  Skeleton,
+  Spinner,
+  useOpener,
+} from "@pagehall/ui";
 import { useNavigate } from "@tanstack/react-router";
 import { BellOff, CheckCheck, Settings, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LoadError } from "../errors/failure.js";
 import { useFormat } from "../preferences/preferences-provider.js";
@@ -43,15 +52,26 @@ export function NotificationPanel({ onClose }: { onClose: () => void }) {
   const panel = useRef<HTMLElement>(null);
   const items = list.data?.pages.flatMap((page) => page.items) ?? [];
   const hasUnread = items.some((item) => item.readAt === null);
+  const restoreFocus = useOpener();
+  const close = useCallback(() => {
+    onClose();
+    restoreFocus();
+  }, [onClose, restoreFocus]);
 
   useEffect(() => {
     panel.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") close();
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
+  }, [close]);
+
+  const loadMore = async () => {
+    const before = panel.current?.querySelectorAll("[data-notification]").length ?? 0;
+    await list.fetchNextPage();
+    focusWhenShown(() => panel.current?.querySelectorAll<HTMLElement>("[data-notification]")[before]);
+  };
 
   return (
     <aside
@@ -72,7 +92,7 @@ export function NotificationPanel({ onClose }: { onClose: () => void }) {
             void navigate({ to: "/settings/notifications" });
           }}
         />
-        <IconButton label={t("notifications.close")} icon={X} onClick={onClose} />
+        <IconButton label={t("notifications.close")} icon={X} onClick={close} />
       </header>
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2">
         <SegmentedControl
@@ -135,7 +155,7 @@ export function NotificationPanel({ onClose }: { onClose: () => void }) {
         ))}
         {list.hasNextPage ? (
           <div className="flex justify-center p-2">
-            <Button variant="secondary" size="sm" onClick={() => void list.fetchNextPage()}>
+            <Button variant="secondary" size="sm" onClick={() => void loadMore()}>
               {list.isFetchingNextPage ? <Spinner label={t("ui.loading")} /> : t("notifications.more")}
             </Button>
           </div>
