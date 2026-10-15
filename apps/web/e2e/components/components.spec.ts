@@ -47,3 +47,25 @@ test("the component page does not scroll sideways at 390 pixels in German", asyn
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(0);
 });
+
+test("every control on the component page has a hit area of at least 44 pixels", async ({ page }) => {
+  await page.goto("/dev/components?mode=light");
+  await expect(page.getByRole("main")).toBeVisible();
+  const small = await page.evaluate(() => {
+    const controls = document.querySelectorAll<HTMLElement>(
+      "main button, main [role='checkbox'], main [role='radio'], main [role='switch'], main [role='tab'], main [role='combobox']",
+    );
+    return Array.from(controls).flatMap((control) => {
+      const box = control.getBoundingClientRect();
+      if (box.width === 0 || box.height === 0 || control.closest("[aria-hidden='true']")) return [];
+      const after = getComputedStyle(control, "::after");
+      const extended = after.position === "absolute";
+      const width = Math.max(box.width, extended ? Number.parseFloat(after.width) || 0 : 0);
+      const height = Math.max(box.height, extended ? Number.parseFloat(after.height) || 0 : 0);
+      if (width >= 44 && height >= 44) return [];
+      const name = control.getAttribute("aria-label") ?? control.textContent?.trim() ?? control.tagName;
+      return [`${name} (${Math.round(width)} × ${Math.round(height)})`];
+    });
+  });
+  expect(small).toEqual([]);
+});

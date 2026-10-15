@@ -10,6 +10,7 @@ import {
 import { type ReactNode, type RefObject, useId, useLayoutEffect, useRef, useState } from "react";
 import { classNames } from "./class-names.js";
 import { controlClassName, useFieldControl } from "./field.js";
+import { HIT_AREA, WIDE_HIT_AREA } from "./hit-area.js";
 import { Icon } from "./icon.js";
 import { Tooltip } from "./tooltip.js";
 import { useTruncated } from "./truncated-text.js";
@@ -170,7 +171,10 @@ export function Checkbox({
         {...(disabled !== undefined ? { disabled } : {})}
         {...(props["aria-label"] ? { "aria-label": props["aria-label"] } : {})}
         {...(descriptionId ? { "aria-describedby": descriptionId } : {})}
-        className="mt-1 flex size-4 shrink-0 items-center justify-center rounded-sm border border-control-border bg-control text-on-accent focus-visible:focus-ring aria-invalid:border-danger disabled:cursor-not-allowed disabled:border-dashed disabled:bg-surface-sunken aria-checked:border-accent aria-checked:bg-accent disabled:aria-checked:border-control-border disabled:aria-checked:bg-control-border"
+        className={classNames(
+          HIT_AREA,
+          "mt-1 flex size-4 shrink-0 items-center justify-center rounded-sm border border-control-border bg-control text-on-accent focus-visible:focus-ring aria-invalid:border-danger disabled:cursor-not-allowed disabled:border-dashed disabled:bg-surface-sunken aria-checked:border-accent aria-checked:bg-accent disabled:aria-checked:border-control-border disabled:aria-checked:bg-control-border",
+        )}
       >
         <CheckboxPrimitive.Indicator>
           <Icon icon={Check} size="sm" />
@@ -228,7 +232,10 @@ export function Switch({
       {...(disabled && !explained ? { disabled: true } : {})}
       {...(explained ? { "aria-disabled": true, "aria-describedby": reasonId, "data-disabled": "" } : {})}
       {...(labelHidden ? { "aria-label": label } : {})}
-      className="group relative inline-flex h-5 w-10 shrink-0 items-center rounded-full border border-control-border bg-control px-1 transition-colors focus-visible:focus-ring aria-checked:border-accent aria-checked:bg-accent data-disabled:cursor-not-allowed data-disabled:border-dashed data-disabled:bg-surface-sunken data-disabled:aria-checked:border-control-border data-disabled:aria-checked:bg-control-border motion-reduce:transition-none"
+      className={classNames(
+        WIDE_HIT_AREA,
+        "group inline-flex h-5 w-10 shrink-0 items-center rounded-full border border-control-border bg-control px-1 transition-colors focus-visible:focus-ring aria-checked:border-accent aria-checked:bg-accent data-disabled:cursor-not-allowed data-disabled:border-dashed data-disabled:bg-surface-sunken data-disabled:aria-checked:border-control-border data-disabled:aria-checked:bg-control-border motion-reduce:transition-none",
+      )}
     >
       <SwitchPrimitive.Thumb className="block size-3 rounded-full bg-control-border transition-transform group-aria-checked:translate-x-5 group-aria-checked:bg-on-accent motion-reduce:transition-none" />
     </SwitchPrimitive.Root>
@@ -288,7 +295,10 @@ export function RadioGroup({ value, onValueChange, options, label, variant = "de
             <RadioGroupPrimitive.Item
               id={itemId}
               value={option.value}
-              className="mt-1 flex size-4 shrink-0 items-center justify-center rounded-full border border-control-border bg-control focus-visible:focus-ring aria-checked:border-accent"
+              className={classNames(
+                HIT_AREA,
+                "mt-1 flex size-4 shrink-0 items-center justify-center rounded-full border border-control-border bg-control focus-visible:focus-ring aria-checked:border-accent",
+              )}
             >
               <RadioGroupPrimitive.Indicator className="block size-2 rounded-full bg-accent" />
             </RadioGroupPrimitive.Item>
@@ -331,6 +341,7 @@ function SegmentedItem({ option }: { option: SegmentedOption }) {
       {...(blocked && option.disabledReason ? { "aria-describedby": reasonId } : {})}
       className={classNames(
         SEGMENTED_ITEM,
+        WIDE_HIT_AREA,
         "text-text-muted focus-visible:focus-ring aria-checked:bg-accent aria-checked:text-on-accent",
         blocked
           ? "cursor-not-allowed border border-dashed border-control-border"
