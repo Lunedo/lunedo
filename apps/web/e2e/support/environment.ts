@@ -45,3 +45,4 @@ export function writeState(patch: Partial<E2EState>): E2EState {
 }
 
 export const OWNER_STORAGE = path.join(STATE_DIR, "owner.json");
+export const SETUP_STORAGE = path.join(STATE_DIR, "setup.json");
