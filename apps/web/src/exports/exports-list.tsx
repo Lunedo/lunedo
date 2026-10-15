@@ -19,8 +19,7 @@ const ERROR_CODES = new Set([
   "exportDisabled",
   "noAccess",
   "tokenRevoked",
-  "tooLarge",
-  "storageFull",
+  "notEnoughStorage",
   "interrupted",
   "internalError",
 ]);

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App, createQueryClient } from "../app.js";
@@ -45,6 +45,7 @@ const space = (role: "reader" | "editor" | "admin" = "admin") => ({
   createdAt: "2026-10-05T08:00:00.000Z",
   updatedAt: "2026-10-05T08:00:00.000Z",
   role,
+  mayExport: role === "admin",
 });
 
 const item = (
@@ -553,6 +554,18 @@ describe("page tree", () => {
         },
       ),
     );
+  });
+
+  it("offers the export of the space only to people who may export it", async () => {
+    for (const role of ["reader", "admin"] as const) {
+      mockApi({ ...baseRoutes(), ...spaceRoutes(role) });
+      await renderAt(`/spaces/ITOPS/folders/${RUNBOOKS}/runbooks`);
+      const user = userEvent.setup();
+      await user.click(await screen.findByRole("button", { name: "Space options" }));
+      const menu = await screen.findByRole("menu");
+      expect(within(menu).queryByRole("menuitem", { name: "Export space" }) !== null).toBe(role === "admin");
+      cleanup();
+    }
   });
 
   it("offers Move in the menu of every item", async () => {

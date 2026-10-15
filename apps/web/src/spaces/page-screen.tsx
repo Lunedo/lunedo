@@ -452,7 +452,12 @@ function PageArticle({
         {sharing.dialog}
         <PageExportDialog
           page={{ id: page.id, title, publishable: !publishMode || page.published }}
-          space={{ key: space.key, exportEnabled: space.exportEnabled, admin: space.role === "admin" }}
+          space={{
+            key: space.key,
+            exportEnabled: space.exportEnabled,
+            admin: space.role === "admin",
+            mayExportPages: space.mayExport,
+          }}
           open={exporting}
           onOpenChange={setExporting}
         />

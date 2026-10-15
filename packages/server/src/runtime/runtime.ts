@@ -24,7 +24,6 @@ import { createDatabase, type Database } from "../database/database.js";
 import { runMigrations } from "../database/migrate.js";
 import { NotificationListener } from "../database/notifications.js";
 import { createDatabasePool, type DatabasePool } from "../database/pool.js";
-import { exportSettings } from "../exports/settings.js";
 import { encryptedStreamOwnersOf, fileStoreOf } from "../files/owners.js";
 import { fileSettings } from "../files/settings.js";
 import { readinessChecks } from "../health/readiness.js";
@@ -169,7 +168,6 @@ export async function createServerRuntime(options: {
         ...sharingSettings,
         ...fileSettings,
         ...importSettings,
-        ...exportSettings,
         ...searchSettings,
         auditRetentionSetting,
         smtpSetting,

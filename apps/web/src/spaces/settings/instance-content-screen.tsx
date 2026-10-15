@@ -9,7 +9,6 @@ import { SettingsPage } from "../../screens/settings/settings-page.js";
 import { useInstanceSettingMutation } from "../../settings/setting-mutations.js";
 import {
   IMPORT_KEYS,
-  INSTANCE_EXPORT_KEYS,
   INSTANCE_FILE_KEYS,
   SHARING_KEYS,
   TRASH_KEYS,
@@ -78,15 +77,6 @@ export function InstanceContentScreen() {
         <SettingsList
           settings={settings.data}
           keys={INSTANCE_FILE_KEYS}
-          level="instance"
-          canManage={canManage}
-          onChange={change}
-        />
-      </Panel>
-      <Panel title={t("content.exportsSection")} description={t("content.exportsSectionDescription")}>
-        <SettingsList
-          settings={settings.data}
-          keys={INSTANCE_EXPORT_KEYS}
           level="instance"
           canManage={canManage}
           onChange={change}

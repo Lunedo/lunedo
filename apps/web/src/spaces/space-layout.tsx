@@ -309,7 +309,9 @@ function SpaceNavigation({
                   { type: "separator" as const },
                 ]
               : []),
-            { label: t("exports.space.menu"), icon: FileArchive, onSelect: () => setExporting(true) },
+            ...(space.mayExport
+              ? [{ label: t("exports.space.menu"), icon: FileArchive, onSelect: () => setExporting(true) }]
+              : []),
           ]}
         />
         <SpaceExportDialog

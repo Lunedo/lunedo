@@ -60,6 +60,7 @@ export interface Space {
 
 export interface SpaceWithRole extends Space {
   role: SpaceRole | null;
+  mayExport: boolean;
 }
 
 type SpaceRow = {
@@ -212,7 +213,12 @@ export class SpaceService {
     if (!space) return null;
     const role =
       viewer.type === "account" ? (await this.#authorization.spaceRole(viewer.id, spaceId)).role : null;
-    return { ...space, role };
+    const exporting = await this.#authorization.explain(viewer, "space.export", {
+      type: "space",
+      id: spaceId,
+    });
+    const mayExport = exporting.allowed || exporting.denials.includes("exportDisabled");
+    return { ...space, role, mayExport };
   }
 
   async lock(tx: Transaction, spaceId: string): Promise<Space> {

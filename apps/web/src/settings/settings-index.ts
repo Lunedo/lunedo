@@ -130,8 +130,6 @@ export const INSTANCE_FILE_KEYS = [
 
 export const SPACE_FILE_KEYS = ["files.keepVersions"] as const;
 
-export const INSTANCE_EXPORT_KEYS = ["exports.maxSizeMegabytes", "exports.storageMegabytes"] as const;
-
 export const IMPORT_KEYS = [
   "imports.maxUploadMegabytes",
   "imports.folderEnabled",
@@ -160,7 +158,6 @@ export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
     section("content.trashSection", [...TRASH_MINIMUM_KEYS, ...TRASH_KEYS].map(setting)),
     section("content.sharingSection", SHARING_KEYS.map(setting)),
     section("content.filesSection", INSTANCE_FILE_KEYS.map(setting)),
-    section("content.exportsSection", INSTANCE_EXPORT_KEYS.map(setting)),
     section("content.importsSection", IMPORT_KEYS.map(setting)),
   ],
   "account.preferences": [

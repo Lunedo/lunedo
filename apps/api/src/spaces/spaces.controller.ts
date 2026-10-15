@@ -133,7 +133,7 @@ export class SpacesController {
     response: {
       description: "The space.",
       schema: spaceWithRoleSchema,
-      example: { ...exampleSpace, role: "editor" },
+      example: { ...exampleSpace, role: "editor", mayExport: false },
     },
   })
   async get(@Param("spaceId") spaceId: string, @Req() request: FastifyRequest): Promise<SpaceWithRole> {
@@ -153,7 +153,7 @@ export class SpacesController {
     response: {
       description: "The space.",
       schema: resolvedSchema,
-      example: { space: { ...exampleSpace, role: "reader" }, redirected: false },
+      example: { space: { ...exampleSpace, role: "reader", mayExport: false }, redirected: false },
     },
   })
   async resolve(@Param("key") key: string, @Req() request: FastifyRequest) {

@@ -63,17 +63,19 @@ export function SpaceExportScreen() {
             />
           </Panel>
         ) : null}
-        <Panel title={t("exports.space.panelTitle")}>
-          <SpaceExport
-            space={{
-              id: space.id,
-              key: space.key,
-              name: spaceDisplayName(t, space),
-              exportEnabled: space.exportEnabled,
-              admin,
-            }}
-          />
-        </Panel>
+        {space.mayExport ? (
+          <Panel title={t("exports.space.panelTitle")}>
+            <SpaceExport
+              space={{
+                id: space.id,
+                key: space.key,
+                name: spaceDisplayName(t, space),
+                exportEnabled: space.exportEnabled,
+                admin,
+              }}
+            />
+          </Panel>
+        ) : null}
       </div>
     </SpaceSettingsPage>
   );

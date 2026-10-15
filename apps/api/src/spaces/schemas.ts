@@ -79,7 +79,14 @@ export const spaceSchema = z
   .describe("A space.");
 
 export const spaceWithRoleSchema = spaceSchema
-  .extend({ role: roleSchema.nullable().describe("The caller's role in the space, or null.") })
+  .extend({
+    role: roleSchema.nullable().describe("The caller's role in the space, or null."),
+    mayExport: z
+      .boolean()
+      .describe(
+        "Whether the caller may export the whole space and pages with their subpages while export is turned on: space administrators, and organization administrators with access to the space outside confidential spaces. Every reader can export single pages.",
+      ),
+  })
   .describe("A space with the caller's role.");
 
 export const exampleSpace = {

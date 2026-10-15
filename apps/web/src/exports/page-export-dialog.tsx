@@ -17,7 +17,7 @@ export function PageExportDialog({
   onOpenChange,
 }: {
   page: { id: string; title: string; publishable: boolean };
-  space: { key: string; exportEnabled: boolean; admin: boolean };
+  space: { key: string; exportEnabled: boolean; admin: boolean; mayExportPages: boolean };
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -67,7 +67,7 @@ function PageExportForm({
   onDone,
 }: {
   page: { id: string; title: string; publishable: boolean };
-  space: { key: string; exportEnabled: boolean; admin: boolean };
+  space: { key: string; exportEnabled: boolean; admin: boolean; mayExportPages: boolean };
   onDone: () => void;
 }) {
   const { t } = useTranslation();
@@ -141,13 +141,16 @@ function PageExportForm({
         variant="card"
         value={choice}
         onValueChange={(value) => setChoice(value as Choice)}
-        options={CHOICES.map((value) => ({
+        options={CHOICES.filter((value) => value !== "subpages" || space.mayExportPages).map((value) => ({
           value,
           label: t(`exports.page.formats.${value}.label`),
           description: t(`exports.page.formats.${value}.description`),
         }))}
       />
       <p className="text-sm text-text-muted">{t("exports.page.scope")}</p>
+      <p className="text-sm text-text-muted">
+        {space.mayExportPages ? t("exports.page.kept") : t("exports.page.subpagesForAdmins")}
+      </p>
       <div className="flex flex-wrap justify-end gap-2">
         <Button type="button" variant="secondary" onClick={onDone}>
           {t("common.cancel")}

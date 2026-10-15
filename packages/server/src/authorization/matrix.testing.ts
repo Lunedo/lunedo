@@ -246,6 +246,7 @@ const EXPECTED: Record<string, Expectation> = {
   "item.share": { scope: "space" },
   "item.transferOwnership": { scope: "space", rule: "ownerOrOrganizationAdministrator" },
   "item.export": { scope: "space" },
+  "item.exportPages": { scope: "space" },
   "comment.view": { scope: "space" },
   "comment.reply": { scope: "space" },
   "comment.resolve": { scope: "space" },

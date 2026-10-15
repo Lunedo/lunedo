@@ -1404,7 +1404,7 @@
     "exportDisabled": "Export is turned off for this space. A space admin can turn it on in the space settings.",
     "exportRunning": "Another export of yours is still running. Wait until it is done, or stop it under Settings › Exports.",
     "nothingToExport": "There is nothing to export yet. Publish the page first.",
-    "exportStorageFull": "The storage for exports is full. Try again later, when earlier downloads have expired, or ask the person who runs Pagehall to raise the limit.",
+    "notEnoughStorage": "Not enough storage for this export. Your instance administrator needs to free up space.",
     "tooManyExports": "You already keep 5 exports. Delete one you no longer need under Settings › Exports, then try again.",
     "invalidShortcut": "The shortcut is not valid. Check the label and the address.",
     "shortcutNotFound": "The shortcut does not exist anymore. Reload the list.",
@@ -2220,14 +2220,6 @@
       "spaces_membersCreateConfidentialSpaces": {
         "label": "Members create confidential spaces",
         "description": "Members may create confidential spaces and one-on-ones that administrators cannot read. Administrators always can."
-      },
-      "exports_maxSizeMegabytes": {
-        "label": "Largest export",
-        "description": "An export of a space or of a page with its subpages stops when it grows beyond this size, and the person sees why. Single pages downloaded directly are not limited."
-      },
-      "exports_storageMegabytes": {
-        "label": "Storage for exports",
-        "description": "The downloads of all people together may take up this much space. When it is full, the oldest expired downloads are removed first; if that is not enough, new exports are refused with a message to try again later."
       },
       "imports_maxUploadMegabytes": {
         "label": "Largest export to upload",
@@ -5081,8 +5073,6 @@
     "collaborationSection": "Collaboration",
     "sharingSection": "Sharing",
     "filesSection": "Files",
-    "exportsSection": "Exports",
-    "exportsSectionDescription": "Limits for the downloads people build from spaces and pages. Each download is kept for 7 days.",
     "importsSection": "Imports",
     "importsSectionDescription": "Limits for imports from Confluence. The import folder itself is set by the person who runs the server.",
     "searchSection": "Search"
@@ -7532,6 +7522,8 @@
       "menu": "Export",
       "format": "Format",
       "scope": "The export contains what you can read: the published version, without comments, private notes and history.",
+      "kept": "A download of a page with subpages is deleted 24 hours after you first downloaded it completely, or after 7 days if you never download it.",
+      "subpagesForAdmins": "Only space admins can export the whole space or a page with its subpages. Ask one of them if you need that.",
       "start": "Start export",
       "download": "Download",
       "failed": "“{title}” was not exported",
@@ -7552,7 +7544,7 @@
         },
         "subpages": {
           "label": "ZIP with subpages",
-          "description": "This page and every subpage you can read, with attachments. It is prepared in the background, and you get a notification when the download is ready."
+          "description": "This page and every subpage you can read, with attachments. It is prepared in the background, and you get a notification when the download is ready. It is refused when the storage of Pagehall is almost full."
         }
       }
     },
@@ -7566,7 +7558,7 @@
       "title": "Export {name}",
       "menu": "Export space",
       "panelTitle": "Export this space",
-      "description": "Creates a ZIP file with every page you can read: the page tree as folders, each page as Markdown and HTML, attachments next to their pages and an index.html with the tree. Comments, private notes and history are not included. The download is kept for 7 days and only you can open it.",
+      "description": "Creates a ZIP file with every page you can read: the page tree as folders, each page as Markdown and HTML, attachments next to their pages and an index.html with the tree. Comments, private notes and history are not included. Only you can open the download. It is deleted 24 hours after you first downloaded it completely, or after 7 days if you never download it. The export is refused when the storage of Pagehall is almost full.",
       "start": "Export space",
       "empty": "You have no exports of this space.",
       "yourExports": "Show your exports"
@@ -7598,8 +7590,7 @@
       "failed": "Failed"
     },
     "errors": {
-      "tooLarge": "The export grew larger than this instance allows. Export a smaller part, such as a page with its subpages, or ask the person who runs Pagehall to raise the limit.",
-      "storageFull": "The storage for exports filled up while the export was built. Start it again later, when earlier downloads have expired.",
+      "notEnoughStorage": "Not enough storage for this export. Your instance administrator needs to free up space, then start it again.",
       "exportDisabled": "Export was turned off for the space. Ask a space admin to turn it on, then export again.",
       "noAccess": "You can no longer read what was exported, or it was deleted. Export again what you can read.",
       "tokenRevoked": "The API token that started the export was revoked or expired. Start the export again.",
@@ -7608,7 +7599,7 @@
     },
     "screen": {
       "title": "Exports",
-      "description": "Downloads of spaces and pages you exported. Each download is kept for 7 days and only you can open it."
+      "description": "Downloads of spaces and pages you exported. Only you can open them. Each download is deleted 24 hours after you first downloaded it completely, or after 7 days if you never download it."
     },
     "settings": {
       "tab": "Export",

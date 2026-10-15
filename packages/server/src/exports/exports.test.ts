@@ -1,8 +1,7 @@
-import { randomBytes } from "node:crypto";
 import { Readable } from "node:stream";
 import { buffer } from "node:stream/consumers";
 import { sql } from "drizzle-orm";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import yauzl from "yauzl";
 import { accountPrincipal, type Principal, SYSTEM } from "../accounts/principal.js";
 import { ForbiddenError } from "../authorization/service.js";
@@ -11,8 +10,7 @@ import { testDatabaseBaseUrl } from "../testing/database.js";
 import { testJobContext } from "../testing/jobs.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { spaceFixtures } from "../testing/spaces.js";
-import { type ExportFile, MAX_EXPORT_ATTEMPTS } from "./exports.js";
-import { exportMaxSizeSetting, exportStorageSetting } from "./settings.js";
+import { type ExportArchive, type ExportFile, MAX_EXPORT_ATTEMPTS } from "./exports.js";
 
 const baseUrl = testDatabaseBaseUrl();
 const INSTANCE = "https://wiki.example.org";
@@ -29,7 +27,8 @@ function doc(...content: unknown[]) {
   return { type: "doc", content };
 }
 
-async function bytesOf(file: ExportFile): Promise<Buffer> {
+async function bytesOf(file: ExportFile | ExportArchive): Promise<Buffer> {
+  if ("read" in file) return buffer(await file.read());
   return Buffer.isBuffer(file.body) ? file.body : buffer(file.body as Readable);
 }
 
@@ -77,19 +76,24 @@ describe.skipIf(!baseUrl)("exports", () => {
     const org = await organization();
     const adminId = await member(org.id, "member", "Space admin");
     const readerId = await member(org.id, "member", "Rita Reader");
+    const stewardId = await member(org.id, "member", "Sam Steward");
     const insiderId = await member(org.id, "member", "Ines Insider");
     const editorId = await member(org.id, "member", "Eddi Editor");
     const created = await space(org.id, adminId, {
       name: "Handbook",
       grants: [
         { principalKind: "account", principalId: readerId, role: "reader" },
-        { principalKind: "account", principalId: insiderId, role: "editor" },
+        { principalKind: "account", principalId: stewardId, role: "admin" },
+        { principalKind: "account", principalId: insiderId, role: "admin" },
         { principalKind: "account", principalId: editorId, role: "editor" },
       ],
     });
     const other = await space(org.id, adminId, {
       name: "Elsewhere",
-      grants: [{ principalKind: "account", principalId: readerId, role: "reader" }],
+      grants: [
+        { principalKind: "account", principalId: readerId, role: "reader" },
+        { principalKind: "account", principalId: stewardId, role: "reader" },
+      ],
     });
     const admin = accountPrincipal(adminId);
     const editor = accountPrincipal(editorId);
@@ -166,11 +170,13 @@ describe.skipIf(!baseUrl)("exports", () => {
       notes,
       adminId,
       readerId,
+      stewardId,
       insiderId,
       editorId,
       admin,
       editor,
       reader: accountPrincipal(readerId),
+      steward: accountPrincipal(stewardId),
       insider: accountPrincipal(insiderId),
     };
   }
@@ -201,14 +207,14 @@ describe.skipIf(!baseUrl)("exports", () => {
     return [...files].map(([path, content]) => `${path}\n${content.toString("utf8")}`).join("\n");
   }
 
-  describe("a space as the reader sees it", () => {
+  describe("a space as an administrator without access to restricted pages sees it", () => {
     let context: Context;
     let files: Map<string, Buffer>;
     let fileName: string;
 
     beforeAll(async () => {
       context = await setup();
-      const result = await exported(context.reader, { spaceId: context.space.id });
+      const result = await exported(context.steward, { spaceId: context.space.id });
       files = result.files;
       fileName = result.file.fileName;
     });
@@ -264,7 +270,7 @@ describe.skipIf(!baseUrl)("exports", () => {
       expect(textOf(files, "index.html")).toContain('<a href="Welcome/Welcome.html">Welcome</a>');
     });
 
-    it("renders modules as static content with the reader's permissions", () => {
+    it("renders modules as static content with the exporter's permissions", () => {
       const html = textOf(files, "Welcome/Welcome.html");
       expect(html).toContain("@Rita Reader</span>");
       expect(html).toContain('class="ph-page-report"');
@@ -290,9 +296,9 @@ describe.skipIf(!baseUrl)("exports", () => {
     expect(textOf(files, "Welcome/Welcome.html")).toContain('href="../Salaries%202027/Salaries%202027.html"');
   });
 
-  it("leaves drafts and unpublished pages out for editors, who could see them in Pagehall", async () => {
+  it("leaves drafts and unpublished pages out for space admins, who could see them in Pagehall", async () => {
     const context = await setup();
-    const { files } = await exported(context.editor, { spaceId: context.space.id });
+    const { files } = await exported(context.steward, { spaceId: context.space.id });
     const all = everything(files);
     expect(all).toContain("Published text");
     expect(all).not.toContain("Draft secret");
@@ -320,7 +326,7 @@ describe.skipIf(!baseUrl)("exports", () => {
 
   it("audits space exports", async () => {
     const context = await setup();
-    const { id } = await exported(context.reader, { spaceId: context.space.id });
+    const { id } = await exported(context.steward, { spaceId: context.space.id });
     const events = await test.database.execute<{ fields: { exportId: string; name: string } }>(sql`
       select fields from audit_events where target_id = ${context.space.id} and name = 'space.exported'`);
     expect(events.rows.map((row) => row.fields)).toEqual([
@@ -378,9 +384,9 @@ describe.skipIf(!baseUrl)("exports", () => {
   describe("the export setting of a space", () => {
     it("applies to everyone, including space and organization administrators", async () => {
       const context = await setup();
-      const ready = await exported(context.reader, { spaceId: context.space.id });
+      const ready = await exported(context.steward, { spaceId: context.space.id });
       await test.settings.set(exportEnabledSetting, { space: context.space.id }, "space", false);
-      for (const actor of [context.admin, context.reader]) {
+      for (const actor of [context.admin, context.steward]) {
         await expect(test.services.exports.start(actor, { spaceId: context.space.id })).rejects.toMatchObject(
           {
             decision: { denials: ["exportDisabled"] },
@@ -390,26 +396,29 @@ describe.skipIf(!baseUrl)("exports", () => {
           test.services.exports.page(actor, context.pages.welcome.id, "markdown"),
         ).rejects.toMatchObject({ decision: { denials: ["exportDisabled"] } });
       }
-      await expect(test.services.exports.download(context.reader, ready.id)).rejects.toMatchObject({
+      await expect(
+        test.services.exports.page(context.reader, context.pages.welcome.id, "markdown"),
+      ).rejects.toMatchObject({ decision: { denials: ["exportDisabled"] } });
+      await expect(test.services.exports.download(context.steward, ready.id)).rejects.toMatchObject({
         decision: { denials: ["exportDisabled"] },
       });
       await test.settings.set(exportEnabledSetting, { space: context.space.id }, "space", true);
-      await expect(test.services.exports.download(context.reader, ready.id)).resolves.toMatchObject({
-        contentType: "application/zip",
+      await expect(test.services.exports.download(context.steward, ready.id)).resolves.toMatchObject({
+        fileName: expect.stringMatching(/\.zip$/),
       });
     });
 
     it("fails a waiting export when export is turned off before it runs", async () => {
       const context = await setup();
-      const started = await test.services.exports.start(context.reader, { spaceId: context.space.id });
+      const started = await test.services.exports.start(context.steward, { spaceId: context.space.id });
       await test.settings.set(exportEnabledSetting, { space: context.space.id }, "space", false);
       await run(started.id);
-      expect(await test.services.exports.get(context.reader, started.id)).toMatchObject({
+      expect(await test.services.exports.get(context.steward, started.id)).toMatchObject({
         state: "failed",
         errorCode: "exportDisabled",
       });
       const notification = await test.database.execute<{ type: string }>(sql`
-        select type from notifications where recipient_id = ${context.readerId} and target_id = ${started.id}`);
+        select type from notifications where recipient_id = ${context.stewardId} and target_id = ${started.id}`);
       expect(notification.rows.map((row) => row.type)).toEqual(["export.failed"]);
     });
   });
@@ -417,20 +426,20 @@ describe.skipIf(!baseUrl)("exports", () => {
   describe("downloads", () => {
     it("are only for the person who exported", async () => {
       const context = await setup();
-      const { id } = await exported(context.reader, { spaceId: context.space.id });
+      const { id } = await exported(context.steward, { spaceId: context.space.id });
       for (const other of [context.admin, context.insider, accountPrincipal(context.org.owner)]) {
         await expect(test.services.exports.download(other, id)).rejects.toBeInstanceOf(ForbiddenError);
         await expect(test.services.exports.get(other, id)).rejects.toMatchObject({ code: "exportNotFound" });
         expect((await test.services.exports.list(other)).map((entry) => entry.id)).not.toContain(id);
       }
-      expect((await test.services.exports.list(context.reader)).map((entry) => entry.id)).toContain(id);
+      expect((await test.services.exports.list(context.steward)).map((entry) => entry.id)).toContain(id);
     });
 
     it("tell the person through a notification with the expiry", async () => {
       const context = await setup();
-      const { id } = await exported(context.reader, { spaceId: context.space.id });
+      const { id } = await exported(context.steward, { spaceId: context.space.id });
       const notification = await test.database.execute<{ type: string; params: { expiresAt: string } }>(sql`
-        select type, params from notifications where recipient_id = ${context.readerId} and target_id = ${id}`);
+        select type, params from notifications where recipient_id = ${context.stewardId} and target_id = ${id}`);
       expect(notification.rows.map((row) => row.type)).toEqual(["export.ready"]);
       const days = (Date.parse(notification.rows[0]?.params.expiresAt ?? "") - Date.now()) / 86_400_000;
       expect(days).toBeGreaterThan(6.9);
@@ -439,15 +448,17 @@ describe.skipIf(!baseUrl)("exports", () => {
 
     it("are gone after seven days, together with their file", async () => {
       const context = await setup();
-      const { id } = await exported(context.reader, { spaceId: context.space.id });
+      const { id } = await exported(context.steward, { spaceId: context.space.id });
       const row = await test.database.execute<{ file_id: string }>(
         sql`select file_id from exports where id = ${id}`,
       );
       await test.database.execute(
         sql`update exports set expires_at = now() - interval '1 second' where id = ${id}`,
       );
-      await expect(test.services.exports.download(context.reader, id)).rejects.toBeInstanceOf(ForbiddenError);
-      expect((await test.services.exports.list(context.reader)).map((entry) => entry.id)).not.toContain(id);
+      await expect(test.services.exports.download(context.steward, id)).rejects.toBeInstanceOf(
+        ForbiddenError,
+      );
+      expect((await test.services.exports.list(context.steward)).map((entry) => entry.id)).not.toContain(id);
       expect(await test.services.exports.removeExpired()).toBeGreaterThanOrEqual(1);
       expect((await test.database.execute(sql`select id from exports where id = ${id}`)).rows).toEqual([]);
       const file = await test.database.execute<{ state: string }>(
@@ -477,8 +488,8 @@ describe.skipIf(!baseUrl)("exports", () => {
 
     it("are removed when the membership in the organization ends or the account is deactivated", async () => {
       const context = await setup();
-      const first = await exported(context.reader, { spaceId: context.space.id });
-      await test.services.memberships.remove(SYSTEM, context.org.id, context.readerId, "removed", {
+      const first = await exported(context.steward, { spaceId: context.space.id });
+      await test.services.memberships.remove(SYSTEM, context.org.id, context.stewardId, "removed", {
         releaseHome: true,
       });
       expect((await test.database.execute(sql`select id from exports where id = ${first.id}`)).rows).toEqual(
@@ -499,6 +510,207 @@ describe.skipIf(!baseUrl)("exports", () => {
     if (!share) throw new Error("The share is missing");
     return share;
   }
+
+  describe("who may export spaces and pages with subpages", () => {
+    async function refused(actor: Principal, context: Context) {
+      await expect(test.services.exports.start(actor, { spaceId: context.space.id })).rejects.toBeInstanceOf(
+        ForbiddenError,
+      );
+      await expect(
+        test.services.exports.start(actor, { pageId: context.pages.welcome.id }),
+      ).rejects.toBeInstanceOf(ForbiddenError);
+    }
+
+    async function allowed(actor: Extract<Principal, { type: "account" }>, context: Context) {
+      const space = await test.services.exports.start(actor, { spaceId: context.space.id });
+      await test.services.exports.remove(actor, space.id);
+      const pages = await test.services.exports.start(actor, { pageId: context.pages.welcome.id });
+      await test.services.exports.remove(actor, pages.id);
+    }
+
+    it("are space admins only, never readers, editors or guests", async () => {
+      const context = await setup();
+      const guestId = await member(context.org.id, "guest", "Gus Guest");
+      await test.services.spacePermissions.apply(context.admin, context.space.id, {
+        action: "grant",
+        principalKind: "account",
+        principalId: guestId,
+        role: "admin",
+      });
+      for (const actor of [context.reader, context.editor, accountPrincipal(guestId)]) {
+        await refused(actor, context);
+      }
+      await allowed(context.steward, context);
+      const page = await test.services.exports.page(context.reader, context.pages.welcome.id, "markdown");
+      expect(page.fileName).toBe("Welcome.md");
+    });
+
+    it("include organization administrators with access to the space, outside confidential spaces", async () => {
+      const context = await setup();
+      const owner = accountPrincipal(context.org.owner);
+      await refused(owner, context);
+      await test.services.spacePermissions.apply(context.admin, context.space.id, {
+        action: "grant",
+        principalKind: "account",
+        principalId: context.org.owner,
+        role: "reader",
+      });
+      await allowed(owner, context);
+
+      const council = await test.services.spaces.create(
+        context.admin,
+        context.org.id,
+        {
+          name: `Council ${crypto.randomUUID().slice(0, 6)}`,
+          key: `C${crypto.randomUUID().replace(/-/g, "").slice(0, 7).toUpperCase()}`,
+          visibility: "private",
+          confidential: true,
+          grants: [{ principalKind: "account", principalId: context.org.owner, role: "reader" }],
+        },
+        test.services.spacePermissions.holders,
+      );
+      await expect(test.services.exports.start(owner, { spaceId: council.id })).rejects.toBeInstanceOf(
+        ForbiddenError,
+      );
+      await expect(
+        test.services.exports.start(context.admin, { spaceId: council.id }),
+      ).resolves.toMatchObject({
+        state: "queued",
+      });
+    });
+
+    it("are checked again before the download", async () => {
+      const context = await setup();
+      const { id } = await exported(context.steward, { pageId: context.pages.welcome.id });
+      const permission = (await test.services.spacePermissions.list(context.space.id)).find(
+        (entry) => entry.principalId === context.stewardId,
+      );
+      await test.services.spacePermissions.apply(context.admin, context.space.id, {
+        action: "change",
+        permissionId: permission?.id ?? "",
+        role: "reader",
+      });
+      await expect(test.services.exports.download(context.steward, id)).rejects.toBeInstanceOf(
+        ForbiddenError,
+      );
+    });
+  });
+
+  describe("free space of the file store", () => {
+    const MEGABYTE = 1024 * 1024;
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    function capacity(free: () => number) {
+      return vi
+        .spyOn(test.services.files.store, "capacity")
+        .mockImplementation(async () => ({ free: free(), total: 1000 * MEGABYTE }));
+    }
+
+    async function storedFiles(): Promise<number> {
+      const result = await test.database.execute<{ count: number }>(
+        sql`select count(*)::int as count from stored_files`,
+      );
+      return Number(result.rows[0]?.count ?? 0);
+    }
+
+    it("refuses an export that would leave less than a tenth free, counting waiting exports", async () => {
+      const context = await setup();
+      capacity(() => 95 * MEGABYTE);
+      await expect(
+        test.services.exports.start(context.steward, { spaceId: context.space.id }),
+      ).rejects.toMatchObject({
+        code: "notEnoughStorage",
+        message: "Not enough storage for this export. Your instance administrator needs to free up space.",
+      });
+      expect(await test.services.exports.list(context.steward)).toEqual([]);
+
+      vi.restoreAllMocks();
+      capacity(() => 200 * MEGABYTE);
+      const waiting = await test.services.exports.start(context.steward, { spaceId: context.space.id });
+      await test.database.execute(
+        sql`update exports set estimated_size = ${150 * MEGABYTE} where id = ${waiting.id}`,
+      );
+      await expect(
+        test.services.exports.start(context.insider, { spaceId: context.space.id }),
+      ).rejects.toMatchObject({ code: "notEnoughStorage" });
+      await run(waiting.id);
+      await expect(
+        test.services.exports.start(context.insider, { spaceId: context.space.id }),
+      ).resolves.toMatchObject({ state: "queued" });
+    });
+
+    it("estimates the size from the pages and attachments", async () => {
+      const context = await setup();
+      await test.services.attachments.upload(context.admin, context.pages.welcome.id, {
+        name: "dump.bin",
+        body: Readable.from([Buffer.alloc(3 * MEGABYTE)]),
+        contentLength: 3 * MEGABYTE,
+      });
+      const started = await test.services.exports.start(context.steward, { spaceId: context.space.id });
+      const row = await test.database.execute<{ estimated_size: string }>(
+        sql`select estimated_size from exports where id = ${started.id}`,
+      );
+      expect(Number(row.rows[0]?.estimated_size)).toBeGreaterThan(3 * MEGABYTE);
+    });
+
+    it("stops cleanly while writing when less than a twentieth is left, and leaves no file", async () => {
+      const context = await setup();
+      let free = 500 * MEGABYTE;
+      capacity(() => free);
+      const started = await test.services.exports.start(context.steward, { spaceId: context.space.id });
+      free = 40 * MEGABYTE;
+      const files = await storedFiles();
+      await run(started.id);
+      expect(await test.services.exports.get(context.steward, started.id)).toMatchObject({
+        state: "failed",
+        errorCode: "notEnoughStorage",
+        fileName: null,
+      });
+      expect(await storedFiles()).toBe(files);
+      const notification = await test.database.execute<{ type: string }>(sql`
+        select type from notifications where recipient_id = ${context.stewardId} and target_id = ${started.id}`);
+      expect(notification.rows.map((row) => row.type)).toEqual(["export.failed"]);
+    });
+  });
+
+  describe("retention", () => {
+    async function expiresInHours(id: string): Promise<number> {
+      const result = await test.database.execute<{ expires_at: Date | string }>(
+        sql`select expires_at from exports where id = ${id}`,
+      );
+      return (new Date(result.rows[0]?.expires_at ?? 0).getTime() - Date.now()) / 3_600_000;
+    }
+
+    it("keeps a download for 24 hours after its first complete download", async () => {
+      const context = await setup();
+      const { id } = await exported(context.steward, { spaceId: context.space.id });
+      expect(await expiresInHours(id)).toBeGreaterThan(24 * 6.9);
+      const archive = await test.services.exports.download(context.steward, id);
+      expect(await expiresInHours(id)).toBeGreaterThan(24 * 6.9);
+      await archive.delivered();
+      const first = await expiresInHours(id);
+      expect(first).toBeGreaterThan(23.9);
+      expect(first).toBeLessThanOrEqual(24);
+      await test.database.execute(
+        sql`update exports set expires_at = expires_at - interval '2 hours' where id = ${id}`,
+      );
+      await (await test.services.exports.download(context.steward, id)).delivered();
+      expect(await expiresInHours(id)).toBeLessThan(22.1);
+    });
+
+    it("sends parts of the archive to resume a download", async () => {
+      const context = await setup();
+      const { id } = await exported(context.steward, { spaceId: context.space.id });
+      const archive = await test.services.exports.download(context.steward, id);
+      const whole = await buffer(await archive.read());
+      const tail = await buffer(await archive.read({ start: 10, end: archive.size - 1 }));
+      expect(whole.length).toBe(archive.size);
+      expect(tail.equals(whole.subarray(10))).toBe(true);
+    });
+  });
 
   describe("the background job", () => {
     it("replaces an earlier export of the same space or page and keeps only a few per person", async () => {
@@ -532,11 +744,11 @@ describe.skipIf(!baseUrl)("exports", () => {
 
     it("shows a token limited to one organization only the exports of that organization", async () => {
       const context = await setup();
-      const { id } = await exported(context.reader, { spaceId: context.space.id });
+      const { id } = await exported(context.steward, { spaceId: context.space.id });
       const other = await organization();
       const limited: Principal = {
         type: "account",
-        id: context.readerId,
+        id: context.stewardId,
         token: {
           id: crypto.randomUUID(),
           organizationId: other.id,
@@ -560,27 +772,27 @@ describe.skipIf(!baseUrl)("exports", () => {
 
     it("allows one running export per person", async () => {
       const context = await setup();
-      const started = await test.services.exports.start(context.reader, { spaceId: context.space.id });
+      const started = await test.services.exports.start(context.steward, { spaceId: context.space.id });
       await expect(
-        test.services.exports.start(context.reader, { pageId: context.pages.welcome.id }),
+        test.services.exports.start(context.steward, { pageId: context.pages.welcome.id }),
       ).rejects.toMatchObject({ code: "exportRunning" });
       await run(started.id);
       await expect(
-        test.services.exports.start(context.reader, { pageId: context.pages.welcome.id }),
+        test.services.exports.start(context.steward, { pageId: context.pages.welcome.id }),
       ).resolves.toMatchObject({ state: "queued" });
     });
 
     it("offers nothing after an interruption and finishes when it runs again", async () => {
       const context = await setup();
-      const started = await test.services.exports.start(context.reader, { spaceId: context.space.id });
+      const started = await test.services.exports.start(context.steward, { spaceId: context.space.id });
       const controller = new AbortController();
       controller.abort(new Error("Worker stopped"));
       await expect(run(started.id, controller.signal)).rejects.toThrow();
-      expect(await test.services.exports.get(context.reader, started.id)).toMatchObject({
+      expect(await test.services.exports.get(context.steward, started.id)).toMatchObject({
         state: "running",
         fileName: null,
       });
-      await expect(test.services.exports.download(context.reader, started.id)).rejects.toBeInstanceOf(
+      await expect(test.services.exports.download(context.steward, started.id)).rejects.toBeInstanceOf(
         ForbiddenError,
       );
       const files = await test.database.execute<{ state: string }>(
@@ -593,20 +805,20 @@ describe.skipIf(!baseUrl)("exports", () => {
       );
       expect(await test.services.exports.watchdog()).toBeGreaterThanOrEqual(1);
       await run(started.id);
-      expect(await test.services.exports.get(context.reader, started.id)).toMatchObject({ state: "ready" });
+      expect(await test.services.exports.get(context.steward, started.id)).toMatchObject({ state: "ready" });
       expect(
-        (await unzip(await bytesOf(await test.services.exports.download(context.reader, started.id)))).size,
+        (await unzip(await bytesOf(await test.services.exports.download(context.steward, started.id)))).size,
       ).toBe(10);
     });
 
     it("fails with a clear reason after too many interruptions", async () => {
       const context = await setup();
-      const started = await test.services.exports.start(context.reader, { spaceId: context.space.id });
+      const started = await test.services.exports.start(context.steward, { spaceId: context.space.id });
       await test.database.execute(
         sql`update exports set state = 'running', attempts = ${MAX_EXPORT_ATTEMPTS} where id = ${started.id}`,
       );
       await run(started.id);
-      expect(await test.services.exports.get(context.reader, started.id)).toMatchObject({
+      expect(await test.services.exports.get(context.steward, started.id)).toMatchObject({
         state: "failed",
         errorCode: "interrupted",
       });
@@ -614,8 +826,8 @@ describe.skipIf(!baseUrl)("exports", () => {
 
     it("stops when the export is removed while it runs", async () => {
       const context = await setup();
-      const started = await test.services.exports.start(context.reader, { spaceId: context.space.id });
-      await test.services.exports.remove(context.reader, started.id);
+      const started = await test.services.exports.start(context.steward, { spaceId: context.space.id });
+      await test.services.exports.remove(context.steward, started.id);
       await run(started.id);
       expect(
         (await test.database.execute(sql`select id from exports where id = ${started.id}`)).rows,
@@ -625,14 +837,14 @@ describe.skipIf(!baseUrl)("exports", () => {
     it("keeps the limits of the API token that started it", async () => {
       const context = await setup();
       const { apiToken } = await test.services.apiTokens.create(SYSTEM, {
-        accountId: context.readerId,
+        accountId: context.stewardId,
         name: "Export",
         scopes: { organization: { spaces: "view" } },
         organizationId: context.org.id,
       });
       const viaToken: Principal = {
         type: "account",
-        id: context.readerId,
+        id: context.stewardId,
         token: {
           id: apiToken.id,
           organizationId: context.org.id,
@@ -642,118 +854,12 @@ describe.skipIf(!baseUrl)("exports", () => {
       const started = await test.services.exports.start(viaToken, { spaceId: context.space.id });
       await test.services.apiTokens.revoke(SYSTEM, apiToken.id);
       await run(started.id);
-      expect(await test.services.exports.get(context.reader, started.id)).toMatchObject({
+      expect(await test.services.exports.get(context.steward, started.id)).toMatchObject({
         state: "failed",
         errorCode: "tokenRevoked",
       });
     });
   });
-  describe("size limits", () => {
-    const MEGABYTE = 1024 * 1024;
-
-    async function withLarge(context: Context, size: number) {
-      await test.services.attachments.upload(context.admin, context.pages.welcome.id, {
-        name: "dump.bin",
-        body: Readable.from([randomBytes(size)]),
-        contentLength: size,
-      });
-    }
-
-    async function storedMegabytes(except: readonly string[] = []): Promise<number> {
-      const result = await test.database.execute<{ bytes: string }>(sql`
-        select coalesce(sum(size), 0) as bytes from exports
-        where state = 'ready' and not (id = any(${sql.param([...except])}::uuid[]))`);
-      return Math.ceil(Number(result.rows[0]?.bytes ?? 0) / MEGABYTE);
-    }
-
-    async function storedFiles(): Promise<number> {
-      const result = await test.database.execute<{ count: number }>(
-        sql`select count(*)::int as count from stored_files`,
-      );
-      return Number(result.rows[0]?.count ?? 0);
-    }
-
-    async function failsWith(context: Context, code: string) {
-      const started = await test.services.exports.start(context.reader, { spaceId: context.space.id });
-      const files = await storedFiles();
-      await run(started.id);
-      expect(await test.services.exports.get(context.reader, started.id)).toMatchObject({
-        state: "failed",
-        errorCode: code,
-        fileName: null,
-        size: null,
-      });
-      expect(await storedFiles()).toBe(files);
-      const notification = await test.database.execute<{ type: string; params: { errorCode: string } }>(sql`
-        select type, params from notifications where recipient_id = ${context.readerId} and target_id = ${started.id}`);
-      expect(notification.rows).toMatchObject([{ type: "export.failed", params: { errorCode: code } }]);
-    }
-
-    it("stop an export larger than the largest export size and leave no file", async () => {
-      const context = await setup();
-      await withLarge(context, MEGABYTE + MEGABYTE / 4);
-      await test.settings.set(exportMaxSizeSetting, {}, "instance", 1);
-      try {
-        await failsWith(context, "tooLarge");
-      } finally {
-        await test.settings.clear(exportMaxSizeSetting, {}, "instance");
-      }
-      await exported(context.reader, { spaceId: context.space.id });
-    });
-
-    it("stop an export that would fill the storage for exports", async () => {
-      const context = await setup();
-      await withLarge(context, 2 * MEGABYTE + MEGABYTE / 4);
-      await test.settings.set(exportStorageSetting, {}, "instance", (await storedMegabytes()) + 1);
-      try {
-        await failsWith(context, "storageFull");
-      } finally {
-        await test.settings.clear(exportStorageSetting, {}, "instance");
-      }
-    });
-
-    it("refuse new exports while the storage is full and make room by removing expired downloads first", async () => {
-      const context = await setup();
-      const kept = await exported(context.reader, { spaceId: context.space.id });
-      const expired = await exported(context.insider, { spaceId: context.space.id });
-      const expiredFile = await test.database.execute<{ file_id: string }>(
-        sql`select file_id from exports where id = ${expired.id}`,
-      );
-      const others = await storedMegabytes([kept.id, expired.id]);
-      await test.settings.set(exportStorageSetting, {}, "instance", others + 4);
-      try {
-        await test.database.execute(sql`update exports set size = ${2 * MEGABYTE} where id = ${kept.id}`);
-        await test.database.execute(sql`update exports set size = ${3 * MEGABYTE} where id = ${expired.id}`);
-        await expect(
-          test.services.exports.start(context.admin, { spaceId: context.space.id }),
-        ).rejects.toMatchObject({ code: "exportStorageFull" });
-        await expect(
-          test.services.exports.start(context.editor, { pageId: context.pages.welcome.id }),
-        ).rejects.toMatchObject({ code: "exportStorageFull" });
-        const page = await test.services.exports.page(context.editor, context.pages.welcome.id, "zip");
-        expect((await unzip(await bytesOf(page))).has("notes.txt")).toBe(true);
-
-        await test.database.execute(
-          sql`update exports set expires_at = now() - interval '1 second' where id = ${expired.id}`,
-        );
-        await expect(
-          test.services.exports.start(context.admin, { spaceId: context.space.id }),
-        ).resolves.toMatchObject({ state: "queued" });
-        expect(
-          (await test.database.execute(sql`select id from exports where id = ${expired.id}`)).rows,
-        ).toEqual([]);
-        const file = await test.database.execute<{ state: string }>(
-          sql`select state from stored_files where id = ${expiredFile.rows[0]?.file_id ?? null}`,
-        );
-        expect(file.rows.map((row) => row.state)).toEqual(["orphaned"]);
-        expect((await test.services.exports.get(context.reader, kept.id)).state).toBe("ready");
-      } finally {
-        await test.database.execute(sql`update exports set size = 0 where id = ${kept.id}`);
-        await test.settings.clear(exportStorageSetting, {}, "instance");
-      }
-    });
-  });
-
   describe("blog posts in a space export", () => {
     async function blogSetup() {
       const context = await setup();
@@ -786,7 +892,7 @@ describe.skipIf(!baseUrl)("exports", () => {
 
     it("puts published posts the exporter can read into a Blog folder, with their attachments", async () => {
       const context = await blogSetup();
-      const { files } = await exported(context.reader, { spaceId: context.space.id });
+      const { files } = await exported(context.steward, { spaceId: context.space.id });
       expect(textOf(files, "Blog/Release notes/Release notes.md")).toContain("Published post text");
       expect(textOf(files, "Blog/Release notes/Release notes.html")).toContain("Published post text");
       expect(textOf(files, "Blog/Release notes/changes.txt")).toBe("post attachment");
@@ -807,10 +913,10 @@ describe.skipIf(!baseUrl)("exports", () => {
 
     it("leaves the Blog folder out of a page export and when there are no posts", async () => {
       const context = await blogSetup();
-      const page = await exported(context.reader, { pageId: context.pages.welcome.id });
+      const page = await exported(context.steward, { pageId: context.pages.welcome.id });
       expect([...page.files.keys()].some((path) => path.startsWith("Blog/"))).toBe(false);
       const plain = await setup();
-      const space = await exported(plain.reader, { spaceId: plain.space.id });
+      const space = await exported(plain.steward, { spaceId: plain.space.id });
       expect([...space.files.keys()].some((path) => path.startsWith("Blog/"))).toBe(false);
     });
   });

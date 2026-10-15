@@ -470,6 +470,13 @@
       "when": 1792084965162,
       "tag": "0066_announcement_start_signal",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1792093369876,
+      "tag": "0067_export_estimate",
+      "breakpoints": true
     }
   ]
 }
