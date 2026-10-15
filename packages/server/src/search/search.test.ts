@@ -290,6 +290,20 @@ describe.skipIf(!baseUrl)("search", () => {
     expect((await find(w.other, w.org.id, `${w.word} cartrige`, { mode: "quick" })).suggestion).toBeNull();
   });
 
+  it("suggests only word forms that occur in content the person can read", async () => {
+    const w = await world();
+    await test.services.tree.create(w.author, w.hidden.id, {
+      kind: "page",
+      title: "Hidden notes",
+      mode: "live",
+      placement: { parentId: null },
+      document: doc(paragraph(`${w.word} cartridges`)),
+    });
+    await drain();
+    expect((await find(w.author, w.org.id, "cartridgess")).suggestion).toBe("cartridges");
+    expect((await find(w.other, w.org.id, "cartridgess")).suggestion).toBe("cartridge");
+  });
+
   it("builds the suggested search text from the corrected words only", () => {
     const corrections = new Map([["cartrige", "cartridge"]]);
     expect(correctedQuery('Cartrige "cartrige ink" -cartrige label:cartrige', corrections)).toBe(

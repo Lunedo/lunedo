@@ -49,6 +49,10 @@ interface Expansions {
   corrections: Map<string, string>;
 }
 
+function termsOf(chunk: SQL): SQL {
+  return sql`to_tsvector('simple', ${chunk}.title || ' ' || ${chunk}.heading || ' ' || ${chunk}.body)`;
+}
+
 function prefixWord(text: string): string {
   return text.replace(/[^\p{L}\p{N}]/gu, "");
 }
@@ -109,7 +113,7 @@ export class PostgresSearchAdapter implements SearchAdapter {
     await executor.execute(sql`
       insert into search_terms (organization_id, word)
       select distinct ${item.organizationId}::uuid, word from (
-        select unnest(tsvector_to_array(to_tsvector('simple', c.title || ' ' || c.heading || ' ' || c.body))) as word
+        select unnest(tsvector_to_array(${termsOf(sql`c`)})) as word
         from search_chunks c where c.item_id = ${item.itemId}) words
       where length(word) between ${MIN_TYPO_LENGTH} and 40 and word ~ '^[[:alpha:]]+$'
       order by word
@@ -373,7 +377,7 @@ export class PostgresSearchAdapter implements SearchAdapter {
       ),
     ];
     if (terms.length === 0) return { alternatives: new Map(), corrections: new Map() };
-    const visibleWord = (word: SQL) => sql`exists (select 1 from search_chunks c
+    const visibleWord = (word: SQL, exact: boolean) => sql`exists (select 1 from search_chunks c
       join tree_items t on t.id = c.item_id
       join spaces s on s.id = t.space_id
       left join search_pending_spaces p on p.space_id = c.space_id
@@ -383,12 +387,12 @@ export class PostgresSearchAdapter implements SearchAdapter {
             sql`(c.config = ${config} and c.document @@ plainto_tsquery(${config}::regconfig, ${word}))`,
         ),
         sql` or `,
-      )}))`;
+      )}) ${exact ? sql`and ${termsOf(sql`c`)} @@ plainto_tsquery('simple', ${word})` : sql``})`;
     const result = await executor.execute<{ term: string; known: boolean; words: string[] }>(sql`
-      select q.term, ${visibleWord(sql`q.term`)} as known,
+      select q.term, ${visibleWord(sql`q.term`, false)} as known,
         array(select w.word from search_terms w
           where w.organization_id = ${viewer.organizationId} and w.word % q.term and w.word <> q.term
-            and similarity(w.word, q.term) >= ${TYPO_SIMILARITY} and ${visibleWord(sql`w.word`)}
+            and similarity(w.word, q.term) >= ${TYPO_SIMILARITY} and ${visibleWord(sql`w.word`, true)}
           order by similarity(w.word, q.term) desc, w.word limit ${TYPO_ALTERNATIVES}) as words
       from unnest(${sql.param(terms)}::text[]) as q(term)`);
     const alternatives = new Map<string, string[]>();
