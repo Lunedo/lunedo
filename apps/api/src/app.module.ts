@@ -22,6 +22,7 @@ import { SearchModule } from "./search/search.module.js";
 import { SetupModule } from "./setup/setup.module.js";
 import { SharingModule } from "./sharing/sharing.module.js";
 import { SpacesModule } from "./spaces/spaces.module.js";
+import { StorageModule } from "./storage/storage.module.js";
 import { TokensModule } from "./tokens/tokens.module.js";
 
 @Global()
@@ -49,6 +50,7 @@ export class AppModule {
               FilesModule,
               ImportsModule,
               ExportsModule,
+              StorageModule,
               SharingModule,
               SearchModule,
             ]

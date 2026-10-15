@@ -125,6 +125,10 @@
       "description": "Spaces, their settings and permissions, and personal spaces."
     },
     {
+      "name": "Storage",
+      "description": "Usage of the file store, warning levels and operations contacts of the instance."
+    },
+    {
       "name": "Tasks",
       "description": ""
     },
@@ -40823,6 +40827,26 @@
                       "title": "Too many requests",
                       "status": 429,
                       "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "507": {
+            "description": "`storageFull`: Storage is almost full.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "storageFull": {
+                    "value": {
+                      "type": "urn:pagehall:problem:storageFull",
+                      "title": "Storage is almost full",
+                      "status": 507,
+                      "code": "storageFull"
                     }
                   }
                 }
@@ -105559,6 +105583,952 @@
         }
       }
     },
+    "/api/v1/instance/storage": {
+      "get": {
+        "operationId": "storage.status",
+        "summary": "Get the usage of the file store",
+        "description": "Shows the usage of the file store, the active warning level and the settings of the warnings. For a local volume the usage is read from the volume; for S3 storage it is the running total of the files Pagehall stores, measured against the limit if one is set.\n\nRequires the permission `instance.settings.view` on the instance.",
+        "tags": [
+          "Storage"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.settings.view",
+          "resource": "instance"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Usage and settings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "store": {
+                      "type": "string",
+                      "enum": [
+                        "local",
+                        "s3"
+                      ],
+                      "description": "Where files are stored: a local volume or S3-compatible storage."
+                    },
+                    "measured": {
+                      "type": "boolean",
+                      "description": "Whether Pagehall can measure the usage. False for S3 storage without a limit."
+                    },
+                    "inactiveReason": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "noLimit"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Why warnings are inactive, or null. `noLimit`: S3 does not report free space, so a limit is needed."
+                    },
+                    "usedBytes": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Bytes in use on the volume, or stored in S3. Null when not measured."
+                    },
+                    "totalBytes": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Size of the volume, or the S3 limit. Null when not measured."
+                    },
+                    "percent": {
+                      "description": "Usage in percent of the size or limit. Null when not measured.",
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "level": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 3,
+                      "description": "The active level: 0 normal, 1 warning, 2 large exports and imports are refused, 3 uploads are refused too."
+                    },
+                    "thresholds": {
+                      "type": "object",
+                      "properties": {
+                        "warning": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100,
+                          "description": "Usage in percent where the warning level starts."
+                        },
+                        "largeWrites": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100,
+                          "description": "Usage in percent where new exports and imports are refused."
+                        },
+                        "critical": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100,
+                          "description": "Usage in percent where uploads are refused too."
+                        }
+                      },
+                      "required": [
+                        "warning",
+                        "largeWrites",
+                        "critical"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The three levels in percent of usage, in ascending order."
+                    },
+                    "s3LimitBytes": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The limit for S3 storage in bytes, or null for none."
+                    },
+                    "reminder": {
+                      "type": "string",
+                      "enum": [
+                        "off",
+                        "daily",
+                        "weekly",
+                        "monthly"
+                      ],
+                      "description": "How often an active level is announced again: `off`, `daily`, `weekly` or `monthly`."
+                    },
+                    "operationsEmails": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "E-mail addresses of the operations contacts, for example an IT ticket address."
+                    },
+                    "teamsWebhook": {
+                      "type": "object",
+                      "properties": {
+                        "configured": {
+                          "type": "boolean",
+                          "description": "Whether a Teams Workflows webhook is set."
+                        },
+                        "host": {
+                          "description": "Host name of the webhook. The full address is never returned.",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "configured",
+                        "host"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The optional Microsoft Teams webhook of the operations contacts."
+                    },
+                    "checkedAt": {
+                      "description": "When the usage was last checked. ISO 8601 timestamp in UTC.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "store",
+                    "measured",
+                    "inactiveReason",
+                    "usedBytes",
+                    "totalBytes",
+                    "percent",
+                    "level",
+                    "thresholds",
+                    "s3LimitBytes",
+                    "reminder",
+                    "operationsEmails",
+                    "teamsWebhook",
+                    "checkedAt"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Usage and settings of the file store warnings."
+                },
+                "example": {
+                  "store": "local",
+                  "measured": true,
+                  "inactiveReason": null,
+                  "usedBytes": 412000000000,
+                  "totalBytes": 500000000000,
+                  "percent": 82.4,
+                  "level": 1,
+                  "thresholds": {
+                    "warning": 80,
+                    "largeWrites": 90,
+                    "critical": 95
+                  },
+                  "s3LimitBytes": null,
+                  "reminder": "weekly",
+                  "operationsEmails": [
+                    "it-tickets@example.org"
+                  ],
+                  "teamsWebhook": {
+                    "configured": true,
+                    "host": "prod-12.westeurope.logic.azure.com"
+                  },
+                  "checkedAt": "2026-10-15T08:00:00.000Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "storage.configure",
+        "summary": "Change the storage warnings",
+        "description": "Changes the three levels, the S3 limit, the reminder interval and the operations contacts. The levels must stay in ascending order. The Teams webhook address is stored encrypted and never returned. Changing the operations contacts is audited.\n\nRequires the permission `instance.settings.manage` on the instance.",
+        "tags": [
+          "Storage"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.settings.manage",
+          "resource": "instance"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "thresholds": {
+                    "description": "The levels to change. The result must stay in ascending order: warning, large writes, critical.",
+                    "type": "object",
+                    "properties": {
+                      "warning": {
+                        "description": "Usage in percent where the warning level starts.",
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 100
+                      },
+                      "largeWrites": {
+                        "description": "Usage in percent where new exports and imports are refused.",
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 100
+                      },
+                      "critical": {
+                        "description": "Usage in percent where uploads are refused too.",
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 100
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "s3LimitBytes": {
+                    "description": "The limit for S3 storage in bytes, or null to remove it.",
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "reminder": {
+                    "description": "How often an active level is announced again.",
+                    "type": "string",
+                    "enum": [
+                      "off",
+                      "daily",
+                      "weekly",
+                      "monthly"
+                    ]
+                  },
+                  "operationsEmails": {
+                    "description": "All e-mail addresses of the operations contacts, up to 20. Replaces the earlier list.",
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 254
+                    }
+                  },
+                  "teamsWebhook": {
+                    "description": "The Teams Workflows webhook address, or null to remove it. Leave it out to keep it.",
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 2000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Changes to the storage warnings. Leave out what stays as it is."
+              },
+              "example": {
+                "thresholds": {
+                  "warning": 75,
+                  "largeWrites": 88,
+                  "critical": 94
+                },
+                "reminder": "weekly"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Usage and settings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "store": {
+                      "type": "string",
+                      "enum": [
+                        "local",
+                        "s3"
+                      ],
+                      "description": "Where files are stored: a local volume or S3-compatible storage."
+                    },
+                    "measured": {
+                      "type": "boolean",
+                      "description": "Whether Pagehall can measure the usage. False for S3 storage without a limit."
+                    },
+                    "inactiveReason": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "noLimit"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Why warnings are inactive, or null. `noLimit`: S3 does not report free space, so a limit is needed."
+                    },
+                    "usedBytes": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Bytes in use on the volume, or stored in S3. Null when not measured."
+                    },
+                    "totalBytes": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Size of the volume, or the S3 limit. Null when not measured."
+                    },
+                    "percent": {
+                      "description": "Usage in percent of the size or limit. Null when not measured.",
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "level": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 3,
+                      "description": "The active level: 0 normal, 1 warning, 2 large exports and imports are refused, 3 uploads are refused too."
+                    },
+                    "thresholds": {
+                      "type": "object",
+                      "properties": {
+                        "warning": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100,
+                          "description": "Usage in percent where the warning level starts."
+                        },
+                        "largeWrites": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100,
+                          "description": "Usage in percent where new exports and imports are refused."
+                        },
+                        "critical": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100,
+                          "description": "Usage in percent where uploads are refused too."
+                        }
+                      },
+                      "required": [
+                        "warning",
+                        "largeWrites",
+                        "critical"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The three levels in percent of usage, in ascending order."
+                    },
+                    "s3LimitBytes": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The limit for S3 storage in bytes, or null for none."
+                    },
+                    "reminder": {
+                      "type": "string",
+                      "enum": [
+                        "off",
+                        "daily",
+                        "weekly",
+                        "monthly"
+                      ],
+                      "description": "How often an active level is announced again: `off`, `daily`, `weekly` or `monthly`."
+                    },
+                    "operationsEmails": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "E-mail addresses of the operations contacts, for example an IT ticket address."
+                    },
+                    "teamsWebhook": {
+                      "type": "object",
+                      "properties": {
+                        "configured": {
+                          "type": "boolean",
+                          "description": "Whether a Teams Workflows webhook is set."
+                        },
+                        "host": {
+                          "description": "Host name of the webhook. The full address is never returned.",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "configured",
+                        "host"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The optional Microsoft Teams webhook of the operations contacts."
+                    },
+                    "checkedAt": {
+                      "description": "When the usage was last checked. ISO 8601 timestamp in UTC.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "store",
+                    "measured",
+                    "inactiveReason",
+                    "usedBytes",
+                    "totalBytes",
+                    "percent",
+                    "level",
+                    "thresholds",
+                    "s3LimitBytes",
+                    "reminder",
+                    "operationsEmails",
+                    "teamsWebhook",
+                    "checkedAt"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Usage and settings of the file store warnings."
+                },
+                "example": {
+                  "store": "local",
+                  "measured": true,
+                  "inactiveReason": null,
+                  "usedBytes": 412000000000,
+                  "totalBytes": 500000000000,
+                  "percent": 82.4,
+                  "level": 1,
+                  "thresholds": {
+                    "warning": 80,
+                    "largeWrites": 90,
+                    "critical": 95
+                  },
+                  "s3LimitBytes": null,
+                  "reminder": "weekly",
+                  "operationsEmails": [
+                    "it-tickets@example.org"
+                  ],
+                  "teamsWebhook": {
+                    "configured": true,
+                    "host": "prod-12.westeurope.logic.azure.com"
+                  },
+                  "checkedAt": "2026-10-15T08:00:00.000Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidStorageSettings`: The storage settings are not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidStorageSettings": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidStorageSettings",
+                      "title": "The storage settings are not valid",
+                      "status": 400,
+                      "code": "invalidStorageSettings"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/instance/storage/test": {
+      "post": {
+        "operationId": "storage.test",
+        "summary": "Send a test message to the operations contacts",
+        "description": "Sends a short test message to the operations e-mail addresses and the Teams webhook, so that you can check that warnings arrive.\n\nRequires the permission `instance.settings.manage` on the instance.",
+        "tags": [
+          "Storage"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.settings.manage",
+          "resource": "instance"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "What was sent.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "addresses": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "How many e-mail addresses were sent a test message."
+                    },
+                    "teams": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "delivered": {
+                              "type": "boolean",
+                              "description": "Whether Teams accepted the message."
+                            },
+                            "reason": {
+                              "description": "Why Teams did not accept it, or null.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "status": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "HTTP status of Teams, or null."
+                            }
+                          },
+                          "required": [
+                            "delivered",
+                            "reason",
+                            "status"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The result for the Teams webhook, or null when none is set."
+                    }
+                  },
+                  "required": [
+                    "addresses",
+                    "teams"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The result of the test message to the operations contacts."
+                },
+                "example": {
+                  "addresses": 1,
+                  "teams": {
+                    "delivered": true,
+                    "reason": null,
+                    "status": null
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/instance/templates": {
       "get": {
         "operationId": "templates.instanceTemplates",
@@ -133620,6 +134590,26 @@
                 }
               }
             }
+          },
+          "507": {
+            "description": "`storageFull`: Storage is almost full.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "storageFull": {
+                    "value": {
+                      "type": "urn:pagehall:problem:storageFull",
+                      "title": "Storage is almost full",
+                      "status": 507,
+                      "code": "storageFull"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -134672,6 +135662,26 @@
                       "title": "Too many requests",
                       "status": 429,
                       "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "507": {
+            "description": "`storageFull`: Storage is almost full.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "storageFull": {
+                    "value": {
+                      "type": "urn:pagehall:problem:storageFull",
+                      "title": "Storage is almost full",
+                      "status": 507,
+                      "code": "storageFull"
                     }
                   }
                 }
@@ -156838,6 +157848,26 @@
                 }
               }
             }
+          },
+          "507": {
+            "description": "`storageFull`: Storage is almost full.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "storageFull": {
+                    "value": {
+                      "type": "urn:pagehall:problem:storageFull",
+                      "title": "Storage is almost full",
+                      "status": 507,
+                      "code": "storageFull"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -161640,7 +162670,7 @@
       "post": {
         "operationId": "exports.exportPages",
         "summary": "Export a page with its subpages",
-        "description": "Starts an export of the page and every subpage you can read, as a ZIP archive with the page tree as folders, each page as Markdown and HTML and the attachments next to their pages. Only space administrators, and organization administrators with access to the space outside confidential spaces, can start it. It is refused when it would leave less than 10 % of the file store free, and stops when less than 5 % is left while it is written. The export runs in the background. When it is ready, you get a notification with the download; only you can open it. The download is deleted 24 hours after it was first downloaded completely, or after 7 days if it is never downloaded. You can run one export at a time and keep up to 5; a new export of the same space or page replaces the earlier one.\n\nRequires the permission `item.exportPages` on the item in `pageId`.",
+        "description": "Starts an export of the page and every subpage you can read, as a ZIP archive with the page tree as folders, each page as Markdown and HTML and the attachments next to their pages. Only space administrators, and organization administrators with access to the space outside confidential spaces, can start it. It is refused when the file store would pass the usage level where large writes are blocked (90 % by default), and stops when the usage reaches the critical level (95 % by default) while it is written. The export runs in the background. When it is ready, you get a notification with the download; only you can open it. The download is deleted 24 hours after it was first downloaded completely, or after 7 days if it is never downloaded. You can run one export at a time and keep up to 5; a new export of the same space or page replaces the earlier one.\n\nRequires the permission `item.exportPages` on the item in `pageId`.",
         "tags": [
           "Exports"
         ],
@@ -180901,7 +181931,7 @@
       "post": {
         "operationId": "exports.exportSpace",
         "summary": "Export a space",
-        "description": "Starts an export of every page of the space you can read, as a ZIP archive with the page tree as folders, each page as Markdown and HTML, the attachments next to their pages and an index.html that lists the tree. Links between exported pages become relative paths. Only space administrators, and organization administrators with access to the space outside confidential spaces, can start it. It is refused when it would leave less than 10 % of the file store free, and stops when less than 5 % is left while it is written. The export runs in the background. When it is ready, you get a notification with the download; only you can open it. The download is deleted 24 hours after it was first downloaded completely, or after 7 days if it is never downloaded. You can run one export at a time and keep up to 5; a new export of the same space or page replaces the earlier one.\n\nRequires the permission `space.export` on the space in `spaceId`.",
+        "description": "Starts an export of every page of the space you can read, as a ZIP archive with the page tree as folders, each page as Markdown and HTML, the attachments next to their pages and an index.html that lists the tree. Links between exported pages become relative paths. Only space administrators, and organization administrators with access to the space outside confidential spaces, can start it. It is refused when the file store would pass the usage level where large writes are blocked (90 % by default), and stops when the usage reaches the critical level (95 % by default) while it is written. The export runs in the background. When it is ready, you get a notification with the download; only you can open it. The download is deleted 24 hours after it was first downloaded completely, or after 7 days if it is never downloaded. You can run one export at a time and keep up to 5; a new export of the same space or page replaces the earlier one.\n\nRequires the permission `space.export` on the space in `spaceId`.",
         "tags": [
           "Exports"
         ],
@@ -201081,7 +202111,7 @@
             "description": "The last part of `type`, for clients that prefer a short key."
           },
           "fields": {
-            "description": "Invalid fields, for `invalidInput` and the codes about the address of a chat channel.",
+            "description": "Invalid fields, for `invalidInput`, `invalidStorageSettings` and the codes about the address of a chat channel.",
             "type": "array",
             "items": {
               "type": "string",
@@ -201103,8 +202133,16 @@
             "maximum": 9007199254740991
           },
           "problem": {
-            "description": "Which password rule failed, for `passwordPolicy`; why the address of a chat channel was refused, for `invalidChatAddress`.",
+            "description": "Which password rule failed, for `passwordPolicy`; why the address of a chat channel was refused, for `invalidChatAddress`; which storage setting was refused (`invalidThresholds`, `invalidS3Limit`, `invalidContacts` or `invalidTeamsWebhook`), for `invalidStorageSettings`.",
             "type": "string"
+          },
+          "refusal": {
+            "description": "What the full storage refuses, for `storageFull`: an `upload`, or a large write such as an import.",
+            "type": "string",
+            "enum": [
+              "upload",
+              "largeWrite"
+            ]
           },
           "minLength": {
             "description": "Minimum password length, for `passwordPolicy`.",

@@ -26,6 +26,11 @@ const MANAGED_ELSEWHERE = new Set([
   "mail.graph",
   "auth.emergencySignInRecipients",
   "instance.url",
+  "storage.warningPercent",
+  "storage.largeWritesPercent",
+  "storage.criticalPercent",
+  "storage.s3LimitBytes",
+  "storage.operationsEmails",
   "spaces.defaultPermissions",
   "home.organizationPage",
 ]);

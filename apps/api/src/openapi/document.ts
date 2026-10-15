@@ -67,6 +67,7 @@ const TAG_DESCRIPTIONS: Record<string, string> = {
   Pages: "The page tree with pages, folders and links, page content, labels and backlinks.",
   Search: "Searching pages, blog posts and comments the caller can read.",
   Watching: "Watching and muting pages, blog posts, meeting series and spaces.",
+  Storage: "Usage of the file store, warning levels and operations contacts of the instance.",
 };
 
 const ROOT = "root";

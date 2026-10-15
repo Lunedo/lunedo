@@ -140,7 +140,7 @@ export class AttachmentsController {
       schema: attachmentSchema,
       example: exampleAttachment,
     },
-    errors: ["fileTooLarge", "invalidFileName", "invalidItem", "unsupportedMediaType"],
+    errors: ["fileTooLarge", "invalidFileName", "invalidItem", "unsupportedMediaType", "storageFull"],
   })
   async upload(
     @Param("pageId") pageId: string,

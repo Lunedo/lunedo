@@ -31,7 +31,7 @@ const pageExportQuery = z
   .strict();
 
 const exportStarted =
-  "Only space administrators, and organization administrators with access to the space outside confidential spaces, can start it. It is refused when it would leave less than 10 % of the file store free, and stops when less than 5 % is left while it is written. The export runs in the background. When it is ready, you get a notification with the download; only you can open it. The download is deleted 24 hours after it was first downloaded completely, or after 7 days if it is never downloaded. You can run one export at a time and keep up to 5; a new export of the same space or page replaces the earlier one.";
+  "Only space administrators, and organization administrators with access to the space outside confidential spaces, can start it. It is refused when the file store would pass the usage level where large writes are blocked (90 % by default), and stops when the usage reaches the critical level (95 % by default) while it is written. The export runs in the background. When it is ready, you get a notification with the download; only you can open it. The download is deleted 24 hours after it was first downloaded completely, or after 7 days if it is never downloaded. You can run one export at a time and keep up to 5; a new export of the same space or page replaces the earlier one.";
 
 function send(reply: FastifyReply, file: ExportFile) {
   reply.header("content-type", file.contentType);
