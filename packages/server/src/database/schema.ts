@@ -162,6 +162,7 @@ export {
   searchFileTextState,
   searchFileTexts,
   searchIndexState,
+  searchItemTerms,
   searchPendingItems,
   searchPendingSpaces,
   searchSource,

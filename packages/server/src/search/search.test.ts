@@ -264,6 +264,42 @@ describe.skipIf(!baseUrl)("search", () => {
     expect(rows.rows.map((row) => row.organization_id)).toEqual([elsewhere.id]);
   });
 
+  it("forgets the words of content that is changed or deleted for good, but keeps shared words", async () => {
+    const w = await world();
+    const letters = w.word.replace(/[^a-z]/g, "");
+    const [kept, edited, purged, shared] = ["kept", "edited", "purged", "shared"].map(
+      (word) => `${word}${letters}`,
+    );
+    const create = async (title: string, text: string) =>
+      test.services.tree.create(w.author, w.shared.id, {
+        kind: "page",
+        title,
+        mode: "live",
+        placement: { parentId: null },
+        document: doc(paragraph(text)),
+      });
+    const first = await create("First", `${kept} ${edited} ${shared}`);
+    const second = await create("Second", `${purged} ${shared}`);
+    await drain();
+    const terms = async () =>
+      (
+        await test.pool.query<{ word: string }>(
+          "select word from search_terms where organization_id = $1 and word like any($2) order by word",
+          [w.org.id, [kept, edited, purged, shared]],
+        )
+      ).rows.map((row) => row.word);
+    expect(await terms()).toEqual([edited, kept, purged, shared].sort());
+
+    await test.services.documents.replace(w.author, first.id, doc(paragraph(`${kept} ${shared}`)));
+    await test.pool.query("update search_pending_items set due_at = now() where item_id = $1", [first.id]);
+    await drain();
+    expect(await terms()).toEqual([kept, purged, shared].sort());
+
+    const entry = await test.services.trash.deleteItem(w.author, second.id);
+    await test.services.trash.deleteImmediately(accountPrincipal(w.org.owner), entry.id, "Erasure request");
+    expect(await terms()).toEqual([kept, shared].sort());
+  });
+
   it("corrects typos only with words of content the person can read and suggests only those", async () => {
     const w = await world();
     for (const word of ["cartrigea", "cartrigeb", "cartrigec"]) {

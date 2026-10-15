@@ -69,7 +69,11 @@ function weighted(chunk: IndexedChunk): { first: string; second: string; labels:
 export class PostgresSearchAdapter implements SearchAdapter {
   async replaceItem(executor: Executor, item: IndexedItem): Promise<void> {
     await executor.execute(sql`delete from search_chunks where item_id = ${item.itemId}`);
-    if (item.chunks.length === 0) return;
+    if (item.chunks.length > 0) await this.#insertChunks(executor, item);
+    await this.#replaceTerms(executor, item.itemId, item.organizationId);
+  }
+
+  async #insertChunks(executor: Executor, item: IndexedItem): Promise<void> {
     const rows = item.chunks.map((chunk) => ({
       id: uuidv7(),
       ...weighted(chunk),
@@ -109,19 +113,40 @@ export class PostgresSearchAdapter implements SearchAdapter {
         position integer, content_type text, title text, heading text, anchor text, body text, author_id uuid,
         content_created_at timestamptz, content_updated_at timestamptz, context_item_id uuid, context_readers text[],
         context_restrictions uuid[], attachment jsonb, first text, second text, labels boolean)`);
-    if (item.organizationId === null) return;
+  }
+
+  async #replaceTerms(executor: Executor, itemId: string, organizationId: string | null): Promise<void> {
+    if (organizationId === null) {
+      await executor.execute(sql`delete from search_item_terms where item_id = ${itemId}`);
+      return;
+    }
+    await executor.execute(
+      sql`select pg_advisory_xact_lock(hashtextextended(${`pagehall.search.terms:${organizationId}`}, 0))`,
+    );
     await executor.execute(sql`
+      with words as (
+        select distinct word from (
+          select unnest(tsvector_to_array(${termsOf(sql`c`)})) as word
+          from search_chunks c where c.item_id = ${itemId}) found
+        where length(word) between ${MIN_TYPO_LENGTH} and 40 and word ~ '^[[:alpha:]]+$'
+      ),
+      removed as (
+        delete from search_item_terms i where i.item_id = ${itemId}
+          and (i.organization_id <> ${organizationId}::uuid or i.word not in (select word from words))
+      ),
+      added as (
+        insert into search_item_terms (organization_id, word, item_id)
+        select ${organizationId}::uuid, word, ${itemId}::uuid from words order by word
+        on conflict do nothing
+      )
       insert into search_terms (organization_id, word)
-      select distinct ${item.organizationId}::uuid, word from (
-        select unnest(tsvector_to_array(${termsOf(sql`c`)})) as word
-        from search_chunks c where c.item_id = ${item.itemId}) words
-      where length(word) between ${MIN_TYPO_LENGTH} and 40 and word ~ '^[[:alpha:]]+$'
-      order by word
+      select ${organizationId}::uuid, word from words order by word
       on conflict (organization_id, word) do nothing`);
   }
 
   async removeItem(executor: Executor, itemId: string): Promise<void> {
     await executor.execute(sql`delete from search_chunks where item_id = ${itemId}`);
+    await executor.execute(sql`delete from search_item_terms where item_id = ${itemId}`);
   }
 
   async updateAccess(executor: Executor, updates: ItemAccess[]): Promise<void> {
