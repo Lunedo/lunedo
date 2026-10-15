@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { slugify } from "@pagehall/editor-schema";
 import { notificationEventOf, uuidv7 } from "@pagehall/shared";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { accounts } from "../accounts/schema.js";
@@ -41,6 +41,9 @@ const MAX_DEVICES = 20;
 const PUSH_TTL_SECONDS = 24 * 60 * 60;
 const DISPATCH_DELAY_MS = 100;
 const TEXT_LIMIT = 300;
+const ABANDONED_MINUTES = 60;
+
+export const PUSH_WATCHDOG_SCHEDULE = "*/10 * * * *";
 
 export const pushDeliveryJob = defineJob({
   name: "push.deliver",
@@ -296,6 +299,18 @@ export class PushService {
     return rows.length;
   }
 
+  async drop(entryId: string): Promise<void> {
+    await this.#database.delete(pushOutbox).where(eq(pushOutbox.id, entryId));
+  }
+
+  async dropAbandoned(): Promise<number> {
+    const dropped = await this.#database
+      .delete(pushOutbox)
+      .where(lt(pushOutbox.queuedAt, sql`now() - make_interval(mins => ${ABANDONED_MINUTES})`))
+      .returning({ id: pushOutbox.id });
+    return dropped.length;
+  }
+
   async message(entryId: string): Promise<{ recipientId: string; message: PushMessage } | null> {
     const [entry] = await this.#database
       .select({
@@ -438,9 +453,17 @@ export async function startPushDelivery(options: {
 }): Promise<void> {
   const { jobs, listener, push, logger } = options;
   await jobs.work(pushDeliveryJob, async (job) => {
-    await push.deliver(job.payload.entryId, job.retryCount >= pushDeliveryJob.retryLimit);
+    const lastAttempt = job.retryCount >= pushDeliveryJob.retryLimit;
+    try {
+      await push.deliver(job.payload.entryId, lastAttempt);
+    } catch (error) {
+      if (!lastAttempt) throw error;
+      await push.drop(job.payload.entryId);
+      logger.warn({ err: error }, "A browser push message was dropped after its last attempt");
+    }
   });
   await jobs.work(pushDispatchJob, async () => {
+    await push.dropAbandoned();
     await push.queuePending(async (entryId) => {
       await jobs.enqueue(pushDeliveryJob, { entryId }, { idempotencyKey: entryId });
     });
@@ -459,4 +482,5 @@ export async function startPushDelivery(options: {
   await listener.listen(PUSH_OUTBOX_CHANNEL, request);
   listener.onReconnect(request);
   await jobs.enqueue(pushDispatchJob, {});
+  await jobs.schedule(pushDispatchJob, PUSH_WATCHDOG_SCHEDULE, {}, { key: "watchdog" });
 }

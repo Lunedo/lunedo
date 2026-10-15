@@ -46,6 +46,7 @@ export const PAGE_CHANGES_COMBINE_MINUTES = 60;
 export const DECISION_SETTLE_MINUTES = 5;
 const MAX_CHANNELS = 20;
 const DELIVERY_RETENTION_DAYS = 14;
+const ABANDONED_MINUTES = 60;
 const DECISION_TEXT_LIMIT = 1000;
 const ANNOUNCEMENT_PREVIEW_LIMIT = 300;
 const MAX_ACTORS = 20;
@@ -834,12 +835,18 @@ export class ChatChannelService {
       return state;
     };
     if (row.state === "failing" || row.confidential) return finish("skipped");
+    const claimed = await this.#database.execute<{ data: Record<string, unknown>; count: number }>(sql`
+      update chat_deliveries set combine_key = null, updated_at = now()
+      where id = ${deliveryId} and state = 'pending'
+      returning data, count`);
+    const current = claimed.rows[0];
+    if (!current) return "skipped";
     const message = await this.#message(this.#database, row, {
       id: row.delivery_id,
       event: row.event,
       subject_id: row.subject_id,
-      data: row.data,
-      count: row.count,
+      data: current.data,
+      count: current.count,
     });
     if (!message) return finish("skipped");
     const target = targetSchemaOf(row.kind).parse(
@@ -909,6 +916,21 @@ export class ChatChannelService {
       { channelId: channel.id, reason: failure.reason, status: failure.status },
       "A chat channel stopped accepting messages",
     );
+  }
+
+  async failDelivery(deliveryId: string): Promise<void> {
+    await this.#database
+      .update(chatDeliveries)
+      .set({ state: "failed", updatedAt: new Date() })
+      .where(and(eq(chatDeliveries.id, deliveryId), eq(chatDeliveries.state, "pending")));
+  }
+
+  async failAbandoned(): Promise<number> {
+    const failed = await this.#database.execute(sql`
+      update chat_deliveries set state = 'failed', updated_at = now()
+      where state = 'pending' and queued_at is not null
+        and greatest(queued_at, not_before) < now() - make_interval(mins => ${ABANDONED_MINUTES})`);
+    return failed.rowCount ?? 0;
   }
 
   async removeOldDeliveries(): Promise<number> {
