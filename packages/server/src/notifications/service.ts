@@ -17,6 +17,7 @@ export const NOTIFICATIONS_CHANNEL = "pagehall_notifications";
 
 export const COMBINE_WINDOW_MINUTES = 30;
 export const COMBINE_MAX_HOURS = 24;
+export const ACTIONABLE_MAIL_DELAY_MINUTES = 2;
 const MAX_ACTORS = 50;
 
 const SCAN_BATCH = 100;
@@ -252,7 +253,7 @@ export class NotificationService {
     const states = await effectiveWatches(tx, subject, recipients);
     const muted = new Set<string>();
     for (const [accountId, watch] of states) {
-      if (watch.state === "muted" && !(event.keptWhenMuted && watch.keepMentions)) muted.add(accountId);
+      if (watch.state === "muted" && !(event.keptWhenMuted && watch.keepActionable)) muted.add(accountId);
     }
     return muted;
   }

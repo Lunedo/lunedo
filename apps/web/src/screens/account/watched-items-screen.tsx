@@ -46,7 +46,7 @@ export function WatchedItemsScreen() {
 
   const release = (entry: WatchedEntry) => {
     const target = entry.target as WatchTarget;
-    const previous = { state: entry.state, keepMentions: entry.keepMentions };
+    const previous = { state: entry.state, keepActionable: entry.keepActionable };
     change.mutate(
       { target, change: { state: null } },
       {
@@ -118,7 +118,7 @@ export function WatchedItemsScreen() {
                       {entry.target.type === "item" ? (
                         <span>{t("notifications.watching.inSpace", { space: entry.spaceName })}</span>
                       ) : null}
-                      {entry.state === "muted" && entry.keepMentions ? (
+                      {entry.state === "muted" && entry.keepActionable ? (
                         <span>{t("notifications.watching.keepsMentions")}</span>
                       ) : null}
                       {entry.automatic ? <span>{t("notifications.watching.automatic")}</span> : null}

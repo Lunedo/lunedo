@@ -1,5 +1,5 @@
 {
-  "id": "f8d750a6-9bc4-4544-884d-52cd8c6d4eaa",
+  "id": "b98be888-f8ef-407d-9101-a7023349873a",
   "prevId": "1b1bf33b-c206-4bad-b48b-7ac8c518292f",
   "version": "7",
   "dialect": "postgresql",
@@ -15443,89 +15443,6 @@
       },
       "isRLSEnabled": false
     },
-    "public.search_item_terms": {
-      "name": "search_item_terms",
-      "schema": "",
-      "columns": {
-        "organization_id": {
-          "name": "organization_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "word": {
-          "name": "word",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "item_id": {
-          "name": "item_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "search_item_terms_item_id_index": {
-          "name": "search_item_terms_item_id_index",
-          "columns": [
-            {
-              "expression": "item_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "search_item_terms_organization_id_organizations_id_fk": {
-          "name": "search_item_terms_organization_id_organizations_id_fk",
-          "tableFrom": "search_item_terms",
-          "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "search_item_terms_item_id_tree_items_id_fk": {
-          "name": "search_item_terms_item_id_tree_items_id_fk",
-          "tableFrom": "search_item_terms",
-          "tableTo": "tree_items",
-          "columnsFrom": [
-            "item_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "search_item_terms_organization_id_word_item_id_pk": {
-          "name": "search_item_terms_organization_id_word_item_id_pk",
-          "columns": [
-            "organization_id",
-            "word",
-            "item_id"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.search_pending_items": {
       "name": "search_pending_items",
       "schema": "",
@@ -19135,8 +19052,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "keep_mentions": {
-          "name": "keep_mentions",
+        "keep_actionable": {
+          "name": "keep_actionable",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
