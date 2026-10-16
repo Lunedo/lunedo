@@ -32,3 +32,12 @@ export class StorageSettingsError extends Error {
     super(message);
   }
 }
+
+export function isStorageFull(error: unknown): boolean {
+  for (let current: unknown = error, depth = 0; current && depth < 5; depth++) {
+    if (current instanceof StorageFullError) return true;
+    if (typeof current === "object" && "code" in current && current.code === "ENOSPC") return true;
+    current = typeof current === "object" && "cause" in current ? current.cause : undefined;
+  }
+  return false;
+}

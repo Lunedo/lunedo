@@ -7084,6 +7084,11 @@
         "cause": "Einige Teile der Datei sind nicht angekommen.",
         "action": "Setze den Upload im ersten Schritt fort."
       },
+      "storageFull": {
+        "what": "Speicher voll",
+        "cause": "Dem Speicher ging der Platz aus, während der Import Dateien schrieb. Pagehall hat ihn deshalb angehalten.",
+        "action": "Bitte die Person, die Pagehall betreibt, Speicher freizugeben oder zu erweitern. Verwirf dann diesen Import und starte ihn neu."
+      },
       "internalError": {
         "what": "Der Import hat nach mehreren Versuchen aufgehört",
         "cause": "Ein unerwartetes Problem ist wiederholt aufgetreten.",

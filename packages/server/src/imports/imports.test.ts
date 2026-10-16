@@ -227,6 +227,19 @@ describe.skipIf(!baseUrl)("Confluence imports", () => {
       await drive(id);
       expect(await test.services.imports.get(as(admin), id)).toMatchObject({ state: "review" });
     });
+
+    it("fails a running import with a storage full code when the volume runs out of room", async () => {
+      const id = await prepared(syntheticExport(), { key: "NOSP" });
+      await test.services.imports.start(as(admin), id);
+      vi.spyOn(test.services.files.store, "write").mockRejectedValue(
+        Object.assign(new Error("no space left on device"), { code: "ENOSPC" }),
+      );
+      await drive(id);
+      expect(await test.services.imports.get(as(admin), id)).toMatchObject({
+        state: "failed",
+        errorCode: "storageFull",
+      });
+    });
   });
 
   it("reports an export of the other format at the file step", async () => {

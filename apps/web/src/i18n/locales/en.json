@@ -7084,6 +7084,11 @@
         "cause": "Some parts of the file have not arrived.",
         "action": "Continue the upload in the first step."
       },
+      "storageFull": {
+        "what": "Storage full",
+        "cause": "The storage ran out of room while the import was writing files, so Pagehall stopped it.",
+        "action": "Ask the person who runs Pagehall to free up or add storage. Then discard this import and start it again."
+      },
       "internalError": {
         "what": "The import stopped after several attempts",
         "cause": "An unexpected problem occurred again and again.",
