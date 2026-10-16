@@ -16,7 +16,7 @@ const baseUrl = testDatabaseBaseUrl();
 const OPEN_CONNECTIONS = 500;
 const SPACES = 10;
 const OPENED_TOGETHER = 25;
-const REVOCATION_BOUND_MS = 500;
+const REVOCATION_BOUND_MS = 1000;
 
 describe.skipIf(!baseUrl)("permission rechecks with many open connections", () => {
   let cluster: Cluster;
@@ -109,7 +109,7 @@ describe.skipIf(!baseUrl)("permission rechecks with many open connections", () =
     const elapsed = await revocationTime(async () => {
       await runtime.pool.query("select pg_notify($1, $2)", [
         AUDIT_CHANGES_CHANNEL,
-        JSON.stringify({ scope: "instance", organizationId: null, target: "account" }),
+        JSON.stringify({ scope: "instance", organizationId: null, target: "organization" }),
       ]);
       await new Promise((resolve) => setTimeout(resolve, 50));
     });

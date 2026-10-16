@@ -101,7 +101,11 @@ function inSpace(spaceId: string): Affected {
 }
 
 function auditAffected(signal: AuditChangeSignal): Affected {
-  if (signal.scope === "instance" || signal.target === "account") return everyone;
+  if (signal.target === "account") {
+    const accountId = signal.accountId;
+    return accountId ? (context) => context.accountId === accountId : () => false;
+  }
+  if (signal.scope === "instance") return everyone;
   return (context) => context.organizationId === signal.organizationId || context.organizationId === null;
 }
 
@@ -332,10 +336,14 @@ export async function createCollabServer(options: {
     }
   }
 
-  function scheduleRecheck(reason: RecheckReason, affected: Affected = everyone): void {
+  function scheduleRecheck(
+    reason: RecheckReason,
+    affected: Affected = everyone,
+    options: { sessions?: boolean } = {},
+  ): void {
     if (destroyed) return;
     signals += 1;
-    const sessions = reason === "interval" || reason === "reconnect";
+    const sessions = options.sessions ?? (reason === "interval" || reason === "reconnect");
     const since = Date.now();
     for (const document of instance.documents.values()) {
       for (const connection of document.getConnections()) {
@@ -572,8 +580,9 @@ export async function createCollabServer(options: {
     }),
     runtime.listener.listen(AUDIT_CHANGES_CHANNEL, (raw) => {
       const signal = parseAuditChangeSignal(raw);
-      if (signal && RECHECKED_AUDIT_TARGETS.has(signal.target))
-        scheduleRecheck("audit", auditAffected(signal));
+      if (signal && RECHECKED_AUDIT_TARGETS.has(signal.target)) {
+        scheduleRecheck("audit", auditAffected(signal), { sessions: signal.target === "account" });
+      }
     }),
   ]);
   runtime.listener.onReconnect(() => scheduleRecheck("reconnect"));

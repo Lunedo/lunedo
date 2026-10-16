@@ -312,6 +312,59 @@ describe.skipIf(!baseUrl)("collaboration server", () => {
     await waitFor(() => client.closeReasons.includes("permissionRevoked"), 3000);
   });
 
+  it("disconnects an ended session at once and leaves other accounts unchecked", async () => {
+    const target = await editor();
+    const other = await editor();
+    const client = open(first.url, target.itemId, { token: target.token });
+    const bystander = open(first.url, other.itemId, { token: other.token });
+    await Promise.all([client.authenticated, bystander.authenticated]);
+    const services = cluster.runtimes[1]?.services;
+    const session = await services?.sessions.resolve(target.token);
+    const logged = vi.spyOn(first.runtime.logger, "info");
+    try {
+      await services?.sessions.endAll(
+        cluster.runtimes[1]?.database as ServerRuntime["database"],
+        target.account,
+      );
+      await services?.audit.recordAlone({
+        name: "auth.signedOut",
+        actor: accountPrincipal(target.account),
+        targetId: target.account,
+        fields: { sessionId: session?.id ?? "" },
+      });
+      await waitFor(() => client.closeReasons.includes("sessionEnded"), 3000);
+      await signalsDelivered();
+      expect(rechecksOf(logged.mock.calls, target.itemId).at(-1)).toMatchObject({
+        reason: "audit",
+        result: "sessionEnded",
+      });
+      expect(rechecksOf(logged.mock.calls, other.itemId)).toEqual([]);
+      expect(bystander.closeReasons).toEqual([]);
+    } finally {
+      logged.mockRestore();
+    }
+  });
+
+  it("ignores account signals that name no account", async () => {
+    const target = await editor();
+    const client = open(first.url, target.itemId, { token: target.token });
+    await client.authenticated;
+    const logged = vi.spyOn(first.runtime.logger, "info");
+    try {
+      await notify(AUDIT_CHANGES_CHANNEL, { scope: "instance", organizationId: null, target: "account" });
+      await notify(AUDIT_CHANGES_CHANNEL, {
+        scope: "instance",
+        organizationId: null,
+        target: "account",
+        accountId: "not-a-uuid",
+      });
+      await signalsDelivered();
+      expect(rechecksOf(logged.mock.calls, target.itemId)).toEqual([]);
+    } finally {
+      logged.mockRestore();
+    }
+  });
+
   it("disconnects a person who loses the edit permission in the space a page was moved to", async () => {
     const target = await editor();
     const runtime = cluster.runtimes[0] as ServerRuntime;

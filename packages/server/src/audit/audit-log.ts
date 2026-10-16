@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { isUuid } from "@pagehall/shared";
 import { and, asc, desc, eq, gte, lt, lte, sql } from "drizzle-orm";
 import type { z } from "zod";
 import { type Principal, SYSTEM } from "../accounts/principal.js";
@@ -33,20 +34,26 @@ export interface AuditChangeSignal {
   scope: "instance" | "organization";
   organizationId: string | null;
   target: AuditTargetType;
+  accountId?: string | null;
 }
 
 export function parseAuditChangeSignal(payload: string): AuditChangeSignal | null {
   try {
     const parsed = JSON.parse(payload) as Partial<AuditChangeSignal>;
     if (!auditTargetTypes.includes(parsed.target as AuditTargetType)) return null;
+    const accountId =
+      parsed.target === "account" && typeof parsed.accountId === "string" && isUuid(parsed.accountId)
+        ? parsed.accountId
+        : null;
     if (parsed.scope === "instance" && parsed.organizationId === null) {
-      return { scope: "instance", organizationId: null, target: parsed.target as AuditTargetType };
+      return { scope: "instance", organizationId: null, target: parsed.target as AuditTargetType, accountId };
     }
     if (parsed.scope === "organization" && typeof parsed.organizationId === "string") {
       return {
         scope: "organization",
         organizationId: parsed.organizationId,
         target: parsed.target as AuditTargetType,
+        accountId,
       };
     }
   } catch {
@@ -284,6 +291,7 @@ export class AuditLog {
       scope: scope.type,
       organizationId: scope.type === "organization" ? scope.id : null,
       target: definition.target,
+      ...(definition.target === "account" && input.targetId ? { accountId: input.targetId } : {}),
     };
     await tx.execute(sql`select pg_notify(${AUDIT_CHANGES_CHANNEL}, ${JSON.stringify(signal)})`);
   }

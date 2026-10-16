@@ -353,7 +353,8 @@ data: ${JSON.stringify(signal)}
     const spaceDecisions = new Map<string, { allowed: boolean; at: number }>();
     const sendChange = (signal: AuditChangeSignal) => {
       spaceDecisions.clear();
-      const data = JSON.stringify(signal);
+      const { accountId: _accountId, ...shown } = signal;
+      const data = JSON.stringify(shown);
       if (pendingChanges.has(data)) return;
       pendingChanges.add(data);
       enqueue(async () => {
