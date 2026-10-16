@@ -2,6 +2,7 @@ import { firstSourceElement, type MacroConverter, sourceElements } from "../impo
 import { attrOf, defineModule, optional, required } from "../module.js";
 import { element, prefixLines } from "../text.js";
 import { uuidValue } from "../values.js";
+import { wordText } from "../word.js";
 
 export const topicUpdateModule = defineModule({
   name: "topicUpdate",
@@ -19,6 +20,14 @@ export const topicUpdateModule = defineModule({
           `${element("p", { class: "ph-topic-update-title" }, renderer.escape(title))}${element("div", { class: "ph-topic-update-content" }, renderer.children(node))}`,
         );
       },
+      word: (node, renderer) => [
+        {
+          type: "box",
+          variant: "neutral",
+          title: [wordText(renderer.topicTitle(attrOf<string>(node, "topicId")), { bold: true })],
+          content: renderer.blocks(node),
+        },
+      ],
       markdown: (node, renderer) =>
         `**${renderer.escape(renderer.topicTitle(attrOf<string>(node, "topicId")))}**\n\n${renderer.blocks(node)}`,
     },
@@ -68,6 +77,14 @@ export const decisionModule = defineModule({
           },
           `${element("span", { class: "ph-decision-label" }, renderer.escape(renderer.label("decision")))}${element("div", { class: "ph-decision-content" }, renderer.children(node))}`,
         ),
+      word: (node, renderer) => [
+        {
+          type: "box",
+          variant: "decision",
+          title: [wordText(renderer.label("decision"), { bold: true })],
+          content: renderer.blocks(node),
+        },
+      ],
       markdown: (node, renderer) =>
         prefixLines(
           `**${renderer.escape(renderer.label("decision"))}**\n\n${renderer.blocks(node)}`,

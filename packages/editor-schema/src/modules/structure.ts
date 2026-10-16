@@ -1,8 +1,10 @@
 import { z } from "zod";
 import { type MacroConverter, macroReference } from "../importing.js";
-import { attrOf, defineModule, optional, required } from "../module.js";
+import type { ValidNode } from "../json.js";
+import { attrOf, defineModule, type HtmlRenderer, optional, required } from "../module.js";
 import { element, htmlAttributes, markdownUrl } from "../text.js";
 import { imageAlignments, uuidValue } from "../values.js";
+import { wordText } from "../word.js";
 
 export const sectionModule = defineModule({
   name: "section",
@@ -20,6 +22,15 @@ export const sectionModule = defineModule({
           { class: "ph-section", "data-section": attrOf<string>(node, "key") },
           `${element("h2", { id: renderer.nextHeadingId() }, renderer.escape(attrOf<string>(node, "title")))}${renderer.children(node)}`,
         ),
+      word: (node, renderer) => [
+        {
+          type: "heading",
+          level: 2,
+          anchor: renderer.nextHeadingId(),
+          content: [wordText(attrOf<string>(node, "title"))],
+        },
+        ...renderer.blocks(node),
+      ],
       markdown: (node, renderer) => {
         renderer.nextHeadingId();
         return `## ${renderer.escape(attrOf<string>(node, "title"))}\n\n${renderer.blocks(node)}`;
@@ -29,6 +40,31 @@ export const sectionModule = defineModule({
     },
   ],
 });
+
+function imageHtml(node: ValidNode, renderer: HtmlRenderer, lazy: boolean): string {
+  const id = attrOf<string>(node, "attachmentId");
+  const resolved = renderer.context.attachment?.(id) ?? null;
+  const href = resolved ? renderer.safeHref(resolved.href) : null;
+  const width = attrOf<number | null>(node, "width");
+  const image = href
+    ? `<img${htmlAttributes({
+        src: href,
+        alt: attrOf<string>(node, "alt"),
+        loading: lazy ? "lazy" : null,
+        width: lazy ? null : width,
+      })}>`
+    : "";
+  return element(
+    "figure",
+    {
+      class: "ph-image",
+      "data-attachment-id": id,
+      "data-align": attrOf<string>(node, "align"),
+      "data-width": width,
+    },
+    image,
+  );
+}
 
 export const imageModule = defineModule({
   name: "image",
@@ -42,23 +78,21 @@ export const imageModule = defineModule({
         width: optional(z.number().int().min(1).max(10_000).nullable(), null),
         align: optional(z.enum(imageAlignments), "center"),
       },
-      html: (node, renderer) => {
+      html: (node, renderer) => imageHtml(node, renderer, true),
+      print: (node, renderer) => imageHtml(node, renderer, false),
+      word: (node, renderer) => {
         const id = attrOf<string>(node, "attachmentId");
         const resolved = renderer.context.attachment?.(id) ?? null;
-        const href = resolved ? renderer.safeHref(resolved.href) : null;
-        const image = href
-          ? `<img${htmlAttributes({ src: href, alt: attrOf<string>(node, "alt"), loading: "lazy" })}>`
-          : "";
-        return element(
-          "figure",
+        return [
           {
-            class: "ph-image",
-            "data-attachment-id": id,
-            "data-align": attrOf<string>(node, "align"),
-            "data-width": attrOf<number | null>(node, "width"),
+            type: "image",
+            attachmentId: id,
+            href: resolved ? renderer.safeHref(resolved.href) : null,
+            alt: attrOf<string>(node, "alt"),
+            width: attrOf<number | null>(node, "width"),
+            align: attrOf<string>(node, "align"),
           },
-          image,
-        );
+        ];
       },
       markdown: (node, renderer) => {
         const resolved = renderer.context.attachment?.(attrOf<string>(node, "attachmentId")) ?? null;
@@ -101,6 +135,12 @@ export const fileModule = defineModule({
           ? element("a", { href, rel: "noopener noreferrer" }, renderer.escape(name))
           : renderer.escape(name);
         return element("div", { class: "ph-file", "data-attachment-id": id }, content);
+      },
+      word: (node, renderer) => {
+        const name = attrOf<string>(node, "name") || renderer.label("file");
+        const resolved = renderer.context.attachment?.(attrOf<string>(node, "attachmentId")) ?? null;
+        const href = resolved ? renderer.safeHref(resolved.href) : null;
+        return [{ type: "paragraph", content: [wordText(name, href ? { link: href } : {})] }];
       },
       markdown: (node, renderer) => {
         const name = renderer.escape(attrOf<string>(node, "name") || renderer.label("file"));

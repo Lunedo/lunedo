@@ -23,9 +23,11 @@ import {
   type ListedPage,
   type MarkdownRenderer,
   optional,
+  type WordRenderer,
 } from "../module.js";
 import { element, markdownUrl, prefixLines } from "../text.js";
 import { uuidValue } from "../values.js";
+import { type WordContent, type WordListItem, wordText } from "../word.js";
 
 export const MAX_CHILD_PAGE_DEPTH = 10;
 export const MAX_FILE_TYPES = 20;
@@ -67,6 +69,28 @@ function pagesHtml(pages: readonly ListedPage[], renderer: HtmlRenderer, level: 
   return element("ul", {}, items.join(""));
 }
 
+function pagesWord(pages: readonly ListedPage[], renderer: WordRenderer, level: number): WordListItem[] {
+  if (level > MAX_CHILD_PAGE_DEPTH) return [];
+  return pages.map((page) => {
+    const href = renderer.safeHref(page.href);
+    const title = page.title || renderer.label("untitledPage");
+    const children = pagesWord(page.children, renderer, level + 1);
+    return {
+      checked: null,
+      content: [
+        { type: "paragraph", content: [wordText(title, href ? { link: href } : {})] },
+        ...(children.length > 0
+          ? [{ type: "list" as const, ordered: false, start: 1, items: children }]
+          : []),
+      ],
+    };
+  });
+}
+
+function mutedLine(text: string): WordContent[] {
+  return [{ type: "paragraph", content: [wordText(text, { muted: true, italic: true })] }];
+}
+
 function pagesMarkdown(pages: readonly ListedPage[], renderer: MarkdownRenderer, level: number): string[] {
   if (level > MAX_CHILD_PAGE_DEPTH) return [];
   return pages.flatMap((page) => {
@@ -79,7 +103,7 @@ function pagesMarkdown(pages: readonly ListedPage[], renderer: MarkdownRenderer,
 
 function listedAttachments(
   node: ValidNode,
-  renderer: HtmlRenderer | MarkdownRenderer,
+  renderer: HtmlRenderer | MarkdownRenderer | WordRenderer,
 ): ListedAttachment[] | null {
   const attachments = renderer.context.attachmentList?.() ?? null;
   if (!attachments) return null;
@@ -89,7 +113,7 @@ function listedAttachments(
 
 function attachmentHref(
   attachment: ListedAttachment,
-  renderer: HtmlRenderer | MarkdownRenderer,
+  renderer: HtmlRenderer | MarkdownRenderer | WordRenderer,
 ): string | null {
   const resolved = renderer.context.attachment?.(attachment.id) ?? null;
   return resolved ? renderer.safeHref(resolved.href) : null;
@@ -201,6 +225,12 @@ export const childPagesModule = defineModule({
           content,
         );
       },
+      word: (node, renderer) => {
+        const pages = renderer.context.childPages?.(childPagesRequest(node)) ?? null;
+        if (pages === null) return mutedLine(renderer.label("childPages"));
+        if (pages.length === 0) return mutedLine(renderer.label("noChildPages"));
+        return [{ type: "list", ordered: false, start: 1, items: pagesWord(pages, renderer, 1) }];
+      },
       markdown: (node, renderer) => {
         const pages = renderer.context.childPages?.(childPagesRequest(node)) ?? null;
         if (pages === null) return `*${renderer.escape(renderer.label("childPages"))}*`;
@@ -254,6 +284,33 @@ export const attachmentListModule = defineModule({
           },
           content,
         );
+      },
+      word: (node, renderer) => {
+        const attachments = listedAttachments(node, renderer);
+        if (attachments === null) return mutedLine(renderer.label("attachmentList"));
+        if (attachments.length === 0) return mutedLine(renderer.label("noAttachments"));
+        return [
+          {
+            type: "list",
+            ordered: false,
+            start: 1,
+            items: attachments.map((attachment) => {
+              const href = attachmentHref(attachment, renderer);
+              return {
+                checked: null,
+                content: [
+                  {
+                    type: "paragraph",
+                    content: [
+                      wordText(attachment.name, href ? { link: href } : {}),
+                      wordText(` (${renderer.formatSize(attachment.size)})`, { muted: true }),
+                    ],
+                  },
+                ],
+              };
+            }),
+          },
+        ];
       },
       markdown: (node, renderer) => {
         const attachments = listedAttachments(node, renderer);

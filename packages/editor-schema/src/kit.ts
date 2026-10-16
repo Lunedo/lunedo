@@ -12,9 +12,10 @@ import {
   type ModuleRegistry,
   type RenderContext,
 } from "./module.js";
-import { createRenderState, HtmlRendererImpl, MarkdownRendererImpl } from "./render.js";
+import { createRenderState, HtmlRendererImpl, MarkdownRendererImpl, WordRendererImpl } from "./render.js";
 import { slugify } from "./text.js";
 import { createValidator, InvalidDocumentError, type ValidationResult } from "./validate.js";
+import type { WordBlock } from "./word.js";
 
 export interface EditorKit {
   registry: ModuleRegistry;
@@ -23,6 +24,7 @@ export interface EditorKit {
   isValid(json: unknown): boolean;
   renderHtml(doc: unknown, context?: RenderContext): string;
   renderMarkdown(doc: unknown, context?: RenderContext): string;
+  renderWord(doc: unknown, context?: RenderContext): WordBlock[];
   extractHeadings(doc: DocumentJson): Heading[];
   plainText(doc: DocumentJson): string;
   extractSections(doc: DocumentJson): Section[];
@@ -143,6 +145,11 @@ export function createEditorKit(registry: ModuleRegistry): EditorKit {
       const state = createRenderState(extractHeadings(node as DocumentJson));
       const markdown = new MarkdownRendererImpl(registry, context, state).render(node);
       return markdown.length > 0 ? `${markdown}\n` : "";
+    },
+    renderWord(doc, context = {}) {
+      const node = validated(doc);
+      const state = createRenderState(extractHeadings(node as DocumentJson));
+      return new WordRendererImpl(registry, context, state).blocks(node);
     },
     extractHeadings,
     extractSections,

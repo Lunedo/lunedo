@@ -9,9 +9,19 @@ import type {
   RenderContext,
   RenderLabels,
   ResolvedPageLink,
+  WordRenderer,
 } from "./module.js";
 import { escapeHtml, escapeMarkdown } from "./text.js";
 import { isAllowedHref } from "./values.js";
+import {
+  type WordBlock,
+  type WordContent,
+  type WordInline,
+  type WordTextStyle,
+  wordBlocks,
+  wordInlines,
+  wordText,
+} from "./word.js";
 
 export const defaultLabels: RenderLabels = {
   noAccess: "No access",
@@ -44,6 +54,7 @@ export const defaultLabels: RenderLabels = {
   reportDue: "Due",
   reportPage: "Page",
   templateButton: "Create from template",
+  unavailableHere: "{name} cannot be shown in this format. Open the page in Pagehall to see it.",
   callout: { info: "Info", tip: "Tip", note: "Note", warning: "Warning", error: "Error" },
 };
 
@@ -136,6 +147,10 @@ abstract class Renderer {
     return this.context.pageLink?.(link) ?? null;
   }
 
+  unavailableHere(type: string): string {
+    return this.label("unavailableHere", { name: this.context.nodeTitle?.(type) ?? type });
+  }
+
   safeHref(href: string): string | null {
     if (!isAllowedHref(href)) return null;
     return this.context.href ? this.context.href(href) : href;
@@ -194,7 +209,15 @@ export class HtmlRendererImpl extends Renderer implements HtmlRenderer {
 
   render(node: ValidNode): string {
     const definition = this.registry.node(node.type);
-    return definition ? definition.html(node, this) : "";
+    if (!definition) return "";
+    if (this.context.target === "print" && definition.print) {
+      if (definition.print !== "unsupported") return definition.print(node, this);
+      const text = escapeHtml(this.unavailableHere(node.type));
+      return definition.spec.inline
+        ? `<span class="ph-unavailable" data-node="${escapeHtml(node.type)}">${text}</span>`
+        : `<div class="ph-unavailable" data-node="${escapeHtml(node.type)}"><p>${text}</p></div>`;
+    }
+    return definition.html(node, this);
   }
 
   children(node: ValidNode): string {
@@ -241,6 +264,39 @@ export class MarkdownRendererImpl extends Renderer implements MarkdownRenderer {
 
   html(node: ValidNode): string {
     return new HtmlRendererImpl(this.registry, this.context, this.state).render(node);
+  }
+}
+
+export class WordRendererImpl extends Renderer implements WordRenderer {
+  render(node: ValidNode): WordContent[] {
+    const definition = this.registry.node(node.type);
+    if (!definition) return [];
+    if (definition.word) return definition.word(node, this);
+    const text = this.unavailableHere(node.type);
+    return definition.spec.inline
+      ? [wordText(text, { muted: true, italic: true })]
+      : [{ type: "placeholder", text }];
+  }
+
+  blocks(node: ValidNode): WordBlock[] {
+    if (node.content.some((child) => this.isInline(child))) {
+      return wordBlocks(this.inline(node));
+    }
+    return wordBlocks(node.content.flatMap((child) => this.render(child)));
+  }
+
+  inline(node: ValidNode): WordInline[] {
+    return node.content.flatMap((child) => {
+      const style = this.orderedMarks(child.marks).reduce<WordTextStyle>(
+        (current, { mark, definition }) => definition.word?.(mark, current, this) ?? current,
+        {},
+      );
+      const items =
+        child.type === "text" ? [wordText(child.text ?? "", {})] : wordInlines(this.render(child));
+      return items.map((item) =>
+        item.type === "text" ? { ...item, style: { ...style, ...item.style } } : item,
+      );
+    });
   }
 }
 

@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { attrOf, defineModule, optional } from "../module.js";
 import { element, escapeLineStart, prefixLines } from "../text.js";
-import { alignmentValue, indentValue } from "../values.js";
+import { alignmentValue, indentValue, type TextAlignment } from "../values.js";
+import { wordText } from "../word.js";
 
 const blockFormatting = {
   textAlign: optional(alignmentValue, "left"),
@@ -31,6 +32,7 @@ export const coreModule = defineModule({
       name: "doc",
       spec: { content: "block+" },
       html: (node, renderer) => renderer.children(node),
+      word: (node, renderer) => renderer.blocks(node),
       markdown: (node, renderer) => renderer.blocks(node),
     },
     {
@@ -38,12 +40,21 @@ export const coreModule = defineModule({
       spec: { content: "inline*", group: "block" },
       attrs: blockFormatting,
       html: (node, renderer) => element("p", formattingAttributes(node), renderer.children(node)),
+      word: (node, renderer) => [
+        {
+          type: "paragraph",
+          content: renderer.inline(node),
+          align: attrOf<TextAlignment>(node, "textAlign"),
+          indent: attrOf<number>(node, "indent"),
+        },
+      ],
       markdown: (node, renderer) => markdownBlockLine(renderer.inline(node)),
     },
     {
       name: "text",
       spec: { group: "inline" },
       html: (node, renderer) => renderer.escape(node.text ?? ""),
+      word: (node) => [wordText(node.text ?? "")],
       markdown: (node, renderer) => renderer.escape(node.text ?? ""),
       text: (node) => node.text ?? "",
     },
@@ -51,6 +62,7 @@ export const coreModule = defineModule({
       name: "hardBreak",
       spec: { inline: true, group: "inline", selectable: false },
       html: () => "<br>",
+      word: () => [{ type: "break" }],
       markdown: () => "\\\n",
       text: () => "\n",
     },
@@ -67,6 +79,14 @@ export const coreModule = defineModule({
           { id: renderer.nextHeadingId(), ...formattingAttributes(node) },
           renderer.children(node),
         ),
+      word: (node, renderer) => [
+        {
+          type: "heading",
+          level: attrOf<number>(node, "level"),
+          anchor: renderer.nextHeadingId(),
+          content: renderer.inline(node),
+        },
+      ],
       markdown: (node, renderer) => {
         renderer.nextHeadingId();
         const content = renderer.inline(node).replace(/\n/g, " ");
@@ -78,12 +98,14 @@ export const coreModule = defineModule({
       name: "blockquote",
       spec: { content: "block+", group: "block", defining: true },
       html: (node, renderer) => element("blockquote", {}, renderer.children(node)),
+      word: (node, renderer) => [{ type: "quote", content: renderer.blocks(node) }],
       markdown: (node, renderer) => prefixLines(renderer.blocks(node), "> ", "> "),
     },
     {
       name: "horizontalRule",
       spec: { group: "block" },
       html: () => "<hr>",
+      word: () => [{ type: "rule" }],
       markdown: () => "---",
     },
   ],

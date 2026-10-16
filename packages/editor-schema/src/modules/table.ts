@@ -1,8 +1,16 @@
 import { z } from "zod";
 import type { ValidNode } from "../json.js";
-import { attrOf, defineModule, type MarkdownRenderer, type NodeDefinition, optional } from "../module.js";
+import {
+  attrOf,
+  defineModule,
+  type MarkdownRenderer,
+  type NodeDefinition,
+  optional,
+  type WordRenderer,
+} from "../module.js";
 import { element } from "../text.js";
-import { colorValue } from "../values.js";
+import { type ContentColor, colorValue } from "../values.js";
+import type { WordTableRow } from "../word.js";
 
 const cellAttributes = {
   colspan: optional(z.number().int().min(1).max(1000), 1),
@@ -44,8 +52,25 @@ function cell(name: "tableCell" | "tableHeader", tag: "td" | "th"): NodeDefiniti
         renderer.children(node),
       );
     },
+    word: (node, renderer) => renderer.blocks(node),
     markdown: (node, renderer) => renderer.blocks(node),
   };
+}
+
+function tableRows(rows: readonly ValidNode[], renderer: WordRenderer): WordTableRow[] {
+  return rows.map((row) => ({
+    cells: row.content.map((cell) => {
+      const widths = attrOf<number[] | null>(cell, "colwidth");
+      return {
+        header: cell.type === "tableHeader",
+        colspan: attrOf<number>(cell, "colspan"),
+        rowspan: attrOf<number>(cell, "rowspan"),
+        width: widths ? widths.reduce((sum, width) => sum + width, 0) : null,
+        background: attrOf<ContentColor | null>(cell, "background"),
+        content: renderer.blocks(cell),
+      };
+    }),
+  }));
 }
 
 function isSimpleCell(node: ValidNode): boolean {
@@ -83,12 +108,16 @@ export const tableModule = defineModule({
           { class: "ph-table" },
           element("table", {}, element("tbody", {}, renderer.children(node))),
         ),
+      word: (node, renderer) => [
+        { type: "table", rows: tableRows(node.content, renderer), borderless: false },
+      ],
       markdown: (node, renderer) => pipeTable(node, renderer) ?? renderer.html(node),
     },
     {
       name: "tableRow",
       spec: { content: "(tableCell | tableHeader)*", tableRole: "row" },
       html: (node, renderer) => element("tr", {}, renderer.children(node)),
+      word: (node, renderer) => [{ type: "table", rows: tableRows([node], renderer), borderless: false }],
       markdown: (node, renderer) => renderer.html(node),
     },
     cell("tableCell", "td"),

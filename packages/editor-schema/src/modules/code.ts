@@ -83,6 +83,9 @@ export const codeBlockModule = defineModule({
         );
         return element("pre", { class: "ph-code-block", "data-language": language }, code);
       },
+      word: (node) => [
+        { type: "code", text: codeText(node), language: attrOf<string | null>(node, "language") },
+      ],
       markdown: (node) => {
         const code = codeText(node);
         const fence = fenceFor(code);

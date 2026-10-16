@@ -29,6 +29,7 @@ import {
   type TaskReportStatus,
   taskReportDueWindows,
   taskReportStatuses,
+  type WordRenderer,
 } from "../module.js";
 import { element, markdownUrl } from "../text.js";
 import {
@@ -39,6 +40,7 @@ import {
   pageIdsValue,
   uuidValue,
 } from "../values.js";
+import { type WordContent, type WordInline, type WordTableCell, wordText } from "../word.js";
 
 export { type TaskReportDue, type TaskReportStatus, taskReportDueWindows, taskReportStatuses };
 
@@ -295,7 +297,7 @@ const taskReportImporter: MacroConverter = {
   },
 };
 
-function formatDay(iso: string, renderer: HtmlRenderer | MarkdownRenderer): string {
+function formatDay(iso: string, renderer: HtmlRenderer | MarkdownRenderer | WordRenderer): string {
   return renderer.formatDate(iso.slice(0, 10));
 }
 
@@ -347,6 +349,57 @@ function taskReportHtml(tasks: readonly ReportedTask[] | null, renderer: HtmlRen
     );
   });
   return element("table", {}, `${head}${element("tbody", {}, rows.join(""))}`);
+}
+
+function wordCell(content: WordInline[], header = false): WordTableCell {
+  return {
+    header,
+    colspan: 1,
+    rowspan: 1,
+    width: null,
+    background: null,
+    content: [{ type: "paragraph", content }],
+  };
+}
+
+function wordTable(headings: readonly string[], rows: readonly WordInline[][][]): WordContent[] {
+  return [
+    {
+      type: "table",
+      borderless: false,
+      rows: [
+        { cells: headings.map((heading) => wordCell([wordText(heading)], true)) },
+        ...rows.map((cells) => ({ cells: cells.map((cell) => wordCell(cell)) })),
+      ],
+    },
+  ];
+}
+
+function wordLink(title: string, href: string | null): WordInline {
+  return wordText(title, href ? { link: href } : {});
+}
+
+function wordNote(text: string): WordContent[] {
+  return [{ type: "paragraph", content: [wordText(text, { muted: true, italic: true })] }];
+}
+
+function taskReportWord(tasks: readonly ReportedTask[] | null, renderer: WordRenderer): WordContent[] {
+  if (tasks === null) return wordNote(renderer.label("taskReport"));
+  if (tasks.length === 0) return wordNote(renderer.label("noReportedTasks"));
+  return wordTable(
+    [
+      renderer.label("reportTask"),
+      renderer.label("reportAssignee"),
+      renderer.label("reportDue"),
+      renderer.label("reportPage"),
+    ],
+    tasks.map((task) => [
+      [wordText(`${task.done ? "\u2611" : "\u2610"} ${task.text}`)],
+      [wordText(task.assignee ?? "")],
+      [wordText(task.dueDate ? renderer.formatDate(task.dueDate) : "")],
+      [wordLink(task.page.title || renderer.label("untitledPage"), renderer.safeHref(task.page.href))],
+    ]),
+  );
 }
 
 function markdownCell(text: string): string {
@@ -413,6 +466,8 @@ export const taskReportModule = defineModule({
           },
           taskReportHtml(renderer.context.taskReport?.(taskReportRequest(node)) ?? null, renderer),
         ),
+      word: (node, renderer) =>
+        taskReportWord(renderer.context.taskReport?.(taskReportRequest(node)) ?? null, renderer),
       markdown: (node, renderer) =>
         taskReportMarkdown(renderer.context.taskReport?.(taskReportRequest(node)) ?? null, renderer),
       text: () => "",
@@ -479,6 +534,19 @@ export const pageReportModule = defineModule({
             "data-limit": request.limit,
           },
           content,
+        );
+      },
+      word: (node, renderer) => {
+        const pages = renderer.context.pageReport?.(pageReportRequest(node)) ?? null;
+        if (pages === null) return wordNote(renderer.label("pageReport"));
+        if (pages.length === 0) return wordNote(renderer.label("noReportedPages"));
+        return wordTable(
+          [renderer.label("reportTitle"), renderer.label("reportAuthor"), renderer.label("reportUpdated")],
+          pages.map((page) => [
+            [wordLink(page.title || renderer.label("untitledPage"), renderer.safeHref(page.href))],
+            [wordText(page.author ?? renderer.label("unknownPerson"))],
+            [wordText(formatDay(page.updatedAt, renderer))],
+          ]),
         );
       },
       markdown: (node, renderer) => {
@@ -551,6 +619,34 @@ export const decisionReportModule = defineModule({
           },
           content,
         );
+      },
+      word: (node, renderer) => {
+        const decisions = renderer.context.decisionReport?.(decisionReportRequest(node)) ?? null;
+        if (decisions === null) return wordNote(renderer.label("decisionReport"));
+        if (decisions.length === 0) return wordNote(renderer.label("noReportedDecisions"));
+        return [
+          {
+            type: "list",
+            ordered: false,
+            start: 1,
+            items: decisions.map((decision) => ({
+              checked: null,
+              content: [
+                { type: "paragraph", content: [wordText(decision.text)] },
+                {
+                  type: "paragraph",
+                  content: [
+                    wordLink(
+                      decision.page.title || renderer.label("untitledPage"),
+                      renderer.safeHref(decision.page.href),
+                    ),
+                    wordText(` · ${formatDay(decision.date, renderer)}`, { muted: true }),
+                  ],
+                },
+              ],
+            })),
+          },
+        ];
       },
       markdown: (node, renderer) => {
         const decisions = renderer.context.decisionReport?.(decisionReportRequest(node)) ?? null;
