@@ -22,6 +22,7 @@ The development environment runs in Docker and watches files by polling, so it w
 - Keep pull requests focused on one change. Large changes are discussed in an issue or discussion first.
 - A pull request that adds a dependency explains why it is needed, names its license and confirms that it is actively maintained.
 - Everything that ships in the container image or the web client must use an OSI-approved license. Data packages and dependencies used only for building or testing may use open data licenses such as CC0-1.0 or CC-BY-4.0 when they are listed in `license-allowlist.json` with their license and a reason. `pnpm licenses:check` enforces this in CI.
+- A package whose `package.json` declares no license, or one that is not a valid SPDX identifier, passes only with an entry in `license-clarifications.json` for that exact version: the declared value (`Unknown` when there is none), the license of its license file and a reason. When nothing is declared, the entry also pins the reviewed license file with `licenseFileSha256`. A new version or a changed license file fails the check until someone reads the file and updates the entry.
 
 ## Commits
 

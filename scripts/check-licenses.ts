@@ -1,5 +1,6 @@
 import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { type ListedPackage, withDeclaredLicense } from "./license-files.ts";
 import {
   type Allowlist,
   type Clarifications,
@@ -12,7 +13,9 @@ function listLicenses(production: boolean): PackageLicense[] {
     encoding: "utf8",
     maxBuffer: 64 * 1024 * 1024,
   });
-  return Object.values(JSON.parse(output) as Record<string, PackageLicense[]>).flat();
+  return Object.values(JSON.parse(output) as Record<string, ListedPackage[]>)
+    .flat()
+    .map(withDeclaredLicense);
 }
 
 const { packages: allowlist } = JSON.parse(
