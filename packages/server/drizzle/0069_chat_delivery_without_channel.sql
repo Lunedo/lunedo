@@ -1,0 +1,1 @@
+ALTER TABLE "chat_deliveries" ALTER COLUMN "channel_id" DROP NOT NULL;

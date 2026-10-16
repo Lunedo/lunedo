@@ -8,7 +8,7 @@ import { instanceAdministratorIds } from "../auth/emergency-recipients.js";
 import { ChatChannelError, type ChatChannelService, type ChatTestResult } from "../chat/channels.js";
 import type { ChatMessage } from "../chat/formats.js";
 import type { Encryption } from "../crypto/envelope.js";
-import type { Database, Transaction } from "../database/database.js";
+import type { Database, Executor, Transaction } from "../database/database.js";
 import type { FileStore } from "../files/store.js";
 import type { JobQueue } from "../jobs/job-queue.js";
 import type { Logger } from "../logging/logger.js";
@@ -32,12 +32,12 @@ import {
   storageWarningPercentSetting,
 } from "./settings.js";
 import type { StorageUsage } from "./usage.js";
+import { STORAGE_TEAMS_SECRET, storageTeamsSecretContext } from "./webhook-secret.js";
 
 export type StorageLevel = 0 | 1 | 2 | 3;
 
 export const CLEAR_MARGIN_POINTS = 5;
 export const MIN_CHECK_INTERVAL_MS = 30_000;
-const TEAMS_SECRET = "storage.operationsTeamsWebhook";
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface StorageThresholds {
@@ -125,10 +125,6 @@ export function reminderDue(reminder: StorageReminder, since: Date, now: Date): 
   const next = new Date(since);
   next.setUTCMonth(next.getUTCMonth() + 1);
   return now.getTime() >= next.getTime();
-}
-
-function secretContext(): string {
-  return `instance_secrets.value:${TEAMS_SECRET}`;
 }
 
 export class StorageService {
@@ -318,12 +314,14 @@ export class StorageService {
       await tx.execute(sql`
         update storage_state set active_level = ${active}, reached_level = ${reached},
           notified_at = ${notifiedAt}, checked_at = ${now}, updated_at = now() where singleton`);
-      if (announcement) mailIds.push(...(await this.#announce(tx, announcement)));
+      if (announcement) {
+        mailIds.push(...(await this.#announce(tx, announcement)));
+        await this.#chat.queueStorageMessage(tx, await this.#teamsMessage(tx, announcement));
+      }
     });
     const sent = announcement as Announcement | null;
     if (sent) {
       await this.#notifications.dispatch(mailIds);
-      await this.#postTeams(sent);
     }
     return { skipped, reading, level, change: sent?.change ?? null };
   }
@@ -341,6 +339,7 @@ export class StorageService {
     const { reading } = announcement;
     const ids: string[] = [];
     const recipients = await instanceAdministratorIds(tx);
+    const link = await this.#link(tx);
     const reached = announcement.change !== "cleared";
     const result = reached
       ? await this.#notifications.notify(tx, {
@@ -355,6 +354,7 @@ export class StorageService {
             totalBytes: reading.totalBytes,
             store: reading.store,
             reminder: announcement.change === "reminder",
+            link,
           },
         })
       : await this.#notifications.notify(tx, {
@@ -362,13 +362,12 @@ export class StorageService {
           recipients,
           organizationId: null,
           targetId: uuidv7(),
-          params: { level: announcement.level, percent: reading.percent, store: reading.store },
+          params: { level: announcement.level, percent: reading.percent, store: reading.store, link },
         });
     ids.push(...result.mailIds);
     const addresses = await this.#settings.get(storageOperationsEmailsSetting, {}, { executor: tx });
     if (addresses.length === 0) return ids;
     const language = await this.#language(tx);
-    const link = await this.#link(tx);
     for (const address of addresses) {
       ids.push(
         reached
@@ -408,14 +407,14 @@ export class StorageService {
     const [row] = await executor
       .select({ value: instanceSecrets.value })
       .from(instanceSecrets)
-      .where(eq(instanceSecrets.name, TEAMS_SECRET));
-    return row ? this.#encryption.decryptString(row.value, secretContext()) : null;
+      .where(eq(instanceSecrets.name, STORAGE_TEAMS_SECRET));
+    return row ? this.#encryption.decryptString(row.value, storageTeamsSecretContext()) : null;
   }
 
-  async #teamsMessage(announcement: Announcement | null): Promise<ChatMessage> {
-    const instanceName = await this.#settings.get(instanceNameSetting, {});
-    const language = await this.#settings.get(languageSetting, {});
-    const base = await this.#settings.get(instanceUrlSetting, {});
+  async #teamsMessage(executor: Executor, announcement: Announcement | null): Promise<ChatMessage> {
+    const instanceName = await this.#settings.get(instanceNameSetting, {}, { executor });
+    const language = await this.#settings.get(languageSetting, {}, { executor });
+    const base = await this.#settings.get(instanceUrlSetting, {}, { executor });
     const link = base ? `${base.replace(/\/+$/, "")}/settings/instance/storage` : null;
     const content = announcement
       ? announcement.change === "cleared"
@@ -451,20 +450,24 @@ export class StorageService {
     };
   }
 
-  async #postTeams(announcement: Announcement | null): Promise<ChatTestResult | null> {
+  async #postTestToTeams(): Promise<ChatTestResult | null> {
     const url = await this.#teamsWebhook(this.#database);
     if (!url) return null;
     try {
-      const result = await this.#chat.postWebhook("teams", url, await this.#teamsMessage(announcement));
+      const result = await this.#chat.postWebhook(
+        "teams",
+        url,
+        await this.#teamsMessage(this.#database, null),
+      );
       if (!result.delivered) {
         this.#logger.warn(
           { reason: result.failure.reason, status: result.failure.status },
-          "Posting the storage warning to Teams failed",
+          "Posting the storage test message to Teams failed",
         );
       }
       return result;
     } catch (error) {
-      this.#logger.warn({ err: error }, "Posting the storage warning to Teams failed");
+      this.#logger.warn({ err: error }, "Posting the storage test message to Teams failed");
       return null;
     }
   }
@@ -490,7 +493,7 @@ export class StorageService {
       });
       await this.#notifications.dispatch(mailIds);
     }
-    return { addresses: addresses.length, teams: await this.#postTeams(null) };
+    return { addresses: addresses.length, teams: await this.#postTestToTeams() };
   }
 
   async configure(actor: Principal, input: StorageConfigurationInput): Promise<StorageStatus> {
@@ -565,12 +568,12 @@ export class StorageService {
       }
       if (webhook !== undefined) {
         if (webhook === null) {
-          await tx.delete(instanceSecrets).where(eq(instanceSecrets.name, TEAMS_SECRET));
+          await tx.delete(instanceSecrets).where(eq(instanceSecrets.name, STORAGE_TEAMS_SECRET));
         } else {
-          const value = this.#encryption.encrypt(webhook, secretContext());
+          const value = this.#encryption.encrypt(webhook, storageTeamsSecretContext());
           await tx
             .insert(instanceSecrets)
-            .values({ name: TEAMS_SECRET, value })
+            .values({ name: STORAGE_TEAMS_SECRET, value })
             .onConflictDoUpdate({ target: instanceSecrets.name, set: { value, updatedAt: new Date() } });
         }
       }

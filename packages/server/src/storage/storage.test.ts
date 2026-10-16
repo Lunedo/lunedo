@@ -163,6 +163,7 @@ describe.skipIf(!baseUrl)("storage warnings", () => {
     await test.database.execute(sql`delete from storage_state`);
     await test.database.execute(sql`delete from notifications where type like 'storage.%'`);
     await test.database.execute(sql`delete from mail_outbox`);
+    await test.database.execute(sql`delete from chat_deliveries where channel_id is null`);
     await test.database.execute(sql`delete from instance_secrets where name like 'storage.%'`);
     test.mail.sent.length = 0;
     for (const setting of [
@@ -186,6 +187,21 @@ describe.skipIf(!baseUrl)("storage warnings", () => {
     usage(share);
     now = new Date(now.getTime() + minutes * MINUTE);
     return monitor.check();
+  }
+
+  async function teamsDeliveries() {
+    const result = await test.database.execute<{ id: string; state: string }>(
+      sql`select id, state from chat_deliveries where channel_id is null order by created_at, id`,
+    );
+    return result.rows;
+  }
+
+  async function deliverTeams(lastAttempt = false) {
+    const results: string[] = [];
+    for (const row of (await teamsDeliveries()).filter((entry) => entry.state === "pending")) {
+      results.push(await test.services.chatChannels.deliver(row.id, lastAttempt));
+    }
+    return results;
   }
 
   async function received(accountId: string, type?: string) {
@@ -421,6 +437,22 @@ describe.skipIf(!baseUrl)("storage warnings", () => {
       const other = monitorOf();
       await Promise.all([monitor.check(), other.check()]);
       expect(await received(admins[0] ?? "")).toHaveLength(1);
+    });
+
+    it("links the administrator mails and notifications to the storage section", async () => {
+      await tick(96);
+      await tick(96);
+      const first = await test.database.execute<{ email: string }>(
+        sql`select email from accounts where id = ${admins[0] ?? ""}`,
+      );
+      const mails = await mailTo(first.rows[0]?.email ?? "");
+      expect(mails[0]?.text).toContain("https://wiki.example.org/settings/instance/storage");
+      expect(await received(admins[0] ?? "", "storage.levelReached")).toMatchObject([
+        { params: { link: "https://wiki.example.org/settings/instance/storage" } },
+      ]);
+      await tick(50);
+      const cleared = await mailTo(first.rows[0]?.email ?? "");
+      expect(cleared.at(-1)?.text).toContain("https://wiki.example.org/settings/instance/storage");
     });
 
     it("sends operations mails without an unsubscribe link and with the operations footer", async () => {
@@ -662,17 +694,21 @@ describe.skipIf(!baseUrl)("storage warnings", () => {
       }
     });
 
-    it("posts to the Teams webhook when a level becomes active and when it clears", async () => {
+    it("posts to the Teams webhook through the chat delivery when a level becomes active and when it clears", async () => {
       const url = hook("teams");
       await monitor.configure(actor(), { teamsWebhook: url });
       await tick(91);
       await tick(91);
+      expect(requests).toHaveLength(0);
+      expect(await teamsDeliveries()).toMatchObject([{ state: "pending" }]);
+      expect(await deliverTeams()).toEqual(["delivered"]);
       expect(requests).toHaveLength(1);
       const posted = JSON.parse(requests[0]?.body ?? "{}") as {
         attachments: { content: { body: { text: string }[] } }[];
       };
       expect(posted.attachments[0]?.content.body.map((block) => block.text).join(" ")).toContain("91.0");
       await tick(50);
+      expect(await deliverTeams()).toEqual(["delivered"]);
       expect(requests).toHaveLength(2);
     });
 
@@ -683,15 +719,50 @@ describe.skipIf(!baseUrl)("storage warnings", () => {
       now = new Date(now.getTime() + 8 * DAY);
       usage(85);
       await monitor.check();
+      await deliverTeams();
       expect(requests).toHaveLength(2);
     });
 
-    it("keeps working when the Teams webhook fails", async () => {
+    it("queues nothing for Teams when no webhook is set", async () => {
+      await tick(85);
+      await tick(85);
+      expect(await teamsDeliveries()).toEqual([]);
+    });
+
+    it("retries a failed Teams post and delivers it once Teams answers again", async () => {
       await monitor.configure(actor(), { teamsWebhook: hook() });
       webhookStatus = 500;
       await tick(85);
       await tick(85);
       expect(await received(admins[0] ?? "", "storage.levelReached")).toHaveLength(1);
+      expect(await deliverTeams()).toEqual(["retry"]);
+      expect(await teamsDeliveries()).toMatchObject([{ state: "pending" }]);
+      webhookStatus = 200;
+      expect(await deliverTeams()).toEqual(["delivered"]);
+      expect(await teamsDeliveries()).toMatchObject([{ state: "delivered" }]);
+      expect(requests).toHaveLength(2);
+    });
+
+    it("gives up after the last attempt without leaking the address", async () => {
+      await monitor.configure(actor(), { teamsWebhook: hook("private-path") });
+      webhookStatus = 500;
+      await tick(85);
+      await tick(85);
+      expect(await deliverTeams(true)).toEqual(["failed"]);
+      expect(await teamsDeliveries()).toMatchObject([{ state: "failed" }]);
+      const stored = await test.database.execute(
+        sql`select data::text as data from chat_deliveries where channel_id is null`,
+      );
+      expect(JSON.stringify(stored.rows)).not.toContain("private-path");
+    });
+
+    it("skips the Teams post when the webhook was removed before it was sent", async () => {
+      await monitor.configure(actor(), { teamsWebhook: hook() });
+      await tick(85);
+      await tick(85);
+      await monitor.configure(actor(), { teamsWebhook: null });
+      expect(await deliverTeams()).toEqual(["skipped"]);
+      expect(requests).toHaveLength(0);
     });
 
     it("stores the webhook address encrypted and never returns it", async () => {

@@ -19,7 +19,7 @@ const levelReached = defineNotificationType({
       total: formatBytes(params.totalBytes),
       store: params.store,
       reminder: params.reminder,
-      link: null,
+      link: params.link,
     },
   }),
 });
@@ -35,7 +35,7 @@ const levelCleared = defineNotificationType({
       level: params.level as 0 | 1 | 2,
       percent: formatPercent(params.percent),
       store: params.store,
-      link: null,
+      link: params.link,
     },
   }),
 });

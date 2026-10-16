@@ -71,11 +71,13 @@ export const notificationParamSchemas = {
     totalBytes: z.number(),
     store: z.enum(["local", "s3"]),
     reminder: z.boolean(),
+    link: z.string().nullable().default(null),
   }),
   "storage.levelCleared": z.object({
     level: z.number().int().min(0).max(2),
     percent: z.number(),
     store: z.enum(["local", "s3"]),
+    link: z.string().nullable().default(null),
   }),
   "identityProvider.credentialExpiring": z.object({
     providerName: z.string(),

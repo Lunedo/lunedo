@@ -24,7 +24,9 @@ The three levels are instance settings and must rise from one to the next. A new
 - A level becomes active after two checks in a row, one minute apart, at or above its threshold. It clears when the usage falls 5 percentage points below the threshold (warning at 80 %, cleared below 75 %). Readings that move around a threshold therefore notify once.
 - A notification goes out when a level becomes active or a higher one does. When the usage falls below a level, one short message says what works again.
 - While a level stays active, the **reminder** repeats the current state: never, daily, weekly (default) or monthly.
-- The e-mails are operations mails: no unsubscribe link, and a footer that says why the recipient gets them.
+- The e-mails are operations mails: no unsubscribe link, and a footer that says why the recipient gets them. Every e-mail links to the storage section.
+- The Teams post is queued with the level change and sent by the chat delivery job, which retries a failing post. The test message is posted at once.
+- An import that fails because the storage is full ends as failed with the code `storageFull`, and its report says "Storage full". A running import is not stopped when the critical level is reached.
 
 ## Interface
 

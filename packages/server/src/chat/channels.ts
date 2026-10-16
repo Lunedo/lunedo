@@ -11,12 +11,14 @@ import {
   uuidv7,
 } from "@pagehall/shared";
 import { and, eq, isNull, sql } from "drizzle-orm";
+import { z } from "zod";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { Encryption } from "../crypto/envelope.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import type { Logger } from "../logging/logger.js";
+import { instanceSecrets } from "../mail/schema.js";
 import type { NotificationService } from "../notifications/service.js";
 import {
   checkAddress,
@@ -28,6 +30,7 @@ import {
 import { languageSetting } from "../settings/builtin.js";
 import type { SettingsService } from "../settings/service.js";
 import { actorIdOf } from "../spaces/common.js";
+import { STORAGE_TEAMS_SECRET, storageTeamsSecretContext } from "../storage/webhook-secret.js";
 import {
   type ChatFailure,
   type ChatMessage,
@@ -50,6 +53,21 @@ export const DECISION_SETTLE_MINUTES = 5;
 const MAX_CHANNELS = 20;
 const DELIVERY_RETENTION_DAYS = 14;
 const ABANDONED_MINUTES = 60;
+
+const storageDeliverySchema = z.object({
+  message: z.object({
+    event: z.literal("storage"),
+    heading: z.string(),
+    title: z.string(),
+    detail: z.string().nullable(),
+    link: z.object({ url: z.string(), label: z.string() }).nullable(),
+    occurredAt: z.string(),
+    space: z.null(),
+    organizationId: z.null(),
+    item: z.null(),
+    actor: z.null(),
+  }),
+});
 const DECISION_TEXT_LIMIT = 1000;
 const ANNOUNCEMENT_PREVIEW_LIMIT = 300;
 const MAX_ACTORS = 20;
@@ -896,10 +914,71 @@ export class ChatChannelService {
     };
   }
 
+  async queueStorageMessage(tx: Transaction, message: ChatMessage): Promise<boolean> {
+    const configured = await tx
+      .select({ name: instanceSecrets.name })
+      .from(instanceSecrets)
+      .where(eq(instanceSecrets.name, STORAGE_TEAMS_SECRET));
+    if (configured.length === 0) return false;
+    await tx.insert(chatDeliveries).values({
+      event: "storage",
+      data: { message: { ...message, occurredAt: message.occurredAt.toISOString() } },
+    });
+    await tx.execute(sql`select pg_notify(${CHAT_DELIVERIES_CHANNEL}, '')`);
+    return true;
+  }
+
+  async #deliverStorage(
+    deliveryId: string,
+    data: unknown,
+    lastAttempt: boolean,
+  ): Promise<"delivered" | "skipped" | "failed" | "retry"> {
+    const finish = async (state: "delivered" | "skipped" | "failed") => {
+      await this.#database
+        .update(chatDeliveries)
+        .set({ state, updatedAt: new Date(), attempts: sql`${chatDeliveries.attempts} + 1` })
+        .where(and(eq(chatDeliveries.id, deliveryId), eq(chatDeliveries.state, "pending")));
+      return state;
+    };
+    const [secret] = await this.#database
+      .select({ value: instanceSecrets.value })
+      .from(instanceSecrets)
+      .where(eq(instanceSecrets.name, STORAGE_TEAMS_SECRET));
+    const parsed = storageDeliverySchema.safeParse(data);
+    if (!secret || !parsed.success) return finish("skipped");
+    const url = this.#encryption.decryptString(secret.value, storageTeamsSecretContext());
+    const failure = await this.#send(deliveryId, "teams", { url }, null, {
+      ...parsed.data.message,
+      occurredAt: new Date(parsed.data.message.occurredAt),
+    });
+    if (!failure) return finish("delivered");
+    if (!failure.permanent && !lastAttempt) {
+      await this.#database
+        .update(chatDeliveries)
+        .set({ attempts: sql`${chatDeliveries.attempts} + 1`, updatedAt: new Date() })
+        .where(eq(chatDeliveries.id, deliveryId));
+      return "retry";
+    }
+    this.#logger.warn(
+      { reason: failure.reason, status: failure.status },
+      "The storage warning could not be posted to Teams",
+    );
+    return finish("failed");
+  }
+
   async deliver(
     deliveryId: string,
     lastAttempt: boolean,
   ): Promise<"delivered" | "skipped" | "failed" | "retry"> {
+    const own = await this.#database
+      .select({ channelId: chatDeliveries.channelId, state: chatDeliveries.state, data: chatDeliveries.data })
+      .from(chatDeliveries)
+      .where(eq(chatDeliveries.id, deliveryId));
+    if (own[0] && own[0].channelId === null) {
+      return own[0].state === "pending"
+        ? this.#deliverStorage(deliveryId, own[0].data, lastAttempt)
+        : "skipped";
+    }
     const loaded = await this.#database.execute<
       ChannelRow & {
         delivery_id: string;
