@@ -402,7 +402,7 @@ export class PageAccessService {
         targetId: itemId,
         params: {
           itemTitle: item.title,
-          itemKind: item.kind === "blogPost" ? "blogPost" : "page",
+          itemKind: item.kind === "blogPost" || item.kind === "whiteboard" ? item.kind : "page",
           spaceKey: "",
           role: entry.role,
           includeDescendants: entry.includeDescendants,

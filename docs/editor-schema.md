@@ -36,6 +36,7 @@ Documents are ProseMirror JSON. The server validates every stored document and e
 | `unsupportedMacro` | | `name`, `data` (the original data, up to 256 KiB) |
 | `image` | | `attachmentId`, `alt`, `width`, `align` |
 | `file` | | `attachmentId`, `name` |
+| `drawing` | | `id` (block ID), `sceneId` and `sceneVersion` (attachment version of the scene), `previewId` and `previewVersion` (attachment version of the SVG image), `text` (up to 20,000 characters, for search) |
 
 ## Marks
 
@@ -58,6 +59,21 @@ On success it returns the normalized document: missing attributes are filled wit
 ## Rendering
 
 `renderHtml` produces the HTML of the read view and `renderMarkdown` GitHub-flavored Markdown, both from the same module definitions. A render context resolves mentions, page links, attachments and dates and provides translated labels. The HTML renderer escapes all content, renders only allowed links and writes colors as names (`data-color`), never as values. Formulas render with KaTeX up to 20,000 characters of LaTeX per document; further formulas appear as their source. In Markdown, formulas stay inside code (`` $`…`$ `` and ```` ```math ```` blocks), so their content cannot turn into Markdown or HTML.
+
+## Whiteboard scenes
+
+`@pagehall/editor-schema/scene` defines the scenes of whiteboards and drawing blocks: Excalidraw elements, images and settings. `validateScene` accepts the element types rectangle, diamond, ellipse, arrow, line, freedraw, text, image and frame with their known fields only; embedded web content, AI frames and custom data other than the sticky-note flag are refused. Links on elements allow `http`, `https` and internal paths. Images are referenced by the ID of an attachment of the same item, never by address.
+
+| Limit | Value |
+|---|---|
+| Scene | 8 MiB |
+| One element | 512 KiB |
+| Elements | 20,000 |
+| Images | 500 |
+| Points of a line or stroke | 20,000 |
+| Text of one element | 20,000 characters |
+
+In Yjs, a scene is a map `elements` (element ID to element), a map `files` (file ID to attachment and type) and a map `settings`. Each client writes an element only when its version is newer; concurrent edits of one element are reconciled with Excalidraw's version and version nonce, so every client ends with the same scene. Deleted elements stay as tombstones for a day, so late changes from other people cannot bring them back.
 
 ## Collaboration
 

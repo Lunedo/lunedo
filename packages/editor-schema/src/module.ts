@@ -134,6 +134,7 @@ export interface RenderLabels {
   tableOfContents: string;
   file: string;
   image: string;
+  drawing: string;
   childPages: string;
   noChildPages: string;
   attachmentList: string;
@@ -157,7 +158,7 @@ export interface RenderLabels {
 export interface RenderContext {
   mention?: (id: string) => { name: string } | null;
   pageLink?: (link: PageLinkTarget) => ResolvedPageLink | null;
-  attachment?: (id: string) => { href: string } | null;
+  attachment?: (id: string, version?: number) => { href: string } | null;
   formatDate?: (iso: string) => string;
   labels?: Partial<RenderLabels>;
   showPlaceholders?: boolean;

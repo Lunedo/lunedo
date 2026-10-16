@@ -190,9 +190,9 @@ export class ItemsController {
   @Post("spaces/:spaceId/items")
   @Permission("space.edit", space)
   @ApiRoute({
-    summary: "Create a page, folder or link",
+    summary: "Create a page, folder, link or whiteboard",
     description:
-      "Creates an item in the page tree, at the end of its parent unless a neighbor is given. Links point to a page or folder in any space the caller can read, or to an `http` or `https` address. A page can start from a template; later changes to the template do not change the page. A new page in publish mode is visible only to editors until it is published.",
+      "Creates an item in the page tree, at the end of its parent unless a neighbor is given. A whiteboard starts empty. Links point to a page or folder in any space the caller can read, or to an `http` or `https` address. A page can start from a template; later changes to the template do not change the page. A new page in publish mode is visible only to editors until it is published.",
     tags: [TAG],
     params: spaceParams,
     body: createItemSchema,

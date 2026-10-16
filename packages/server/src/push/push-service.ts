@@ -126,7 +126,8 @@ export function pushLink(type: string, targetId: string | null, params: Record<s
     return `/access-requests/${targetId}`;
   }
   if (targetId && spaceKey && typeof params.itemKind === "string") {
-    const section = params.itemKind === "blogPost" ? "blog" : "pages";
+    const section =
+      params.itemKind === "blogPost" ? "blog" : params.itemKind === "whiteboard" ? "whiteboards" : "pages";
     return `/spaces/${encodeURIComponent(spaceKey)}/${section}/${targetId}/${slugify(title)}`;
   }
   return "/";

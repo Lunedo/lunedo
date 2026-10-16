@@ -15,7 +15,7 @@ export const MAX_STARS = 500;
 
 export interface ContentReference {
   id: string;
-  kind: "page" | "folder" | "link" | "blogPost";
+  kind: "page" | "folder" | "link" | "blogPost" | "whiteboard";
   title: string;
   spaceId: string;
   spaceKey: string;

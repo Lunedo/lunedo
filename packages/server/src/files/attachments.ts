@@ -223,8 +223,8 @@ export class AttachmentService {
       where t.id = ${itemId}`);
     const row = result.rows[0];
     if (!row) throw new AttachmentError("itemNotFound", "The page does not exist");
-    if (row.kind !== "page" && row.kind !== "blogPost") {
-      throw new AttachmentError("invalidItem", "Files can be attached to pages and blog posts");
+    if (row.kind !== "page" && row.kind !== "blogPost" && row.kind !== "whiteboard") {
+      throw new AttachmentError("invalidItem", "Files can be attached to pages, blog posts and whiteboards");
     }
     return row;
   }
@@ -334,12 +334,29 @@ export class AttachmentService {
     );
     if (keep === UNLIMITED) return;
     await tx.execute(sql`
+      with item as (select item_id from attachments where id = ${attachmentId}),
+      documents as (
+        select document from page_versions where item_id = (select item_id from item)
+        union all select snapshot from page_documents where item_id = (select item_id from item)
+        union all select document from discarded_drafts where item_id = (select item_id from item)
+      ),
+      drawings as (
+        select jsonb_path_query(document, 'lax $.** ? (@.type == "drawing").attrs') as attrs from documents
+      ),
+      referenced as (
+        select (attrs->>'sceneVersion')::int as number from drawings
+        where attrs->>'sceneId' = ${attachmentId}::text and jsonb_typeof(attrs->'sceneVersion') = 'number'
+        union
+        select (attrs->>'previewVersion')::int from drawings
+        where attrs->>'previewId' = ${attachmentId}::text and jsonb_typeof(attrs->'previewVersion') = 'number'
+      )
       delete from attachment_versions v
       where v.attachment_id = ${attachmentId} and not v.kept
         and v.id <> (select current_version_id from attachments where id = ${attachmentId})
         and v.id is distinct from (select published_version_id from attachments where id = ${attachmentId})
+        and v.number not in (select number from referenced)
         and v.number not in (select number from attachment_versions
-          where attachment_id = ${attachmentId} and not kept
+          where attachment_id = ${attachmentId} and not kept and number not in (select number from referenced)
           order by number desc limit ${keep})`);
   }
 

@@ -37,6 +37,7 @@ export const comments = pgTable(
     quotePrefix: text(),
     quoteSuffix: text(),
     quotePublic: boolean().notNull().default(false),
+    elementId: text(),
     detachedAt: timestampColumn(),
     resolvedAt: timestampColumn(),
     resolvedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
@@ -52,6 +53,8 @@ export const comments = pgTable(
     index().on(table.resolvedBy),
     index().on(table.deletedBy),
     check("comments_reply_has_no_quote", sql`${table.parentId} is null or ${table.quote} is null`),
+    check("comments_reply_has_no_element", sql`${table.parentId} is null or ${table.elementId} is null`),
+    check("comments_element_length", sql`length(${table.elementId}) <= 128`),
     check("comments_body_kept", sql`${table.body} is not null or ${table.deletedAt} is not null`),
   ],
 );

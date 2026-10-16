@@ -222,7 +222,7 @@ export const digestTimeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 export const watchStates = ["watching", "muted", "notWatching"] as const;
 export type WatchState = (typeof watchStates)[number];
 
-const contentKind = z.enum(["page", "blogPost", "meetingTopic"]);
+const contentKind = z.enum(["page", "blogPost", "meetingTopic", "whiteboard"]);
 const shareRole = z.enum(["reader", "commenter", "editor"]);
 
 export const contentNotificationParamSchemas = {

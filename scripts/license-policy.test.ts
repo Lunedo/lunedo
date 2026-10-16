@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { findLicenseViolations, isApprovedLicense, type PackageLicense } from "./license-policy.ts";
+import {
+  findLicenseViolations,
+  isApprovedLicense,
+  type PackageLicense,
+  UNDECLARED_LICENSE,
+} from "./license-policy.ts";
 
 describe("isApprovedLicense", () => {
   it("accepts approved licenses", () => {
@@ -67,6 +72,45 @@ describe("findLicenseViolations", () => {
       findLicenseViolations({ all: [changed], production: [changed], allowlist: {}, clarifications }).length,
       2,
     );
+  });
+
+  it("accepts a package without a declared license only with its reviewed license file", () => {
+    const reviewed = "a".repeat(64);
+    const khroma: PackageLicense = {
+      name: "khroma",
+      versions: ["2.1.0"],
+      license: UNDECLARED_LICENSE,
+      licenseFiles: { "2.1.0": reviewed },
+    };
+    const entry = { declared: UNDECLARED_LICENSE, license: "MIT", reason: "license file is MIT" };
+    const check = (pkg: PackageLicense, clarification: Record<string, unknown>) =>
+      findLicenseViolations({
+        all: [pkg],
+        production: [pkg],
+        allowlist: {},
+        clarifications: { "khroma@2.1.0": { ...entry, ...clarification } },
+      });
+
+    assert.deepEqual(check(khroma, { licenseFileSha256: reviewed }), []);
+    const unpinned = check(khroma, {}).join("\n");
+    assert.match(unpinned, /must pin the reviewed license file/);
+    assert.match(unpinned, /ships in the image or web client/);
+
+    const changed = check(
+      { ...khroma, licenseFiles: { "2.1.0": "b".repeat(64) } },
+      { licenseFileSha256: reviewed },
+    ).join("\n");
+    assert.match(changed, /differs from the reviewed one/);
+    assert.match(changed, /ships in the image or web client/);
+
+    const withoutFile = check({ ...khroma, licenseFiles: {} }, { licenseFileSha256: reviewed }).join("\n");
+    assert.match(withoutFile, /differs from the reviewed one/);
+
+    const newer = { ...khroma, versions: ["2.2.0"], licenseFiles: { "2.2.0": reviewed } };
+    assert.deepEqual(check(newer, { licenseFileSha256: reviewed }), [
+      "khroma@2.2.0 (Unknown) ships in the image or web client and needs an OSI-approved license",
+      "Clarification khroma@2.1.0 is not needed and must be removed",
+    ]);
   });
 
   it("accepts an allowlisted build or test dependency", () => {

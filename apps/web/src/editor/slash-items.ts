@@ -31,6 +31,7 @@ import {
   type LucideIcon,
   Minus,
   Paperclip,
+  PenLine,
   Pilcrow,
   Quote,
   Sigma,
@@ -44,6 +45,7 @@ import { editorActions } from "./actions.js";
 import { pageScopeOf } from "./extensions/page-scope.js";
 import type { SuggestionItem } from "./extensions/suggestions.js";
 import { COLUMN_LAYOUTS } from "./nodes/block-views.js";
+import { openDrawingWhenInserted } from "./nodes/drawing-view.js";
 
 export type SlashGroup = "text" | "lists" | "blocks" | "inline";
 
@@ -423,6 +425,19 @@ export const slashCommands: SlashCommandDefinition[] = [
     run: (editor, range) => {
       editor.chain().focus().deleteRange(range).run();
       editorActions(editor)?.pickFiles?.();
+    },
+  },
+  {
+    id: "drawing",
+    group: "blocks",
+    icon: PenLine,
+    labelKey: "editor.blocks.drawing",
+    descriptionKey: "editor.blocks.drawingDescription",
+    keywords: ["drawing", "sketch", "excalidraw", "whiteboard", "zeichnung", "skizze", "zeichnen"],
+    run: (editor, range) => {
+      const id = crypto.randomUUID();
+      openDrawingWhenInserted(id);
+      editor.chain().focus().deleteRange(range).insertContent({ type: "drawing", attrs: { id } }).run();
     },
   },
   {

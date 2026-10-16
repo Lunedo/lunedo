@@ -1,4 +1,5 @@
 import { commentText, type DocumentJson, migrateDocument } from "@pagehall/editor-schema";
+import { sceneText, validateScene } from "@pagehall/editor-schema/scene";
 import { type ContentLanguage, OTHER_CONTENT_LANGUAGE } from "@pagehall/shared";
 import { type SQL, sql } from "drizzle-orm";
 import type { Database, Executor } from "../database/database.js";
@@ -7,7 +8,14 @@ import type { Logger } from "../logging/logger.js";
 import { pageStatusEnabledCondition } from "../spaces/status.js";
 import { readerTokens, restrictionIds } from "./access.js";
 import type { ContextAccess, IndexedChunk, IndexedItem, ItemAccess, SearchAdapter } from "./adapter.js";
-import { cleanText, documentChunks, MAX_CHUNKS_PER_SOURCE, splitText, textChunks } from "./chunks.js";
+import {
+  type ChunkText,
+  cleanText,
+  documentChunks,
+  MAX_CHUNKS_PER_SOURCE,
+  splitText,
+  textChunks,
+} from "./chunks.js";
 import { TextExtractor } from "./extraction/extractor.js";
 import {
   type ExtractableFormat,
@@ -23,7 +31,7 @@ export const SEARCH_CHANGES_CHANNEL = "pagehall_search_changes";
 export const EXTRACTOR_VERSION = 1;
 
 const BATCH_SIZE = 50;
-const INDEXED_KINDS = sql`('page', 'blogPost', 'meetingTopic')`;
+const INDEXED_KINDS = sql`('page', 'blogPost', 'meetingTopic', 'whiteboard')`;
 const MAX_RETRY_DELAY_SECONDS = 60 * 60;
 const BUSY_RETRY_MS = 2000;
 const REFUSED_CONTENT_CLASSES = ["22", "54"];
@@ -49,6 +57,12 @@ export interface AttachmentFiles {
 interface LoadedItem {
   item: IndexedItem | null;
   incomplete: boolean;
+}
+
+function boardChunks(scene: unknown): ChunkText[] {
+  const validation = validateScene(scene);
+  const chunks = validation.ok ? textChunks(sceneText(validation.scene)) : [];
+  return chunks.length > 0 ? chunks : [{ heading: "", anchor: null, body: "" }];
 }
 
 function indexable(item: SQL, space: SQL): SQL {
@@ -350,7 +364,7 @@ export class SearchIndexer {
   async #load(executor: Executor, itemId: string): Promise<LoadedItem> {
     const result = await executor.execute<{
       id: string;
-      kind: "page" | "blogPost" | "meetingTopic";
+      kind: "page" | "blogPost" | "meetingTopic" | "whiteboard";
       mode: "publish" | "live";
       title: string;
       space_id: string;
@@ -373,6 +387,8 @@ export class SearchIndexer {
       live_document: DocumentJson | null;
       live_schema: number | null;
       live_changed_at: Date | string | null;
+      board_scene: unknown;
+      board_changed_at: Date | string | null;
       status_id: string | null;
     }>(sql`
       select t.id, t.kind, t.mode, t.title, t.space_id, s.organization_id, t.creator_id, t.created_at,
@@ -384,25 +400,30 @@ export class SearchIndexer {
         ${organizationLanguage(sql`s.organization_id`)} as organization_language,
         v.title as version_title, v.document as version_document, v.schema_version as version_schema,
         v.created_at as version_created_at, d.snapshot as live_document, d.schema_version as live_schema,
-        d.changed_at as live_changed_at, sv.id as status_id
+        d.changed_at as live_changed_at, w.scene as board_scene, w.changed_at as board_changed_at,
+        sv.id as status_id
       from tree_items t join spaces s on s.id = t.space_id
       left join page_status_values sv on sv.id = t.status_id and sv.space_id = t.space_id
         and ${pageStatusEnabledCondition(sql`s`)}
       left join page_versions v on v.id = t.published_version_id and t.mode = 'publish'
       left join page_documents d on d.item_id = t.id and t.mode = 'live'
+      left join whiteboard_documents w on w.item_id = t.id and t.kind = 'whiteboard'
       where t.id = ${itemId}`);
     const row = result.rows[0];
     if (!row?.indexable) return { item: null, incomplete: false };
+    const board = row.kind === "whiteboard";
     const live = row.mode === "live";
-    const stored = live ? row.live_document : row.version_document;
+    const stored = board ? null : live ? row.live_document : row.version_document;
     const schemaVersion = live ? row.live_schema : row.version_schema;
-    if (!live && !stored) return { item: null, incomplete: false };
+    if (!board && !live && !stored) return { item: null, incomplete: false };
     const document = stored && schemaVersion ? migrateDocument(stored, schemaVersion) : null;
     const title = live ? row.title : (row.version_title ?? row.title);
     const updatedAt = asDate(
-      live
-        ? (row.live_changed_at ?? row.content_updated_at)
-        : (row.version_created_at ?? row.content_updated_at),
+      board
+        ? (row.board_changed_at ?? row.content_updated_at)
+        : live
+          ? (row.live_changed_at ?? row.content_updated_at)
+          : (row.version_created_at ?? row.content_updated_at),
     );
     const language: ContentLanguage =
       contentLanguageOf(row.content_language) ??
@@ -417,9 +438,12 @@ export class SearchIndexer {
       context: null,
       attachment: null,
     };
-    const chunks: IndexedChunk[] = (
-      document ? documentChunks(document) : [{ heading: "", anchor: null, body: "" }]
-    ).map((chunk, position) => ({
+    const texts = board
+      ? boardChunks(row.board_scene)
+      : document
+        ? documentChunks(document)
+        : [{ heading: "", anchor: null, body: "" }];
+    const chunks: IndexedChunk[] = texts.map((chunk, position) => ({
       ...own,
       ...chunk,
       source: "item",

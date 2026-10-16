@@ -4,7 +4,7 @@ People who edit a page at the same time work on one shared document. Pagehall us
 
 ## Connections
 
-The web client connects to `wss://<instance address>/collab` with the document name `page:<page ID>`.
+The web client connects to `wss://<instance address>/collab` with the document name `page:<page ID>` for pages and blog posts, and `whiteboard:<item ID>` for whiteboards ([whiteboards.md](whiteboards.md)).
 
 - In a single container (`all`), the API forwards WebSocket connections on `/collab` to the local collaboration server, so only the API port needs to be published. `PAGEHALL_COLLAB_UPSTREAM` changes where the API forwards to.
 - With separate roles behind a load balancer, route `/collab` to the collaboration nodes, with WebSocket support and idle timeouts above 60 seconds. Keep the `Host`, `Cookie` and `Origin` headers unchanged.
@@ -20,7 +20,7 @@ Refused connections receive one of these reasons: `notSignedIn`, `tokenNotAllowe
 
 ## Validation
 
-Every update is checked before it reaches the document: the update is applied to a validated copy, and the result must pass the editor schema (see [editor-schema.md](editor-schema.md)). Updates above 2 MiB, presence updates above 64 KiB and updates that use the Yjs client of another account are refused as well. A refused update closes the page's connection with the reason `updateRejected`, nothing of it is stored, and the audit log records `page.updateRejected` with the reason and the kinds of problems, never the content. A connection that sends more than about 100 messages per second is closed with `tooManyMessages`.
+Every update is checked before it reaches the document: the update is applied to a validated copy, and the result must pass the editor schema (see [editor-schema.md](editor-schema.md)). For whiteboards, only the elements an update changes are checked against the scene rules described there, while the size of the whole scene is kept up to date. Updates above 2 MiB, presence updates above 64 KiB and updates that use the Yjs client of another account are refused as well. A refused update closes the page's connection with the reason `updateRejected`, nothing of it is stored, and the audit log records `page.updateRejected` (or `whiteboard.updateRejected`) with the reason and the kinds of problems, never the content. A connection that sends more than about 100 messages per second is closed with `tooManyMessages`.
 
 The server records which Yjs client belongs to which account, so changes can be attributed later.
 
@@ -36,7 +36,7 @@ When the browser loses its network connection, the editor shows "Offline" at onc
 
 ## Permissions
 
-Permission changes take effect on open connections at once, also on other nodes. A person who loses edit permission is disconnected with the reason `permissionRevoked`; an ended session closes the connection with `sessionEnded`. Every 30 seconds the server checks all open connections again.
+Permission changes take effect on open connections at once, also on other nodes. A person who loses edit permission is disconnected with the reason `permissionRevoked`; an ended session (sign-out, ended sessions, a changed or reset password) closes that person's connections at once with `sessionEnded`, without rechecking anyone else. Every 30 seconds the server checks all open connections again.
 
 ## Several nodes
 

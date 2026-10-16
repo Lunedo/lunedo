@@ -10,6 +10,7 @@ import {
   Folder,
   Link as LinkIcon,
   Move,
+  Presentation,
   Trash2,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -70,6 +71,11 @@ export function useItemActions(
         label: t("tree.newFolderInside"),
         icon: Folder,
         onSelect: () => context.openCreate("folder", item.id),
+      },
+      {
+        label: t("tree.newWhiteboardInside"),
+        icon: Presentation,
+        onSelect: () => context.openCreate("whiteboard", item.id),
       },
       { type: "separator" },
     );

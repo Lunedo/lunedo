@@ -163,6 +163,8 @@ export const auditEventNames = [
   "comment.deletedByModerator",
   "page.draftDiscarded",
   "page.versionRestored",
+  "whiteboard.versionRestored",
+  "whiteboard.updateRejected",
   "page.modeChanged",
   "page.archived",
   "page.unarchived",

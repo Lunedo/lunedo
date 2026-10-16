@@ -57,7 +57,7 @@ export interface OwnerCandidate {
   email: string | null;
 }
 
-const ownedKinds = sql`array['page', 'folder', 'link', 'blogPost', 'meetingSeries']::tree_item_kind[]`;
+const ownedKinds = sql`array['page', 'folder', 'link', 'blogPost', 'meetingSeries', 'whiteboard']::tree_item_kind[]`;
 
 export function ownerActiveCondition(item: SQL, space: SQL): SQL {
   return sql`exists (select 1 from accounts oa where oa.id = ${item}.owner_id and (oa.state = 'placeholder'

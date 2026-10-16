@@ -16,6 +16,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
+  Presentation,
   Repeat,
   Settings,
   Shield,
@@ -40,7 +41,7 @@ import { SpaceBadge, spaceDisplayName } from "./space-badge.js";
 import { SpaceContext, type SpaceContextValue } from "./space-context.js";
 import { itemQuery, type SpaceWithRole, sharedPath, spaceByKeyQuery } from "./space-queries.js";
 import { TemplateGallery } from "./templates/template-gallery.js";
-import { CreateItemDialog } from "./tree/create-item-dialog.js";
+import { type CreatedKind, CreateItemDialog } from "./tree/create-item-dialog.js";
 import { MoveDialog } from "./tree/move-dialog.js";
 import { PageTree } from "./tree/page-tree.js";
 
@@ -146,7 +147,7 @@ function SpaceFrame({ space }: { space: SpaceWithRole }) {
   );
   const canEdit = (space.role === "editor" || space.role === "admin") && !space.archived;
   const [moving, setMoving] = useState<Parameters<SpaceContextValue["openMove"]>[0] | null>(null);
-  const [creating, setCreating] = useState<{ kind: "folder" | "link"; parentId: string | null } | null>(null);
+  const [creating, setCreating] = useState<{ kind: CreatedKind; parentId: string | null } | null>(null);
   const [treeOpen, setTreeOpen] = useState(false);
   const [galleryParent, setGalleryParent] = useState<string | null | undefined>(undefined);
   const [seriesTemplate, setSeriesTemplate] = useState<string | null>(null);
@@ -455,6 +456,11 @@ function SpaceNavigation({
             items={[
               { label: t("tree.newPage"), icon: FilePlus, onSelect: () => onCreate("page", null) },
               { label: t("tree.newFolder"), icon: Folder, onSelect: () => onCreate("folder", null) },
+              {
+                label: t("tree.newWhiteboard"),
+                icon: Presentation,
+                onSelect: () => onCreate("whiteboard", null),
+              },
               { label: t("tree.newLink"), icon: Link2, onSelect: () => onCreate("link", null) },
             ]}
           />

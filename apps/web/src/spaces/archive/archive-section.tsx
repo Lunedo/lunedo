@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Archive, ChevronRight, FileText, Folder } from "lucide-react";
+import { Archive, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { archiveQuery } from "../content-queries.js";
+import { itemIcon } from "../item-icons.js";
 import { itemHref } from "../item-paths.js";
 import type { SpaceWithRole } from "../space-queries.js";
 
@@ -37,7 +38,7 @@ export function ArchiveSection({ space, currentId }: { space: SpaceWithRole; cur
         <ul id={panelId} className="flex flex-col gap-px">
           {items.map((item) => {
             const href = itemHref({ id: item.id, kind: item.kind, title: item.title, link: null }, space.key);
-            const Icon = item.kind === "folder" ? Folder : FileText;
+            const Icon = itemIcon(item.kind);
             const current = item.id === currentId;
             return (
               <li key={item.id}>

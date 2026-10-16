@@ -1,0 +1,5 @@
+.ph-whiteboard .default-sidebar-trigger,
+.ph-whiteboard [data-testid="toolbar-embeddable"],
+.ph-whiteboard .library-menu-browse-button {
+  display: none;
+}

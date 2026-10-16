@@ -12,6 +12,7 @@ export {
   taskReportDueWindows,
   taskReportStatuses,
 } from "@pagehall/editor-schema";
+export type { SceneProblem, SceneProblemCode } from "@pagehall/editor-schema/scene";
 export {
   type Account,
   AccountService,
@@ -833,3 +834,18 @@ export {
   serviceAccountNameSchema,
 } from "./tokens/service-accounts.js";
 export * from "./tokens/settings.js";
+export { SceneInvalidError } from "./whiteboards/common.js";
+export {
+  DrawingService,
+  drawingFileNames,
+  type SavedDrawingPreview,
+  type SavedDrawingScene,
+} from "./whiteboards/drawings.js";
+export { MAX_PREVIEW_BYTES, SvgRejectedError, sanitizeSvg } from "./whiteboards/svg.js";
+export {
+  type StoredPreview,
+  type WhiteboardScene,
+  WhiteboardService,
+  type WhiteboardVersion,
+  type WhiteboardVersionContent,
+} from "./whiteboards/whiteboards.js";

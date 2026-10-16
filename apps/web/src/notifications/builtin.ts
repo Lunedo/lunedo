@@ -26,7 +26,7 @@ import {
   UserRoundX,
   Users,
 } from "lucide-react";
-import { blogPostPath, pagePath } from "../spaces/space-queries.js";
+import { blogPostPath, pagePath, whiteboardPath } from "../spaces/space-queries.js";
 import { notificationTypes } from "./notification-types.js";
 import type { NotificationItem } from "./notifications-api.js";
 
@@ -41,7 +41,9 @@ function contentLink(item: NotificationItem) {
     to:
       params.itemKind === "blogPost"
         ? blogPostPath(spaceKey, item.target.id, slug)
-        : pagePath(spaceKey, item.target.id, slug),
+        : params.itemKind === "whiteboard"
+          ? whiteboardPath(spaceKey, item.target.id, slug)
+          : pagePath(spaceKey, item.target.id, slug),
   };
 }
 
