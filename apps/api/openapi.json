@@ -22243,6 +22243,60 @@
                         ],
                         "description": "What is exported: `space` for a whole space, `pages` for a page with its subpages."
                       },
+                      "format": {
+                        "type": "string",
+                        "enum": [
+                          "archive",
+                          "html",
+                          "markdown",
+                          "print",
+                          "pdf",
+                          "docx"
+                        ],
+                        "description": "What the file contains: `archive` a ZIP with every page as Markdown and HTML, `html` or `markdown` a ZIP with one of them, `print` one print-ready HTML file, `pdf` one PDF file, `docx` one Word document."
+                      },
+                      "options": {
+                        "type": "object",
+                        "properties": {
+                          "attachments": {
+                            "type": "boolean",
+                            "description": "Whether the attachments are included or listed."
+                          },
+                          "comments": {
+                            "type": "boolean",
+                            "description": "Whether open comments are included."
+                          },
+                          "contents": {
+                            "type": "boolean",
+                            "description": "Whether a table of contents is included."
+                          },
+                          "paper": {
+                            "type": "string",
+                            "enum": [
+                              "a4",
+                              "letter"
+                            ],
+                            "description": "Paper size of `print`, `pdf` and `docx`."
+                          },
+                          "orientation": {
+                            "type": "string",
+                            "enum": [
+                              "portrait",
+                              "landscape"
+                            ],
+                            "description": "Orientation of `print`, `pdf` and `docx`."
+                          }
+                        },
+                        "required": [
+                          "attachments",
+                          "comments",
+                          "contents",
+                          "paper",
+                          "orientation"
+                        ],
+                        "additionalProperties": false,
+                        "description": "The options the export was started with."
+                      },
                       "spaceId": {
                         "anyOf": [
                           {
@@ -22305,7 +22359,7 @@
                         "description": "Progress of a running export."
                       },
                       "fileName": {
-                        "description": "File name of the ZIP archive once it is ready.",
+                        "description": "File name of the file once it is ready.",
                         "type": [
                           "string",
                           "null"
@@ -22322,7 +22376,7 @@
                             "type": "null"
                           }
                         ],
-                        "description": "Size of the ZIP archive in bytes once it is ready."
+                        "description": "Size of the file in bytes once it is ready."
                       },
                       "errorCode": {
                         "anyOf": [
@@ -22333,6 +22387,9 @@
                               "noAccess",
                               "tokenRevoked",
                               "notEnoughStorage",
+                              "renderUnavailable",
+                              "renderFailed",
+                              "renderTooLarge",
                               "interrupted",
                               "internalError"
                             ]
@@ -22341,7 +22398,7 @@
                             "type": "null"
                           }
                         ],
-                        "description": "Why a failed export stopped: export was turned off for the space, the permission to export the space or page was lost, the API token that started it was revoked, the file store ran short of free space while it was written, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
+                        "description": "Why a failed export stopped: export was turned off for the space, the permission to export the space or page was lost, the API token that started it was revoked, the file store ran short of free space while it was written, the render container for PDF is not set up or cannot be reached, it could not create the PDF, the document was larger than the render container accepts, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
                       },
                       "createdAt": {
                         "type": "string",
@@ -22376,6 +22433,8 @@
                     "required": [
                       "id",
                       "scope",
+                      "format",
+                      "options",
                       "spaceId",
                       "rootItemId",
                       "name",
@@ -22397,6 +22456,14 @@
                   {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a90",
                     "scope": "space",
+                    "format": "archive",
+                    "options": {
+                      "attachments": true,
+                      "comments": false,
+                      "contents": true,
+                      "paper": "a4",
+                      "orientation": "portrait"
+                    },
                     "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                     "rootItemId": null,
                     "name": "IT Operations",
@@ -22723,6 +22790,60 @@
                       ],
                       "description": "What is exported: `space` for a whole space, `pages` for a page with its subpages."
                     },
+                    "format": {
+                      "type": "string",
+                      "enum": [
+                        "archive",
+                        "html",
+                        "markdown",
+                        "print",
+                        "pdf",
+                        "docx"
+                      ],
+                      "description": "What the file contains: `archive` a ZIP with every page as Markdown and HTML, `html` or `markdown` a ZIP with one of them, `print` one print-ready HTML file, `pdf` one PDF file, `docx` one Word document."
+                    },
+                    "options": {
+                      "type": "object",
+                      "properties": {
+                        "attachments": {
+                          "type": "boolean",
+                          "description": "Whether the attachments are included or listed."
+                        },
+                        "comments": {
+                          "type": "boolean",
+                          "description": "Whether open comments are included."
+                        },
+                        "contents": {
+                          "type": "boolean",
+                          "description": "Whether a table of contents is included."
+                        },
+                        "paper": {
+                          "type": "string",
+                          "enum": [
+                            "a4",
+                            "letter"
+                          ],
+                          "description": "Paper size of `print`, `pdf` and `docx`."
+                        },
+                        "orientation": {
+                          "type": "string",
+                          "enum": [
+                            "portrait",
+                            "landscape"
+                          ],
+                          "description": "Orientation of `print`, `pdf` and `docx`."
+                        }
+                      },
+                      "required": [
+                        "attachments",
+                        "comments",
+                        "contents",
+                        "paper",
+                        "orientation"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The options the export was started with."
+                    },
                     "spaceId": {
                       "anyOf": [
                         {
@@ -22785,7 +22906,7 @@
                       "description": "Progress of a running export."
                     },
                     "fileName": {
-                      "description": "File name of the ZIP archive once it is ready.",
+                      "description": "File name of the file once it is ready.",
                       "type": [
                         "string",
                         "null"
@@ -22802,7 +22923,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Size of the ZIP archive in bytes once it is ready."
+                      "description": "Size of the file in bytes once it is ready."
                     },
                     "errorCode": {
                       "anyOf": [
@@ -22813,6 +22934,9 @@
                             "noAccess",
                             "tokenRevoked",
                             "notEnoughStorage",
+                            "renderUnavailable",
+                            "renderFailed",
+                            "renderTooLarge",
                             "interrupted",
                             "internalError"
                           ]
@@ -22821,7 +22945,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Why a failed export stopped: export was turned off for the space, the permission to export the space or page was lost, the API token that started it was revoked, the file store ran short of free space while it was written, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
+                      "description": "Why a failed export stopped: export was turned off for the space, the permission to export the space or page was lost, the API token that started it was revoked, the file store ran short of free space while it was written, the render container for PDF is not set up or cannot be reached, it could not create the PDF, the document was larger than the render container accepts, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
                     },
                     "createdAt": {
                       "type": "string",
@@ -22856,6 +22980,8 @@
                   "required": [
                     "id",
                     "scope",
+                    "format",
+                    "options",
                     "spaceId",
                     "rootItemId",
                     "name",
@@ -22874,6 +23000,14 @@
                 "example": {
                   "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a90",
                   "scope": "space",
+                  "format": "archive",
+                  "options": {
+                    "attachments": true,
+                    "comments": false,
+                    "contents": true,
+                    "paper": "a4",
+                    "orientation": "portrait"
+                  },
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                   "rootItemId": null,
                   "name": "IT Operations",
@@ -23015,7 +23149,7 @@
       "get": {
         "operationId": "exports.download",
         "summary": "Download an export",
-        "description": "Sends the ZIP archive of a ready export. Only the person who started it can download it, only while export is turned on for the space and they may still export what was exported. After the first complete download it is kept for 24 more hours; ranges are supported to resume an interrupted download.\n\nRequires the permission `export.download` on the export in `exportId`.",
+        "description": "Sends the file of a ready export: a ZIP archive, a print-ready HTML file, a PDF file or a Word document, depending on its format. Only the person who started it can download it, only while export is turned on for the space and they may still export what was exported. After the first complete download it is kept for 24 more hours; ranges are supported to resume an interrupted download.\n\nRequires the permission `export.download` on the export in `exportId`.",
         "tags": [
           "Exports"
         ],
@@ -23046,9 +23180,27 @@
         ],
         "responses": {
           "200": {
-            "description": "The ZIP archive or the requested part of it.",
+            "description": "The file or the requested part of it.",
             "content": {
               "application/zip": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": ""
+              },
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": ""
+              },
+              "application/pdf": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": ""
+              },
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document": {
                 "schema": {
                   "type": "string"
                 },
@@ -23060,6 +23212,24 @@
             "description": "Part of the file, for a request with a `Range` header.",
             "content": {
               "application/zip": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": ""
+              },
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": ""
+              },
+              "application/pdf": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": ""
+              },
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document": {
                 "schema": {
                   "type": "string"
                 },
@@ -102282,6 +102452,311 @@
         }
       }
     },
+    "/api/v1/instance/rendering": {
+      "get": {
+        "operationId": "rendering.status",
+        "summary": "Get the state of PDF and Word rendering",
+        "description": "Asks the optional render container for its state and version. Without it, people still create PDF files through the print dialog of their browser; only PDF through the API and PDF of whole spaces in the background need it.\n\nRequires the permission `instance.settings.view` on the instance.",
+        "tags": [
+          "Exports"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.settings.view",
+          "resource": "instance"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The state of rendering.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "pdf": {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "type": "string",
+                          "description": "`notConfigured` when no render container is set up, `healthy` when it answers, `unreachable` when it does not answer, refuses the token or answers something unexpected. New values can be added in later versions; handle unknown values.",
+                          "x-extensible-enum": [
+                            "notConfigured",
+                            "healthy",
+                            "unreachable"
+                          ]
+                        },
+                        "reason": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "x-extensible-enum": [
+                                "connection",
+                                "token",
+                                "response"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Why the container is unreachable: no connection, a token it refuses, or an unexpected answer. New values can be added in later versions; handle unknown values."
+                        },
+                        "url": {
+                          "description": "Address of the render container, set through PAGEHALL_RENDER_URL.",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "checkedAt": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "When the container was asked. ISO 8601 timestamp in UTC."
+                        },
+                        "version": {
+                          "description": "Version of the render container.",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "browser": {
+                          "description": "Browser engine of the render container and its version.",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "concurrency": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Documents the container renders at the same time."
+                        },
+                        "running": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Documents being rendered now."
+                        },
+                        "waiting": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Documents waiting now."
+                        },
+                        "maxBytes": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Largest document with its images the container accepts."
+                        },
+                        "timeoutSeconds": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Longest time the container spends on one document."
+                        }
+                      },
+                      "required": [
+                        "state",
+                        "reason",
+                        "url",
+                        "checkedAt",
+                        "version",
+                        "browser",
+                        "concurrency",
+                        "running",
+                        "waiting",
+                        "maxBytes",
+                        "timeoutSeconds"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The optional render container that creates PDF files on the server."
+                    },
+                    "word": {
+                      "type": "object",
+                      "properties": {
+                        "available": {
+                          "type": "boolean",
+                          "description": "Word documents are created by Pagehall itself and always available."
+                        }
+                      },
+                      "required": [
+                        "available"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Word documents."
+                    }
+                  },
+                  "required": [
+                    "pdf",
+                    "word"
+                  ],
+                  "additionalProperties": false,
+                  "description": "How pages become PDF and Word files."
+                },
+                "example": {
+                  "pdf": {
+                    "state": "healthy",
+                    "reason": null,
+                    "url": "http://pagehall-render:3000",
+                    "checkedAt": "2026-10-16T09:00:00.000Z",
+                    "version": "1.0.2",
+                    "browser": "Chromium 140.0.7339.80",
+                    "concurrency": 2,
+                    "running": 0,
+                    "waiting": 0,
+                    "maxBytes": 209715200,
+                    "timeoutSeconds": 300
+                  },
+                  "word": {
+                    "available": true
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/instance/role-assignments": {
       "get": {
         "operationId": "instance.assignments",
@@ -123006,7 +123481,7 @@
           }
         ],
         "requestBody": {
-          "required": true,
+          "required": false,
           "content": {
             "application/json": {
               "schema": {
@@ -162452,7 +162927,7 @@
       "get": {
         "operationId": "exports.page",
         "summary": "Export a page",
-        "description": "Sends the page as readers see it: the published version in publish mode. Modules such as child page lists and reports are rendered with your permissions; content you cannot read is left out. Comments, private notes and the history are not exported. Links to other pages and to attachments point to Pagehall, except the attachments inside a ZIP.\n\nRequires the permission `item.export` on the item in `pageId`.",
+        "description": "Sends the page as readers see it: the published version in publish mode. Modules such as child page lists and reports are rendered with your permissions; content you cannot read is left out. Private notes and the history are not exported; open comments only in `print`, `pdf` and `docx` when asked for. Links to other pages and to attachments point to Pagehall, except the attachments inside a ZIP. Images in `pdf` and `docx` are embedded when you may read them. Without the render container, `pdf` answers with `renderUnavailable`; people can still print the `print` format to PDF in their browser.\n\nRequires the permission `item.export` on the item in `pageId`.",
         "tags": [
           "Exports"
         ],
@@ -162484,22 +162959,96 @@
             "name": "format",
             "in": "query",
             "required": true,
-            "description": "`markdown` for one Markdown file, `html` for one HTML file with inline styles that can be read offline, `zip` for both together with the attachments of the page.",
+            "description": "`markdown` for one Markdown file, `html` for one HTML file with inline styles that can be read offline, `zip` for both together with the attachments of the page. `print` for print-ready HTML with page breaks, header, footer and contents, laid out into sheets by a pagination library such as Vivliostyle. `pdf` for a PDF file, which needs the optional render container. `docx` for a Word document.",
             "schema": {
               "type": "string",
               "enum": [
                 "markdown",
                 "html",
-                "zip"
+                "zip",
+                "print",
+                "pdf",
+                "docx"
+              ]
+            }
+          },
+          {
+            "name": "attachments",
+            "in": "query",
+            "required": false,
+            "description": "For `print`, `pdf` and `docx`: `true` (the default) adds an appendix that lists the attachments of the page.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          },
+          {
+            "name": "comments",
+            "in": "query",
+            "required": false,
+            "description": "For `print`, `pdf` and `docx`: `true` adds the open comments after the page. Off by default.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          },
+          {
+            "name": "contents",
+            "in": "query",
+            "required": false,
+            "description": "For `print`, `pdf` and `docx`: `true` (the default) adds a table of contents.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          },
+          {
+            "name": "paper",
+            "in": "query",
+            "required": false,
+            "description": "Paper size for `print`, `pdf` and `docx`; `a4` by default.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "a4",
+                "letter"
+              ]
+            }
+          },
+          {
+            "name": "orientation",
+            "in": "query",
+            "required": false,
+            "description": "Orientation for `print`, `pdf` and `docx`; `portrait` by default.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "portrait",
+                "landscape"
               ]
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "The page as a Markdown file, an HTML file or a ZIP archive.",
+            "description": "The page as a Markdown file, an HTML file, a ZIP archive, a PDF file or a Word document.",
             "content": {
               "text/markdown": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "# Connect through WireGuard\n"
+              },
+              "application/zip": {
                 "schema": {
                   "type": "string"
                 },
@@ -162511,7 +163060,13 @@
                 },
                 "example": "# Connect through WireGuard\n"
               },
-              "application/zip": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "# Connect through WireGuard\n"
+              },
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document": {
                 "schema": {
                   "type": "string"
                 },
@@ -162662,6 +163217,46 @@
                 }
               }
             }
+          },
+          "502": {
+            "description": "`renderFailed`: The render container could not create the PDF.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "renderFailed": {
+                    "value": {
+                      "type": "urn:pagehall:problem:renderFailed",
+                      "title": "The render container could not create the PDF",
+                      "status": 502,
+                      "code": "renderFailed"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`renderUnavailable`: Server-side PDF needs the render container.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "renderUnavailable": {
+                    "value": {
+                      "type": "urn:pagehall:problem:renderUnavailable",
+                      "title": "Server-side PDF needs the render container",
+                      "status": 503,
+                      "code": "renderUnavailable"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -162670,7 +163265,7 @@
       "post": {
         "operationId": "exports.exportPages",
         "summary": "Export a page with its subpages",
-        "description": "Starts an export of the page and every subpage you can read, as a ZIP archive with the page tree as folders, each page as Markdown and HTML and the attachments next to their pages. Only space administrators, and organization administrators with access to the space outside confidential spaces, can start it. It is refused when the file store would pass the usage level where large writes are blocked (90 % by default), and stops when the usage reaches the critical level (95 % by default) while it is written. The export runs in the background. When it is ready, you get a notification with the download; only you can open it. The download is deleted 24 hours after it was first downloaded completely, or after 7 days if it is never downloaded. You can run one export at a time and keep up to 5; a new export of the same space or page replaces the earlier one.\n\nRequires the permission `item.exportPages` on the item in `pageId`.",
+        "description": "Starts an export of the page and every subpage you can read: by default a ZIP archive with the page tree as folders, each page as Markdown and HTML and the attachments next to their pages; with a format, one print-ready HTML file, PDF file or Word document of all pages. Only space administrators, and organization administrators with access to the space outside confidential spaces, can start it. It is refused when the file store would pass the usage level where large writes are blocked (90 % by default), and stops when the usage reaches the critical level (95 % by default) while it is written. The export runs in the background. When it is ready, you get a notification with the download; only you can open it. The download is deleted 24 hours after it was first downloaded completely, or after 7 days if it is never downloaded. You can run one export at a time and keep up to 5; a new export of the same space or page replaces the earlier one.\n\nRequires the permission `item.exportPages` on the item in `pageId`.",
         "tags": [
           "Exports"
         ],
@@ -162699,6 +163294,74 @@
             }
           }
         ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "description": "What to export and how. Without a body, the export is a ZIP with every page as Markdown and HTML.",
+                "type": "object",
+                "properties": {
+                  "format": {
+                    "default": "archive",
+                    "description": "`archive` (the default) for a ZIP with every page as Markdown and HTML, `html` or `markdown` for a ZIP with one of them, `print` for one print-ready HTML file of up to 300 pages, `pdf` for one PDF file, which needs the optional render container, `docx` for one Word document.",
+                    "type": "string",
+                    "enum": [
+                      "archive",
+                      "html",
+                      "markdown",
+                      "print",
+                      "pdf",
+                      "docx"
+                    ]
+                  },
+                  "attachments": {
+                    "default": true,
+                    "description": "Adds the attachments: next to their pages in a ZIP, as an appendix that lists them in `print`, `pdf` and `docx`. `archive` always contains them.",
+                    "type": "boolean"
+                  },
+                  "comments": {
+                    "default": false,
+                    "description": "Adds the open comments after each page in `print`, `pdf` and `docx`.",
+                    "type": "boolean"
+                  },
+                  "contents": {
+                    "default": true,
+                    "description": "Adds a table of contents in `print`, `pdf` and `docx`.",
+                    "type": "boolean"
+                  },
+                  "paper": {
+                    "default": "a4",
+                    "description": "Paper size for `print`, `pdf` and `docx`.",
+                    "type": "string",
+                    "enum": [
+                      "a4",
+                      "letter"
+                    ]
+                  },
+                  "orientation": {
+                    "default": "portrait",
+                    "description": "Orientation for `print`, `pdf` and `docx`.",
+                    "type": "string",
+                    "enum": [
+                      "portrait",
+                      "landscape"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "example": {
+                "format": "docx",
+                "attachments": true,
+                "comments": false,
+                "contents": true,
+                "paper": "a4",
+                "orientation": "portrait"
+              }
+            }
+          }
+        },
         "responses": {
           "202": {
             "description": "The started export.",
@@ -162719,6 +163382,60 @@
                         "pages"
                       ],
                       "description": "What is exported: `space` for a whole space, `pages` for a page with its subpages."
+                    },
+                    "format": {
+                      "type": "string",
+                      "enum": [
+                        "archive",
+                        "html",
+                        "markdown",
+                        "print",
+                        "pdf",
+                        "docx"
+                      ],
+                      "description": "What the file contains: `archive` a ZIP with every page as Markdown and HTML, `html` or `markdown` a ZIP with one of them, `print` one print-ready HTML file, `pdf` one PDF file, `docx` one Word document."
+                    },
+                    "options": {
+                      "type": "object",
+                      "properties": {
+                        "attachments": {
+                          "type": "boolean",
+                          "description": "Whether the attachments are included or listed."
+                        },
+                        "comments": {
+                          "type": "boolean",
+                          "description": "Whether open comments are included."
+                        },
+                        "contents": {
+                          "type": "boolean",
+                          "description": "Whether a table of contents is included."
+                        },
+                        "paper": {
+                          "type": "string",
+                          "enum": [
+                            "a4",
+                            "letter"
+                          ],
+                          "description": "Paper size of `print`, `pdf` and `docx`."
+                        },
+                        "orientation": {
+                          "type": "string",
+                          "enum": [
+                            "portrait",
+                            "landscape"
+                          ],
+                          "description": "Orientation of `print`, `pdf` and `docx`."
+                        }
+                      },
+                      "required": [
+                        "attachments",
+                        "comments",
+                        "contents",
+                        "paper",
+                        "orientation"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The options the export was started with."
                     },
                     "spaceId": {
                       "anyOf": [
@@ -162782,7 +163499,7 @@
                       "description": "Progress of a running export."
                     },
                     "fileName": {
-                      "description": "File name of the ZIP archive once it is ready.",
+                      "description": "File name of the file once it is ready.",
                       "type": [
                         "string",
                         "null"
@@ -162799,7 +163516,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Size of the ZIP archive in bytes once it is ready."
+                      "description": "Size of the file in bytes once it is ready."
                     },
                     "errorCode": {
                       "anyOf": [
@@ -162810,6 +163527,9 @@
                             "noAccess",
                             "tokenRevoked",
                             "notEnoughStorage",
+                            "renderUnavailable",
+                            "renderFailed",
+                            "renderTooLarge",
                             "interrupted",
                             "internalError"
                           ]
@@ -162818,7 +163538,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Why a failed export stopped: export was turned off for the space, the permission to export the space or page was lost, the API token that started it was revoked, the file store ran short of free space while it was written, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
+                      "description": "Why a failed export stopped: export was turned off for the space, the permission to export the space or page was lost, the API token that started it was revoked, the file store ran short of free space while it was written, the render container for PDF is not set up or cannot be reached, it could not create the PDF, the document was larger than the render container accepts, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
                     },
                     "createdAt": {
                       "type": "string",
@@ -162853,6 +163573,8 @@
                   "required": [
                     "id",
                     "scope",
+                    "format",
+                    "options",
                     "spaceId",
                     "rootItemId",
                     "name",
@@ -162871,6 +163593,14 @@
                 "example": {
                   "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a90",
                   "scope": "pages",
+                  "format": "archive",
+                  "options": {
+                    "attachments": true,
+                    "comments": false,
+                    "contents": true,
+                    "paper": "a4",
+                    "orientation": "portrait"
+                  },
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                   "rootItemId": null,
                   "name": "IT Operations",
@@ -163002,7 +163732,7 @@
             }
           },
           "409": {
-            "description": "`exportRunning`: Another export of yours is still running. `nothingToExport`: There is nothing to export. `tooManyExports`: You keep as many exports as allowed.",
+            "description": "`exportRunning`: Another export of yours is still running. `nothingToExport`: There is nothing to export. `tooManyExports`: You keep as many exports as allowed. `tooManyPagesToPrint`: Too many pages to print in a browser.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -163032,6 +163762,14 @@
                       "status": 409,
                       "code": "tooManyExports"
                     }
+                  },
+                  "tooManyPagesToPrint": {
+                    "value": {
+                      "type": "urn:pagehall:problem:tooManyPagesToPrint",
+                      "title": "Too many pages to print in a browser",
+                      "status": 409,
+                      "code": "tooManyPagesToPrint"
+                    }
                   }
                 }
               }
@@ -163057,6 +163795,26 @@
               }
             }
           },
+          "503": {
+            "description": "`renderUnavailable`: Server-side PDF needs the render container.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "renderUnavailable": {
+                    "value": {
+                      "type": "urn:pagehall:problem:renderUnavailable",
+                      "title": "Server-side PDF needs the render container",
+                      "status": 503,
+                      "code": "renderUnavailable"
+                    }
+                  }
+                }
+              }
+            }
+          },
           "507": {
             "description": "`notEnoughStorage`: Not enough storage for this export.",
             "content": {
@@ -163071,6 +163829,235 @@
                       "title": "Not enough storage for this export",
                       "status": 507,
                       "code": "notEnoughStorage"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pages/{pageId}/exports/summary": {
+      "get": {
+        "operationId": "exports.pagesSummary",
+        "summary": "Count what an export of a page with its subpages contains",
+        "description": "Counts the page and its subpages that you can read, so you can choose a format before you start the export. Browsers print up to `printLimit` pages at once; `serverPdf` tells whether the render container can create PDF files instead.\n\nRequires the permission `item.exportPages` on the item in `pageId`.",
+        "tags": [
+          "Exports"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.exportPages",
+          "resource": "item",
+          "parameter": "pageId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "pageId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the page.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The counts.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "pages": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Pages you can read in the scope."
+                    },
+                    "blogPosts": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Published blog posts you can read; only for a whole space."
+                    },
+                    "printLimit": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Most pages a browser prints at once through the print view."
+                    },
+                    "serverPdf": {
+                      "type": "boolean",
+                      "description": "Whether the render container is set up, so PDF can be created on the server."
+                    }
+                  },
+                  "required": [
+                    "pages",
+                    "blogPosts",
+                    "printLimit",
+                    "serverPdf"
+                  ],
+                  "additionalProperties": false,
+                  "description": "What an export of a space or of a page with its subpages contains."
+                },
+                "example": {
+                  "pages": 412,
+                  "blogPosts": 31,
+                  "printLimit": 300,
+                  "serverPdf": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`exportDisabled`: Export is turned off for this space. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "exportDisabled": {
+                    "value": {
+                      "type": "urn:pagehall:problem:exportDisabled",
+                      "title": "Export is turned off for this space",
+                      "status": 403,
+                      "code": "exportDisabled"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`nothingToExport`: There is nothing to export.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "nothingToExport": {
+                    "value": {
+                      "type": "urn:pagehall:problem:nothingToExport",
+                      "title": "There is nothing to export",
+                      "status": 409,
+                      "code": "nothingToExport"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
                     }
                   }
                 }
@@ -181931,7 +182918,7 @@
       "post": {
         "operationId": "exports.exportSpace",
         "summary": "Export a space",
-        "description": "Starts an export of every page of the space you can read, as a ZIP archive with the page tree as folders, each page as Markdown and HTML, the attachments next to their pages and an index.html that lists the tree. Links between exported pages become relative paths. Only space administrators, and organization administrators with access to the space outside confidential spaces, can start it. It is refused when the file store would pass the usage level where large writes are blocked (90 % by default), and stops when the usage reaches the critical level (95 % by default) while it is written. The export runs in the background. When it is ready, you get a notification with the download; only you can open it. The download is deleted 24 hours after it was first downloaded completely, or after 7 days if it is never downloaded. You can run one export at a time and keep up to 5; a new export of the same space or page replaces the earlier one.\n\nRequires the permission `space.export` on the space in `spaceId`.",
+        "description": "Starts an export of every page of the space you can read: by default a ZIP archive with the page tree as folders, each page as Markdown and HTML, the attachments next to their pages and an index.html that lists the tree, where links between exported pages become relative paths; with a format, one print-ready HTML file, PDF file or Word document of all pages and published blog posts. Only space administrators, and organization administrators with access to the space outside confidential spaces, can start it. It is refused when the file store would pass the usage level where large writes are blocked (90 % by default), and stops when the usage reaches the critical level (95 % by default) while it is written. The export runs in the background. When it is ready, you get a notification with the download; only you can open it. The download is deleted 24 hours after it was first downloaded completely, or after 7 days if it is never downloaded. You can run one export at a time and keep up to 5; a new export of the same space or page replaces the earlier one.\n\nRequires the permission `space.export` on the space in `spaceId`.",
         "tags": [
           "Exports"
         ],
@@ -181960,6 +182947,74 @@
             }
           }
         ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "description": "What to export and how. Without a body, the export is a ZIP with every page as Markdown and HTML.",
+                "type": "object",
+                "properties": {
+                  "format": {
+                    "default": "archive",
+                    "description": "`archive` (the default) for a ZIP with every page as Markdown and HTML, `html` or `markdown` for a ZIP with one of them, `print` for one print-ready HTML file of up to 300 pages, `pdf` for one PDF file, which needs the optional render container, `docx` for one Word document.",
+                    "type": "string",
+                    "enum": [
+                      "archive",
+                      "html",
+                      "markdown",
+                      "print",
+                      "pdf",
+                      "docx"
+                    ]
+                  },
+                  "attachments": {
+                    "default": true,
+                    "description": "Adds the attachments: next to their pages in a ZIP, as an appendix that lists them in `print`, `pdf` and `docx`. `archive` always contains them.",
+                    "type": "boolean"
+                  },
+                  "comments": {
+                    "default": false,
+                    "description": "Adds the open comments after each page in `print`, `pdf` and `docx`.",
+                    "type": "boolean"
+                  },
+                  "contents": {
+                    "default": true,
+                    "description": "Adds a table of contents in `print`, `pdf` and `docx`.",
+                    "type": "boolean"
+                  },
+                  "paper": {
+                    "default": "a4",
+                    "description": "Paper size for `print`, `pdf` and `docx`.",
+                    "type": "string",
+                    "enum": [
+                      "a4",
+                      "letter"
+                    ]
+                  },
+                  "orientation": {
+                    "default": "portrait",
+                    "description": "Orientation for `print`, `pdf` and `docx`.",
+                    "type": "string",
+                    "enum": [
+                      "portrait",
+                      "landscape"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "example": {
+                "format": "pdf",
+                "attachments": true,
+                "comments": false,
+                "contents": true,
+                "paper": "a4",
+                "orientation": "portrait"
+              }
+            }
+          }
+        },
         "responses": {
           "202": {
             "description": "The started export.",
@@ -181980,6 +183035,60 @@
                         "pages"
                       ],
                       "description": "What is exported: `space` for a whole space, `pages` for a page with its subpages."
+                    },
+                    "format": {
+                      "type": "string",
+                      "enum": [
+                        "archive",
+                        "html",
+                        "markdown",
+                        "print",
+                        "pdf",
+                        "docx"
+                      ],
+                      "description": "What the file contains: `archive` a ZIP with every page as Markdown and HTML, `html` or `markdown` a ZIP with one of them, `print` one print-ready HTML file, `pdf` one PDF file, `docx` one Word document."
+                    },
+                    "options": {
+                      "type": "object",
+                      "properties": {
+                        "attachments": {
+                          "type": "boolean",
+                          "description": "Whether the attachments are included or listed."
+                        },
+                        "comments": {
+                          "type": "boolean",
+                          "description": "Whether open comments are included."
+                        },
+                        "contents": {
+                          "type": "boolean",
+                          "description": "Whether a table of contents is included."
+                        },
+                        "paper": {
+                          "type": "string",
+                          "enum": [
+                            "a4",
+                            "letter"
+                          ],
+                          "description": "Paper size of `print`, `pdf` and `docx`."
+                        },
+                        "orientation": {
+                          "type": "string",
+                          "enum": [
+                            "portrait",
+                            "landscape"
+                          ],
+                          "description": "Orientation of `print`, `pdf` and `docx`."
+                        }
+                      },
+                      "required": [
+                        "attachments",
+                        "comments",
+                        "contents",
+                        "paper",
+                        "orientation"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The options the export was started with."
                     },
                     "spaceId": {
                       "anyOf": [
@@ -182043,7 +183152,7 @@
                       "description": "Progress of a running export."
                     },
                     "fileName": {
-                      "description": "File name of the ZIP archive once it is ready.",
+                      "description": "File name of the file once it is ready.",
                       "type": [
                         "string",
                         "null"
@@ -182060,7 +183169,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Size of the ZIP archive in bytes once it is ready."
+                      "description": "Size of the file in bytes once it is ready."
                     },
                     "errorCode": {
                       "anyOf": [
@@ -182071,6 +183180,9 @@
                             "noAccess",
                             "tokenRevoked",
                             "notEnoughStorage",
+                            "renderUnavailable",
+                            "renderFailed",
+                            "renderTooLarge",
                             "interrupted",
                             "internalError"
                           ]
@@ -182079,7 +183191,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Why a failed export stopped: export was turned off for the space, the permission to export the space or page was lost, the API token that started it was revoked, the file store ran short of free space while it was written, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
+                      "description": "Why a failed export stopped: export was turned off for the space, the permission to export the space or page was lost, the API token that started it was revoked, the file store ran short of free space while it was written, the render container for PDF is not set up or cannot be reached, it could not create the PDF, the document was larger than the render container accepts, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
                     },
                     "createdAt": {
                       "type": "string",
@@ -182114,6 +183226,8 @@
                   "required": [
                     "id",
                     "scope",
+                    "format",
+                    "options",
                     "spaceId",
                     "rootItemId",
                     "name",
@@ -182132,6 +183246,14 @@
                 "example": {
                   "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a90",
                   "scope": "space",
+                  "format": "archive",
+                  "options": {
+                    "attachments": true,
+                    "comments": false,
+                    "contents": true,
+                    "paper": "a4",
+                    "orientation": "portrait"
+                  },
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                   "rootItemId": null,
                   "name": "IT Operations",
@@ -182263,7 +183385,7 @@
             }
           },
           "409": {
-            "description": "`exportRunning`: Another export of yours is still running. `tooManyExports`: You keep as many exports as allowed.",
+            "description": "`exportRunning`: Another export of yours is still running. `tooManyExports`: You keep as many exports as allowed. `tooManyPagesToPrint`: Too many pages to print in a browser.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -182284,6 +183406,14 @@
                       "title": "You keep as many exports as allowed",
                       "status": 409,
                       "code": "tooManyExports"
+                    }
+                  },
+                  "tooManyPagesToPrint": {
+                    "value": {
+                      "type": "urn:pagehall:problem:tooManyPagesToPrint",
+                      "title": "Too many pages to print in a browser",
+                      "status": 409,
+                      "code": "tooManyPagesToPrint"
                     }
                   }
                 }
@@ -182310,6 +183440,26 @@
               }
             }
           },
+          "503": {
+            "description": "`renderUnavailable`: Server-side PDF needs the render container.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "renderUnavailable": {
+                    "value": {
+                      "type": "urn:pagehall:problem:renderUnavailable",
+                      "title": "Server-side PDF needs the render container",
+                      "status": 503,
+                      "code": "renderUnavailable"
+                    }
+                  }
+                }
+              }
+            }
+          },
           "507": {
             "description": "`notEnoughStorage`: Not enough storage for this export.",
             "content": {
@@ -182324,6 +183474,215 @@
                       "title": "Not enough storage for this export",
                       "status": 507,
                       "code": "notEnoughStorage"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/spaces/{spaceId}/exports/summary": {
+      "get": {
+        "operationId": "exports.spaceSummary",
+        "summary": "Count what an export of a space contains",
+        "description": "Counts the pages and published blog posts of the space that you can read, so you can choose a format before you start the export. Browsers print up to `printLimit` pages at once; `serverPdf` tells whether the render container can create PDF files instead.\n\nRequires the permission `space.export` on the space in `spaceId`.",
+        "tags": [
+          "Exports"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.export",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the space.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The counts.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "pages": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Pages you can read in the scope."
+                    },
+                    "blogPosts": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Published blog posts you can read; only for a whole space."
+                    },
+                    "printLimit": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Most pages a browser prints at once through the print view."
+                    },
+                    "serverPdf": {
+                      "type": "boolean",
+                      "description": "Whether the render container is set up, so PDF can be created on the server."
+                    }
+                  },
+                  "required": [
+                    "pages",
+                    "blogPosts",
+                    "printLimit",
+                    "serverPdf"
+                  ],
+                  "additionalProperties": false,
+                  "description": "What an export of a space or of a page with its subpages contains."
+                },
+                "example": {
+                  "pages": 412,
+                  "blogPosts": 31,
+                  "printLimit": 300,
+                  "serverPdf": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`exportDisabled`: Export is turned off for this space. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "exportDisabled": {
+                    "value": {
+                      "type": "urn:pagehall:problem:exportDisabled",
+                      "title": "Export is turned off for this space",
+                      "status": 403,
+                      "code": "exportDisabled"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
                     }
                   }
                 }

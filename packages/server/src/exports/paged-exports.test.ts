@@ -1,0 +1,400 @@
+import { Readable } from "node:stream";
+import mammoth from "mammoth";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { accountPrincipal, type Principal } from "../accounts/principal.js";
+import { Secret } from "../config/secret.js";
+import { testDatabaseBaseUrl } from "../testing/database.js";
+import { testJobContext } from "../testing/jobs.js";
+import { createTestServices, type TestServices } from "../testing/services.js";
+import { spaceFixtures } from "../testing/spaces.js";
+import { ExportError, type ExportRequest } from "./exports.js";
+import { bytesOf, doc, type ExportContext, exportFixtures, paragraph, text } from "./fixtures.testing.js";
+import { defaultExportOptions, MAX_BROWSER_PRINT_PAGES } from "./options.js";
+
+const baseUrl = testDatabaseBaseUrl();
+const INSTANCE = "https://wiki.example.org";
+const TOKEN = "t".repeat(40);
+const PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAAEElEQVR4nGP4z8DwnwEIAA/2Av7f8DbHAAAAAElFTkSuQmCC",
+  "base64",
+);
+
+interface RenderCall {
+  authorization: string | null;
+  html: string;
+  baseUrl: string | null;
+  assets: { path: string; contentType: string; data: string }[];
+}
+
+function fakeRender(calls: RenderCall[]): typeof fetch {
+  return (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input);
+    const headers = new Headers(init?.headers);
+    if (url.endsWith("/v1/info")) {
+      return Response.json({
+        version: "1.0.0",
+        browser: "Chromium 140",
+        concurrency: 2,
+        running: 0,
+        waiting: 0,
+        maxBytes: 50 * 1024 * 1024,
+        timeoutSeconds: 60,
+      });
+    }
+    const body = JSON.parse(String(init?.body)) as Omit<RenderCall, "authorization">;
+    calls.push({ authorization: headers.get("authorization"), ...body });
+    return new Response(Buffer.from("%PDF-1.7 rendered"), { headers: { "content-type": "application/pdf" } });
+  }) as typeof fetch;
+}
+
+async function html(data: Buffer): Promise<string> {
+  return (await mammoth.convertToHtml({ buffer: data })).value;
+}
+
+describe.skipIf(!baseUrl)("print, PDF and Word exports", () => {
+  let test: TestServices;
+  let rendered: TestServices;
+  const calls: RenderCall[] = [];
+  const { setup } = exportFixtures(() => test);
+  const { member, space } = spaceFixtures(() => test);
+  let context: ExportContext;
+  let image: string;
+  let hiddenImage: string;
+
+  beforeAll(async () => {
+    test = await createTestServices(baseUrl ?? "", {
+      configuredInstanceUrl: INSTANCE,
+      render: { url: "http://render.test:3000", token: new Secret(TOKEN) },
+      renderFetch: fakeRender(calls),
+    });
+    rendered = test;
+    await test.pool.query("insert into instance (id, setup_completed_at) values (1, now())");
+    context = await setup();
+    const { admin, pages } = context;
+    const rack = await test.services.attachments.upload(admin, pages.welcome.id, {
+      name: "rack.png",
+      body: Readable.from([PNG]),
+      contentLength: PNG.length,
+    });
+    const secret = await test.services.attachments.upload(admin, pages.salaries.id, {
+      name: "salary-chart.png",
+      body: Readable.from([PNG]),
+      contentLength: PNG.length,
+    });
+    image = rack.id;
+    hiddenImage = secret.id;
+    const current = await test.services.documents.readable(pages.welcome.id);
+    await test.services.documents.replace(
+      admin,
+      pages.welcome.id,
+      doc(
+        { type: "heading", attrs: { level: 1 }, content: [text("Overview")] },
+        ...(current?.document.content ?? []),
+        { type: "image", attrs: { attachmentId: rack.id, alt: "Rack" } },
+        { type: "image", attrs: { attachmentId: secret.id, alt: "Leaked chart" } },
+      ),
+    );
+    await test.services.comments.create(context.reader, pages.welcome.id, {
+      body: doc(paragraph(text("Please add the VLAN plan"))),
+    });
+  });
+
+  afterAll(async () => {
+    await test?.close();
+  });
+
+  async function job(
+    actor: Principal,
+    target: { spaceId: string } | { pageId: string },
+    request: ExportRequest,
+  ) {
+    const started = await test.services.exports.start(actor, target, request);
+    await test.services.exports.work(testJobContext("exports.build", { exportId: started.id }));
+    const ready = await test.services.exports.get(actor, started.id);
+    expect(ready.state).toBe("ready");
+    expect(ready.format).toBe(request.format);
+    return test.services.exports.download(actor, started.id);
+  }
+
+  describe("print-ready HTML of a page", () => {
+    it("shows the title block, contents and published content with the reader's permissions", async () => {
+      const file = await test.services.exports.page(context.reader, context.pages.welcome.id, "print");
+      expect(file.contentType).toBe("text/html; charset=utf-8");
+      expect(file.fileName).toBe("Welcome.html");
+      const printed = (await bytesOf(file)).toString("utf8");
+      expect(printed).toContain('<p class="ph-path">Handbook</p><h1 class="ph-page-title">Welcome</h1>');
+      expect(printed).toMatch(/<p class="ph-meta">Space admin · Last changed on [^<]+<\/p>/);
+      expect(printed).toContain('<span class="ph-entry">Overview</span>');
+      expect(printed).toContain("Network: setup/guide");
+      expect(printed).toContain('data-access="none">No access</span>');
+      expect(printed).not.toContain("Salaries");
+      expect(printed).not.toContain("Secret task");
+      expect(printed).not.toContain("Never published");
+      expect(printed).toContain(`src="/api/v1/attachments/${image}/content"`);
+      expect(printed).not.toContain('loading="lazy"');
+      expect(printed).toContain("@page{size:A4 portrait;");
+      expect(printed).toContain('@bottom-left{content:"Exported on ');
+      expect(printed).toContain(' by Rita Reader"');
+    });
+
+    it("uses the paper size and orientation and adds comments and attachments when asked", async () => {
+      const options = {
+        ...defaultExportOptions,
+        paper: "letter" as const,
+        orientation: "landscape" as const,
+      };
+      const plain = (
+        await bytesOf(
+          await test.services.exports.page(context.reader, context.pages.welcome.id, "print", options),
+        )
+      ).toString("utf8");
+      expect(plain).toContain("@page{size:letter landscape;");
+      expect(plain).not.toContain("Please add the VLAN plan");
+      expect(plain).toContain("<td>notes.txt</td><td>Welcome</td>");
+      const commented = (
+        await bytesOf(
+          await test.services.exports.page(context.reader, context.pages.welcome.id, "print", {
+            ...options,
+            comments: true,
+            attachments: false,
+          }),
+        )
+      ).toString("utf8");
+      expect(commented).toContain("Please add the VLAN plan");
+      expect(commented).toContain('<p class="ph-comment-meta">Rita Reader · ');
+      expect(commented).not.toContain('<section class="ph-appendix"');
+    });
+
+    it("names the space and the ancestors in the path", async () => {
+      const printed = (
+        await bytesOf(await test.services.exports.page(context.insider, context.pages.bonus.id, "print"))
+      ).toString("utf8");
+      expect(printed).toContain(
+        '<p class="ph-path">Handbook › Salaries 2027</p><h1 class="ph-page-title">Bonus plan</h1>',
+      );
+    });
+
+    it("refuses a page the person cannot read", async () => {
+      await expect(
+        test.services.exports.page(context.reader, context.pages.salaries.id, "print"),
+      ).rejects.toThrow();
+      await expect(
+        test.services.exports.page(context.reader, context.pages.salaries.id, "docx"),
+      ).rejects.toThrow();
+    });
+  });
+
+  describe("subtrees and spaces", () => {
+    it("leaves out a page restricted in the middle of a subtree with everything below it", async () => {
+      const { admin, space, steward } = context;
+      const create = (title: string, parentId: string | null) =>
+        test.services.tree.create(admin, space.id, {
+          kind: "page",
+          title,
+          mode: "live",
+          placement: { parentId },
+        });
+      const guide = await create("Guide", null);
+      const chapter = await create("Public chapter", guide.id);
+      const hidden = await create("Hidden chapter", guide.id);
+      const below = await create("Below hidden", hidden.id);
+      for (const [page, words] of [
+        [guide, "Guide text"],
+        [chapter, "Chapter text"],
+        [hidden, "Hidden text"],
+        [below, "Below text"],
+      ] as const) {
+        await test.services.documents.replace(admin, page.id, doc(paragraph(text(words))));
+      }
+      const insiderId = await member(context.org.id, "member", "Hanna Hidden");
+      await test.services.pageAccess.change(admin, hidden.id, [
+        { action: "share", holderKind: "account", holderId: insiderId, role: "editor" },
+        { action: "restrict", kind: "view" },
+      ]);
+      const file = await job(
+        steward,
+        { pageId: guide.id },
+        { format: "print", options: defaultExportOptions },
+      );
+      expect(file.contentType).toBe("text/html; charset=utf-8");
+      expect(file.fileName).toMatch(/^Guide \d{4}-\d{2}-\d{2}\.html$/);
+      const printed = (await bytesOf(file)).toString("utf8");
+      expect(printed).toContain("Guide text");
+      expect(printed).toContain("Chapter text");
+      expect(printed).not.toContain("Hidden");
+      expect(printed).not.toContain("Below");
+      expect(printed.match(/<article class="ph-print-page"/g)).toHaveLength(2);
+      expect(printed).toContain('<li data-level="1"><a href="#ph-page-');
+      const word = await html(
+        await bytesOf(
+          await job(steward, { pageId: guide.id }, { format: "docx", options: defaultExportOptions }),
+        ),
+      );
+      expect(word).toContain("Chapter text");
+      expect(word).not.toContain("Hidden");
+      expect(word).not.toContain("Below");
+    });
+
+    it("prints a space with its pages and without restricted pages or drafts", async () => {
+      const file = await job(
+        context.steward,
+        { spaceId: context.space.id },
+        { format: "print", options: defaultExportOptions },
+      );
+      const printed = (await bytesOf(file)).toString("utf8");
+      expect(printed).toContain('<h1 class="ph-document-title">Handbook</h1>');
+      expect(printed).toContain("Published text");
+      expect(printed).not.toContain("Draft secret");
+      expect(printed).not.toContain("Salaries");
+      expect(printed).not.toContain("Confidential numbers");
+      expect(printed).not.toContain("Never published");
+    });
+
+    it("refuses multi-page exports to readers", async () => {
+      await expect(
+        test.services.exports.start(
+          context.reader,
+          { spaceId: context.space.id },
+          {
+            format: "docx",
+            options: defaultExportOptions,
+          },
+        ),
+      ).rejects.toThrow();
+      await expect(
+        test.services.exports.start(
+          context.reader,
+          { pageId: context.pages.welcome.id },
+          {
+            format: "print",
+            options: defaultExportOptions,
+          },
+        ),
+      ).rejects.toThrow();
+    });
+
+    it("counts the pages of a scope and refuses to prepare a print view above the browser limit", async () => {
+      const counts = await test.services.exports.counts(context.steward, { spaceId: context.space.id });
+      expect(counts).toMatchObject({ printLimit: MAX_BROWSER_PRINT_PAGES, serverPdf: true });
+      expect(counts.pages).toBeGreaterThan(0);
+      const { admin, org } = context;
+      const big = await space(org.id, context.adminId, { name: "Big" });
+      for (let index = 0; index <= MAX_BROWSER_PRINT_PAGES; index += 1) {
+        await test.services.tree.create(admin, big.id, {
+          kind: "page",
+          title: `Page ${index}`,
+          mode: "live",
+          placement: { parentId: null },
+        });
+      }
+      await expect(
+        test.services.exports.start(
+          admin,
+          { spaceId: big.id },
+          { format: "print", options: defaultExportOptions },
+        ),
+      ).rejects.toMatchObject({ code: "tooManyPagesToPrint" });
+      const word = await test.services.exports.start(
+        admin,
+        { spaceId: big.id },
+        {
+          format: "docx",
+          options: defaultExportOptions,
+        },
+      );
+      expect(word.state).toBe("queued");
+      await test.services.exports.remove(admin, word.id);
+    }, 120_000);
+  });
+
+  describe("Word", () => {
+    it("writes the page with its structure and embeds only images the exporter may read", async () => {
+      const file = await test.services.exports.page(context.reader, context.pages.welcome.id, "docx");
+      expect(file.fileName).toBe("Welcome.docx");
+      expect(file.contentType).toBe(
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      );
+      const output = await html(await bytesOf(file));
+      expect(output).toMatch(/<h1><a id="_Toc\d+"><\/a>Overview<\/h1>/);
+      expect(output).toContain("@Rita Reader");
+      expect(output).toContain('<img alt="Rack" src="data:image/png;base64,');
+      expect(output).not.toContain('alt="Leaked chart" src=');
+      expect(output).toContain("Leaked chart");
+      expect(output).not.toContain("Salaries");
+    });
+  });
+
+  describe("PDF", () => {
+    it("sends the print HTML with the readable images to the render container", async () => {
+      calls.length = 0;
+      const file = await rendered.services.exports.page(context.reader, context.pages.welcome.id, "pdf");
+      expect(file.contentType).toBe("application/pdf");
+      expect(file.fileName).toBe("Welcome.pdf");
+      expect((await bytesOf(file)).toString("latin1")).toBe("%PDF-1.7 rendered");
+      expect(calls).toHaveLength(1);
+      const [call] = calls;
+      expect(call?.authorization).toBe(`Bearer ${TOKEN}`);
+      expect(call?.baseUrl).toBe(INSTANCE);
+      expect(call?.html).toContain('<h1 class="ph-page-title">Welcome</h1>');
+      expect(call?.html).not.toContain("Salaries");
+      expect(call?.assets.map((asset) => asset.path)).toEqual([`/api/v1/attachments/${image}/content`]);
+      expect(call?.assets.map((asset) => asset.path)).not.toContain(
+        `/api/v1/attachments/${hiddenImage}/content`,
+      );
+      expect(call?.assets[0]?.contentType).toBe("image/png");
+    });
+
+    it("builds a PDF of a subtree in the background", async () => {
+      calls.length = 0;
+      const file = await job(
+        context.insider,
+        { pageId: context.pages.salaries.id },
+        {
+          format: "pdf",
+          options: defaultExportOptions,
+        },
+      );
+      expect(file.contentType).toBe("application/pdf");
+      expect(file.fileName).toMatch(/^Salaries 2027 \d{4}-\d{2}-\d{2}\.pdf$/);
+      expect(calls[0]?.html).toContain("Confidential numbers");
+      expect(calls[0]?.html).toContain("Bonus plan");
+    });
+
+    it("answers with a clear error without the render container", async () => {
+      const without = await createTestServices(baseUrl ?? "", { configuredInstanceUrl: INSTANCE });
+      try {
+        await without.pool.query("insert into instance (id, setup_completed_at) values (1, now())");
+        const { organization, member: person, space } = spaceFixtures(() => without);
+        const org = await organization();
+        const ownerId = await person(org.id, "member", "Owner");
+        const owner = accountPrincipal(ownerId);
+        const created = await space(org.id, ownerId, { name: "Solo", grants: [] });
+        const page = await without.services.tree.create(owner, created.id, {
+          kind: "page",
+          title: "Alone",
+          mode: "live",
+          placement: { parentId: null },
+        });
+        const refused = await without.services.exports
+          .page(owner, page.id, "pdf")
+          .catch((error: unknown) => error);
+        expect(refused).toBeInstanceOf(ExportError);
+        expect(refused).toMatchObject({
+          code: "renderUnavailable",
+          message: "Server-side PDF needs the render container; see the documentation",
+        });
+        await expect(
+          without.services.exports.start(
+            owner,
+            { spaceId: created.id },
+            { format: "pdf", options: defaultExportOptions },
+          ),
+        ).rejects.toMatchObject({ code: "renderUnavailable" });
+        expect((await without.services.exports.counts(owner, { spaceId: created.id })).serverPdf).toBe(false);
+        expect(await without.services.rendering.status()).toEqual({ state: "notConfigured" });
+      } finally {
+        await without.close();
+      }
+    });
+  });
+});

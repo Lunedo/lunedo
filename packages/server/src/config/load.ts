@@ -41,6 +41,7 @@ export interface ServerConfig {
     backupKeys: Secret | undefined;
   };
   metricsToken: Secret | undefined;
+  render: { url: string; token: Secret } | undefined;
   shutdownTimeoutSeconds: number;
   trustedProxies: string[];
   outboundAllowedNetworks: string[];
@@ -177,6 +178,9 @@ export function loadConfig(env: Env): ServerConfig {
   if (values.PAGEHALL_FILE_STORAGE === "s3" && !values.PAGEHALL_S3_BUCKET) {
     problems.push("PAGEHALL_S3_BUCKET: is required when PAGEHALL_FILE_STORAGE is s3");
   }
+  if (Boolean(values.PAGEHALL_RENDER_URL) !== Boolean(values.PAGEHALL_RENDER_TOKEN)) {
+    problems.push("PAGEHALL_RENDER_URL and PAGEHALL_RENDER_TOKEN: set both or neither");
+  }
   if (Boolean(values.PAGEHALL_S3_ACCESS_KEY_ID) !== Boolean(values.PAGEHALL_S3_SECRET_ACCESS_KEY)) {
     problems.push("PAGEHALL_S3_ACCESS_KEY_ID and PAGEHALL_S3_SECRET_ACCESS_KEY: set both or neither");
   }
@@ -237,6 +241,12 @@ export function loadConfig(env: Env): ServerConfig {
       backupKeys: secret("PAGEHALL_BACKUP_KEY"),
     },
     metricsToken: secret("PAGEHALL_METRICS_TOKEN"),
+    render: values.PAGEHALL_RENDER_URL
+      ? {
+          url: (values.PAGEHALL_RENDER_URL as string).replace(/\/$/, ""),
+          token: secret("PAGEHALL_RENDER_TOKEN") as Secret,
+        }
+      : undefined,
     shutdownTimeoutSeconds: values.PAGEHALL_SHUTDOWN_TIMEOUT_SECONDS as number,
     trustedProxies: values.PAGEHALL_TRUSTED_PROXIES as string[],
     outboundAllowedNetworks: values.PAGEHALL_OUTBOUND_ALLOWED_NETWORKS as string[],

@@ -14,6 +14,7 @@ beforeAll(async () => {
   writeFileSync(path.join(webRoot, "index.html"), "<!doctype html><title>Pagehall</title>");
   writeFileSync(path.join(webRoot, "assets", "app-1234.js"), "console.log(1)");
   writeFileSync(path.join(webRoot, "preview.html"), "<!doctype html><title>Preview</title>");
+  writeFileSync(path.join(webRoot, "print.html"), "<!doctype html><title>Print</title>");
   app = await createTestApp({ webRoot });
 });
 
@@ -56,6 +57,18 @@ describe("web client", () => {
     expect(response.headers["x-content-type-options"]).toBe("nosniff");
     const asset = await app.inject({ method: "GET", url: "/assets/app-1234.js" });
     expect(asset.headers["access-control-allow-origin"]).toBe("*");
+  });
+
+  it("serves the print viewer only to its own origin and runs only its own scripts", async () => {
+    const response = await app.inject({ method: "GET", url: "/print.html" });
+    expect(response.statusCode).toBe(200);
+    const policy = String(response.headers["content-security-policy"]);
+    expect(policy).toContain("default-src 'none'");
+    expect(policy).toContain("script-src 'self'");
+    expect(policy).not.toMatch(/script-src[^;]*unsafe/);
+    expect(policy).toContain("frame-ancestors 'self'");
+    expect(policy).toContain("img-src 'self' data: blob:");
+    expect(response.headers["x-content-type-options"]).toBe("nosniff");
   });
 
   it("keeps the health endpoints", async () => {

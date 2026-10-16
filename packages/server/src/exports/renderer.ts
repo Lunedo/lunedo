@@ -3,7 +3,9 @@ import {
   type DecisionReportRequest,
   type DocumentJson,
   escapeHtml,
+  extractHeadings,
   formatBytes,
+  type Heading,
   type ListedAttachment,
   type ListedPage,
   type PageReportRequest,
@@ -14,12 +16,15 @@ import {
   type ReportedTask,
   renderHtml,
   renderMarkdown,
+  renderWord,
   slugify,
   type TaskReportRequest,
   taskReportRequest,
+  type WordBlock,
 } from "@pagehall/editor-schema";
 import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
+import type { AuthorizationService } from "../authorization/service.js";
 import type { TaskService } from "../collaboration/tasks.js";
 import type { Database } from "../database/database.js";
 import type { AttachmentService } from "../files/attachments.js";
@@ -34,6 +39,7 @@ import {
 } from "../spaces/documents.js";
 import type { PeopleService } from "../spaces/people.js";
 import type { ReportService } from "../spaces/reports.js";
+import { visibleItem } from "../spaces/visibility.js";
 import { exportStyle } from "./style.js";
 import type { ExportTexts } from "./texts.js";
 
@@ -66,6 +72,8 @@ export interface ExportFormatter {
 export interface PreparedPage {
   id: string;
   title: string;
+  author: string | null;
+  path: readonly string[];
   version: number | null;
   updatedAt: Date;
   document: DocumentJson;
@@ -106,8 +114,11 @@ function collectListedIds(pages: readonly ListedPage[], into: Set<string>): void
   }
 }
 
+type Target = ExportFormat | "print";
+
 export class PageExportRenderer {
   readonly #database: Database;
+  readonly #authorization: AuthorizationService;
   readonly #documents: PageDocumentService;
   readonly #attachments: AttachmentService;
   readonly #reports: ReportService;
@@ -121,6 +132,7 @@ export class PageExportRenderer {
 
   constructor(options: {
     database: Database;
+    authorization: AuthorizationService;
     documents: PageDocumentService;
     attachments: AttachmentService;
     reports: ReportService;
@@ -133,6 +145,7 @@ export class PageExportRenderer {
     origin: string;
   }) {
     this.#database = options.database;
+    this.#authorization = options.authorization;
     this.#documents = options.documents;
     this.#attachments = options.attachments;
     this.#reports = options.reports;
@@ -171,11 +184,42 @@ export class PageExportRenderer {
     return new Set(result.rows.map((row) => row.id));
   }
 
+  async path(pageId: string): Promise<string[]> {
+    const result = await this.#database.execute<{ space: string; title: string | null }>(sql`
+      select s.name as space, a.title
+      from tree_items t join spaces s on s.id = t.space_id
+      left join lateral (
+        select case when p.kind = 'page' and p.mode = 'publish' then coalesce(v.title, p.title) else p.title end
+            as title,
+          array_position(t.path, p.id) as position
+        from tree_items p left join page_versions v on v.id = p.published_version_id
+        where p.id = any(t.path) and p.id <> t.id and p.reader_visible
+          and ${visibleItem(this.#authorization, this.#viewer, sql`p`, sql`s`)}
+      ) a on true
+      where t.id = ${pageId}
+      order by a.position nulls first`);
+    const [first] = result.rows;
+    if (!first) return [];
+    return [
+      first.space,
+      ...result.rows.flatMap((row) =>
+        row.title === null ? [] : [row.title.trim() || this.#texts.untitledPage],
+      ),
+    ];
+  }
+
+  async #author(accountId: string | null): Promise<string | null> {
+    if (!accountId) return null;
+    return (await this.#people.visibleNames(this.#viewer, [accountId])).get(accountId) ?? null;
+  }
+
   async prepare(pageId: string): Promise<PreparedPage | null> {
     const readable = await this.#documents.readable(pageId);
     if (!readable) return null;
     const document = readable.document;
     const unavailable = new Set<Module>();
+    const author = await this.#author(readable.updatedBy);
+    const path = await this.path(pageId);
     try {
       const references = await this.#documents.references(this.#viewer, document);
       const childPages = await this.#load("childPages", unavailable, () =>
@@ -220,6 +264,8 @@ export class PageExportRenderer {
       return {
         id: pageId,
         title: readable.title,
+        author,
+        path,
         version: readable.version,
         updatedAt: readable.updatedAt,
         document,
@@ -272,6 +318,8 @@ export class PageExportRenderer {
       return {
         id: pageId,
         title: readable.title,
+        author,
+        path,
         version: readable.version,
         updatedAt: readable.updatedAt,
         document,
@@ -371,9 +419,11 @@ export class PageExportRenderer {
     };
   }
 
-  #context(page: PreparedPage, format: ExportFormat, locator: Locator): RenderContext {
+  #context(page: PreparedPage, format: ExportFormat, locator: Locator, print = false): RenderContext {
     const { references } = page;
     return {
+      ...(print ? { target: "print" as const } : {}),
+      nodeTitle: (type) => this.#texts.nodeTitles[type] ?? this.#texts.someContent,
       labels: this.#labels(page),
       href: this.#address(format, locator),
       formatDate: (iso) => this.#format.day(iso),
@@ -425,10 +475,11 @@ export class PageExportRenderer {
     return lines;
   }
 
-  #body(page: PreparedPage, format: ExportFormat, locator: Locator): string {
+  #body(page: PreparedPage, target: Target, locator: Locator): string {
+    const format = target === "markdown" ? "markdown" : "html";
     if (!page.failed) {
       try {
-        const context = this.#context(page, format, locator);
+        const context = this.#context(page, format, locator, target === "print");
         return format === "html"
           ? renderHtml(page.document, context)
           : renderMarkdown(page.document, context);
@@ -439,6 +490,30 @@ export class PageExportRenderer {
     return format === "html"
       ? `<p class="ph-export-note">${escapeHtml(this.#texts.pageUnavailable)}</p>`
       : `> ${this.#texts.pageUnavailable}\n`;
+  }
+
+  printBody(page: PreparedPage, locator: Locator): string {
+    return this.#body(page, "print", locator);
+  }
+
+  wordBody(page: PreparedPage, locator: Locator): WordBlock[] {
+    if (!page.failed) {
+      try {
+        return renderWord(page.document, this.#context(page, "html", locator));
+      } catch (error) {
+        this.#logger.warn({ err: error }, "A page could not be rendered for an export");
+      }
+    }
+    return [{ type: "placeholder", text: this.#texts.pageUnavailable }];
+  }
+
+  headings(page: PreparedPage): Heading[] {
+    return page.failed ? [] : extractHeadings(page.document);
+  }
+
+  meta(page: PreparedPage): string[] {
+    const [first = "", ...rest] = this.#meta(page);
+    return page.author ? [`${page.author} · ${first}`, ...rest] : [first, ...rest];
   }
 
   title(page: PreparedPage): string {

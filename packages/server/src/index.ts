@@ -261,10 +261,27 @@ export {
   EXPORT_RETENTION_DAYS,
   ExportError,
   type ExportFile,
+  type ExportRequest,
   ExportService,
   type ExportSummary,
+  type ExportSummaryCounts,
   type PageExportFormat,
+  pageExportFormats,
 } from "./exports/exports.js";
+export {
+  defaultExportOptions,
+  type ExportFormat,
+  type ExportOptions,
+  exportFormats,
+  exportOptionsSchema,
+  MAX_BROWSER_PRINT_PAGES,
+  type Orientation,
+  orientations,
+  type PaperSize,
+  paperSizes,
+} from "./exports/options.js";
+export { printHtml } from "./exports/print.js";
+export { type RenderConnection, RenderService, type RenderStatus } from "./exports/rendering.js";
 export { type ExportScope, type ExportState, exportScopes, exportStates } from "./exports/schema.js";
 export {
   type Attachment,

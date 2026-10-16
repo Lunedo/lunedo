@@ -1,6 +1,7 @@
 import { chatChannelKinds, smtpOAuth2Providers } from "@pagehall/shared";
 import { z } from "zod";
 import type { PrincipalType } from "../accounts/principal.js";
+import { exportFormats } from "../exports/options.js";
 
 export const auditTargetTypes = [
   "account",
@@ -1205,13 +1206,18 @@ export const auditCatalog = {
   "space.exported": event({
     actor: ["account"],
     target: "space",
-    fields: z.object({ name: z.string(), key: z.string(), exportId: z.uuid() }),
+    fields: z.object({
+      name: z.string(),
+      key: z.string(),
+      exportId: z.uuid(),
+      format: z.enum(exportFormats).optional(),
+    }),
     visibility: "organization",
   }),
   "page.subtreeExported": event({
     actor: ["account"],
     target: "page",
-    fields: pageFields.extend({ exportId: z.uuid() }),
+    fields: pageFields.extend({ exportId: z.uuid(), format: z.enum(exportFormats).optional() }),
     visibility: "organization",
   }),
   "template.created": event({

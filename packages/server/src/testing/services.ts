@@ -11,6 +11,7 @@ import { KeyRingHolder } from "../crypto/key-ring-holder.js";
 import { createDatabase, type Database } from "../database/database.js";
 import { runMigrations } from "../database/migrate.js";
 import { createDatabasePool, type DatabasePool } from "../database/pool.js";
+import type { RenderConnection } from "../exports/rendering.js";
 import type { DirectoryConnector } from "../identity/ldap-connection.js";
 import { createLogger } from "../logging/logger.js";
 import type { OutboundPolicy } from "../outbound/guarded-request.js";
@@ -42,6 +43,8 @@ export async function createTestServices(
     atlassianFetch?: typeof fetch;
     chatPolicy?: OutboundPolicy;
     pushPolicy?: OutboundPolicy;
+    render?: RenderConnection;
+    renderFetch?: typeof fetch;
     beforeMigrations?: (url: string) => Promise<unknown>;
   } = {},
 ): Promise<TestServices> {
@@ -82,6 +85,8 @@ export async function createTestServices(
       ...(options.atlassianFetch ? { atlassianFetch: options.atlassianFetch } : {}),
       ...(options.chatPolicy ? { chatPolicy: options.chatPolicy } : {}),
       ...(options.pushPolicy ? { pushPolicy: options.pushPolicy } : {}),
+      ...(options.render ? { render: options.render } : {}),
+      ...(options.renderFetch ? { renderFetch: options.renderFetch } : {}),
       mailTransport: () => mail,
     });
   const services = build();
