@@ -10,7 +10,14 @@ import type { Logger } from "../logging/logger.js";
 import { blocksOfType } from "../spaces/documents.js";
 import type { ExportOptions } from "./options.js";
 import { type PrintAttachment, type PrintComment, type PrintPage, pageAnchor, printHtml } from "./print.js";
-import { type Locator, nowhere, type PageExportRenderer, type PreparedPage } from "./renderer.js";
+import {
+  type BoardPreview,
+  type Locator,
+  nowhere,
+  type PageExportRenderer,
+  type PreparedPage,
+  whiteboardPreviewPath,
+} from "./renderer.js";
 import type { RenderAsset } from "./rendering.js";
 import { imageInfo, type WordComment, type WordImage, type WordPage, wordDocument } from "./word.js";
 
@@ -53,6 +60,7 @@ export class PagedExport {
   readonly #viewer: Principal;
   readonly #language: string;
   readonly #images = new Map<string, Promise<ReadImage>>();
+  readonly #boards = new Map<string, BoardPreview>();
   readonly #maxEmbedded: number;
   #embedded = 0;
 
@@ -84,6 +92,7 @@ export class PagedExport {
     return {
       page: (pageId) => (ids.has(pageId) ? `#${pageAnchor(pageId)}` : null),
       attachment: (attachmentId) => `/api/v1/attachments/${attachmentId}/content`,
+      preview: (itemId) => (ids.has(itemId) ? whiteboardPreviewPath(itemId) : null),
       index: () => null,
     };
   }
@@ -176,7 +185,9 @@ export class PagedExport {
     for (const entry of input.entries) {
       const page = await input.prepare(entry.id);
       await input.progress();
-      if (page) pages.push({ entry, page });
+      if (!page) continue;
+      if (page.board?.preview) this.#boards.set(page.id, page.board.preview);
+      pages.push({ entry, page });
     }
     return pages;
   }
@@ -237,12 +248,22 @@ export class PagedExport {
     });
   }
 
-  #readable(attachmentId: string): Promise<ReadImage> {
-    const cached = this.#images.get(attachmentId);
+  #cached(key: string, read: () => Promise<ReadImage>): Promise<ReadImage> {
+    const cached = this.#images.get(key);
     if (cached) return cached;
-    const read = this.#read(attachmentId);
-    this.#images.set(attachmentId, read);
-    return read;
+    const reading = read();
+    this.#images.set(key, reading);
+    return reading;
+  }
+
+  #readable(attachmentId: string): Promise<ReadImage> {
+    return this.#cached(`attachment:${attachmentId}`, () => this.#read(attachmentId));
+  }
+
+  #boardImage(itemId: string, preview: BoardPreview): Promise<ReadImage> {
+    return this.#cached(`whiteboard:${itemId}`, () =>
+      this.#file(preview.fileId, preview.size, "image/svg+xml"),
+    );
   }
 
   async #read(attachmentId: string): Promise<ReadImage> {
@@ -252,22 +273,27 @@ export class PagedExport {
     });
     if (!allowed) return null;
     const content = await this.#attachments.content(attachmentId, "published");
-    if (!content?.contentType.startsWith("image/") || content.size > MAX_EMBEDDED_IMAGE_BYTES) return null;
-    if (this.#embedded + content.size > this.#maxEmbedded) return null;
-    this.#embedded += content.size;
+    if (!content?.contentType.startsWith("image/")) return null;
+    return this.#file(content.fileId, content.size, content.contentType);
+  }
+
+  async #file(fileId: string, size: number, contentType: string): Promise<ReadImage> {
+    if (size > MAX_EMBEDDED_IMAGE_BYTES || this.#embedded + size > this.#maxEmbedded) return null;
+    this.#embedded += size;
     try {
-      const stream = await this.#files.read(content.fileId);
+      const stream = await this.#files.read(fileId);
       const chunks: Buffer[] = [];
       for await (const chunk of stream) chunks.push(chunk as Buffer);
-      return { data: Buffer.concat(chunks), contentType: content.contentType };
+      return { data: Buffer.concat(chunks), contentType };
     } catch (error) {
-      this.#logger.warn({ err: error, attachmentId }, "An image could not be read for an export");
+      this.#logger.warn({ err: error, fileId }, "An image could not be read for an export");
       return null;
     }
   }
 
   async #image(attachmentId: string): Promise<WordImage | null> {
-    const read = await this.#readable(attachmentId);
+    const board = this.#boards.get(attachmentId);
+    const read = await (board ? this.#boardImage(attachmentId, board) : this.#readable(attachmentId));
     if (!read) return null;
     const info = imageInfo(read.data);
     return info ? { ...info, data: read.data } : null;
@@ -275,7 +301,17 @@ export class PagedExport {
 
   async assets(pages: readonly PreparedPage[]): Promise<RenderAsset[]> {
     const ids = new Set<string>();
+    const assets: RenderAsset[] = [];
     for (const page of pages) {
+      if (page.board?.preview) {
+        const read = await this.#boardImage(page.id, page.board.preview);
+        if (read)
+          assets.push({
+            path: whiteboardPreviewPath(page.id),
+            contentType: read.contentType,
+            data: read.data,
+          });
+      }
       for (const image of blocksOfType(page.document, "image")) {
         const id = image.attrs?.attachmentId;
         if (typeof id === "string") ids.add(id);
@@ -285,7 +321,6 @@ export class PagedExport {
         if (typeof id === "string") ids.add(id);
       }
     }
-    const assets: RenderAsset[] = [];
     for (const id of ids) {
       const read = await this.#readable(id);
       if (read)

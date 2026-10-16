@@ -8,6 +8,7 @@ import {
   type Heading,
   type ListedAttachment,
   type ListedPage,
+  markdownUrl,
   type PageReportRequest,
   type RenderContext,
   type RenderLabels,
@@ -58,10 +59,25 @@ type Module = "childPages" | "attachmentList" | "pageReport" | "decisionReport" 
 export interface Locator {
   page(pageId: string, format: ExportFormat): string | null;
   attachment(attachmentId: string): string | null;
+  preview(itemId: string): string | null;
   index(format: ExportFormat): string | null;
 }
 
-export const nowhere: Locator = { page: () => null, attachment: () => null, index: () => null };
+export const nowhere: Locator = {
+  page: () => null,
+  attachment: () => null,
+  preview: () => null,
+  index: () => null,
+};
+
+export function whiteboardPreviewPath(itemId: string): string {
+  return `/api/v1/whiteboards/${itemId}/preview`;
+}
+
+export interface BoardPreview {
+  fileId: string;
+  size: number;
+}
 
 export interface ExportFormatter {
   date(date: Date): string;
@@ -87,6 +103,7 @@ export interface PreparedPage {
   meeting: { startsAt: Date | null; attendees: string[] } | null;
   unavailable: ReadonlySet<Module>;
   failed: boolean;
+  board: { preview: BoardPreview | null } | null;
 }
 
 export interface RenderedPage {
@@ -312,6 +329,7 @@ export class PageExportRenderer {
         meeting,
         unavailable,
         failed: false,
+        board: null,
       };
     } catch (error) {
       this.#logger.warn({ err: error }, "A page could not be prepared for an export");
@@ -333,8 +351,63 @@ export class PageExportRenderer {
         meeting: null,
         unavailable,
         failed: true,
+        board: null,
       };
     }
+  }
+
+  async prepareBoard(itemId: string): Promise<PreparedPage | null> {
+    const result = await this.#database.execute<{
+      title: string;
+      changed_at: Date | string;
+      updated_by: string | null;
+      file_id: string | null;
+      size: string | number | null;
+    }>(sql`
+      select t.title, d.changed_at, d.updated_by, f.id as file_id, f.size
+      from tree_items t join whiteboard_documents d on d.item_id = t.id
+      left join whiteboard_previews p on p.id = d.preview_id
+      left join stored_files f on f.id = p.file_id and f.state = 'ready'
+      where t.id = ${itemId} and t.kind = 'whiteboard'`);
+    const row = result.rows[0];
+    if (!row) return null;
+    return {
+      id: itemId,
+      title: row.title,
+      author: await this.#author(row.updated_by),
+      path: await this.path(itemId),
+      version: null,
+      updatedAt: new Date(row.changed_at),
+      document: { type: "doc", content: [] },
+      references: { people: {}, pages: {}, topics: {} },
+      childPages: null,
+      attachments: null,
+      pageReports: null,
+      decisionReports: null,
+      taskReports: null,
+      taskStatus: null,
+      meeting: null,
+      unavailable: new Set(),
+      failed: false,
+      board: { preview: row.file_id ? { fileId: row.file_id, size: Number(row.size ?? 0) } : null },
+    };
+  }
+
+  #previewSource(page: PreparedPage, locator: Locator): string | null {
+    if (!page.board?.preview) return null;
+    return locator.preview(page.id) ?? `${this.#origin}${whiteboardPreviewPath(page.id)}`;
+  }
+
+  #boardBody(page: PreparedPage, format: ExportFormat, locator: Locator): string {
+    const source = this.#previewSource(page, locator);
+    if (format === "markdown") {
+      return source
+        ? `![${markdownText(this.title(page))}](${markdownUrl(source)})\n`
+        : `> ${this.#texts.whiteboardWithoutImage}\n`;
+    }
+    return source
+      ? `<figure class="ph-whiteboard"><img src="${escapeHtml(source)}" alt="${escapeHtml(this.title(page))}"></figure>`
+      : `<p class="ph-export-note">${escapeHtml(this.#texts.whiteboardWithoutImage)}</p>`;
   }
 
   async #taskReports(document: DocumentJson): Promise<Map<string, readonly ReportedTask[]>> {
@@ -477,6 +550,7 @@ export class PageExportRenderer {
 
   #body(page: PreparedPage, target: Target, locator: Locator): string {
     const format = target === "markdown" ? "markdown" : "html";
+    if (page.board) return this.#boardBody(page, format, locator);
     if (!page.failed) {
       try {
         const context = this.#context(page, format, locator, target === "print");
@@ -497,6 +571,20 @@ export class PageExportRenderer {
   }
 
   wordBody(page: PreparedPage, locator: Locator): WordBlock[] {
+    if (page.board) {
+      return page.board.preview
+        ? [
+            {
+              type: "image",
+              attachmentId: page.id,
+              href: this.#previewSource(page, locator),
+              alt: this.title(page),
+              width: null,
+              align: "center",
+            },
+          ]
+        : [{ type: "placeholder", text: this.#texts.whiteboardWithoutImage }];
+    }
     if (!page.failed) {
       try {
         return renderWord(page.document, this.#context(page, "html", locator));

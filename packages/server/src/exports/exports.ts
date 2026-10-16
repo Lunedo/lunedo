@@ -219,7 +219,7 @@ type ItemRow = {
   id: string;
   parent_id: string | null;
   path: string[];
-  kind: "page" | "folder" | "link" | "meetingSeries";
+  kind: "page" | "whiteboard" | "folder" | "link" | "meetingSeries";
   title: string;
   link_url: string | null;
   link_item_id: string | null;
@@ -571,12 +571,12 @@ export class ExportService {
     rootItemId: string | null,
   ): Promise<{ pages: number; blogPosts: number }> {
     const result = await this.#database.execute<{ pages: number; blog_posts: number }>(sql`
-      select count(*) filter (where t.kind = 'page')::int as pages,
+      select count(*) filter (where t.kind in ('page', 'whiteboard'))::int as pages,
         count(*) filter (where t.kind = 'blogPost' and b.published_at is not null)::int as blog_posts
       from tree_items t join spaces s on s.id = t.space_id left join blog_posts b on b.item_id = t.id
-      where t.space_id = ${spaceId} and t.kind in ('page', 'blogPost') and t.reader_visible
+      where t.space_id = ${spaceId} and t.kind in ('page', 'whiteboard', 'blogPost') and t.reader_visible
         and t.trash_entry_id is null
-        and ${rootItemId ? sql`${rootItemId}::uuid = any(t.path) and t.kind = 'page'` : sql`t.archived_root_id is null`}
+        and ${rootItemId ? sql`${rootItemId}::uuid = any(t.path) and t.kind in ('page', 'whiteboard')` : sql`t.archived_root_id is null`}
         and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}`);
     const row = result.rows[0];
     return { pages: Number(row?.pages ?? 0), blogPosts: Number(row?.blog_posts ?? 0) };
@@ -754,6 +754,11 @@ export class ExportService {
           join attachment_versions v on v.id = a.published_version_id
           join stored_files f on f.id = v.file_id
           join tree_items t on t.id = a.item_id
+          where t.space_id = ${spaceId} and t.trash_entry_id is null ${within})
+        + (select coalesce(sum(f.size), 0) from whiteboard_documents d
+          join whiteboard_previews p on p.id = d.preview_id
+          join stored_files f on f.id = p.file_id
+          join tree_items t on t.id = d.item_id
           where t.space_id = ${spaceId} and t.trash_entry_id is null ${within}) as attachments,
         (select coalesce(sum(octet_length(coalesce(v.document::text, d.snapshot::text, ''))), 0)
           from tree_items t
@@ -761,7 +766,8 @@ export class ExportService {
           left join page_documents d on d.item_id = t.id and t.mode = 'live'
           where t.space_id = ${spaceId} and t.kind in ('page', 'blogPost') and t.trash_entry_id is null ${within}) as text,
         (select count(*)::int from tree_items t
-          where t.space_id = ${spaceId} and t.kind in ('page', 'blogPost') and t.trash_entry_id is null ${within}) as pages`);
+          where t.space_id = ${spaceId} and t.kind in ('page', 'blogPost', 'whiteboard')
+            and t.trash_entry_id is null ${within}) as pages`);
     const row = result.rows[0];
     return (
       Number(row?.attachments ?? 0) +
@@ -1057,7 +1063,7 @@ export class ExportService {
       left join page_versions v on v.id = t.published_version_id
       where t.space_id = ${row.space_id}
         ${root ? sql`and ${root}::uuid = any(t.path)` : sql``}
-        and t.kind in ('page', 'folder', 'link', 'meetingSeries')
+        and t.kind in ('page', 'whiteboard', 'folder', 'link', 'meetingSeries')
         and t.reader_visible
         and t.archived_root_id is not distinct from ${archivedRoot}
         and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
@@ -1073,6 +1079,16 @@ export class ExportService {
     }));
   }
 
+  async #previews(itemIds: readonly string[]) {
+    if (itemIds.length === 0) return [];
+    const result = await this.#database.execute<{ item_id: string; file_id: string }>(sql`
+      select d.item_id, f.id as file_id
+      from whiteboard_documents d join whiteboard_previews p on p.id = d.preview_id
+      join stored_files f on f.id = p.file_id and f.state = 'ready'
+      where d.item_id = any(${sql.param([...itemIds])}::uuid[])`);
+    return result.rows.map((preview) => ({ itemId: preview.item_id, fileId: preview.file_id }));
+  }
+
   async #build(row: ExportRow, signal: AbortSignal): Promise<void> {
     const viewer = await this.#viewer(row);
     await this.#requireRoot(viewer, row);
@@ -1083,12 +1099,14 @@ export class ExportService {
       ...(row.root_item_id ? [] : await this.#blogPosts(viewer, row, renderer.texts.blog)),
     ];
     const pageIds = items.filter((item) => item.kind === "page").map((item) => item.id);
+    const boardIds = new Set(items.filter((item) => item.kind === "whiteboard").map((item) => item.id));
     if (row.root_item_id && !pageIds.includes(row.root_item_id)) throw new ExportFailure("noAccess");
     const prepared = new Map<string, PreparedPage>();
     const plan = planExport({
       rootId: row.root_item_id,
       items,
       attachments: await this.#publishedAttachments(pageIds),
+      previews: await this.#previews([...boardIds]),
       untitledPage: renderer.texts.untitledPage,
       untitledFolder: renderer.texts.untitledFolder,
     });
@@ -1100,6 +1118,7 @@ export class ExportService {
       ? plan.pages.length + 1
       : plan.pages.length * (withMarkdown && withHtml ? 2 : 1) +
         (withAttachments ? plan.attachments.length : 0) +
+        plan.previews.length +
         1;
     let done = 0;
     let beat = 0;
@@ -1113,14 +1132,18 @@ export class ExportService {
         where id = ${row.id} and state = 'running' returning id`);
       if (alive.rows.length === 0) throw new ExportRemoved();
     };
+    const load = async (id: string) => {
+      const page = boardIds.has(id) ? await renderer.prepareBoard(id) : await renderer.prepare(id);
+      if (!page) throw new ExportFailure("noAccess");
+      return page;
+    };
     const prepare = async (node: PlannedNode) => {
       const cached = prepared.get(node.id);
       if (cached) {
         prepared.delete(node.id);
         return cached;
       }
-      const page = await renderer.prepare(node.id);
-      if (!page) throw new ExportFailure("noAccess");
+      const page = await load(node.id);
       prepared.set(node.id, page);
       return page;
     };
@@ -1141,11 +1164,7 @@ export class ExportService {
         path: row.root_item_id ? await renderer.path(row.root_item_id) : [],
         exported: await this.#exported(renderer, row.account_id, now),
         options,
-        prepare: async (id: string) => {
-          const page = await renderer.prepare(id);
-          if (!page) throw new ExportFailure("noAccess");
-          return page;
-        },
+        prepare: load,
         progress,
       };
       let file: Buffer;
@@ -1194,6 +1213,18 @@ export class ExportService {
               const page = await prepare(node);
               await progress();
               return Buffer.from(renderer.html(page, plan.locator(node), language), "utf8");
+            },
+          });
+        }
+        if (node.preview) {
+          const preview = node.preview;
+          entries.push({
+            path: preview.path,
+            mtime: now,
+            compress: true,
+            content: async () => {
+              await progress();
+              return this.#files.read(preview.fileId);
             },
           });
         }
@@ -1270,7 +1301,7 @@ export class ExportService {
             (node.kind === "folder" ? renderer.texts.untitledFolder : renderer.texts.untitledPage),
         );
         let entry = title;
-        if (node.kind === "page") {
+        if (node.kind === "page" || node.kind === "whiteboard") {
           entry = `<a href="${escapeHtml(locator.page(node.id, "html") ?? "")}">${title}</a>`;
         } else if (node.kind === "link") {
           const local = node.linkItemId ? locator.page(node.linkItemId, "html") : null;

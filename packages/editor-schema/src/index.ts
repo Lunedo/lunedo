@@ -122,7 +122,7 @@ export {
   titlePatternFields,
 } from "./modules/templates.js";
 export { defaultLabels, formatBytes, MAX_EXPENSIVE_RENDER_COST } from "./render.js";
-export { escapeHtml, slugify } from "./text.js";
+export { escapeHtml, markdownUrl, slugify } from "./text.js";
 export {
   InvalidDocumentError,
   limits,

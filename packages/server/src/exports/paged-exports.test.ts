@@ -1,6 +1,6 @@
 import { Readable } from "node:stream";
 import mammoth from "mammoth";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { accountPrincipal, type Principal } from "../accounts/principal.js";
 import { Secret } from "../config/secret.js";
 import { createLogger } from "../logging/logger.js";
@@ -9,7 +9,15 @@ import { testJobContext } from "../testing/jobs.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { spaceFixtures } from "../testing/spaces.js";
 import { ExportError, type ExportRequest } from "./exports.js";
-import { bytesOf, doc, type ExportContext, exportFixtures, paragraph, text } from "./fixtures.testing.js";
+import {
+  bytesOf,
+  doc,
+  type ExportContext,
+  exportFixtures,
+  paragraph,
+  text,
+  unzip,
+} from "./fixtures.testing.js";
 import { defaultExportOptions, MAX_BROWSER_PRINT_PAGES } from "./options.js";
 import { PagedExport } from "./paged.js";
 import type { PreparedPage } from "./renderer.js";
@@ -17,6 +25,8 @@ import type { PreparedPage } from "./renderer.js";
 const baseUrl = testDatabaseBaseUrl();
 const INSTANCE = "https://wiki.example.org";
 const TOKEN = "t".repeat(40);
+const BOARD_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 20"><rect width="12" height="8"/></svg>';
 const PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAAEElEQVR4nGP4z8DwnwEIAA/2Av7f8DbHAAAAAElFTkSuQmCC",
   "base64",
@@ -354,6 +364,142 @@ describe.skipIf(!baseUrl)("print, PDF and Word exports", () => {
         page(doc(imageNode(second.id), imageNode(image))),
       ]);
       expect(assets.map((asset) => asset.path)).toEqual([`/api/v1/attachments/${image}/content`]);
+    });
+  });
+
+  describe("whiteboards", () => {
+    let boards: { root: string; map: string; blank: string; secret: string };
+
+    beforeAll(async () => {
+      const { admin, space, org } = context;
+      const create = (kind: "page" | "whiteboard", title: string, parentId: string | null) =>
+        test.services.tree.create(admin, space.id, { kind, title, mode: "live", placement: { parentId } });
+      const root = await create("page", "Planning", null);
+      await test.services.documents.replace(admin, root.id, doc(paragraph(text("Planning text"))));
+      const map = await create("whiteboard", "Network map", root.id);
+      const blank = await create("whiteboard", "Blank board", root.id);
+      const secret = await create("whiteboard", "Secret board", root.id);
+      for (const board of [map, secret]) {
+        expect(
+          await test.services.whiteboards.setPreview(admin, board.id, {
+            revision: 1,
+            body: Readable.from([Buffer.from(BOARD_SVG)]),
+          }),
+        ).toBe(true);
+      }
+      const holderId = await member(org.id, "member", "Bea Board");
+      await test.services.pageAccess.change(admin, secret.id, [
+        { action: "share", holderKind: "account", holderId, role: "editor" },
+        { action: "restrict", kind: "view" },
+      ]);
+      boards = { root: root.id, map: map.id, blank: blank.id, secret: secret.id };
+    });
+
+    beforeEach(async () => {
+      for (const kept of await test.services.exports.list(context.steward)) {
+        await test.services.exports.remove(context.steward, kept.id);
+      }
+    });
+
+    it("prints each whiteboard as its own page with its image or a note", async () => {
+      const printed = (
+        await bytesOf(
+          await job(
+            context.steward,
+            { pageId: boards.root },
+            { format: "print", options: defaultExportOptions },
+          ),
+        )
+      ).toString("utf8");
+      expect(printed.match(/<article class="ph-print-page"/g)).toHaveLength(3);
+      expect(printed).toContain('<h1 class="ph-page-title">Network map</h1>');
+      expect(printed).toContain(
+        `<figure class="ph-whiteboard"><img src="/api/v1/whiteboards/${boards.map}/preview" alt="Network map"></figure>`,
+      );
+      expect(printed).toContain('<h1 class="ph-page-title">Blank board</h1>');
+      expect(printed).toContain("This whiteboard has no saved image yet");
+      expect(printed).not.toContain("Secret board");
+      expect(printed).not.toContain(boards.secret);
+      const counts = await test.services.exports.counts(context.steward, { pageId: boards.root });
+      expect(counts.pages).toBe(3);
+    });
+
+    it("sends the whiteboard images the exporter may see to the render container", async () => {
+      calls.length = 0;
+      await job(context.steward, { pageId: boards.root }, { format: "pdf", options: defaultExportOptions });
+      const assets = calls[0]?.assets ?? [];
+      const map = assets.find((asset) => asset.path === `/api/v1/whiteboards/${boards.map}/preview`);
+      expect(map?.contentType).toBe("image/svg+xml");
+      expect(Buffer.from(map?.data ?? "", "base64").toString("utf8")).toContain("<rect");
+      expect(assets.map((asset) => asset.path)).not.toContain(`/api/v1/whiteboards/${boards.secret}/preview`);
+    });
+
+    it("embeds the whiteboard images in Word", async () => {
+      const data = await bytesOf(
+        await job(
+          context.steward,
+          { pageId: boards.root },
+          { format: "docx", options: defaultExportOptions },
+        ),
+      );
+      const output = await html(data);
+      expect(output).toContain("Network map");
+      expect(output).toContain('<img alt="Network map"');
+      expect(output).toContain("This whiteboard has no saved image yet");
+      expect(output).not.toContain("Secret board");
+      const files = await unzip(data);
+      expect([...files.keys()].filter((name) => name.endsWith(".svg"))).toHaveLength(1);
+    });
+
+    it("puts the whiteboard images into HTML and Markdown archives", async () => {
+      const files = await unzip(
+        await bytesOf(
+          await job(
+            context.steward,
+            { pageId: boards.root },
+            { format: "archive", options: defaultExportOptions },
+          ),
+        ),
+      );
+      const names = [...files.keys()];
+      const image = names.find((name) => name.endsWith("Network map.svg")) ?? "";
+      expect(files.get(image)?.toString("utf8")).toContain("<rect");
+      const page = (extension: string) =>
+        files.get(names.find((name) => name.endsWith(`Network map${extension}`)) ?? "")?.toString("utf8") ??
+        "";
+      expect(page(".html")).toContain('<img src="Network%20map.svg" alt="Network map">');
+      expect(page(".md")).toContain("![Network map](Network%20map.svg)");
+      const blank = names.find((name) => name.endsWith("Blank board.md")) ?? "";
+      expect(files.get(blank)?.toString("utf8")).toContain("> This whiteboard has no saved image yet");
+      expect(names.filter((name) => name.endsWith(".svg"))).toEqual([image]);
+      expect(names.some((name) => name.includes("Secret"))).toBe(false);
+      expect(files.get("index.html")?.toString("utf8")).toContain(">Network map</a>");
+      const htmlOnly = await unzip(
+        await bytesOf(
+          await job(
+            context.steward,
+            { pageId: boards.root },
+            { format: "html", options: defaultExportOptions },
+          ),
+        ),
+      );
+      expect([...htmlOnly.keys()].filter((name) => name.endsWith(".svg"))).toEqual([image]);
+    });
+
+    it("exports the whiteboards of a whole space", async () => {
+      const files = await unzip(
+        await bytesOf(
+          await job(
+            context.steward,
+            { spaceId: context.space.id },
+            { format: "markdown", options: defaultExportOptions },
+          ),
+        ),
+      );
+      const names = [...files.keys()];
+      expect(names.some((name) => name.endsWith("Network map.svg"))).toBe(true);
+      expect(names.some((name) => name.endsWith("Blank board.md"))).toBe(true);
+      expect(names.some((name) => name.includes("Secret"))).toBe(false);
     });
   });
 

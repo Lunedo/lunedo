@@ -240,6 +240,46 @@ describe("image sizes", () => {
       0x03,
     ]);
     expect(imageInfo(jpeg)).toEqual({ type: "jpg", width: 7, height: 5 });
-    expect(imageInfo(Buffer.from("<svg></svg>"))).toBeNull();
+    expect(imageInfo(Buffer.from("not an image"))).toBeNull();
+  });
+
+  it("reads the size of SVG images from their size or view box", () => {
+    expect(
+      imageInfo(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="640px" height="480"></svg>')),
+    ).toEqual({ type: "svg", width: 640, height: 480 });
+    expect(imageInfo(Buffer.from('<?xml version="1.0"?><svg viewBox="0 0 1200.5 300"></svg>'))).toEqual({
+      type: "svg",
+      width: 1201,
+      height: 300,
+    });
+    expect(imageInfo(Buffer.from('<svg width="100%"></svg>'))).toEqual({
+      type: "svg",
+      width: 800,
+      height: 600,
+    });
+  });
+
+  it("embeds SVG images with a fallback for older Word versions", async () => {
+    const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="20"></svg>');
+    const data = await wordDocument({
+      ...document([
+        page([
+          {
+            type: "image",
+            attachmentId: SAMPLE_IMAGE,
+            href: null,
+            alt: "Board",
+            width: null,
+            align: "center",
+          },
+        ]),
+      ]),
+      image: async () => {
+        const info = imageInfo(svg);
+        return info ? { ...info, data: svg } : null;
+      },
+    });
+    expect(await entry(data, "word/document.xml")).toContain("svgBlip");
+    expect(await html(data)).toContain('<img alt="Board" src="data:image/png;base64,');
   });
 });

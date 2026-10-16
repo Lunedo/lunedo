@@ -35,7 +35,7 @@ type FileChild = Paragraph | Table | TableOfContents;
 
 export interface WordImage {
   data: Buffer;
-  type: "png" | "jpg" | "gif" | "bmp";
+  type: "png" | "jpg" | "gif" | "bmp" | "svg";
   width: number;
   height: number;
 }
@@ -90,6 +90,12 @@ const HEADINGS = [
   HeadingLevel.HEADING_6,
 ] as const;
 const SAFE_LINK = /^(https?:|mailto:)/i;
+const SVG_FALLBACK = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+  "base64",
+);
+const SVG_ROOT = /<svg\b[^>]*>/i;
+const SVG_DEFAULT_SIZE = { width: 800, height: 600 };
 
 const { color } = designTokens;
 
@@ -412,19 +418,25 @@ class WordWriter {
     const maximum = Math.floor(this.#textWidth * PIXELS_PER_TWIP);
     const width = Math.min(block.width ?? image.width, image.width, maximum);
     const height = Math.max(1, Math.round((image.height * width) / Math.max(1, image.width)));
+    const common = {
+      transformation: { width, height },
+      altText: {
+        name: block.alt || this.#document.texts.labels.image,
+        description: block.alt,
+        title: block.alt,
+      },
+    };
     return new Paragraph({
       alignment,
       children: [
-        new ImageRun({
-          type: image.type,
-          data: image.data,
-          transformation: { width, height },
-          altText: {
-            name: block.alt || this.#document.texts.labels.image,
-            description: block.alt,
-            title: block.alt,
-          },
-        }),
+        image.type === "svg"
+          ? new ImageRun({
+              ...common,
+              type: "svg",
+              data: image.data,
+              fallback: { type: "png", data: SVG_FALLBACK },
+            })
+          : new ImageRun({ ...common, type: image.type, data: image.data }),
       ],
     });
   }
@@ -626,6 +638,29 @@ export function wordDocument(document: WordDocument): Promise<Buffer> {
   return new WordWriter(document).write();
 }
 
+function svgLength(value: string | undefined): number | null {
+  const match = value ? /^\s*(\d+(?:\.\d+)?)(?:px)?\s*$/.exec(value) : null;
+  const length = match ? Number(match[1]) : Number.NaN;
+  return Number.isFinite(length) && length > 0 ? Math.round(length) : null;
+}
+
+function svgInfo(data: Buffer): Omit<WordImage, "data"> | null {
+  const root = SVG_ROOT.exec(data.toString("utf8", 0, Math.min(data.length, 4096)))?.[0];
+  if (!root) return null;
+  const attribute = (name: string) => new RegExp(`\\s${name}\\s*=\\s*["']([^"']*)["']`, "i").exec(root)?.[1];
+  const box = (attribute("viewBox") ?? "")
+    .trim()
+    .split(/[\s,]+/)
+    .map(Number);
+  const boxWidth = box.length === 4 && (box[2] ?? 0) > 0 ? Math.round(box[2] ?? 0) : null;
+  const boxHeight = box.length === 4 && (box[3] ?? 0) > 0 ? Math.round(box[3] ?? 0) : null;
+  return {
+    type: "svg",
+    width: svgLength(attribute("width")) ?? boxWidth ?? SVG_DEFAULT_SIZE.width,
+    height: svgLength(attribute("height")) ?? boxHeight ?? SVG_DEFAULT_SIZE.height,
+  };
+}
+
 export function imageInfo(data: Buffer): Omit<WordImage, "data"> | null {
   if (data.length >= 24 && data.readUInt32BE(0) === 0x89504e47 && data.toString("ascii", 12, 16) === "IHDR") {
     return { type: "png", width: data.readUInt32BE(16), height: data.readUInt32BE(20) };
@@ -648,5 +683,5 @@ export function imageInfo(data: Buffer): Omit<WordImage, "data"> | null {
       offset += 2 + length;
     }
   }
-  return null;
+  return svgInfo(data);
 }
