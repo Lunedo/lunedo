@@ -2207,7 +2207,7 @@
       },
       "files_keepVersions": {
         "label": "Versionen einer Datei, die behalten werden",
-        "description": "Wird eine neue Version hochgeladen und gibt es mehr als diese Anzahl, wird die älteste nicht zum Behalten markierte Version entfernt. Markierte Versionen zählen nicht mit."
+        "description": "Wird eine neue Version hochgeladen und gibt es mehr als diese Anzahl, wird die älteste nicht zum Behalten markierte Version entfernt. Markierte Versionen und Versionen, die eine Seitenversion noch zeigt, etwa Zeichnungen, bleiben immer erhalten und zählen nicht mit."
       },
       "sharing_shareLinks": {
         "label": "Freigabelinks",

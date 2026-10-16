@@ -2207,7 +2207,7 @@
       },
       "files_keepVersions": {
         "label": "Versions of a file to keep",
-        "description": "When a new version is uploaded and there are more than this number, the oldest version not marked to keep is removed. Marked versions do not count."
+        "description": "When a new version is uploaded and there are more than this number, the oldest version not marked to keep is removed. Marked versions and versions that a page version still shows, such as drawings, are always kept and do not count."
       },
       "sharing_shareLinks": {
         "label": "Share links",
