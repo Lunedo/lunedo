@@ -4287,7 +4287,9 @@
       "decisionReport": "Decision report",
       "decisionReportDescription": "List of the decisions made on pages",
       "templateButton": "Template button",
-      "templateButtonDescription": "Button that creates a page from a template"
+      "templateButtonDescription": "Button that creates a page from a template",
+      "drawing": "Drawing",
+      "drawingDescription": "Sketch by hand with shapes, arrows and sticky notes"
     },
     "mention": {
       "unknown": "Unknown person"
@@ -4655,6 +4657,21 @@
       "titleHintNoFields": "This template has no input fields. Leave empty to use the title of the template.",
       "tooLong": "Use up to {count} characters.",
       "unknownFields": "{count, plural, one {{fields} is not an input field} other {{fields} are not input fields}} of this template. Remove {count, plural, one {it} other {them}} or choose another template."
+    },
+    "drawing": {
+      "label": "Drawing",
+      "edit": "Edit",
+      "editTitle": "Edit drawing",
+      "editDescription": "Others can keep editing the page. They see that you are editing this drawing.",
+      "editedBy": "{count, plural, one {{name} is editing this drawing} other {{name} are editing this drawing}}",
+      "empty": "Empty drawing. Choose Edit to start drawing.",
+      "emptyReadOnly": "This drawing is empty.",
+      "save": "Save drawing",
+      "saveFailed": "The drawing could not be saved",
+      "loadFailed": "The drawing could not be loaded",
+      "discardDescription": "Your changes since opening the drawing are lost. The drawing on the page stays as it was.",
+      "discard": "Discard changes",
+      "keepEditing": "Keep editing"
     }
   },
   "spaces": {
@@ -4977,7 +4994,9 @@
     "undoFailed": "The move could not be undone",
     "createFailed": "The page could not be created",
     "viewRestricted": "Restricted: only the access list can view it",
-    "editRestricted": "Restricted: only the access list can edit it"
+    "editRestricted": "Restricted: only the access list can edit it",
+    "newWhiteboard": "New whiteboard",
+    "newWhiteboardInside": "New whiteboard inside"
   },
   "move": {
     "title": "Move {title}",
@@ -5025,7 +5044,9 @@
     "urlInvalid": "Enter a full address that starts with http:// or https://.",
     "createFolder": "Create folder",
     "createLink": "Create link",
-    "failed": "The item could not be created"
+    "failed": "The item could not be created",
+    "createWhiteboard": "Create whiteboard",
+    "whiteboardTitle": "New whiteboard"
   },
   "folder": {
     "titleLabel": "Folder title",
@@ -5160,7 +5181,8 @@
       "blogPost": "Blog post",
       "other": "Item",
       "meetingSeries": "Meeting series",
-      "meetingTopic": "Running topic"
+      "meetingTopic": "Running topic",
+      "whiteboard": "Whiteboard"
     },
     "unknownPerson": "Unknown person",
     "stageOne": "Space trash",
@@ -5533,7 +5555,10 @@
     "restoreFailed": "The comment could not be restored",
     "resolveFailed": "The comment could not be resolved",
     "reopenFailed": "The comment could not be reopened",
-    "hint": "Mention someone with @. Ctrl+Enter sends the comment."
+    "hint": "Mention someone with @. Ctrl+Enter sends the comment.",
+    "element": "Element",
+    "elementGone": "Element removed. The comment stays here.",
+    "showOnBoard": "Show on the whiteboard"
   },
   "tasks": {
     "myTitle": "My tasks",
@@ -7674,7 +7699,8 @@
       "comment": "Comment",
       "attachment": "Attachment",
       "topic": "Running topic",
-      "decision": "Decision"
+      "decision": "Decision",
+      "whiteboard": "Whiteboards"
     },
     "quick": {
       "label": "Search",
@@ -8126,6 +8152,57 @@
         "invalidThresholds": "The levels must be whole percentages that rise: warning, then large writes, then critical.",
         "invalidS3Limit": "The limit must be a positive size."
       }
+    }
+  },
+  "whiteboards": {
+    "titleLabel": "Title of the whiteboard",
+    "canvas": "Whiteboard",
+    "loadFailed": "The whiteboard could not be loaded",
+    "phone": "On phones you can view and zoom the whiteboard. Edit it on a tablet or computer.",
+    "archivedTitle": "This whiteboard is archived",
+    "archivedDescription": "It can be viewed but not changed. Bring it back from the archive to edit it.",
+    "previewOf": "Image of the whiteboard {title}",
+    "imageFailed": "An image on the whiteboard could not be loaded or saved",
+    "refused": {
+      "title": "This change was not saved",
+      "embed": "Embedded web content is not available on whiteboards yet. Add a link instead.",
+      "other": "An element contains something whiteboards cannot store, such as a link that does not start with http, https or a Pagehall address. Undo the change or edit the link."
+    },
+    "stickyNote": {
+      "add": "Sticky note",
+      "placeholder": "Note"
+    },
+    "comments": {
+      "add": "Comment",
+      "onElement": "Comment on element",
+      "hint": "Select an element on the whiteboard and choose Comment on element. The comment stays with the element when it moves."
+    },
+    "elements": {
+      "withText": "{label}: “{text}”",
+      "rectangle": "Rectangle",
+      "diamond": "Diamond",
+      "ellipse": "Ellipse",
+      "arrow": "Arrow",
+      "line": "Line",
+      "freedraw": "Drawing",
+      "text": "Text",
+      "image": "Image",
+      "frame": "Frame",
+      "stickyNote": "Sticky note",
+      "removed": "Removed element",
+      "other": "Element"
+    },
+    "history": {
+      "latest": "Latest",
+      "explore": "Explore this version",
+      "showImage": "Show image",
+      "restore": "Restore version {number}",
+      "restored": "Version {number} is the current content again.",
+      "restoreFailed": "The version could not be restored",
+      "loadFailed": "The version could not be loaded",
+      "imageOf": "Image of version {number}",
+      "noImage": "No image of this version",
+      "noImageDescription": "An image is saved after a change. Explore the version to see it."
     }
   }
 }

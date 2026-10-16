@@ -1,17 +1,16 @@
-import { Badge, classNames, IconButton, Menu, Spinner, useToast, VisuallyHidden } from "@pagehall/ui";
+import {
+  Badge,
+  classNames,
+  IconButton,
+  Menu,
+  Spinner,
+  Tooltip,
+  useToast,
+  VisuallyHidden,
+} from "@pagehall/ui";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import {
-  ChevronDown,
-  ChevronRight,
-  ExternalLink,
-  FileText,
-  Folder,
-  Link2,
-  Lock,
-  MoreHorizontal,
-  Repeat,
-} from "lucide-react";
+import { ChevronDown, ChevronRight, ExternalLink, Lock, MoreHorizontal } from "lucide-react";
 import {
   createContext,
   type DragEvent,
@@ -27,6 +26,8 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { request } from "../../api/request.js";
 import { problemMessage } from "../../errors/problem-message.js";
+import { WhiteboardPreview } from "../../whiteboards/whiteboard-preview.js";
+import { itemIcon } from "../item-icons.js";
 import { isExternal, itemHref } from "../item-paths.js";
 import { type SpaceWithRole, spaceKeys, type TreeItem } from "../space-queries.js";
 import { useItemActions } from "./item-actions.js";
@@ -378,16 +379,7 @@ function TreeNode({
   const external = href !== null && isExternal(href);
   const title = item.kind === "link" && !item.link?.accessible ? t("tree.noAccess") : item.title;
   const target = tree.dropTarget?.id === item.id ? tree.dropTarget.zone : null;
-  const Glyph =
-    item.kind === "folder"
-      ? Folder
-      : item.kind === "meetingSeries"
-        ? Repeat
-        : item.kind === "link"
-          ? external
-            ? ExternalLink
-            : Link2
-          : FileText;
+  const Glyph = item.kind === "link" && external ? ExternalLink : itemIcon(item.kind);
 
   const onDragStart = (event: DragEvent<HTMLElement>) => {
     tree.dragged.current = { item, previousId, nextId };
@@ -470,7 +462,22 @@ function TreeNode({
         ) : (
           <span aria-hidden="true" className="size-6 shrink-0" />
         )}
-        <Glyph aria-hidden="true" className="size-icon shrink-0 text-text-muted" />
+        {item.kind === "whiteboard" ? (
+          <Tooltip
+            side="right"
+            content={
+              <WhiteboardPreview
+                itemId={item.id}
+                label={t("whiteboards.previewOf", { title })}
+                className="aspect-video w-field"
+              />
+            }
+          >
+            <Glyph aria-hidden="true" className="size-icon shrink-0 text-text-muted" />
+          </Tooltip>
+        ) : (
+          <Glyph aria-hidden="true" className="size-icon shrink-0 text-text-muted" />
+        )}
         {href ? (
           <a
             href={href}

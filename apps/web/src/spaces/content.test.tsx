@@ -572,13 +572,13 @@ describe("trash", () => {
           body: {
             items: [
               page(VPN, "VPN access"),
-              { ...page("01929b1e-0000-7000-8000-0000000000f2", "Team board"), kind: "whiteboard" },
+              { ...page("01929b1e-0000-7000-8000-0000000000f2", "Team board"), kind: "database" },
             ],
             nextCursor: null,
           },
         }),
         [`GET /api/v1/spaces/${SPACE_ID}/trash`]: () => ({
-          body: [{ ...entry, itemKind: "whiteboard", title: "Old board", descendants: 0 }],
+          body: [{ ...entry, itemKind: "database", title: "Old board", descendants: 0 }],
         }),
       }),
     );

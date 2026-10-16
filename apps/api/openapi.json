@@ -158676,13 +158676,13 @@
                           },
                           "anchor": {
                             "type": "string",
-                            "enum": [
+                            "description": "`page` for a comment on the whole page or whiteboard, `inline` for a comment on text in it, `element` for a comment on an element of a whiteboard, `detached` for a comment whose text or element no longer exists. Detached comments are listed with the page comments. New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
                               "page",
                               "inline",
                               "element",
                               "detached"
-                            ],
-                            "description": "`page` for a comment on the whole page or whiteboard, `inline` for a comment on text in it, `element` for a comment on an element of a whiteboard, `detached` for a comment whose text or element no longer exists. Detached comments are listed with the page comments."
+                            ]
                           },
                           "elementId": {
                             "description": "The whiteboard element the comment refers to, also after it was removed, or null.",

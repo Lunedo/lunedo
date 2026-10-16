@@ -1,18 +1,7 @@
 import { EmptyState, PageHeader, Section, Skeleton } from "@pagehall/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import {
-  AtSign,
-  Clock,
-  FileText,
-  Folder,
-  Layers,
-  ListChecks,
-  Newspaper,
-  Share2,
-  Star,
-  Sun,
-} from "lucide-react";
+import { AtSign, Clock, Layers, ListChecks, Newspaper, Share2, Star, Sun } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { LoadError } from "../errors/failure.js";
 import { OneOnOnes, UpcomingMeetings } from "../meetings/home-sections.js";
@@ -21,6 +10,7 @@ import { useFormat } from "../preferences/preferences-provider.js";
 import { useDocumentTitle } from "../screens/settings/settings-page.js";
 import { sharedWithMeQuery } from "../sharing/sharing-api.js";
 import { useSession } from "../shell/shell-context.js";
+import { itemIcon } from "../spaces/item-icons.js";
 import { itemHref } from "../spaces/item-paths.js";
 import { postHref } from "./blog/blog-list.js";
 import { type ContentReference, homeQuery } from "./queries.js";
@@ -33,7 +23,7 @@ function ReferenceLink({
   meta?: string;
 }) {
   const href = itemHref({ id: item.id, kind: item.kind, title: item.title, link: null }, item.spaceKey);
-  const Icon = item.kind === "blogPost" ? Newspaper : item.kind === "folder" ? Folder : FileText;
+  const Icon = itemIcon(item.kind);
   if (!href) return null;
   return (
     <Link

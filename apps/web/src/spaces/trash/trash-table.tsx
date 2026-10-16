@@ -1,9 +1,10 @@
 import { Badge, Button, Table, type TableColumn } from "@pagehall/ui";
-import { FileText, Folder, Layers, Link2 } from "lucide-react";
+import { Layers } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import type { TrashEntry } from "../content-queries.js";
+import { itemIcon } from "../item-icons.js";
 import { itemKindLabel } from "../item-kinds.js";
 
 export function daysUntil(date: string): number {
@@ -11,14 +12,7 @@ export function daysUntil(date: string): number {
 }
 
 function KindIcon({ entry }: { entry: TrashEntry }) {
-  const Icon =
-    entry.kind === "space"
-      ? Layers
-      : entry.itemKind === "folder"
-        ? Folder
-        : entry.itemKind === "link"
-          ? Link2
-          : FileText;
+  const Icon = entry.kind === "space" ? Layers : itemIcon(entry.itemKind);
   return <Icon aria-hidden="true" className="size-icon shrink-0 text-text-muted" />;
 }
 

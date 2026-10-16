@@ -24,6 +24,23 @@ import { CommentComposer } from "./comment-composer.js";
 import { type CommentEntry, type CommentThread, collaborationKeys, commentsQuery } from "./queries.js";
 import { ReactionBar, useReactionToggle } from "./reaction-bar.js";
 
+export interface ElementAnchor {
+  elementId: string;
+  label: string;
+}
+
+export type CommentAnchor = TextAnchor | ElementAnchor;
+
+export function isElementAnchor(anchor: CommentAnchor): anchor is ElementAnchor {
+  return "elementId" in anchor;
+}
+
+export type DescribeElement = (elementId: string, quote: string) => string;
+
+function isAnchored(thread: CommentThread): boolean {
+  return thread.anchor === "inline" || thread.anchor === "element";
+}
+
 export interface CommentPermissions {
   viewerId: string | null;
   canComment: boolean;
@@ -214,6 +231,7 @@ function ThreadView({
   permissions,
   active,
   onActivate,
+  describeElement,
 }: {
   thread: CommentThread;
   itemId: string;
@@ -221,6 +239,7 @@ function ThreadView({
   permissions: CommentPermissions;
   active: boolean;
   onActivate: (threadId: string) => void;
+  describeElement: DescribeElement | undefined;
 }) {
   const { t } = useTranslation();
   const actions = useCommentActions(itemId);
@@ -230,13 +249,36 @@ function ThreadView({
     if (active) element.current?.scrollIntoView({ block: "nearest" });
   }, [active]);
   const inline = thread.anchor === "inline";
+  const elementId = thread.elementId ?? null;
+  const onElement = typeof elementId === "string";
+  const quote = onElement
+    ? (describeElement?.(elementId, thread.quote ?? "") ?? (thread.quote || t("comments.element")))
+    : thread.quote;
   return (
     <article
       ref={element}
-      aria-label={thread.quote ? t("comments.threadOn", { quote: thread.quote }) : t("comments.pageThread")}
+      aria-label={quote ? t("comments.threadOn", { quote }) : t("comments.pageThread")}
       className={`flex flex-col gap-3 rounded-md border p-3 ${active ? "border-accent" : "border-border"}`}
     >
-      {thread.quote ? (
+      {onElement ? (
+        thread.anchor === "element" ? (
+          <button
+            type="button"
+            onClick={() => onActivate(thread.id)}
+            className="border-l-4 border-warning pl-2 text-start text-sm text-text-muted hover:text-text focus-visible:focus-ring"
+            title={t("comments.showOnBoard")}
+          >
+            {quote}
+          </button>
+        ) : (
+          <div className="flex flex-col gap-1">
+            <blockquote className="border-l-4 border-border pl-2 text-sm text-text-muted line-through">
+              {quote}
+            </blockquote>
+            <p className="text-xs text-text-muted">{t("comments.elementGone")}</p>
+          </div>
+        )
+      ) : thread.quote ? (
         inline ? (
           <button
             type="button"
@@ -300,7 +342,7 @@ function ThreadView({
               {t("comments.reply")}
             </Button>
           )}
-          {thread.quote !== null && thread.anchor !== "detached" ? (
+          {isAnchored(thread) ? (
             thread.resolvedAt ? (
               <Button
                 size="sm"
@@ -329,7 +371,7 @@ function ThreadView({
 
 export function openThreadIds(threads: readonly CommentThread[] | undefined): string[] {
   return (threads ?? [])
-    .filter((thread) => thread.anchor === "inline" && thread.resolvedAt === null)
+    .filter((thread) => isAnchored(thread) && thread.resolvedAt === null)
     .map((thread) => thread.id);
 }
 
@@ -341,14 +383,18 @@ export function CommentsPanel({
   activeThread,
   onActivate,
   onClose,
+  describeElement,
+  hint,
 }: {
   itemId: string;
   permissions: CommentPermissions;
-  pending: TextAnchor | null;
+  pending: CommentAnchor | null;
   onPendingDone: () => void;
   activeThread: string | null;
   onActivate: (threadId: string) => void;
   onClose: () => void;
+  describeElement?: DescribeElement;
+  hint?: string;
 }) {
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -357,16 +403,20 @@ export function CommentsPanel({
   const [showResolved, setShowResolved] = useState(false);
   const threads = comments.data?.threads ?? [];
   const people = comments.data?.people ?? {};
-  const open = threads.filter((thread) => thread.anchor === "inline" && thread.resolvedAt === null);
-  const page = threads.filter((thread) => thread.anchor !== "inline");
-  const resolved = threads.filter((thread) => thread.anchor === "inline" && thread.resolvedAt !== null);
+  const open = threads.filter((thread) => isAnchored(thread) && thread.resolvedAt === null);
+  const page = threads.filter((thread) => !isAnchored(thread));
+  const resolved = threads.filter((thread) => isAnchored(thread) && thread.resolvedAt !== null);
 
-  const create = async (body: DocumentJson, anchor?: TextAnchor) => {
+  const create = async (body: DocumentJson, anchor?: CommentAnchor) => {
     try {
       const created = await request(() =>
         api.POST("/api/v1/pages/{pageId}/comments", {
           params: { path: { pageId: itemId } },
-          body: (anchor ? { body, anchor } : { body }) as never,
+          body: (anchor
+            ? isElementAnchor(anchor)
+              ? { body, elementId: anchor.elementId }
+              : { body, anchor }
+            : { body }) as never,
         }),
       );
       await queryClient.invalidateQueries({ queryKey: collaborationKeys.comments(itemId) });
@@ -390,6 +440,7 @@ export function CommentsPanel({
         permissions={permissions}
         active={thread.id === activeThread}
         onActivate={onActivate}
+        describeElement={describeElement}
       />
     </li>
   );
@@ -415,7 +466,7 @@ export function CommentsPanel({
             aria-label={t("comments.newInline")}
           >
             <blockquote className="border-l-4 border-warning pl-2 text-sm text-text-muted">
-              “{pending.exact}”
+              {isElementAnchor(pending) ? pending.label : `“${pending.exact}”`}
             </blockquote>
             <CommentComposer
               pageId={itemId}
@@ -446,6 +497,7 @@ export function CommentsPanel({
             {permissions.canComment ? t("comments.emptyCanComment") : t("comments.empty")}
           </p>
         ) : null}
+        {hint && permissions.canComment ? <p className="text-xs text-text-muted">{hint}</p> : null}
         {open.length > 0 ? (
           <section aria-label={t("comments.openSection")} className="flex flex-col gap-2">
             <h3 className="text-xs font-semibold tracking-label text-text-muted uppercase">

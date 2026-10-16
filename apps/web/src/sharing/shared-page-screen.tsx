@@ -19,6 +19,7 @@ import { DraftStatusLine, PublishButton } from "../spaces/page-publishing.js";
 import { PageContent, useLostEditPermission } from "../spaces/page-screen.js";
 import { Redirect } from "../spaces/redirect.js";
 import { type ItemDetails, itemQuery, sharedPath } from "../spaces/space-queries.js";
+import { WhiteboardView } from "../whiteboards/whiteboard-view.js";
 import { NoPageAccess } from "./access-requests.js";
 import { accessRoleLabel } from "./explanation.js";
 import { myAccessQuery, sharedWithMeQuery } from "./sharing-api.js";
@@ -171,5 +172,34 @@ export function SharedPageScreen() {
     const href = itemHref(page, page.spaceKey);
     if (href) return <Redirect to={href} search={search} />;
   }
+  if (page.kind === "whiteboard") return <SharedWhiteboard key={page.id} board={page} />;
   return <SharedPage key={page.id} page={page} />;
+}
+
+function SharedWhiteboard({ board }: { board: ItemDetails }) {
+  const { t } = useTranslation();
+  const mine = useQuery({ ...myAccessQuery(board.id), throwOnError: false });
+  const role = mine.data?.role ?? null;
+  const breadcrumbs = board.ancestors.map((ancestor) => ({
+    label: ancestor.title,
+    href: sharedPath(ancestor.id, itemSlug(ancestor.title)),
+  }));
+  return (
+    <main id="main" tabIndex={-1} className="flex min-w-0 flex-1 outline-none">
+      <WhiteboardView
+        board={{ id: board.id, title: board.title, spaceId: board.spaceId, archived: board.archived }}
+        title={board.title}
+        {...(breadcrumbs.length > 0 ? { breadcrumbs } : {})}
+        description={
+          <span className="flex flex-wrap items-center gap-2">
+            <SharedBy page={board} />
+            {role ? <Badge>{accessRoleLabel(t, role)}</Badge> : null}
+          </span>
+        }
+        role={role}
+        mayEdit={role !== null && EDITING.has(role)}
+        spaceArchived={false}
+      />
+    </main>
+  );
 }

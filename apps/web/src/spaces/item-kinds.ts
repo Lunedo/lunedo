@@ -7,6 +7,7 @@ export const knownItemKinds = [
   "blogPost",
   "meetingSeries",
   "meetingTopic",
+  "whiteboard",
 ] as const;
 export type KnownItemKind = (typeof knownItemKinds)[number];
 

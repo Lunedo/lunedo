@@ -74,11 +74,10 @@ export const threadSchema = z
       .describe(
         "For inline comments, the text the comment refers to; for comments on a whiteboard element, the text of the element (possibly empty). Readers see inline comments only once their text is published.",
       ),
-    anchor: z
-      .enum(["page", "inline", "element", "detached"])
-      .describe(
-        "`page` for a comment on the whole page or whiteboard, `inline` for a comment on text in it, `element` for a comment on an element of a whiteboard, `detached` for a comment whose text or element no longer exists. Detached comments are listed with the page comments.",
-      ),
+    anchor: extensibleEnum(
+      ["page", "inline", "element", "detached"],
+      "`page` for a comment on the whole page or whiteboard, `inline` for a comment on text in it, `element` for a comment on an element of a whiteboard, `detached` for a comment whose text or element no longer exists. Detached comments are listed with the page comments.",
+    ),
     elementId: z
       .string()
       .nullable()

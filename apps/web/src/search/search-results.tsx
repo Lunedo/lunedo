@@ -9,6 +9,7 @@ import {
   MessageSquare,
   Newspaper,
   Paperclip,
+  Presentation,
   Repeat,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -16,7 +17,8 @@ import { topicPath } from "../meetings/queries.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { itemSlug } from "../spaces/item-paths.js";
 import { StatusBadge } from "../spaces/ownership/page-status.js";
-import { blogPostPath, pagePath } from "../spaces/space-queries.js";
+import { blogPostPath, pagePath, whiteboardPath } from "../spaces/space-queries.js";
+import { WhiteboardPreview } from "../whiteboards/whiteboard-preview.js";
 import type { SearchHit } from "./search-api.js";
 
 export interface HitTarget {
@@ -28,6 +30,7 @@ export interface HitTarget {
 function itemPath(hit: SearchHit, itemId: string, title: string): string {
   const spaceKey = hit.space?.key ?? "";
   const slug = itemSlug(title);
+  if (hit.itemType === "whiteboard") return whiteboardPath(spaceKey, itemId, slug);
   return hit.itemType === "blogPost"
     ? blogPostPath(spaceKey, itemId, slug)
     : pagePath(spaceKey, itemId, slug);
@@ -59,6 +62,7 @@ export function hitIcon(hit: Pick<SearchHit, "type">): LucideIcon {
   if (hit.type === "attachment") return Paperclip;
   if (hit.type === "topic") return Repeat;
   if (hit.type === "decision") return Flag;
+  if (hit.type === "whiteboard") return Presentation;
   return FileText;
 }
 
@@ -68,6 +72,7 @@ export function typeLabel(t: TFunction, type: string): string {
   if (type === "attachment") return t("search.types.attachment");
   if (type === "topic") return t("search.types.topic");
   if (type === "decision") return t("search.types.decision");
+  if (type === "whiteboard") return t("search.types.whiteboard");
   return t("search.types.page");
 }
 
@@ -139,6 +144,13 @@ export function SearchResult({ hit }: { hit: SearchHit }) {
           )}
         </h3>
         {target ? null : <p className="text-sm text-text-muted">{t("search.topicOutsideSpace")}</p>}
+        {hit.type === "whiteboard" ? (
+          <WhiteboardPreview
+            itemId={hit.itemId}
+            label={t("whiteboards.previewOf", { title: hit.title })}
+            className="aspect-video w-field max-w-full"
+          />
+        ) : null}
         {hit.excerpt.length > 0 ? (
           <p className="line-clamp-3 text-text-muted">
             <Highlighted parts={hit.excerpt} />
