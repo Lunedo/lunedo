@@ -3,6 +3,7 @@ import mammoth from "mammoth";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accountPrincipal, type Principal } from "../accounts/principal.js";
 import { Secret } from "../config/secret.js";
+import { createLogger } from "../logging/logger.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { testJobContext } from "../testing/jobs.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
@@ -10,6 +11,8 @@ import { spaceFixtures } from "../testing/spaces.js";
 import { ExportError, type ExportRequest } from "./exports.js";
 import { bytesOf, doc, type ExportContext, exportFixtures, paragraph, text } from "./fixtures.testing.js";
 import { defaultExportOptions, MAX_BROWSER_PRINT_PAGES } from "./options.js";
+import { PagedExport } from "./paged.js";
+import type { PreparedPage } from "./renderer.js";
 
 const baseUrl = testDatabaseBaseUrl();
 const INSTANCE = "https://wiki.example.org";
@@ -321,6 +324,36 @@ describe.skipIf(!baseUrl)("print, PDF and Word exports", () => {
       expect(output).not.toContain('alt="Leaked chart" src=');
       expect(output).toContain("Leaked chart");
       expect(output).not.toContain("Salaries");
+    });
+  });
+
+  describe("embedded images", () => {
+    it("reads each image once and stops embedding at the size budget of the document", async () => {
+      const { admin, pages } = context;
+      const second = await test.services.attachments.upload(admin, pages.welcome.id, {
+        name: "switch.png",
+        body: Readable.from([PNG]),
+        contentLength: PNG.length,
+      });
+      const paged = new PagedExport({
+        database: test.database,
+        authorization: test.services.authorization,
+        attachments: test.services.attachments,
+        files: test.services.files,
+        comments: test.services.comments,
+        logger: createLogger({ service: "test", level: "silent" }),
+        renderer: undefined as never,
+        viewer: context.reader,
+        language: "en",
+        maxEmbeddedBytes: PNG.length,
+      });
+      const imageNode = (id: string) => ({ type: "image", attrs: { attachmentId: id, alt: "" } });
+      const page = (document: unknown) => ({ document }) as unknown as PreparedPage;
+      const assets = await paged.assets([
+        page(doc(imageNode(image), imageNode(image))),
+        page(doc(imageNode(second.id), imageNode(image))),
+      ]);
+      expect(assets.map((asset) => asset.path)).toEqual([`/api/v1/attachments/${image}/content`]);
     });
   });
 

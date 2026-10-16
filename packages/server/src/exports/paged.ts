@@ -15,6 +15,9 @@ import type { RenderAsset } from "./rendering.js";
 import { imageInfo, type WordComment, type WordImage, type WordPage, wordDocument } from "./word.js";
 
 export const MAX_EMBEDDED_IMAGE_BYTES = 25 * 1024 * 1024;
+export const MAX_EMBEDDED_TOTAL_BYTES = 100 * 1024 * 1024;
+
+type ReadImage = { data: Buffer; contentType: string } | null;
 
 export interface PagedEntry {
   id: string;
@@ -49,6 +52,9 @@ export class PagedExport {
   readonly #renderer: PageExportRenderer;
   readonly #viewer: Principal;
   readonly #language: string;
+  readonly #images = new Map<string, Promise<ReadImage>>();
+  readonly #maxEmbedded: number;
+  #embedded = 0;
 
   constructor(options: {
     database: Database;
@@ -60,6 +66,7 @@ export class PagedExport {
     renderer: PageExportRenderer;
     viewer: Principal;
     language: string;
+    maxEmbeddedBytes?: number;
   }) {
     this.#database = options.database;
     this.#authorization = options.authorization;
@@ -70,6 +77,7 @@ export class PagedExport {
     this.#renderer = options.renderer;
     this.#viewer = options.viewer;
     this.#language = options.language;
+    this.#maxEmbedded = options.maxEmbeddedBytes ?? MAX_EMBEDDED_TOTAL_BYTES;
   }
 
   #printLocator(ids: ReadonlySet<string>): Locator {
@@ -229,7 +237,15 @@ export class PagedExport {
     });
   }
 
-  async #readable(attachmentId: string): Promise<{ data: Buffer; contentType: string } | null> {
+  #readable(attachmentId: string): Promise<ReadImage> {
+    const cached = this.#images.get(attachmentId);
+    if (cached) return cached;
+    const read = this.#read(attachmentId);
+    this.#images.set(attachmentId, read);
+    return read;
+  }
+
+  async #read(attachmentId: string): Promise<ReadImage> {
     const allowed = await this.#authorization.authorize(this.#viewer, "attachment.view", {
       type: "attachment",
       id: attachmentId,
@@ -237,6 +253,8 @@ export class PagedExport {
     if (!allowed) return null;
     const content = await this.#attachments.content(attachmentId, "published");
     if (!content?.contentType.startsWith("image/") || content.size > MAX_EMBEDDED_IMAGE_BYTES) return null;
+    if (this.#embedded + content.size > this.#maxEmbedded) return null;
+    this.#embedded += content.size;
     try {
       const stream = await this.#files.read(content.fileId);
       const chunks: Buffer[] = [];
