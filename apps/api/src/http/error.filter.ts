@@ -27,6 +27,8 @@ import {
   ShareLinkRateLimitedError,
   SmtpConfigurationError,
   SpaceError,
+  StorageFullError,
+  StorageSettingsError,
   TokenRejectedError,
 } from "@pagehall/server";
 import type { FastifyReply } from "fastify";
@@ -144,6 +146,16 @@ function map(error: unknown): Mapped | null {
       code: problem.code,
       detail: (problem.getResponse() as { detail?: string }).detail ?? "Not allowed",
       extensions: problem.extensions,
+    };
+  }
+  if (error instanceof StorageFullError) {
+    return { code: "storageFull", detail: error.message, extensions: { refusal: error.refusal } };
+  }
+  if (error instanceof StorageSettingsError) {
+    return {
+      code: "invalidStorageSettings",
+      detail: error.message,
+      extensions: { fields: error.fields.map((field) => `body.${field}`), problem: error.code },
     };
   }
   if (error instanceof ExportError) {

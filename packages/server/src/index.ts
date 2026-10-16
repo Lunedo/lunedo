@@ -791,6 +791,15 @@ export {
   type VersionReference,
   VersionService,
 } from "./spaces/versions.js";
+export { StorageFullError, StorageSettingsError, type StorageSettingsErrorCode } from "./storage/errors.js";
+export { type StorageReminder, storageReminders } from "./storage/settings.js";
+export {
+  type StorageConfigurationInput,
+  type StorageLevel,
+  StorageService,
+  type StorageStatus,
+  type StorageThresholds,
+} from "./storage/storage.js";
 export {
   MAX_CHOICE_OPTIONS,
   MAX_TEMPLATE_FIELDS,

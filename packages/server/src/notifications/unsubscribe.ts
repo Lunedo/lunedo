@@ -1,5 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
-import { notificationEvents } from "@pagehall/shared";
+import { type NotificationType, notificationEvents, operationsNotificationTypes } from "@pagehall/shared";
 import { eq } from "drizzle-orm";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { accounts } from "../accounts/schema.js";
@@ -24,6 +24,14 @@ export interface UnsubscribeLinks {
 
 export function isSecurityEvent(eventId: string): boolean {
   return notificationEvents.some((event) => event.id === eventId && event.security);
+}
+
+export function isOperationsEvent(eventId: string): boolean {
+  return notificationEvents.some(
+    (event) =>
+      event.id === eventId &&
+      event.types.every((type) => operationsNotificationTypes.has(type as NotificationType)),
+  );
 }
 
 export interface UnsubscribeState {

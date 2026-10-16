@@ -9,6 +9,7 @@ import type { SettingsService } from "../settings/service.js";
 import { actorIdOf, auditScopeOf, SpaceError } from "../spaces/common.js";
 import type { PeopleService } from "../spaces/people.js";
 import { signalSpaceChange } from "../spaces/signals.js";
+import type { StorageService } from "../storage/storage.js";
 import { type FileService, FileTooLargeError } from "./files.js";
 import { cleanFileName, fileNameKey } from "./names.js";
 import { publishAttachments } from "./publication.js";
@@ -126,6 +127,7 @@ export class AttachmentService {
   readonly #settings: SettingsService;
   readonly #people: PeopleService;
   readonly #audit: AuditLog;
+  readonly #storage: StorageService;
 
   constructor(options: {
     database: Database;
@@ -133,12 +135,14 @@ export class AttachmentService {
     settings: SettingsService;
     people: PeopleService;
     audit: AuditLog;
+    storage: StorageService;
   }) {
     this.#database = options.database;
     this.#files = options.files;
     this.#settings = options.settings;
     this.#people = options.people;
     this.#audit = options.audit;
+    this.#storage = options.storage;
   }
 
   get files(): FileService {
@@ -255,6 +259,12 @@ export class AttachmentService {
     if (input.contentLength !== undefined && input.contentLength > limit) {
       input.body.resume();
       throw new FileTooLargeError(limit);
+    }
+    try {
+      await this.#storage.requireUpload();
+    } catch (error) {
+      input.body.resume();
+      throw error;
     }
     const stored = await this.#files.write(input.body, { name, maxBytes: limit });
     try {

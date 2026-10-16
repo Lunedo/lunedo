@@ -1073,7 +1073,8 @@
     "accessOverview": "Access overview",
     "imports": "Import",
     "exports": "Exports",
-    "announcements": "Announcements"
+    "announcements": "Announcements",
+    "storage": "Storage"
   },
   "commands": {
     "label": "Command palette",
@@ -1496,7 +1497,9 @@
       "roomNotFound": "The homeserver does not know this room. Check the room address, and that the bot was invited to the room.",
       "unauthorized": "The homeserver did not accept the access token. Copy the token of the bot again.",
       "unreachable": "Pagehall could not reach the homeserver. Check its address, and that this server can reach it."
-    }
+    },
+    "storageFull": "Storage is almost full. Your instance administrator has been informed. Try again once space has been freed up.",
+    "invalidStorageSettings": "The storage settings are not valid. Check the marked fields and try again."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -1970,6 +1973,12 @@
       "pageMode": {
         "publish": "Publish mode",
         "live": "Live mode"
+      },
+      "storageReminder": {
+        "off": "Never",
+        "daily": "Daily",
+        "weekly": "Weekly",
+        "monthly": "Monthly"
       }
     },
     "keys": {
@@ -2256,6 +2265,10 @@
       "notifications_digestEnabled": {
         "label": "Send a daily summary by e-mail",
         "description": "Collects the notifications whose e-mail is set to the daily summary. Turned off, they appear only in the app."
+      },
+      "storage_reminder": {
+        "label": "Reminder while a level is active",
+        "description": "How often Pagehall repeats the current state to the people who were told, while a warning level stays active."
       }
     },
     "disabled": {
@@ -2447,7 +2460,9 @@
       "meetings": "Meeting reminders and notes",
       "ownershipAndStatus": "Ownership and page status changes",
       "spaceAdministration": "Space administration",
-      "importsAndExports": "Imports and exports"
+      "importsAndExports": "Imports and exports",
+      "storageLevelReached": "File store fills up",
+      "storageLevelCleared": "File store usage falls"
     },
     "types": {
       "identityProvider": {
@@ -2533,6 +2548,10 @@
       },
       "chatChannel": {
         "failing": "The chat channel {channelName} stopped accepting messages, so nothing is posted there. Open its settings to see why and fix it."
+      },
+      "storage": {
+        "levelReached": "{level, select, 1 {The file store is {percent, number, ::.0} % full. Nothing is blocked yet.} 2 {The file store is {percent, number, ::.0} % full. New exports and imports are refused.} other {The file store is {percent, number, ::.0} % full. Uploads are refused too.}}",
+        "levelCleared": "{level, select, 0 {The file store usage is back to normal ({percent, number, ::.0} %).} 1 {The file store usage fell to {percent, number, ::.0} %. Exports, imports and uploads work again.} other {The file store usage fell to {percent, number, ::.0} %. Uploads work again; new exports and imports are still refused.}}"
       }
     },
     "channelFor": "{event}: {channel}",
@@ -3546,6 +3565,9 @@
         "credentialAdded": "E-mail credential added",
         "credentialRemoved": "E-mail credential removed"
       },
+      "storage": {
+        "contactsChanged": "Operations contacts changed"
+      },
       "settings": {
         "changed": "Setting changed"
       },
@@ -4118,7 +4140,8 @@
     "loadDrafts": "The drafts could not be loaded",
     "changeAddress": "The address was not changed",
     "unsubscribeLink": "Checking the unsubscribe link failed",
-    "openNotification": "Opening the notification failed"
+    "openNotification": "Opening the notification failed",
+    "loadStorage": "The storage status could not be loaded"
   },
   "lifecycle": {
     "placeholder": {
@@ -7061,6 +7084,11 @@
         "cause": "Some parts of the file have not arrived.",
         "action": "Continue the upload in the first step."
       },
+      "storageFull": {
+        "what": "Storage full",
+        "cause": "The storage ran out of room while the import was writing files, so Pagehall stopped it.",
+        "action": "Ask the person who runs Pagehall to free up or add storage. Then discard this import and start it again."
+      },
       "internalError": {
         "what": "The import stopped after several attempts",
         "cause": "An unexpected problem occurred again and again.",
@@ -7999,5 +8027,98 @@
     "notTested": "Not tested yet",
     "lastTestFailed": "Last test failed",
     "testFailedAt": "last test failed {time}"
+  },
+  "storage": {
+    "title": "Storage",
+    "description": "See how full the file store is and decide who is told before it runs out.",
+    "loadFailed": "The storage status could not be loaded",
+    "banner": {
+      "1": {
+        "title": "The file store is filling up",
+        "body": "{percent} of the file store is used. Free up space or add capacity before it is full."
+      },
+      "2": {
+        "title": "New exports and imports are paused",
+        "body": "{percent} of the file store is used. Free up space; uploads and editing still work."
+      },
+      "3": {
+        "title": "Uploads are paused: the file store is almost full",
+        "body": "{percent} of the file store is used. Free up space now; editing pages still works."
+      },
+      "open": "Open the storage settings"
+    },
+    "usage": {
+      "title": "Usage",
+      "store": "File store",
+      "stores": {
+        "local": "Local volume",
+        "s3": "S3-compatible storage"
+      },
+      "summary": "{used} of {total} used ({percent})",
+      "progress": "Used share of the file store",
+      "status": "Status",
+      "levels": {
+        "0": "Normal",
+        "1": "Warning",
+        "2": "Large writes paused",
+        "3": "Critical"
+      },
+      "checked": "Checked {time}",
+      "notChecked": "Not checked yet",
+      "inactiveTitle": "Storage warning inactive",
+      "inactiveNoLimit": "S3 does not report free space. Set a limit so Pagehall can warn you."
+    },
+    "levels": {
+      "title": "Warning levels",
+      "description": "Percentages of the volume, or of the S3 limit. Pagehall checks every minute and acts when two checks in a row reach a level.",
+      "warning": "Warning",
+      "warningHint": "Administrators and operations contacts are told. Nothing is blocked.",
+      "largeWrites": "Large writes paused",
+      "largeWritesHint": "New space and subtree exports and imports are refused.",
+      "critical": "Critical",
+      "criticalHint": "Uploads are refused too. Editing pages keeps working.",
+      "unit": "%",
+      "invalid": "Enter a whole percentage from 1 to 100.",
+      "order": "Each level must be higher than the one before: warning, then large writes, then critical.",
+      "saved": "Warning levels saved"
+    },
+    "s3": {
+      "title": "S3 limit",
+      "label": "Limit for stored files",
+      "hint": "S3 does not report free space. Set a limit so Pagehall can warn you. Leave it empty for no warning.",
+      "unit": "GB",
+      "invalid": "Enter a size in gigabytes, for example 500, or leave the field empty."
+    },
+    "reminder": {
+      "title": "Reminders"
+    },
+    "contacts": {
+      "title": "Operations contacts",
+      "description": "Besides all instance administrators, these contacts get an e-mail and an optional Teams post when a level becomes active, when it rises, as a reminder and when usage falls.",
+      "addresses": "E-mail addresses",
+      "addressesHint": "One address per line, for example an IT ticket address. Up to 20.",
+      "addressesInvalid": "Check the addresses: each line needs one valid e-mail address, up to 20 in total.",
+      "webhook": "Teams webhook",
+      "webhookHint": "The address of a Teams Workflows webhook. It is stored encrypted and never shown again.",
+      "webhookSet": "Webhook set on {host}",
+      "webhookReplace": "Replace webhook",
+      "webhookRemove": "Remove webhook",
+      "webhookRemoved": "The webhook is removed when you save.",
+      "webhookKeep": "Keep webhook",
+      "webhookCancelReplace": "Keep the current webhook",
+      "webhookPlaceholder": "https://…",
+      "saved": "Operations contacts saved",
+      "test": "Send test message",
+      "testNothing": "Save an e-mail address or a Teams webhook first, then send a test message.",
+      "testMails": "Test message sent to {count, plural, one {# address} other {# addresses}}.",
+      "testTeamsOk": "Teams accepted the test message.",
+      "testTeamsFailed": "Teams did not accept the test message ({reason}). Check the webhook address and try again.",
+      "errors": {
+        "invalidContacts": "Check the addresses: each needs to be a valid e-mail address, up to 20 in total.",
+        "invalidTeamsWebhook": "This webhook address cannot be used. Copy the full address from the Teams workflow and try again.",
+        "invalidThresholds": "The levels must be whole percentages that rise: warning, then large writes, then critical.",
+        "invalidS3Limit": "The limit must be a positive size."
+      }
+    }
   }
 }

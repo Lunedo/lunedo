@@ -477,6 +477,20 @@
       "when": 1792093369876,
       "tag": "0067_export_estimate",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1792097729380,
+      "tag": "0068_storage_state",
+      "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1792132732002,
+      "tag": "0069_chat_delivery_without_channel",
+      "breakpoints": true
     }
   ]
 }

@@ -10,6 +10,7 @@ import type { JobContext, JobQueue } from "../jobs/job-queue.js";
 import type { Logger } from "../logging/logger.js";
 import type { NotificationService } from "../notifications/service.js";
 import { isValidSpaceKey, normalizeSpaceKey, spaceKeyCandidates, suggestSpaceKey } from "../spaces/keys.js";
+import { isStorageFull } from "../storage/errors.js";
 import type { AtlassianDirectory } from "./atlassian.js";
 import { deleteCredentials, directoryFor } from "./credentials.js";
 import {
@@ -166,6 +167,11 @@ export class ImportWorker {
       }
       if (error instanceof ImportHeldError) return;
       if (job.signal.aborted) throw error;
+      if (isStorageFull(error)) {
+        this.#options.logger.warn({ err: error, importId }, "An import stopped because the storage is full");
+        await this.#fail(importId, "storageFull");
+        return;
+      }
       if (job.retryCount >= importWorkJob.retryLimit) {
         this.#options.logger.error({ err: error, importId }, "An import failed after all retries");
         await this.#fail(importId, "internalError");

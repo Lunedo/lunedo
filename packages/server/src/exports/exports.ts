@@ -25,6 +25,8 @@ import type { PageDocumentService } from "../spaces/documents.js";
 import type { PeopleService } from "../spaces/people.js";
 import type { ReportService } from "../spaces/reports.js";
 import { visibleItem } from "../spaces/visibility.js";
+import { StorageFullError } from "../storage/errors.js";
+import type { StorageService } from "../storage/storage.js";
 import { type ArchiveEntry, zipArchive } from "./archive.js";
 import { exportBuildJob } from "./jobs.js";
 import { safeName } from "./names.js";
@@ -48,8 +50,6 @@ import { exportTexts } from "./texts.js";
 
 export const EXPORT_RETENTION_DAYS = 7;
 export const DOWNLOADED_RETENTION_HOURS = 24;
-export const MIN_FREE_SHARE_AT_START = 0.1;
-export const MIN_FREE_SHARE_WHILE_WRITING = 0.05;
 const FREE_SPACE_CHECK_BYTES = 16 * 1024 * 1024;
 const PAGE_OVERHEAD_BYTES = 8 * 1024;
 const EXPORT_RUNNING = "Another export of yours is still running";
@@ -214,6 +214,7 @@ export class ExportService {
   readonly #settings: SettingsService;
   readonly #mail: MailService;
   readonly #files: FileService;
+  readonly #storage: StorageService;
   readonly #documents: PageDocumentService;
   readonly #attachments: AttachmentService;
   readonly #reports: ReportService;
@@ -232,6 +233,7 @@ export class ExportService {
     settings: SettingsService;
     mail: MailService;
     files: FileService;
+    storage: StorageService;
     documents: PageDocumentService;
     attachments: AttachmentService;
     reports: ReportService;
@@ -249,6 +251,7 @@ export class ExportService {
     this.#settings = options.settings;
     this.#mail = options.mail;
     this.#files = options.files;
+    this.#storage = options.storage;
     this.#documents = options.documents;
     this.#attachments = options.attachments;
     this.#reports = options.reports;
@@ -403,8 +406,8 @@ export class ExportService {
     if (running.rows.length > 0) {
       throw new ExportError("exportRunning", EXPORT_RUNNING);
     }
-    const capacity = await this.#files.store.capacity();
-    const estimate = capacity ? await this.#estimate(subject.spaceId, subject.rootItemId) : 0;
+    const measured = (await this.#storage.reading()) !== null;
+    const estimate = measured ? await this.#estimate(subject.spaceId, subject.rootItemId) : 0;
     const id = uuidv7();
     try {
       await this.#database.transaction(async (tx) => {
@@ -424,15 +427,18 @@ export class ExportService {
             `You can keep up to ${MAX_KEPT_EXPORTS} exports. Delete one you no longer need first.`,
           );
         }
-        if (capacity) {
+        if (measured) {
           await tx.execute(
             sql`select pg_advisory_xact_lock(hashtextextended('pagehall.exports.storage', 0))`,
           );
           const pending = await tx.execute<{ bytes: string | number }>(sql`
             select coalesce(sum(estimated_size), 0) as bytes from exports where state in ('queued', 'running')`);
-          const left = capacity.free - Number(pending.rows[0]?.bytes ?? 0) - estimate;
-          if (left < capacity.total * MIN_FREE_SHARE_AT_START) {
-            throw new ExportError("notEnoughStorage", NOT_ENOUGH_STORAGE);
+          try {
+            await this.#storage.requireLargeWrite(Number(pending.rows[0]?.bytes ?? 0) + estimate);
+          } catch (error) {
+            if (error instanceof StorageFullError)
+              throw new ExportError("notEnoughStorage", NOT_ENOUGH_STORAGE);
+            throw error;
           }
         }
         await tx.execute(sql`
@@ -546,7 +552,7 @@ export class ExportService {
   }
 
   #watchFreeSpace(): { stream: Transform; stopped: () => boolean } {
-    const store = this.#files.store;
+    const storage = this.#storage;
     let written = 0;
     let checkedAt = Number.NEGATIVE_INFINITY;
     let stopped = false;
@@ -558,16 +564,16 @@ export class ExportService {
           return;
         }
         checkedAt = written;
-        store.capacity().then(
-          (capacity) => {
-            if (capacity && capacity.free < capacity.total * MIN_FREE_SHARE_WHILE_WRITING) {
+        storage.requireBuildRoom(written).then(
+          () => callback(null, chunk),
+          (error: unknown) => {
+            if (error instanceof StorageFullError) {
               stopped = true;
               callback(new ExportFailure("notEnoughStorage"));
             } else {
-              callback(null, chunk);
+              callback(error as Error);
             }
           },
-          (error: unknown) => callback(error as Error),
         );
       },
     });

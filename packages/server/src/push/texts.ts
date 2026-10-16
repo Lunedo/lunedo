@@ -141,6 +141,14 @@ const en: Texts = {
     title: "The e-mail credential expires soon",
     body: "Microsoft Graph",
   }),
+  "storage.levelReached": ({ params }) => ({
+    title: params.level === 3 ? "Storage is almost full" : "Storage is filling up",
+    body: `${Math.round(Number(params.percent) || 0)} %`,
+  }),
+  "storage.levelCleared": ({ params }) => ({
+    title: params.level === 0 ? "Storage usage is back to normal" : "Storage usage has fallen",
+    body: `${Math.round(Number(params.percent) || 0)} %`,
+  }),
   "identityProvider.credentialExpiring": ({ params }) => ({
     title: "A sign-in provider credential expires soon",
     body: text(params.providerName),
@@ -280,6 +288,15 @@ const de: Texts = {
   "mail.credentialExpiring": () => ({
     title: "Die E-Mail-Zugangsdaten laufen bald ab",
     body: "Microsoft Graph",
+  }),
+  "storage.levelReached": ({ params }) => ({
+    title: params.level === 3 ? "Der Speicher ist fast voll" : "Der Speicher füllt sich",
+    body: `${Math.round(Number(params.percent) || 0)} %`,
+  }),
+  "storage.levelCleared": ({ params }) => ({
+    title:
+      params.level === 0 ? "Die Speicherbelegung ist wieder normal" : "Die Speicherbelegung ist gesunken",
+    body: `${Math.round(Number(params.percent) || 0)} %`,
   }),
   "identityProvider.credentialExpiring": ({ params }) => ({
     title: "Zugangsdaten eines Anmeldeanbieters laufen bald ab",

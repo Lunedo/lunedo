@@ -61,9 +61,7 @@ export const chatDeliveries = pgTable(
   "chat_deliveries",
   {
     id: primaryId(),
-    channelId: uuid()
-      .notNull()
-      .references(() => chatChannels.id, { onDelete: "cascade" }),
+    channelId: uuid().references(() => chatChannels.id, { onDelete: "cascade" }),
     event: text().notNull(),
     subjectId: uuid(),
     data: jsonb().notNull().default({}),

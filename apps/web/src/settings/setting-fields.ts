@@ -55,6 +55,14 @@ const fields: SettingField[] = [
     key: "files.keepVersions",
     type: { kind: "number", min: 1, max: 1_000_000, unit: "versions", unlimited: true },
   },
+  {
+    key: "storage.reminder",
+    type: {
+      kind: "enum",
+      values: ["off", "daily", "weekly", "monthly"],
+      labelPrefix: "settings.values.storageReminder",
+    },
+  },
   { key: "sharing.shareLinks", type: { kind: "boolean" } },
   { key: "sharing.anyoneLinks", type: { kind: "boolean" } },
   { key: "sharing.anyoneLinkMaxDays", type: days(1, 3650, [7, 30, 90]) },

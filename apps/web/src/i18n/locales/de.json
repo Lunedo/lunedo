@@ -1073,7 +1073,8 @@
     "accessOverview": "Zugriffsübersicht",
     "imports": "Import",
     "exports": "Exporte",
-    "announcements": "Ankündigungen"
+    "announcements": "Ankündigungen",
+    "storage": "Speicher"
   },
   "commands": {
     "label": "Befehlspalette",
@@ -1496,7 +1497,9 @@
       "roomNotFound": "Der Homeserver kennt diesen Raum nicht. Prüfe die Adresse des Raums und ob der Bot in den Raum eingeladen ist.",
       "unauthorized": "Der Homeserver hat das Zugriffstoken nicht angenommen. Kopiere das Token des Bots erneut.",
       "unreachable": "Pagehall erreicht den Homeserver nicht. Prüfe seine Adresse und ob dieser Server ihn erreicht."
-    }
+    },
+    "storageFull": "Der Speicher ist fast voll. Die Administration der Instanz wurde informiert. Versuche es erneut, sobald Platz geschaffen wurde.",
+    "invalidStorageSettings": "Die Speichereinstellungen sind ungültig. Prüfe die markierten Felder und versuche es erneut."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -1970,6 +1973,12 @@
       "pageMode": {
         "publish": "Veröffentlichen-Modus",
         "live": "Live-Modus"
+      },
+      "storageReminder": {
+        "off": "Nie",
+        "daily": "Täglich",
+        "weekly": "Wöchentlich",
+        "monthly": "Monatlich"
       }
     },
     "keys": {
@@ -2256,6 +2265,10 @@
       "notifications_digestEnabled": {
         "label": "Tägliche Zusammenfassung per E-Mail senden",
         "description": "Sammelt die Benachrichtigungen, deren E-Mail auf die tägliche Zusammenfassung steht. Ausgeschaltet erscheinen sie nur in der App."
+      },
+      "storage_reminder": {
+        "label": "Erinnerung, solange eine Stufe aktiv ist",
+        "description": "Wie oft Pagehall den aktuellen Stand den informierten Personen wiederholt, solange eine Warnstufe aktiv bleibt."
       }
     },
     "disabled": {
@@ -2447,7 +2460,9 @@
       "meetings": "Erinnerungen und Notizen zu Besprechungen",
       "ownershipAndStatus": "Besitzer- und Seitenstatusänderungen",
       "spaceAdministration": "Space-Verwaltung",
-      "importsAndExports": "Importe und Exporte"
+      "importsAndExports": "Importe und Exporte",
+      "storageLevelReached": "Dateispeicher füllt sich",
+      "storageLevelCleared": "Belegung des Dateispeichers sinkt"
     },
     "types": {
       "identityProvider": {
@@ -2533,6 +2548,10 @@
       },
       "chatChannel": {
         "failing": "Der Chat-Kanal {channelName} nimmt keine Nachrichten mehr an, deshalb wird dort nichts gepostet. Öffne seine Einstellungen, um den Grund zu sehen und ihn zu beheben."
+      },
+      "storage": {
+        "levelReached": "{level, select, 1 {Der Dateispeicher ist zu {percent, number, ::.0} % belegt. Noch ist nichts gesperrt.} 2 {Der Dateispeicher ist zu {percent, number, ::.0} % belegt. Neue Exporte und Importe werden abgelehnt.} other {Der Dateispeicher ist zu {percent, number, ::.0} % belegt. Auch Uploads werden abgelehnt.}}",
+        "levelCleared": "{level, select, 0 {Die Belegung des Dateispeichers ist wieder normal ({percent, number, ::.0} %).} 1 {Die Belegung des Dateispeichers ist auf {percent, number, ::.0} % gesunken. Exporte, Importe und Uploads funktionieren wieder.} other {Die Belegung des Dateispeichers ist auf {percent, number, ::.0} % gesunken. Uploads funktionieren wieder; neue Exporte und Importe werden weiter abgelehnt.}}"
       }
     },
     "channelFor": "{event}: {channel}",
@@ -3546,6 +3565,9 @@
         "credentialAdded": "E-Mail-Zugangsdaten hinzugefügt",
         "credentialRemoved": "E-Mail-Zugangsdaten entfernt"
       },
+      "storage": {
+        "contactsChanged": "Betriebskontakte geändert"
+      },
       "settings": {
         "changed": "Einstellung geändert"
       },
@@ -4118,7 +4140,8 @@
     "loadDrafts": "Die Entwürfe konnten nicht geladen werden",
     "changeAddress": "Die Adresse wurde nicht geändert",
     "unsubscribeLink": "Der Abmeldelink konnte nicht geprüft werden",
-    "openNotification": "Die Benachrichtigung konnte nicht geöffnet werden"
+    "openNotification": "Die Benachrichtigung konnte nicht geöffnet werden",
+    "loadStorage": "Der Speicherstatus konnte nicht geladen werden"
   },
   "lifecycle": {
     "placeholder": {
@@ -7061,6 +7084,11 @@
         "cause": "Einige Teile der Datei sind nicht angekommen.",
         "action": "Setze den Upload im ersten Schritt fort."
       },
+      "storageFull": {
+        "what": "Speicher voll",
+        "cause": "Dem Speicher ging der Platz aus, während der Import Dateien schrieb. Pagehall hat ihn deshalb angehalten.",
+        "action": "Bitte die Person, die Pagehall betreibt, Speicher freizugeben oder zu erweitern. Verwirf dann diesen Import und starte ihn neu."
+      },
       "internalError": {
         "what": "Der Import hat nach mehreren Versuchen aufgehört",
         "cause": "Ein unerwartetes Problem ist wiederholt aufgetreten.",
@@ -7999,5 +8027,98 @@
     "notTested": "Noch nicht getestet",
     "lastTestFailed": "Letzter Test fehlgeschlagen",
     "testFailedAt": "letzter Test fehlgeschlagen {time}"
+  },
+  "storage": {
+    "title": "Speicher",
+    "description": "Sieh, wie voll der Dateispeicher ist, und lege fest, wer informiert wird, bevor er aufgebraucht ist.",
+    "loadFailed": "Der Speicherstatus konnte nicht geladen werden",
+    "banner": {
+      "1": {
+        "title": "Der Dateispeicher füllt sich",
+        "body": "{percent} des Dateispeichers sind belegt. Schaffe Platz oder erweitere den Speicher, bevor er voll ist."
+      },
+      "2": {
+        "title": "Neue Exporte und Importe sind pausiert",
+        "body": "{percent} des Dateispeichers sind belegt. Schaffe Platz; Uploads und Bearbeiten funktionieren weiter."
+      },
+      "3": {
+        "title": "Uploads sind pausiert: Der Dateispeicher ist fast voll",
+        "body": "{percent} des Dateispeichers sind belegt. Schaffe jetzt Platz; Seiten lassen sich weiter bearbeiten."
+      },
+      "open": "Speichereinstellungen öffnen"
+    },
+    "usage": {
+      "title": "Belegung",
+      "store": "Dateispeicher",
+      "stores": {
+        "local": "Lokales Laufwerk",
+        "s3": "S3-kompatibler Speicher"
+      },
+      "summary": "{used} von {total} belegt ({percent})",
+      "progress": "Belegter Anteil des Dateispeichers",
+      "status": "Status",
+      "levels": {
+        "0": "Normal",
+        "1": "Warnung",
+        "2": "Große Schreibvorgänge pausiert",
+        "3": "Kritisch"
+      },
+      "checked": "Geprüft {time}",
+      "notChecked": "Noch nicht geprüft",
+      "inactiveTitle": "Speicherwarnung inaktiv",
+      "inactiveNoLimit": "S3 meldet keinen freien Platz. Lege ein Limit fest, damit Pagehall dich warnen kann."
+    },
+    "levels": {
+      "title": "Warnstufen",
+      "description": "Prozent des Laufwerks oder des S3-Limits. Pagehall prüft jede Minute und handelt, wenn zwei Prüfungen in Folge eine Stufe erreichen.",
+      "warning": "Warnung",
+      "warningHint": "Administration und Betriebskontakte werden informiert. Nichts wird gesperrt.",
+      "largeWrites": "Große Schreibvorgänge pausiert",
+      "largeWritesHint": "Neue Exporte von Spaces und Teilbäumen sowie Importe werden abgelehnt.",
+      "critical": "Kritisch",
+      "criticalHint": "Auch Uploads werden abgelehnt. Seiten lassen sich weiter bearbeiten.",
+      "unit": "%",
+      "invalid": "Gib eine ganze Prozentzahl von 1 bis 100 ein.",
+      "order": "Jede Stufe muss höher sein als die davor: erst Warnung, dann große Schreibvorgänge, dann kritisch.",
+      "saved": "Warnstufen gespeichert"
+    },
+    "s3": {
+      "title": "S3-Limit",
+      "label": "Limit für gespeicherte Dateien",
+      "hint": "S3 meldet keinen freien Platz. Lege ein Limit fest, damit Pagehall dich warnen kann. Leer lassen für keine Warnung.",
+      "unit": "GB",
+      "invalid": "Gib eine Größe in Gigabyte ein, zum Beispiel 500, oder lass das Feld leer."
+    },
+    "reminder": {
+      "title": "Erinnerungen"
+    },
+    "contacts": {
+      "title": "Betriebskontakte",
+      "description": "Neben allen Instanzadministratoren erhalten diese Kontakte eine E-Mail und optional einen Teams-Beitrag, wenn eine Stufe aktiv wird, steigt, als Erinnerung und wenn die Belegung sinkt.",
+      "addresses": "E-Mail-Adressen",
+      "addressesHint": "Eine Adresse pro Zeile, zum Beispiel eine Ticket-Adresse der IT. Bis zu 20.",
+      "addressesInvalid": "Prüfe die Adressen: Jede Zeile braucht genau eine gültige E-Mail-Adresse, insgesamt bis zu 20.",
+      "webhook": "Teams-Webhook",
+      "webhookHint": "Die Adresse eines Teams-Workflows-Webhooks. Sie wird verschlüsselt gespeichert und nie wieder angezeigt.",
+      "webhookSet": "Webhook gesetzt bei {host}",
+      "webhookReplace": "Webhook ersetzen",
+      "webhookRemove": "Webhook entfernen",
+      "webhookRemoved": "Der Webhook wird beim Speichern entfernt.",
+      "webhookKeep": "Webhook behalten",
+      "webhookCancelReplace": "Aktuellen Webhook behalten",
+      "webhookPlaceholder": "https://…",
+      "saved": "Betriebskontakte gespeichert",
+      "test": "Testnachricht senden",
+      "testNothing": "Speichere zuerst eine E-Mail-Adresse oder einen Teams-Webhook und sende dann eine Testnachricht.",
+      "testMails": "Testnachricht an {count, plural, one {# Adresse} other {# Adressen}} gesendet.",
+      "testTeamsOk": "Teams hat die Testnachricht angenommen.",
+      "testTeamsFailed": "Teams hat die Testnachricht nicht angenommen ({reason}). Prüfe die Webhook-Adresse und versuche es erneut.",
+      "errors": {
+        "invalidContacts": "Prüfe die Adressen: Jede muss eine gültige E-Mail-Adresse sein, insgesamt bis zu 20.",
+        "invalidTeamsWebhook": "Diese Webhook-Adresse lässt sich nicht verwenden. Kopiere die vollständige Adresse aus dem Teams-Workflow und versuche es erneut.",
+        "invalidThresholds": "Die Stufen müssen ganze Prozentzahlen sein und steigen: erst Warnung, dann große Schreibvorgänge, dann kritisch.",
+        "invalidS3Limit": "Das Limit muss eine positive Größe sein."
+      }
+    }
   }
 }

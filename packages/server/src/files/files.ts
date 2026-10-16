@@ -20,6 +20,7 @@ import {
 import type { Database, Executor } from "../database/database.js";
 import type { Logger } from "../logging/logger.js";
 import type { ValueSigner } from "../sharing/signer.js";
+import type { StorageUsage } from "../storage/usage.js";
 import { type DetectedType, detectType, SNIFF_BYTES } from "./sniff.js";
 import type { ByteRange, FileStore } from "./store.js";
 
@@ -90,6 +91,7 @@ export class FileService {
   readonly #keyRing: KeyRingHolder;
   readonly #logger: Logger;
   readonly #signer: ValueSigner;
+  readonly #usage: StorageUsage | undefined;
 
   constructor(options: {
     database: Database;
@@ -97,12 +99,14 @@ export class FileService {
     keyRing: KeyRingHolder;
     logger: Logger;
     signer: ValueSigner;
+    usage?: StorageUsage;
   }) {
     this.#database = options.database;
     this.#store = options.store;
     this.#keyRing = options.keyRing;
     this.#logger = options.logger;
     this.#signer = options.signer;
+    this.#usage = options.usage;
   }
 
   get store(): FileStore {
@@ -126,18 +130,21 @@ export class FileService {
       associatedData: associatedData(id),
     });
     let keyVersion: number;
+    let counted = 0;
     try {
       let failure: Error | null = null;
       const encrypted = chain(body, inspector, encrypt, (error) => {
         failure = error ?? null;
       });
-      await this.#store.write(key, encrypted).catch((error: unknown) => {
+      const stored = await this.#store.write(key, encrypted).catch((error: unknown) => {
         throw failure ?? error;
       });
+      await this.#usage?.add(stored);
+      counted = stored;
       if (failure) throw failure;
       keyVersion = await this.#rewrapIfOutdated(key, version);
     } catch (error) {
-      await this.#discard(id, key);
+      await this.#discard(id, key, counted);
       throw error;
     }
     const head = Buffer.concat(inspector.head);
@@ -191,9 +198,10 @@ export class FileService {
     if (claimed.rows.length === 0) throw new Error("The uploaded file was removed before it was saved");
   }
 
-  async #discard(id: string, key: string): Promise<void> {
+  async #discard(id: string, key: string, stored: number): Promise<void> {
     try {
       await this.#store.delete(key);
+      await this.#usage?.add(-stored);
       await this.#database.execute(sql`delete from stored_files where id = ${id} and state = 'pending'`);
     } catch (error) {
       this.#logger.warn({ err: error, fileId: id }, "Removing an incomplete upload failed");
@@ -287,7 +295,9 @@ export class FileService {
           and not exists (select 1 from attachment_versions v where v.file_id = ${row.id})
         returning id`);
       if (claimed.rows.length === 0) continue;
+      const stored = (await this.#store.size(row.storage_key)) ?? 0;
       await this.#store.delete(row.storage_key);
+      await this.#usage?.add(-stored);
       await this.#database.execute(sql`delete from stored_files where id = ${row.id}`);
       removed += 1;
     }

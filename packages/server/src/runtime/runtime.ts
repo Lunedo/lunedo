@@ -53,6 +53,7 @@ import { preferenceSettings } from "../settings/preferences.js";
 import { SettingsService } from "../settings/service.js";
 import { sharingSettings } from "../sharing/settings.js";
 import { spaceSettings } from "../spaces/settings.js";
+import { storageSettings } from "../storage/settings.js";
 import { tokenSettings } from "../tokens/settings.js";
 
 export type ProcessRole = "api" | "collab" | "worker";
@@ -167,6 +168,7 @@ export async function createServerRuntime(options: {
         ...collaborationSettings,
         ...sharingSettings,
         ...fileSettings,
+        ...storageSettings,
         ...importSettings,
         ...searchSettings,
         auditRetentionSetting,

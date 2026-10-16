@@ -151,6 +151,8 @@ export const problems = {
   exportRunning: { status: 409, title: "Another export of yours is still running" },
   nothingToExport: { status: 409, title: "There is nothing to export" },
   notEnoughStorage: { status: 507, title: "Not enough storage for this export" },
+  storageFull: { status: 507, title: "Storage is almost full" },
+  invalidStorageSettings: { status: 400, title: "The storage settings are not valid" },
   tooManyExports: { status: 409, title: "You keep as many exports as allowed" },
   holderNotInPagehall: { status: 409, title: "The person or group is not in Pagehall yet" },
   differenceResolved: { status: 409, title: "The difference no longer exists" },
@@ -358,7 +360,9 @@ export const problemSchema = z
     fields: z
       .array(z.string().describe("Path of an invalid field, with dots between levels."))
       .optional()
-      .describe("Invalid fields, for `invalidInput` and the codes about the address of a chat channel."),
+      .describe(
+        "Invalid fields, for `invalidInput`, `invalidStorageSettings` and the codes about the address of a chat channel.",
+      ),
     denials: z
       .array(z.string().describe("Reason code of the authorization service."))
       .optional()
@@ -372,7 +376,13 @@ export const problemSchema = z
       .string()
       .optional()
       .describe(
-        "Which password rule failed, for `passwordPolicy`; why the address of a chat channel was refused, for `invalidChatAddress`.",
+        "Which password rule failed, for `passwordPolicy`; why the address of a chat channel was refused, for `invalidChatAddress`; which storage setting was refused (`invalidThresholds`, `invalidS3Limit`, `invalidContacts` or `invalidTeamsWebhook`), for `invalidStorageSettings`.",
+      ),
+    refusal: z
+      .enum(["upload", "largeWrite"])
+      .optional()
+      .describe(
+        "What the full storage refuses, for `storageFull`: an `upload`, or a large write such as an import.",
       ),
     minLength: z.number().int().optional().describe("Minimum password length, for `passwordPolicy`."),
     lockedBy: z.string().optional().describe("Level that locked the setting, for `settingLocked`."),

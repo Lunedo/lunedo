@@ -272,7 +272,7 @@ export class ImportsController {
     bodyExample: { name: "export.zip", size: 20971520 },
     status: 201,
     response: { description: "The upload.", schema: uploadSchema, example: { ...exampleUpload, parts: [] } },
-    errors: ["uploadTooLarge", "invalidFileName", "invalidUpload"],
+    errors: ["uploadTooLarge", "invalidFileName", "invalidUpload", "storageFull"],
   })
   async createUpload(
     @Param("organizationId") organizationId: string,
@@ -325,7 +325,13 @@ export class ImportsController {
         .describe("A stored part."),
       example: { number: 1, size: 16777216 },
     },
-    errors: ["invalidUploadPart", "uploadChecksumMismatch", "uploadComplete", "unsupportedMediaType"],
+    errors: [
+      "invalidUploadPart",
+      "uploadChecksumMismatch",
+      "uploadComplete",
+      "unsupportedMediaType",
+      "storageFull",
+    ],
   })
   async putPart(
     @Param("organizationId") organizationId: string,
@@ -484,7 +490,14 @@ export class ImportsController {
       schema: importSchema,
       example: { ...exampleImport, state: "running" },
     },
-    errors: ["importNotReady", "importStarted", "keyTaken", "invalidSpaceName", "invalidSpaceKey"],
+    errors: [
+      "importNotReady",
+      "importStarted",
+      "keyTaken",
+      "invalidSpaceName",
+      "invalidSpaceKey",
+      "storageFull",
+    ],
   })
   async start(@Param("importId") importId: string, @Req() request: FastifyRequest) {
     return this.#services.imports.start(actorOf(request), importId);

@@ -12,7 +12,7 @@ import { mailWording } from "./mail-texts.js";
 import type { NotificationRegistry, NotificationSubject, NotificationTypeDefinition } from "./registry.js";
 import { notifications } from "./schema.js";
 import { browserPushSetting, notificationEventSettings, notificationRetentionSetting } from "./types.js";
-import type { UnsubscribeService } from "./unsubscribe.js";
+import { isOperationsEvent, type UnsubscribeService } from "./unsubscribe.js";
 import { effectiveWatches } from "./watches.js";
 
 export const NOTIFICATIONS_CHANNEL = "pagehall_notifications";
@@ -216,7 +216,8 @@ export class NotificationService {
             organizationId: input.organizationId,
             notification: true,
             unsubscribe: links ? { label: mailWording[locale.language].unsubscribeEvent, ...links } : null,
-            security: event.security,
+            security: event.security && !isOperationsEvent(event.id),
+            operations: isOperationsEvent(event.id),
           }),
         );
       }
