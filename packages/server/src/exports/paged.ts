@@ -280,6 +280,10 @@ export class PagedExport {
         const id = image.attrs?.attachmentId;
         if (typeof id === "string") ids.add(id);
       }
+      for (const drawing of blocksOfType(page.document, "drawing")) {
+        const id = drawing.attrs?.previewId;
+        if (typeof id === "string") ids.add(id);
+      }
     }
     const assets: RenderAsset[] = [];
     for (const id of ids) {

@@ -335,6 +335,24 @@ const blogPostRoute = createRoute({
   component: lazyRouteComponent(() => import("./collaboration/blog/blog-post-screen.js"), "BlogPostScreen"),
 });
 
+const whiteboardRoute = createRoute({
+  getParentRoute: () => spaceRoute,
+  path: "/whiteboards/$itemId/{-$slug}",
+  params: { parse: (params) => ({ ...params, itemId: z.uuid().parse(params.itemId) }) },
+  component: lazyRouteComponent(() => import("./whiteboards/whiteboard-screen.js"), "WhiteboardScreen"),
+});
+
+const whiteboardHistoryRoute = createRoute({
+  getParentRoute: () => spaceRoute,
+  path: "/whiteboards/$itemId/history",
+  params: { parse: (params) => ({ ...params, itemId: z.uuid().parse(params.itemId) }) },
+  validateSearch: z.object({ version: z.coerce.number().int().min(1).optional().catch(undefined) }),
+  component: lazyRouteComponent(
+    () => import("./whiteboards/whiteboard-history-screen.js"),
+    "WhiteboardHistoryScreen",
+  ),
+});
+
 const historyRoute = createRoute({
   getParentRoute: () => spaceRoute,
   path: "/pages/$itemId/history",
@@ -867,6 +885,8 @@ const routeTree = rootRoute.addChildren([
       blogPostRoute,
       historyRoute,
       pageRoute,
+      whiteboardHistoryRoute,
+      whiteboardRoute,
       folderRoute,
       meetingsRoute,
       seriesRoute,

@@ -5,7 +5,7 @@ export interface SpaceContextValue {
   space: SpaceWithRole;
   canEdit: boolean;
   openMove: (item: Pick<TreeItem, "id" | "title" | "kind" | "spaceId" | "parentId">) => void;
-  openCreate: (kind: "page" | "folder" | "link", parentId: string | null) => void;
+  openCreate: (kind: "page" | "folder" | "link" | "whiteboard", parentId: string | null) => void;
 }
 
 export const SpaceContext = createContext<SpaceContextValue | null>(null);

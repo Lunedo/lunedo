@@ -177,7 +177,7 @@ export class AccessRequestService {
     if (actor.type !== "account") throw new SpaceError("signInRequired", "Sign in to request access");
     const item = await this.#database.execute<{ space_id: string }>(sql`
       select t.space_id from tree_items t join spaces s on s.id = t.space_id
-      where t.id = ${itemId} and t.trash_entry_id is null and s.deleted_at is null and t.kind in ('page', 'folder', 'blogPost')`);
+      where t.id = ${itemId} and t.trash_entry_id is null and s.deleted_at is null and t.kind in ('page', 'folder', 'blogPost', 'whiteboard')`);
     const spaceId = item.rows[0]?.space_id;
     await this.#checkDailyLimit(this.#database, actor.id);
     if (!spaceId || (await this.#hasAccess(this.#database, actor.id, spaceId, itemId))) return;

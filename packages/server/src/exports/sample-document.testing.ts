@@ -127,6 +127,17 @@ export function sampleDocument(): DocumentJson {
       { type: "decisionReport", attrs: {} },
       { type: "taskReport", attrs: {} },
       { type: "unsupportedMacro", attrs: { name: "jira" } },
+      {
+        type: "drawing",
+        attrs: {
+          id: SAMPLE_TASK,
+          sceneId: SAMPLE_FILE,
+          sceneVersion: 1,
+          previewId: SAMPLE_IMAGE,
+          previewVersion: 1,
+          text: "Rack sketch",
+        },
+      },
     ],
   };
 }

@@ -48,6 +48,7 @@ import { VersionsController } from "../spaces/versions.controller.js";
 import { StorageController } from "../storage/storage.controller.js";
 import { ServiceAccountsController } from "../tokens/service-accounts.controller.js";
 import { TokensController } from "../tokens/tokens.controller.js";
+import { WhiteboardsController } from "../whiteboards/whiteboards.controller.js";
 
 export const apiControllers = (): Type[] => [
   AuthController,
@@ -78,6 +79,7 @@ export const apiControllers = (): Type[] => [
   ShortcutsController,
   PersonalSpacesController,
   VersionsController,
+  WhiteboardsController,
   TrashController,
   TemplatesController,
   MeetingsController,

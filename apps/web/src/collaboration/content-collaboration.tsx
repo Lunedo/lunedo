@@ -9,7 +9,7 @@ import { request } from "../api/request.js";
 import type { ReadViewCollaboration } from "../editor/read-view.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { useSession } from "../shell/shell-context.js";
-import { CommentsPanel, openThreadIds } from "./comments-panel.js";
+import { type CommentAnchor, CommentsPanel, type DescribeElement, openThreadIds } from "./comments-panel.js";
 import { useOverlayFocusTrap } from "./focus-trap.js";
 import { collaborationKeys, commentsQuery, recordView, starredQuery, taskStatusesQuery } from "./queries.js";
 import { useSetTaskStatus } from "./task-actions.js";
@@ -80,6 +80,8 @@ export interface ContentCollaboration {
   };
   commentsButton: ReactNode;
   panel: ReactNode;
+  activeThread: string | null;
+  commentOn: (anchor: CommentAnchor | null) => void;
 }
 
 export function useContentCollaboration({
@@ -88,18 +90,22 @@ export function useContentCollaboration({
   role,
   archived,
   writable,
+  describeElement,
+  hint,
 }: {
   itemId: string;
   spaceId: string;
   role: "reader" | "commenter" | "editor" | "admin" | null;
   archived: boolean;
   writable: boolean;
+  describeElement?: DescribeElement;
+  hint?: string;
 }): ContentCollaboration {
   const { t } = useTranslation();
   const session = useSession();
   const viewerId = session.account?.id ?? null;
   const [open, setOpen] = useState(false);
-  const [pending, setPending] = useState<TextAnchor | null>(null);
+  const [pending, setPending] = useState<CommentAnchor | null>(null);
   const [active, setActive] = useState<string | null>(null);
   const toggleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -133,7 +139,7 @@ export function useContentCollaboration({
     setActive(threadId);
     setOpen(true);
   }, []);
-  const comment = useCallback((anchor: TextAnchor) => {
+  const comment = useCallback((anchor: CommentAnchor | null) => {
     setPending(anchor);
     setOpen(true);
   }, []);
@@ -158,6 +164,8 @@ export function useContentCollaboration({
       spaceId,
       ...(canComment ? { onCommentSelection: comment } : {}),
     },
+    activeThread: active,
+    commentOn: comment,
     editor: {
       ...(canComment ? { onComment: comment } : {}),
       openThreads,
@@ -196,6 +204,8 @@ export function useContentCollaboration({
           activeThread={active}
           onActivate={setActive}
           onClose={close}
+          {...(describeElement ? { describeElement } : {})}
+          {...(hint ? { hint } : {})}
         />
       </div>
     ) : null,

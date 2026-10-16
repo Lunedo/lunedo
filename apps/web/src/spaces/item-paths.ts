@@ -1,5 +1,5 @@
 import { slugify } from "@pagehall/editor-schema";
-import { blogPostPath, folderPath, pagePath, type TreeItem } from "./space-queries.js";
+import { blogPostPath, folderPath, pagePath, type TreeItem, whiteboardPath } from "./space-queries.js";
 
 export function itemSlug(title: string): string {
   return slugify(title);
@@ -12,6 +12,7 @@ export function itemHref(
   if (item.kind === "page") return pagePath(spaceKey, item.id, itemSlug(item.title));
   if (item.kind === "folder") return spaceKey ? folderPath(spaceKey, item.id, itemSlug(item.title)) : null;
   if (item.kind === "blogPost") return blogPostPath(spaceKey, item.id, itemSlug(item.title));
+  if (item.kind === "whiteboard") return whiteboardPath(spaceKey, item.id, itemSlug(item.title));
   if (item.kind === "meetingSeries")
     return spaceKey ? `/spaces/${encodeURIComponent(spaceKey)}/meetings/${item.id}` : null;
   if (item.kind === "meetingTopic")

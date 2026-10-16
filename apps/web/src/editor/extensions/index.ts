@@ -22,6 +22,7 @@ import {
   TableOfContentsView,
   UnsupportedMacroView,
 } from "../nodes/block-views.js";
+import { DrawingView } from "../nodes/drawing-view.js";
 import {
   DateView,
   EmojiView,
@@ -75,6 +76,7 @@ const BLOCK_VIEWS: Record<string, ComponentType<ReactNodeViewProps>> = {
   unsupportedMacro: UnsupportedMacroView,
   image: AttachmentView,
   file: AttachmentView,
+  drawing: DrawingView,
   taskReport: TaskReportView,
   childPages: ChildPagesView,
   attachmentList: AttachmentListView,

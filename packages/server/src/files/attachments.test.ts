@@ -254,6 +254,55 @@ describe.skipIf(!baseUrl)("attachments", () => {
     expect(audit.rows).toHaveLength(1);
   });
 
+  it("keeps every drawing version that a page version still shows and removes only unreferenced ones", async () => {
+    const context = await setup();
+    const chain = { organization: context.org.id, space: context.space.id };
+    await test.settings.set(keepVersionsSetting, chain, "space", 2);
+    const page = await test.services.tree.create(context.editor, context.space.id, {
+      kind: "page",
+      title: "Floor plan",
+      mode: "publish",
+      placement: { parentId: null },
+    });
+    const blockId = randomUUID();
+    const scene = JSON.stringify({ elements: [], files: {}, settings: { viewBackgroundColor: null } });
+    const saveScene = () =>
+      test.services.drawings.saveScene(context.editor, page.id, {
+        blockId,
+        body: Readable.from([Buffer.from(scene)]),
+      });
+    const savePreview = (width: number) =>
+      test.services.drawings.savePreview(context.editor, page.id, {
+        blockId,
+        body: Readable.from([
+          Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg"><rect width="${width}" height="1"/></svg>`),
+        ]),
+      });
+    for (let edit = 1; edit <= 4; edit += 1) {
+      const saved = await saveScene();
+      const preview = await savePreview(edit);
+      await test.services.documents.replace(context.editor, page.id, {
+        type: "doc",
+        content: [{ type: "drawing", attrs: { id: blockId, ...saved, ...preview } }],
+      });
+      await test.services.versions.publish(context.editor, page.id);
+    }
+
+    const oldest = await test.pool.query<{ document: { content: { attrs: Record<string, unknown> }[] } }>(
+      "select document from page_versions where item_id = $1 order by number limit 1",
+      [page.id],
+    );
+    const attrs = oldest.rows[0]?.document.content[0]?.attrs ?? {};
+    expect(attrs).toMatchObject({ sceneVersion: 1, previewVersion: 1 });
+    expect(await read(String(attrs.previewId), 1)).toContain('width="1"');
+    expect(await read(String(attrs.sceneId), 1)).toContain('"elements"');
+    expect(await versionNumbers(context, String(attrs.sceneId))).toEqual([4, 3, 2, 1]);
+    expect(await versionNumbers(context, String(attrs.previewId))).toEqual([4, 3, 2, 1]);
+
+    for (let unreferenced = 0; unreferenced < 4; unreferenced += 1) await saveScene();
+    expect(await versionNumbers(context, String(attrs.sceneId))).toEqual([8, 7, 4, 3, 2, 1]);
+  });
+
   it("stores identical content of one space once, encrypted, and keeps it while any version uses it", async () => {
     const context = await setup();
     const content = randomBytes(5000).toString("base64");

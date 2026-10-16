@@ -17,6 +17,8 @@ import {
   RelyingPartyError,
   SavedSearchLimitError,
   SavedSearchNameError,
+  SceneInvalidError,
+  type SceneProblemCode,
   SessionGoneError,
   SettingAboveMaximumError,
   SettingBelowMinimumError,
@@ -29,6 +31,7 @@ import {
   SpaceError,
   StorageFullError,
   StorageSettingsError,
+  SvgRejectedError,
   TokenRejectedError,
 } from "@pagehall/server";
 import type { FastifyReply } from "fastify";
@@ -41,6 +44,21 @@ import {
   ProblemException,
   problemBody,
 } from "./problems.js";
+
+const SCENE_PROBLEM_MESSAGES: Record<SceneProblemCode, string> = {
+  notAnObject: "Expected an object",
+  notSerializable: "The scene is not valid JSON",
+  tooLarge: "The scene is larger than allowed",
+  tooManyElements: "The scene has too many elements",
+  tooManyFiles: "The scene has too many images",
+  elementTooLarge: "The element is larger than allowed",
+  unknownElementType: "This kind of element is not supported",
+  unknownField: "The field is not supported",
+  invalidElement: "The element has a value that is not allowed",
+  duplicateElement: "Two elements have the same ID",
+  invalidLink: "Links can point to http and https addresses and to Pagehall only",
+  invalidFile: "Images must be attachments of the same page or whiteboard",
+};
 
 const STATUS_CODES: Record<number, ProblemCode> = {
   400: "invalidInput",
@@ -207,6 +225,18 @@ function map(error: unknown): Mapped | null {
       extensions: { problems: error.problems.slice(0, 50) },
     };
   }
+  if (error instanceof SceneInvalidError) {
+    return {
+      code: "invalidScene",
+      detail: error.message,
+      extensions: {
+        problems: error.problems
+          .slice(0, 50)
+          .map((problem) => ({ ...problem, message: SCENE_PROBLEM_MESSAGES[problem.code] })),
+      },
+    };
+  }
+  if (error instanceof SvgRejectedError) return { code: "invalidDrawingImage", detail: error.message };
   if (error instanceof DocumentInvalidError) {
     return {
       code: "invalidDocument",

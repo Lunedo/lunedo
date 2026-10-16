@@ -37,6 +37,7 @@ export const defaultLabels: RenderLabels = {
   tableOfContents: "Table of contents",
   file: "File",
   image: "Image",
+  drawing: "Drawing",
   childPages: "Child pages",
   noChildPages: "No child pages",
   attachmentList: "Attachments",

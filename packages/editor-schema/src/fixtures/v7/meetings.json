@@ -1,0 +1,77 @@
+{
+  "type": "doc",
+  "content": [
+    {
+      "type": "topicUpdate",
+      "attrs": {
+        "topicId": "01929b1e-0000-7000-8000-000000000021"
+      },
+      "content": [
+        {
+          "type": "paragraph",
+          "content": [
+            {
+              "type": "text",
+              "text": "HR and IT define one key together."
+            }
+          ]
+        },
+        {
+          "type": "bulletList",
+          "content": [
+            {
+              "type": "listItem",
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Draft is with HR."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "decision",
+      "attrs": {
+        "id": "01929b1e-0000-7000-8000-000000000022",
+        "topicId": "01929b1e-0000-7000-8000-000000000021"
+      },
+      "content": [
+        {
+          "type": "paragraph",
+          "content": [
+            {
+              "type": "text",
+              "text": "Laptops get BitLocker with TPM and PIN from November."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "decision",
+      "attrs": {
+        "id": null,
+        "topicId": null
+      },
+      "content": [
+        {
+          "type": "paragraph",
+          "content": [
+            {
+              "type": "text",
+              "text": "Printer support moves to the facility team."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

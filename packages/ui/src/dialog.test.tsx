@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -61,6 +61,22 @@ describe("Dialog", () => {
     await userEvent.click(screen.getByRole("button", { name: "Invite people" }));
     await userEvent.click(screen.getByRole("button", { name: "Close" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("stays open on Escape and outside clicks when it must not be dismissed, and fills the screen", async () => {
+    const onOpenChange = vi.fn();
+    renderUi(
+      <Dialog open onOpenChange={onOpenChange} title="Edit drawing" size="full" dismissible={false}>
+        <Input aria-label="Name" />
+      </Dialog>,
+    );
+    const dialog = screen.getByRole("dialog", { name: "Edit drawing" });
+    expect(dialog.className).toContain("h-full");
+    await userEvent.keyboard("{Escape}");
+    fireEvent.pointerDown(document.body);
+    expect(onOpenChange).not.toHaveBeenCalled();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Close" }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 });
 
@@ -373,7 +389,7 @@ describe("focus on the main heading", () => {
       </main>,
     );
     const heading = screen.getByRole("heading", { name: "Restart the VPN gateway" });
-    await userEvent.pointer({ keys: "[MouseLeft]", target: document.body });
+    fireEvent.pointerDown(document.body);
     focusMainHeading();
     expect(document.activeElement).toBe(heading);
     expect(heading.hasAttribute("data-quiet-focus")).toBe(true);

@@ -72,13 +72,16 @@ export const threadSchema = z
       .string()
       .nullable()
       .describe(
-        "For inline comments, the text the comment refers to. Readers see inline comments only once their text is published.",
+        "For inline comments, the text the comment refers to; for comments on a whiteboard element, the text of the element (possibly empty). Readers see inline comments only once their text is published.",
       ),
-    anchor: z
-      .enum(["page", "inline", "detached"])
-      .describe(
-        "`page` for a comment on the whole page, `inline` for a comment on text in it, `detached` for an inline comment whose text no longer exists. Detached comments are listed with the page comments.",
-      ),
+    anchor: extensibleEnum(
+      ["page", "inline", "element", "detached"],
+      "`page` for a comment on the whole page or whiteboard, `inline` for a comment on text in it, `element` for a comment on an element of a whiteboard, `detached` for a comment whose text or element no longer exists. Detached comments are listed with the page comments.",
+    ),
+    elementId: z
+      .string()
+      .nullable()
+      .describe("The whiteboard element the comment refers to, also after it was removed, or null."),
     resolvedAt: timestamp("When the inline comment was resolved, or null while it is open.").nullable(),
     resolvedBy: person("Who resolved it, or null.").nullable(),
     replies: z.array(commentSchema).describe("Replies, oldest first. Replies are one level deep."),
@@ -106,6 +109,7 @@ export const exampleThread = {
   reactions: [],
   quote: "Hotel Wi-Fi blocks UDP 51820",
   anchor: "inline",
+  elementId: null,
   resolvedAt: null,
   resolvedBy: null,
   replies: [],
@@ -142,6 +146,11 @@ export const createCommentSchema = z
   .object({
     body: commentBodySchema,
     anchor: anchorSchema.optional().describe("Text the comment refers to. Leave it out for a page comment."),
+    elementId: z
+      .string()
+      .regex(/^[A-Za-z0-9_-]{1,128}$/)
+      .optional()
+      .describe("ID of the whiteboard element the comment refers to. Only for whiteboards."),
   })
   .strict()
   .describe("A new comment.");

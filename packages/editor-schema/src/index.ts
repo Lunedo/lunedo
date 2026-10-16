@@ -90,6 +90,7 @@ export {
   type Unsupported,
   type WordRenderer,
 } from "./module.js";
+export { MAX_DRAWING_TEXT } from "./modules/drawings.js";
 export { createDefaultRegistry, defaultModules } from "./modules/index.js";
 export {
   childPagesRequest,

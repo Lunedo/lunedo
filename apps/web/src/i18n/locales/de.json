@@ -1290,7 +1290,7 @@
     "tooManyLabels": "Eine Seite kann bis zu 100 Labels haben. Entferne ein Label, bevor du ein weiteres hinzufügst.",
     "invalidComment": "Der Kommentar enthält etwas, das Kommentare nicht unterstützen. Entferne Tabellen, Bilder oder Überschriften und versuche es erneut.",
     "invalidAnchor": "Markiere bis zu 1000 Zeichen innerhalb eines Absatzes, um sie zu kommentieren.",
-    "anchorNotFound": "Der markierte Text hat sich inzwischen geändert. Markiere ihn erneut und kommentiere.",
+    "anchorNotFound": "Der markierte Text oder das Element hat sich inzwischen geändert. Markiere es erneut und kommentiere.",
     "tooManyComments": "Diese Seite hat die höchste Zahl an Kommentaren. Erledige oder lösche zuerst alte.",
     "restoreExpired": "Der Kommentar kann nicht mehr wiederhergestellt werden; gelöschte Kommentare lassen sich eine Stunde lang wiederherstellen.",
     "notInlineComment": "Nur Kommentare zu Text können als erledigt markiert werden.",
@@ -1309,7 +1309,10 @@
     "personalOnly": "Nur Personen haben Favoriten und eine Startseite.",
     "invalidHomePage": "Wähle eine Seite aus einem Space dieser Organisation, die du lesen kannst.",
     "invalidFileName": "Der Dateiname ist leer oder zu lang. Benenne die Datei um und lade sie erneut hoch.",
-    "invalidItem": "Dateien können nur an Seiten und Blogbeiträge angehängt werden.",
+    "invalidItem": "Dateien können nur an Seiten, Blogbeiträge und Whiteboards angehängt werden.",
+    "invalidScene": "Die Zeichnung enthält etwas, das Pagehall nicht speichern kann, etwa eingebettete Webinhalte oder ein Bild von einer anderen Website. Mach die letzte Änderung rückgängig und versuch es noch einmal.",
+    "invalidDrawingImage": "Das Bild der Zeichnung konnte nicht gelesen werden. Lade die Seite neu und speichere die Zeichnung noch einmal.",
+    "revisionNotStored": "Das Whiteboard wurde in diesem Stand noch nicht gespeichert. Warte kurz; die Vorschau wird mit der nächsten Änderung gespeichert.",
     "invalidCover": "Das Titelbild muss ein an diesen Beitrag angehängtes Bild sein. Lade das Bild zuerst hoch und wähle es dann aus.",
     "invalidFocus": "Der Fokuspunkt liegt außerhalb des Bildes. Klicke in das Bild, um ihn zu setzen.",
     "invalidScope": "Diese Art von Link ist für diese Seite nicht möglich. Wähle unter „Wer ihn öffnen kann“ eine andere Option.",
@@ -2208,7 +2211,7 @@
       },
       "files_keepVersions": {
         "label": "Versionen einer Datei, die behalten werden",
-        "description": "Wird eine neue Version hochgeladen und gibt es mehr als diese Anzahl, wird die älteste nicht zum Behalten markierte Version entfernt. Markierte Versionen zählen nicht mit."
+        "description": "Wird eine neue Version hochgeladen und gibt es mehr als diese Anzahl, wird die älteste nicht zum Behalten markierte Version entfernt. Markierte Versionen und Versionen, die eine Seitenversion noch zeigt, etwa Zeichnungen, bleiben immer erhalten und zählen nicht mit."
       },
       "sharing_shareLinks": {
         "label": "Freigabelinks",
@@ -3678,6 +3681,10 @@
         "restrictionHolderRemoved": "Person oder Gruppe aus einer Seitenbeschränkung entfernt",
         "subtreeExported": "Seite mit Unterseiten exportiert"
       },
+      "whiteboard": {
+        "updateRejected": "Änderung am Whiteboard abgelehnt",
+        "versionRestored": "Whiteboard-Version wiederhergestellt"
+      },
       "trash": {
         "itemsDeleted": "In den Papierkorb verschoben",
         "itemsRestored": "Aus dem Papierkorb wiederhergestellt",
@@ -4284,7 +4291,9 @@
       "decisionReport": "Entscheidungsbericht",
       "decisionReportDescription": "Liste der Entscheidungen auf Seiten",
       "templateButton": "Vorlagen-Schaltfläche",
-      "templateButtonDescription": "Schaltfläche, die eine Seite aus einer Vorlage anlegt"
+      "templateButtonDescription": "Schaltfläche, die eine Seite aus einer Vorlage anlegt",
+      "drawing": "Zeichnung",
+      "drawingDescription": "Von Hand skizzieren mit Formen, Pfeilen und Haftnotizen"
     },
     "mention": {
       "unknown": "Unbekannte Person"
@@ -4652,6 +4661,21 @@
       "titleHintNoFields": "Diese Vorlage hat keine Eingabefelder. Leer lassen für den Titel der Vorlage.",
       "tooLong": "Höchstens {count} Zeichen verwenden.",
       "unknownFields": "{count, plural, one {{fields} ist kein Eingabefeld} other {{fields} sind keine Eingabefelder}} dieser Vorlage. Entferne {count, plural, one {es} other {sie}} oder wähle eine andere Vorlage."
+    },
+    "drawing": {
+      "label": "Zeichnung",
+      "edit": "Bearbeiten",
+      "editTitle": "Zeichnung bearbeiten",
+      "editDescription": "Andere können die Seite weiter bearbeiten. Sie sehen, dass du diese Zeichnung bearbeitest.",
+      "editedBy": "{count, plural, one {{name} bearbeitet diese Zeichnung} other {{name} bearbeiten diese Zeichnung}}",
+      "empty": "Leere Zeichnung. Wähle Bearbeiten, um zu zeichnen.",
+      "emptyReadOnly": "Diese Zeichnung ist leer.",
+      "save": "Zeichnung speichern",
+      "saveFailed": "Die Zeichnung konnte nicht gespeichert werden",
+      "loadFailed": "Die Zeichnung konnte nicht geladen werden",
+      "discardDescription": "Deine Änderungen seit dem Öffnen gehen verloren. Die Zeichnung auf der Seite bleibt, wie sie war.",
+      "discard": "Änderungen verwerfen",
+      "keepEditing": "Weiter bearbeiten"
     }
   },
   "spaces": {
@@ -4974,7 +4998,9 @@
     "undoFailed": "Das Verschieben konnte nicht rückgängig gemacht werden",
     "createFailed": "Die Seite konnte nicht erstellt werden",
     "viewRestricted": "Eingeschränkt: Nur die Zugriffsliste kann sie ansehen",
-    "editRestricted": "Eingeschränkt: Nur die Zugriffsliste kann sie bearbeiten"
+    "editRestricted": "Eingeschränkt: Nur die Zugriffsliste kann sie bearbeiten",
+    "newWhiteboard": "Neues Whiteboard",
+    "newWhiteboardInside": "Neues Whiteboard darin"
   },
   "move": {
     "title": "{title} verschieben",
@@ -5022,7 +5048,9 @@
     "urlInvalid": "Gib eine vollständige Adresse ein, die mit http:// oder https:// beginnt.",
     "createFolder": "Ordner erstellen",
     "createLink": "Link erstellen",
-    "failed": "Der Eintrag konnte nicht erstellt werden"
+    "failed": "Der Eintrag konnte nicht erstellt werden",
+    "createWhiteboard": "Whiteboard erstellen",
+    "whiteboardTitle": "Neues Whiteboard"
   },
   "folder": {
     "titleLabel": "Titel des Ordners",
@@ -5157,7 +5185,8 @@
       "blogPost": "Blogbeitrag",
       "other": "Element",
       "meetingSeries": "Besprechungsserie",
-      "meetingTopic": "Laufendes Thema"
+      "meetingTopic": "Laufendes Thema",
+      "whiteboard": "Whiteboard"
     },
     "unknownPerson": "Unbekannte Person",
     "stageOne": "Papierkorb",
@@ -5530,7 +5559,10 @@
     "restoreFailed": "Der Kommentar konnte nicht wiederhergestellt werden",
     "resolveFailed": "Der Kommentar konnte nicht als erledigt markiert werden",
     "reopenFailed": "Der Kommentar konnte nicht wieder geöffnet werden",
-    "hint": "Mit @ erwähnst du jemanden. Strg+Eingabe sendet den Kommentar."
+    "hint": "Mit @ erwähnst du jemanden. Strg+Eingabe sendet den Kommentar.",
+    "element": "Element",
+    "elementGone": "Element entfernt. Der Kommentar bleibt hier erhalten.",
+    "showOnBoard": "Auf dem Whiteboard zeigen"
   },
   "tasks": {
     "myTitle": "Meine Aufgaben",
@@ -7748,7 +7780,8 @@
       "comment": "Kommentar",
       "attachment": "Anhang",
       "topic": "Laufendes Thema",
-      "decision": "Entscheidung"
+      "decision": "Entscheidung",
+      "whiteboard": "Whiteboards"
     },
     "quick": {
       "label": "Suche",
@@ -8200,6 +8233,57 @@
         "invalidThresholds": "Die Stufen müssen ganze Prozentzahlen sein und steigen: erst Warnung, dann große Schreibvorgänge, dann kritisch.",
         "invalidS3Limit": "Das Limit muss eine positive Größe sein."
       }
+    }
+  },
+  "whiteboards": {
+    "titleLabel": "Titel des Whiteboards",
+    "canvas": "Whiteboard",
+    "loadFailed": "Das Whiteboard konnte nicht geladen werden",
+    "phone": "Auf dem Smartphone kannst du das Whiteboard ansehen und zoomen. Bearbeite es auf einem Tablet oder Computer.",
+    "archivedTitle": "Dieses Whiteboard ist archiviert",
+    "archivedDescription": "Es kann angesehen, aber nicht geändert werden. Hol es aus dem Archiv zurück, um es zu bearbeiten.",
+    "previewOf": "Bild des Whiteboards {title}",
+    "imageFailed": "Ein Bild auf dem Whiteboard konnte nicht geladen oder gespeichert werden",
+    "refused": {
+      "title": "Diese Änderung wurde nicht gespeichert",
+      "embed": "Eingebettete Webinhalte sind auf Whiteboards noch nicht verfügbar. Füge stattdessen einen Link ein.",
+      "other": "Ein Element enthält etwas, das Whiteboards nicht speichern können, etwa einen Link, der nicht mit http, https oder einer Pagehall-Adresse beginnt. Mach die Änderung rückgängig oder ändere den Link."
+    },
+    "stickyNote": {
+      "add": "Haftnotiz",
+      "placeholder": "Notiz"
+    },
+    "comments": {
+      "add": "Kommentieren",
+      "onElement": "Element kommentieren",
+      "hint": "Wähle ein Element auf dem Whiteboard aus und dann Element kommentieren. Der Kommentar bleibt beim Element, auch wenn es verschoben wird."
+    },
+    "elements": {
+      "withText": "{label}: „{text}“",
+      "rectangle": "Rechteck",
+      "diamond": "Raute",
+      "ellipse": "Ellipse",
+      "arrow": "Pfeil",
+      "line": "Linie",
+      "freedraw": "Freihandzeichnung",
+      "text": "Text",
+      "image": "Bild",
+      "frame": "Rahmen",
+      "stickyNote": "Haftnotiz",
+      "removed": "Entferntes Element",
+      "other": "Element"
+    },
+    "history": {
+      "latest": "Neueste",
+      "explore": "Diese Version erkunden",
+      "showImage": "Bild zeigen",
+      "restore": "Version {number} wiederherstellen",
+      "restored": "Version {number} ist wieder der aktuelle Inhalt.",
+      "restoreFailed": "Die Version konnte nicht wiederhergestellt werden",
+      "loadFailed": "Die Version konnte nicht geladen werden",
+      "imageOf": "Bild der Version {number}",
+      "noImage": "Kein Bild dieser Version",
+      "noImageDescription": "Ein Bild wird nach einer Änderung gespeichert. Erkunde die Version, um sie zu sehen."
     }
   },
   "rendering": {

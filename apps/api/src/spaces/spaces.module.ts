@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { MeetingsController } from "../meetings/meetings.controller.js";
 import { OneOnOnesController } from "../meetings/one-on-ones.controller.js";
+import { WhiteboardsController } from "../whiteboards/whiteboards.controller.js";
 import { ConfidentialSpacesController } from "./confidential-spaces.controller.js";
 import { ItemsController } from "./items.controller.js";
 import { OrganizationSpacesController } from "./organization-spaces.controller.js";
@@ -22,6 +23,7 @@ import { VersionsController } from "./versions.controller.js";
     ShortcutsController,
     PersonalSpacesController,
     VersionsController,
+    WhiteboardsController,
     TrashController,
     TemplatesController,
     MeetingsController,

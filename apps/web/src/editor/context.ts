@@ -1,12 +1,16 @@
+import type { HocuspocusProvider } from "@hocuspocus/provider";
 import { useRouter } from "@tanstack/react-router";
 import type { Editor } from "@tiptap/core";
 import { useEditorState } from "@tiptap/react";
 import { createContext, useCallback, useContext } from "react";
+import type { PresenceUser } from "./presence.js";
 
 export interface PageContext {
   pageId: string;
   spaceId: string;
   spaceKey: string;
+  provider?: HocuspocusProvider;
+  self?: PresenceUser | null;
 }
 
 export const PageContextValue = createContext<PageContext | null>(null);

@@ -82,7 +82,15 @@ const mappingRuleFields = z.object({
 
 const spaceRoleNames = ["reader", "commenter", "editor", "admin"] as const;
 const pageModeNames = ["publish", "live"] as const;
-const itemKindNames = ["page", "folder", "link", "blogPost", "meetingSeries", "meetingTopic"] as const;
+const itemKindNames = [
+  "page",
+  "folder",
+  "link",
+  "blogPost",
+  "meetingSeries",
+  "meetingTopic",
+  "whiteboard",
+] as const;
 const pageFields = z.object({ spaceId: z.uuid(), title: z.string() });
 const attachmentVersionFields = pageFields.extend({
   attachmentId: z.uuid(),
@@ -1119,6 +1127,26 @@ export const auditCatalog = {
       version: z.number().int().positive(),
       mode: z.enum(pageModeNames),
       newVersion: z.number().int().positive().nullable(),
+    }),
+    visibility: "organization",
+  }),
+  "whiteboard.versionRestored": event({
+    actor: ["account"],
+    target: "page",
+    fields: pageFields.extend({
+      version: z.number().int().positive(),
+      newVersion: z.number().int().positive(),
+    }),
+    visibility: "organization",
+  }),
+  "whiteboard.updateRejected": event({
+    actor: ["account"],
+    target: "page",
+    fields: z.object({
+      spaceId: z.uuid(),
+      reason: z.enum(["invalidScene", "tooLarge", "foreignClient", "malformed"]),
+      problems: z.array(z.string()).max(20),
+      bytes: z.number().int().nonnegative(),
     }),
     visibility: "organization",
   }),

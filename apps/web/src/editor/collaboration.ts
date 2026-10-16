@@ -1,7 +1,7 @@
 import { HocuspocusProvider, WebSocketStatus } from "@hocuspocus/provider";
 import * as Y from "yjs";
 import { onSignOut } from "../session/sign-out.js";
-import { decodeBase64, type SaveState, SaveTracker } from "./save-state.js";
+import { coversOwnChanges, decodeBase64, type SaveState, SaveTracker } from "./save-state.js";
 
 export const connectionRefusals = [
   "originNotAllowed",
@@ -36,8 +36,15 @@ export function collaborationUrl(origin: string): string {
   return `${origin.replace(/^http/, "ws")}/collab`;
 }
 
-export function documentName(pageId: string): string {
-  return `page:${pageId.toLowerCase()}`;
+export type DocumentKind = "page" | "whiteboard";
+
+export function documentName(itemId: string, kind: DocumentKind = "page"): string {
+  return `${kind}:${itemId.toLowerCase()}`;
+}
+
+export interface CollaborationOptions {
+  origin?: string;
+  kind?: DocumentKind;
 }
 
 function problemOf(reason: string, known: readonly string[]): CollaborationProblem {
@@ -45,6 +52,7 @@ function problemOf(reason: string, known: readonly string[]): CollaborationProbl
 }
 
 type Listener = () => void;
+type SavedListener = (revision: number, ownChangesStored: boolean) => void;
 
 export const REATTACH_DELAYS_MS = [1000, 2000, 5000, 10_000, 30_000];
 
@@ -54,6 +62,7 @@ export class PageCollaboration {
   readonly provider: HocuspocusProvider;
   readonly tracker: SaveTracker;
   readonly #listeners = new Set<Listener>();
+  readonly #savedListeners = new Set<SavedListener>();
   #snapshot: CollaborationSnapshot = {
     connected: false,
     synced: false,
@@ -65,8 +74,8 @@ export class PageCollaboration {
   #reattachTimer: ReturnType<typeof setTimeout> | null = null;
   #destroyed = false;
 
-  constructor(pageId: string, options: { origin?: string } = {}) {
-    this.name = documentName(pageId);
+  constructor(itemId: string, options: CollaborationOptions = {}) {
+    this.name = documentName(itemId, options.kind);
     this.tracker = new SaveTracker(this.doc);
     this.tracker.subscribe((saveState) => this.#set({ saveState }));
     this.provider = new HocuspocusProvider({
@@ -136,14 +145,19 @@ export class PageCollaboration {
   }
 
   #stateless(payload: string): void {
-    let message: { type?: unknown; stateVector?: unknown };
+    let message: { type?: unknown; stateVector?: unknown; revision?: unknown };
     try {
-      message = JSON.parse(payload) as { type?: unknown; stateVector?: unknown };
+      message = JSON.parse(payload) as { type?: unknown; stateVector?: unknown; revision?: unknown };
     } catch {
       return;
     }
     if (message.type === "saved" && typeof message.stateVector === "string") {
-      this.tracker.saved(decodeBase64(message.stateVector));
+      const stored = decodeBase64(message.stateVector);
+      this.tracker.saved(stored);
+      if (typeof message.revision === "number") {
+        const own = coversOwnChanges(this.doc, stored);
+        for (const listener of this.#savedListeners) listener(message.revision, own);
+      }
     } else if (message.type === "saveFailed") {
       this.tracker.saveFailed();
     }
@@ -171,6 +185,11 @@ export class PageCollaboration {
 
   getSnapshot = (): CollaborationSnapshot => this.#snapshot;
 
+  subscribeSaved = (listener: SavedListener): (() => void) => {
+    this.#savedListeners.add(listener);
+    return () => this.#savedListeners.delete(listener);
+  };
+
   get hasUnsavedChanges(): boolean {
     return this.tracker.hasUnsavedChanges;
   }
@@ -184,6 +203,7 @@ export class PageCollaboration {
     this.provider.destroy();
     this.doc.destroy();
     this.#listeners.clear();
+    this.#savedListeners.clear();
   }
 }
 
@@ -208,15 +228,15 @@ function warnBeforeUnload(event: BeforeUnloadEvent): void {
   event.returnValue = "";
 }
 
-export function openCollaboration(pageId: string, options: { origin?: string } = {}): PageCollaboration {
-  const entry = openCollaborations.get(documentName(pageId));
+export function openCollaboration(itemId: string, options: CollaborationOptions = {}): PageCollaboration {
+  const entry = openCollaborations.get(documentName(itemId, options.kind));
   if (entry) {
     entry.editors += 1;
     entry.unsubscribe?.();
     entry.unsubscribe = null;
     return entry.collaboration;
   }
-  const collaboration = new PageCollaboration(pageId, options);
+  const collaboration = new PageCollaboration(itemId, options);
   openCollaborations.set(collaboration.name, { collaboration, editors: 1, unsubscribe: null });
   return collaboration;
 }

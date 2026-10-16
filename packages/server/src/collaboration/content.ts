@@ -223,7 +223,7 @@ export async function publishTasks(
 
 interface ItemFacts {
   title: string;
-  kind: "page" | "blogPost" | "meetingTopic";
+  kind: "page" | "blogPost" | "meetingTopic" | "whiteboard";
   spaceId: string;
   spaceKey: string;
   organizationId: string | null;
@@ -326,7 +326,9 @@ export class ContentActivity {
 
   async versionCreated(tx: Transaction, itemId: string, version: number): Promise<void> {
     const created = await tx.execute<{ created_by: string | null; contributors: string[] }>(sql`
-      select created_by, contributors from page_versions where item_id = ${itemId} and number = ${version}`);
+      select created_by, contributors from page_versions where item_id = ${itemId} and number = ${version}
+      union all
+      select created_by, contributors from whiteboard_versions where item_id = ${itemId} and number = ${version}`);
     const row = created.rows[0];
     if (!row) return;
     const actorId = row.created_by;
@@ -436,14 +438,14 @@ export class ContentActivity {
   async #facts(executor: Executor, itemId: string): Promise<ItemFacts | null> {
     const result = await executor.execute<{
       title: string;
-      kind: "page" | "blogPost" | "meetingTopic";
+      kind: "page" | "blogPost" | "meetingTopic" | "whiteboard";
       space_id: string;
       key: string;
       organization_id: string | null;
     }>(sql`
       select t.title, t.kind, t.space_id, s.key, s.organization_id
       from tree_items t join spaces s on s.id = t.space_id
-      where t.id = ${itemId} and t.kind in ('page', 'blogPost', 'meetingTopic')`);
+      where t.id = ${itemId} and t.kind in ('page', 'blogPost', 'meetingTopic', 'whiteboard')`);
     const row = result.rows[0];
     return row
       ? {

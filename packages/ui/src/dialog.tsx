@@ -8,12 +8,13 @@ import { focusInitial } from "./initial-focus.js";
 import { useUiLabels } from "./labels.js";
 import { useReturnFocus } from "./return-focus.js";
 
-export type DialogSize = "sm" | "md" | "lg";
+export type DialogSize = "sm" | "md" | "lg" | "full";
 
 const SIZES: Record<DialogSize, string> = {
   sm: "max-w-dialog-sm",
   md: "max-w-dialog-md",
   lg: "max-w-dialog-lg",
+  full: "h-full max-w-none",
 };
 
 export interface DialogProps {
@@ -24,6 +25,7 @@ export interface DialogProps {
   size?: DialogSize;
   footer?: ReactNode;
   children?: ReactNode;
+  dismissible?: boolean;
 }
 
 export function Dialog({
@@ -34,6 +36,7 @@ export function Dialog({
   size = "md",
   footer,
   children,
+  dismissible = true,
 }: DialogProps) {
   const labels = useUiLabels();
   const returnFocus = useReturnFocus(open);
@@ -47,6 +50,12 @@ export function Dialog({
             ref={content}
             onOpenAutoFocus={(event) => focusInitial(event, content, header)}
             onCloseAutoFocus={returnFocus}
+            {...(dismissible
+              ? {}
+              : {
+                  onEscapeKeyDown: (event: Event) => event.preventDefault(),
+                  onInteractOutside: (event: Event) => event.preventDefault(),
+                })}
             {...(description ? {} : { "aria-describedby": undefined })}
             className={classNames(
               "flex w-full min-w-0 flex-col gap-4 rounded-lg bg-surface p-5 text-text shadow-dialog focus-visible:focus-ring",

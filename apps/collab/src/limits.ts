@@ -2,6 +2,7 @@ import { MAX_DOCUMENT_BYTES } from "@pagehall/editor-schema";
 
 export const COLLAB_PATH = "/collab";
 export const DOCUMENT_PREFIX = "page:";
+export const WHITEBOARD_PREFIX = "whiteboard:";
 
 export const MAX_UPDATE_BYTES = MAX_DOCUMENT_BYTES;
 export const MAX_AWARENESS_BYTES = 64 * 1024;

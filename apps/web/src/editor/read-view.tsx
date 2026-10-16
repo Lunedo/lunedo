@@ -30,10 +30,11 @@ export function readViewContext(
   references: References,
   t: TFunction,
   format: Formatter,
-  attachmentUrl: (id: string) => string = (id) => contentUrl(id),
+  attachmentUrl: (id: string, version?: number) => string = (id, version) =>
+    contentUrl(id, version === undefined ? {} : { version }),
 ): RenderContext {
   return {
-    attachment: (id) => ({ href: attachmentUrl(id) }),
+    attachment: (id, version) => ({ href: attachmentUrl(id, version) }),
     mention: (id) => {
       const name = references.people[id];
       return name ? { name } : null;
@@ -66,6 +67,7 @@ export function readViewContext(
       tableOfContents: t("editor.toc.title"),
       file: t("editor.readView.file"),
       image: t("editor.readView.image"),
+      drawing: t("editor.drawing.label"),
       childPages: t("editor.childPages.title"),
       noChildPages: t("editor.childPages.empty"),
       attachmentList: t("editor.attachmentList.title"),
@@ -116,7 +118,7 @@ export function applyWidths(root: HTMLElement): void {
 }
 
 export interface ReadViewAttachments {
-  url?: (id: string) => string;
+  url?: (id: string, version?: number) => string;
   onOpen?: (id: string) => void;
 }
 

@@ -285,10 +285,10 @@ describe("Word rendering", () => {
     const registry = new ModuleRegistry().register(
       ...defaultModules,
       defineModule({
-        name: "drawing",
+        name: "testDiagram",
         nodes: [
           {
-            name: "drawing",
+            name: "testDiagram",
             spec: { group: "block", atom: true },
             html: () => "<svg></svg>",
             print: "unsupported",
@@ -298,8 +298,8 @@ describe("Word rendering", () => {
       }),
     );
     const kit = createEditorKit(registry);
-    const document = doc(paragraph(text("Before")), { type: "drawing" });
-    const nodeTitle = (type: string) => (type === "drawing" ? "Drawing" : null);
+    const document = doc(paragraph(text("Before")), { type: "testDiagram" });
+    const nodeTitle = (type: string) => (type === "testDiagram" ? "Diagram" : null);
     expect(kit.renderWord(document, { nodeTitle })).toEqual([
       {
         type: "paragraph",
@@ -309,11 +309,13 @@ describe("Word rendering", () => {
       },
       {
         type: "placeholder",
-        text: "Drawing cannot be shown in this format. Open the page in Pagehall to see it.",
+        text: "Diagram cannot be shown in this format. Open the page in Pagehall to see it.",
       },
     ]);
     const printed = kit.renderHtml(document, { nodeTitle, target: "print" });
-    expect(printed).toContain('<div class="ph-unavailable" data-node="drawing"><p>Drawing cannot be shown');
+    expect(printed).toContain(
+      '<div class="ph-unavailable" data-node="testDiagram"><p>Diagram cannot be shown',
+    );
     expect(printed).not.toContain("<svg>");
     expect(kit.renderHtml(document, { nodeTitle })).toContain("<svg></svg>");
   });

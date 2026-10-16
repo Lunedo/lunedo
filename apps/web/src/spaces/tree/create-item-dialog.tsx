@@ -21,13 +21,15 @@ import type { SpaceWithRole } from "../space-queries.js";
 
 export type CreateKind = "page" | "folder" | "link";
 
+export type CreatedKind = "folder" | "link" | "whiteboard";
+
 export function CreateItemDialog({
   space,
   request: pending,
   onOpenChange,
 }: {
   space: SpaceWithRole;
-  request: { kind: "folder" | "link"; parentId: string | null } | null;
+  request: { kind: CreatedKind; parentId: string | null } | null;
   onOpenChange: (open: boolean) => void;
 }) {
   const { t } = useTranslation();
@@ -35,7 +37,13 @@ export function CreateItemDialog({
     <Dialog
       open={pending !== null}
       onOpenChange={onOpenChange}
-      title={pending?.kind === "link" ? t("createItem.linkTitle") : t("createItem.folderTitle")}
+      title={
+        pending?.kind === "link"
+          ? t("createItem.linkTitle")
+          : pending?.kind === "whiteboard"
+            ? t("createItem.whiteboardTitle")
+            : t("createItem.folderTitle")
+      }
       size="sm"
     >
       {pending ? (
@@ -58,7 +66,7 @@ function CreateItemForm({
   onDone,
 }: {
   space: SpaceWithRole;
-  kind: "folder" | "link";
+  kind: CreatedKind;
   parentId: string | null;
   onDone: () => void;
 }) {
@@ -105,7 +113,7 @@ function CreateItemForm({
       );
       await queryClient.invalidateQueries({ queryKey: ["spaces", space.id, "children"] });
       onDone();
-      if (kind === "folder") {
+      if (kind === "folder" || kind === "whiteboard") {
         const href = itemHref(created, space.key);
         if (href) await navigate({ to: href });
       }
@@ -193,7 +201,7 @@ function CreateItemForm({
         {...(errors.title ? { error: errors.title } : {})}
       >
         <Input
-          autoFocus={kind === "folder"}
+          autoFocus={kind !== "link"}
           maxLength={255}
           value={title}
           onChange={(event) => setTitle(event.target.value)}
@@ -214,7 +222,11 @@ function CreateItemForm({
           {t("common.cancel")}
         </Button>
         <Button type="submit" variant="primary" loading={saving}>
-          {kind === "link" ? t("createItem.createLink") : t("createItem.createFolder")}
+          {kind === "link"
+            ? t("createItem.createLink")
+            : kind === "whiteboard"
+              ? t("createItem.createWhiteboard")
+              : t("createItem.createFolder")}
         </Button>
       </div>
     </form>

@@ -120,7 +120,13 @@ export interface Client {
 export function connect(
   url: string,
   itemId: string,
-  options: { token?: string; origin?: string | null; headers?: Record<string, string>; doc?: Y.Doc } = {},
+  options: {
+    token?: string;
+    origin?: string | null;
+    headers?: Record<string, string>;
+    doc?: Y.Doc;
+    kind?: "page" | "whiteboard";
+  } = {},
 ): Client {
   const headers: Record<string, string> = { "x-forwarded-for": nextClientAddress(), ...options.headers };
   if (options.origin !== null) headers.origin = options.origin ?? ORIGIN;
@@ -140,7 +146,7 @@ export function connect(
   });
   const provider = new HocuspocusProvider({
     websocketProvider: socket,
-    name: `page:${itemId}`,
+    name: `${options.kind ?? "page"}:${itemId}`,
     document: doc,
     token: "session",
     onSynced: () => settle?.resolve(),

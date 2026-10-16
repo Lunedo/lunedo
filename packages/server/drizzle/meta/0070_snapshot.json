@@ -1,5 +1,5 @@
 {
-  "id": "4e680f9b-12bc-4511-92fb-7d702e216168",
+  "id": "5a2ad233-8aec-4d37-a1af-d96188113c64",
   "prevId": "515ca723-35c9-4066-9870-2e7ca277dd9b",
   "version": "7",
   "dialect": "postgresql",
@@ -3334,6 +3334,12 @@
           "notNull": true,
           "default": false
         },
+        "element_id": {
+          "name": "element_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "detached_at": {
           "name": "detached_at",
           "type": "timestamp with time zone",
@@ -3542,6 +3548,14 @@
         "comments_reply_has_no_quote": {
           "name": "comments_reply_has_no_quote",
           "value": "\"comments\".\"parent_id\" is null or \"comments\".\"quote\" is null"
+        },
+        "comments_reply_has_no_element": {
+          "name": "comments_reply_has_no_element",
+          "value": "\"comments\".\"parent_id\" is null or \"comments\".\"element_id\" is null"
+        },
+        "comments_element_length": {
+          "name": "comments_element_length",
+          "value": "length(\"comments\".\"element_id\") <= 128"
         },
         "comments_body_kept": {
           "name": "comments_body_kept",
@@ -4262,21 +4276,6 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
-        },
-        "format": {
-          "name": "format",
-          "type": "export_format",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'archive'"
-        },
-        "options": {
-          "name": "options",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::jsonb"
         },
         "space_id": {
           "name": "space_id",
@@ -19551,6 +19550,495 @@
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
+    },
+    "public.whiteboard_documents": {
+      "name": "whiteboard_documents",
+      "schema": "",
+      "columns": {
+        "item_id": {
+          "name": "item_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scene": {
+          "name": "scene",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "revision": {
+          "name": "revision",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "versioned_revision": {
+          "name": "versioned_revision",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "preview_id": {
+          "name": "preview_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "changed_at": {
+          "name": "changed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_by": {
+          "name": "updated_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "whiteboard_documents_preview_id_index": {
+          "name": "whiteboard_documents_preview_id_index",
+          "columns": [
+            {
+              "expression": "preview_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "whiteboard_documents_updated_by_index": {
+          "name": "whiteboard_documents_updated_by_index",
+          "columns": [
+            {
+              "expression": "updated_by",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "whiteboard_documents_item_id_tree_items_id_fk": {
+          "name": "whiteboard_documents_item_id_tree_items_id_fk",
+          "tableFrom": "whiteboard_documents",
+          "tableTo": "tree_items",
+          "columnsFrom": [
+            "item_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "whiteboard_documents_preview_id_whiteboard_previews_id_fk": {
+          "name": "whiteboard_documents_preview_id_whiteboard_previews_id_fk",
+          "tableFrom": "whiteboard_documents",
+          "tableTo": "whiteboard_previews",
+          "columnsFrom": [
+            "preview_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "whiteboard_documents_updated_by_accounts_id_fk": {
+          "name": "whiteboard_documents_updated_by_accounts_id_fk",
+          "tableFrom": "whiteboard_documents",
+          "tableTo": "accounts",
+          "columnsFrom": [
+            "updated_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.whiteboard_previews": {
+      "name": "whiteboard_previews",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "item_id": {
+          "name": "item_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "file_id": {
+          "name": "file_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "revision": {
+          "name": "revision",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "whiteboard_previews_item_id_revision_index": {
+          "name": "whiteboard_previews_item_id_revision_index",
+          "columns": [
+            {
+              "expression": "item_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "revision",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "whiteboard_previews_file_id_index": {
+          "name": "whiteboard_previews_file_id_index",
+          "columns": [
+            {
+              "expression": "file_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "whiteboard_previews_created_by_index": {
+          "name": "whiteboard_previews_created_by_index",
+          "columns": [
+            {
+              "expression": "created_by",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "whiteboard_previews_item_id_tree_items_id_fk": {
+          "name": "whiteboard_previews_item_id_tree_items_id_fk",
+          "tableFrom": "whiteboard_previews",
+          "tableTo": "tree_items",
+          "columnsFrom": [
+            "item_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "whiteboard_previews_file_id_stored_files_id_fk": {
+          "name": "whiteboard_previews_file_id_stored_files_id_fk",
+          "tableFrom": "whiteboard_previews",
+          "tableTo": "stored_files",
+          "columnsFrom": [
+            "file_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "whiteboard_previews_created_by_accounts_id_fk": {
+          "name": "whiteboard_previews_created_by_accounts_id_fk",
+          "tableFrom": "whiteboard_previews",
+          "tableTo": "accounts",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.whiteboard_versions": {
+      "name": "whiteboard_versions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "item_id": {
+          "name": "item_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "number": {
+          "name": "number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scene": {
+          "name": "scene",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason": {
+          "name": "reason",
+          "type": "version_reason",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "restored_from": {
+          "name": "restored_from",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revision": {
+          "name": "revision",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state_vector": {
+          "name": "state_vector",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "preview_id": {
+          "name": "preview_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "contributors": {
+          "name": "contributors",
+          "type": "uuid[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::uuid[]"
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "whiteboard_versions_number_unique": {
+          "name": "whiteboard_versions_number_unique",
+          "columns": [
+            {
+              "expression": "item_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "number",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "whiteboard_versions_preview_id_index": {
+          "name": "whiteboard_versions_preview_id_index",
+          "columns": [
+            {
+              "expression": "preview_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "whiteboard_versions_created_by_index": {
+          "name": "whiteboard_versions_created_by_index",
+          "columns": [
+            {
+              "expression": "created_by",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "whiteboard_versions_item_id_tree_items_id_fk": {
+          "name": "whiteboard_versions_item_id_tree_items_id_fk",
+          "tableFrom": "whiteboard_versions",
+          "tableTo": "tree_items",
+          "columnsFrom": [
+            "item_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "whiteboard_versions_preview_id_whiteboard_previews_id_fk": {
+          "name": "whiteboard_versions_preview_id_whiteboard_previews_id_fk",
+          "tableFrom": "whiteboard_versions",
+          "tableTo": "whiteboard_previews",
+          "columnsFrom": [
+            "preview_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "whiteboard_versions_created_by_accounts_id_fk": {
+          "name": "whiteboard_versions_created_by_accounts_id_fk",
+          "tableFrom": "whiteboard_versions",
+          "tableTo": "accounts",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "whiteboard_versions_number_positive": {
+          "name": "whiteboard_versions_number_positive",
+          "value": "\"whiteboard_versions\".\"number\" > 0"
+        }
+      },
+      "isRLSEnabled": false
     }
   },
   "enums": {
@@ -19675,18 +20163,6 @@
       "values": [
         "discarded",
         "replaced"
-      ]
-    },
-    "public.export_format": {
-      "name": "export_format",
-      "schema": "public",
-      "values": [
-        "archive",
-        "html",
-        "markdown",
-        "print",
-        "pdf",
-        "docx"
       ]
     },
     "public.export_scope": {
@@ -20105,7 +20581,8 @@
         "link",
         "blogPost",
         "meetingSeries",
-        "meetingTopic"
+        "meetingTopic",
+        "whiteboard"
       ]
     },
     "public.version_reason": {

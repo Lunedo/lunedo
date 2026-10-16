@@ -34,6 +34,7 @@ describe("slash commands", () => {
       "mention",
       "pageLink",
       "emoji",
+      "drawing",
     ]) {
       expect(ids).toContain(id);
     }

@@ -8,6 +8,7 @@ import type { Database, Executor, Transaction } from "../database/database.js";
 import { contentLanguageOf, spaceContentLanguage } from "../search/languages.js";
 import type { SettingsService } from "../settings/service.js";
 import type { ValueSigner } from "../sharing/signer.js";
+import { insertInitialWhiteboard } from "../whiteboards/initial.js";
 import { actorIdOf, SpaceError } from "./common.js";
 import { insertInitialDocument, type PageDocumentService } from "./documents.js";
 import { positionBetween } from "./fractional-index.js";
@@ -634,9 +635,11 @@ export class TreeService {
         values (${itemId}, ${spaceId}, ${input.placement.parentId}, ${input.kind}, ${position}, ${title},
           ${description}, ${linkItemId}, ${linkUrl}, ${mode}, ${actorId}, ${actorId})`);
       if (input.kind === "page") await insertInitialDocument(tx, itemId, actorId, input.document);
+      if (input.kind === "whiteboard") await insertInitialWhiteboard(tx, itemId, actorId);
       await refreshReaderVisibility(tx, [itemId]);
       if (input.kind === "page") await this.#documents.afterInsert(tx, itemId, actorId);
-      if (input.kind === "page") await this.#activity.created(tx, itemId, actorId);
+      if (input.kind === "page" || input.kind === "whiteboard")
+        await this.#activity.created(tx, itemId, actorId);
       await signalSpaceChange(tx, { spaceId, kind: "tree", itemId });
       return itemId;
     });

@@ -1,16 +1,7 @@
 import { Button, EmptyState, IconButton, Menu, PageHeader, SegmentedControl, Skeleton } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, Link } from "@tanstack/react-router";
-import {
-  ArrowRightLeft,
-  FilePlus,
-  FileText,
-  Folder,
-  FolderOpen,
-  Link2,
-  MoreHorizontal,
-  Move,
-} from "lucide-react";
+import { ArrowRightLeft, FilePlus, Folder, FolderOpen, Link2, MoreHorizontal, Move } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
@@ -19,8 +10,10 @@ import { LoadError } from "../errors/failure.js";
 import { preferenceKeys, useUpdatePreference } from "../preferences/preferences.js";
 import { usePreferences } from "../preferences/preferences-provider.js";
 import { useDocumentTitle } from "../screens/settings/settings-page.js";
+import { WhiteboardPreview } from "../whiteboards/whiteboard-preview.js";
 import { FolderDescription } from "./folder-description.js";
 import { InlineTitle } from "./inline-title.js";
+import { itemIcon } from "./item-icons.js";
 import { itemHref, itemSlug } from "./item-paths.js";
 import { OwnerLine } from "./ownership/owner-line.js";
 import { Redirect } from "./redirect.js";
@@ -207,10 +200,17 @@ function FolderEntry({ item, tile }: { item: TreeItem; tile: boolean }) {
   const { t } = useTranslation();
   const { space } = useSpace();
   const href = itemHref(item, space.key);
-  const Glyph = item.kind === "folder" ? Folder : item.kind === "link" ? Link2 : FileText;
+  const Glyph = itemIcon(item.kind);
   const title = item.kind === "link" && !item.link?.accessible ? t("tree.noAccess") : item.title;
   const content = (
     <>
+      {tile && item.kind === "whiteboard" ? (
+        <WhiteboardPreview
+          itemId={item.id}
+          label={t("whiteboards.previewOf", { title })}
+          className="aspect-video w-full"
+        />
+      ) : null}
       <Glyph aria-hidden="true" className="size-icon shrink-0 text-text-muted" />
       <span className="min-w-0 flex-1 truncate font-medium" title={title}>
         {title}

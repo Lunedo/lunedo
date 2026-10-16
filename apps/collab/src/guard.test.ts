@@ -1,8 +1,9 @@
 import { documentSize } from "@pagehall/editor-schema";
+import { emptyScene, MAX_SCENE_BYTES, SCENE_ELEMENTS, yDocFromScene } from "@pagehall/editor-schema/scene";
 import { documentFromYDoc, yDocFromDocument } from "@pagehall/editor-schema/yjs";
 import { describe, expect, it } from "vitest";
 import * as Y from "yjs";
-import { DocumentGuard } from "./guard.js";
+import { DocumentGuard, sceneValidator } from "./guard.js";
 import { appendParagraph } from "./harness.testing.js";
 
 const owners = (known: Map<number, string> = new Map()) => ({
@@ -105,5 +106,89 @@ describe("DocumentGuard", () => {
     timings.sort((left, right) => left - right);
     expect(timings[Math.floor(timings.length / 2)]).toBeLessThan(150);
     expect(JSON.stringify(documentFromYDoc(live))).toContain("aParagraph 19");
+  });
+});
+
+function shape(id: string, extra: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    id,
+    type: "rectangle",
+    x: 0,
+    y: 0,
+    width: 10,
+    height: 10,
+    angle: 0,
+    strokeColor: "#1e1e1e",
+    backgroundColor: "transparent",
+    fillStyle: "solid",
+    strokeWidth: 1,
+    strokeStyle: "solid",
+    roundness: null,
+    roughness: 1,
+    opacity: 100,
+    seed: 1,
+    version: 1,
+    versionNonce: 1,
+    index: "a0",
+    isDeleted: false,
+    groupIds: [],
+    frameId: null,
+    boundElements: null,
+    updated: 1,
+    link: null,
+    locked: false,
+    ...extra,
+  };
+}
+
+function padded(id: string): Record<string, unknown> {
+  return shape(id, { groupIds: Array.from({ length: 100 }, (_, index) => `${"g".repeat(120)}${index}`) });
+}
+
+describe("DocumentGuard for whiteboards", () => {
+  it("checks only the elements an update changes and keeps the scene size up to date", async () => {
+    const live = yDocFromScene(emptyScene());
+    const guard = new DocumentGuard(live, owners(), sceneValidator);
+    const element = editOf(live, (doc) => doc.getMap(SCENE_ELEMENTS).set("a", shape("a")));
+    expect(await guard.check(element, "account-a")).toMatchObject({ ok: true });
+    Y.applyUpdate(live, element);
+    const moved = editOf(live, (doc) =>
+      doc.getMap(SCENE_ELEMENTS).set("a", shape("a", { x: 5, version: 2 })),
+    );
+    expect(await guard.check(moved, "account-a")).toMatchObject({ ok: true });
+    const invalid = editOf(live, (doc) =>
+      doc.getMap(SCENE_ELEMENTS).set("b", shape("b", { type: "iframe" })),
+    );
+    expect(await guard.check(invalid, "account-a")).toEqual({
+      ok: false,
+      reason: "invalidDocument",
+      problems: ["unknownElementType"],
+    });
+  });
+
+  it("counts elements that arrive without a check, such as restored versions, towards the limit", async () => {
+    const live = yDocFromScene(emptyScene());
+    const guard = new DocumentGuard(live, owners(), sceneValidator);
+    const size = JSON.stringify(padded("x")).length;
+    const count = Math.floor(MAX_SCENE_BYTES / size);
+    live.transact(() => {
+      for (let index = 0; index < count; index += 1)
+        live.getMap(SCENE_ELEMENTS).set(`e${index}`, padded(`e${index}`));
+    });
+    const more = editOf(live, (doc) => {
+      for (let index = 0; index < 20; index += 1)
+        doc.getMap(SCENE_ELEMENTS).set(`n${index}`, padded(`n${index}`));
+    });
+    expect(await guard.check(more, "account-a")).toEqual({
+      ok: false,
+      reason: "invalidDocument",
+      problems: ["tooLarge"],
+    });
+    const removal = editOf(live, (doc) => {
+      for (let index = 0; index < 40; index += 1) doc.getMap(SCENE_ELEMENTS).delete(`e${index}`);
+    });
+    expect(await guard.check(removal, "account-a")).toMatchObject({ ok: true });
+    Y.applyUpdate(live, removal);
+    expect(await guard.check(more, "account-a")).toMatchObject({ ok: true });
   });
 });

@@ -89,10 +89,13 @@ export function isApprovedLicense(expression: string): boolean {
   }
 }
 
+export const UNDECLARED_LICENSE = "Unknown";
+
 export interface PackageLicense {
   name: string;
   versions: string[];
   license: string;
+  licenseFiles?: Record<string, string>;
 }
 
 export interface AllowlistEntry {
@@ -106,6 +109,7 @@ export interface Clarification {
   declared: string;
   license: string;
   reason: string;
+  licenseFileSha256?: string;
 }
 
 export type Clarifications = Record<string, Clarification>;
@@ -124,12 +128,32 @@ export function findLicenseViolations(options: {
   const violations: string[] = [];
   const clarifications = options.clarifications ?? {};
   const usedClarifications = new Set<string>();
+  const reviewedFile = (pkg: PackageLicense, version: string, entry: Clarification): boolean => {
+    if (pkg.license !== UNDECLARED_LICENSE) return true;
+    const key = `${pkg.name}@${version}`;
+    if (!entry.licenseFileSha256) {
+      violations.push(`Clarification ${key} must pin the reviewed license file with licenseFileSha256`);
+      return false;
+    }
+    if (pkg.licenseFiles?.[version] !== entry.licenseFileSha256) {
+      violations.push(
+        `The license file of ${key} differs from the reviewed one; review it and update the clarification`,
+      );
+      return false;
+    }
+    return true;
+  };
   const effective = (pkg: PackageLicense): string => {
     const keys = pkg.versions.map((version) => `${pkg.name}@${version}`);
     const entries = keys.map((key) => clarifications[key]);
     if (keys.length === 0 || entries.some((entry) => !entry || entry.declared !== pkg.license))
       return pkg.license;
     for (const key of keys) usedClarifications.add(key);
+    const reviewed = pkg.versions.map((version, index) => {
+      const entry = entries[index];
+      return entry !== undefined && reviewedFile(pkg, version, entry);
+    });
+    if (reviewed.includes(false)) return pkg.license;
     const licenses = new Set(entries.map((entry) => entry?.license ?? ""));
     return licenses.size === 1 ? ([...licenses][0] ?? pkg.license) : pkg.license;
   };

@@ -36,6 +36,7 @@ Documents are ProseMirror JSON. The server validates every stored document and e
 | `unsupportedMacro` | | `name`, `data` (the original data, up to 256 KiB) |
 | `image` | | `attachmentId`, `alt`, `width`, `align` |
 | `file` | | `attachmentId`, `name` |
+| `drawing` | | `id` (block ID), `sceneId` and `sceneVersion` (attachment version of the scene), `previewId` and `previewVersion` (attachment version of the SVG image), `text` (up to 20,000 characters, for search) |
 
 ## Marks
 
@@ -62,6 +63,21 @@ On success it returns the normalized document: missing attributes are filled wit
 With `target: "print"` in the render context, `renderHtml` produces the HTML for print: images load at once with their width, and expand blocks show their content under their title. A node can define its own `print` form. A node that cannot be printed, such as a diagram without a preview, sets `print: "unsupported"` and appears as a note that names it and points to the page in Pagehall.
 
 `renderWord` produces a neutral description of a Word document: paragraphs with styled text runs, headings with anchors, lists and task lists, tables with merged cells and backgrounds, code, labelled boxes for callouts and decisions, images, contents and placeholders. The server turns it into a `.docx` file; the package itself has no Word dependency. Each node defines a `word` form and each mark changes the style of its text. A node without a `word` form appears as the same note as in print. The render context's `nodeTitle` names nodes in that note.
+
+## Whiteboard scenes
+
+`@pagehall/editor-schema/scene` defines the scenes of whiteboards and drawing blocks: Excalidraw elements, images and settings. `validateScene` accepts the element types rectangle, diamond, ellipse, arrow, line, freedraw, text, image and frame with their known fields only; embedded web content, AI frames and custom data other than the sticky-note flag are refused. Links on elements allow `http`, `https` and internal paths. Images are referenced by the ID of an attachment of the same item, never by address.
+
+| Limit | Value |
+|---|---|
+| Scene | 8 MiB |
+| One element | 512 KiB |
+| Elements | 20,000 |
+| Images | 500 |
+| Points of a line or stroke | 20,000 |
+| Text of one element | 20,000 characters |
+
+In Yjs, a scene is a map `elements` (element ID to element), a map `files` (file ID to attachment and type) and a map `settings`. Each client writes an element only when its version is newer; concurrent edits of one element are reconciled with Excalidraw's version and version nonce, so every client ends with the same scene. Deleted elements stay as tombstones for a day, so late changes from other people cannot bring them back.
 
 ## Collaboration
 

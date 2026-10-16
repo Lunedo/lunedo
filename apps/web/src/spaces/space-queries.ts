@@ -172,6 +172,9 @@ export function spacesChanged(queryClient: QueryClient, events: SpaceChangeEvent
       add(["items", event.itemId, "discarded"]);
       add(["items", event.itemId, "attachments"]);
     }
+    if ((event.kind === "page" || event.kind === "tree") && event.itemId) {
+      add(["items", event.itemId, "whiteboard"]);
+    }
     if (event.kind === "page" && event.itemId) {
       add(["items", event.itemId, "draft"]);
       add(["items", event.itemId, "versions"]);
@@ -223,6 +226,11 @@ export function pagePath(spaceKey: string, itemId: string, slug: string): string
 export function blogPostPath(spaceKey: string, itemId: string, slug: string): string {
   if (!spaceKey) return sharedPath(itemId, slug);
   return `/spaces/${encodeURIComponent(spaceKey)}/blog/${itemId}/${slug}`;
+}
+
+export function whiteboardPath(spaceKey: string, itemId: string, slug: string): string {
+  if (!spaceKey) return sharedPath(itemId, slug);
+  return `/spaces/${encodeURIComponent(spaceKey)}/whiteboards/${itemId}/${slug}`;
 }
 
 export function folderPath(spaceKey: string, itemId: string, slug: string): string {

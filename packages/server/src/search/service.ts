@@ -78,7 +78,7 @@ export interface SearchAttachment {
   size: number;
 }
 
-export const searchItemTypes = ["page", "blogPost", "topic"] as const;
+export const searchItemTypes = ["page", "blogPost", "topic", "whiteboard"] as const;
 export type SearchItemType = (typeof searchItemTypes)[number];
 
 export interface SearchHit {
@@ -130,6 +130,10 @@ const TYPE_ALIASES: Record<string, SearchContentType> = {
   blogpost: "blogPost",
   "blog-post": "blogPost",
   post: "blogPost",
+  whiteboard: "whiteboard",
+  whiteboards: "whiteboard",
+  board: "whiteboard",
+  boards: "whiteboard",
   comment: "comment",
   comments: "comment",
   attachment: "attachment",
@@ -382,7 +386,13 @@ export class SearchService {
     const itemTypes = new Map(
       kinds.rows.map((row): [string, SearchItemType] => [
         row.id,
-        row.kind === "meetingTopic" ? "topic" : row.kind === "blogPost" ? "blogPost" : "page",
+        row.kind === "meetingTopic"
+          ? "topic"
+          : row.kind === "blogPost"
+            ? "blogPost"
+            : row.kind === "whiteboard"
+              ? "whiteboard"
+              : "page",
       ]),
     );
     const inSpaces = hits.filter((hit) => spaces.has(hit.spaceId)).map((hit) => hit.itemId);

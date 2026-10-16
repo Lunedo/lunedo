@@ -224,7 +224,10 @@ function CollaborativeEditor({
     editor,
     selector: ({ editor: current }) => current?.isEditable ?? false,
   });
-  const pageContext = useMemo(() => ({ pageId, spaceId, spaceKey }), [pageId, spaceId, spaceKey]);
+  const pageContext = useMemo(
+    () => ({ pageId, spaceId, spaceKey, provider: collaboration.provider, self }),
+    [pageId, spaceId, spaceKey, collaboration.provider, self],
+  );
   const blocked = snapshot.problem !== null && !snapshot.loaded;
 
   return (

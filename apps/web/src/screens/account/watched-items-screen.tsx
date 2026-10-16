@@ -12,7 +12,7 @@ import {
   type WatchedEntry,
   type WatchTarget,
 } from "../../notifications/watching-api.js";
-import { blogPostPath, folderPath, pagePath } from "../../spaces/space-queries.js";
+import { blogPostPath, folderPath, pagePath, whiteboardPath } from "../../spaces/space-queries.js";
 import { SettingsPage } from "../settings/settings-page.js";
 
 export function watchedPath(entry: WatchedEntry): string | null {
@@ -31,6 +31,8 @@ export function watchedPath(entry: WatchedEntry): string | null {
       return seriesPath(entry.spaceKey, id);
     case "meetingTopic":
       return topicPath(entry.spaceKey, id);
+    case "whiteboard":
+      return whiteboardPath(entry.spaceKey, id, slug);
     default:
       return null;
   }
