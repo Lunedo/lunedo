@@ -1,0 +1,31 @@
+{
+  "name": "@pagehall/fractional-indexing",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Order keys between two keys, compatible with the fractional-indexing package that Excalidraw uses",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "exports": {
+    ".": {
+      "@pagehall/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "pagehall-dev",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@pagehall/config": "workspace:*",
+    "@types/node": "^24.19.2",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false
+}

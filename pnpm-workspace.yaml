@@ -13,6 +13,7 @@ ignoredOptionalDependencies:
 
 overrides:
   "@scalar/json-magic>undici": ^7.29.1
+  fractional-indexing: link:./packages/fractional-indexing
 
 patchedDependencies:
   "@tiptap/y-tiptap@3.0.9": patches/@tiptap__y-tiptap@3.0.9.patch
