@@ -1,0 +1,341 @@
+{
+  "type": "doc",
+  "content": [
+    {
+      "type": "heading",
+      "attrs": {
+        "level": 1
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Remote access"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "attrs": {
+        "level": 2,
+        "textAlign": "center",
+        "indent": 1
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Level 2"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "attrs": {
+        "level": 3,
+        "textAlign": "center",
+        "indent": 1
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Level 3"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "attrs": {
+        "level": 4,
+        "textAlign": "center",
+        "indent": 1
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Level 4"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "attrs": {
+        "level": 5,
+        "textAlign": "center",
+        "indent": 1
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Level 5"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "attrs": {
+        "level": 6,
+        "textAlign": "center",
+        "indent": 1
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Level 6"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "text": "Plain, "
+        },
+        {
+          "type": "text",
+          "text": "bold",
+          "marks": [
+            {
+              "type": "bold"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": " and "
+        },
+        {
+          "type": "text",
+          "text": "italic",
+          "marks": [
+            {
+              "type": "italic"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": ", "
+        },
+        {
+          "type": "text",
+          "text": "underlined",
+          "marks": [
+            {
+              "type": "underline"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": ", "
+        },
+        {
+          "type": "text",
+          "text": "struck",
+          "marks": [
+            {
+              "type": "strike"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": ", H"
+        },
+        {
+          "type": "text",
+          "text": "2",
+          "marks": [
+            {
+              "type": "subscript"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": "O and x"
+        },
+        {
+          "type": "text",
+          "text": "2",
+          "marks": [
+            {
+              "type": "superscript"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": ", "
+        },
+        {
+          "type": "text",
+          "text": "inline code",
+          "marks": [
+            {
+              "type": "code"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": "."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "text": "Visit "
+        },
+        {
+          "type": "text",
+          "text": "the portal",
+          "marks": [
+            {
+              "type": "link",
+              "attrs": {
+                "href": "https://example.org/portal"
+              }
+            },
+            {
+              "type": "bold"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": ", "
+        },
+        {
+          "type": "text",
+          "text": "write",
+          "marks": [
+            {
+              "type": "link",
+              "attrs": {
+                "href": "mailto:it@example.org"
+              }
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": " or open "
+        },
+        {
+          "type": "text",
+          "text": "a page",
+          "marks": [
+            {
+              "type": "link",
+              "attrs": {
+                "href": "/spaces/IT"
+              }
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": "."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "text": "Red text",
+          "marks": [
+            {
+              "type": "textColor",
+              "attrs": {
+                "color": "red"
+              }
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": " and "
+        },
+        {
+          "type": "text",
+          "text": "highlighted",
+          "marks": [
+            {
+              "type": "highlight",
+              "attrs": {
+                "color": "yellow"
+              }
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": " and "
+        },
+        {
+          "type": "text",
+          "text": "discussed",
+          "marks": [
+            {
+              "type": "inlineComment",
+              "attrs": {
+                "threadId": "01929b1e-0000-7000-8000-000000000004"
+              }
+            },
+            {
+              "type": "inlineComment",
+              "attrs": {
+                "threadId": "01929b1e-0000-7000-8000-000000000005"
+              }
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": "."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "text": "First line"
+        },
+        {
+          "type": "hardBreak"
+        },
+        {
+          "type": "text",
+          "text": "second line"
+        }
+      ],
+      "attrs": {
+        "textAlign": "right",
+        "indent": 2
+      }
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "text": "Justified text"
+        }
+      ],
+      "attrs": {
+        "textAlign": "justify"
+      }
+    },
+    {
+      "type": "paragraph"
+    }
+  ]
+}

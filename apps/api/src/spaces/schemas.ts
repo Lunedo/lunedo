@@ -327,7 +327,7 @@ export const treeItemSchema = z
     parentId: uuid("Parent item, or null at the root of the tree.").nullable(),
     kind: extensibleEnum(
       treeItemKinds,
-      "`page`, `folder`, `link` or `blogPost`. Blog posts are not part of the tree; they appear in the blog of their space.",
+      "`page`, `folder`, `link`, `blogPost`, `meetingSeries`, `meetingTopic` or `whiteboard`. Blog posts and topics are not part of the tree; they appear in the blog and the meetings of their space.",
     ),
     title: z.string().describe("Title. Empty for a link to content the caller cannot read."),
     description: z.string().describe("Short description of a folder."),
@@ -455,8 +455,10 @@ export const placementShape = {
 export const createItemSchema = z
   .object({
     kind: z
-      .enum(["page", "folder", "link"])
-      .describe("`page`, `folder` or `link`. Blog posts are created in the blog of a space."),
+      .enum(["page", "folder", "link", "whiteboard"])
+      .describe(
+        "`page`, `folder`, `link` or `whiteboard`. Blog posts are created in the blog of a space, meeting series in its meetings.",
+      ),
     title: z.string().max(ITEM_TITLE_MAX_LENGTH).describe("Title, 1 to 255 characters."),
     description: z
       .string()

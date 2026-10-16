@@ -4,7 +4,15 @@ import type { SearchViewer } from "./access.js";
 import type { ParsedQuery } from "./query.js";
 import type { SearchSource } from "./schema.js";
 
-export const searchContentTypes = ["page", "blogPost", "comment", "attachment", "topic", "decision"] as const;
+export const searchContentTypes = [
+  "page",
+  "blogPost",
+  "whiteboard",
+  "comment",
+  "attachment",
+  "topic",
+  "decision",
+] as const;
 export type SearchContentType = (typeof searchContentTypes)[number];
 
 export const searchSorts = ["relevance", "newest"] as const;

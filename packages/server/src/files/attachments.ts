@@ -223,8 +223,8 @@ export class AttachmentService {
       where t.id = ${itemId}`);
     const row = result.rows[0];
     if (!row) throw new AttachmentError("itemNotFound", "The page does not exist");
-    if (row.kind !== "page" && row.kind !== "blogPost") {
-      throw new AttachmentError("invalidItem", "Files can be attached to pages and blog posts");
+    if (row.kind !== "page" && row.kind !== "blogPost" && row.kind !== "whiteboard") {
+      throw new AttachmentError("invalidItem", "Files can be attached to pages, blog posts and whiteboards");
     }
     return row;
   }

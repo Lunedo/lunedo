@@ -34,7 +34,15 @@ export const spaceRoles = ["reader", "commenter", "editor", "admin"] as const;
 export type SpaceRole = (typeof spaceRoles)[number];
 export const spaceRole = pgEnum("space_role", spaceRoles);
 
-export const treeItemKinds = ["page", "folder", "link", "blogPost", "meetingSeries", "meetingTopic"] as const;
+export const treeItemKinds = [
+  "page",
+  "folder",
+  "link",
+  "blogPost",
+  "meetingSeries",
+  "meetingTopic",
+  "whiteboard",
+] as const;
 export type TreeItemKind = (typeof treeItemKinds)[number];
 export const treeItemKind = pgEnum("tree_item_kind", treeItemKinds);
 

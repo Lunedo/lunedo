@@ -29,7 +29,7 @@ import {
 } from "@pagehall/server";
 import { isUuid } from "@pagehall/shared";
 import * as Y from "yjs";
-import { DocumentGuard } from "./guard.js";
+import { DocumentGuard, pageValidator, sceneValidator } from "./guard.js";
 import {
   CLIENT_ADDRESS_HEADER,
   COLLAB_PATH,
@@ -47,6 +47,7 @@ import {
   STORE_DEBOUNCE_MS,
   STORE_MAX_DEBOUNCE_MS,
   STORE_RETRY_MS,
+  WHITEBOARD_PREFIX,
 } from "./limits.js";
 import { RedisSync } from "./redis-sync.js";
 
@@ -143,10 +144,32 @@ function cookie(header: string | null, name: string): string | undefined {
   return undefined;
 }
 
+export type DocumentKind = "page" | "whiteboard";
+
+const DOCUMENT_PREFIXES: Record<DocumentKind, string> = {
+  page: DOCUMENT_PREFIX,
+  whiteboard: WHITEBOARD_PREFIX,
+};
+
+export function parseDocumentName(documentName: string): { kind: DocumentKind; itemId: string } | null {
+  for (const [kind, prefix] of Object.entries(DOCUMENT_PREFIXES) as [DocumentKind, string][]) {
+    if (!documentName.startsWith(prefix)) continue;
+    const id = documentName.slice(prefix.length);
+    return isUuid(id) && id === id.toLowerCase() ? { kind, itemId: id } : null;
+  }
+  return null;
+}
+
 export function itemIdOf(documentName: string): string | null {
-  if (!documentName.startsWith(DOCUMENT_PREFIX)) return null;
-  const id = documentName.slice(DOCUMENT_PREFIX.length);
-  return isUuid(id) && id === id.toLowerCase() ? id : null;
+  return parseDocumentName(documentName)?.itemId ?? null;
+}
+
+function documentNamesOf(itemId: string): string[] {
+  return Object.values(DOCUMENT_PREFIXES).map((prefix) => `${prefix}${itemId}`);
+}
+
+function acceptsItem(kind: DocumentKind, itemKind: string | undefined): boolean {
+  return kind === "whiteboard" ? itemKind === "whiteboard" : itemKind === "page" || itemKind === "blogPost";
 }
 
 export async function createCollabServer(options: {
@@ -194,19 +217,37 @@ export async function createCollabServer(options: {
 
   async function reject(
     context: CollabContext,
+    documentName: string,
     reason: "invalidDocument" | "tooLarge" | "foreignClient" | "malformed",
     problems: string[],
     bytes: number,
   ): Promise<never> {
-    await services.audit
-      .recordAlone({
-        name: "page.updateRejected",
-        actor: accountPrincipal(context.accountId),
-        targetId: context.itemId,
-        fields: { spaceId: context.spaceId, reason, problems, bytes },
-        scope: auditScopeOf({ organizationId: context.organizationId }),
-      })
-      .catch((error: unknown) => logger.warn({ err: error }, "Recording a rejected update failed"));
+    const actor = accountPrincipal(context.accountId);
+    const scope = auditScopeOf({ organizationId: context.organizationId });
+    const recorded =
+      parseDocumentName(documentName)?.kind === "whiteboard"
+        ? services.audit.recordAlone({
+            name: "whiteboard.updateRejected",
+            actor,
+            targetId: context.itemId,
+            fields: {
+              spaceId: context.spaceId,
+              reason: reason === "invalidDocument" ? "invalidScene" : reason,
+              problems,
+              bytes,
+            },
+            scope,
+          })
+        : services.audit.recordAlone({
+            name: "page.updateRejected",
+            actor,
+            targetId: context.itemId,
+            fields: { spaceId: context.spaceId, reason, problems, bytes },
+            scope,
+          });
+    await recorded.catch((error: unknown) =>
+      logger.warn({ err: error }, "Recording a rejected update failed"),
+    );
     logger.info({ itemId: context.itemId, reason }, "Collaborative update rejected");
     throw closeReasons.updateRejected;
   }
@@ -360,8 +401,14 @@ export async function createCollabServer(options: {
     drain();
   }
 
-  async function mergeStored(document: Document, itemId: string): Promise<void> {
-    const state = await services.documents.state(itemId);
+  async function storedState(kind: DocumentKind, itemId: string): Promise<Uint8Array | null> {
+    return kind === "whiteboard"
+      ? ((await services.whiteboards.stored(itemId))?.state ?? null)
+      : services.documents.state(itemId);
+  }
+
+  async function mergeStored(document: Document, kind: DocumentKind, itemId: string): Promise<void> {
+    const state = await storedState(kind, itemId);
     if (state) Y.applyUpdate(document, state, STORE_ORIGIN);
   }
 
@@ -400,7 +447,8 @@ export async function createCollabServer(options: {
         if (!(await allowed(session.accountId, "account", CONNECTIONS_PER_ACCOUNT_PER_MINUTE))) {
           throw new Refusal("tooManyConnections");
         }
-        const itemId = itemIdOf(documentName);
+        const parsed = parseDocumentName(documentName);
+        const itemId = parsed?.itemId ?? null;
         const location = itemId ? await locate(itemId) : undefined;
         const context: CollabContext = {
           accountId: session.accountId,
@@ -412,10 +460,7 @@ export async function createCollabServer(options: {
           signalsBeforeCheck,
           checkedAt,
         };
-        if (
-          (location?.kind !== "page" && location?.kind !== "blogPost") ||
-          !(await may(context, "item.view"))
-        ) {
+        if (!parsed || !acceptsItem(parsed.kind, location?.kind) || !(await may(context, "item.view"))) {
           throw new Refusal("pageNotFound");
         }
         if (!(await may(context, "item.edit"))) throw new Refusal("noEditPermission");
@@ -427,26 +472,38 @@ export async function createCollabServer(options: {
       }
     },
     async onLoadDocument({ document, documentName }) {
-      const itemId = itemIdOf(documentName);
-      const stored = itemId ? await services.documents.stored(itemId) : null;
-      if (!itemId || !stored) throw { reason: "pageNotFound" };
-      Y.applyUpdate(document, stored.state, STORE_ORIGIN);
-      migrateYDoc(document, stored.schemaVersion, STORE_ORIGIN);
+      const parsed = parseDocumentName(documentName);
+      if (!parsed) throw { reason: "pageNotFound" };
+      const { kind, itemId } = parsed;
+      if (kind === "whiteboard") {
+        const stored = await services.whiteboards.stored(itemId);
+        if (!stored) throw { reason: "pageNotFound" };
+        Y.applyUpdate(document, stored.state, STORE_ORIGIN);
+      } else {
+        const stored = await services.documents.stored(itemId);
+        if (!stored) throw { reason: "pageNotFound" };
+        Y.applyUpdate(document, stored.state, STORE_ORIGIN);
+        migrateYDoc(document, stored.schemaVersion, STORE_ORIGIN);
+      }
       guards.get(documentName)?.destroy();
       guards.set(
         documentName,
-        new DocumentGuard(document, {
-          owners: async (clients) => {
-            const result = await runtime.pool.query<{ client_id: string; account_id: string }>(
-              "select client_id, account_id from collaboration_clients where item_id = $1 and client_id = any($2)",
-              [itemId, clients],
-            );
-            return new Map(result.rows.map((row) => [Number(row.client_id), row.account_id]));
+        new DocumentGuard(
+          document,
+          {
+            owners: async (clients) => {
+              const result = await runtime.pool.query<{ client_id: string; account_id: string }>(
+                "select client_id, account_id from collaboration_clients where item_id = $1 and client_id = any($2)",
+                [itemId, clients],
+              );
+              return new Map(result.rows.map((row) => [Number(row.client_id), row.account_id]));
+            },
           },
-        }),
+          kind === "whiteboard" ? sceneValidator : pageValidator,
+        ),
       );
     },
-    async beforeHandleMessage({ connection, update, context }) {
+    async beforeHandleMessage({ connection, update, context, documentName }) {
       let bucket = buckets.get(connection);
       if (!bucket) {
         bucket = new Bucket();
@@ -454,13 +511,13 @@ export async function createCollabServer(options: {
       }
       if (!bucket.take()) throw closeReasons.tooManyMessages;
       if (update.byteLength > MAX_UPDATE_BYTES) {
-        await reject(context as CollabContext, "tooLarge", [], update.byteLength);
+        await reject(context as CollabContext, documentName, "tooLarge", [], update.byteLength);
       }
       if (update.byteLength > MAX_AWARENESS_BYTES) {
         const message = new IncomingMessage(update);
         message.readVarString();
         if (message.readVarUint() === MessageType.Awareness) {
-          await reject(context as CollabContext, "tooLarge", [], update.byteLength);
+          await reject(context as CollabContext, documentName, "tooLarge", [], update.byteLength);
         }
       }
     },
@@ -470,7 +527,8 @@ export async function createCollabServer(options: {
       const guard = guards.get(documentName);
       if (!guard) throw closeReasons.updateRejected;
       const verdict = await guard.check(payload, collab.accountId);
-      if (!verdict.ok) return reject(collab, verdict.reason, verdict.problems, payload.byteLength);
+      if (!verdict.ok)
+        return reject(collab, documentName, verdict.reason, verdict.problems, payload.byteLength);
       for (const client of verdict.newClients) {
         await recordClient(runtime.database, collab.itemId, client, collab.accountId);
       }
@@ -478,14 +536,17 @@ export async function createCollabServer(options: {
     },
     async onStoreDocument(payload: onStoreDocumentPayload<CollabContext>) {
       const { document, documentName } = payload;
-      const itemId = itemIdOf(documentName);
-      if (!itemId) return;
+      const parsed = parseDocumentName(documentName);
+      if (!parsed) return;
+      const { kind, itemId } = parsed;
       try {
-        await mergeStored(document, itemId);
+        await mergeStored(document, kind, itemId);
         const stateVector = Y.encodeStateVector(document);
-        const revision = await services.documents.store(itemId, document, {
-          actorId: lastEditors.get(documentName) ?? null,
-        });
+        const actorId = lastEditors.get(documentName) ?? null;
+        const revision =
+          kind === "whiteboard"
+            ? await services.whiteboards.store(itemId, document, { actorId })
+            : await services.documents.store(itemId, document, { actorId });
         document.broadcastStateless(
           JSON.stringify({
             type: "saved",
@@ -494,7 +555,7 @@ export async function createCollabServer(options: {
           }),
         );
       } catch (error) {
-        logger.warn({ err: error, itemId }, "Storing a page failed");
+        logger.warn({ err: error, itemId, kind }, "Storing a document failed");
         document.broadcastStateless(JSON.stringify({ type: "saveFailed" }));
         setTimeout(() => {
           if (!destroyed && instance.documents.get(documentName) === document) {
@@ -527,11 +588,16 @@ export async function createCollabServer(options: {
       guards.get(documentName)?.destroy();
       guards.delete(documentName);
       lastEditors.delete(documentName);
-      const itemId = itemIdOf(documentName);
-      if (!itemId) return;
-      await services.versions
-        .endSession(itemId, node)
-        .catch((error: unknown) => logger.warn({ err: error, itemId }, "Ending an editing session failed"));
+      const parsed = parseDocumentName(documentName);
+      if (!parsed) return;
+      const { kind, itemId } = parsed;
+      const ended =
+        kind === "whiteboard"
+          ? services.whiteboards.endSession(itemId, node)
+          : services.versions.endSession(itemId, node);
+      await ended.catch((error: unknown) =>
+        logger.warn({ err: error, itemId }, "Ending an editing session failed"),
+      );
     },
     async onDestroy() {
       destroyed = true;
@@ -566,11 +632,14 @@ export async function createCollabServer(options: {
     runtime.listener.listen(DOCUMENT_CHANGES_CHANNEL, (raw) => {
       const signal = parseDocumentChangeSignal(raw);
       if (destroyed || !signal || signal.origin === services.documents.origin) return;
-      const document = instance.documents.get(`${DOCUMENT_PREFIX}${signal.itemId}`);
-      if (!document || document.isLoading) return;
-      mergeStored(document, signal.itemId).catch((error: unknown) =>
-        logger.warn({ err: error }, "Loading a page changed elsewhere failed"),
-      );
+      for (const name of documentNamesOf(signal.itemId)) {
+        const document = instance.documents.get(name);
+        const parsed = parseDocumentName(name);
+        if (!document || document.isLoading || !parsed) continue;
+        mergeStored(document, parsed.kind, signal.itemId).catch((error: unknown) =>
+          logger.warn({ err: error }, "Loading a document changed elsewhere failed"),
+        );
+      }
     }),
     runtime.listener.listen(SPACE_CHANGES_CHANNEL, (raw) => {
       const signal = parseSpaceChangeSignal(raw);

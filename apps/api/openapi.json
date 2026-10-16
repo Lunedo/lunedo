@@ -147,6 +147,10 @@
     {
       "name": "Watching",
       "description": "Watching and muting pages, blog posts, meeting series and spaces."
+    },
+    {
+      "name": "Whiteboards",
+      "description": ""
     }
   ],
   "paths": {
@@ -7073,6 +7077,7 @@
                               "blogPost",
                               "meetingSeries",
                               "meetingTopic",
+                              "whiteboard",
                               "space"
                             ]
                           },
@@ -21820,7 +21825,8 @@
                               "link",
                               "blogPost",
                               "meetingSeries",
-                              "meetingTopic"
+                              "meetingTopic",
+                              "whiteboard"
                             ]
                           },
                           {
@@ -25209,7 +25215,8 @@
                               "link",
                               "blogPost",
                               "meetingSeries",
-                              "meetingTopic"
+                              "meetingTopic",
+                              "whiteboard"
                             ]
                           },
                           "title": {
@@ -25271,7 +25278,8 @@
                                   "link",
                                   "blogPost",
                                   "meetingSeries",
-                                  "meetingTopic"
+                                  "meetingTopic",
+                                  "whiteboard"
                                 ]
                               },
                               "title": {
@@ -25502,7 +25510,8 @@
                                   "link",
                                   "blogPost",
                                   "meetingSeries",
-                                  "meetingTopic"
+                                  "meetingTopic",
+                                  "whiteboard"
                                 ]
                               },
                               "title": {
@@ -101092,7 +101101,8 @@
                             "link",
                             "blogPost",
                             "meetingSeries",
-                            "meetingTopic"
+                            "meetingTopic",
+                            "whiteboard"
                           ]
                         },
                         {
@@ -101647,7 +101657,8 @@
                               "link",
                               "blogPost",
                               "meetingSeries",
-                              "meetingTopic"
+                              "meetingTopic",
+                              "whiteboard"
                             ]
                           },
                           {
@@ -108819,7 +108830,8 @@
                 "link",
                 "blogPost",
                 "meetingSeries",
-                "meetingTopic"
+                "meetingTopic",
+                "whiteboard"
               ]
             }
           },
@@ -108870,14 +108882,15 @@
                       },
                       "kind": {
                         "type": "string",
-                        "description": "`page`, `folder`, `link` or `blogPost`. Blog posts are not part of the tree; they appear in the blog of their space. New values can be added in later versions; handle unknown values.",
+                        "description": "`page`, `folder`, `link`, `blogPost`, `meetingSeries`, `meetingTopic` or `whiteboard`. Blog posts and topics are not part of the tree; they appear in the blog and the meetings of their space. New values can be added in later versions; handle unknown values.",
                         "x-extensible-enum": [
                           "page",
                           "folder",
                           "link",
                           "blogPost",
                           "meetingSeries",
-                          "meetingTopic"
+                          "meetingTopic",
+                          "whiteboard"
                         ]
                       },
                       "title": {
@@ -108988,7 +109001,8 @@
                                           "link",
                                           "blogPost",
                                           "meetingSeries",
-                                          "meetingTopic"
+                                          "meetingTopic",
+                                          "whiteboard"
                                         ]
                                       },
                                       "title": {
@@ -109435,7 +109449,8 @@
                             "link",
                             "blogPost",
                             "meetingSeries",
-                            "meetingTopic"
+                            "meetingTopic",
+                            "whiteboard"
                           ]
                         },
                         {
@@ -109786,14 +109801,15 @@
                     },
                     "kind": {
                       "type": "string",
-                      "description": "`page`, `folder`, `link` or `blogPost`. Blog posts are not part of the tree; they appear in the blog of their space. New values can be added in later versions; handle unknown values.",
+                      "description": "`page`, `folder`, `link`, `blogPost`, `meetingSeries`, `meetingTopic` or `whiteboard`. Blog posts and topics are not part of the tree; they appear in the blog and the meetings of their space. New values can be added in later versions; handle unknown values.",
                       "x-extensible-enum": [
                         "page",
                         "folder",
                         "link",
                         "blogPost",
                         "meetingSeries",
-                        "meetingTopic"
+                        "meetingTopic",
+                        "whiteboard"
                       ]
                     },
                     "title": {
@@ -109904,7 +109920,8 @@
                                         "link",
                                         "blogPost",
                                         "meetingSeries",
-                                        "meetingTopic"
+                                        "meetingTopic",
+                                        "whiteboard"
                                       ]
                                     },
                                     "title": {
@@ -110153,7 +110170,8 @@
                               "link",
                               "blogPost",
                               "meetingSeries",
-                              "meetingTopic"
+                              "meetingTopic",
+                              "whiteboard"
                             ]
                           },
                           "title": {
@@ -110519,14 +110537,15 @@
                     },
                     "kind": {
                       "type": "string",
-                      "description": "`page`, `folder`, `link` or `blogPost`. Blog posts are not part of the tree; they appear in the blog of their space. New values can be added in later versions; handle unknown values.",
+                      "description": "`page`, `folder`, `link`, `blogPost`, `meetingSeries`, `meetingTopic` or `whiteboard`. Blog posts and topics are not part of the tree; they appear in the blog and the meetings of their space. New values can be added in later versions; handle unknown values.",
                       "x-extensible-enum": [
                         "page",
                         "folder",
                         "link",
                         "blogPost",
                         "meetingSeries",
-                        "meetingTopic"
+                        "meetingTopic",
+                        "whiteboard"
                       ]
                     },
                     "title": {
@@ -110637,7 +110656,8 @@
                                         "link",
                                         "blogPost",
                                         "meetingSeries",
-                                        "meetingTopic"
+                                        "meetingTopic",
+                                        "whiteboard"
                                       ]
                                     },
                                     "title": {
@@ -111737,14 +111757,15 @@
                     },
                     "kind": {
                       "type": "string",
-                      "description": "`page`, `folder`, `link` or `blogPost`. Blog posts are not part of the tree; they appear in the blog of their space. New values can be added in later versions; handle unknown values.",
+                      "description": "`page`, `folder`, `link`, `blogPost`, `meetingSeries`, `meetingTopic` or `whiteboard`. Blog posts and topics are not part of the tree; they appear in the blog and the meetings of their space. New values can be added in later versions; handle unknown values.",
                       "x-extensible-enum": [
                         "page",
                         "folder",
                         "link",
                         "blogPost",
                         "meetingSeries",
-                        "meetingTopic"
+                        "meetingTopic",
+                        "whiteboard"
                       ]
                     },
                     "title": {
@@ -111855,7 +111876,8 @@
                                         "link",
                                         "blogPost",
                                         "meetingSeries",
-                                        "meetingTopic"
+                                        "meetingTopic",
+                                        "whiteboard"
                                       ]
                                     },
                                     "title": {
@@ -112385,14 +112407,15 @@
                     },
                     "kind": {
                       "type": "string",
-                      "description": "`page`, `folder`, `link` or `blogPost`. Blog posts are not part of the tree; they appear in the blog of their space. New values can be added in later versions; handle unknown values.",
+                      "description": "`page`, `folder`, `link`, `blogPost`, `meetingSeries`, `meetingTopic` or `whiteboard`. Blog posts and topics are not part of the tree; they appear in the blog and the meetings of their space. New values can be added in later versions; handle unknown values.",
                       "x-extensible-enum": [
                         "page",
                         "folder",
                         "link",
                         "blogPost",
                         "meetingSeries",
-                        "meetingTopic"
+                        "meetingTopic",
+                        "whiteboard"
                       ]
                     },
                     "title": {
@@ -112503,7 +112526,8 @@
                                         "link",
                                         "blogPost",
                                         "meetingSeries",
-                                        "meetingTopic"
+                                        "meetingTopic",
+                                        "whiteboard"
                                       ]
                                     },
                                     "title": {
@@ -121755,7 +121779,8 @@
                               "link",
                               "blogPost",
                               "meetingSeries",
-                              "meetingTopic"
+                              "meetingTopic",
+                              "whiteboard"
                             ]
                           },
                           "title": {
@@ -133354,7 +133379,8 @@
                                 "link",
                                 "blogPost",
                                 "meetingSeries",
-                                "meetingTopic"
+                                "meetingTopic",
+                                "whiteboard"
                               ]
                             },
                             "title": {
@@ -133621,7 +133647,8 @@
                                 "link",
                                 "blogPost",
                                 "meetingSeries",
-                                "meetingTopic"
+                                "meetingTopic",
+                                "whiteboard"
                               ]
                             },
                             "title": {
@@ -143454,6 +143481,7 @@
                             "x-extensible-enum": [
                               "page",
                               "blogPost",
+                              "whiteboard",
                               "comment",
                               "attachment",
                               "topic",
@@ -143476,7 +143504,8 @@
                             "x-extensible-enum": [
                               "page",
                               "blogPost",
-                              "topic"
+                              "topic",
+                              "whiteboard"
                             ]
                           },
                           "title": {
@@ -143839,6 +143868,7 @@
                                     "x-extensible-enum": [
                                       "page",
                                       "blogPost",
+                                      "whiteboard",
                                       "comment",
                                       "attachment",
                                       "topic",
@@ -144619,6 +144649,7 @@
                               "x-extensible-enum": [
                                 "page",
                                 "blogPost",
+                                "whiteboard",
                                 "comment",
                                 "attachment",
                                 "topic",
@@ -144940,13 +144971,14 @@
                       "types": {
                         "default": [],
                         "description": "Types of results.",
-                        "maxItems": 6,
+                        "maxItems": 7,
                         "type": "array",
                         "items": {
                           "type": "string",
                           "enum": [
                             "page",
                             "blogPost",
+                            "whiteboard",
                             "comment",
                             "attachment",
                             "topic",
@@ -145448,6 +145480,7 @@
                               "x-extensible-enum": [
                                 "page",
                                 "blogPost",
+                                "whiteboard",
                                 "comment",
                                 "attachment",
                                 "topic",
@@ -145784,13 +145817,14 @@
                       "types": {
                         "default": [],
                         "description": "Types of results.",
-                        "maxItems": 6,
+                        "maxItems": 7,
                         "type": "array",
                         "items": {
                           "type": "string",
                           "enum": [
                             "page",
                             "blogPost",
+                            "whiteboard",
                             "comment",
                             "attachment",
                             "topic",
@@ -145954,6 +145988,7 @@
                             "x-extensible-enum": [
                               "page",
                               "blogPost",
+                              "whiteboard",
                               "comment",
                               "attachment",
                               "topic",
@@ -146498,13 +146533,14 @@
                       "types": {
                         "default": [],
                         "description": "Types of results.",
-                        "maxItems": 6,
+                        "maxItems": 7,
                         "type": "array",
                         "items": {
                           "type": "string",
                           "enum": [
                             "page",
                             "blogPost",
+                            "whiteboard",
                             "comment",
                             "attachment",
                             "topic",
@@ -146647,6 +146683,7 @@
                             "x-extensible-enum": [
                               "page",
                               "blogPost",
+                              "whiteboard",
                               "comment",
                               "attachment",
                               "topic",
@@ -152459,7 +152496,8 @@
                               "link",
                               "blogPost",
                               "meetingSeries",
-                              "meetingTopic"
+                              "meetingTopic",
+                              "whiteboard"
                             ]
                           },
                           {
@@ -153427,7 +153465,8 @@
                               "link",
                               "blogPost",
                               "meetingSeries",
-                              "meetingTopic"
+                              "meetingTopic",
+                              "whiteboard"
                             ]
                           },
                           "title": {
@@ -157670,7 +157709,7 @@
             }
           },
           "400": {
-            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidFileName`: The file name is not valid. `invalidInput`: The request is not valid. `invalidItem`: Files can only be attached to pages and blog posts.",
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidFileName`: The file name is not valid. `invalidInput`: The request is not valid. `invalidItem`: Files can only be attached to pages, blog posts and whiteboards.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -157704,7 +157743,7 @@
                   "invalidItem": {
                     "value": {
                       "type": "urn:pagehall:problem:invalidItem",
-                      "title": "Files can only be attached to pages and blog posts",
+                      "title": "Files can only be attached to pages, blog posts and whiteboards",
                       "status": 400,
                       "code": "invalidItem"
                     }
@@ -158629,7 +158668,7 @@
                             "description": "Reactions, empty when reactions are turned off."
                           },
                           "quote": {
-                            "description": "For inline comments, the text the comment refers to. Readers see inline comments only once their text is published.",
+                            "description": "For inline comments, the text the comment refers to; for comments on a whiteboard element, the text of the element (possibly empty). Readers see inline comments only once their text is published.",
                             "type": [
                               "string",
                               "null"
@@ -158640,9 +158679,17 @@
                             "enum": [
                               "page",
                               "inline",
+                              "element",
                               "detached"
                             ],
-                            "description": "`page` for a comment on the whole page, `inline` for a comment on text in it, `detached` for an inline comment whose text no longer exists. Detached comments are listed with the page comments."
+                            "description": "`page` for a comment on the whole page or whiteboard, `inline` for a comment on text in it, `element` for a comment on an element of a whiteboard, `detached` for a comment whose text or element no longer exists. Detached comments are listed with the page comments."
+                          },
+                          "elementId": {
+                            "description": "The whiteboard element the comment refers to, also after it was removed, or null.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
                           },
                           "resolvedAt": {
                             "anyOf": [
@@ -158861,6 +158908,7 @@
                           "reactions",
                           "quote",
                           "anchor",
+                          "elementId",
                           "resolvedAt",
                           "resolvedBy",
                           "replies"
@@ -158919,6 +158967,7 @@
                       "reactions": [],
                       "quote": "Hotel Wi-Fi blocks UDP 51820",
                       "anchor": "inline",
+                      "elementId": null,
                       "resolvedAt": null,
                       "resolvedBy": null,
                       "replies": []
@@ -159050,7 +159099,7 @@
       "post": {
         "operationId": "comments.create",
         "summary": "Comment on a page",
-        "description": "Adds a comment on the whole page or, with an anchor, on text in it. An inline comment marks the text in the draft, or in the current content in live mode; readers see the mark with the next publication. Mentioned people who can read the page are notified at once.\n\nRequires the permission `item.comment` on the item in `pageId`.",
+        "description": "Adds a comment on the whole page or whiteboard, with an anchor on text in a page, or with an element ID on an element of a whiteboard. An inline comment marks the text in the draft, or in the current content in live mode; readers see the mark with the next publication. Mentioned people who can read the page are notified at once.\n\nRequires the permission `item.comment` on the item in `pageId`.",
         "tags": [
           "Comments"
         ],
@@ -159117,6 +159166,11 @@
                       "exact"
                     ],
                     "additionalProperties": false
+                  },
+                  "elementId": {
+                    "description": "ID of the whiteboard element the comment refers to. Only for whiteboards.",
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_-]{1,128}$"
                   }
                 },
                 "required": [
@@ -159296,7 +159350,7 @@
             }
           },
           "409": {
-            "description": "`anchorNotFound`: The selected text no longer exists. `tooManyComments`: The page has too many comments.",
+            "description": "`anchorNotFound`: The selected text or element no longer exists. `tooManyComments`: The page has too many comments.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -159306,7 +159360,7 @@
                   "anchorNotFound": {
                     "value": {
                       "type": "urn:pagehall:problem:anchorNotFound",
-                      "title": "The selected text no longer exists",
+                      "title": "The selected text or element no longer exists",
                       "status": 409,
                       "code": "anchorNotFound"
                     }
@@ -160599,14 +160653,15 @@
                     },
                     "kind": {
                       "type": "string",
-                      "description": "`page`, `folder`, `link` or `blogPost`. Blog posts are not part of the tree; they appear in the blog of their space. New values can be added in later versions; handle unknown values.",
+                      "description": "`page`, `folder`, `link`, `blogPost`, `meetingSeries`, `meetingTopic` or `whiteboard`. Blog posts and topics are not part of the tree; they appear in the blog and the meetings of their space. New values can be added in later versions; handle unknown values.",
                       "x-extensible-enum": [
                         "page",
                         "folder",
                         "link",
                         "blogPost",
                         "meetingSeries",
-                        "meetingTopic"
+                        "meetingTopic",
+                        "whiteboard"
                       ]
                     },
                     "title": {
@@ -160717,7 +160772,8 @@
                                         "link",
                                         "blogPost",
                                         "meetingSeries",
-                                        "meetingTopic"
+                                        "meetingTopic",
+                                        "whiteboard"
                                       ]
                                     },
                                     "title": {
@@ -162439,6 +162495,580 @@
                       "title": "Too many requests",
                       "status": 429,
                       "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pages/{pageId}/drawings/{blockId}/preview": {
+      "put": {
+        "operationId": "whiteboards.drawingPreview",
+        "summary": "Store the image of a drawing",
+        "description": "Sanitizes the SVG image of a drawing block and stores it as a new version of the attachment `drawing-<block ID>.svg` of the page. Readers, exports and the print view show this image.\n\nRequires the permission `item.edit` on the item in `pageId`.",
+        "tags": [
+          "Whiteboards"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.edit",
+          "resource": "item",
+          "parameter": "pageId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "pageId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the page or blog post.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "blockId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the drawing block in the page.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "The SVG image, up to 5 MB. Scripts, links, external resources and foreign content are removed.",
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Where the image is stored.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "previewId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the attachment that holds the image."
+                    },
+                    "previewVersion": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Version of the attachment."
+                    }
+                  },
+                  "required": [
+                    "previewId",
+                    "previewVersion"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The stored image."
+                },
+                "example": {
+                  "previewId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a23",
+                  "previewVersion": 2
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidDrawingImage`: The image of the drawing is not a valid SVG image. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidDrawingImage": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidDrawingImage",
+                      "title": "The image of the drawing is not a valid SVG image",
+                      "status": 400,
+                      "code": "invalidDrawingImage"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "`fileTooLarge`: The file is larger than allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "fileTooLarge": {
+                    "value": {
+                      "type": "urn:pagehall:problem:fileTooLarge",
+                      "title": "The file is larger than allowed",
+                      "status": 413,
+                      "code": "fileTooLarge"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "`unsupportedMediaType`: The request body has an unsupported type.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "unsupportedMediaType": {
+                    "value": {
+                      "type": "urn:pagehall:problem:unsupportedMediaType",
+                      "title": "The request body has an unsupported type",
+                      "status": 415,
+                      "code": "unsupportedMediaType"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "507": {
+            "description": "`storageFull`: Storage is almost full.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "storageFull": {
+                    "value": {
+                      "type": "urn:pagehall:problem:storageFull",
+                      "title": "Storage is almost full",
+                      "status": 507,
+                      "code": "storageFull"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pages/{pageId}/drawings/{blockId}/scene": {
+      "put": {
+        "operationId": "whiteboards.drawingScene",
+        "summary": "Store the scene of a drawing",
+        "description": "Validates the scene of a drawing block and stores it as a new version of the attachment `drawing-<block ID>.excalidraw` of the page. Point the block to the returned attachment and version; older versions of the page keep showing the drawing they had.\n\nRequires the permission `item.edit` on the item in `pageId`.",
+        "tags": [
+          "Whiteboards"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.edit",
+          "resource": "item",
+          "parameter": "pageId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "pageId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the page or blog post.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "blockId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the drawing block in the page.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "The scene as JSON, up to 8 MB, in the same form as the scene of a whiteboard.",
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Where the scene is stored and the text of the drawing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sceneId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the attachment that holds the scene."
+                    },
+                    "sceneVersion": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Version of the attachment."
+                    },
+                    "text": {
+                      "type": "string",
+                      "description": "Text of the drawing, for the block and for search."
+                    }
+                  },
+                  "required": [
+                    "sceneId",
+                    "sceneVersion",
+                    "text"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The stored scene."
+                },
+                "example": {
+                  "sceneId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a22",
+                  "sceneVersion": 2,
+                  "text": "Server room"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidScene`: The drawing contains something Pagehall cannot store.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidScene": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidScene",
+                      "title": "The drawing contains something Pagehall cannot store",
+                      "status": 400,
+                      "code": "invalidScene"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "`fileTooLarge`: The file is larger than allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "fileTooLarge": {
+                    "value": {
+                      "type": "urn:pagehall:problem:fileTooLarge",
+                      "title": "The file is larger than allowed",
+                      "status": 413,
+                      "code": "fileTooLarge"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "`unsupportedMediaType`: The request body has an unsupported type.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "unsupportedMediaType": {
+                    "value": {
+                      "type": "urn:pagehall:problem:unsupportedMediaType",
+                      "title": "The request body has an unsupported type",
+                      "status": 415,
+                      "code": "unsupportedMediaType"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "507": {
+            "description": "`storageFull`: Storage is almost full.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "storageFull": {
+                    "value": {
+                      "type": "urn:pagehall:problem:storageFull",
+                      "title": "Storage is almost full",
+                      "status": 507,
+                      "code": "storageFull"
                     }
                   }
                 }
@@ -169380,7 +170010,8 @@
                           "link",
                           "blogPost",
                           "meetingSeries",
-                          "meetingTopic"
+                          "meetingTopic",
+                          "whiteboard"
                         ]
                       },
                       "title": {
@@ -177173,7 +177804,8 @@
                           "link",
                           "blogPost",
                           "meetingSeries",
-                          "meetingTopic"
+                          "meetingTopic",
+                          "whiteboard"
                         ]
                       },
                       "title": {
@@ -181651,7 +182283,8 @@
                             "link",
                             "blogPost",
                             "meetingSeries",
-                            "meetingTopic"
+                            "meetingTopic",
+                            "whiteboard"
                           ]
                         },
                         {
@@ -183981,14 +184614,15 @@
                           },
                           "kind": {
                             "type": "string",
-                            "description": "`page`, `folder`, `link` or `blogPost`. Blog posts are not part of the tree; they appear in the blog of their space. New values can be added in later versions; handle unknown values.",
+                            "description": "`page`, `folder`, `link`, `blogPost`, `meetingSeries`, `meetingTopic` or `whiteboard`. Blog posts and topics are not part of the tree; they appear in the blog and the meetings of their space. New values can be added in later versions; handle unknown values.",
                             "x-extensible-enum": [
                               "page",
                               "folder",
                               "link",
                               "blogPost",
                               "meetingSeries",
-                              "meetingTopic"
+                              "meetingTopic",
+                              "whiteboard"
                             ]
                           },
                           "title": {
@@ -184099,7 +184733,8 @@
                                               "link",
                                               "blogPost",
                                               "meetingSeries",
-                                              "meetingTopic"
+                                              "meetingTopic",
+                                              "whiteboard"
                                             ]
                                           },
                                           "title": {
@@ -184484,8 +185119,8 @@
       },
       "post": {
         "operationId": "items.create",
-        "summary": "Create a page, folder or link",
-        "description": "Creates an item in the page tree, at the end of its parent unless a neighbor is given. Links point to a page or folder in any space the caller can read, or to an `http` or `https` address. A page can start from a template; later changes to the template do not change the page. A new page in publish mode is visible only to editors until it is published.\n\nRequires the permission `space.edit` on the space in `spaceId`.",
+        "summary": "Create a page, folder, link or whiteboard",
+        "description": "Creates an item in the page tree, at the end of its parent unless a neighbor is given. A whiteboard starts empty. Links point to a page or folder in any space the caller can read, or to an `http` or `https` address. A page can start from a template; later changes to the template do not change the page. A new page in publish mode is visible only to editors until it is published.\n\nRequires the permission `space.edit` on the space in `spaceId`.",
         "tags": [
           "Pages"
         ],
@@ -184526,9 +185161,10 @@
                     "enum": [
                       "page",
                       "folder",
-                      "link"
+                      "link",
+                      "whiteboard"
                     ],
-                    "description": "`page`, `folder` or `link`. Blog posts are created in the blog of a space."
+                    "description": "`page`, `folder`, `link` or `whiteboard`. Blog posts are created in the blog of a space, meeting series in its meetings."
                   },
                   "title": {
                     "type": "string",
@@ -184697,14 +185333,15 @@
                     },
                     "kind": {
                       "type": "string",
-                      "description": "`page`, `folder`, `link` or `blogPost`. Blog posts are not part of the tree; they appear in the blog of their space. New values can be added in later versions; handle unknown values.",
+                      "description": "`page`, `folder`, `link`, `blogPost`, `meetingSeries`, `meetingTopic` or `whiteboard`. Blog posts and topics are not part of the tree; they appear in the blog and the meetings of their space. New values can be added in later versions; handle unknown values.",
                       "x-extensible-enum": [
                         "page",
                         "folder",
                         "link",
                         "blogPost",
                         "meetingSeries",
-                        "meetingTopic"
+                        "meetingTopic",
+                        "whiteboard"
                       ]
                     },
                     "title": {
@@ -184815,7 +185452,8 @@
                                         "link",
                                         "blogPost",
                                         "meetingSeries",
-                                        "meetingTopic"
+                                        "meetingTopic",
+                                        "whiteboard"
                                       ]
                                     },
                                     "title": {
@@ -191269,7 +191907,8 @@
                                   "link",
                                   "blogPost",
                                   "meetingSeries",
-                                  "meetingTopic"
+                                  "meetingTopic",
+                                  "whiteboard"
                                 ]
                               },
                               "title": {
@@ -191592,7 +192231,8 @@
                                 "link",
                                 "blogPost",
                                 "meetingSeries",
-                                "meetingTopic"
+                                "meetingTopic",
+                                "whiteboard"
                               ]
                             },
                             "title": {
@@ -192140,7 +192780,8 @@
                                 "link",
                                 "blogPost",
                                 "meetingSeries",
-                                "meetingTopic"
+                                "meetingTopic",
+                                "whiteboard"
                               ]
                             },
                             "title": {
@@ -192433,7 +193074,8 @@
                                   "link",
                                   "blogPost",
                                   "meetingSeries",
-                                  "meetingTopic"
+                                  "meetingTopic",
+                                  "whiteboard"
                                 ]
                               },
                               "title": {
@@ -192730,7 +193372,8 @@
                                   "link",
                                   "blogPost",
                                   "meetingSeries",
-                                  "meetingTopic"
+                                  "meetingTopic",
+                                  "whiteboard"
                                 ]
                               },
                               "title": {
@@ -196159,7 +196802,8 @@
                               "link",
                               "blogPost",
                               "meetingSeries",
-                              "meetingTopic"
+                              "meetingTopic",
+                              "whiteboard"
                             ]
                           },
                           {
@@ -196951,7 +197595,8 @@
                               "link",
                               "blogPost",
                               "meetingSeries",
-                              "meetingTopic"
+                              "meetingTopic",
+                              "whiteboard"
                             ]
                           },
                           "title": {
@@ -198730,7 +199375,8 @@
                               "link",
                               "blogPost",
                               "meetingSeries",
-                              "meetingTopic"
+                              "meetingTopic",
+                              "whiteboard"
                             ]
                           },
                           "title": {
@@ -202053,6 +202699,1559 @@
                       "title": "The meeting series has ended",
                       "status": 409,
                       "code": "seriesEnded"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/whiteboards/{itemId}/preview": {
+      "get": {
+        "operationId": "whiteboards.preview",
+        "summary": "Get the image of a whiteboard",
+        "description": "Sends the SVG image of the current state or of a version. Pagehall shows it in the page tree, in search results and in links. Answers 404 when no image was stored yet.\n\nRequires the permission `item.view` on the item in `itemId`.",
+        "tags": [
+          "Whiteboards"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.view",
+          "resource": "item",
+          "parameter": "itemId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the whiteboard.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": false,
+            "description": "Number of the version. Default: the current state.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The image as SVG, sanitized when it was stored. It is sent with `Content-Security-Policy: sandbox` and `X-Content-Type-Options: nosniff`.",
+            "content": {
+              "image/svg+xml": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": ""
+              }
+            }
+          },
+          "206": {
+            "description": "Part of the file, for a request with a `Range` header.",
+            "content": {
+              "image/svg+xml": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": ""
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified: the file matches the `If-None-Match` header."
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "whiteboards.storePreview",
+        "summary": "Store the image of a whiteboard",
+        "description": "Stores the SVG image of a saved state. The web client creates it after its changes were saved. An image of an older state than the stored one is ignored. Versions of the same state get the image too.\n\nRequires the permission `item.edit` on the item in `itemId`.",
+        "tags": [
+          "Whiteboards"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.edit",
+          "resource": "item",
+          "parameter": "itemId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the whiteboard.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "revision",
+            "in": "query",
+            "required": true,
+            "description": "The stored state the image shows, as reported by the collaboration server after saving.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "The SVG image, up to 5 MB. Scripts, links, external resources and foreign content are removed.",
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Whether the image was kept.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "kept": {
+                      "type": "boolean",
+                      "description": "False when a newer image exists already."
+                    }
+                  },
+                  "required": [
+                    "kept"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The result."
+                },
+                "example": {
+                  "kept": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidDrawingImage`: The image of the drawing is not a valid SVG image. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidDrawingImage": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidDrawingImage",
+                      "title": "The image of the drawing is not a valid SVG image",
+                      "status": 400,
+                      "code": "invalidDrawingImage"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`revisionNotStored`: The whiteboard has not been saved in this state yet.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "revisionNotStored": {
+                    "value": {
+                      "type": "urn:pagehall:problem:revisionNotStored",
+                      "title": "The whiteboard has not been saved in this state yet",
+                      "status": 409,
+                      "code": "revisionNotStored"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "`fileTooLarge`: The file is larger than allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "fileTooLarge": {
+                    "value": {
+                      "type": "urn:pagehall:problem:fileTooLarge",
+                      "title": "The file is larger than allowed",
+                      "status": 413,
+                      "code": "fileTooLarge"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "`unsupportedMediaType`: The request body has an unsupported type.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "unsupportedMediaType": {
+                    "value": {
+                      "type": "urn:pagehall:problem:unsupportedMediaType",
+                      "title": "The request body has an unsupported type",
+                      "status": 415,
+                      "code": "unsupportedMediaType"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "507": {
+            "description": "`storageFull`: Storage is almost full.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "storageFull": {
+                    "value": {
+                      "type": "urn:pagehall:problem:storageFull",
+                      "title": "Storage is almost full",
+                      "status": 507,
+                      "code": "storageFull"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/whiteboards/{itemId}/scene": {
+      "get": {
+        "operationId": "whiteboards.scene",
+        "summary": "Get the content of a whiteboard",
+        "description": "Returns the stored scene. People who edit the board together use the collaboration server with the document name `whiteboard:<ID>`; it stores the scene about a second after each change.\n\nRequires the permission `item.view` on the item in `itemId`.",
+        "tags": [
+          "Whiteboards"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.view",
+          "resource": "item",
+          "parameter": "itemId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the whiteboard.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The whiteboard.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "itemId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the whiteboard."
+                    },
+                    "scene": {
+                      "description": "The scene: `elements` (Excalidraw elements of the types rectangle, diamond, ellipse, arrow, line, freedraw, text, image and frame, ordered by their `index`), `files` (images by file ID, each the `attachmentId` of an attachment of the item and its `mimeType`) and `settings` (`viewBackgroundColor`).",
+                      "$ref": "#/components/schemas/Schema113ae44d8375"
+                    },
+                    "revision": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of the stored state."
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the scene was last stored. ISO 8601 timestamp in UTC."
+                    },
+                    "updatedBy": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the account."
+                            },
+                            "name": {
+                              "description": "Name of the person, or null when the account no longer exists.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false,
+                          "description": "A person."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Who changed it last, or null."
+                    },
+                    "preview": {
+                      "type": "boolean",
+                      "description": "Whether an image of the current state exists."
+                    }
+                  },
+                  "required": [
+                    "itemId",
+                    "scene",
+                    "revision",
+                    "updatedAt",
+                    "updatedBy",
+                    "preview"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The current content of a whiteboard."
+                },
+                "example": {
+                  "itemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a21",
+                  "scene": {
+                    "elements": [],
+                    "files": {},
+                    "settings": {
+                      "viewBackgroundColor": null
+                    }
+                  },
+                  "revision": 12,
+                  "updatedAt": "2026-10-16T09:12:00.000Z",
+                  "updatedBy": {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                    "name": "Anna Berger"
+                  },
+                  "preview": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/whiteboards/{itemId}/versions": {
+      "get": {
+        "operationId": "whiteboards.versions",
+        "summary": "List the versions of a whiteboard",
+        "description": "Lists all versions, newest first. A version is kept when the last person leaves the board and after it was idle for the time set for live pages.\n\nRequires the permission `item.view` on the item in `itemId`.",
+        "tags": [
+          "Whiteboards"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.view",
+          "resource": "item",
+          "parameter": "itemId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the whiteboard.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Versions.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "number": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991,
+                        "description": "Number of the version, counting from 1."
+                      },
+                      "title": {
+                        "type": "string",
+                        "description": "Title of the whiteboard in this version."
+                      },
+                      "reason": {
+                        "type": "string",
+                        "description": "Why the version exists: `session` (an editing session ended or the board was idle) or `restored` (an older version was restored). New values can be added in later versions; handle unknown values.",
+                        "x-extensible-enum": [
+                          "published",
+                          "session",
+                          "restored",
+                          "modeChanged",
+                          "imported",
+                          "importedNotApplied"
+                        ]
+                      },
+                      "restoredFrom": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The restored version, or null."
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "When the version was created. ISO 8601 timestamp in UTC."
+                      },
+                      "createdBy": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "ID of the account."
+                              },
+                              "name": {
+                                "description": "Name of the person, or null when the account no longer exists.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A person."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Who restored, or null for versions of editing sessions."
+                      },
+                      "contributors": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the account."
+                            },
+                            "name": {
+                              "description": "Name of the person, or null when the account no longer exists.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false,
+                          "description": "A person."
+                        },
+                        "description": "Everyone who changed the board since the previous version."
+                      },
+                      "preview": {
+                        "type": "boolean",
+                        "description": "Whether an image of this version exists."
+                      }
+                    },
+                    "required": [
+                      "number",
+                      "title",
+                      "reason",
+                      "restoredFrom",
+                      "createdAt",
+                      "createdBy",
+                      "contributors",
+                      "preview"
+                    ],
+                    "additionalProperties": false,
+                    "description": "A version of a whiteboard."
+                  },
+                  "description": "Versions, newest first."
+                },
+                "example": [
+                  {
+                    "number": 3,
+                    "title": "Network redesign 2027",
+                    "reason": "session",
+                    "restoredFrom": null,
+                    "createdAt": "2026-10-16T09:12:00.000Z",
+                    "createdBy": null,
+                    "contributors": [
+                      {
+                        "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                        "name": "Anna Berger"
+                      }
+                    ],
+                    "preview": true
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/whiteboards/{itemId}/versions/{number}": {
+      "get": {
+        "operationId": "whiteboards.version",
+        "summary": "Get a version of a whiteboard",
+        "description": "Returns a version with its scene.\n\nRequires the permission `item.view` on the item in `itemId`.",
+        "tags": [
+          "Whiteboards"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.view",
+          "resource": "item",
+          "parameter": "itemId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the whiteboard.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "number",
+            "in": "path",
+            "required": true,
+            "description": "Number of the version.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The version.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "number": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of the version, counting from 1."
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "Title of the whiteboard in this version."
+                    },
+                    "reason": {
+                      "type": "string",
+                      "description": "Why the version exists: `session` (an editing session ended or the board was idle) or `restored` (an older version was restored). New values can be added in later versions; handle unknown values.",
+                      "x-extensible-enum": [
+                        "published",
+                        "session",
+                        "restored",
+                        "modeChanged",
+                        "imported",
+                        "importedNotApplied"
+                      ]
+                    },
+                    "restoredFrom": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The restored version, or null."
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the version was created. ISO 8601 timestamp in UTC."
+                    },
+                    "createdBy": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the account."
+                            },
+                            "name": {
+                              "description": "Name of the person, or null when the account no longer exists.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false,
+                          "description": "A person."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Who restored, or null for versions of editing sessions."
+                    },
+                    "contributors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the account."
+                          },
+                          "name": {
+                            "description": "Name of the person, or null when the account no longer exists.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A person."
+                      },
+                      "description": "Everyone who changed the board since the previous version."
+                    },
+                    "preview": {
+                      "type": "boolean",
+                      "description": "Whether an image of this version exists."
+                    },
+                    "scene": {
+                      "description": "The scene: `elements` (Excalidraw elements of the types rectangle, diamond, ellipse, arrow, line, freedraw, text, image and frame, ordered by their `index`), `files` (images by file ID, each the `attachmentId` of an attachment of the item and its `mimeType`) and `settings` (`viewBackgroundColor`).",
+                      "$ref": "#/components/schemas/Schema113ae44d8375"
+                    }
+                  },
+                  "required": [
+                    "number",
+                    "title",
+                    "reason",
+                    "restoredFrom",
+                    "createdAt",
+                    "createdBy",
+                    "contributors",
+                    "preview",
+                    "scene"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A version with its scene."
+                },
+                "example": {
+                  "number": 3,
+                  "title": "Network redesign 2027",
+                  "reason": "session",
+                  "restoredFrom": null,
+                  "createdAt": "2026-10-16T09:12:00.000Z",
+                  "createdBy": null,
+                  "contributors": [
+                    {
+                      "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                      "name": "Anna Berger"
+                    }
+                  ],
+                  "preview": true,
+                  "scene": {
+                    "elements": [],
+                    "files": {},
+                    "settings": {
+                      "viewBackgroundColor": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/whiteboards/{itemId}/versions/{number}/restore": {
+      "post": {
+        "operationId": "whiteboards.restore",
+        "summary": "Restore a version of a whiteboard",
+        "description": "The version becomes the current content at once, also for people editing the board, and a new version is created. History is never rewritten.\n\nRequires the permission `item.edit` on the item in `itemId`.",
+        "tags": [
+          "Whiteboards"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.edit",
+          "resource": "item",
+          "parameter": "itemId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the whiteboard.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "number",
+            "in": "path",
+            "required": true,
+            "description": "Number of the version.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The new version.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "version": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "The new version."
+                    }
+                  },
+                  "required": [
+                    "version"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The result."
+                },
+                "example": {
+                  "version": 4
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found. `versionNotFound`: The version does not exist.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  },
+                  "versionNotFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:versionNotFound",
+                      "title": "The version does not exist",
+                      "status": 404,
+                      "code": "versionNotFound"
                     }
                   }
                 }

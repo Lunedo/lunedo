@@ -896,7 +896,7 @@ export class ChatChannelService {
           : null,
       channelName: channel.name,
     });
-    const section = item.kind === "blogPost" ? "blog" : "pages";
+    const section = item.kind === "blogPost" ? "blog" : item.kind === "whiteboard" ? "whiteboards" : "pages";
     const url = await this.#link(
       `spaces/${encodeURIComponent(item.space_key)}/${section}/${item.id}/${slugify(item.title)}`,
     );

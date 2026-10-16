@@ -415,6 +415,11 @@ export function schemaExtensions(): AnyExtension[] {
     atomNode("templateButton", "div"),
     atomNode("image", "div", { width: dataAttribute("width", "number") }),
     atomNode("file", "div"),
+    atomNode("drawing", "div", {
+      id: dataAttribute("drawingId"),
+      sceneVersion: dataAttribute("sceneVersion", "number"),
+      previewVersion: dataAttribute("previewVersion", "number"),
+    }),
     containerNode("section"),
     containerNode("callout"),
     containerNode("expand"),

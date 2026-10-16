@@ -4,11 +4,13 @@ import {
   extractInlineCommentThreads,
   extractMentions,
   isValidAnchor,
+  MAX_QUOTE_LENGTH,
   type TextAnchor,
   type ValidationProblem,
   validateComment,
   withInlineComment,
 } from "@pagehall/editor-schema";
+import { boundText, validateScene } from "@pagehall/editor-schema/scene";
 import { applyDocument, documentFromYDoc } from "@pagehall/editor-schema/yjs";
 import { uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
@@ -60,7 +62,8 @@ export interface CommentList {
 
 export interface CommentThread extends Comment {
   quote: string | null;
-  anchor: "page" | "inline" | "detached";
+  anchor: "page" | "inline" | "element" | "detached";
+  elementId: string | null;
   resolvedAt: Date | null;
   resolvedBy: CommentPerson | null;
   replies: Comment[];
@@ -75,6 +78,7 @@ type CommentRow = {
   quote: string | null;
   quote_prefix: string | null;
   quote_suffix: string | null;
+  element_id: string | null;
   detached_at: Date | string | null;
   resolved_at: Date | string | null;
   resolved_by: string | null;
@@ -136,8 +140,8 @@ export class CommentService {
 
   async list(viewer: Principal, itemId: string): Promise<CommentList> {
     const result = await this.#database.execute<CommentRow>(sql`
-      select c.id, c.item_id, c.parent_id, c.author_id, c.body, c.quote, c.quote_prefix, c.quote_suffix, c.detached_at,
-        c.resolved_at, c.resolved_by,
+      select c.id, c.item_id, c.parent_id, c.author_id, c.body, c.quote, c.quote_prefix, c.quote_suffix, c.element_id,
+        c.detached_at, c.resolved_at, c.resolved_by,
         c.edited_at, c.deleted_at, c.created_at
       from comments c join comments r on r.id = coalesce(c.parent_id, c.id)
       join tree_items t on t.id = c.item_id join spaces s on s.id = t.space_id
@@ -180,11 +184,16 @@ export class CommentService {
         ...toComment(row),
         quote: row.quote,
         anchor:
-          row.quote === null
-            ? "page"
-            : (anchored ? anchored(row) : row.detached_at === null)
-              ? "inline"
-              : "detached",
+          row.element_id !== null
+            ? row.detached_at === null
+              ? "element"
+              : "detached"
+            : row.quote === null
+              ? "page"
+              : (anchored ? anchored(row) : row.detached_at === null)
+                ? "inline"
+                : "detached",
+        elementId: row.element_id,
         resolvedAt: date(row.resolved_at),
         resolvedBy: person(row.resolved_by),
         replies: replies.get(row.id) ?? [],
@@ -306,7 +315,7 @@ export class CommentService {
   async create(
     actor: Principal,
     itemId: string,
-    input: { body: unknown; anchor?: TextAnchor | undefined },
+    input: { body: unknown; anchor?: TextAnchor | undefined; elementId?: string | undefined },
   ): Promise<string> {
     const body = validBody(input.body);
     const actorId = actorIdOf(actor);
@@ -322,14 +331,29 @@ export class CommentService {
         sql`select space_id, kind from tree_items where id = ${itemId}`,
       );
       const item = located.rows[0];
-      const commentable = item?.kind === "page" || item?.kind === "blogPost" || item?.kind === "meetingTopic";
+      const commentable =
+        item?.kind === "page" ||
+        item?.kind === "blogPost" ||
+        item?.kind === "meetingTopic" ||
+        item?.kind === "whiteboard";
       if (!item || !commentable) throw new SpaceError("itemNotFound", "The page does not exist");
       if (anchor && item.kind === "meetingTopic") {
         throw new SpaceError("invalidAnchor", "Comments on a topic refer to the whole topic");
       }
+      if (anchor && item.kind === "whiteboard") {
+        throw new SpaceError(
+          "invalidAnchor",
+          "Comments on a whiteboard refer to an element or the whole board",
+        );
+      }
+      if (input.elementId !== undefined && item.kind !== "whiteboard") {
+        throw new SpaceError("invalidAnchor", "Only comments on a whiteboard refer to an element");
+      }
       await this.#count(tx, itemId);
       const id = uuidv7();
-      if (!anchor) {
+      if (input.elementId !== undefined) {
+        await this.#anchorToElement(tx, itemId, id, input.elementId, actorId, body);
+      } else if (!anchor) {
         await tx.execute(sql`
           insert into comments (id, item_id, author_id, body) values (${id}, ${itemId}, ${actorId}, ${JSON.stringify(body)}::jsonb)`);
       } else {
@@ -340,6 +364,29 @@ export class CommentService {
       await signalSpaceChange(tx, { spaceId: item.space_id, kind: "comments", itemId });
       return id;
     });
+  }
+
+  async #anchorToElement(
+    tx: Transaction,
+    itemId: string,
+    id: string,
+    elementId: string,
+    actorId: string | null,
+    body: DocumentJson,
+  ): Promise<void> {
+    const board = await tx.execute<{ scene: unknown }>(
+      sql`select scene from whiteboard_documents where item_id = ${itemId}`,
+    );
+    const validation = validateScene(board.rows[0]?.scene);
+    const scene = validation.ok ? validation.scene : null;
+    const element = scene?.elements.find((candidate) => candidate.id === elementId && !candidate.isDeleted);
+    if (!scene || !element) {
+      throw new SpaceError("anchorNotFound", "The element was removed in the meantime; select another one");
+    }
+    const quote = boundText(scene, element).slice(0, MAX_QUOTE_LENGTH);
+    await tx.execute(sql`
+      insert into comments (id, item_id, author_id, body, quote, quote_public, element_id)
+      values (${id}, ${itemId}, ${actorId}, ${JSON.stringify(body)}::jsonb, ${quote}, true, ${elementId})`);
   }
 
   async #anchor(
@@ -472,7 +519,10 @@ export class CommentService {
     await this.#database.transaction(async (tx) => {
       const comment = await this.#lock(tx, commentId);
       if (comment.parentId !== null || comment.quote === null) {
-        throw new SpaceError("notInlineComment", "Only inline comments can be resolved");
+        throw new SpaceError(
+          "notInlineComment",
+          "Only comments on selected text or an element can be resolved",
+        );
       }
       await tx.execute(sql`
         update comments set resolved_at = ${resolved ? sql`coalesce(resolved_at, now())` : null},

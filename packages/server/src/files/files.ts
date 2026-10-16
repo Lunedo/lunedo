@@ -286,13 +286,15 @@ export class FileService {
       order by updated_at limit ${limit}`);
     await this.#database.execute(sql`
       update stored_files f set state = 'ready', updated_at = now()
-      where f.state = 'orphaned' and exists (select 1 from attachment_versions v where v.file_id = f.id)`);
+      where f.state = 'orphaned' and (exists (select 1 from attachment_versions v where v.file_id = f.id)
+        or exists (select 1 from whiteboard_previews p where p.file_id = f.id))`);
     let removed = 0;
     for (const row of result.rows) {
       const claimed = await this.#database.execute(sql`
         update stored_files set state = 'orphaned', updated_at = now() where id = ${row.id}
           and (state = 'orphaned' or (state in ('pending', 'stored') and updated_at < now() - interval '1 day'))
           and not exists (select 1 from attachment_versions v where v.file_id = ${row.id})
+          and not exists (select 1 from whiteboard_previews p where p.file_id = ${row.id})
         returning id`);
       if (claimed.rows.length === 0) continue;
       const stored = (await this.#store.size(row.storage_key)) ?? 0;

@@ -14,6 +14,11 @@
       "@pagehall/source": "./src/yjs.ts",
       "types": "./dist/yjs.d.ts",
       "default": "./dist/yjs.js"
+    },
+    "./scene": {
+      "@pagehall/source": "./src/scene.ts",
+      "types": "./dist/scene.d.ts",
+      "default": "./dist/scene.js"
     }
   },
   "scripts": {

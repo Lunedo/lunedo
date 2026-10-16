@@ -1289,7 +1289,7 @@
     "tooManyLabels": "A page can have up to 100 labels. Remove a label before you add another.",
     "invalidComment": "The comment contains something comments do not support. Remove tables, images or headings and try again.",
     "invalidAnchor": "Select up to 1000 characters within one paragraph to comment on them.",
-    "anchorNotFound": "The selected text changed in the meantime. Select it again and comment.",
+    "anchorNotFound": "The selected text or element changed in the meantime. Select it again and comment.",
     "tooManyComments": "This page has the maximum number of comments. Resolve or delete old ones first.",
     "restoreExpired": "The comment can no longer be restored; deleted comments can be restored within an hour.",
     "notInlineComment": "Only comments on text can be resolved.",
@@ -1308,7 +1308,10 @@
     "personalOnly": "Only people have starred items and a home page.",
     "invalidHomePage": "Choose a page from a space of this organization that you can read.",
     "invalidFileName": "The file name is empty or too long. Rename the file and upload it again.",
-    "invalidItem": "Files can only be attached to pages and blog posts.",
+    "invalidItem": "Files can only be attached to pages, blog posts and whiteboards.",
+    "invalidScene": "The drawing contains something Pagehall cannot store, such as embedded web content or an image from another site. Undo the last change and try again.",
+    "invalidDrawingImage": "The picture of the drawing could not be read. Reload the page and save the drawing again.",
+    "revisionNotStored": "The whiteboard was not saved in this state yet. Wait a moment; the preview is saved with the next change.",
     "invalidCover": "The cover must be an image attached to this post. Upload the image first, then choose it.",
     "invalidFocus": "The focal point lies outside the image. Click inside the image to set it.",
     "invalidScope": "This kind of link cannot be used for this page. Choose another option under \"Who can open it\".",
@@ -3673,6 +3676,10 @@
         "restrictionHolderAdded": "Person or group added to a page restriction",
         "restrictionHolderRemoved": "Person or group removed from a page restriction",
         "subtreeExported": "Page exported with its subpages"
+      },
+      "whiteboard": {
+        "updateRejected": "Whiteboard change rejected",
+        "versionRestored": "Whiteboard version restored"
       },
       "trash": {
         "itemsDeleted": "Moved to the trash",

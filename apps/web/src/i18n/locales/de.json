@@ -1289,7 +1289,7 @@
     "tooManyLabels": "Eine Seite kann bis zu 100 Labels haben. Entferne ein Label, bevor du ein weiteres hinzufügst.",
     "invalidComment": "Der Kommentar enthält etwas, das Kommentare nicht unterstützen. Entferne Tabellen, Bilder oder Überschriften und versuche es erneut.",
     "invalidAnchor": "Markiere bis zu 1000 Zeichen innerhalb eines Absatzes, um sie zu kommentieren.",
-    "anchorNotFound": "Der markierte Text hat sich inzwischen geändert. Markiere ihn erneut und kommentiere.",
+    "anchorNotFound": "Der markierte Text oder das Element hat sich inzwischen geändert. Markiere es erneut und kommentiere.",
     "tooManyComments": "Diese Seite hat die höchste Zahl an Kommentaren. Erledige oder lösche zuerst alte.",
     "restoreExpired": "Der Kommentar kann nicht mehr wiederhergestellt werden; gelöschte Kommentare lassen sich eine Stunde lang wiederherstellen.",
     "notInlineComment": "Nur Kommentare zu Text können als erledigt markiert werden.",
@@ -1308,7 +1308,10 @@
     "personalOnly": "Nur Personen haben Favoriten und eine Startseite.",
     "invalidHomePage": "Wähle eine Seite aus einem Space dieser Organisation, die du lesen kannst.",
     "invalidFileName": "Der Dateiname ist leer oder zu lang. Benenne die Datei um und lade sie erneut hoch.",
-    "invalidItem": "Dateien können nur an Seiten und Blogbeiträge angehängt werden.",
+    "invalidItem": "Dateien können nur an Seiten, Blogbeiträge und Whiteboards angehängt werden.",
+    "invalidScene": "Die Zeichnung enthält etwas, das Pagehall nicht speichern kann, etwa eingebettete Webinhalte oder ein Bild von einer anderen Website. Mach die letzte Änderung rückgängig und versuch es noch einmal.",
+    "invalidDrawingImage": "Das Bild der Zeichnung konnte nicht gelesen werden. Lade die Seite neu und speichere die Zeichnung noch einmal.",
+    "revisionNotStored": "Das Whiteboard wurde in diesem Stand noch nicht gespeichert. Warte kurz; die Vorschau wird mit der nächsten Änderung gespeichert.",
     "invalidCover": "Das Titelbild muss ein an diesen Beitrag angehängtes Bild sein. Lade das Bild zuerst hoch und wähle es dann aus.",
     "invalidFocus": "Der Fokuspunkt liegt außerhalb des Bildes. Klicke in das Bild, um ihn zu setzen.",
     "invalidScope": "Diese Art von Link ist für diese Seite nicht möglich. Wähle unter „Wer ihn öffnen kann“ eine andere Option.",
@@ -3673,6 +3676,10 @@
         "restrictionHolderAdded": "Person oder Gruppe zu einer Seitenbeschränkung hinzugefügt",
         "restrictionHolderRemoved": "Person oder Gruppe aus einer Seitenbeschränkung entfernt",
         "subtreeExported": "Seite mit Unterseiten exportiert"
+      },
+      "whiteboard": {
+        "updateRejected": "Änderung am Whiteboard abgelehnt",
+        "versionRestored": "Whiteboard-Version wiederhergestellt"
       },
       "trash": {
         "itemsDeleted": "In den Papierkorb verschoben",

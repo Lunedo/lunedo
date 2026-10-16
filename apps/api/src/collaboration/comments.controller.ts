@@ -70,7 +70,7 @@ export class CommentsController {
   @ApiRoute({
     summary: "Comment on a page",
     description:
-      "Adds a comment on the whole page or, with an anchor, on text in it. An inline comment marks the text in the draft, or in the current content in live mode; readers see the mark with the next publication. Mentioned people who can read the page are notified at once.",
+      "Adds a comment on the whole page or whiteboard, with an anchor on text in a page, or with an element ID on an element of a whiteboard. An inline comment marks the text in the draft, or in the current content in live mode; readers see the mark with the next publication. Mentioned people who can read the page are notified at once.",
     tags: [TAG],
     params: pageParams,
     body: createCommentSchema,

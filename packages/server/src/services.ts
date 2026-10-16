@@ -195,6 +195,8 @@ import { StorageUsage } from "./storage/usage.js";
 import { TemplateService } from "./templates/templates.js";
 import { API_TOKEN_EXPIRY_SCHEDULE, ApiTokenService, apiTokenExpiryJob } from "./tokens/api-tokens.js";
 import { ServiceAccountService } from "./tokens/service-accounts.js";
+import { DrawingService } from "./whiteboards/drawings.js";
+import { WhiteboardService } from "./whiteboards/whiteboards.js";
 
 export interface AccountServices {
   push: PushService;
@@ -255,6 +257,8 @@ export interface AccountServices {
   announcements: AnnouncementService;
   documents: PageDocumentService;
   versions: VersionService;
+  whiteboards: WhiteboardService;
+  drawings: DrawingService;
   trash: TrashService;
   archive: ArchiveService;
   templates: TemplateService;
@@ -676,6 +680,17 @@ export function createAccountServices(options: {
     logger,
   });
   const attachments = new AttachmentService({ database, files, settings, people, audit, storage });
+  const whiteboards = new WhiteboardService({
+    database,
+    files,
+    storage,
+    people,
+    settings,
+    activity,
+    audit,
+    origin: documents.origin,
+  });
+  const drawings = new DrawingService({ database, attachments });
   const searchAdapter = new PostgresSearchAdapter();
   const search = new SearchService({
     database,
@@ -894,6 +909,8 @@ export function createAccountServices(options: {
     files,
     storage,
     attachments,
+    whiteboards,
+    drawings,
     guestShares,
     confidentialSpaces,
     meetings,
@@ -1033,6 +1050,8 @@ export async function workAccountJobs(
   await jobs.work(liveVersionsJob, async (job) => {
     const created = await services.versions.versionIdlePages();
     if (created > 0) job.logger.info({ created }, "Versions of live pages created");
+    const boards = await services.whiteboards.versionIdleBoards();
+    if (boards > 0) job.logger.info({ created: boards }, "Versions of whiteboards created");
   });
   await jobs.work(scheduledBlogPostsJob, async (job) => {
     const published = await services.blog.publishDue();
