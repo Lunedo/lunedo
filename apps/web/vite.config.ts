@@ -59,7 +59,7 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
-      input: { main: "index.html", preview: "preview.html" },
+      input: { main: "index.html", preview: "preview.html", print: "print.html" },
     },
   },
   preview: {

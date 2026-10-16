@@ -11,8 +11,8 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PreferencesProvider } from "../preferences/preferences-provider.js";
 import { mockApi, problem, type RecordedRequest, renderWithProviders } from "../testing/render.js";
+import { ExportDialog } from "./export-dialog.js";
 import { ExportsList } from "./exports-list.js";
-import { PageExportDialog } from "./page-export-dialog.js";
 import { SpaceExport } from "./space-export.js";
 
 const PAGE = "01929b1e-0000-7000-8000-0000000000e1";
@@ -33,6 +33,8 @@ function exportEntry(overrides: Record<string, unknown>) {
     fileName: "IT Operations 2026-10-14.zip",
     size: 2_097_152,
     errorCode: null,
+    format: "archive",
+    options: { attachments: true, comments: false, contents: true, paper: "a4", orientation: "portrait" },
     createdAt: "2026-10-14T09:00:00.000Z",
     finishedAt: "2026-10-14T09:01:00.000Z",
     expiresAt: "2026-10-21T09:01:00.000Z",
@@ -46,8 +48,12 @@ function inRouter(ui: ReactNode) {
     routeTree: root.addChildren([
       createRoute({ getParentRoute: () => root, path: "/settings/exports" }),
       createRoute({ getParentRoute: () => root, path: "/spaces/$spaceKey/settings/export" }),
+      createRoute({ getParentRoute: () => root, path: "/print" }),
     ]),
     history: createMemoryHistory({ initialEntries: ["/"] }),
+  });
+  router.subscribe("onResolved", ({ toLocation }) => {
+    location = toLocation.href;
   });
   return <RouterProvider router={router} />;
 }
@@ -83,6 +89,7 @@ function api(routes: Parameters<typeof mockApi>[0] = {}) {
 }
 
 beforeEach(() => {
+  location = "/";
   api();
   vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:export");
   vi.spyOn(URL, "revokeObjectURL").mockReturnValue(undefined);
@@ -93,15 +100,19 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+let location = "/";
+
 function dialog(
   options: { exportEnabled?: boolean; publishable?: boolean; admin?: boolean; mayExportPages?: boolean } = {},
 ) {
   return renderWithProviders(
     inRouter(
-      <PageExportDialog
+      <ExportDialog
         page={{ id: PAGE, title: "VPN setup", publishable: options.publishable ?? true }}
         space={{
+          id: SPACE,
           key: "ITOPS",
+          name: "IT Operations",
           exportEnabled: options.exportEnabled ?? true,
           admin: options.admin ?? false,
           mayExportPages: options.mayExportPages ?? true,
@@ -113,57 +124,157 @@ function dialog(
   );
 }
 
-describe("page export", () => {
-  it("downloads the page in the chosen format", async () => {
+function counts(total: { pages: number; blogPosts?: number; serverPdf?: boolean }) {
+  return () => ({
+    body: {
+      pages: total.pages,
+      blogPosts: total.blogPosts ?? 0,
+      printLimit: 300,
+      serverPdf: total.serverPdf ?? false,
+    },
+  });
+}
+
+function bodyOf(request: RecordedRequest | undefined): unknown {
+  return request?.body;
+}
+
+describe("export dialog", () => {
+  it("downloads a page as Word with the chosen paper and orientation", async () => {
+    api({ [`GET /api/v1/pages/${PAGE}/export`]: () => ({ body: "PK" }) });
+    await dialog();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("radio", { name: /^Word/ }));
+    await user.click(screen.getByRole("radio", { name: "Letter" }));
+    await user.click(screen.getByRole("radio", { name: "Landscape" }));
+    await user.click(screen.getByRole("button", { name: "Download" }));
+    await waitFor(() => expect(URL.createObjectURL).toHaveBeenCalled());
+    expect(requests.map((request) => request.path)).toContain(
+      `/api/v1/pages/${PAGE}/export?format=docx&attachments=true&comments=false&contents=true&paper=letter&orientation=landscape`,
+    );
+  });
+
+  it("downloads HTML as one file without attachments and as a ZIP with them", async () => {
     api({ [`GET /api/v1/pages/${PAGE}/export`]: () => ({ body: "<!doctype html>" }) });
     await dialog();
     const user = userEvent.setup();
     await user.click(await screen.findByRole("radio", { name: /^HTML/ }));
+    expect(screen.queryByRole("switch", { name: "Include comments" })).toBeNull();
     await user.click(screen.getByRole("button", { name: "Download" }));
-    await waitFor(() => expect(URL.createObjectURL).toHaveBeenCalled());
-    expect(requests.map((request) => request.path)).toContain(`/api/v1/pages/${PAGE}/export?format=html`);
+    await waitFor(() =>
+      expect(requests.map((request) => request.path)).toContain(`/api/v1/pages/${PAGE}/export?format=zip`),
+    );
+    await user.click(screen.getByRole("switch", { name: "Include attachments" }));
+    await user.click(screen.getByRole("button", { name: "Download" }));
+    await waitFor(() =>
+      expect(requests.map((request) => request.path)).toContain(`/api/v1/pages/${PAGE}/export?format=html`),
+    );
   });
 
-  it("starts the export with subpages in the background", async () => {
+  it("opens the print view for PDF of a single page with the browser hint", async () => {
+    await dialog();
+    expect(
+      await screen.findByText("Your browser opens the print dialog — choose “Save as PDF”."),
+    ).toBeTruthy();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("switch", { name: "Include comments" }));
+    await user.click(screen.getByRole("button", { name: "Open print view" }));
+    await waitFor(() => expect(location).toContain("/print?"));
+    expect(location).toContain(`page=${PAGE}`);
+    expect(location).toContain("comments=true");
+  });
+
+  it("prepares the print view of a page with its subpages on the server", async () => {
     api({
-      [`POST /api/v1/pages/${PAGE}/exports`]: () => ({ status: 202, body: exportEntry({ state: "queued" }) }),
+      [`GET /api/v1/pages/${PAGE}/exports/summary`]: counts({ pages: 5 }),
+      [`POST /api/v1/pages/${PAGE}/exports`]: () => ({
+        status: 202,
+        body: exportEntry({ id: RUNNING, state: "queued", format: "print" }),
+      }),
     });
     await dialog();
     const user = userEvent.setup();
-    await user.click(await screen.findByRole("radio", { name: /ZIP with subpages/ }));
+    await user.click(await screen.findByRole("radio", { name: /This page and its subpages/ }));
+    expect(await screen.findByText("5 pages you can read")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Prepare print view" }));
+    await waitFor(() => expect(location).toContain(`export=${RUNNING}`));
+    const started = requests.find((request) => request.method === "POST");
+    expect(bodyOf(started)).toMatchObject({ format: "print", attachments: true, paper: "a4" });
+  });
+
+  it("offers Word, HTML or PDF on the server above the print limit", async () => {
+    api({
+      [`GET /api/v1/spaces/${SPACE}/exports/summary`]: counts({ pages: 412, blogPosts: 31, serverPdf: true }),
+      [`POST /api/v1/spaces/${SPACE}/exports`]: () => ({
+        status: 202,
+        body: exportEntry({ state: "queued", format: "pdf" }),
+      }),
+    });
+    await dialog();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("radio", { name: /The whole space/ }));
+    expect(await screen.findByText("412 pages and 31 blog posts")).toBeTruthy();
+    expect(await screen.findByText("Too many pages for the print view")).toBeTruthy();
+    expect(
+      screen.getByText(/443 pages are more than browsers print reliably at once \(up to 300\)/),
+    ).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Create PDF on the server" }));
+    expect(screen.getByText("The PDF is created on the server.")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Start export" }));
     expect(await screen.findByText("Export started")).toBeTruthy();
-    expect(requests.some((request) => request.method === "POST")).toBe(true);
+    expect(bodyOf(requests.find((request) => request.method === "POST"))).toMatchObject({ format: "pdf" });
   });
 
-  it("offers only single pages to people who may not export subpages, and says who can", async () => {
-    await dialog({ mayExportPages: false });
-    expect(await screen.findByRole("radio", { name: /^Markdown/ })).toBeTruthy();
-    expect(screen.queryByRole("radio", { name: /ZIP with subpages/ })).toBeNull();
-    expect(
-      screen.getByText(/Only space admins can export the whole space or a page with its subpages/),
-    ).toBeTruthy();
-  });
-
-  it("says how long a download with subpages is kept", async () => {
+  it("switches to Word above the print limit when PDF on the server is not set up", async () => {
+    api({ [`GET /api/v1/spaces/${SPACE}/exports/summary`]: counts({ pages: 301 }) });
     await dialog();
-    expect(await screen.findByText(/deleted 24 hours after you first downloaded it completely/)).toBeTruthy();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("radio", { name: /The whole space/ }));
+    expect(await screen.findByText(/Export as Word or HTML instead/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Create PDF on the server" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Export as Word" }));
+    expect(
+      (screen.getByRole("radio", { name: /^Word/ }) as HTMLButtonElement).getAttribute("aria-checked"),
+    ).toBe("true");
+    expect(screen.queryByText("Too many pages for the print view")).toBeNull();
+  });
+
+  it("shows readers the scopes of several pages as unavailable and says why", async () => {
+    await dialog({ mayExportPages: false });
+    const subpages = await screen.findByRole("radio", { name: /This page and its subpages/ });
+    const space = screen.getByRole("radio", { name: /The whole space/ });
+    expect(subpages.hasAttribute("disabled")).toBe(true);
+    expect(space.hasAttribute("disabled")).toBe(true);
+    expect(
+      screen.getAllByText(
+        "Only space admins can export several pages at once. Ask a space admin of IT Operations.",
+      ),
+    ).toHaveLength(2);
+    expect(requests.some((request) => request.path.includes("/exports/summary"))).toBe(false);
   });
 
   it("says that an administrator has to free up space when the storage is almost full", async () => {
-    api({ [`POST /api/v1/pages/${PAGE}/exports`]: () => problem(507, "notEnoughStorage") });
+    api({
+      [`GET /api/v1/pages/${PAGE}/exports/summary`]: counts({ pages: 2 }),
+      [`POST /api/v1/pages/${PAGE}/exports`]: () => problem(507, "notEnoughStorage"),
+    });
     await dialog();
     const user = userEvent.setup();
-    await user.click(await screen.findByRole("radio", { name: /ZIP with subpages/ }));
+    await user.click(await screen.findByRole("radio", { name: /^Word/ }));
+    await user.click(screen.getByRole("radio", { name: /This page and its subpages/ }));
     await user.click(screen.getByRole("button", { name: "Start export" }));
     expect(await screen.findByText(/Your instance administrator needs to free up space/)).toBeTruthy();
   });
 
   it("says why an export cannot start and keeps the dialog open", async () => {
-    api({ [`POST /api/v1/pages/${PAGE}/exports`]: () => problem(409, "exportRunning") });
+    api({
+      [`GET /api/v1/pages/${PAGE}/exports/summary`]: counts({ pages: 2 }),
+      [`POST /api/v1/pages/${PAGE}/exports`]: () => problem(409, "exportRunning"),
+    });
     await dialog();
     const user = userEvent.setup();
-    await user.click(await screen.findByRole("radio", { name: /ZIP with subpages/ }));
+    await user.click(await screen.findByRole("radio", { name: /^Markdown/ }));
+    await user.click(screen.getByRole("radio", { name: /This page and its subpages/ }));
     await user.click(screen.getByRole("button", { name: "Start export" }));
     expect(await screen.findByText(/Another export of yours is still running/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "Start export" })).toBeTruthy();
@@ -218,24 +329,27 @@ describe("the list of exports", () => {
 });
 
 describe("space export", () => {
-  it("starts the export of the space and lists only its exports", async () => {
+  it("starts a Word export of the space and lists only its exports", async () => {
     api({
+      [`GET /api/v1/spaces/${SPACE}/exports/summary`]: counts({ pages: 12 }),
       [`POST /api/v1/spaces/${SPACE}/exports`]: () => ({
         status: 202,
-        body: exportEntry({ state: "queued" }),
+        body: exportEntry({ state: "queued", format: "docx" }),
       }),
     });
     await renderWithProviders(
       inRouter(
         <SpaceExport
-          space={{ id: SPACE, key: "ITOPS", name: "IT Operations", exportEnabled: true, admin: false }}
+          space={{ id: SPACE, key: "ITOPS", name: "IT Operations", exportEnabled: true, admin: true }}
         />,
       ),
     );
     const user = userEvent.setup();
-    await user.click(await screen.findByRole("button", { name: "Export space" }));
+    await user.click(await screen.findByRole("radio", { name: /^Word/ }));
+    await user.click(screen.getByRole("button", { name: "Start export" }));
     expect(await screen.findByText("Export started")).toBeTruthy();
-    expect(requests.some((request) => request.path === `/api/v1/spaces/${SPACE}/exports`)).toBe(true);
+    const started = requests.find((request) => request.path === `/api/v1/spaces/${SPACE}/exports`);
+    expect(bodyOf(started)).toMatchObject({ format: "docx" });
   });
 
   it("tells readers that export is off without offering the action", async () => {
@@ -247,6 +361,6 @@ describe("space export", () => {
       ),
     );
     expect(await screen.findByText(/A space admin can turn it on/)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Export space" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Start export" })).toBeNull();
   });
 });

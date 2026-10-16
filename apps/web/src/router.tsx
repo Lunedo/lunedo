@@ -10,6 +10,7 @@ import {
 import { z } from "zod";
 import { instanceInfoQuery, sessionQuery } from "./api/queries.js";
 import { NotFoundScreen, RouteErrorScreen, ScreenErrorScreen } from "./errors/route-error.js";
+import { printRouteSearch } from "./exports/print-search.js";
 import { RootLayout } from "./root-layout.js";
 import { searchPageSearch } from "./search/search-params.js";
 import { safeRedirect } from "./session/redirect.js";
@@ -169,17 +170,31 @@ const unsubscribeRoute = createRoute({
   component: lazyRouteComponent(() => import("./notifications/unsubscribe-screen.js"), "UnsubscribeScreen"),
 });
 
+async function requireSession(queryClient: QueryClient, href: string) {
+  await requireSetupComplete(queryClient);
+  const session = await queryClient.fetchQuery(sessionQuery);
+  if (!session) throw redirect({ to: "/sign-in", search: { redirect: href } });
+  if (session.sessionKind === "secondFactorSetup") throw redirect({ to: "/second-factor-setup" });
+  return session;
+}
+
 const appRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: "app",
-  beforeLoad: async ({ context, location }) => {
-    await requireSetupComplete(context.queryClient);
-    const session = await context.queryClient.fetchQuery(sessionQuery);
-    if (!session) throw redirect({ to: "/sign-in", search: { redirect: location.href } });
-    if (session.sessionKind === "secondFactorSetup") throw redirect({ to: "/second-factor-setup" });
-    return { session };
-  },
+  beforeLoad: async ({ context, location }) => ({
+    session: await requireSession(context.queryClient, location.href),
+  }),
   component: lazyRouteComponent(() => import("./shell/app-shell.js"), "AppShell"),
+});
+
+const printRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/print",
+  validateSearch: printRouteSearch,
+  beforeLoad: async ({ context, location }) => ({
+    session: await requireSession(context.queryClient, location.href),
+  }),
+  component: lazyRouteComponent(() => import("./exports/print-screen.js"), "PrintScreen"),
 });
 
 const homeRoute = createRoute({
@@ -754,6 +769,11 @@ const instanceProviderRoute = createRoute({
     "InstanceProviderScreen",
   ),
 });
+const instanceRenderingRoute = instanceScreen(
+  "/rendering",
+  () => import("./screens/instance/rendering-screen.js"),
+  "InstanceRenderingScreen",
+);
 const instanceMailRoute = instanceScreen(
   "/mail",
   () => import("./screens/instance/mail-screen.js"),
@@ -827,6 +847,7 @@ const routeTree = rootRoute.addChildren([
     secondFactorSetupRoute,
     unsubscribeRoute,
   ]),
+  printRoute,
   appRoute.addChildren([
     homeRoute,
     forYouRoute,
@@ -908,6 +929,7 @@ const routeTree = rootRoute.addChildren([
         instanceProviderRoute,
         instanceMailRoute,
         instanceStorageRoute,
+        instanceRenderingRoute,
         breakGlassRoute,
         instanceNotificationsRoute,
         instanceAnnouncementsRoute,

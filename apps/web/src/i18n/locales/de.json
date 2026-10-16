@@ -1074,7 +1074,8 @@
     "imports": "Import",
     "exports": "Exporte",
     "announcements": "Ankündigungen",
-    "storage": "Speicher"
+    "storage": "Speicher",
+    "rendering": "Rendering"
   },
   "commands": {
     "label": "Befehlspalette",
@@ -1499,7 +1500,10 @@
       "unreachable": "Pagehall erreicht den Homeserver nicht. Prüfe seine Adresse und ob dieser Server ihn erreicht."
     },
     "storageFull": "Der Speicher ist fast voll. Die Administration der Instanz wurde informiert. Versuche es erneut, sobald Platz geschaffen wurde.",
-    "invalidStorageSettings": "Die Speichereinstellungen sind ungültig. Prüfe die markierten Felder und versuche es erneut."
+    "invalidStorageSettings": "Die Speichereinstellungen sind ungültig. Prüfe die markierten Felder und versuche es erneut.",
+    "tooManyPagesToPrint": "Browser drucken bis zu 300 Seiten auf einmal. Exportieren Sie stattdessen als Word oder HTML, oder als PDF auf dem Server, falls Ihre Administration den Render-Container eingerichtet hat.",
+    "renderUnavailable": "PDF auf dem Server braucht den Render-Container, der nicht eingerichtet oder nicht erreichbar ist. Drucken Sie das PDF stattdessen über Ihren Browser oder fragen Sie Ihre Instanz-Administration.",
+    "renderFailed": "Der Render-Container konnte das PDF nicht erstellen. Versuchen Sie es erneut; schlägt es wieder fehl, informieren Sie Ihre Instanz-Administration."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -7546,35 +7550,9 @@
       "adminHere": "Das gilt für alle, auch für dich. Schalte oben „Export erlauben“ ein, um zu exportieren."
     },
     "page": {
-      "title": "Seite exportieren",
       "menu": "Exportieren",
-      "format": "Format",
-      "scope": "Der Export enthält, was du lesen kannst: die veröffentlichte Version, ohne Kommentare, private Notizen und Verlauf.",
-      "kept": "Ein Download einer Seite mit Unterseiten wird 24 Stunden nach dem ersten vollständigen Herunterladen gelöscht, oder nach 7 Tagen, wenn du ihn nie herunterlädst.",
-      "subpagesForAdmins": "Nur Space-Admins können den ganzen Space oder eine Seite mit Unterseiten exportieren. Frag eine dieser Personen, wenn du das brauchst.",
-      "start": "Export starten",
-      "download": "Herunterladen",
-      "failed": "„{title}“ wurde nicht exportiert",
       "unpublishedTitle": "Diese Seite ist noch nicht veröffentlicht",
-      "unpublished": "Exporte enthalten nur veröffentlichte Inhalte. Veröffentliche die Seite zuerst und exportiere sie dann.",
-      "formats": {
-        "markdown": {
-          "label": "Markdown",
-          "description": "Eine .md-Datei. Links auf andere Seiten und Anhänge zeigen auf Pagehall."
-        },
-        "html": {
-          "label": "HTML",
-          "description": "Eine .html-Datei, die sich in jedem Browser öffnen lässt, auch offline."
-        },
-        "zip": {
-          "label": "ZIP mit Anhängen",
-          "description": "Die Seite als Markdown und HTML zusammen mit ihren Anhängen."
-        },
-        "subpages": {
-          "label": "ZIP mit Unterseiten",
-          "description": "Diese Seite und alle Unterseiten, die du lesen kannst, mit Anhängen. Der Export wird im Hintergrund erstellt; du bekommst eine Benachrichtigung, sobald der Download bereitsteht. Er wird abgelehnt, wenn der Speicher von Pagehall fast voll ist."
-        }
-      }
+      "unpublished": "Exporte enthalten nur veröffentlichte Inhalte. Veröffentliche die Seite zuerst und exportiere sie dann."
     },
     "started": {
       "title": "Export gestartet",
@@ -7583,13 +7561,10 @@
       "failed": "Der Export konnte nicht gestartet werden"
     },
     "space": {
-      "title": "{name} exportieren",
       "menu": "Space exportieren",
       "panelTitle": "Diesen Space exportieren",
-      "description": "Erstellt eine ZIP-Datei mit allen Seiten, die du lesen kannst: der Seitenbaum als Ordner, jede Seite als Markdown und HTML, Anhänge neben ihren Seiten und eine index.html mit dem Baum. Kommentare, private Notizen und Verlauf sind nicht enthalten. Nur du kannst den Download öffnen. Er wird 24 Stunden nach dem ersten vollständigen Herunterladen gelöscht, oder nach 7 Tagen, wenn du ihn nie herunterlädst. Der Export wird abgelehnt, wenn der Speicher von Pagehall fast voll ist.",
-      "start": "Space exportieren",
-      "empty": "Du hast keine Exporte dieses Space.",
-      "yourExports": "Deine Exporte anzeigen"
+      "description": "Exportieren Sie alle Seiten und veröffentlichten Blogbeiträge, die Sie lesen können, als PDF, Word, HTML oder Markdown. Eingeschränkte Seiten sind nur enthalten, wenn Sie sie lesen können; private Notizen und der Verlauf nicht. Nur Sie können den Download öffnen. Er wird 24 Stunden nach dem ersten vollständigen Download gelöscht, oder nach 7 Tagen, wenn Sie ihn nie herunterladen. Der Export wird abgelehnt, wenn der Speicher von Pagehall fast voll ist.",
+      "empty": "Du hast keine Exporte dieses Space."
     },
     "list": {
       "label": "Deine Exporte",
@@ -7609,7 +7584,8 @@
       "download": "Herunterladen",
       "cancel": "Export von {name} abbrechen",
       "delete": "Export von {name} löschen",
-      "progress": "Fortschritt des Exports von {name}"
+      "progress": "Fortschritt des Exports von {name}",
+      "openPrint": "Druckansicht öffnen"
     },
     "states": {
       "queued": "Wartet",
@@ -7623,7 +7599,10 @@
       "noAccess": "Du kannst das Exportierte nicht mehr lesen, oder es wurde gelöscht. Exportiere erneut, was du lesen kannst.",
       "tokenRevoked": "Das API-Token, das den Export gestartet hat, wurde widerrufen oder ist abgelaufen. Starte den Export erneut.",
       "interrupted": "Der Export wurde mehrmals unterbrochen. Starte ihn erneut; scheitert er wieder, wende dich an die Person, die Pagehall betreibt.",
-      "internalError": "Beim Erstellen des Exports ist etwas schiefgegangen. Starte ihn erneut; scheitert er wieder, wende dich an die Person, die Pagehall betreibt."
+      "internalError": "Beim Erstellen des Exports ist etwas schiefgegangen. Starte ihn erneut; scheitert er wieder, wende dich an die Person, die Pagehall betreibt.",
+      "renderUnavailable": "PDF auf dem Server braucht den Render-Container, der nicht eingerichtet oder nicht erreichbar ist. Drucken Sie das PDF stattdessen über Ihren Browser oder fragen Sie Ihre Instanz-Administration.",
+      "renderFailed": "Der Render-Container konnte das PDF nicht erstellen. Starten Sie den Export erneut; schlägt er wieder fehl, informieren Sie Ihre Instanz-Administration.",
+      "renderTooLarge": "Das Dokument mit seinen Bildern ist größer, als der Render-Container annimmt. Exportieren Sie weniger Seiten oder als Word bzw. HTML."
     },
     "screen": {
       "title": "Exporte",
@@ -7632,9 +7611,111 @@
     "settings": {
       "tab": "Export",
       "title": "Export",
-      "description": "Erlaube, Seiten und den ganzen Space als Markdown und HTML zu exportieren.",
+      "description": "Erlauben Sie, Seiten und den ganzen Space als PDF, Word, HTML und Markdown zu exportieren.",
       "settingTitle": "Export-Einstellung",
       "copyNote": "Das Ausschalten des Exports verhindert kein Kopieren: Wer eine Seite lesen kann, kann ihren Inhalt weiterhin kopieren."
+    },
+    "dialog": {
+      "title": "„{name}“ exportieren",
+      "format": "Format",
+      "scope": "Was exportiert wird",
+      "content": "Inhalt",
+      "paper": "Papierformat",
+      "orientation": "Ausrichtung",
+      "papers": {
+        "a4": "A4",
+        "letter": "Letter"
+      },
+      "orientations": {
+        "portrait": "Hochformat",
+        "landscape": "Querformat"
+      },
+      "formats": {
+        "pdf": {
+          "label": "PDF",
+          "description": "Druckansicht im Browser"
+        },
+        "docx": {
+          "label": "Word",
+          "description": ".docx mit Layout, Tabellen und Bildern"
+        },
+        "html": {
+          "label": "HTML",
+          "description": "Seiten, die jeder Browser öffnet"
+        },
+        "markdown": {
+          "label": "Markdown",
+          "description": "Textdateien mit Formatierung"
+        }
+      },
+      "printHintTitle": "Ihr Browser öffnet den Druckdialog – wählen Sie „Als PDF speichern“.",
+      "printHint": "Pagehall fügt Kopfzeile, Fußzeile und Seitenzahlen hinzu. Schalten Sie die eigenen Kopf- und Fußzeilen des Browsers aus.",
+      "printPrepared": "Bei mehreren Seiten wird die Druckansicht zuerst auf dem Server vorbereitet.",
+      "scopes": {
+        "page": {
+          "label": "Diese Seite",
+          "description": "Nur {title}"
+        },
+        "pages": {
+          "label": "Diese Seite mit Unterseiten",
+          "description": "{title} und die Unterseiten, die Sie lesen können",
+          "counted": "{count, plural, one {# Seite, die Sie lesen können} other {# Seiten, die Sie lesen können}}"
+        },
+        "space": {
+          "label": "Der ganze Space „{name}“",
+          "description": "Alle Seiten und veröffentlichten Blogbeiträge, die Sie lesen können",
+          "counted": "{pages, plural, one {# Seite} other {# Seiten}} und {posts, plural, one {# Blogbeitrag} other {# Blogbeiträge}}"
+        },
+        "adminsOnly": "Nur Space-Admins können mehrere Seiten auf einmal exportieren. Fragen Sie einen Space-Admin von {name}."
+      },
+      "attachments": "Anhänge einschließen",
+      "attachmentsPaged": "Bilder bleiben im Dokument; Dateien werden in einem Anhang aufgelistet.",
+      "attachmentsFiles": "Dateien kommen neben den Seiten in eine ZIP-Datei.",
+      "comments": "Kommentare einschließen",
+      "commentsDescription": "Offene Kommentare erscheinen nach jeder Seite.",
+      "contents": "Inhaltsverzeichnis",
+      "contentsDescription": "Auf dem ersten Blatt, mit Seitenzahlen.",
+      "background": "Läuft im Hintergrund. Sie erhalten eine Benachrichtigung mit dem Download, sobald die Datei fertig ist.",
+      "tooManyTitle": "Zu viele Seiten für die Druckansicht",
+      "tooMany": "{count, plural, one {# Seite ist} other {# Seiten sind}} mehr, als Browser zuverlässig auf einmal drucken (bis zu {limit}). Exportieren Sie stattdessen als Word oder HTML.",
+      "tooManyServer": "{count, plural, one {# Seite ist} other {# Seiten sind}} mehr, als Browser zuverlässig auf einmal drucken (bis zu {limit}). Erstellen Sie das PDF auf dem Server oder exportieren Sie als Word oder HTML.",
+      "useWord": "Als Word exportieren",
+      "useHtml": "Als HTML exportieren",
+      "useServer": "PDF auf dem Server erstellen",
+      "serverChosen": "Das PDF wird auf dem Server erstellt.",
+      "countsFailed": "Die Seiten konnten nicht gezählt werden. Sie können den Export trotzdem starten.",
+      "openPrint": "Druckansicht öffnen",
+      "preparePrint": "Druckansicht vorbereiten",
+      "download": "Herunterladen",
+      "start": "Export starten",
+      "failed": "„{name}“ wurde nicht exportiert"
+    },
+    "print": {
+      "title": "Druckansicht · {title}",
+      "details": "{paper} · {orientation} · {count, plural, one {# Blatt} other {# Blätter}}",
+      "back": "Zurück",
+      "again": "Erneut drucken",
+      "frame": "Druckvorschau von {title}",
+      "hint": "Ihr Browser öffnet den Druckdialog – wählen Sie „Als PDF speichern“. Schalten Sie die eigenen Kopf- und Fußzeilen des Browsers aus; Pagehall fügt eigene hinzu.",
+      "preparing": "Die Druckansicht wird vorbereitet",
+      "preparingProgress": "{done} von {total} Schritten erledigt",
+      "loading": "Die Seiten werden geladen",
+      "layout": "Die Blätter werden gesetzt",
+      "failedTitle": "Die Druckansicht konnte nicht angezeigt werden",
+      "failed": "Die Seiten konnten nicht geladen oder gesetzt werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+      "exportFailed": "Die Vorbereitung der Druckansicht ist auf dem Server fehlgeschlagen. Starten Sie den Export im Exportdialog erneut.",
+      "retry": "Erneut versuchen",
+      "missingTitle": "Nichts zu drucken",
+      "missing": "Öffnen Sie die Druckansicht über den Exportdialog einer Seite.",
+      "browsers": "Chrome und Edge übernehmen Papierformat und Ausrichtung der Druckansicht. In Firefox und Safari wählen Sie dasselbe Papierformat und dieselbe Ausrichtung im Druckdialog."
+    },
+    "formats": {
+      "archive": "Markdown und HTML",
+      "html": "HTML",
+      "markdown": "Markdown",
+      "print": "Druckansicht",
+      "pdf": "PDF",
+      "docx": "Word"
     }
   },
   "search": {
@@ -8119,6 +8200,47 @@
         "invalidThresholds": "Die Stufen müssen ganze Prozentzahlen sein und steigen: erst Warnung, dann große Schreibvorgänge, dann kritisch.",
         "invalidS3Limit": "Das Limit muss eine positive Größe sein."
       }
+    }
+  },
+  "rendering": {
+    "title": "Rendering",
+    "description": "Wie Seiten zu PDF- und Word-Dateien werden.",
+    "pdf": {
+      "title": "PDF-Render-Container",
+      "status": "Status",
+      "checked": "Geprüft {time}",
+      "check": "Erneut prüfen",
+      "states": {
+        "notConfigured": "Nicht eingerichtet",
+        "healthy": "Bereit",
+        "unreachable": "Nicht erreichbar"
+      },
+      "reasons": {
+        "connection": "Pagehall erreicht den Container nicht. Prüfen Sie, ob er läuft und PAGEHALL_RENDER_URL auf ihn zeigt.",
+        "token": "Der Container lehnt das Token ab. Setzen Sie dasselbe Token in PAGEHALL_RENDER_TOKEN von Pagehall und RENDER_TOKEN des Containers.",
+        "response": "Der Container antwortet, aber nicht wie ein Pagehall-Render-Container. Prüfen Sie PAGEHALL_RENDER_URL."
+      },
+      "address": "Adresse",
+      "version": "Version",
+      "browser": "Browser",
+      "concurrency": "Dokumente gleichzeitig",
+      "concurrencyHint": "Wird mit RENDER_CONCURRENCY im Container gesetzt. Jedes Dokument braucht etwa 300 MB Arbeitsspeicher.",
+      "queue": "Jetzt",
+      "queueValue": "{running} in Arbeit, {waiting} wartend",
+      "limits": "Grenzen je Dokument",
+      "limitsValue": "{size} · {seconds, plural, one {# Sekunde} other {# Sekunden}}",
+      "usedFor": "Wird für PDF über die API und für PDF mehrerer Seiten im Hintergrund verwendet. Einzelne Seiten exportieren Personen als PDF über ihren eigenen Browser.",
+      "notConfiguredTitle": "Der interaktive Export funktioniert ohne ihn.",
+      "notConfigured": "Personen drucken PDF-Dateien über ihren eigenen Browser. Der Container wird nur für PDF über die API und für PDF vieler Seiten im Hintergrund gebraucht. Er führt Chromium ohne Oberfläche aus und ist optional.",
+      "setup": "Fügen Sie den Render-Container Ihrer Docker-Compose-Datei hinzu, setzen Sie dasselbe Token für Pagehall und starten Sie Pagehall neu:",
+      "docs": "So richten Sie den Render-Container ein",
+      "loadFailed": "Der Zustand des Renderings konnte nicht geladen werden"
+    },
+    "other": {
+      "title": "Weitere Formate",
+      "word": "Word (.docx)",
+      "wordDescription": "Wird von Pagehall selbst erstellt. Immer verfügbar.",
+      "available": "Verfügbar"
     }
   }
 }

@@ -17,6 +17,7 @@ import {
   Mail,
   Megaphone,
   Palette,
+  Printer,
   Search,
   Settings,
   ShieldAlert,
@@ -310,6 +311,15 @@ navigationItems.register(
     icon: HardDrive,
     labelKey: "navigation.storage",
     to: `${INSTANCE}/storage`,
+    permission: "instance.settings.view",
+  },
+  {
+    id: "instance.rendering",
+    order: 66,
+    section: "instance",
+    icon: Printer,
+    labelKey: "navigation.rendering",
+    to: `${INSTANCE}/rendering`,
     permission: "instance.settings.view",
   },
   {

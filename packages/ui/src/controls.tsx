@@ -262,6 +262,7 @@ export interface ChoiceOption {
   value: string;
   label: ReactNode;
   description?: ReactNode;
+  disabled?: boolean;
 }
 
 export interface RadioGroupProps {
@@ -288,7 +289,8 @@ export function RadioGroup({ value, onValueChange, options, label, variant = "de
             key={option.value}
             htmlFor={itemId}
             className={classNames(
-              "flex cursor-pointer items-start gap-3",
+              "flex items-start gap-3",
+              option.disabled ? "cursor-not-allowed" : "cursor-pointer",
               variant === "card" &&
                 "rounded-md border border-border p-3 has-aria-checked:border-accent has-aria-checked:bg-accent-soft",
             )}
@@ -296,15 +298,18 @@ export function RadioGroup({ value, onValueChange, options, label, variant = "de
             <RadioGroupPrimitive.Item
               id={itemId}
               value={option.value}
+              {...(option.disabled ? { disabled: true } : {})}
               className={classNames(
                 HIT_AREA,
-                "mt-1 flex size-4 shrink-0 items-center justify-center rounded-full border border-control-border bg-control focus-visible:focus-ring aria-checked:border-accent",
+                "mt-1 flex size-4 shrink-0 items-center justify-center rounded-full border border-control-border bg-control focus-visible:focus-ring disabled:opacity-60 aria-checked:border-accent",
               )}
             >
               <RadioGroupPrimitive.Indicator className="block size-2 rounded-full bg-accent" />
             </RadioGroupPrimitive.Item>
             <span className="flex flex-col">
-              <span className="font-medium text-text">{option.label}</span>
+              <span className={classNames("font-medium", option.disabled ? "text-text-muted" : "text-text")}>
+                {option.label}
+              </span>
               {option.description && <span className="text-sm text-text-muted">{option.description}</span>}
             </span>
           </label>
