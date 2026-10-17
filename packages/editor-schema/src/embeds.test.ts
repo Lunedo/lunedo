@@ -79,15 +79,27 @@ describe("the default embed services", () => {
         },
       ],
     };
-    expect(resolveEmbed("https://videos.example.org/watch?v=../../admin", [service])?.src).toBe(
-      "https://videos.example.org/embed/..%2F..%2Fadmin",
-    );
-    expect(resolveEmbed("https://videos.example.org/watch?v=..", [service])?.src).toBe(
-      "https://videos.example.org/embed/%2E%2E",
-    );
-    expect(resolveEmbed("https://videos.example.org/watch?v=a%3Fb%23c", [service])?.src).toBe(
+    const embedOf = (link: string, rules = service.rules) => resolveEmbed(link, [{ ...service, rules }])?.src;
+    expect(embedOf("https://videos.example.org/watch?v=../../admin")).toBeUndefined();
+    expect(embedOf("https://videos.example.org/watch?v=..")).toBeUndefined();
+    expect(embedOf("https://videos.example.org/watch?v=a%5Cb")).toBeUndefined();
+    expect(embedOf("https://videos.example.org/watch?v=a%3Fb%23c")).toBe(
       "https://videos.example.org/embed/a%3Fb%23c",
     );
+    const path = [
+      { pattern: "https://videos.example.org/v/{video}", embed: "https://videos.example.org/embed/{video}" },
+    ];
+    for (const value of ["%2e%2e", "%2E", ".%2e", "a%2fb", "a%5Cb", "%00"]) {
+      expect(embedOf(`https://videos.example.org/v/${value}`, path), value).toBeUndefined();
+    }
+    expect(embedOf("https://videos.example.org/v/a%20b", path)).toBe(
+      "https://videos.example.org/embed/a%20b",
+    );
+    const rest = [{ pattern: "https://videos.example.org/{*}", embed: "https://videos.example.org/{*}" }];
+    expect(embedOf("https://videos.example.org/a/%2e%2e/admin", rest)).toBe(
+      "https://videos.example.org/admin",
+    );
+    expect(embedOf("https://videos.example.org/a/b%2Fc", rest)).toBeUndefined();
   });
 
   it("passes the validation of the setting", () => {

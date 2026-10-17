@@ -6,7 +6,8 @@ export const MAX_EMBED_PATTERN_LENGTH = 500;
 export const EMBED_ID_PATTERN = /^[a-z][a-z0-9-]{0,39}$/;
 
 const PLACEHOLDER = /\{([a-zA-Z][a-zA-Z0-9]{0,19}|\*)\}/g;
-const SEGMENT_VALUE = /^[A-Za-z0-9._~=%!$'()+,;:@-]{1,300}$/;
+const MAX_SEGMENT_LENGTH = 300;
+const KEPT_IN_SEGMENT = /%(3D|3A|40|21|24|27|28|29|2A|2B|2C|3B)/g;
 const HOST_LABEL_VALUE = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 const QUERY_VALUE_LENGTH = 500;
 const URL_PLACEHOLDER = "url";
@@ -137,6 +138,27 @@ function matchHost(pattern: readonly string[], host: readonly string[], captures
   });
 }
 
+function cleanValue(value: string, maximum: number): string | null {
+  if (value.length === 0 || value.length > maximum || /^\.+$/.test(value)) return null;
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code < 0x20 || code === 0x7f || value[index] === "/" || value[index] === "\\") return null;
+  }
+  return value;
+}
+
+function decodedSegment(raw: string): string | null {
+  try {
+    return cleanValue(decodeURIComponent(raw), MAX_SEGMENT_LENGTH);
+  } catch {
+    return null;
+  }
+}
+
+function encodeSegment(value: string): string {
+  return encodeURIComponent(value).replace(KEPT_IN_SEGMENT, (escaped) => decodeURIComponent(escaped));
+}
+
 function matchSegments(pattern: readonly string[], path: readonly string[], captures: Captures): boolean {
   const rest = pattern.findIndex((segment) => placeholderOf(segment) === REST);
   if (rest === -1 ? pattern.length !== path.length : path.length < pattern.length - 1) return false;
@@ -145,18 +167,19 @@ function matchSegments(pattern: readonly string[], path: readonly string[], capt
   for (let index = 0; index < pattern.length; index += 1) {
     const segment = pattern[index] as string;
     if (index === rest) {
-      const values = path.slice(rest, rest + restLength);
-      if (!values.every((value) => SEGMENT_VALUE.test(value))) return false;
-      captures.set(REST, values);
+      const values = path.slice(rest, rest + restLength).map(decodedSegment);
+      if (values.some((value) => value === null)) return false;
+      captures.set(REST, values as string[]);
       continue;
     }
-    const value = (rest !== -1 && index > rest ? path[index - 1 + restLength] : path[index]) as string;
+    const raw = (rest !== -1 && index > rest ? path[index - 1 + restLength] : path[index]) as string;
+    const value = decodedSegment(raw);
+    if (value === null) return false;
     const name = placeholderOf(segment);
     if (name === null) {
       if (segment !== value) return false;
       continue;
     }
-    if (!SEGMENT_VALUE.test(value)) return false;
     captures.set(name, value);
   }
   return true;
@@ -164,8 +187,8 @@ function matchSegments(pattern: readonly string[], path: readonly string[], capt
 
 function matchQuery(pattern: readonly [string, string][], url: URL, captures: Captures): boolean {
   return pattern.every(([key, expected]) => {
-    const value = url.searchParams.get(key);
-    if (value === null || value.length === 0 || value.length > QUERY_VALUE_LENGTH) return false;
+    const value = cleanValue(url.searchParams.get(key) ?? "", QUERY_VALUE_LENGTH);
+    if (value === null) return false;
     const name = placeholderOf(expected);
     if (name === null) return value === expected;
     captures.set(name, value);
@@ -183,15 +206,14 @@ function fill(template: ParsedPattern, captures: Captures, link: string): string
     if (name === null) return encode(part);
     if (name === URL_PLACEHOLDER) return encodeURIComponent(link);
     const captured = captures.get(name);
-    if (typeof captured !== "string") return "";
-    if (/^\.+$/.test(captured)) return "%2E".repeat(captured.length);
-    return SEGMENT_VALUE.test(captured) ? captured : encodeURIComponent(captured);
+    return typeof captured === "string" ? encode(captured) : "";
   };
   const host = template.host.map((label) => value(label, (text) => text)).join(".");
   const path = template.path.flatMap((segment) => {
     const name = placeholderOf(segment);
-    if (name === REST) return [...((captures.get(REST) as readonly string[] | undefined) ?? [])];
-    return [value(segment, encodeURIComponent)];
+    if (name === REST)
+      return ((captures.get(REST) as readonly string[] | undefined) ?? []).map(encodeSegment);
+    return [value(segment, encodeSegment)];
   });
   const query = template.query
     .map(([key, part]) => {
