@@ -4,10 +4,10 @@ import { sql } from "drizzle-orm";
 import type { Executor } from "../database/database.js";
 
 export const reportCategories = {
-  macros: ["unsupportedMacro"],
+  macros: ["unsupportedMacro", "unmappedQuery", "macroOptionDropped"],
   diagrams: ["diagramFileMissing", "gliffyDiagram", "diagramPageMissing"],
   attachments: ["missingAttachment", "attachmentFileMissing", "attachmentTooLarge", "attachmentUnreadable"],
-  links: ["externalPageLink", "unsupportedLink", "invalidLink", "externalImage"],
+  links: ["externalPageLink", "unsupportedLink", "invalidLink", "externalImage", "unresolvedInclude"],
   content: ["invalidContent", "contentTruncated", "macroDataTruncated", "unresolvedPerson", "invalidLabel"],
   comments: ["inlineCommentMoved", "tooManyComments"],
   archive: ["duplicateEntry", "skippedEntry"],

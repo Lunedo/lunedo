@@ -65,6 +65,9 @@ export function isAllowedHref(href: string): boolean {
 export const MAX_LABEL_LENGTH = 100;
 export const MAX_FILTER_LABELS = 20;
 export const MAX_FILTER_PAGES = 20;
+export const MAX_FILTER_SPACES = 20;
+export const MAX_PROPERTY_KEY_LENGTH = 200;
+export const MAX_PROPERTY_SET_ID_LENGTH = 100;
 
 export function cleanLabel(value: string): string | null {
   const label = value
@@ -98,6 +101,36 @@ export const pageIdsValue = z
   .array(z.string().refine(isUuid, "Expected a lowercase UUID"))
   .max(MAX_FILTER_PAGES)
   .refine(unique, "Each page may appear only once");
+export const spaceIdsValue = z
+  .array(z.string().refine(isUuid, "Expected a lowercase UUID"))
+  .max(MAX_FILTER_SPACES)
+  .refine(unique, "Each space may appear only once");
+
+export function propertyKey(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+export function propertyKeyOf(value: string): string {
+  return propertyKey(value).toLowerCase();
+}
+
+function isCleanText(value: string, maximum: number): boolean {
+  return value.length > 0 && value.length <= maximum && !hasControlCharacter(value) && value.trim() === value;
+}
+
+export const propertySetIdValue = z
+  .string()
+  .refine((value) => isCleanText(value, MAX_PROPERTY_SET_ID_LENGTH), "Expected an ID of 1 to 100 characters");
+export const propertyColumnValue = z
+  .string()
+  .refine(
+    (value) => isCleanText(value, MAX_PROPERTY_KEY_LENGTH) && !value.includes(","),
+    "Expected a property name of 1 to 200 characters without commas",
+  );
+export const propertyColumnsValue = z
+  .array(propertyColumnValue)
+  .max(30)
+  .refine((values) => unique(values.map((value) => value.toLowerCase())), "Each column may appear only once");
 export const templateIdValue = z
   .string()
   .refine(isTemplateId, "Expected a template ID or a built-in template such as builtin:how-to");

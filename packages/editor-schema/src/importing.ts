@@ -26,9 +26,19 @@ export interface FileReference {
 export type MacroNote =
   | { readonly code: "diagramFileMissing"; readonly macro: string; readonly name: string }
   | { readonly code: "gliffyDiagram"; readonly name: string }
-  | { readonly code: "diagramPageMissing"; readonly name: string };
+  | { readonly code: "diagramPageMissing"; readonly name: string }
+  | { readonly code: "unmappedQuery"; readonly macro: string; readonly query: string }
+  | { readonly code: "macroOptionDropped"; readonly macro: string; readonly option: string }
+  | {
+      readonly code: "unresolvedInclude";
+      readonly macro: string;
+      readonly title: string;
+      readonly spaceKey: string | null;
+    }
+  | { readonly code: "externalPageLink"; readonly title: string; readonly spaceKey: string | null };
 
 export interface MacroImportContext {
+  readonly spaceKey: string | null;
   blocks(content: readonly SourceContent[]): NodeJson[];
   inline(content: readonly SourceContent[]): NodeJson[];
   attachment(reference: SourceElement, page: SourceElement | null): ImportedAttachment | null;

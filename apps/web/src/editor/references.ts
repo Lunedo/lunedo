@@ -151,3 +151,17 @@ export async function searchPages(query: string) {
   });
   return items;
 }
+
+export function usePageReferences(ids: readonly string[]): Record<string, PageReference> {
+  useSyncExternalStore(subscribe, () => version);
+  const key = ids.join(",");
+  useEffect(() => {
+    for (const id of key.split(",")) if (id && !pages.has(id)) void loadPage(id);
+  }, [key]);
+  return Object.fromEntries(
+    ids.flatMap((id) => {
+      const page = pages.get(id);
+      return page ? [[id, page] as const] : [];
+    }),
+  );
+}

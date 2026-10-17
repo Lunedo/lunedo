@@ -1,7 +1,8 @@
 import type { MarkSpec, NodeSpec } from "prosemirror-model";
 import type { z } from "zod";
 import type { ImportSource, MacroConverter } from "./importing.js";
-import type { ValidMark, ValidNode } from "./json.js";
+import type { DocumentJson, NodeJson, ValidMark, ValidNode } from "./json.js";
+import type { ContentColor } from "./values.js";
 import type { WordBlock, WordContent, WordInline, WordTextStyle } from "./word.js";
 
 export interface AttributeSpec {
@@ -121,6 +122,77 @@ export interface ReportedTask {
   page: { title: string; href: string };
 }
 
+export const contentLabelSorts = ["modified", "created", "title"] as const;
+export type ContentLabelSort = (typeof contentLabelSorts)[number];
+
+export const labeledContentKinds = ["page", "blogPost"] as const;
+export type LabeledContentKind = (typeof labeledContentKinds)[number];
+
+export interface PropertiesReportRequest {
+  spaceIds: readonly string[];
+  labels: readonly string[];
+  setId: string | null;
+  columns: readonly string[];
+  sortBy: string | null;
+  reverse: boolean;
+  pageSize: number;
+}
+
+export interface ReportedProperties {
+  title: string;
+  href: string;
+  creator: string | null;
+  labels: readonly string[];
+  cells: readonly (readonly NodeJson[] | null)[];
+}
+
+export interface PropertiesReport {
+  columns: readonly string[];
+  rows: readonly ReportedProperties[];
+  total: number;
+}
+
+export interface ContentByLabelRequest {
+  labels: readonly string[];
+  matchAll: boolean;
+  spaceIds: readonly string[];
+  kinds: readonly LabeledContentKind[];
+  sort: ContentLabelSort;
+  reverse: boolean;
+  limit: number;
+  excerpts: boolean;
+}
+
+export interface LabeledContent {
+  title: string;
+  href: string;
+  kind: LabeledContentKind;
+  space: string | null;
+  labels: readonly string[];
+  excerpt: string | null;
+}
+
+export interface RelatedLabelsRequest {
+  labels: readonly string[];
+}
+
+export interface RelatedLabel {
+  label: string;
+  href: string;
+}
+
+export interface IncludeRequest {
+  pageId: string | null;
+  sourceSpace: string | null;
+  sourceTitle: string | null;
+  excerpt: boolean;
+  name: string | null;
+}
+
+export type IncludedContent =
+  | { state: "visible"; title: string; href: string; document: DocumentJson; context: RenderContext }
+  | { state: "hidden" | "loop" | "depth" | "noExcerpt" };
+
 export interface RenderLabels {
   noAccess: string;
   inTrash: string;
@@ -164,6 +236,28 @@ export interface RenderLabels {
   reportPage: string;
   templateButton: string;
   unavailableHere: string;
+  pageProperties: string;
+  propertiesReport: string;
+  noReportedProperties: string;
+  propertiesReportCreator: string;
+  propertiesReportLabels: string;
+  propertiesReportMore: string;
+  importedQuery: string;
+  contentByLabel: string;
+  noLabeledContent: string;
+  relatedLabels: string;
+  noRelatedLabels: string;
+  excerpt: string;
+  hiddenExcerpt: string;
+  includedPage: string;
+  includedExcerpt: string;
+  notImportedYet: string;
+  includeLoop: string;
+  includeTooDeep: string;
+  noExcerpt: string;
+  roadmap: string;
+  roadmapReadOnly: string;
+  roadmapAsList: string;
   callout: Record<"info" | "tip" | "note" | "warning" | "error", string>;
 }
 
@@ -195,6 +289,12 @@ export interface RenderContext {
   pageReport?: (request: PageReportRequest) => readonly ReportedPage[] | null;
   decisionReport?: (request: DecisionReportRequest) => readonly ReportedDecision[] | null;
   taskReport?: (request: TaskReportRequest) => readonly ReportedTask[] | null;
+  propertiesReport?: (request: PropertiesReportRequest) => PropertiesReport | null;
+  contentByLabel?: (request: ContentByLabelRequest) => readonly LabeledContent[] | null;
+  relatedLabels?: (request: RelatedLabelsRequest) => readonly RelatedLabel[] | null;
+  include?: (request: IncludeRequest) => IncludedContent | null;
+  formatMonth?: (iso: string) => string;
+  svgPalette?: (color: ContentColor, role: "background" | "text") => string;
   href?: (href: string) => string;
 }
 
@@ -214,6 +314,7 @@ interface BaseRenderer {
 
 export interface HtmlRenderer extends BaseRenderer {
   spendRenderBudget(cost: number): boolean;
+  nested(content: readonly NodeJson[], context: RenderContext): string;
   children(node: ValidNode): string;
   render(node: ValidNode): string;
   escape(text: string): string;
@@ -226,6 +327,7 @@ export interface MarkdownRenderer extends BaseRenderer {
   render(node: ValidNode): string;
   escape(text: string): string;
   html(node: ValidNode): string;
+  nested(content: readonly NodeJson[], context: RenderContext): string;
   safeHref(href: string): string | null;
 }
 
@@ -233,6 +335,7 @@ export interface WordRenderer extends BaseRenderer {
   render(node: ValidNode): WordContent[];
   blocks(node: ValidNode): WordBlock[];
   inline(node: ValidNode): WordInline[];
+  nested(content: readonly NodeJson[], context: RenderContext): WordBlock[];
   safeHref(href: string): string | null;
 }
 

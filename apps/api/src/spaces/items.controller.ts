@@ -438,11 +438,16 @@ export class ItemsController {
           }))
         : null,
       diagrams: await this.#services.documents.referencedDiagrams(actor, snapshot.document),
-      ...(await this.#services.reports.forDocument(actor, snapshot.document)),
+      ...(await this.#services.reports.forDocument(actor, snapshot.document, pageId)),
+    };
+    const merged = {
+      ...references,
+      people: { ...listings.references.people, ...references.people },
+      pages: { ...listings.references.pages, ...references.pages },
     };
     return {
       itemId: pageId,
-      markdown: renderPageMarkdown(snapshot.document, references, listings),
+      markdown: renderPageMarkdown(snapshot.document, merged, listings),
       revision: snapshot.revision,
       updatedAt: snapshot.updatedAt,
     };

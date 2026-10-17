@@ -28,9 +28,39 @@ Discarding and stopping require typing the space key. Reviewers can read the spa
 The report lists problems by category: macros, diagrams, attachments, links, content and archive. Each entry is typed and can be exported as CSV.
 
 - draw.io, Gliffy, Mermaid and PlantUML macros become diagram blocks; see [diagrams.md](diagrams.md#importing-from-confluence).
-- Other Confluence macros are kept as unsupported-macro blocks. Readers see a neutral notice; editors see the macro name. The report counts each macro by name.
+- Macros without a converter, and macros whose parameters a converter cannot take over, are kept as unsupported-macro blocks with their original data. Readers see a neutral notice; editors see the macro name. The report counts each macro by name.
 - Links to pages inside the export are rewritten. Links to other pages keep their original address and are reported.
 - Only the current version of each page is imported, unless the full page history was chosen. Attachments keep all versions.
+
+## Macros
+
+These Confluence macros become Pagehall blocks. A macro falls back to an unsupported-macro block when its content or a parameter cannot be taken over, unless the table names another fallback.
+
+| Macro | Becomes | Fallback |
+|---|---|---|
+| `info`, `tip`, `note`, `warning` | Callout | |
+| `expand` | Expand | |
+| `status` | Status | |
+| `code` | Code block | |
+| `toc`, `toc-zone` | Table of contents | Unsupported with `include` or `exclude` |
+| `children` | Child pages | Unsupported when the page is not part of the export |
+| `attachments`, `view-file`, `viewpdf`, `viewxls` | Attachment list, file | |
+| `content-report-table`, `recently-updated` | Page report | |
+| `decisionreport`, decision lists | Decision report, decisions | |
+| `tasks-report-macro` | Task report | |
+| `create-from-template` | Template button | |
+| `details` (`id`, `hidden`) | Page properties. The table may have the names in the first column or in the first row. | Unsupported when the body is not one table of names and values, or a value contains blocks other than text, lists, quotes and code |
+| `detailssummary` (`cql`, `label`, `spaces`, `headings`, `firstcolumn`, `sortBy`, `reverseSort`, `pageSize`, `showCreator`, `showPageLabels`, `id`) | Page properties report | A query that cannot be converted into labels and spaces stays in the block as a note, and the report lists it. `showCommentsCount` and `showLikesCount` are listed as options not taken over. |
+| `contentbylabel` (`labels`, `cql`, `spaces`, `type`, `operator`, `sort`, `reverse`, `max`, `excerptType`, `showLabels`, `showSpace`, `title`) | Content by label | A query that cannot be converted stays as a note and is listed; `excludeCurrent` is listed as an option not taken over |
+| `related-labels` (`labels`, `title`) | Related labels | |
+| `excerpt` (`name`, `hidden`) | Excerpt | |
+| `excerpt-include` (page, `name`, `nopanel`) | Include excerpt | |
+| `include` (page) | Include page | |
+| `roadmap` | Read-only roadmap | Unsupported when the roadmap data cannot be read |
+
+Queries are converted when they combine labels (`label = …`, `label in (…)`, or several labels joined with `or`), spaces (`space = …`, `currentSpace()`) and the type with `and`. For content by label, labels joined with `and` become "all of the labels".
+
+An include of a page that is not part of the export keeps the Confluence space key and title of that page and is listed in the report. It shows the page as soon as a page with that title is imported into the same organization, by a re-import or by importing its space; the including page does not change. Links from roadmap bars to pages outside the export are listed like other links and the bar keeps its title.
 
 ## People
 

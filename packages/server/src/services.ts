@@ -166,6 +166,7 @@ import { ValueSigner } from "./sharing/signer.js";
 import { ArchiveService } from "./spaces/archive.js";
 import { ConfidentialSpaceService } from "./spaces/confidential.js";
 import { PageDocumentService } from "./spaces/documents.js";
+import { IncludeService } from "./spaces/includes.js";
 import { TreeService } from "./spaces/items.js";
 import {
   applyTrashRetention,
@@ -288,6 +289,7 @@ export interface AccountServices {
   topics: TopicService;
   decisions: DecisionService;
   reports: ReportService;
+  includes: IncludeService;
   privateNotes: PrivateNotesService;
   oneOnOnes: OneOnOneService;
   importUploads: UploadService;
@@ -746,7 +748,8 @@ export function createAccountServices(options: {
   const meetingReminders = new MeetingReminders({ database, authorization, notifications });
   const topics = new TopicService({ database, authorization, people, documents, meetings, activity });
   const decisions = new DecisionService({ database, authorization });
-  const reports = new ReportService({ database, authorization, people });
+  const reports = new ReportService({ database, authorization, people, documents });
+  const includes = new IncludeService({ database, authorization, documents });
   const privateNotes = new PrivateNotesService({ database, authorization });
   const oneOnOnes = new OneOnOneService({
     database,
@@ -816,6 +819,7 @@ export function createAccountServices(options: {
     documents,
     attachments,
     reports,
+    includes,
     tasks,
     people,
     address: instanceAddress,
@@ -933,6 +937,7 @@ export function createAccountServices(options: {
     topics,
     decisions,
     reports,
+    includes,
     privateNotes,
     oneOnOnes,
     importUploads,

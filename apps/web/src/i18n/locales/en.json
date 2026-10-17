@@ -4300,7 +4300,21 @@
       "mermaid": "Mermaid diagram",
       "mermaidDescription": "Diagram from text in Mermaid syntax",
       "plantuml": "PlantUML diagram",
-      "plantumlDescription": "Sequence, class and other UML diagrams from text"
+      "plantumlDescription": "Sequence, class and other UML diagrams from text",
+      "pageProperties": "Page properties",
+      "pagePropertiesDescription": "Names and values that reports collect from many pages",
+      "propertiesReport": "Page properties report",
+      "propertiesReportDescription": "Table of the page properties of pages with labels",
+      "contentByLabel": "Content by label",
+      "contentByLabelDescription": "List of pages and blog posts with labels",
+      "relatedLabels": "Related labels",
+      "relatedLabelsDescription": "Labels used together with the labels of this page",
+      "excerpt": "Excerpt",
+      "excerptDescription": "Part of this page that other pages can include",
+      "includeExcerpt": "Include excerpt",
+      "includeExcerptDescription": "Show the excerpt of another page",
+      "includePage": "Include page",
+      "includePageDescription": "Show the content of another page"
     },
     "mention": {
       "unknown": "Unknown person"
@@ -4502,7 +4516,8 @@
       "image": "Image",
       "invalid": "This page cannot be shown because its stored content is damaged. Ask a space admin to restore an earlier version.",
       "taskDone": "Done",
-      "taskOpen": "Open"
+      "taskOpen": "Open",
+      "restrictedContent": "Restricted content"
     },
     "shortcuts": {
       "slash": "Insert a block",
@@ -4616,7 +4631,10 @@
       "searchPage": "Search for a page",
       "hiddenPage": "A page you cannot open",
       "tooManyPages": "Choose up to {count} pages. Remove one before you add another.",
-      "reverse": "Reverse order"
+      "reverse": "Reverse order",
+      "searchSpace": "Search for a space",
+      "hiddenSpace": "A space you cannot open",
+      "tooManySpaces": "Choose up to {count} spaces. Remove one before you add another."
     },
     "pageReport": {
       "title": "Page report",
@@ -4747,6 +4765,102 @@
         "timeout": "Drawing the diagram took longer than 10 seconds and was stopped. Simplify the diagram or split it.",
         "unavailable": "The diagram renderer did not start. Reload the page and try again."
       }
+    },
+    "pageProperties": {
+      "title": "Page properties",
+      "name": "Name",
+      "value": "Value",
+      "hiddenNote": "Hidden on the page, shown in reports",
+      "setId": "ID",
+      "setIdPlaceholder": "Optional",
+      "hide": "Hide on the page",
+      "addRow": "Add property",
+      "remove": "Remove property",
+      "removeNamed": "Remove property {name}",
+      "setIdLabel": "ID of the page properties"
+    },
+    "propertiesReport": {
+      "title": "Page properties report",
+      "loadFailed": "The pages of the report could not be loaded.",
+      "empty": "No pages you can see have page properties that match the filters.",
+      "creator": "Creator",
+      "labels": "Labels",
+      "range": "Pages {first} to {last} of {total}",
+      "importedQueryTitle": "Filter from Confluence not taken over",
+      "importedQuery": "This block was imported with the query {query}, which Pagehall cannot apply. Check the labels and spaces below.",
+      "spacesHint": "Leave empty for every space you can read.",
+      "labelsHint": "Pages with at least one of these labels. Leave empty for every page with page properties.",
+      "columns": "Columns",
+      "columnsHint": "Names of the page properties to show. Leave empty for all names used on the pages.",
+      "searchColumn": "Search or type a name",
+      "tooManyColumns": "Choose up to {count} columns. Remove one before you add another.",
+      "sort": "Order",
+      "byTitle": "By title",
+      "pageSize": "Pages per page",
+      "pageSizeValue": "{count, plural, one {# page} other {# pages}}",
+      "firstColumn": "Heading of the first column",
+      "firstColumnHint": "Leave empty for Page.",
+      "setId": "Page properties ID",
+      "setIdHint": "Only page properties with this ID. Leave empty for all.",
+      "showCreator": "Show who created each page",
+      "showLabels": "Show the labels of each page",
+      "readableOnly": "Always up to date. Only pages you can read are listed."
+    },
+    "contentByLabel": {
+      "title": "Content by label",
+      "chooseLabels": "Choose labels to list the pages that have them.",
+      "loadFailed": "The pages with these labels could not be loaded.",
+      "empty": "No pages you can see have these labels.",
+      "labelsHint": "Pages with these labels.",
+      "match": "Labels",
+      "matchAny": "Any of the labels",
+      "matchAll": "All of the labels",
+      "kinds": "Show",
+      "kindsAll": "Pages and blog posts",
+      "kindsPage": "Pages",
+      "kindsBlogPost": "Blog posts",
+      "heading": "Heading",
+      "headingHint": "Shown above the list. Leave empty for none.",
+      "excerpts": "Show excerpts",
+      "showSpace": "Show the space",
+      "showLabels": "Show the labels"
+    },
+    "relatedLabels": {
+      "title": "Related labels",
+      "loadFailed": "The related labels could not be loaded.",
+      "empty": "No related labels.",
+      "labelsHint": "Leave empty for the labels of this page."
+    },
+    "include": {
+      "pageTitle": "Included page",
+      "excerptTitle": "Included excerpt",
+      "page": "Page",
+      "pageHint": "The page whose content is shown here. Readers see it only if they can read that page.",
+      "importedHint": "Imported from Confluence as {title}. It appears once that page is imported, or choose a page.",
+      "choosePage": "Choose the page to include.",
+      "notImportedYet": "The included page {title} was not part of the import. It appears here once it is imported.",
+      "restricted": "Restricted content. Readers who cannot read the included page see nothing here.",
+      "loop": "This content is not shown because it would include itself.",
+      "tooDeep": "This content is not shown because included pages are nested too deeply.",
+      "noExcerpt": "The included page has no excerpt with this name.",
+      "loadFailed": "The included content could not be loaded.",
+      "excerptName": "Excerpt name",
+      "excerptNameHint": "Leave empty for the first excerpt of the page.",
+      "panel": "Show the title of the page above the excerpt"
+    },
+    "excerpt": {
+      "title": "Excerpt",
+      "hiddenTitle": "Hidden excerpt",
+      "name": "Name",
+      "namePlaceholder": "Optional",
+      "hide": "Hide on this page",
+      "hiddenNote": "Readers of this page do not see this excerpt. It is shown where it is included.",
+      "nameLabel": "Name of the excerpt"
+    },
+    "roadmap": {
+      "title": "Roadmap",
+      "readOnly": "Imported roadmap. Roadmaps can be edited once planning is available.",
+      "asList": "Show as list"
     }
   },
   "spaces": {
@@ -7059,6 +7173,21 @@
           "title": "{count, plural, one {# included diagram is} other {# included diagrams are}} on pages that were not imported",
           "hint": "The blocks show a note with the diagram name. To keep such a diagram, add it to the page as a draw.io diagram of its own.",
           "entry": "Diagram “{name}” is included from a page that is not part of the import."
+        },
+        "unmappedQuery": {
+          "title": "{count, plural, one {# report keeps} other {# reports keep}} a Confluence query",
+          "hint": "The query could not be converted into labels and spaces. The block keeps it as a note; check its filters.",
+          "entry": "Macro {macro}: the query {query} could not be converted."
+        },
+        "macroOptionDropped": {
+          "title": "{count, plural, one {# option} other {# options}} of macros not taken over",
+          "hint": "The block works without them.",
+          "entry": "Macro {macro}: the option {option} is not available in Pagehall."
+        },
+        "unresolvedInclude": {
+          "title": "{count, plural, one {# include points} other {# includes point}} to pages outside the export",
+          "hint": "They show the page once it is imported into this organization.",
+          "entry": "Macro {macro} includes “{title}” from space {spaceKey}, which was not part of the export."
         }
       },
       "people": "People",

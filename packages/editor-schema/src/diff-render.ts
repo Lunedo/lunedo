@@ -1,7 +1,7 @@
 import { type BlockDiff, type DocumentDiff, diffKit, type InlineSegment, type LineChange } from "./diff.js";
 import type { NodeJson, ValidMark, ValidNode } from "./json.js";
 import { type AttributeSpec, attrOf, hasDefault, type ModuleRegistry, type RenderContext } from "./module.js";
-import { createRenderState, HtmlRendererImpl, type RenderState } from "./render.js";
+import { createRenderState, HtmlRendererImpl, type Prepare, type RenderState } from "./render.js";
 import { element, escapeHtml } from "./text.js";
 import { InvalidDocumentError, MAX_DEPTH, type ValidationCode } from "./validate.js";
 
@@ -108,10 +108,11 @@ class DiffHtmlRenderer extends HtmlRendererImpl {
     registry: ModuleRegistry,
     context: RenderContext,
     state: RenderState,
+    prepare: Prepare,
     private readonly view: DiffView,
     private readonly diffLabels: DiffLabels,
   ) {
-    super(registry, context, state);
+    super(registry, context, state, prepare);
   }
 
   block(diff: BlockDiff): string {
@@ -220,9 +221,16 @@ export function renderDiffHtml(
     .map((block) => representative(block, view))
     .filter((node): node is NodeJson => node !== null);
   const headings = kit.extractHeadings({ type: "doc", content });
-  const renderer = new DiffHtmlRenderer(kit.registry, context, createRenderState(headings), view, {
-    ...defaultDiffLabels,
-    ...options.labels,
-  });
+  const renderer = new DiffHtmlRenderer(
+    kit.registry,
+    context,
+    createRenderState(headings),
+    kit.prepare,
+    view,
+    {
+      ...defaultDiffLabels,
+      ...options.labels,
+    },
+  );
   return diff.blocks.map((block) => renderer.block(block)).join("");
 }

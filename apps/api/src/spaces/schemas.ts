@@ -545,6 +545,43 @@ export const exampleDocument = {
   content: [{ type: "paragraph", content: [{ type: "text", text: "Connect through WireGuard." }] }],
 };
 
+export const pageReferencesSchema = z
+  .object({
+    people: z
+      .record(z.string(), z.string().describe("Name of the person."))
+      .describe("Names of mentioned people the caller may see, by account ID."),
+    pages: z
+      .record(
+        z.string(),
+        z
+          .object({
+            title: z.string().describe("Title, or empty without access."),
+            spaceKey: z.string().describe("Key of the page's space, or empty without access."),
+            kind: z.string().describe("Kind of the item."),
+            accessible: z.boolean().describe("Whether the caller can open the page."),
+            inTrash: z
+              .boolean()
+              .describe("Whether the page is in the trash. Then only the title is given, as `In trash`."),
+          })
+          .describe("A linked page."),
+      )
+      .describe("Linked pages by ID."),
+    topics: z
+      .record(
+        z.string(),
+        z
+          .object({
+            title: z.string().describe("Title of the running topic."),
+            status: extensibleEnum(["open", "closed"], "Whether the topic is still open."),
+          })
+          .describe("A running topic."),
+      )
+      .describe(
+        "Running topics that topic updates and decisions in the document refer to, by ID, as far as the caller may see them.",
+      ),
+  })
+  .describe("What mentions and page links in the document point to, as far as the caller may see it.");
+
 export const pageContentSchema = z
   .object({
     itemId: uuid("ID of the page."),
@@ -559,42 +596,7 @@ export const pageContentSchema = z
     revision: z.number().int().describe("Number of the stored state; it rises with every save."),
     updatedAt: timestamp("When the content was last stored."),
     updatedBy: uuid("Account that stored the content last, or null.").nullable(),
-    references: z
-      .object({
-        people: z
-          .record(z.string(), z.string().describe("Name of the person."))
-          .describe("Names of mentioned people the caller may see, by account ID."),
-        pages: z
-          .record(
-            z.string(),
-            z
-              .object({
-                title: z.string().describe("Title, or empty without access."),
-                spaceKey: z.string().describe("Key of the page's space, or empty without access."),
-                kind: z.string().describe("Kind of the item."),
-                accessible: z.boolean().describe("Whether the caller can open the page."),
-                inTrash: z
-                  .boolean()
-                  .describe("Whether the page is in the trash. Then only the title is given, as `In trash`."),
-              })
-              .describe("A linked page."),
-          )
-          .describe("Linked pages by ID."),
-        topics: z
-          .record(
-            z.string(),
-            z
-              .object({
-                title: z.string().describe("Title of the running topic."),
-                status: extensibleEnum(["open", "closed"], "Whether the topic is still open."),
-              })
-              .describe("A running topic."),
-          )
-          .describe(
-            "Running topics that topic updates and decisions in the document refer to, by ID, as far as the caller may see them.",
-          ),
-      })
-      .describe("What mentions and page links in the document point to, as far as the caller may see it."),
+    references: pageReferencesSchema,
   })
   .describe("The stored content of a page.");
 

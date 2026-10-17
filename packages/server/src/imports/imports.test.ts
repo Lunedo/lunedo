@@ -697,6 +697,174 @@ describe.skipIf(!baseUrl)("Confluence imports", () => {
     expect(left.rows[0]?.count).toBe(0);
   });
 
+  it("imports page properties, label reports, excerpts, includes and roadmaps and resolves includes imported later", async () => {
+    const macro = (name: string, parameters: Record<string, string>, body = "") =>
+      `<ac:structured-macro ac:name="${name}" ac:schema-version="1">${Object.entries(parameters)
+        .map(([key, value]) => `<ac:parameter ac:name="${key}">${value}</ac:parameter>`)
+        .join("")}${body}</ac:structured-macro>`;
+    const roadmap = {
+      title: "Plan",
+      timeline: { startDate: "2027-01-01 00:00:00", endDate: "2027-06-30 00:00:00", displayOption: "MONTH" },
+      lanes: [
+        {
+          title: "Core",
+          color: { lane: "#3b7fc4" },
+          bars: [
+            {
+              rowIndex: 0,
+              startDate: "2027-02-01 00:00:00",
+              title: "Site",
+              duration: 1,
+              pageLink: { id: "8101" },
+            },
+          ],
+        },
+      ],
+      markers: [],
+    };
+    const model: SyntheticExport = {
+      space: { id: "8001", key: "PROP", name: "Properties", homePageId: "8100" },
+      users: [ALICE],
+      attachments: [],
+      pages: [
+        {
+          id: "8100",
+          title: "Properties home",
+          parentId: null,
+          position: null,
+          body: "<p>Home</p>",
+          creatorKey: ALICE.key,
+        },
+        {
+          id: "8101",
+          title: "Site A",
+          parentId: "8100",
+          position: 1,
+          creatorKey: ALICE.key,
+          labels: ["site", "network"],
+          body: [
+            macro(
+              "details",
+              { hidden: "true" },
+              "<ac:rich-text-body><table><tbody><tr><th><p>Uplink</p></th><td><p>1 Gbit/s</p></td></tr></tbody></table></ac:rich-text-body>",
+            ),
+            macro(
+              "excerpt",
+              { hidden: "true" },
+              "<ac:rich-text-body><p>Site A in short</p></ac:rich-text-body>",
+            ),
+          ].join(""),
+        },
+        {
+          id: "8102",
+          title: "Overview",
+          parentId: "8100",
+          position: 2,
+          creatorKey: ALICE.key,
+          labels: ["site"],
+          body: [
+            macro("detailssummary", {
+              headings: "Uplink",
+              cql: "label = &quot;site&quot; and space = currentSpace()",
+            }),
+            macro("detailssummary", { cql: "label = &quot;site&quot; and ancestor = 8100" }),
+            macro("contentbylabel", { labels: "site", showLabels: "false" }),
+            '<ac:structured-macro ac:name="related-labels" ac:schema-version="1" />',
+            macro("excerpt-include", { "": '<ac:link><ri:page ri:content-title="Site A" /></ac:link>' }),
+            macro("include", {
+              "": '<ac:link><ri:page ri:space-key="OPSX" ri:content-title="Runbook" /></ac:link>',
+            }),
+            macro("roadmap", { source: encodeURIComponent(JSON.stringify(roadmap)), timeline: "true" }),
+          ].join(""),
+        },
+      ],
+    };
+    const result = await imported(model, { key: "PRPA" });
+    expect(result.state).toBe("review");
+    const site = await itemFor(result.id, "8101");
+    const overview = await itemFor(result.id, "8102");
+    const types = nodes(await documentOf(overview)).map((node) => node.type);
+    expect(types).toEqual(
+      expect.arrayContaining([
+        "propertiesReport",
+        "contentByLabel",
+        "relatedLabels",
+        "includeExcerpt",
+        "includePage",
+        "roadmap",
+      ]),
+    );
+    expect(types).not.toContain("unsupportedMacro");
+    const all = nodes(await documentOf(overview));
+    expect(all.find((node) => node.type === "includeExcerpt")?.attrs?.pageId).toBe(site);
+    expect(all.find((node) => node.type === "roadmap")?.attrs?.roadmap).toMatchObject({
+      lanes: [{ bars: [{ pageId: site }] }],
+    });
+    const stored = await test.database.execute<{ key: string; text: string }>(
+      sql`select key, text from page_properties where item_id = ${site}`,
+    );
+    expect(stored.rows).toEqual([{ key: "Uplink", text: "1 Gbit/s" }]);
+    const excerpt = await test.database.execute<{ text: string }>(
+      sql`select text from page_excerpts where item_id = ${site}`,
+    );
+    expect(excerpt.rows).toEqual([{ text: "Site A in short" }]);
+    const problems = await test.database.execute<{ category: string; code: string; details: unknown }>(sql`
+      select category, code, details from import_problems where import_id = ${result.id} order by code`);
+    expect(problems.rows).toEqual([
+      {
+        category: "macros",
+        code: "unmappedQuery",
+        details: { macro: "detailssummary", query: 'label = "site" and ancestor = 8100' },
+      },
+      {
+        category: "links",
+        code: "unresolvedInclude",
+        details: { macro: "include", title: "Runbook", spaceKey: "OPSX" },
+      },
+    ]);
+    const report = await test.services.reports.properties(as(admin), {
+      spaceIds: [result.quarantineSpace?.id ?? ""],
+      labels: ["site"],
+      setId: null,
+      columns: [],
+      sortBy: null,
+      reverse: false,
+      pageSize: 30,
+    });
+    expect(report.rows.map((row) => row.page.title)).toEqual(["Site A"]);
+    const request = { pageId: null, sourceSpace: "OPSX", sourceTitle: "Runbook", excerpt: false, name: null };
+    expect(await test.services.includes.target(as(admin), overview, request)).toBeNull();
+    const later = await imported(
+      {
+        space: { id: "8002", key: "OPSX", name: "Operations", homePageId: "8200" },
+        users: [ALICE],
+        attachments: [],
+        pages: [
+          {
+            id: "8200",
+            title: "Operations home",
+            parentId: null,
+            position: null,
+            body: "<p>Ops</p>",
+            creatorKey: ALICE.key,
+          },
+          {
+            id: "8201",
+            title: "Runbook",
+            parentId: "8200",
+            position: 1,
+            body: "<p>Restart the router</p>",
+            creatorKey: ALICE.key,
+          },
+        ],
+      },
+      { key: "OPSA" },
+    );
+    const runbook = await itemFor(later.id, "8201");
+    expect(await test.services.includes.target(as(admin), overview, request)).toMatchObject({ id: runbook });
+    expect(await test.services.includes.target(as(reviewer), overview, request)).toBeNull();
+  });
+
   it("resumes after an interruption in every phase without duplicates", async () => {
     const id = await prepared(largeExport(120, 30), { key: "BIGR" });
     await test.services.imports.start(as(admin), id);

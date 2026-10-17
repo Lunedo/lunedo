@@ -1,5 +1,5 @@
 import { slugify } from "@pagehall/editor-schema";
-import { sql } from "drizzle-orm";
+import { type SQL, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database } from "../database/database.js";
@@ -94,6 +94,19 @@ export function parseConfluenceLink(input: string): ConfluenceLink | null {
   return null;
 }
 
+export function importedTitleCandidates(spaceKey: string, title: string, kind: "page" | "blogPost"): SQL {
+  return sql`
+    select b.target_id as id, 0 as rank, b.recorded_at as at from import_titles n
+    join import_baselines b on b.space_id = n.space_id and b.kind = 'page' and b.source_id = n.source_id
+    where n.space_key = ${spaceKey.toLowerCase()} and n.title_key = ${titleKey(title)}
+      and b.target_id is not null
+    union all
+    select t.id, 1, t.updated_at from imported_spaces x join tree_items t on t.space_id = x.space_id
+    where x.source_space_key = ${spaceKey.toLowerCase()}
+      and lower(trim(t.title)) = ${titleKey(title)}
+      and t.kind = ${kind}`;
+}
+
 export class ConfluenceLinkService {
   readonly #database: Database;
   readonly #authorization: AuthorizationService;
@@ -124,16 +137,7 @@ export class ConfluenceLinkService {
           union all
           select i.target_id, 1, i.created_at from import_items i
           where i.kind = 'page' and i.source_id = ${link.pageId}`
-        : sql`
-          select b.target_id as id, 0 as rank, b.recorded_at as at from import_titles n
-          join import_baselines b on b.space_id = n.space_id and b.kind = 'page' and b.source_id = n.source_id
-          where n.space_key = ${link.spaceKey.toLowerCase()} and n.title_key = ${titleKey(link.title)}
-            and b.target_id is not null
-          union all
-          select t.id, 1, t.updated_at from imported_spaces x join tree_items t on t.space_id = x.space_id
-          where x.source_space_key = ${link.spaceKey.toLowerCase()}
-            and lower(trim(t.title)) = ${titleKey(link.title)}
-            and t.kind = ${link.blog ? "blogPost" : "page"}`;
+        : importedTitleCandidates(link.spaceKey, link.title, link.blog ? "blogPost" : "page");
     const result = await this.#database.execute<{
       id: string;
       kind: "page" | "blogPost";

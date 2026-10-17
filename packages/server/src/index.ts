@@ -1,12 +1,23 @@
 export {
   ANCHOR_CONTEXT_LENGTH,
   cleanLabel,
+  contentLabelSorts,
+  DEFAULT_CONTENT_BY_LABEL_LIMIT,
   DEFAULT_PAGE_REPORT_LIMIT,
+  DEFAULT_PROPERTIES_REPORT_PAGE_SIZE,
   decisionReportOrders,
   diagramTypes,
+  labeledContentKinds,
+  MAX_CONTENT_BY_LABEL_LIMIT,
+  MAX_EXCERPT_NAME_LENGTH,
   MAX_FILTER_LABELS,
   MAX_FILTER_PAGES,
+  MAX_FILTER_SPACES,
   MAX_PAGE_REPORT_LIMIT,
+  MAX_PROPERTIES_REPORT_COLUMNS,
+  MAX_PROPERTIES_REPORT_PAGE_SIZE,
+  MAX_PROPERTY_KEY_LENGTH,
+  MAX_PROPERTY_SET_ID_LENGTH,
   MAX_QUOTE_LENGTH,
   MAX_TEMPLATE_TITLE_PATTERN,
   pageReportSorts,
@@ -709,6 +720,7 @@ export {
   recordClient,
   renderPageMarkdown,
 } from "./spaces/documents.js";
+export { type IncludedPage, IncludeService, type Inclusion } from "./spaces/includes.js";
 export {
   cleanLinkUrl,
   ITEM_DESCRIPTION_MAX_LENGTH,
@@ -741,7 +753,10 @@ export type { PermissionChange, SpacePermissionEntry } from "./spaces/permission
 export type { PersonalSpaceForReview } from "./spaces/personal.js";
 export {
   type DecisionReportPage,
+  type LabeledItem,
   MAX_DECISION_REPORT_PAGE,
+  type PropertiesReportPage,
+  type PropertiesReportRow,
   type ReportDecision,
   type ReportPage,
   ReportService,

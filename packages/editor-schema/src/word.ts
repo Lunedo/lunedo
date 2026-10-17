@@ -57,6 +57,7 @@ export type WordBlock =
       width: number | null;
       align: string;
     }
+  | { type: "svg"; svg: string; alt: string; width: number; height: number }
   | { type: "rule" }
   | { type: "contents"; minLevel: number; maxLevel: number }
   | { type: "placeholder"; text: string };

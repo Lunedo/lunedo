@@ -4300,7 +4300,21 @@
       "mermaid": "Mermaid-Diagramm",
       "mermaidDescription": "Diagramm aus Text in Mermaid-Syntax",
       "plantuml": "PlantUML-Diagramm",
-      "plantumlDescription": "Sequenz-, Klassen- und andere UML-Diagramme aus Text"
+      "plantumlDescription": "Sequenz-, Klassen- und andere UML-Diagramme aus Text",
+      "pageProperties": "Seiteneigenschaften",
+      "pagePropertiesDescription": "Namen und Werte, die Berichte von vielen Seiten sammeln",
+      "propertiesReport": "Bericht zu Seiteneigenschaften",
+      "propertiesReportDescription": "Tabelle der Seiteneigenschaften von Seiten mit Labels",
+      "contentByLabel": "Inhalte nach Label",
+      "contentByLabelDescription": "Liste von Seiten und Blogbeiträgen mit Labels",
+      "relatedLabels": "Verwandte Labels",
+      "relatedLabelsDescription": "Labels, die zusammen mit den Labels dieser Seite verwendet werden",
+      "excerpt": "Auszug",
+      "excerptDescription": "Teil dieser Seite, den andere Seiten einbinden können",
+      "includeExcerpt": "Auszug einbinden",
+      "includeExcerptDescription": "Den Auszug einer anderen Seite anzeigen",
+      "includePage": "Seite einbinden",
+      "includePageDescription": "Den Inhalt einer anderen Seite anzeigen"
     },
     "mention": {
       "unknown": "Unbekannte Person"
@@ -4502,7 +4516,8 @@
       "image": "Bild",
       "invalid": "Diese Seite kann nicht angezeigt werden, weil ihr gespeicherter Inhalt beschädigt ist. Bitte einen Space-Admin, eine frühere Version wiederherzustellen.",
       "taskDone": "Erledigt",
-      "taskOpen": "Offen"
+      "taskOpen": "Offen",
+      "restrictedContent": "Eingeschränkter Inhalt"
     },
     "shortcuts": {
       "slash": "Block einfügen",
@@ -4616,7 +4631,10 @@
       "searchPage": "Seite suchen",
       "hiddenPage": "Eine Seite, die du nicht öffnen kannst",
       "tooManyPages": "Bis zu {count} Seiten wählen. Entferne eine, bevor du eine weitere hinzufügst.",
-      "reverse": "Reihenfolge umkehren"
+      "reverse": "Reihenfolge umkehren",
+      "searchSpace": "Bereich suchen",
+      "hiddenSpace": "Ein Bereich, den Sie nicht öffnen können",
+      "tooManySpaces": "Wählen Sie bis zu {count} Bereiche. Entfernen Sie einen, bevor Sie einen weiteren hinzufügen."
     },
     "pageReport": {
       "title": "Seitenbericht",
@@ -4747,6 +4765,102 @@
         "timeout": "Das Zeichnen des Diagramms hat länger als 10 Sekunden gedauert und wurde abgebrochen. Vereinfache das Diagramm oder teile es auf.",
         "unavailable": "Die Diagrammdarstellung ist nicht gestartet. Lade die Seite neu und versuche es noch einmal."
       }
+    },
+    "pageProperties": {
+      "title": "Seiteneigenschaften",
+      "name": "Name",
+      "value": "Wert",
+      "hiddenNote": "Auf der Seite ausgeblendet, in Berichten sichtbar",
+      "setId": "ID",
+      "setIdPlaceholder": "Optional",
+      "hide": "Auf der Seite ausblenden",
+      "addRow": "Eigenschaft hinzufügen",
+      "remove": "Eigenschaft entfernen",
+      "removeNamed": "Eigenschaft {name} entfernen",
+      "setIdLabel": "ID der Seiteneigenschaften"
+    },
+    "propertiesReport": {
+      "title": "Bericht zu Seiteneigenschaften",
+      "loadFailed": "Die Seiten des Berichts konnten nicht geladen werden.",
+      "empty": "Keine Seite, die Sie sehen können, hat Seiteneigenschaften, die zu den Filtern passen.",
+      "creator": "Erstellt von",
+      "labels": "Labels",
+      "range": "Seiten {first} bis {last} von {total}",
+      "importedQueryTitle": "Filter aus Confluence nicht übernommen",
+      "importedQuery": "Dieser Block wurde mit der Abfrage {query} importiert, die Pagehall nicht anwenden kann. Prüfen Sie unten Labels und Bereiche.",
+      "spacesHint": "Leer lassen für alle Bereiche, die Sie lesen können.",
+      "labelsHint": "Seiten mit mindestens einem dieser Labels. Leer lassen für alle Seiten mit Seiteneigenschaften.",
+      "columns": "Spalten",
+      "columnsHint": "Namen der Seiteneigenschaften, die angezeigt werden. Leer lassen für alle Namen, die auf den Seiten vorkommen.",
+      "searchColumn": "Namen suchen oder eingeben",
+      "tooManyColumns": "Wählen Sie bis zu {count} Spalten. Entfernen Sie eine, bevor Sie eine weitere hinzufügen.",
+      "sort": "Reihenfolge",
+      "byTitle": "Nach Titel",
+      "pageSize": "Seiten pro Seite",
+      "pageSizeValue": "{count, plural, one {# Seite} other {# Seiten}}",
+      "firstColumn": "Überschrift der ersten Spalte",
+      "firstColumnHint": "Leer lassen für Seite.",
+      "setId": "ID der Seiteneigenschaften",
+      "setIdHint": "Nur Seiteneigenschaften mit dieser ID. Leer lassen für alle.",
+      "showCreator": "Anzeigen, wer jede Seite erstellt hat",
+      "showLabels": "Labels jeder Seite anzeigen",
+      "readableOnly": "Immer aktuell. Es werden nur Seiten aufgeführt, die Sie lesen können."
+    },
+    "contentByLabel": {
+      "title": "Inhalte nach Label",
+      "chooseLabels": "Wählen Sie Labels, um die Seiten mit diesen Labels aufzulisten.",
+      "loadFailed": "Die Seiten mit diesen Labels konnten nicht geladen werden.",
+      "empty": "Keine Seite, die Sie sehen können, hat diese Labels.",
+      "labelsHint": "Seiten mit diesen Labels.",
+      "match": "Labels",
+      "matchAny": "Eines der Labels",
+      "matchAll": "Alle Labels",
+      "kinds": "Anzeigen",
+      "kindsAll": "Seiten und Blogbeiträge",
+      "kindsPage": "Seiten",
+      "kindsBlogPost": "Blogbeiträge",
+      "heading": "Überschrift",
+      "headingHint": "Wird über der Liste angezeigt. Leer lassen für keine.",
+      "excerpts": "Auszüge anzeigen",
+      "showSpace": "Bereich anzeigen",
+      "showLabels": "Labels anzeigen"
+    },
+    "relatedLabels": {
+      "title": "Verwandte Labels",
+      "loadFailed": "Die verwandten Labels konnten nicht geladen werden.",
+      "empty": "Keine verwandten Labels.",
+      "labelsHint": "Leer lassen für die Labels dieser Seite."
+    },
+    "include": {
+      "pageTitle": "Eingebundene Seite",
+      "excerptTitle": "Eingebundener Auszug",
+      "page": "Seite",
+      "pageHint": "Die Seite, deren Inhalt hier angezeigt wird. Leser sehen ihn nur, wenn sie diese Seite lesen können.",
+      "importedHint": "Aus Confluence als {title} importiert. Erscheint, sobald diese Seite importiert ist, oder wählen Sie eine Seite.",
+      "choosePage": "Wählen Sie die Seite, die eingebunden wird.",
+      "notImportedYet": "Die eingebundene Seite {title} war nicht Teil des Imports. Sie erscheint hier, sobald sie importiert ist.",
+      "restricted": "Eingeschränkter Inhalt. Leser, die die eingebundene Seite nicht lesen können, sehen hier nichts.",
+      "loop": "Dieser Inhalt wird nicht angezeigt, weil er sich selbst einbinden würde.",
+      "tooDeep": "Dieser Inhalt wird nicht angezeigt, weil eingebundene Seiten zu tief verschachtelt sind.",
+      "noExcerpt": "Die eingebundene Seite hat keinen Auszug mit diesem Namen.",
+      "loadFailed": "Der eingebundene Inhalt konnte nicht geladen werden.",
+      "excerptName": "Name des Auszugs",
+      "excerptNameHint": "Leer lassen für den ersten Auszug der Seite.",
+      "panel": "Titel der Seite über dem Auszug anzeigen"
+    },
+    "excerpt": {
+      "title": "Auszug",
+      "hiddenTitle": "Versteckter Auszug",
+      "name": "Name",
+      "namePlaceholder": "Optional",
+      "hide": "Auf dieser Seite ausblenden",
+      "hiddenNote": "Leser dieser Seite sehen diesen Auszug nicht. Er wird dort angezeigt, wo er eingebunden ist.",
+      "nameLabel": "Name des Auszugs"
+    },
+    "roadmap": {
+      "title": "Roadmap",
+      "readOnly": "Importierte Roadmap. Roadmaps lassen sich bearbeiten, sobald die Planung verfügbar ist.",
+      "asList": "Als Liste anzeigen"
     }
   },
   "spaces": {
@@ -7059,6 +7173,21 @@
           "title": "{count, plural, one {# eingebundenes Diagramm liegt} other {# eingebundene Diagramme liegen}} auf Seiten, die nicht importiert wurden",
           "hint": "Die Blöcke zeigen einen Hinweis mit dem Diagrammnamen. Um ein solches Diagramm zu behalten, füge es der Seite als eigenes draw.io-Diagramm hinzu.",
           "entry": "Das Diagramm „{name}“ wird von einer Seite eingebunden, die nicht im Import enthalten ist."
+        },
+        "unmappedQuery": {
+          "title": "{count, plural, one {# Bericht behält} other {# Berichte behalten}} eine Confluence-Abfrage",
+          "hint": "Die Abfrage ließ sich nicht in Labels und Bereiche umwandeln. Der Block behält sie als Hinweis; prüfen Sie seine Filter.",
+          "entry": "Makro {macro}: Die Abfrage {query} ließ sich nicht umwandeln."
+        },
+        "macroOptionDropped": {
+          "title": "{count, plural, one {# Option} other {# Optionen}} von Makros nicht übernommen",
+          "hint": "Der Block funktioniert ohne sie.",
+          "entry": "Makro {macro}: Die Option {option} gibt es in Pagehall nicht."
+        },
+        "unresolvedInclude": {
+          "title": "{count, plural, one {# Einbindung verweist} other {# Einbindungen verweisen}} auf Seiten außerhalb des Exports",
+          "hint": "Sie zeigen die Seite, sobald sie in diese Organisation importiert ist.",
+          "entry": "Makro {macro} bindet „{title}“ aus dem Bereich {spaceKey} ein, die nicht Teil des Exports war."
         }
       },
       "people": "Personen",

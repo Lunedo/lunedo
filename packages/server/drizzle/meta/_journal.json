@@ -505,6 +505,13 @@
       "when": 1792187476547,
       "tag": "0071_export_format",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1792239125884,
+      "tag": "0072_page_properties",
+      "breakpoints": true
     }
   ]
 }

@@ -54,6 +54,7 @@ function lookup(): StorageLookup {
     },
     person: () => ID(50),
     space: () => null,
+    spaceKey: "SYN",
     newId() {
       next += 1;
       return ID(next);
@@ -493,7 +494,7 @@ describe("attachments macro", () => {
 });
 
 describe("macros without a module", () => {
-  for (const name of ["details", "detailssummary", "roadmap", "related-labels"]) {
+  for (const name of ["gallery", "livesearch", "blog-posts", "pagetree"]) {
     it(`keep ${name} as an unsupported macro with its data`, async () => {
       await unsupported(macro(name, { hidden: "true" }, rich("<p>Owner</p>")), name);
     });
@@ -515,7 +516,7 @@ describe("converting again", () => {
     macro("children", { page: '<ac:link><ri:page ri:content-title="Runbook" /></ac:link>' }),
     macro("attachments", { patterns: "*.pdf" }),
     macro("view-file", { name: '<ri:attachment ri:filename="costs.xlsx" />' }),
-    macro("roadmap", { timeline: "true" }),
+    macro("gallery", { columns: "3" }),
   ].join("");
 
   it("gives the same document, counts and tasks", async () => {
@@ -554,7 +555,7 @@ describe("references of converted macros", () => {
             page: '<ac:link><ri:page ri:content-title="Runbook" /></ac:link>',
           }),
           macro("info", {}, rich('<p><ri:user ri:account-id="557058:aaaa" /></p>')),
-          macro("details", {}, rich('<p><ri:user ri:account-id="557058:bbbb" /></p>')),
+          macro("gallery", {}, rich('<p><ri:user ri:account-id="557058:bbbb" /></p>')),
         ].join(""),
       ),
     );
@@ -965,6 +966,489 @@ describe("space templates", () => {
       '<p>A<ac:placeholder>Describe the goal</ac:placeholder> <at:var at:name="Owner" /></p>',
     );
     expect(page.document.content?.map(strip)).toEqual([{ type: "paragraph", content: [text("A")] }]);
+  });
+});
+
+function propertyTable(rows: [string, string][]): string {
+  return `<table><tbody>${rows.map(([key, value]) => `<tr><th><p><strong>${key}</strong></p></th><td>${value}</td></tr>`).join("")}</tbody></table>`;
+}
+
+describe("page properties", () => {
+  it("become a property set with names and rich values", async () => {
+    const page = await convert(
+      macro(
+        "details",
+        { id: "site", hidden: "true" },
+        rich(
+          propertyTable([
+            ["Owner", '<p><ac:link><ri:user ri:userkey="8a7f" /></ac:link> </p>'],
+            ["Status", `<p>${macro("status", { title: "Live", colour: "Green" })}</p>`],
+            ["Steps", "<ul><li><p>Order</p></li><li><p>Install</p></li></ul>"],
+            ["Note", "<blockquote><p>Quoted</p></blockquote>"],
+            ["Script", macro("code", {}, plain("ls"))],
+            ["Empty", ""],
+          ]),
+        ),
+      ),
+    );
+    expect(page.notes).toEqual([]);
+    expect(Object.fromEntries(page.converted)).toEqual({ details: 1, status: 1, code: 1 });
+    const [block] = (page.document.content ?? []).map(strip);
+    expect(block?.attrs).toEqual({ setId: "site", hidden: true });
+    const rows = block?.content ?? [];
+    expect(rows.map((row) => row.content?.[0])).toEqual([
+      { type: "pagePropertyKey", content: [text("Owner")] },
+      { type: "pagePropertyKey", content: [text("Status")] },
+      { type: "pagePropertyKey", content: [text("Steps")] },
+      { type: "pagePropertyKey", content: [text("Note")] },
+      { type: "pagePropertyKey", content: [text("Script")] },
+      { type: "pagePropertyKey", content: [text("Empty")] },
+    ]);
+    expect(rows[0]?.content?.[1]).toEqual({
+      type: "pagePropertyValue",
+      content: [{ type: "paragraph", content: [{ type: "mention", attrs: { id: ID(50) } }] }],
+    });
+    expect(rows[1]?.content?.[1]?.content?.[0]?.content?.[0]).toMatchObject({
+      type: "status",
+      attrs: { text: "Live", color: "green" },
+    });
+    expect(rows[2]?.content?.[1]?.content?.[0]?.type).toBe("bulletList");
+    expect(rows[3]?.content?.[1]?.content?.[0]?.type).toBe("blockquote");
+    expect(rows[4]?.content?.[1]?.content?.[0]?.type).toBe("codeBlock");
+    expect(rows[5]?.content?.[1]).toEqual({ type: "pagePropertyValue", content: [{ type: "paragraph" }] });
+  });
+
+  it("read a table with the names in the first row", async () => {
+    const [block] = await blocks(
+      macro(
+        "details",
+        {},
+        rich(
+          "<table><tbody><tr><th>Site</th><th>Uplink</th></tr><tr><td><p>Graz</p></td><td><p>1 Gbit/s</p></td></tr></tbody></table>",
+        ),
+      ),
+    );
+    expect(block?.attrs).toEqual({ setId: null, hidden: false });
+    expect(block?.content?.map((row) => row.content?.map((cell) => cell.content))).toEqual([
+      [[text("Site")], [{ type: "paragraph", content: [text("Graz")] }]],
+      [[text("Uplink")], [{ type: "paragraph", content: [text("1 Gbit/s")] }]],
+    ]);
+  });
+
+  it("stay unsupported when the body is not a table of names and values", async () => {
+    await unsupported(macro("details", {}, rich("<p>Owner: Anna</p>")), "details");
+    await unsupported(
+      macro("details", {}, rich('<table><tbody><tr><th>a</th><td colspan="2">b</td></tr></tbody></table>')),
+      "details",
+    );
+    await unsupported(
+      macro("details", {}, rich(propertyTable([["Panel", macro("info", {}, rich("<p>x</p>"))]]))),
+      "details",
+    );
+    await unsupported(macro("details", { label: "x" }, rich(propertyTable([["a", "<p>b</p>"]]))), "details");
+  });
+});
+
+describe("page properties report", () => {
+  const defaults = {
+    spaceIds: [],
+    labels: [],
+    setId: null,
+    columns: [],
+    firstColumn: "",
+    sortBy: null,
+    reverse: false,
+    pageSize: 30,
+    showCreator: false,
+    showLabels: false,
+    query: null,
+  };
+
+  it("maps labels, the current space, headings, sorting and the first column", async () => {
+    const page = await convert(
+      macro("detailssummary", {
+        firstcolumn: "Script",
+        headings: "Script name, Short description,Status",
+        sortBy: "Title",
+        showCreator: "true",
+        cql: "label = &quot;ad-script&quot; and space = currentSpace ( )",
+      }),
+    );
+    expect(page.notes).toEqual([]);
+    expect(page.document.content?.map(strip)).toEqual([
+      {
+        type: "propertiesReport",
+        attrs: {
+          ...defaults,
+          spaceIds: [SPACE],
+          labels: ["ad-script"],
+          columns: ["Script name", "Short description", "Status"],
+          firstColumn: "Script",
+          showCreator: true,
+        },
+      },
+    ]);
+  });
+
+  it("maps a label query over all spaces, sorting by a column, page size and the set ID", async () => {
+    expect(
+      await blocks(
+        macro("detailssummary", {
+          cql: "label in (&quot;a&quot;, &quot;b&quot;) and type = page",
+          sortBy: "Status",
+          reverseSort: "true",
+          pageSize: "250",
+          id: "site",
+          showPageLabels: "true",
+        }),
+      ),
+    ).toEqual([
+      {
+        type: "propertiesReport",
+        attrs: {
+          ...defaults,
+          labels: ["a", "b"],
+          sortBy: "Status",
+          reverse: true,
+          pageSize: 100,
+          setId: "site",
+          showLabels: true,
+        },
+      },
+    ]);
+  });
+
+  it("keeps the block without parameters", async () => {
+    const page = await convert(`<ac:structured-macro ac:name="detailssummary" ac:schema-version="3" />`);
+    expect(page.notes).toEqual([]);
+    expect(page.document.content?.map(strip)).toEqual([{ type: "propertiesReport", attrs: defaults }]);
+  });
+
+  it("keeps a query it cannot map in the block and reports it", async () => {
+    for (const cql of [
+      "label = &quot;a&quot; and ancestor = 123",
+      "label = &quot;a&quot; and space = &quot;OPS&quot;",
+      "label = &quot;a&quot; and label = &quot;b&quot;",
+      "title ~ &quot;net&quot;",
+    ]) {
+      const page = await convert(macro("detailssummary", { cql, headings: "Owner" }));
+      const query = cql.replaceAll("&quot;", '"');
+      expect(page.notes).toEqual([{ code: "unmappedQuery", macro: "detailssummary", query }]);
+      expect(page.document.content?.[0]).toMatchObject({
+        type: "propertiesReport",
+        attrs: { query, columns: ["Owner"], labels: [], spaceIds: [] },
+      });
+    }
+  });
+
+  it("reports options it drops", async () => {
+    const page = await convert(macro("detailssummary", { cql: "label = a", showCommentsCount: "true" }));
+    expect(page.notes).toEqual([
+      { code: "macroOptionDropped", macro: "detailssummary", option: "showCommentsCount" },
+    ]);
+  });
+});
+
+describe("content by label", () => {
+  const defaults = {
+    labels: [],
+    matchAll: false,
+    spaceIds: [],
+    kinds: ["page", "blogPost"],
+    sort: "modified",
+    reverse: false,
+    limit: 5,
+    excerpts: false,
+    showLabels: true,
+    showSpace: true,
+    title: "",
+    query: null,
+  };
+
+  it("maps the query and every option of the macro", async () => {
+    const page = await convert(
+      macro("contentbylabel", {
+        showLabels: "false",
+        max: "5",
+        spaces:
+          "com.atlassian.confluence.content.render.xhtml.model.resource.identifiers.SpaceResourceIdentifier@92b",
+        sort: "modified",
+        showSpace: "false",
+        reverse: "true",
+        type: "page",
+        cql: "label = &quot;kb-how-to-article&quot; and type = &quot;page&quot; and space = &quot;SYN&quot;",
+        labels: "kb-how-to-article",
+      }),
+    );
+    expect(page.notes).toEqual([]);
+    expect(page.document.content?.map(strip)).toEqual([
+      {
+        type: "contentByLabel",
+        attrs: {
+          ...defaults,
+          labels: ["kb-how-to-article"],
+          spaceIds: [SPACE],
+          kinds: ["page"],
+          reverse: true,
+          showLabels: false,
+          showSpace: false,
+        },
+      },
+    ]);
+  });
+
+  it("maps labels that must all be present, excerpts, title and limits", async () => {
+    expect(
+      await blocks(
+        macro("contentbylabel", {
+          labels: "a,b",
+          operator: "AND",
+          excerptType: "simple",
+          title: "Guides",
+          max: "500",
+          sort: "creation",
+          type: "blogpost",
+        }),
+      ),
+    ).toEqual([
+      {
+        type: "contentByLabel",
+        attrs: {
+          ...defaults,
+          labels: ["a", "b"],
+          matchAll: true,
+          excerpts: true,
+          title: "Guides",
+          limit: 100,
+          sort: "created",
+          kinds: ["blogPost"],
+        },
+      },
+    ]);
+    expect(
+      (await blocks(macro("contentbylabel", { cql: "label = a and label = b" })))[0]?.attrs,
+    ).toMatchObject({
+      labels: ["a", "b"],
+      matchAll: true,
+    });
+  });
+
+  it("keeps a query it cannot map and the labels of the macro", async () => {
+    const page = await convert(
+      macro("contentbylabel", { labels: "a", cql: "label = &quot;a&quot; and creator = currentUser()" }),
+    );
+    expect(page.notes).toEqual([
+      { code: "unmappedQuery", macro: "contentbylabel", query: 'label = "a" and creator = currentUser()' },
+    ]);
+    expect(page.document.content?.[0]?.attrs).toMatchObject({
+      labels: ["a"],
+      query: 'label = "a" and creator = currentUser()',
+    });
+  });
+
+  it("stays unsupported for labels it cannot read without a query", async () => {
+    await unsupported(macro("contentbylabel", { labels: "+a,-b" }), "contentbylabel");
+    await unsupported(macro("contentbylabel", { labels: "a", type: "attachment" }), "contentbylabel");
+  });
+});
+
+describe("related labels", () => {
+  it("become a related labels block", async () => {
+    expect(await blocks(`<ac:structured-macro ac:name="related-labels" ac:schema-version="1" />`)).toEqual([
+      { type: "relatedLabels", attrs: { labels: [], title: "" } },
+    ]);
+    expect(await blocks(macro("related-labels", { labels: "network, Uplink", title: "See also" }))).toEqual([
+      { type: "relatedLabels", attrs: { labels: ["network", "uplink"], title: "See also" } },
+    ]);
+  });
+});
+
+describe("excerpts and includes", () => {
+  it("keep an excerpt with its content, name and hidden state", async () => {
+    expect(
+      await blocks(macro("excerpt", { hidden: "true", name: "contacts" }, rich("<p>Call us</p>"))),
+    ).toEqual([
+      {
+        type: "excerpt",
+        attrs: { name: "contacts", hidden: true },
+        content: [{ type: "paragraph", content: [text("Call us")] }],
+      },
+    ]);
+    expect(
+      (await blocks(macro("excerpt", { "atlassian-macro-output-type": "INLINE" }, rich("<p>Short</p>"))))[0]
+        ?.attrs,
+    ).toEqual({
+      name: null,
+      hidden: false,
+    });
+  });
+
+  it("include the excerpt and the content of imported pages", async () => {
+    const link = '<ac:link><ri:page ri:content-title="Runbook" /></ac:link>';
+    const page = await convert(
+      `${macro("excerpt-include", { "": link, nopanel: "true" })}${macro("include", { "": link })}`,
+    );
+    expect(page.notes).toEqual([]);
+    expect(page.document.content?.map(strip)).toEqual([
+      {
+        type: "includeExcerpt",
+        attrs: { pageId: RUNBOOK, sourceSpace: null, sourceTitle: null, name: null, panel: false },
+      },
+      { type: "includePage", attrs: { pageId: RUNBOOK, sourceSpace: null, sourceTitle: null } },
+    ]);
+  });
+
+  it("keep pages outside the import as unresolved and report them", async () => {
+    const page = await convert(
+      [
+        macro("excerpt-include", {
+          "": '<ac:link><ri:page ri:space-key="OPS" ri:content-title="Escalation" /></ac:link>',
+        }),
+        macro("include", { "": "Missing page" }),
+        macro("include", { "": "OPS:On-call" }),
+      ].join(""),
+    );
+    expect(page.document.content?.map((node) => node.attrs)).toEqual([
+      { pageId: null, sourceSpace: "OPS", sourceTitle: "Escalation", name: null, panel: true },
+      { pageId: null, sourceSpace: "SYN", sourceTitle: "Missing page" },
+      { pageId: null, sourceSpace: "OPS", sourceTitle: "On-call" },
+    ]);
+    expect(page.notes).toEqual([
+      { code: "unresolvedInclude", macro: "excerpt-include", title: "Escalation", spaceKey: "OPS" },
+      { code: "unresolvedInclude", macro: "include", title: "Missing page", spaceKey: "SYN" },
+      { code: "unresolvedInclude", macro: "include", title: "On-call", spaceKey: "OPS" },
+    ]);
+  });
+
+  it("collect the titles of pages in the same space for the lookup", async () => {
+    const references = storageReferences(
+      await parseStorage(
+        [
+          macro("include", { "": "Plain title" }),
+          macro("excerpt-include", { "": '<ac:link><ri:page ri:content-title="Runbook" /></ac:link>' }),
+        ].join(""),
+      ),
+    );
+    expect(references.pages).toContainEqual({ title: "Plain title", spaceKey: null, sourceId: null });
+    expect(references.pages).toContainEqual({ title: "Runbook", spaceKey: null, sourceId: null });
+  });
+
+  it("stay unsupported without a target", async () => {
+    await unsupported(macro("include", {}), "include");
+    await unsupported(macro("excerpt", {}, rich(macro("excerpt", {}, rich("<p>x</p>")))), "excerpt");
+  });
+});
+
+describe("roadmap", () => {
+  const source = {
+    title: "Roadmap Planner",
+    timeline: { startDate: "2027-01-01 00:00:00", endDate: "2027-12-31 00:00:00", displayOption: "MONTH" },
+    lanes: [
+      {
+        title: "Core",
+        color: { lane: "#f6c342", bar: "#fadb8e", text: "#594300", count: 1 },
+        bars: [
+          {
+            rowIndex: 0,
+            startDate: "2027-01-15 07:21:58",
+            id: "b1",
+            title: "Order",
+            description: "Six switches",
+            duration: 1.5,
+            pageLink: { id: "181305345" },
+          },
+          {
+            rowIndex: 1,
+            startDate: "2027-03-01 00:00:00",
+            id: "b2",
+            title: "Cabling",
+            description: "",
+            duration: 2,
+            pageLink: { title: "Runbook", wikiLink: "[SYN:Runbook]" },
+          },
+          {
+            rowIndex: 0,
+            startDate: "2027-06-01 00:00:00",
+            id: "b3",
+            title: "Elsewhere",
+            duration: 0.25,
+            pageLink: { title: "Escalation", spaceKey: "OPS" },
+          },
+        ],
+      },
+      { title: "Access", color: { lane: "#3b7fc4" }, bars: [] },
+    ],
+    markers: [{ title: "Kick Off", markerDate: "2027-03-31 17:38:01" }],
+  };
+
+  const roadmapMacro = (value: unknown) =>
+    macro("roadmap", {
+      maplinks: "",
+      timeline: "true",
+      source: encodeURIComponent(JSON.stringify(value)),
+      pagelinks: "",
+      title: "Roadmap%20Planner",
+      hash: "74a7",
+    });
+
+  it("keeps lanes, bars with their page links and markers", async () => {
+    const page = await convert(roadmapMacro(source));
+    expect(page.document.content?.map(strip)).toEqual([
+      {
+        type: "roadmap",
+        attrs: {
+          roadmap: {
+            title: "Roadmap Planner",
+            start: "2027-01-01",
+            end: "2027-12-31",
+            lanes: [
+              {
+                title: "Core",
+                color: "yellow",
+                bars: [
+                  {
+                    title: "Order",
+                    description: "Six switches",
+                    start: "2027-01-15",
+                    end: "2027-03-01",
+                    row: 0,
+                    pageId: PROJECT,
+                  },
+                  {
+                    title: "Cabling",
+                    description: "",
+                    start: "2027-03-01",
+                    end: "2027-05-01",
+                    row: 1,
+                    pageId: RUNBOOK,
+                  },
+                  {
+                    title: "Elsewhere",
+                    description: "",
+                    start: "2027-06-01",
+                    end: "2027-06-09",
+                    row: 0,
+                    pageId: null,
+                  },
+                ],
+              },
+              { title: "Access", color: "blue", bars: [] },
+            ],
+            markers: [{ title: "Kick Off", date: "2027-03-31" }],
+          },
+        },
+      },
+    ]);
+    expect(page.notes).toEqual([{ code: "externalPageLink", title: "Escalation", spaceKey: "OPS" }]);
+  });
+
+  it("stays unsupported when the data cannot be read", async () => {
+    await unsupported(macro("roadmap", { source: "%7Bbroken" }), "roadmap");
+    await unsupported(
+      roadmapMacro({ ...source, timeline: { ...source.timeline, displayOption: "QUARTER" } }),
+      "roadmap",
+    );
+    await unsupported(roadmapMacro({ ...source, lanes: [] }), "roadmap");
   });
 });
 

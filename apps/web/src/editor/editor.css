@@ -872,3 +872,173 @@ details.ph-expand > summary {
   @apply rounded-sm px-2 text-sm font-regular text-text-muted;
   background-color: var(--ph-color-surface-sunken);
 }
+
+.ph-content .ph-page-properties table {
+  @apply w-full;
+}
+
+.ph-content .ph-page-properties th {
+  @apply w-1/3 align-top;
+}
+
+.ph-content .ph-page-properties-block,
+.ph-content .ph-excerpt-block {
+  @apply my-4 flex flex-col gap-2 rounded-md border border-border bg-surface p-4;
+}
+
+.ph-content .ph-page-properties-block[data-hidden="true"],
+.ph-content .ph-excerpt-block[data-hidden="true"] {
+  @apply border-dashed;
+}
+
+.ph-content .ph-block-header {
+  @apply flex flex-wrap items-center justify-between gap-2;
+}
+
+.ph-content .ph-page-properties-head,
+.ph-content .ph-page-property-cells {
+  @apply grid gap-2;
+  grid-template-columns: minmax(8rem, 1fr) minmax(0, 2fr);
+}
+
+.ph-content .ph-page-properties-head {
+  @apply text-sm font-semibold text-text-muted;
+}
+
+.ph-content .ph-page-property {
+  @apply flex items-start gap-2 border-t border-border pt-2;
+}
+
+.ph-content .ph-page-property > .ph-page-property-cells {
+  @apply min-w-0 flex-1;
+}
+
+.ph-content [data-type="pagePropertyKey"] {
+  @apply rounded-sm bg-surface-sunken px-2 py-1 font-semibold wrap-anywhere;
+}
+
+.ph-content [data-type="pagePropertyValue"] {
+  @apply min-w-0 px-2 py-1;
+}
+
+.ph-content [data-type="pagePropertyValue"] > :not(:first-child) {
+  @apply mt-2;
+}
+
+.ph-content .ph-excerpt-content > :not(:first-child) {
+  @apply mt-3;
+}
+
+.ph-content .ph-properties-report-block,
+.ph-content .ph-content-by-label-block,
+.ph-content .ph-related-labels-block,
+.ph-content .ph-include-block,
+.ph-content .ph-roadmap-block {
+  @apply my-4 rounded-md border border-border bg-surface p-4;
+}
+
+.ph-content :is(.ph-properties-report, .ph-content-by-label, .ph-related-labels) {
+  @apply my-4;
+}
+
+.ph-content
+  :is(.ph-properties-report-block, .ph-content-by-label-block, .ph-related-labels-block)
+  :is(.ph-properties-report, .ph-content-by-label, .ph-related-labels) {
+  @apply my-0;
+}
+
+.ph-content
+  :is(.ph-properties-report-block, .ph-content-by-label-block, .ph-related-labels-block, .ph-include-block)
+  h3 {
+  @apply mt-0;
+}
+
+.ph-content
+  :is(.ph-properties-report-block, .ph-content-by-label-block, .ph-include-block)
+  button[role="checkbox"] {
+  @apply mt-0 size-6;
+}
+
+.ph-content .ph-rendered-blocks > :not(:first-child) {
+  @apply mt-1;
+}
+
+.ph-content .ph-label-list {
+  @apply flex flex-wrap gap-2 ps-0;
+  list-style: none;
+}
+
+.ph-content .ph-label-list a {
+  @apply inline-flex min-h-6 items-center rounded-sm bg-surface-sunken px-2 text-sm;
+}
+
+.ph-content .ph-include:empty {
+  @apply hidden;
+}
+
+.ph-content .ph-include-panel {
+  @apply my-4 rounded-md border border-border p-4;
+}
+
+.ph-content .ph-include-block .ph-include-panel {
+  @apply my-0;
+}
+
+.ph-content .ph-include-note {
+  @apply my-2 italic;
+}
+
+.ph-content .ph-roadmap {
+  @apply my-4 flex flex-col gap-2;
+}
+
+.ph-content .ph-roadmap-scroll {
+  @apply overflow-x-auto;
+}
+
+.ph-content .ph-roadmap-image {
+  @apply h-auto max-w-none;
+  font-family: inherit;
+}
+
+.ph-content .ph-roadmap figcaption {
+  @apply text-sm text-text-muted;
+}
+
+.ph-content .ph-roadmap-list summary {
+  @apply cursor-pointer text-sm;
+}
+
+.ph-content .ph-roadmap-grid {
+  stroke: var(--ph-color-border);
+}
+
+.ph-content .ph-roadmap-month {
+  fill: var(--ph-color-text-muted);
+}
+
+.ph-content .ph-roadmap-lane {
+  fill: var(--content-background);
+  fill-opacity: 0.35;
+}
+
+.ph-content .ph-roadmap-bar {
+  fill: var(--content-background);
+}
+
+.ph-content :is(.ph-roadmap-lane-title, .ph-roadmap-bar-title) {
+  fill: var(--content-text);
+}
+
+.ph-content .ph-roadmap-link:focus-visible .ph-roadmap-bar {
+  stroke: var(--ph-color-accent);
+  stroke-width: 2;
+}
+
+.ph-content .ph-roadmap-marker line {
+  stroke: var(--ph-content-red-text);
+}
+
+.ph-content .ph-roadmap-marker text {
+  fill: var(--ph-content-red-text);
+}

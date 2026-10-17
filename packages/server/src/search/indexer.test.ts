@@ -237,6 +237,31 @@ describe.skipIf(!baseUrl)("search indexer", () => {
     expect(chunks.rows.length).toBeGreaterThan(1);
   });
 
+  it("indexes included content only on the page it comes from", async () => {
+    const context = await setup(1);
+    const [source = ""] = context.ids;
+    const including = await test.services.tree.create(context.member, context.space.id, {
+      kind: "page",
+      title: "Including page",
+      mode: "live",
+      placement: { parentId: null },
+      document: {
+        type: "doc",
+        content: [
+          { type: "paragraph", content: [{ type: "text", text: "Own words" }] },
+          { type: "includePage", attrs: { pageId: source } },
+          { type: "includeExcerpt", attrs: { pageId: source } },
+        ],
+      },
+    });
+    await test.pool.query("update search_pending_items set due_at = now() where item_id = any($1)", [
+      [source, including.id],
+    ]);
+    expect((await test.services.search.indexer.drain()).failed).toBe(0);
+    expect(await found(context)).toEqual([source]);
+    expect(await found(context, "Own words")).toEqual([including.id]);
+  });
+
   it("removes an item the index refuses, with its older chunks, and indexes it again when it changes", async () => {
     const context = await setup(2);
     const [refusedId, healthyId] = context.ids;

@@ -40,6 +40,17 @@ Documents are ProseMirror JSON. The server validates every stored document and e
 | `drawioReference` | | `id` (block ID), `pageId` and `diagramId` (the page and the `drawio` block whose current image it shows; both empty when the page was not imported), `name` (diagram name from the import, up to 255 characters). Rendered through the `diagramReference` resolver of the render context with the reader's permissions; without a resolver it becomes a placeholder for the client. It has no text for search. |
 | `mermaid`, `plantuml` | | `id` (block ID), `source` (up to 50,000 characters), `previewId` and `previewVersion` (attachment version of the SVG image), `text` (up to 20,000 characters, for search) |
 | `drawing` | | `id` (block ID), `sceneId` and `sceneVersion` (attachment version of the scene), `previewId` and `previewVersion` (attachment version of the SVG image), `text` (up to 20,000 characters, for search) |
+| `pageProperties` | `pageProperty` rows | `setId` (up to 100 characters or null), `hidden` |
+| `pageProperty` | `pagePropertyKey`, then `pagePropertyValue` | |
+| `pagePropertyKey` | text without marks, up to 200 characters | |
+| `pagePropertyValue` | paragraphs, lists, quotes and code blocks, also nested in lists and quotes | |
+| `propertiesReport` | | `spaceIds`, `labels`, `setId`, `columns` (property names without commas), `firstColumn`, `sortBy` (a property name or null for the title), `reverse`, `pageSize` (1 to 100), `showCreator`, `showLabels`, `query` (an imported query that could not be converted) |
+| `contentByLabel` | | `labels`, `matchAll`, `spaceIds`, `kinds` (`page`, `blogPost`), `sort`, `reverse`, `limit` (1 to 100), `excerpts`, `showLabels`, `showSpace`, `title`, `query` |
+| `relatedLabels` | | `labels` (empty for the labels of the page), `title` |
+| `excerpt` | blocks, but no excerpt | `name` (up to 100 characters or null), `hidden` |
+| `includeExcerpt` | | `pageId`, or `sourceSpace` and `sourceTitle` of a Confluence page not imported yet; `name` of the excerpt, `panel` |
+| `includePage` | | `pageId`, or `sourceSpace` and `sourceTitle` |
+| `roadmap` | | `roadmap`: `title`, `start` and `end` dates, `lanes` (up to 50, each with `title`, a `color` and `bars` with `title`, `description`, `start`, `end`, `row` and `pageId`) and `markers` (`title`, `date`), up to 200 bars and ten years
 
 ## Marks
 
@@ -81,6 +92,10 @@ With `target: "print"` in the render context, `renderHtml` produces the HTML for
 | Text of one element | 20,000 characters |
 
 In Yjs, a scene is a map `elements` (element ID to element), a map `files` (file ID to attachment and type) and a map `settings`. Each client writes an element only when its version is newer; concurrent edits of one element are reconciled with Excalidraw's version and version nonce, so every client ends with the same scene. Deleted elements stay as tombstones for a day, so late changes from other people cannot bring them back.
+
+## Reports and includes
+
+Report blocks and include blocks hold only their settings. The renderers ask the render context for their data (`propertiesReport`, `contentByLabel`, `relatedLabels`, `include`), so every caller supplies what the viewer may see. Without that data, the HTML renderer writes a placeholder with the settings as `data-` attributes, which the web client fills. Included content is rendered with `nested`, in the context of the included page, and contributes no text to the search index of the including page.
 
 ## Collaboration
 

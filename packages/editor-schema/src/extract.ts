@@ -12,9 +12,20 @@ function stringOrNull(value: unknown): string | null {
   return typeof value === "string" ? value : null;
 }
 
+function roadmapPages(node: NodeJson): string[] {
+  const roadmap = node.attrs?.roadmap as { lanes?: { bars?: { pageId?: unknown }[] }[] } | undefined;
+  return (roadmap?.lanes ?? []).flatMap((lane) =>
+    (lane.bars ?? []).flatMap((bar) => (typeof bar.pageId === "string" ? [bar.pageId] : [])),
+  );
+}
+
 export function extractPageLinks(doc: DocumentJson): PageLinkTarget[] {
   const links: PageLinkTarget[] = [];
   visit(doc, (node) => {
+    if (node.type === "roadmap") {
+      for (const pageId of roadmapPages(node)) links.push({ pageId, spaceId: null, title: null });
+      return;
+    }
     if (node.type !== "pageLink") return;
     links.push({
       pageId: stringOrNull(node.attrs?.pageId),

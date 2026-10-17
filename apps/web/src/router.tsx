@@ -311,6 +311,10 @@ const itemSearch = z.object({
   attachment: z.uuid().optional().catch(undefined),
   edit: z.boolean().optional().catch(undefined),
   notes: z.boolean().optional().catch(undefined),
+  reports: z
+    .record(z.string().regex(/^[0-9a-z]{1,8}$/), z.number().int().min(2).max(100_000))
+    .optional()
+    .catch(undefined),
 });
 
 const pageRoute = createRoute({

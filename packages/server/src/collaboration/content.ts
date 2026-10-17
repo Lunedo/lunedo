@@ -19,6 +19,7 @@ import type { ChatChannelService } from "../chat/channels.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import type { NotificationService } from "../notifications/service.js";
 import type { WatchService } from "../notifications/watches.js";
+import { syncReusableContent } from "../spaces/properties.js";
 import { signalSpaceChange } from "../spaces/signals.js";
 
 function idsOf(type: string, node: NodeJson, ids: Set<string> = new Set()): Set<string> {
@@ -267,6 +268,7 @@ export class ContentActivity {
     const decided = await syncDecisions(tx, itemId, document);
     if (notify) await this.#chat?.decisionsRecorded(tx, itemId, decided);
     await syncTopicUpdates(tx, itemId, document);
+    await syncReusableContent(tx, itemId, document);
     const threads = [...extractInlineCommentThreads(document).keys()];
     if (threads.length > 0) {
       await tx.execute(sql`

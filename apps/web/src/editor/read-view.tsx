@@ -14,7 +14,20 @@ import type { Formatter } from "../format/format.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { useOpenPath } from "./context.js";
 import { anchorFromSelection } from "./dom-anchor.js";
+import { IncludedContent, includeFromAttrs } from "./includes.js";
+import {
+  ContentByLabelList,
+  contentByLabelDisplayFromAttrs,
+  contentByLabelFromAttrs,
+  RelatedLabelsList,
+} from "./label-blocks.js";
 import { AttachmentList, ChildPagesList, childPagesFromAttrs, fileTypesOf } from "./listings.js";
+import {
+  listOf,
+  PropertiesReportTable,
+  propertiesDisplayFromAttrs,
+  propertiesReportFromAttrs,
+} from "./properties.js";
 import { followTitleLink, pagePath, type References, rememberReferences } from "./references.js";
 import {
   DecisionReportList,
@@ -54,6 +67,7 @@ export function readViewContext(
       return { href: `${FOLLOW_PATH}?${query.toString()}`, title: link.title ?? "", accessible: true };
     },
     formatDate: (iso) => (isIsoDate(iso) ? format.date(`${iso}T12:00:00Z`) : iso),
+    formatMonth: (iso) => (isIsoDate(iso) ? format.month(`${iso}T12:00:00Z`) : iso),
     labels: {
       noAccess: t("editor.pageLink.noAccess"),
       inTrash: t("editor.pageLink.inTrash"),
@@ -87,6 +101,26 @@ export function readViewContext(
       reportAuthor: t("editor.pageReport.author"),
       reportUpdated: t("editor.pageReport.updated"),
       templateButton: t("editor.templateButton.defaultLabel"),
+      pageProperties: t("editor.pageProperties.title"),
+      propertiesReport: t("editor.propertiesReport.title"),
+      noReportedProperties: t("editor.propertiesReport.empty"),
+      propertiesReportCreator: t("editor.propertiesReport.creator"),
+      propertiesReportLabels: t("editor.propertiesReport.labels"),
+      contentByLabel: t("editor.contentByLabel.title"),
+      noLabeledContent: t("editor.contentByLabel.empty"),
+      relatedLabels: t("editor.relatedLabels.title"),
+      noRelatedLabels: t("editor.relatedLabels.empty"),
+      excerpt: t("editor.excerpt.title"),
+      hiddenExcerpt: t("editor.excerpt.hiddenTitle"),
+      includedPage: t("editor.include.pageTitle"),
+      includedExcerpt: t("editor.include.excerptTitle"),
+      restrictedContent: t("editor.readView.restrictedContent"),
+      includeLoop: t("editor.include.loop"),
+      includeTooDeep: t("editor.include.tooDeep"),
+      noExcerpt: t("editor.include.noExcerpt"),
+      roadmap: t("editor.roadmap.title"),
+      roadmapReadOnly: t("editor.roadmap.readOnly"),
+      roadmapAsList: t("editor.roadmap.asList"),
       callout: {
         info: t("editor.callout.info"),
         tip: t("editor.callout.tip"),
@@ -169,6 +203,10 @@ export function PageReadView({
   const [pageReports, setPageReports] = useState<HTMLElement[]>([]);
   const [decisionReports, setDecisionReports] = useState<HTMLElement[]>([]);
   const [templateButtons, setTemplateButtons] = useState<HTMLElement[]>([]);
+  const [propertiesReports, setPropertiesReports] = useState<HTMLElement[]>([]);
+  const [labelLists, setLabelLists] = useState<HTMLElement[]>([]);
+  const [relatedLabels, setRelatedLabels] = useState<HTMLElement[]>([]);
+  const [includes, setIncludes] = useState<HTMLElement[]>([]);
   const [diagramReferences, setDiagramReferences] = useState<HTMLElement[]>([]);
   const [selection, setSelection] = useState<{ anchor: TextAnchor; top: number; left: number } | null>(null);
   const { taskStatuses, canToggleTask, onToggleTask, openThreads = [], activeThread = null } = collaboration;
@@ -199,6 +237,10 @@ export function PageReadView({
     setPageReports(placeholders(".ph-page-report"));
     setDecisionReports(placeholders(".ph-decision-report"));
     setTemplateButtons(placeholders(".ph-template-button"));
+    setPropertiesReports(placeholders(".ph-properties-report"));
+    setLabelLists(placeholders(".ph-content-by-label"));
+    setRelatedLabels(placeholders(".ph-related-labels"));
+    setIncludes(placeholders(".ph-include"));
     setDiagramReferences(placeholders(".ph-diagram-reference"));
   }, [html]);
 
@@ -358,6 +400,49 @@ export function PageReadView({
       )}
       {decisionReports.map((element) =>
         createPortal(<DecisionReportList request={decisionReportFromAttrs(element.dataset)} />, element),
+      )}
+      {propertiesReports.map((element) =>
+        createPortal(
+          <PropertiesReportTable
+            report={propertiesReportFromAttrs(element.dataset)}
+            display={propertiesDisplayFromAttrs(element.dataset)}
+          />,
+          element,
+        ),
+      )}
+      {labelLists.map((element) =>
+        createPortal(
+          <>
+            {element.dataset.title ? <h3 className="font-semibold">{element.dataset.title}</h3> : null}
+            <ContentByLabelList
+              request={contentByLabelFromAttrs(element.dataset)}
+              display={contentByLabelDisplayFromAttrs(element.dataset)}
+            />
+          </>,
+          element,
+        ),
+      )}
+      {relatedLabels.map((element) =>
+        createPortal(
+          <>
+            <h3 className="font-semibold">{element.dataset.title || t("editor.relatedLabels.title")}</h3>
+            <RelatedLabelsList pageId={pageId} labels={listOf(element.dataset.labels)} />
+          </>,
+          element,
+        ),
+      )}
+      {includes.map((element) =>
+        createPortal(
+          <IncludedContent
+            include={includeFromAttrs(
+              element.classList.contains("ph-include-excerpt") ? "includeExcerpt" : "includePage",
+              element.dataset,
+            )}
+            hostId={pageId}
+            panel={element.dataset.panel === "true"}
+          />,
+          element,
+        ),
       )}
       {diagramReferences.map((element) =>
         createPortal(

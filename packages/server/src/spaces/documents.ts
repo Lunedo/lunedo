@@ -1,5 +1,6 @@
 import {
   type ChildPagesRequest,
+  type ContentByLabelRequest,
   childPagesRequest,
   type DecisionReportRequest,
   type DocumentJson,
@@ -10,13 +11,18 @@ import {
   extractPageLinks,
   extractTasks,
   extractTopicUpdates,
+  type LabeledContent,
   type ListedAttachment,
   type ListedPage,
   MAX_CHILD_PAGE_DEPTH,
   migrateDocument,
   type NodeJson,
   type PageReportRequest,
+  type PropertiesReport,
+  type PropertiesReportRequest,
   type ReferencedDiagram,
+  type RelatedLabel,
+  type RelatedLabelsRequest,
   type ReportedDecision,
   type ReportedPage,
   renderMarkdown,
@@ -136,9 +142,16 @@ export interface PageListings {
   attachments: readonly ListedAttachment[] | null;
   pageReports?: ReadonlyMap<string, readonly ReportedPage[]>;
   decisionReports?: ReadonlyMap<string, readonly ReportedDecision[]>;
+  propertiesReports?: ReadonlyMap<string, PropertiesReport>;
+  contentByLabel?: ReadonlyMap<string, readonly LabeledContent[]>;
+  relatedLabels?: ReadonlyMap<string, readonly RelatedLabel[]>;
 }
 
-export function reportKey(request: PageReportRequest | DecisionReportRequest): string {
+export function relatedLabelsKey(labels: readonly string[]): string {
+  return JSON.stringify([...labels].sort());
+}
+
+export function reportKey(request: object): string {
   return JSON.stringify(Object.entries(request).sort(([left], [right]) => left.localeCompare(right)));
 }
 
@@ -191,6 +204,12 @@ export function renderPageMarkdown(
           pageReport: (request: PageReportRequest) => listings.pageReports?.get(reportKey(request)) ?? [],
           decisionReport: (request: DecisionReportRequest) =>
             listings.decisionReports?.get(reportKey(request)) ?? [],
+          propertiesReport: (request: PropertiesReportRequest) =>
+            listings.propertiesReports?.get(reportKey(request)) ?? { columns: [], rows: [], total: 0 },
+          contentByLabel: (request: ContentByLabelRequest) =>
+            listings.contentByLabel?.get(reportKey(request)) ?? [],
+          relatedLabels: (request: RelatedLabelsRequest) =>
+            listings.relatedLabels?.get(relatedLabelsKey(request.labels)) ?? [],
         }
       : {}),
     mention: (id) => {

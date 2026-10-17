@@ -50,7 +50,10 @@ function htmlText(html: string): string {
   }
   output += html.slice(index);
   return decode(
-    output.replace(/<div class="ph-callout-control">[\s\S]*?<\/div>/g, "").replace(/<[^>]*>/g, ""),
+    output
+      .replace(/<div class="ph-callout-control">[\s\S]*?<\/div>/g, "")
+      .replace(/<svg\b[\s\S]*?<\/svg>/g, "")
+      .replace(/<[^>]*>/g, ""),
   ).replace(/\s+/g, "");
 }
 

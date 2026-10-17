@@ -194,6 +194,7 @@ function importContext(files: Record<string, number>, pages: Record<string, stri
   const requested: FileReference[] = [];
   let next = 0;
   const context: MacroImportContext = {
+    spaceKey: null,
     blocks: () => [],
     inline: () => [],
     attachment: () => null,

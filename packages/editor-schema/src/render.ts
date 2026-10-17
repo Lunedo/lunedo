@@ -1,4 +1,4 @@
-import type { ValidMark, ValidNode } from "./json.js";
+import type { DocumentJson, NodeJson, ValidMark, ValidNode } from "./json.js";
 import type {
   Heading,
   HtmlRenderer,
@@ -66,6 +66,30 @@ export const defaultLabels: RenderLabels = {
   reportPage: "Page",
   templateButton: "Create from template",
   unavailableHere: "{name} cannot be shown in this format. Open the page in Pagehall to see it.",
+  pageProperties: "Page properties",
+  propertiesReport: "Page properties report",
+  noReportedProperties: "No pages with page properties match the filters",
+  propertiesReportCreator: "Creator",
+  propertiesReportLabels: "Labels",
+  propertiesReportMore: "{shown} of {total} pages. Open the page in Pagehall to see all.",
+  importedQuery:
+    "Imported with a query that could not be converted: {query}. Check the labels and spaces of this block.",
+  contentByLabel: "Content by label",
+  noLabeledContent: "No pages match the labels",
+  relatedLabels: "Related labels",
+  noRelatedLabels: "No related labels",
+  excerpt: "Excerpt",
+  hiddenExcerpt: "Hidden excerpt",
+  includedPage: "Included page",
+  includedExcerpt: "Included excerpt",
+  notImportedYet:
+    "The included page {title} was not part of the import. It appears here once it is imported.",
+  includeLoop: "This content is not shown because it would include itself.",
+  includeTooDeep: "This content is not shown because included pages are nested too deeply.",
+  noExcerpt: "The included page has no excerpt.",
+  roadmap: "Roadmap",
+  roadmapReadOnly: "Imported roadmap. Roadmaps can be edited once planning is available.",
+  roadmapAsList: "Show as list",
   callout: { info: "Info", tip: "Tip", note: "Note", warning: "Warning", error: "Error" },
 };
 
@@ -91,15 +115,26 @@ export const MAX_EXPENSIVE_RENDER_COST = 20_000;
 class RenderState {
   index = 0;
   spent = 0;
+  included = 0;
 
-  constructor(readonly headings: readonly Heading[]) {}
+  constructor(
+    readonly headings: readonly Heading[],
+    readonly prefix = "",
+  ) {}
 
   next(): string {
     const heading = this.headings[this.index];
     this.index += 1;
-    return heading?.id ?? `section-${this.index}`;
+    return `${this.prefix}${heading?.id ?? `section-${this.index}`}`;
   }
 }
+
+export interface PreparedContent {
+  node: ValidNode;
+  headings: readonly Heading[];
+}
+
+export type Prepare = (doc: DocumentJson) => PreparedContent;
 
 abstract class Renderer {
   readonly labels: RenderLabels;
@@ -108,6 +143,7 @@ abstract class Renderer {
     protected readonly registry: ModuleRegistry,
     readonly context: RenderContext,
     protected readonly state: RenderState,
+    protected readonly prepare: Prepare,
   ) {
     this.labels = {
       ...defaultLabels,
@@ -209,6 +245,15 @@ abstract class Renderer {
     return output;
   }
 
+  protected nestedContent(content: readonly NodeJson[]): { node: ValidNode; state: RenderState } {
+    const prepared = this.prepare({ type: "doc", content: [...content] });
+    this.state.included += 1;
+    const prefix = `${this.state.prefix}included-${this.state.included}-`;
+    const state = new RenderState(prepared.headings, prefix);
+    state.spent = this.state.spent;
+    return { node: prepared.node, state };
+  }
+
   protected isInline(node: ValidNode): boolean {
     const definition = this.registry.node(node.type);
     return node.type === "text" || definition?.spec.inline === true;
@@ -242,6 +287,13 @@ export class HtmlRendererImpl extends Renderer implements HtmlRenderer {
     }
     return node.content.map((child) => this.render(child)).join("");
   }
+
+  nested(content: readonly NodeJson[], context: RenderContext): string {
+    const { node, state } = this.nestedContent(content);
+    const html = new HtmlRendererImpl(this.registry, context, state, this.prepare).children(node);
+    this.state.spent = state.spent;
+    return html;
+  }
 }
 
 export class MarkdownRendererImpl extends Renderer implements MarkdownRenderer {
@@ -274,7 +326,14 @@ export class MarkdownRendererImpl extends Renderer implements MarkdownRenderer {
   }
 
   html(node: ValidNode): string {
-    return new HtmlRendererImpl(this.registry, this.context, this.state).render(node);
+    return new HtmlRendererImpl(this.registry, this.context, this.state, this.prepare).render(node);
+  }
+
+  nested(content: readonly NodeJson[], context: RenderContext): string {
+    const { node, state } = this.nestedContent(content);
+    const markdown = new MarkdownRendererImpl(this.registry, context, state, this.prepare).blocks(node);
+    this.state.spent = state.spent;
+    return markdown;
   }
 }
 
@@ -294,6 +353,13 @@ export class WordRendererImpl extends Renderer implements WordRenderer {
       return wordBlocks(this.inline(node));
     }
     return wordBlocks(node.content.flatMap((child) => this.render(child)));
+  }
+
+  nested(content: readonly NodeJson[], context: RenderContext): WordBlock[] {
+    const { node, state } = this.nestedContent(content);
+    const blocks = new WordRendererImpl(this.registry, context, state, this.prepare).blocks(node);
+    this.state.spent = state.spent;
+    return blocks;
   }
 
   inline(node: ValidNode): WordInline[] {

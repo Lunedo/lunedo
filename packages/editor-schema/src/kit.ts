@@ -12,7 +12,13 @@ import {
   type ModuleRegistry,
   type RenderContext,
 } from "./module.js";
-import { createRenderState, HtmlRendererImpl, MarkdownRendererImpl, WordRendererImpl } from "./render.js";
+import {
+  createRenderState,
+  HtmlRendererImpl,
+  MarkdownRendererImpl,
+  type Prepare,
+  WordRendererImpl,
+} from "./render.js";
 import { slugify } from "./text.js";
 import { createValidator, InvalidDocumentError, type ValidationResult } from "./validate.js";
 import type { WordBlock } from "./word.js";
@@ -28,6 +34,7 @@ export interface EditorKit {
   extractHeadings(doc: DocumentJson): Heading[];
   plainText(doc: DocumentJson): string;
   extractSections(doc: DocumentJson): Section[];
+  prepare: Prepare;
 }
 
 export interface Section {
@@ -130,6 +137,11 @@ export function createEditorKit(registry: ModuleRegistry): EditorKit {
     return toValidNode(result.document);
   };
 
+  const prepare = (doc: DocumentJson) => {
+    const node = validated(doc);
+    return { node, headings: extractHeadings(node as DocumentJson) };
+  };
+
   return {
     registry,
     schema,
@@ -138,21 +150,22 @@ export function createEditorKit(registry: ModuleRegistry): EditorKit {
     renderHtml(doc, context = {}) {
       const node = validated(doc);
       const state = createRenderState(extractHeadings(node as DocumentJson));
-      return new HtmlRendererImpl(registry, context, state).render(node);
+      return new HtmlRendererImpl(registry, context, state, prepare).render(node);
     },
     renderMarkdown(doc, context = {}) {
       const node = validated(doc);
       const state = createRenderState(extractHeadings(node as DocumentJson));
-      const markdown = new MarkdownRendererImpl(registry, context, state).render(node);
+      const markdown = new MarkdownRendererImpl(registry, context, state, prepare).render(node);
       return markdown.length > 0 ? `${markdown}\n` : "";
     },
     renderWord(doc, context = {}) {
       const node = validated(doc);
       const state = createRenderState(extractHeadings(node as DocumentJson));
-      return new WordRendererImpl(registry, context, state).blocks(node);
+      return new WordRendererImpl(registry, context, state, prepare).blocks(node);
     },
     extractHeadings,
     extractSections,
+    prepare,
     plainText: (doc) => textOf(toValidNode(doc as NodeJson)).trim(),
   };
 }

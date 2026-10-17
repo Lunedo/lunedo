@@ -56,6 +56,7 @@ export interface StorageLookup {
   template?(sourceId: string): string | null;
   readonly templateVariables?: ReadonlyMap<string, string>;
   inlineComment?(ref: string): string | null;
+  readonly spaceKey?: string;
   newId(): string;
   diagramId?(name: string, pageSourceId: string | null): string;
 }
@@ -329,6 +330,7 @@ class Converter {
 
   constructor(private readonly lookup: StorageLookup) {
     this.context = {
+      spaceKey: lookup.spaceKey ?? null,
       blocks: (content) => this.blocks(content as (XmlNode | string)[]),
       inline: (content) => {
         const items = this.items(content as (XmlNode | string)[], []);
