@@ -22,6 +22,23 @@ export {
   validateComment,
 } from "./comments.js";
 export {
+  DEFAULT_EMBED_REFERRER_POLICY,
+  defaultEmbedServices,
+  EMBED_ID_PATTERN,
+  EMBED_REFERRER_POLICIES,
+  type EmbedReferrerPolicy,
+  type EmbedRule,
+  type EmbedService,
+  embedFrameSources,
+  embedRuleProblem,
+  embedServicesValue,
+  MAX_EMBED_RULES,
+  MAX_EMBED_SERVICES,
+  narrowEmbedServices,
+  type ResolvedEmbed,
+  resolveEmbed,
+} from "./embeds.js";
+export {
   documentSize,
   type ExtractedDecision,
   type ExtractedTask,
@@ -48,6 +65,7 @@ export type {
   SourceContent,
   SourceElement,
 } from "./importing.js";
+export { defaultImportTexts, type ImportText, importTexts } from "./importing.js";
 export type { DocumentJson, MarkJson, NodeJson, ValidMark, ValidNode } from "./json.js";
 export { buildSchema, createEditorKit, type EditorKit, type Section } from "./kit.js";
 export {
@@ -92,6 +110,7 @@ export {
   type PropertiesReportRequest,
   pageReportSorts,
   type ReferencedDiagram,
+  type ReferencedWhiteboard,
   type RelatedLabel,
   type RelatedLabelsRequest,
   type RenderContext,
@@ -101,6 +120,7 @@ export {
   type ReportedPage,
   type ReportedProperties,
   type ReportedTask,
+  type ResolvedAttachment,
   type ResolvedPageLink,
   required,
   type TaskReportRequest,
@@ -116,6 +136,14 @@ export {
   textDiagramTypes,
 } from "./modules/diagrams.js";
 export { MAX_DRAWING_TEXT } from "./modules/drawings.js";
+export {
+  EMBED_ALLOW,
+  EMBED_SANDBOX,
+  isEmbeddableUrl,
+  MAX_EMBED_HEIGHT,
+  MAX_EMBED_TITLE,
+  MIN_EMBED_HEIGHT,
+} from "./modules/embeds.js";
 export {
   excerptContent,
   includeRequest,
@@ -161,6 +189,13 @@ export {
 } from "./modules/reports.js";
 export type { Roadmap } from "./modules/roadmap.js";
 export {
+  MAX_PREVIEW_HEIGHT,
+  MAX_PREVIEW_ZOOM,
+  MIN_PREVIEW_HEIGHT,
+  MIN_PREVIEW_ZOOM,
+} from "./modules/structure.js";
+export { cleanTabTitle, MAX_TAB_TITLE, MAX_TABS } from "./modules/tabs.js";
+export {
   MAX_PLACEHOLDER_LENGTH,
   MAX_TEMPLATE_BUTTON_LABEL,
   MAX_TEMPLATE_TITLE_PATTERN,
@@ -169,7 +204,7 @@ export {
   templateTitlePattern,
   titlePatternFields,
 } from "./modules/templates.js";
-export { defaultLabels, formatBytes, MAX_EXPENSIVE_RENDER_COST } from "./render.js";
+export { defaultLabels, formatBytes, headingNumbers, MAX_EXPENSIVE_RENDER_COST } from "./render.js";
 export { escapeHtml, markdownUrl, slugify } from "./text.js";
 export {
   InvalidDocumentError,

@@ -48,6 +48,7 @@ import type { KeyRingHolder } from "./crypto/key-ring-holder.js";
 import type { Database } from "./database/database.js";
 import type { DatabasePool } from "./database/pool.js";
 import { DiagramService } from "./diagrams/diagrams.js";
+import { EmbedServices } from "./embeds/embeds.js";
 import { ExportService } from "./exports/exports.js";
 import {
   EXPORT_CLEANUP_SCHEDULE,
@@ -290,6 +291,7 @@ export interface AccountServices {
   decisions: DecisionService;
   reports: ReportService;
   includes: IncludeService;
+  embeds: EmbedServices;
   privateNotes: PrivateNotesService;
   oneOnOnes: OneOnOneService;
   importUploads: UploadService;
@@ -750,6 +752,7 @@ export function createAccountServices(options: {
   const decisions = new DecisionService({ database, authorization });
   const reports = new ReportService({ database, authorization, people, documents });
   const includes = new IncludeService({ database, authorization, documents });
+  const embeds = new EmbedServices({ settings });
   const privateNotes = new PrivateNotesService({ database, authorization });
   const oneOnOnes = new OneOnOneService({
     database,
@@ -938,6 +941,7 @@ export function createAccountServices(options: {
     decisions,
     reports,
     includes,
+    embeds,
     privateNotes,
     oneOnOnes,
     importUploads,

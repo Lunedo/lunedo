@@ -42,6 +42,9 @@ describe("slash commands", () => {
       "excerpt",
       "includeExcerpt",
       "includePage",
+      "embed",
+      "whiteboard",
+      "tabs",
     ]) {
       expect(ids).toContain(id);
     }

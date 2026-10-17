@@ -160,13 +160,17 @@ function CreateItemForm({
                 selectedItem={itemTarget}
                 emptyText={t("createItem.noMatch")}
                 load={async (query) => {
-                  const found = await request(() =>
-                    api.GET("/api/v1/items", {
-                      params: { query: { limit: 20, ...(query ? { q: query } : {}) } },
-                    }),
-                  );
+                  const search = (kind?: "whiteboard") =>
+                    request(() =>
+                      api.GET("/api/v1/items", {
+                        params: {
+                          query: { limit: 20, ...(query ? { q: query } : {}), ...(kind ? { kind } : {}) },
+                        },
+                      }),
+                    );
+                  const [pages, boards] = await Promise.all([search(), search("whiteboard")]);
                   return {
-                    items: found.map((item) => ({
+                    items: [...pages, ...boards].slice(0, 20).map((item) => ({
                       value: item.id,
                       label: item.title,
                       description: item.spaceName || item.spaceKey,

@@ -109,3 +109,7 @@ export function useSession(): SessionInfo {
   if (!value) throw new Error("useSession needs a signed-in session");
   return value;
 }
+
+export function useCurrentOrganizationId(): string | null {
+  return useContext(OrganizationContext)?.organizationId ?? null;
+}

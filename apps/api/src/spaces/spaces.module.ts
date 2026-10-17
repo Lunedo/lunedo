@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { DiagramsController } from "../diagrams/diagrams.controller.js";
+import { EmbedsController } from "../embeds/embeds.controller.js";
 import { MeetingsController } from "../meetings/meetings.controller.js";
 import { OneOnOnesController } from "../meetings/one-on-ones.controller.js";
 import { WhiteboardsController } from "../whiteboards/whiteboards.controller.js";
@@ -26,6 +27,7 @@ import { VersionsController } from "./versions.controller.js";
     VersionsController,
     WhiteboardsController,
     DiagramsController,
+    EmbedsController,
     TrashController,
     TemplatesController,
     MeetingsController,

@@ -45,7 +45,7 @@ function TitleLink({ href, children }: { href: string; children: string }) {
   );
 }
 
-function notFound(error: unknown): boolean {
+export function notFound(error: unknown): boolean {
   return error instanceof ApiError && (error.status === 404 || error.status === 403);
 }
 

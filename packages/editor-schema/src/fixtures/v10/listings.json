@@ -1,0 +1,35 @@
+{
+  "type": "doc",
+  "content": [
+    {
+      "type": "childPages",
+      "attrs": {
+        "pageId": null,
+        "depth": 1,
+        "sort": "tree",
+        "reverse": false
+      }
+    },
+    {
+      "type": "childPages",
+      "attrs": {
+        "pageId": "01929b1e-0000-7000-8000-000000000004",
+        "depth": null,
+        "sort": "modified",
+        "reverse": true
+      }
+    },
+    {
+      "type": "attachmentList",
+      "attrs": {
+        "fileTypes": []
+      }
+    },
+    {
+      "type": "attachmentList",
+      "attrs": {
+        "fileTypes": ["pdf", "docx", "xlsx"]
+      }
+    }
+  ]
+}

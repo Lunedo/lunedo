@@ -193,6 +193,14 @@ export function sampleDocument(): DocumentJson {
         attrs: { id: SAMPLE_TASK, pageId: SAMPLE_PAGE, diagramId: SAMPLE_TASK, name: "Network" },
       },
       { type: "mermaid", attrs: { id: SAMPLE_TASK, source: "flowchart LR\n  A[Router] --> B[Switch]" } },
+      { type: "embed", attrs: { url: "https://youtu.be/dQw4w9WgXcQ", title: "Login video" } },
+      { type: "whiteboard", attrs: { whiteboardId: SAMPLE_PAGE } },
+      {
+        type: "tabs",
+        content: [
+          { type: "tab", attrs: { title: "Windows" }, content: [paragraph(text("Open the settings"))] },
+        ],
+      },
       {
         type: "plantuml",
         attrs: {

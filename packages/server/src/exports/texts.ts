@@ -99,6 +99,13 @@ const english: ExportTexts = {
     roadmap: "Roadmap",
     roadmapReadOnly: "Imported roadmap. Roadmaps can be edited once planning is available.",
     roadmapAsList: "Show as list",
+    embed: "External embed",
+    embedNotAllowed:
+      "Not on the embed allowlist, shown as a link. Organization administrators manage the list.",
+    embedFrom: "Embedded from {service}",
+    whiteboard: "Whiteboard",
+    chooseWhiteboard: "Choose a whiteboard for this block.",
+    filePreview: "File preview",
     callout: { info: "Info", tip: "Tip", note: "Note", warning: "Warning", error: "Error" },
   },
   contents: "Contents",
@@ -201,6 +208,13 @@ const german: ExportTexts = {
     roadmapReadOnly:
       "Importierte Roadmap. Roadmaps lassen sich bearbeiten, sobald die Planung verfügbar ist.",
     roadmapAsList: "Als Liste anzeigen",
+    embed: "Externe Einbettung",
+    embedNotAllowed:
+      "Nicht auf der Liste erlaubter Einbettungen, daher als Link angezeigt. Organisationsadministratoren verwalten die Liste.",
+    embedFrom: "Eingebettet von {service}",
+    whiteboard: "Whiteboard",
+    chooseWhiteboard: "Wähle ein Whiteboard für diesen Block.",
+    filePreview: "Dateivorschau",
     callout: { info: "Info", tip: "Tipp", note: "Notiz", warning: "Warnung", error: "Fehler" },
   },
   contents: "Inhalt",

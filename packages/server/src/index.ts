@@ -6,7 +6,11 @@ export {
   DEFAULT_PAGE_REPORT_LIMIT,
   DEFAULT_PROPERTIES_REPORT_PAGE_SIZE,
   decisionReportOrders,
+  defaultEmbedServices,
   diagramTypes,
+  EMBED_REFERRER_POLICIES,
+  type EmbedService,
+  embedFrameSources,
   labeledContentKinds,
   MAX_CONTENT_BY_LABEL_LIMIT,
   MAX_EXCERPT_NAME_LENGTH,
@@ -279,6 +283,8 @@ export {
   type SavedDiagramSource,
 } from "./diagrams/diagrams.js";
 export { DiagramRejectedError, MAX_DRAWIO_BYTES, sanitizeDrawio } from "./diagrams/drawio.js";
+export { EmbedServices } from "./embeds/embeds.js";
+export { allowedEmbedServicesSetting, embedServicesSetting, embedSettings } from "./embeds/settings.js";
 export {
   EXPORT_RETENTION_DAYS,
   ExportError,

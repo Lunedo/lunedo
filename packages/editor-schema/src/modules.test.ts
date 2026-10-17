@@ -95,7 +95,7 @@ describe("module registry", () => {
         module.importers.includes(modules.importer("confluence", "adf:decision-list") as never),
       )?.name,
     ).toBe("decision");
-    expect(modules.importer("confluence", "jira")).toBeUndefined();
+    expect(modules.importer("confluence", "poll")).toBeUndefined();
     const importer: MacroConverter = { source: "confluence", macros: ["poll"], convert: () => [] };
     const registry = createDefaultRegistry().register(defineModule({ name: "poll", importers: [importer] }));
     expect(registry.importer("confluence", "poll")).toBe(importer);

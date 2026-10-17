@@ -179,6 +179,7 @@ export const treeItems = pgTable(
     title: text().notNull(),
     description: text().notNull().default(""),
     width: pageWidth().notNull().default("fixed"),
+    numberHeadings: boolean().notNull().default(false),
     linkItemId: uuid().references((): AnyPgColumn => treeItems.id, { onDelete: "set null" }),
     linkUrl: text(),
     mode: pageMode().notNull().default("live"),

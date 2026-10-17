@@ -7,6 +7,9 @@ import { organizationQuery, organizationSettingsQuery } from "../../api/organiza
 import { request } from "../../api/request.js";
 import { OrganizationHomePage } from "../../collaboration/organization-home-page.js";
 import { SettingsList } from "../../components/settings-list.js";
+import { embedServicesQuery } from "../../editor/embedded-blocks.js";
+import { OrganizationEmbedAllowlist } from "../../embeds/embed-allowlist.js";
+import { LoadError } from "../../errors/failure.js";
 import { StorageUsage } from "../../files/storage-usage.js";
 import { SettingsPage } from "../../screens/settings/settings-page.js";
 import { useOrganizationSettingMutation } from "../../settings/setting-mutations.js";
@@ -100,6 +103,12 @@ export function OrganizationContentScreen() {
           onChange={change}
         />
       </Panel>
+      <Panel title={t("embeds.allowlist.title")} description={t("embeds.allowlist.organizationDescription")}>
+        <OrganizationEmbeds
+          organizationId={organizationId}
+          canManage={state.can("organization.settings.manage")}
+        />
+      </Panel>
       <Panel title={t("home.organizationPage")} description={t("home.organizationPageDescription")}>
         <OrganizationHomePage
           organizationId={organizationId}
@@ -157,5 +166,38 @@ export function OrganizationContentScreen() {
         </Panel>
       ) : null}
     </SettingsPage>
+  );
+}
+
+function OrganizationEmbeds({ organizationId, canManage }: { organizationId: string; canManage: boolean }) {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const mutation = useOrganizationSettingMutation(organizationId);
+  const query = embedServicesQuery(organizationId);
+  const embeds = useQuery({ ...query, throwOnError: false });
+  if (embeds.isPending) return null;
+  if (embeds.isError) {
+    return (
+      <LoadError
+        what={t("embeds.allowlist.loadFailed")}
+        error={embeds.error}
+        onRetry={() => void embeds.refetch()}
+      />
+    );
+  }
+  const { available, services, narrowed } = embeds.data;
+  return (
+    <OrganizationEmbedAllowlist
+      available={available}
+      allowed={narrowed ? services.map((service) => service.id) : null}
+      canManage={canManage}
+      onSave={async (allowed) => {
+        await mutation.mutateAsync({
+          key: "embeds.allowedServices",
+          change: allowed === null ? { clear: true } : { value: allowed },
+        });
+        await queryClient.invalidateQueries({ queryKey: query.queryKey });
+      }}
+    />
   );
 }

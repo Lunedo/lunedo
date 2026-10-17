@@ -47,6 +47,10 @@ While someone edits a drawing, others see "Anna is editing this drawing" on the 
 
 The drawing and its image are stored as versions of the attachments `drawing-<block ID>.excalidraw` and `drawing-<block ID>.svg` of the page, so they follow the permissions, drafts and versions of the page: an older version of the page shows the drawing it had. Search finds the text of a drawing as part of the page. Exports and the print view use the image.
 
+## Whiteboards in pages and the page tree
+
+**Link to whiteboard** shows a whiteboard's image and title in a page and opens it on click, with the reader's permissions; links in the page tree can point to whiteboards. See [embeds-and-blocks.md](embeds-and-blocks.md#whiteboard-blocks).
+
 ## API
 
 | Request | Purpose |

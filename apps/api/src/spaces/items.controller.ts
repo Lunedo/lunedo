@@ -294,7 +294,8 @@ export class ItemsController {
   @Permission("item.edit", item)
   @ApiRoute({
     summary: "Change an item",
-    description: "Changes the title, the description of a folder or the width of a page.",
+    description:
+      "Changes the title, the description of a folder, or the width and heading numbers of a page.",
     tags: [TAG],
     params: itemParams,
     body: updateItemSchema,

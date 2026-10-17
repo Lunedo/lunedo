@@ -1,0 +1,1 @@
+ALTER TABLE "tree_items" ADD COLUMN "number_headings" boolean DEFAULT false NOT NULL;

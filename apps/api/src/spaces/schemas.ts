@@ -258,7 +258,7 @@ export const permissionChangeSchema = z
 export const linkSchema = z
   .object({
     itemId: uuid(
-      "Linked page or folder, or null for an address or when the caller cannot read it.",
+      "Linked page, folder or whiteboard, or null for an address or when the caller cannot read it.",
     ).nullable(),
     url: z.string().nullable().describe("Linked `http` or `https` address, or null."),
     accessible: z.boolean().describe("Whether the caller can open the target. If not, the title is empty."),
@@ -273,7 +273,7 @@ export const linkSchema = z
         title: z.string().describe("Title of the target."),
       })
       .nullable()
-      .describe("The linked page or folder, or null."),
+      .describe("The linked page, folder or whiteboard, or null."),
   })
   .describe("Where a link in the page tree points.");
 
@@ -332,6 +332,9 @@ export const treeItemSchema = z
     title: z.string().describe("Title. Empty for a link to content the caller cannot read."),
     description: z.string().describe("Short description of a folder."),
     width: z.enum(pageWidths).describe("Page width: `fixed` or `full`."),
+    numberHeadings: z
+      .boolean()
+      .describe("Whether the headings of the page are numbered in the page, in print and in Word."),
     mode: modeSchema,
     published: z
       .boolean()
@@ -372,6 +375,7 @@ export const exampleItem = {
   title: "VPN access for remote staff",
   description: "",
   width: "fixed",
+  numberHeadings: false,
   mode: "publish",
   published: true,
   archived: false,
@@ -496,7 +500,9 @@ export const createItemSchema = z
       ),
     link: z
       .object({
-        itemId: uuid("Page or folder to link to, in any space the caller can read.").nullable().optional(),
+        itemId: uuid("Page, folder or whiteboard to link to, in any space the caller can read.")
+          .nullable()
+          .optional(),
         url: z.string().max(2048).nullable().optional().describe("`http` or `https` address to link to."),
       })
       .strict()
@@ -515,6 +521,10 @@ export const updateItemSchema = z
       .optional()
       .describe("New description of a folder, up to 1000 characters."),
     width: z.enum(pageWidths).optional().describe("Page width: `fixed` or `full`."),
+    numberHeadings: z
+      .boolean()
+      .optional()
+      .describe("Whether to number the headings of the page in the page, in print and in Word."),
   })
   .strict()
   .describe("Fields to change.");

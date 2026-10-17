@@ -697,6 +697,80 @@ describe.skipIf(!baseUrl)("Confluence imports", () => {
     expect(left.rows[0]?.count).toBe(0);
   });
 
+  it("imports embeds, tabs, file previews and third-party macros with report entries", async () => {
+    const macro = (name: string, parameters: Record<string, string>, body = "") =>
+      `<ac:structured-macro ac:name="${name}" ac:schema-version="1">${Object.entries(parameters)
+        .map(([key, value]) => `<ac:parameter ac:name="${key}">${value}</ac:parameter>`)
+        .join("")}${body}</ac:structured-macro>`;
+    const rich = (xhtml: string) => `<ac:rich-text-body>${xhtml}</ac:rich-text-body>`;
+    const table = "<table><tbody><tr><th><p>Agent</p></th></tr><tr><td><p>Anna</p></td></tr></tbody></table>";
+    const page = (id: string, title: string, body: string, position: number) => ({
+      id,
+      title,
+      parentId: "8300",
+      position,
+      creatorKey: ALICE.key,
+      body,
+    });
+    const model: SyntheticExport = {
+      space: { id: "8003", key: "THRD", name: "Third party", homePageId: "8300" },
+      users: [ALICE],
+      attachments: [],
+      pages: [
+        {
+          id: "8300",
+          title: "Third party home",
+          parentId: null,
+          position: null,
+          body: "<p>Home</p>",
+          creatorKey: ALICE.key,
+        },
+        page(
+          "8301",
+          "Media",
+          [
+            macro("widget", { url: '<ri:url ri:value="https://www.youtube.com/watch?v=r7WIRd_8poI" />' }),
+            macro("widget", { url: '<ri:url ri:value="https://videos.example.net/w/1" />' }),
+            macro(
+              "ui-tabs",
+              {},
+              rich(
+                `${macro("ui-tab", { title: "Windows" }, rich("<p>Win</p>"))}${macro("ui-tab", { title: "macOS" }, rich("<p>Mac</p>"))}`,
+              ),
+            ),
+            macro("table-chart", { type: "Pie" }, rich(table)),
+            `<p>Ticket ${macro("jira", { server: "Jira", key: "OPS-1" })}</p>`,
+            macro("multiexcerpt", { MultiExcerptName: "shared" }, rich("<p>Shared words</p>")),
+          ].join(""),
+          1,
+        ),
+        page("8302", "Handbook", macro("numberedheadings", {}, rich("<h1>Overview</h1><h2>Scope</h2>")), 2),
+      ],
+    };
+    const result = await imported(model, { key: "THRA" });
+    expect(result.state).toBe("review");
+    const media = await itemFor(result.id, "8301");
+    const types = nodes(await documentOf(media)).map((node) => node.type);
+    expect(types).toEqual(expect.arrayContaining(["embed", "tabs", "tab", "callout", "table", "excerpt"]));
+    expect(types).not.toContain("unsupportedMacro");
+    const handbook = await itemFor(result.id, "8302");
+    const numbered = await test.database.execute<{ number_headings: boolean }>(
+      sql`select number_headings from tree_items where id = any(${sql.param([media, handbook])}::uuid[]) order by id = ${handbook}`,
+    );
+    expect(numbered.rows.map((row) => row.number_headings)).toEqual([false, true]);
+    const problems = await test.database.execute<{ category: string; code: string; details: unknown }>(sql`
+      select category, code, details from import_problems where import_id = ${result.id} order by code`);
+    expect(problems.rows).toEqual([
+      { category: "macros", code: "chartNotImported", details: { macro: "table-chart" } },
+      {
+        category: "links",
+        code: "embedNotAllowed",
+        details: { macro: "widget", url: "https://videos.example.net/w/1" },
+      },
+      { category: "macros", code: "jiraNotImported", details: { macro: "jira", issues: "OPS-1" } },
+    ]);
+  });
+
   it("imports page properties, label reports, excerpts, includes and roadmaps and resolves includes imported later", async () => {
     const macro = (name: string, parameters: Record<string, string>, body = "") =>
       `<ac:structured-macro ac:name="${name}" ac:schema-version="1">${Object.entries(parameters)
