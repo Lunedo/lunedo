@@ -173,7 +173,7 @@ export const notificationEvents: readonly NotificationEvent[] = [
   contentEvent("accessRequests", ["access.requested"], "immediately", { keptWhenMuted: true, push: true }),
   contentEvent("comments", ["comment.created"], "digest"),
   contentEvent("changes", ["content.changed"], "off"),
-  contentEvent("copies", ["copy.finished", "copy.failed"], "off", { keptWhenMuted: true }),
+  contentEvent("copies", ["copy.finished", "copy.failed"], "off"),
   contentEvent("blogPosts", ["blogPost.published"], "digest"),
   contentEvent("meetings", ["meeting.reminder", "meeting.notesAvailable", "oneOnOne.started"], "off"),
   contentEvent(

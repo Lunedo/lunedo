@@ -53,13 +53,12 @@ describe("notification events", () => {
     ).toEqual([]);
   });
 
-  it("keep mentions, tasks, shares, access requests and the person's own copies from muted content", () => {
+  it("keep mentions, tasks, shares and access requests from muted content", () => {
     expect(notificationEvents.filter((event) => event.keptWhenMuted).map((event) => event.id)).toEqual([
       "mentions",
       "tasks",
       "shares",
       "accessRequests",
-      "copies",
     ]);
   });
 
