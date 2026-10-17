@@ -10,10 +10,10 @@ function focusIsLost(): boolean {
 const PERSON_ACTS = ["pointerdown", "keydown", "focusin"] as const;
 
 export function useNavigationFocus(): void {
-  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const pathname = useRouterState({ select: (state) => state.resolvedLocation?.pathname });
   const previous = useRef(pathname);
   useEffect(() => {
-    const changed = previous.current !== pathname;
+    const changed = previous.current !== undefined && previous.current !== pathname;
     previous.current = pathname;
     if (!changed) return;
     const settle = () => focusIsLost() && mainHeading() !== null && focusMainHeading();
