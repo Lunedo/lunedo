@@ -1,3 +1,4 @@
+import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from "@tanstack/react-router";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -168,6 +169,36 @@ describe("page properties report", () => {
     });
     expect(screen.getByText("Pages 1 to 2 of 3")).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: /next/i }));
+    expect(await screen.findByRole("link", { name: "Linz" })).toBeTruthy();
+  });
+
+  it("keeps the page of the results in the address, so going back and links keep it", async () => {
+    const history = createMemoryHistory({ initialEntries: ["/spaces/OPS/pages/x/sites"] });
+    const root = createRootRoute({
+      component: () => (
+        <PreferencesProvider>
+          <PageReadView
+            document={{
+              type: "doc",
+              content: [{ type: "propertiesReport", attrs: { columns: ["Owner"], pageSize: 2 } }],
+            }}
+            references={{ people: {}, pages: {} }}
+            pageId={PAGE}
+          />
+        </PreferencesProvider>
+      ),
+    });
+    const router = createRouter({ routeTree: root, history });
+    const { requests } = routes();
+    await renderWithProviders(<RouterProvider router={router} />);
+    await screen.findByRole("link", { name: "Graz" });
+    await userEvent.click(screen.getByRole("button", { name: /next/i }));
+    expect(await screen.findByRole("link", { name: "Linz" })).toBeTruthy();
+    expect(decodeURIComponent(router.state.location.href)).toMatch(/reports=\{"[0-9a-z]+":2\}/);
+    expect(requests.some((request) => request.path.includes("offset=2"))).toBe(true);
+    history.back();
+    expect(await screen.findByRole("link", { name: "Graz" })).toBeTruthy();
+    history.forward();
     expect(await screen.findByRole("link", { name: "Linz" })).toBeTruthy();
   });
 

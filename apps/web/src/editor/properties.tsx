@@ -24,7 +24,7 @@ import {
 import { keepPreviousData, useQueries, useQuery } from "@tanstack/react-query";
 import { NodeViewContent, type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
 import { ListPlus, Table2, TableProperties, Trash2 } from "lucide-react";
-import { type MouseEvent, useEffect, useState } from "react";
+import { type MouseEvent, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
@@ -32,6 +32,7 @@ import { LoadError } from "../errors/failure.js";
 import { useEditable, useOpenPath, usePageContext } from "./context.js";
 import type { References } from "./references.js";
 import { RenderedBlocks } from "./rendered-blocks.js";
+import { reportKey, useReportPage } from "./report-page.js";
 import { LabelsField, labelsOf } from "./reports.js";
 
 const PAGE_SIZES = [10, 20, 30, 50, 100];
@@ -183,15 +184,19 @@ export function PropertiesReportTable({
 }) {
   const { t } = useTranslation();
   const [sort, setSort] = useState<TableSort>(() => sortOf(report));
-  const [offset, setOffset] = useState(0);
+  const [page, setPage] = useReportPage(reportKey(report));
+  const offset = (page - 1) * report.pageSize;
   const settings = JSON.stringify({
     sort: sortOf(report),
     filters: [report.spaceIds, report.labels, report.setId, report.columns, report.pageSize],
   });
+  const shown = useRef(settings);
   useEffect(() => {
+    if (shown.current === settings) return;
+    shown.current = settings;
     setSort((JSON.parse(settings) as { sort: TableSort }).sort);
-    setOffset(0);
-  }, [settings]);
+    setPage(1);
+  }, [settings, setPage]);
   const sortBy = sort.key === TITLE ? null : sort.key.slice("column:".length);
   const result = useQuery({
     queryKey: ["reports", "properties", report, sort, offset],
@@ -214,6 +219,11 @@ export function PropertiesReportTable({
         }),
       ),
   });
+  const total = result.data?.total ?? 0;
+  const pages = Math.max(1, Math.ceil(total / report.pageSize));
+  useEffect(() => {
+    if (total > 0 && page > pages) setPage(pages);
+  }, [total, page, pages, setPage]);
   if (result.isPending) return <SkeletonText lines={3} />;
   if (result.isError) {
     return (
@@ -238,7 +248,7 @@ export function PropertiesReportTable({
         sort={sort}
         onSortChange={(next) => {
           setSort(next);
-          setOffset(0);
+          setPage(1);
         }}
         loading={result.isFetching}
         columns={[
@@ -290,8 +300,8 @@ export function PropertiesReportTable({
             ? {
                 hasPrevious: offset > 0,
                 hasNext: offset + report.pageSize < data.total,
-                onPrevious: () => setOffset(Math.max(0, offset - report.pageSize)),
-                onNext: () => setOffset(offset + report.pageSize),
+                onPrevious: () => setPage(Math.max(1, page - 1)),
+                onNext: () => setPage(page + 1),
               }
             : undefined
         }
@@ -611,10 +621,13 @@ export function PagePropertyView({ node, editor, getPos }: NodeViewProps) {
     <NodeViewWrapper className="ph-page-property">
       <NodeViewContent className="ph-page-property-cells" />
       {editable ? (
-        <span contentEditable={false} className="ph-page-property-actions">
+        <span
+          contentEditable={false}
+          className="ph-page-property-actions flex size-hit shrink-0 items-center justify-center"
+        >
           <IconButton
             icon={Trash2}
-            size="sm"
+            size="md"
             label={
               name ? t("editor.pageProperties.removeNamed", { name }) : t("editor.pageProperties.remove")
             }
