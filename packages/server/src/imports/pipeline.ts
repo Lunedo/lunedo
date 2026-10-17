@@ -476,27 +476,34 @@ export class ImportPipeline {
   }
 
   async #space(run: PipelineRun): Promise<void> {
+    const description = run.reimport ? null : (await run.reader.space({ staging: run.staging })).description;
     await this.#database.transaction(async (tx) => {
       const locked = await tx.execute<{ quarantine_space_id: string | null }>(
         sql`select quarantine_space_id from imports where id = ${run.importId} for update`,
       );
-      if (locked.rows[0]?.quarantine_space_id) return;
-      const existing = await tx.execute<{ taken: boolean }>(
-        sql`select exists (select 1 from spaces where key = ${run.spaceKey}) as taken`,
-      );
-      if (existing.rows[0]?.taken) {
-        throw new ImportFormatError("keyTaken", "Another space now uses the key of this import.");
+      let spaceId = locked.rows[0]?.quarantine_space_id ?? null;
+      if (!spaceId) {
+        const existing = await tx.execute<{ taken: boolean }>(
+          sql`select exists (select 1 from spaces where key = ${run.spaceKey}) as taken`,
+        );
+        if (existing.rows[0]?.taken) {
+          throw new ImportFormatError("keyTaken", "Another space now uses the key of this import.");
+        }
+        const space = await createQuarantineSpace(tx, {
+          organizationId: run.organizationId,
+          name: run.spaceName,
+          key: run.spaceKey,
+          importerId: run.importerId,
+          readers: run.reviewerIds,
+        });
+        spaceId = space.spaceId;
+        await tx.execute(sql`update imports set quarantine_space_id = ${spaceId} where id = ${run.importId}`);
       }
-      const space = await createQuarantineSpace(tx, {
-        organizationId: run.organizationId,
-        name: run.spaceName,
-        key: run.spaceKey,
-        importerId: run.importerId,
-        readers: run.reviewerIds,
-      });
-      await tx.execute(
-        sql`update imports set quarantine_space_id = ${space.spaceId} where id = ${run.importId}`,
-      );
+      if (description) {
+        await tx.execute(
+          sql`update spaces set description = ${description} where id = ${spaceId} and description = ''`,
+        );
+      }
     });
   }
 

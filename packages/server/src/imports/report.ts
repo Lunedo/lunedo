@@ -21,6 +21,7 @@ export const reportCategories = {
   source: [
     "contentSkipped",
     "trashedContent",
+    "removedRestrictionKept",
     "contentTypeNotImported",
     "likesAndWatchersSkipped",
     "permissionsUnavailable",

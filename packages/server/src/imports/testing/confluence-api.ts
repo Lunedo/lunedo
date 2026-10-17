@@ -346,6 +346,11 @@ export function fakeConfluence(model: SyntheticExport, options: FakeConfluenceOp
                   key: model.space.key,
                   name: model.space.name,
                   homepageId: model.space.homePageId,
+                  ...(model.space.description === undefined
+                    ? {}
+                    : {
+                        description: { plain: { value: model.space.description, representation: "plain" } },
+                      }),
                 },
               ]
             : [],
@@ -511,8 +516,15 @@ export function fakeConfluence(model: SyntheticExport, options: FakeConfluenceOp
     if (segments[2] === "content" && segments[4] === "restriction" && segments.length === 5) {
       const pageId = segments[3] ?? "";
       if (!all.has(pageId) || options.restricted?.has(`${pageId}/restriction`)) return response(403);
+      const visible = (entry: ReturnType<typeof restrictions>["read"]) => ({
+        ...entry,
+        restrictions: {
+          ...entry.restrictions,
+          group: { results: entry.restrictions.group.results.filter((group) => group.name !== "tombstone") },
+        },
+      });
       const { read, update } = restrictions(pageId);
-      return json(200, { results: [read, update] });
+      return json(200, { results: [visible(read), visible(update)] });
     }
     if (
       segments[2] === "content" &&

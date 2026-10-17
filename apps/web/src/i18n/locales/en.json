@@ -7339,6 +7339,11 @@
           "hint": "Confluence refused them. Import with a token of an account that can read them, or add them later.",
           "entry": "{title}: the {part, select, comments {comments} attachments {attachments} restrictions {restrictions} other {content}} could not be read."
         },
+        "removedRestrictionKept": {
+          "title": "Restrictions kept that Confluence may have removed",
+          "hint": "Confluence marks removed restrictions in its export without saying who had them. Pagehall keeps such pages restricted. Check them and remove the restriction where it is not needed.",
+          "entry": "{count, plural, one {# page} other {# pages}}: {pages}"
+        },
         "trashedContent": {
           "title": "{count, plural, one {# page} other {# pages}} in the Confluence trash not imported",
           "hint": "They were deleted in Confluence. Restore them there and import again if you need them.",

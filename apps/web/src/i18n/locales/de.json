@@ -7339,6 +7339,11 @@
           "hint": "Confluence hat sie verweigert. Importiere mit dem Token eines Kontos, das sie lesen kann, oder ergänze sie später.",
           "entry": "{title}: {part, select, comments {Die Kommentare konnten} attachments {Die Anhänge konnten} restrictions {Die Einschränkungen konnten} other {Der Inhalt konnte}} nicht gelesen werden."
         },
+        "removedRestrictionKept": {
+          "title": "Einschränkungen behalten, die Confluence vielleicht entfernt hat",
+          "hint": "Confluence markiert entfernte Einschränkungen im Export, ohne zu sagen, für wen sie galten. Pagehall lässt diese Seiten eingeschränkt. Prüfe sie und entferne die Einschränkung, wo sie nicht nötig ist.",
+          "entry": "{count, plural, one {# Seite} other {# Seiten}}: {pages}"
+        },
         "trashedContent": {
           "title": "{count, plural, one {# Seite} other {# Seiten}} im Papierkorb von Confluence nicht importiert",
           "hint": "Sie wurden in Confluence gelöscht. Stelle sie dort wieder her und importiere erneut, wenn du sie brauchst.",

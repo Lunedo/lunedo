@@ -179,3 +179,26 @@ export function macroDifferences(
   }
   return result;
 }
+
+export function removedRestrictionPages(snapshot: ImportSnapshot): string[] {
+  const entry = snapshot.problems.find((problem) => problem.code === "removedRestrictionKept");
+  return entry ? String(entry.details.pages).split(", ") : [];
+}
+
+export function withoutRemovedRestrictions(snapshot: ImportSnapshot): ImportSnapshot {
+  const pages = new Set(removedRestrictionPages(snapshot));
+  return {
+    ...snapshot,
+    problems: snapshot.problems.filter((problem) => problem.code !== "removedRestrictionKept"),
+    items: snapshot.items.map((item) =>
+      pages.has(titleOf(item))
+        ? {
+            ...item,
+            restrictions: Object.fromEntries(
+              Object.entries(item.restrictions).filter(([, holders]) => holders.length > 0),
+            ),
+          }
+        : item,
+    ),
+  };
+}

@@ -37,6 +37,7 @@ export interface ItemSnapshot {
 }
 
 export interface ImportSnapshot {
+  readonly description: string;
   readonly items: ItemSnapshot[];
   readonly templates: string[];
   readonly problems: {
@@ -71,8 +72,13 @@ export function documentNodes(document: unknown): SnapshotNode[] {
 export async function importSnapshot(database: Database, importId: string): Promise<ImportSnapshot> {
   const rows = async <T>(query: ReturnType<typeof sql>) =>
     (await database.execute<T & Record<string, unknown>>(query)).rows as T[];
-  const [space] = await rows<{ space_id: string; overview_item_id: string; key: string }>(sql`
-    select s.id as space_id, s.overview_item_id, s.key from imports i join spaces s on s.id = i.quarantine_space_id
+  const [space] = await rows<{
+    space_id: string;
+    overview_item_id: string;
+    key: string;
+    description: string;
+  }>(sql`
+    select s.id as space_id, s.overview_item_id, s.key, s.description from imports i join spaces s on s.id = i.quarantine_space_id
     where i.id = ${importId}`);
   if (!space) throw new Error("The import has no space");
   const people = new Map(
@@ -245,7 +251,7 @@ export async function importSnapshot(database: Database, importId: string): Prom
     role: row.role,
   }));
   roles.sort((left, right) => `${left.holder} ${left.role}`.localeCompare(`${right.holder} ${right.role}`));
-  return { items: result, templates, problems, roles };
+  return { description: space.description, items: result, templates, problems, roles };
 }
 
 function normalize(value: unknown, people: ReadonlyMap<string, string>, spaceKey: string): unknown {
@@ -283,7 +289,7 @@ export function differences(left: ImportSnapshot, right: ImportSnapshot): Differ
   for (const key of rightItems.keys()) {
     if (!leftItems.has(key)) result.push({ page: key, field: "item", left: "missing", right: "present" });
   }
-  for (const field of ["templates", "problems", "roles"] as const) {
+  for (const field of ["description", "templates", "problems", "roles"] as const) {
     if (JSON.stringify(left[field]) !== JSON.stringify(right[field])) {
       result.push({ page: "(space)", field, left: left[field], right: right[field] });
     }

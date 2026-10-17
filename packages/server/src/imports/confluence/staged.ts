@@ -35,6 +35,20 @@ export interface StagedSpace {
   key: string;
   name: string;
   homePageId: string | null;
+  description?: string | null;
+}
+
+export const PLAIN_BODY_TYPE = "0";
+
+export async function spaceDescription(
+  staging: StagingStore,
+  descriptionId: string | null,
+): Promise<string | null> {
+  if (!descriptionId) return null;
+  await staging.flush();
+  const [record] = await staging.byRef<{ body: string }>(kinds.plainBody, [descriptionId]);
+  const text = (record?.data.body ?? "").replace(/\s+/g, " ").trim();
+  return text ? text.slice(0, 1000) : null;
 }
 
 export interface StagedPage {
@@ -145,6 +159,7 @@ export interface StagedContentPermission {
 export interface StagedRestriction {
   kind: "view" | "edit";
   origin: "table" | "legacy";
+  removed?: boolean;
   userKey: string | null;
   accountId: string | null;
   group: string | null;
@@ -189,6 +204,7 @@ export const kinds = {
   siteSpace: "siteSpace",
   visited: "visited",
   mention: "mention",
+  plainBody: "plainBody",
 } as const;
 
 export interface SiteSpace {
@@ -372,6 +388,7 @@ export abstract class StagedConfluenceReader implements ImportReader {
         key: record.data.key,
         name: record.data.name,
         homePageId: record.data.homePageId,
+        description: record.data.description ?? null,
       };
     }
     throw new Error("The export has no space");
@@ -876,6 +893,23 @@ export async function reportTrashed(context: ScanContext, spaceId: string): Prom
   }
 }
 
+export async function reportRemovedRestrictions(context: ScanContext): Promise<void> {
+  await context.staging.flush();
+  const pageIds = new Set<string>();
+  for await (const record of context.staging.iterate<StagedRestriction>(kinds.restriction)) {
+    if (record.data.removed && record.ref) pageIds.add(record.ref);
+  }
+  const pages = await context.staging.get<StagedPage>(kinds.page, [...pageIds]);
+  const titles = [...pages.values()]
+    .map((page) => page.data.title)
+    .sort((left, right) => left.localeCompare(right));
+  if (titles.length === 0) return;
+  await context.problem("removedRestrictionKept", {
+    count: titles.length,
+    pages: titles.join(", ").slice(0, 2000),
+  });
+}
+
 export async function stageRestrictions(staging: StagingStore): Promise<void> {
   await staging.flush();
   if ((await staging.count(kinds.restriction, { field: "origin", value: "table" })) > 0) {
@@ -893,24 +927,32 @@ export async function stageRestrictions(staging: StagingStore): Promise<void> {
     for (const permission of batch) {
       const set = sets.get(permission.ref);
       const kind = restrictionKind(set?.data.type ?? permission.data.type);
-      if (
-        !set ||
-        !kind ||
-        (!permission.data.userKey && !permission.data.accountId && !permission.data.group) ||
-        isTombstone(permission.data.group, permission.data.userKey ?? permission.data.accountId)
-      )
+      if (!set || !kind || (!permission.data.userKey && !permission.data.accountId && !permission.data.group))
         continue;
+      const removed = isTombstone(
+        permission.data.group,
+        permission.data.userKey ?? permission.data.accountId,
+      );
       await staging.put({
         kind: kinds.restriction,
         sourceId: permission.sourceId,
         ref: set.data.contentId,
-        data: {
-          kind,
-          origin: "legacy",
-          userKey: permission.data.userKey,
-          accountId: permission.data.accountId,
-          group: permission.data.group,
-        } satisfies StagedRestriction,
+        data: removed
+          ? ({
+              kind,
+              origin: "legacy",
+              removed,
+              userKey: null,
+              accountId: null,
+              group: null,
+            } satisfies StagedRestriction)
+          : ({
+              kind,
+              origin: "legacy",
+              userKey: permission.data.userKey,
+              accountId: permission.data.accountId,
+              group: permission.data.group,
+            } satisfies StagedRestriction),
       });
     }
     batch = [];

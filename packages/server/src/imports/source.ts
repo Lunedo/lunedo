@@ -43,6 +43,7 @@ export interface SourceSpace {
   readonly key: string;
   readonly name: string;
   readonly homePageId: string | null;
+  readonly description: string | null;
 }
 
 export interface SourcePerson {

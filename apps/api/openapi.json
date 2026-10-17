@@ -43009,6 +43009,7 @@
                               "skippedEntry",
                               "contentSkipped",
                               "trashedContent",
+                              "removedRestrictionKept",
                               "contentTypeNotImported",
                               "likesAndWatchersSkipped",
                               "permissionsUnavailable",

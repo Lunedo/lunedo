@@ -13,12 +13,15 @@ import {
   isTombstone,
   KEPT_PROPERTIES,
   kinds,
+  PLAIN_BODY_TYPE,
   pageSort,
+  reportRemovedRestrictions,
   reportTrashed,
   type ScannedArchive,
   STORAGE_BODY_TYPE,
   StagedConfluenceReader,
   scanArchive,
+  spaceDescription,
   stageRestrictions,
   stageTrashed,
   titleKey,
@@ -112,6 +115,7 @@ export class ConfluenceCsvReader extends StagedConfluenceReader {
         key: value(spaceRow, "spacekey"),
         name: value(spaceRow, "spacename"),
         homePageId: optional(spaceRow, "homepage"),
+        description: await spaceDescription(context.staging, optional(spaceRow, "spacedescid")),
       },
     });
     await context.staging.flush();
@@ -119,6 +123,7 @@ export class ConfluenceCsvReader extends StagedConfluenceReader {
     await context.staging.removeOtherThan(kinds.template, "spaceId", spaceId);
     await context.staging.orderTree(kinds.page);
     await stageRestrictions(context.staging);
+    await reportRemovedRestrictions(context);
     await reportTrashed(context, spaceId);
   }
 
@@ -142,9 +147,18 @@ export class ConfluenceCsvReader extends StagedConfluenceReader {
         await this.#content(row, context);
         return;
       case "bodycontent": {
-        if (value(row, "bodytypeid") !== STORAGE_BODY_TYPE) return;
         const content = optional(row, "contentid");
         if (!content) return;
+        if (value(row, "bodytypeid") === PLAIN_BODY_TYPE) {
+          await context.staging.put({
+            kind: kinds.plainBody,
+            sourceId: value(row, "bodycontentid"),
+            ref: content,
+            data: { body: (row.body ?? "").slice(0, 10_000) },
+          });
+          return;
+        }
+        if (value(row, "bodytypeid") !== STORAGE_BODY_TYPE) return;
         await context.staging.put({
           kind: kinds.body,
           sourceId: value(row, "bodycontentid"),
@@ -215,18 +229,21 @@ export class ConfluenceCsvReader extends StagedConfluenceReader {
         const group = value(row, "principal_type").toUpperCase() === "GROUP";
         const principal = optional(row, "principal_id");
         const groupName = optional(row, "groupname");
-        if ((group ? !groupName : !principal) || isTombstone(groupName, group ? null : principal)) return;
+        if (group ? !groupName : !principal) return;
+        const removed = isTombstone(groupName, group ? null : principal);
         await context.staging.put({
           kind: kinds.restriction,
           sourceId: `${content}:${kind}:${group ? `group:${groupName}` : `user:${principal}`}`,
           ref: content,
-          data: {
-            kind,
-            origin: "table",
-            userKey: null,
-            accountId: group ? null : principal,
-            group: group ? groupName : null,
-          },
+          data: removed
+            ? { kind, origin: "table", removed, userKey: null, accountId: null, group: null }
+            : {
+                kind,
+                origin: "table",
+                userKey: null,
+                accountId: group ? null : principal,
+                group: group ? groupName : null,
+              },
         });
         return;
       }

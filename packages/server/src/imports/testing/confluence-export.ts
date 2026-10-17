@@ -115,6 +115,7 @@ export interface SyntheticExport {
     readonly key: string;
     readonly name: string;
     readonly homePageId: string;
+    readonly description?: string;
   };
   readonly users: readonly SyntheticUser[];
   readonly pages: readonly SyntheticPage[];
@@ -131,6 +132,8 @@ export interface SyntheticExport {
 }
 
 const DATE = "2024-03-01 10:20:30.123";
+const DESCRIPTION_ID = "990001";
+const DESCRIPTION_BODY_ID = "990002";
 
 function cdata(text: string): string {
   return `<![CDATA[${text.replace(/\]\](\]*)>/g, "]] $1>")}]]>`;
@@ -444,10 +447,26 @@ export function createXmlExport(model: SyntheticExport): Buffer {
         property("name", model.space.name),
         property("key", model.space.key),
         reference("homePage", "Page", model.space.homePageId),
+        model.space.description === undefined
+          ? ""
+          : reference("description", "SpaceDescription", DESCRIPTION_ID),
         property("spaceStatus", "CURRENT"),
       ].join(""),
     ),
   );
+  if (model.space.description !== undefined) {
+    parts.push(
+      object(
+        "BodyContent",
+        DESCRIPTION_BODY_ID,
+        [
+          property("body", model.space.description),
+          reference("content", "SpaceDescription", DESCRIPTION_ID),
+          property("bodyType", 0),
+        ].join(""),
+      ),
+    );
+  }
   for (const space of model.siteSpaces ?? []) {
     parts.push(
       object("Space", space.id, [property("name", space.name), property("key", space.key)].join("")),
@@ -682,11 +701,25 @@ export function createCsvExport(
   }
   const tables: Record<string, string> = {
     "spaces.csv": csvTable(
-      ["spaceid", "spacename", "spacekey", "homepage", "spacestatus"],
-      [[model.space.id, model.space.name, model.space.key, model.space.homePageId, "CURRENT"]],
+      ["spaceid", "spacename", "spacekey", "spacedescid", "homepage", "spacestatus"],
+      [
+        [
+          model.space.id,
+          model.space.name,
+          model.space.key,
+          model.space.description === undefined ? null : DESCRIPTION_ID,
+          model.space.homePageId,
+          "CURRENT",
+        ],
+      ],
     ),
     "content.csv": csvTable(CONTENT_COLUMNS, content),
-    "bodycontent.csv": csvTable(["bodycontentid", "body", "contentid", "bodytypeid"], bodies),
+    "bodycontent.csv": csvTable(
+      ["bodycontentid", "body", "contentid", "bodytypeid"],
+      model.space.description === undefined
+        ? bodies
+        : [...bodies, [DESCRIPTION_BODY_ID, model.space.description, DESCRIPTION_ID, 0]],
+    ),
     "label.csv": csvTable(["labelid", "name", "namespace"], labels),
     "content_label.csv": csvTable(["id", "labelid", "contentid"], labellings),
     "user_mapping.csv": csvTable(

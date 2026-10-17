@@ -6,7 +6,6 @@ import {
   confluenceDate,
   contentKind,
   formerTitleRecord,
-  isTombstone,
   kinds,
   PAGE_STATUS_PROPERTY,
   pageSort,
@@ -134,6 +133,7 @@ const spaceSchema = z.looseObject({
   key: text(255),
   name: text(1000).default(""),
   homepageId: id.nullish(),
+  description: z.looseObject({ plain: z.looseObject({ value: text(10_000) }).nullish() }).nullish(),
 });
 
 const PERMISSION_TYPES: Readonly<Record<string, string>> = {
@@ -263,7 +263,12 @@ export async function scanCloud(api: ConfluenceApi, context: ScanContext, spaceK
     await context.staging.put({
       kind: kinds.space,
       sourceId: space.id,
-      data: { key: space.key, name: space.name, homePageId: space.homepageId ?? null },
+      data: {
+        key: space.key,
+        name: space.name,
+        homePageId: space.homepageId ?? null,
+        description: space.description?.plain?.value.replace(/\s+/g, " ").trim().slice(0, 1000) || null,
+      },
     });
     await context.problem("likesAndWatchersSkipped", {});
     await save({ step: "pages", next: null, after: null });
@@ -628,7 +633,7 @@ async function details(
     }
     for (const group of entry.restrictions?.group?.results ?? []) {
       const name = group.name.trim();
-      if (!name || isTombstone(name, null)) continue;
+      if (!name) continue;
       await context.staging.put({
         kind: kinds.restriction,
         sourceId: `${pageId}/${kind}/group/${name.toLowerCase()}`,

@@ -9,9 +9,11 @@ import {
   countDifferences,
   type MacroOutcome,
   macroDifferences,
+  removedRestrictionPages,
   restrictionDifferences,
   spaceCounts,
   trashDifferences,
+  withoutRemovedRestrictions,
 } from "../testing/confluence-cloud/expectations.js";
 import {
   CLOUD_SPACES,
@@ -226,7 +228,13 @@ describe.skipIf(!baseUrl || !fixturesAvailable())("Import of the Confluence Clou
     if (process.env.PAGEHALL_IMPORT_CHECK_OUT) {
       const resolved: Record<string, ImportSnapshot> = {};
       for (const [key, value] of snapshots)
-        resolved[key] = await value.catch(() => ({ items: [], templates: [], problems: [], roles: [] }));
+        resolved[key] = await value.catch(() => ({
+          description: "",
+          items: [],
+          templates: [],
+          problems: [],
+          roles: [],
+        }));
       writeFileSync(
         process.env.PAGEHALL_IMPORT_CHECK_OUT,
         JSON.stringify({ durations: Object.fromEntries(durations), snapshots: resolved }, null, 1),
@@ -328,7 +336,7 @@ describe.skipIf(!baseUrl || !fixturesAvailable())("Import of the Confluence Clou
     it(`imports ${space} from its space export as listed in the expected content`, {
       timeout: 300_000,
     }, async () => {
-      const result = await snapshot("xml", space);
+      const result = withoutRemovedRestrictions(await snapshot("xml", space));
       const wanted = expected();
       const trash = recordedTrash(space);
       expect([
@@ -348,6 +356,20 @@ describe.skipIf(!baseUrl || !fixturesAvailable())("Import of the Confluence Clou
     });
   }
 
+  it("keeps restrictions that Confluence marked as removed and lists their pages once", {
+    timeout: 300_000,
+  }, async () => {
+    const fromSpace = await snapshot("xml", "PHIT");
+    const pages = removedRestrictionPages(fromSpace);
+    expect(pages.length).toBeGreaterThan(0);
+    for (const title of pages) {
+      const item = fromSpace.items.find((candidate) => candidate.path.split(" › ").at(-1) === title);
+      expect(item?.restrictions.edit).toEqual([]);
+    }
+    const fromApi = await snapshot("api", "PHIT");
+    expect(removedRestrictionPages(fromApi)).toEqual([]);
+  });
+
   it("asks which space to import from a site backup", { timeout: 300_000 }, async () => {
     const { view } = await analyzed(siteBackup);
     expect(view.state).toBe("draft");
@@ -365,7 +387,7 @@ describe.skipIf(!baseUrl || !fixturesAvailable())("Import of the Confluence Clou
 
   for (const space of CLOUD_SPACES) {
     it(`imports ${space} through the API like from its space export`, { timeout: 300_000 }, async () => {
-      const fromSpace = await snapshot("xml", space);
+      const fromSpace = withoutRemovedRestrictions(await snapshot("xml", space));
       const fromApi = await snapshot("api", space);
       const skipped = fromApi.problems.filter((problem) => problem.code === "likesAndWatchersSkipped");
       expect(skipped).toHaveLength(1);
@@ -429,6 +451,7 @@ describe.skipIf(!baseUrl || !fixturesAvailable())("Import of the Confluence Clou
       );
     }
     expect(kindOf(team, "Altes Telefonsystem (abgelöst)")?.archived).toBe(true);
+    expect(team.description).toContain("Onboarding");
   });
 
   it("imports the largest space and the site backup in bounded time and memory", {

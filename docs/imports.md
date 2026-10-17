@@ -84,7 +84,7 @@ The table covers the XML and CSV exports of Confluence Cloud, the XML exports of
 | Attachments | Attachments with all their versions | Missing files are listed in the report |
 | Images and files of other spaces | | A placeholder with the file name, listed in the report |
 | Labels | Labels | Personal labels (`my:`) are left out |
-| Page restrictions | View and edit restrictions with the same people and groups | Entries that only mark a removed restriction (Cloud writes the group "tombstone") are ignored |
+| Page restrictions | View and edit restrictions with the same people and groups | Exports of Confluence Cloud mark a removed restriction with the group "tombstone". Pagehall keeps such a page restricted and lists all of them in one report entry; the API reports only the restrictions that apply. |
 | Space permissions and space roles | Space roles; see [Permissions](#permissions) | App accounts, site administrators (`all-product-admins`) and permissions without access to the space get no role |
 | Page states | Page statuses | |
 | Templates of the space | Templates | |
@@ -92,7 +92,8 @@ The table covers the XML and CSV exports of Confluence Cloud, the XML exports of
 | Watchers | Counted in the report | Not imported |
 | Macros | See [Macros](#macros) and [diagrams](diagrams.md#importing-from-confluence) | Unsupported-macro blocks, listed in the report |
 | Content properties of apps | | Not imported |
-| Space logo and description | | Not imported |
+| Space description | The description of the space, as plain text up to 1,000 characters | Data Center through the API: not imported |
+| Space logo | | Not imported |
 
 ## Quarantine
 

@@ -11,12 +11,15 @@ import {
   isProductAdmins,
   KEPT_PROPERTIES,
   kinds,
+  PLAIN_BODY_TYPE,
   pageSort,
+  reportRemovedRestrictions,
   reportTrashed,
   type SiteSpace,
   STORAGE_BODY_TYPE,
   StagedConfluenceReader,
   scanArchive,
+  spaceDescription,
   stageRestrictions,
   stageSiteSpaces,
   stageTrashed,
@@ -71,7 +74,7 @@ const KIND_FLAGS = [
 const CONTENT_REFERENCES = ["originalVersion", "creator", "lastModifier", "parent", "space"];
 
 const WANTED = new Map<string, Kept>([
-  ["Space", kept(["key", "name"], ["homePage"])],
+  ["Space", kept(["key", "name"], ["homePage", "description"])],
   ["Page", kept(CONTENT, CONTENT_REFERENCES)],
   ["BlogPost", kept(CONTENT, CONTENT_REFERENCES)],
   [
@@ -329,6 +332,7 @@ export class ConfluenceXmlReader extends StagedConfluenceReader {
         key: (space.properties.get("key") ?? "").trim(),
         name: (space.properties.get("name") ?? "").trim(),
         homePageId: space.references.get("homePage") ?? null,
+        description: await spaceDescription(context.staging, space.references.get("description") ?? null),
       },
     });
     await context.staging.flush();
@@ -336,6 +340,7 @@ export class ConfluenceXmlReader extends StagedConfluenceReader {
     await context.staging.removeOtherThan(kinds.template, "spaceId", space.id);
     await context.staging.orderTree(kinds.page);
     await stageRestrictions(context.staging);
+    await reportRemovedRestrictions(context);
     await reportTrashed(context, space.id);
     await context.saveCheckpoint({ objects });
   }
@@ -499,9 +504,19 @@ export class ConfluenceXmlReader extends StagedConfluenceReader {
         return;
       }
       case "BodyContent": {
-        if ((property("bodyType") ?? "").trim() !== STORAGE_BODY_TYPE) return;
+        const bodyType = (property("bodyType") ?? "").trim();
         const content = reference("content");
         if (!content) return;
+        if (bodyType === PLAIN_BODY_TYPE) {
+          await context.staging.put({
+            kind: kinds.plainBody,
+            sourceId: object.id,
+            ref: content,
+            data: { body: (property("body") ?? "").slice(0, 10_000) },
+          });
+          return;
+        }
+        if (bodyType !== STORAGE_BODY_TYPE) return;
         await context.staging.put({
           kind: kinds.body,
           sourceId: object.id,

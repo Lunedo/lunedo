@@ -28,7 +28,13 @@ function cloudModel(): SyntheticExport {
     ...extra,
   });
   return {
-    space: { id: "9001", key: "CLD", name: "Cloud content", homePageId: "9100" },
+    space: {
+      id: "9001",
+      key: "CLD",
+      name: "Cloud content",
+      homePageId: "9100",
+      description: "Plans,  notes\nand boards of the team.",
+    },
     users: [ALICE, BOB],
     pages: [
       page("9100", "Cloud home", null),
@@ -153,8 +159,11 @@ describe.skipIf(!baseUrl)("Confluence Cloud content types, archive and trash", (
     return result.rows;
   }
 
-  async function expectCloudContent(importId: string) {
+  async function expectCloudContent(importId: string, source: "export" | "api") {
     const found = await items(importId);
+    const space = await test.database.execute<{ description: string }>(sql`
+      select s.description from imports i join spaces s on s.id = i.quarantine_space_id where i.id = ${importId}`);
+    expect(space.rows[0]?.description).toBe("Plans, notes and boards of the team.");
     expect(found.get("Plans")).toMatchObject({ kind: "folder", document: null });
     expect(found.get("Meeting notes")).toMatchObject({ kind: "page", parent: "Plans" });
     expect(found.get("Example site")).toMatchObject({ kind: "link", link_url: "https://example.org/" });
@@ -176,7 +185,12 @@ describe.skipIf(!baseUrl)("Confluence Cloud content types, archive and trash", (
       parent: "Old phone system",
     });
     expect(found.has("Discarded idea")).toBe(false);
-    expect(found.get("Shared page")?.restrictions).toEqual(["view"]);
+    expect(found.get("Shared page")?.restrictions).toEqual(source === "export" ? ["view", "edit"] : ["view"]);
+    expect((await problems(importId)).filter((problem) => problem.code === "removedRestrictionKept")).toEqual(
+      source === "export"
+        ? [{ code: "removedRestrictionKept", details: { count: 1, pages: "Shared page" } }]
+        : [],
+    );
     expect(found.get("Archived secrets")).toMatchObject({ archived: true, parent: "Restricted area" });
     const inherited = await test.database.execute<{ restricted: boolean }>(sql`
       select exists (select 1 from page_restrictions r where r.item_id = any(t.path) and r.kind = 'view') as restricted
@@ -203,7 +217,7 @@ describe.skipIf(!baseUrl)("Confluence Cloud content types, archive and trash", (
       format,
     });
     expect(view.state).toBe("review");
-    expect(await expectCloudContent(view.id)).toEqual([
+    expect(await expectCloudContent(view.id, "export")).toEqual([
       { holder_kind: "account", group_key: null, role: "admin", code: null },
       { holder_kind: "account", group_key: null, role: "admin", code: null },
       { holder_kind: "organizationMembers", group_key: null, role: "editor", code: "widened" },
@@ -227,7 +241,7 @@ describe.skipIf(!baseUrl)("Confluence Cloud content types, archive and trash", (
     await imports.start(admin, draft.id);
     await harness.drive(draft.id);
     expect((await imports.get(admin, draft.id)).state).toBe("review");
-    expect(await expectCloudContent(draft.id)).toEqual([
+    expect(await expectCloudContent(draft.id, "api")).toEqual([
       { holder_kind: "account", group_key: null, role: "admin", code: null },
       { holder_kind: "account", group_key: null, role: null, code: "app" },
       { holder_kind: "organizationMembers", group_key: null, role: "editor", code: "widened" },
