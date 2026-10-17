@@ -42,6 +42,7 @@ import { ItemActivity } from "../ownership/item-activity.js";
 import { spaceDisplayName } from "../space-badge.js";
 import { useSpace } from "../space-context.js";
 import { type ItemDetails, itemQuery, pagePath } from "../space-queries.js";
+import { CopiedFrom } from "./copied-from.js";
 import { type DiffLayout, DiffView } from "./diff-view.js";
 
 const route = getRouteApi("/app/spaces/$spaceKey/pages/$itemId/history");
@@ -300,7 +301,11 @@ function VersionList({
   const reason = (version: PageVersion) =>
     version.reason === "restored"
       ? t("versions.reasons.restored", { number: version.restoredFrom ?? 0 })
-      : translateKey(t, `versions.reasons.${version.reason}`);
+      : version.reason === "copied"
+        ? version.copiedFrom?.title
+          ? t("versions.reasons.copied", { title: version.copiedFrom.title })
+          : t("versions.reasons.copiedHidden")
+        : translateKey(t, `versions.reasons.${version.reason}`);
   return (
     <aside
       aria-label={t("versions.list")}
@@ -342,6 +347,7 @@ function VersionList({
                 .join(" · ")}
               status={version.note ? `${reason(version)} · ${version.note}` : reason(version)}
             />
+            <CopiedFrom source={version.copiedFrom} />
           </li>
         ))}
       </ul>

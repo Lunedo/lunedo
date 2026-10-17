@@ -9,7 +9,13 @@ import { ApiRoute } from "../http/api-route.js";
 import { notFound } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
 import { extensibleEnum, timestamp, uuid } from "../http/schemas.js";
-import { documentSchema, exampleDocument, modeSchema, pageContentSchema } from "./schemas.js";
+import {
+  copiedFromSchema,
+  documentSchema,
+  exampleDocument,
+  modeSchema,
+  pageContentSchema,
+} from "./schemas.js";
 
 const TAG = "Versions";
 const page = { type: "item", param: "pageId" } as const;
@@ -35,9 +41,10 @@ const versionSchema = z
     note: z.string().describe("Note of the person who published it, or empty."),
     reason: extensibleEnum(
       versionReasons,
-      "Why the version exists: `published` (someone published), `session` (an editing session in live mode ended), `restored` (an older version was restored in live mode), `modeChanged` (the page switched modes), `imported` (a re-import applied the source version) or `importedNotApplied` (a re-import added the source version to the history without applying it).",
+      "Why the version exists: `published` (someone published), `session` (an editing session in live mode ended), `restored` (an older version was restored in live mode), `modeChanged` (the page switched modes), `imported` (a re-import applied the source version), `importedNotApplied` (a re-import added the source version to the history without applying it) or `copied` (the page was created as a copy of `copiedFrom`).",
     ),
     restoredFrom: z.number().int().nullable().describe("The restored version, or null."),
+    copiedFrom: copiedFromSchema,
     createdAt: timestamp("When the version was created."),
     createdBy: personSchema
       .nullable()
@@ -54,6 +61,7 @@ const exampleVersion = {
   note: "Added the section on lost devices",
   reason: "published",
   restoredFrom: null,
+  copiedFrom: null,
   createdAt: "2026-10-03T14:20:00.000Z",
   createdBy: { id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20", name: "Anna Berger" },
   contributors: [{ id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20", name: "Anna Berger" }],
@@ -347,8 +355,8 @@ export class VersionsController {
       example: [exampleVersion],
     },
   })
-  async versions(@Param("pageId") pageId: string) {
-    return this.#services.versions.list(pageId);
+  async versions(@Param("pageId") pageId: string, @Req() request: FastifyRequest) {
+    return this.#services.copies.sources(actorOf(request), await this.#services.versions.list(pageId));
   }
 
   @Get(":pageId/versions/:number")
@@ -373,7 +381,9 @@ export class VersionsController {
     @Param("number") number: number,
     @Req() request: FastifyRequest,
   ) {
-    const version = await this.#services.versions.get(pageId, number);
+    const stored = await this.#services.versions.get(pageId, number);
+    if (!stored) throw notFound();
+    const [version] = await this.#services.copies.sources(actorOf(request), [stored]);
     if (!version) throw notFound();
     return {
       ...version,

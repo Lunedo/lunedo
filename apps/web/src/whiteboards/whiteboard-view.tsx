@@ -13,6 +13,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Archive,
   ArchiveRestore,
+  Copy,
   History,
   MessageSquarePlus,
   MoreHorizontal,
@@ -381,12 +382,15 @@ export function WhiteboardView({
 }
 
 export function whiteboardMenu(
-  t: (key: "tree.move" | "archive.unarchive" | "archive.archive" | "trash.moveToTrash") => string,
+  t: (
+    key: "tree.move" | "tree.copy" | "archive.unarchive" | "archive.archive" | "trash.moveToTrash",
+  ) => string,
   options: {
     writable: boolean;
     canEdit: boolean;
     archived: boolean;
     onMove: () => void;
+    onCopy: () => void;
     onArchive: () => void;
     onUnarchive: () => void;
     onDelete: () => void;
@@ -394,6 +398,7 @@ export function whiteboardMenu(
 ): MenuItem[] {
   const items: MenuItem[] = [];
   if (options.writable) items.push({ label: t("tree.move"), icon: Move, onSelect: options.onMove });
+  items.push({ label: t("tree.copy"), icon: Copy, onSelect: options.onCopy });
   if (options.canEdit) {
     items.push(
       { type: "separator" },

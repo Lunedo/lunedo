@@ -41,6 +41,7 @@ import { SpaceBadge, spaceDisplayName } from "./space-badge.js";
 import { SpaceContext, type SpaceContextValue } from "./space-context.js";
 import { itemQuery, type SpaceWithRole, sharedPath, spaceByKeyQuery } from "./space-queries.js";
 import { TemplateGallery } from "./templates/template-gallery.js";
+import { CopyDialog } from "./tree/copy-dialog.js";
 import { type CreatedKind, CreateItemDialog } from "./tree/create-item-dialog.js";
 import { MoveDialog } from "./tree/move-dialog.js";
 import { PageTree } from "./tree/page-tree.js";
@@ -147,6 +148,7 @@ function SpaceFrame({ space }: { space: SpaceWithRole }) {
   );
   const canEdit = (space.role === "editor" || space.role === "admin") && !space.archived;
   const [moving, setMoving] = useState<Parameters<SpaceContextValue["openMove"]>[0] | null>(null);
+  const [copying, setCopying] = useState<Parameters<SpaceContextValue["openCopy"]>[0] | null>(null);
   const [creating, setCreating] = useState<{ kind: CreatedKind; parentId: string | null } | null>(null);
   const [treeOpen, setTreeOpen] = useState(false);
   const [galleryParent, setGalleryParent] = useState<string | null | undefined>(undefined);
@@ -156,6 +158,7 @@ function SpaceFrame({ space }: { space: SpaceWithRole }) {
       space,
       canEdit,
       openMove: (item) => setMoving(item),
+      openCopy: (item) => setCopying(item),
       openCreate: (kind, parentId) => {
         if (kind === "page") setGalleryParent(parentId);
         else setCreating({ kind, parentId });
@@ -208,6 +211,7 @@ function SpaceFrame({ space }: { space: SpaceWithRole }) {
         {navigation}
       </Drawer>
       <MoveDialog space={space} item={moving} onOpenChange={(open) => !open && setMoving(null)} />
+      <CopyDialog space={space} item={copying} onOpenChange={(open) => !open && setCopying(null)} />
       <CreateItemDialog
         space={space}
         request={creating}

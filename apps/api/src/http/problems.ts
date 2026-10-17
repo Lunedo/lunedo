@@ -1,6 +1,6 @@
 import { HttpException } from "@nestjs/common";
 import { z } from "zod";
-import { moveImpactSchema } from "../spaces/schemas.js";
+import { copyImpactSchema, moveImpactSchema } from "../spaces/schemas.js";
 import { uuid } from "./schemas.js";
 
 export const PROBLEM_TYPE_PREFIX = "urn:pagehall:problem:";
@@ -241,6 +241,10 @@ export const problems = {
   moveIntoDescendant: { status: 409, title: "An item cannot be moved below itself" },
   itemMoved: { status: 409, title: "The item was moved at the same moment" },
   moveChangesAccess: { status: 409, title: "The move changes who can access the content" },
+  copyChangesAccess: { status: 409, title: "The copy can be read by people who cannot read the source" },
+  notCopyable: { status: 409, title: "Only pages, folders and whiteboards can be copied" },
+  neverPublished: { status: 409, title: "The page has never been published" },
+  otherOrganization: { status: 409, title: "Content stays within its organization" },
   restrictedParentInTrash: {
     status: 409,
     title: "The content was below a restricted page that is in the trash",
@@ -460,6 +464,11 @@ export const problemSchema = z
     impact: moveImpactSchema
       .optional()
       .describe("Who gains and who loses access, with the confirmation to send, for `moveChangesAccess`."),
+    copyImpact: copyImpactSchema
+      .optional()
+      .describe(
+        "Who could read the copy but not the source, with the confirmation to send, for `copyChangesAccess`.",
+      ),
     formerParent: z
       .object({
         id: uuid("ID of the former parent page."),

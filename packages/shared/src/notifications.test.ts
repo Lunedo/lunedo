@@ -40,6 +40,7 @@ describe("notification events", () => {
       accessRequests: { inApp: true, email: "immediately", push: true },
       comments: { inApp: true, email: "digest", push: false },
       changes: { inApp: true, email: "off", push: false },
+      copies: { inApp: true, email: "off", push: false },
       blogPosts: { inApp: true, email: "digest", push: false },
       meetings: { inApp: true, email: "off", push: false },
       ownershipAndStatus: { inApp: true, email: "off", push: false },

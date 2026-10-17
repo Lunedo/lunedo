@@ -1526,7 +1526,11 @@
     "confluenceInvalidResponse": "Confluence schickte eine Antwort, die Pagehall nicht lesen kann. Prüfe die Adresse und versuche es erneut.",
     "confluenceUnreachable": "Pagehall hat Confluence nicht erreicht. Prüfe die Adresse und ob Confluence läuft, und versuche es erneut.",
     "confluenceRateLimited": "Confluence hat um Verlangsamung gebeten. Warte eine Minute und versuche es erneut.",
-    "confluenceSpaceMissing": "Den Bereich gibt es nicht, oder das Token kann ihn nicht lesen. Wähle einen anderen Bereich."
+    "confluenceSpaceMissing": "Den Bereich gibt es nicht, oder das Token kann ihn nicht lesen. Wähle einen anderen Bereich.",
+    "copyChangesAccess": "Die Kopie kann von Personen geöffnet werden, die das Original nicht öffnen können. Prüfe, wer Zugriff erhält, und bestätige dann die Kopie.",
+    "notCopyable": "Nur Seiten, Ordner und Whiteboards können kopiert werden. Kopiere stattdessen eine Seite oder einen Ordner.",
+    "neverPublished": "Die Seite wurde nie veröffentlicht und hat daher keinen Inhalt zum Kopieren. Veröffentliche sie zuerst und kopiere sie dann.",
+    "otherOrganization": "Inhalte können nur innerhalb ihrer Organisation kopiert werden. Wähle einen Space derselben Organisation."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -2493,7 +2497,8 @@
       "spaceAdministration": "Space-Verwaltung",
       "importsAndExports": "Importe und Exporte",
       "storageLevelReached": "Dateispeicher füllt sich",
-      "storageLevelCleared": "Belegung des Dateispeichers sinkt"
+      "storageLevelCleared": "Belegung des Dateispeichers sinkt",
+      "copies": "Meine Kopien"
     },
     "types": {
       "identityProvider": {
@@ -2583,6 +2588,10 @@
       "storage": {
         "levelReached": "{level, select, 1 {Der Dateispeicher ist zu {percent, number, ::.0} % belegt. Noch ist nichts gesperrt.} 2 {Der Dateispeicher ist zu {percent, number, ::.0} % belegt. Neue Exporte und Importe werden abgelehnt.} other {Der Dateispeicher ist zu {percent, number, ::.0} % belegt. Auch Uploads werden abgelehnt.}}",
         "levelCleared": "{level, select, 0 {Die Belegung des Dateispeichers ist wieder normal ({percent, number, ::.0} %).} 1 {Die Belegung des Dateispeichers ist auf {percent, number, ::.0} % gesunken. Exporte, Importe und Uploads funktionieren wieder.} other {Die Belegung des Dateispeichers ist auf {percent, number, ::.0} % gesunken. Uploads funktionieren wieder; neue Exporte und Importe werden weiter abgelehnt.}}"
+      },
+      "copy": {
+        "finished": "Deine Kopie {itemTitle} ist im Space {spaceKey} fertig.",
+        "failed": "Das Kopieren von {itemTitle} ist fehlgeschlagen, es wurde nichts angelegt. Kopiere erneut."
       }
     },
     "channelFor": "{event}: {channel}",
@@ -3703,7 +3712,8 @@
         "guestInvited": "Gast zu einer Seite eingeladen",
         "restrictionHolderAdded": "Person oder Gruppe zu einer Seitenbeschränkung hinzugefügt",
         "restrictionHolderRemoved": "Person oder Gruppe aus einer Seitenbeschränkung entfernt",
-        "subtreeExported": "Seite mit Unterseiten exportiert"
+        "subtreeExported": "Seite mit Unterseiten exportiert",
+        "copied": "Seite kopiert"
       },
       "whiteboard": {
         "updateRejected": "Änderung am Whiteboard abgelehnt",
@@ -4875,7 +4885,8 @@
       "loadFailed": "Der eingebundene Inhalt konnte nicht geladen werden.",
       "excerptName": "Name des Auszugs",
       "excerptNameHint": "Leer lassen für den ersten Auszug der Seite.",
-      "panel": "Titel der Seite über dem Auszug anzeigen"
+      "panel": "Titel der Seite über dem Auszug anzeigen",
+      "hiddenFromSomeReaders": "Nicht alle, die diese Seite lesen können, können die eingebundene Seite lesen. Sie sehen hier nichts."
     },
     "excerpt": {
       "title": "Auszug",
@@ -5272,7 +5283,8 @@
     "viewRestricted": "Eingeschränkt: Nur die Zugriffsliste kann sie ansehen",
     "editRestricted": "Eingeschränkt: Nur die Zugriffsliste kann sie bearbeiten",
     "newWhiteboard": "Neues Whiteboard",
-    "newWhiteboardInside": "Neues Whiteboard darin"
+    "newWhiteboardInside": "Neues Whiteboard darin",
+    "copy": "Kopieren …"
   },
   "move": {
     "title": "{title} verschieben",
@@ -5621,7 +5633,9 @@
       "restored": "Aus Version {number} wiederhergestellt",
       "modeChanged": "Bearbeitungsmodus geändert",
       "imported": "Aus Confluence",
-      "importedNotApplied": "Aus Confluence, nicht übernommen"
+      "importedNotApplied": "Aus Confluence, nicht übernommen",
+      "copied": "Kopiert von {title}",
+      "copiedHidden": "Von einer anderen Seite kopiert"
     },
     "draftChanges": "{count, plural, one {# Änderung, nicht veröffentlicht} other {# Änderungen, nicht veröffentlicht}}",
     "compare": "Vergleichen",
@@ -5703,7 +5717,8 @@
     "keepPublishMode": "Veröffentlichen-Modus behalten",
     "notPublishedTitle": "Noch nicht veröffentlicht",
     "notPublishedDescription": "Bis jemand die Seite veröffentlicht, sehen sie nur Bearbeiter.",
-    "publishedMeta": "Veröffentlicht am {date} · Version {version}"
+    "publishedMeta": "Veröffentlicht am {date} · Version {version}",
+    "openOriginal": "Original {title} öffnen"
   },
   "gallery": {
     "title": "In {space} erstellen",
@@ -6860,7 +6875,9 @@
       "deleteConfirm": "Space endgültig löschen",
       "deleted": "{key} wurde gelöscht.",
       "deleteFailed": "Der Space konnte nicht gelöscht werden"
-    }
+    },
+    "copyOutTitle": "Die Kopie verlässt den vertraulichen Space",
+    "copyOut": "Die Kopie ist nicht vor Admins geschützt, und die oben genannten Personen können sie öffnen."
   },
   "imports": {
     "title": "Import",
@@ -8970,5 +8987,59 @@
       },
       "sendsOrigin": "Erhält die Adresse dieser Instanz, nicht die der Seite."
     }
+  },
+  "copy": {
+    "title": "{title} kopieren",
+    "description": "Die Kopie entsteht aus der veröffentlichten Version, mit Anhängen und Labels. Kommentare, Freigaben und Beschränkungen bleiben beim Original.",
+    "space": "Space",
+    "parent": "Einordnen unter",
+    "parentHint": "Suche Seiten und Ordner nach Titel oder behalte die oberste Ebene.",
+    "topLevel": "Oberste Ebene des Space",
+    "folder": "Ordner",
+    "page": "Seite",
+    "noMatch": "Keine Seite und kein Ordner passt zum Titel.",
+    "noSpace": "Du kannst in keinem Space Inhalte anlegen und deshalb nichts kopieren. Bitte einen Space-Admin um die Rolle Bearbeiter.",
+    "position": "Position",
+    "first": "Am Anfang",
+    "last": "Am Ende",
+    "descendants": "Auch die Seiten darunter kopieren",
+    "contents": "Was kopiert wird",
+    "items": "{count, plural, one {# Eintrag wird angelegt.} other {# Einträge werden angelegt.}}",
+    "hidden": "{count, plural, one {# Eintrag darunter fehlt, weil du ihn nicht öffnen kannst.} other {# Einträge darunter fehlen, weil du sie nicht öffnen kannst.}}",
+    "skipped": "{count, plural, one {# Eintrag darunter kann nicht kopiert werden: Nie veröffentlichte Seiten, Besprechungen und Besprechungsreihen bleiben zurück.} other {# Einträge darunter können nicht kopiert werden: Nie veröffentlichte Seiten, Besprechungen und Besprechungsreihen bleiben zurück.}}",
+    "background": "Diese Kopie ist groß. Sie läuft im Hintergrund, und du bekommst eine Benachrichtigung, wenn sie fertig ist.",
+    "access": "Wer die Kopie öffnen kann",
+    "impactFailed": "Wer die Kopie öffnen kann, konnte nicht berechnet werden",
+    "impact": {
+      "noChangeTitle": "Dieselben Personen können die Kopie öffnen",
+      "noChange": "Alle, die das Original öffnen können, können die Kopie öffnen, und sonst niemand.",
+      "gaining": "{count, plural, one {# Person kann die Kopie öffnen, aber nicht das Original} other {# Personen können die Kopie öffnen, aber nicht das Original}}",
+      "losing": "{count, plural, one {# Person kann das Original öffnen, aber nicht die Kopie} other {# Personen können das Original öffnen, aber nicht die Kopie}}",
+      "changing": "{count, plural, one {# Person hat auf der Kopie eine andere Rolle} other {# Personen haben auf der Kopie eine andere Rolle}}"
+    },
+    "widerTitle": "Mehr Personen können die Kopie lesen als das Original",
+    "wider": "Beschränkungen des Originals werden nicht kopiert. Am neuen Ort können die oben genannten Personen Inhalte öffnen, die sie heute nicht öffnen können.",
+    "widerConfirm": "Diese Personen sollen die Kopie öffnen können",
+    "widerRequired": "Bestätige, dass diese Personen die Kopie öffnen dürfen, oder wähle einen anderen Ort.",
+    "submit": "Kopieren",
+    "submitToSpace": "Nach {space} kopieren",
+    "copied": "{title} kopiert",
+    "copiedToSpace": "{title} nach {space} kopiert",
+    "left": "{count, plural, one {# Eintrag wurde nicht kopiert.} other {# Einträge wurden nicht kopiert.}}",
+    "running": "{title} wird kopiert",
+    "progress": "{done} von {total} Einträgen kopiert",
+    "closeHint": "Du kannst diesen Dialog schließen. Du bekommst eine Benachrichtigung, wenn die Kopie fertig ist.",
+    "close": "Schließen",
+    "open": "Kopie öffnen",
+    "statusFailed": "Der Fortschritt der Kopie konnte nicht geladen werden",
+    "jobFailed": "Die Kopie ist fehlgeschlagen, es wurde nichts angelegt",
+    "errors": {
+      "copyChangesAccess": "Wer den Inhalt öffnen kann, hat sich nach deiner Bestätigung geändert. Kopiere erneut und prüfe den Zugriff.",
+      "storageFull": "Der Speicher ist fast voll, deshalb wurde die Kopie angehalten. Die Instanz-Administration wurde informiert.",
+      "copyInterrupted": "Die Kopie wurde unterbrochen, zum Beispiel durch einen Neustart. Kopiere erneut.",
+      "other": "Beim Kopieren ist etwas schiefgegangen. Kopiere erneut; schlägt es wieder fehl, wende dich an deine Administration."
+    },
+    "failed": "Der Eintrag konnte nicht kopiert werden",
+    "accessChanged": "Wer die Kopie öffnen kann, hat sich inzwischen geändert. Prüfe die Liste unten und kopiere erneut."
   }
 }

@@ -7,16 +7,31 @@ import { roleLabel } from "./holders.js";
 
 const SHOWN = 8;
 
-export function ImpactSummary({ impact }: { impact: AccessImpact }) {
+export interface ImpactTexts {
+  noChangeTitle: string;
+  noChange: string;
+  gaining: (count: number) => string;
+  losing: (count: number) => string;
+  changing: (count: number) => string;
+}
+
+export function ImpactSummary({ impact, texts }: { impact: AccessImpact; texts?: ImpactTexts }) {
   const { t } = useTranslation();
+  const words: ImpactTexts = texts ?? {
+    noChangeTitle: t("spaces.impact.noChangeTitle"),
+    noChange: t("spaces.impact.noChange"),
+    gaining: (count) => t("spaces.impact.gaining", { count }),
+    losing: (count) => t("spaces.impact.losing", { count }),
+    changing: (count) => t("spaces.impact.changing", { count }),
+  };
   const gaining = impact.changes.filter((change) => change.before === null);
   const losing = impact.changes.filter((change) => change.after === null);
   const changing = impact.changes.filter((change) => change.before !== null && change.after !== null);
   const total = impact.gaining + impact.losing + impact.raised + impact.lowered;
   if (total === 0) {
     return (
-      <Notice variant="info" title={t("spaces.impact.noChangeTitle")}>
-        {t("spaces.impact.noChange")}
+      <Notice variant="info" title={words.noChangeTitle}>
+        {words.noChange}
       </Notice>
     );
   }
@@ -35,7 +50,7 @@ export function ImpactSummary({ impact }: { impact: AccessImpact }) {
   return (
     <div className="flex flex-col gap-3">
       {impact.gaining > 0 ? (
-        <Notice variant="info" title={t("spaces.impact.gaining", { count: impact.gaining })}>
+        <Notice variant="info" title={words.gaining(impact.gaining)}>
           {list(
             gaining.map((change) => `${change.name} · ${roleLabel(t, change.after ?? "reader")}`),
             unlistedGaining,
@@ -43,7 +58,7 @@ export function ImpactSummary({ impact }: { impact: AccessImpact }) {
         </Notice>
       ) : null}
       {impact.losing > 0 ? (
-        <Notice variant="warning" title={t("spaces.impact.losing", { count: impact.losing })}>
+        <Notice variant="warning" title={words.losing(impact.losing)}>
           {list(
             losing.map((change) => change.name),
             unlistedLosing,
@@ -51,7 +66,7 @@ export function ImpactSummary({ impact }: { impact: AccessImpact }) {
         </Notice>
       ) : null}
       {changing.length > 0 || impact.raised + impact.lowered > 0 ? (
-        <Notice variant="info" title={t("spaces.impact.changing", { count: impact.raised + impact.lowered })}>
+        <Notice variant="info" title={words.changing(impact.raised + impact.lowered)}>
           {list(
             changing.map((change) =>
               t("spaces.impact.roleChange", {

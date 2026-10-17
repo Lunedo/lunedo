@@ -70,6 +70,8 @@ export const whiteboardVersions = pgTable(
     scene: jsonb().notNull(),
     reason: versionReason().notNull(),
     restoredFrom: integer(),
+    copiedFromId: uuid().references(() => treeItems.id, { onDelete: "set null" }),
+    copiedFromTitle: text(),
     revision: bigint({ mode: "number" }).notNull(),
     stateVector: bytes().notNull(),
     previewId: uuid().references((): AnyPgColumn => whiteboardPreviews.id, { onDelete: "set null" }),
@@ -81,6 +83,7 @@ export const whiteboardVersions = pgTable(
     uniqueIndex("whiteboard_versions_number_unique").on(table.itemId, table.number),
     index().on(table.previewId),
     index().on(table.createdBy),
+    index().on(table.copiedFromId),
     check("whiteboard_versions_number_positive", sql`${table.number} > 0`),
   ],
 );

@@ -51,6 +51,12 @@ const listQuery = z
       .enum(["true", "false"])
       .optional()
       .describe("`true` lists only the caller's one-on-ones. Without it, one-on-ones are left out."),
+    role: z
+      .enum(["reader", "commenter", "editor", "admin"])
+      .optional()
+      .describe(
+        "Only spaces where the caller holds at least this role, for example `editor` for the spaces the caller can create content in.",
+      ),
   })
   .strict();
 
@@ -118,6 +124,7 @@ export class SpacesController {
         organizationId: query.organizationId,
         archived: query.archived === "true",
         oneOnOne: query.oneOnOne === "true",
+        minimum: query.role,
         page: pageRequest(query, nameCursor),
       }),
     );

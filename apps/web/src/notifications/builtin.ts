@@ -6,6 +6,7 @@ import {
   CalendarClock,
   CalendarPlus,
   CircleDot,
+  Copy,
   FileArchive,
   FileInput,
   FilePen,
@@ -26,7 +27,7 @@ import {
   UserRoundX,
   Users,
 } from "lucide-react";
-import { blogPostPath, pagePath, whiteboardPath } from "../spaces/space-queries.js";
+import { blogPostPath, folderPath, pagePath, whiteboardPath } from "../spaces/space-queries.js";
 import { notificationTypes } from "./notification-types.js";
 import type { NotificationItem } from "./notifications-api.js";
 
@@ -182,6 +183,16 @@ notificationTypes.register(
     link: (item) =>
       item.target.id ? inOrganization(item, "/imports/$importId", { importId: item.target.id }) : null,
   },
+  {
+    id: "copy.finished",
+    icon: Copy,
+    link: (item) => {
+      const params = item.params as { itemKind?: string; itemTitle?: string; spaceKey?: string };
+      if (params.itemKind !== "folder" || !item.target.id) return contentLink(item);
+      return { to: folderPath(params.spaceKey ?? "", item.target.id, slugify(params.itemTitle ?? "")) };
+    },
+  },
+  { id: "copy.failed", icon: Copy, link: () => null },
   {
     id: "export.ready",
     icon: FileArchive,

@@ -11,6 +11,7 @@ import { ApiRoute } from "../http/api-route.js";
 import { notFound, ProblemException } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
 import { extensibleEnum, timestamp, uuid } from "../http/schemas.js";
+import { copiedFromSchema } from "../spaces/schemas.js";
 
 const TAG = "Whiteboards";
 const board = { type: "item", param: "itemId" } as const;
@@ -86,11 +87,14 @@ const versionSchema = z
     title: z.string().describe("Title of the whiteboard in this version."),
     reason: extensibleEnum(
       versionReasons,
-      "Why the version exists: `session` (an editing session ended or the board was idle) or `restored` (an older version was restored).",
+      "Why the version exists: `session` (an editing session ended or the board was idle), `restored` (an older version was restored) or `copied` (the board was created as a copy of `copiedFrom`).",
     ),
     restoredFrom: z.number().int().nullable().describe("The restored version, or null."),
+    copiedFrom: copiedFromSchema,
     createdAt: timestamp("When the version was created."),
-    createdBy: personSchema.nullable().describe("Who restored, or null for versions of editing sessions."),
+    createdBy: personSchema
+      .nullable()
+      .describe("Who restored or copied, or null for versions of editing sessions."),
     contributors: z
       .array(personSchema)
       .describe("Everyone who changed the board since the previous version."),
@@ -109,6 +113,7 @@ const exampleVersion = {
   title: "Network redesign 2027",
   reason: "session",
   restoredFrom: null,
+  copiedFrom: null,
   createdAt: "2026-10-16T09:12:00.000Z",
   createdBy: null,
   contributors: [examplePerson],
@@ -290,8 +295,8 @@ export class WhiteboardsController {
       example: [exampleVersion],
     },
   })
-  async versions(@Param("itemId") itemId: string) {
-    return this.#services.whiteboards.list(itemId);
+  async versions(@Param("itemId") itemId: string, @Req() request: FastifyRequest) {
+    return this.#services.copies.sources(actorOf(request), await this.#services.whiteboards.list(itemId));
   }
 
   @Get("whiteboards/:itemId/versions/:number")
@@ -307,8 +312,14 @@ export class WhiteboardsController {
       example: { ...exampleVersion, scene: exampleScene },
     },
   })
-  async version(@Param("itemId") itemId: string, @Param("number") number: number) {
-    const version = await this.#services.whiteboards.get(itemId, number);
+  async version(
+    @Param("itemId") itemId: string,
+    @Param("number") number: number,
+    @Req() request: FastifyRequest,
+  ) {
+    const stored = await this.#services.whiteboards.get(itemId, number);
+    if (!stored) throw notFound();
+    const [version] = await this.#services.copies.sources(actorOf(request), [stored]);
     if (!version) throw notFound();
     return version;
   }

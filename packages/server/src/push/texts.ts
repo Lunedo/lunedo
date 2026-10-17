@@ -104,6 +104,8 @@ const en: Texts = {
   "import.held": ({ params }) => ({ title: "Import paused", body: text(params.spaceKey) }),
   "export.ready": ({ params }) => ({ title: "Export ready to download", body: text(params.name) }),
   "export.failed": ({ params }) => ({ title: "Export failed", body: text(params.name) }),
+  "copy.finished": ({ params }) => ({ title: "Copy ready", body: text(params.itemTitle) }),
+  "copy.failed": ({ params }) => ({ title: "Copy failed", body: text(params.itemTitle) }),
   "chatChannel.failing": ({ params }) => ({
     title: "A chat channel stopped accepting messages",
     body: text(params.channelName),
@@ -246,6 +248,8 @@ const de: Texts = {
   "import.held": ({ params }) => ({ title: "Import angehalten", body: text(params.spaceKey) }),
   "export.ready": ({ params }) => ({ title: "Export bereit zum Herunterladen", body: text(params.name) }),
   "export.failed": ({ params }) => ({ title: "Export fehlgeschlagen", body: text(params.name) }),
+  "copy.finished": ({ params }) => ({ title: "Kopie fertig", body: text(params.itemTitle) }),
+  "copy.failed": ({ params }) => ({ title: "Kopieren fehlgeschlagen", body: text(params.itemTitle) }),
   "chatChannel.failing": ({ params }) => ({
     title: "Ein Chat-Kanal nimmt keine Nachrichten mehr an",
     body: text(params.channelName),

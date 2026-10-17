@@ -54,11 +54,28 @@ A tree item is a page, a folder or a link:
 - **Folders** hold other items and show them as a list or as tiles, with an optional description. A folder can be turned into a page and back, without losing its children.
 - **Links** point to an item in any space, or to a web address. A link to an item the reader cannot open shows "No access", without the item's title.
 
-Items are ordered by a fractional position, so a move changes only the moved item. Moves lock the affected spaces, check that an item never ends up below itself, and reject a move whose neighbors changed in the meantime (`itemMoved`), so two people moving items at the same moment never break the tree. Moving an item to another space needs the editor role in both spaces; the move dialog shows first how access to the item changes.
+Items are ordered by a fractional position, so a move changes only the moved item. To duplicate an item instead, see [Copying](#copying). Moves lock the affected spaces, check that an item never ends up below itself, and reject a move whose neighbors changed in the meantime (`itemMoved`), so two people moving items at the same moment never break the tree. Moving an item to another space needs the editor role in both spaces; the move dialog shows first how access to the item changes.
 
 Changes to the tree reach every open sidebar at once through the live updates stream.
 
 In the sidebar, the page tree is operated with the keyboard: arrow keys move and open levels, Home and End jump to the first and last item, Shift+F10 opens the item's menu, and **Move…** in that menu moves an item without dragging. A move by drag and drop can be undone for 5 seconds.
+
+## Copying
+
+**Copy…** in the menu of a page, folder or whiteboard, in the page tree and on the item itself, creates a copy within the space or in another space of the same organization. A page can be copied alone or with the pages below it; a folder is always copied with its content.
+
+- **Who can copy:** everyone who can read the item, into a space where they have the editor role. Copying out of a confidential space needs the editor role there as well, like moving.
+- **What a copy contains:** the published version of each item (never a draft) as its first version, with "Copied from …" and a link to the original in its history for people who can read the original; everyone else sees "Copied from another page". The current version of every attachment comes along, including the files of drawings and diagrams; older attachment versions do not. Whiteboards keep their images and preview. Labels, page properties, page width, numbered headings and the page status (matched by name in another space) are copied; the person copying becomes the owner.
+- **What stays behind:** comments, reactions, watchers, shares and share links, the version history and view or edit restrictions. Tasks are copied as new tasks with their assignees.
+- **Links:** links between copied pages point to the copies; all other links, includes, excerpts and live diagram references keep pointing to their original targets.
+- **Titles:** when the target space already has an item with the same title, the copy is called "Copy of …", then "Copy of … (2)" and so on.
+- **Left out:** items below that the person cannot read, pages that were never published, meetings and meeting series. The dialog and the result say how many, never which.
+
+A copy inherits the restrictions of its new place. Before copying, the dialog shows who can open the copy compared with the original. When people can open the copy who cannot open the original, the dialog says so and asks for an explicit confirmation; the copy is recorded as `page.copied` in the audit log, with the source, the target, the counts and whether the access was wider.
+
+Copies of more than 20 items run in the background. The dialog shows their progress and can be closed; a notification arrives when the copy is done or failed. A copy reads the original at one point in time, so changes made while it runs are not half copied, and a copy that fails leaves nothing behind. While it runs, people keep editing and creating pages, also in the target space; moving or deleting the place the copy goes to takes priority, and the copy then starts again at the new place or fails because the place is gone. Attachments of a copy share the stored files of the original, so a copy takes almost no extra storage; when storage is almost full, copies with attachments are refused like uploads.
+
+Through the API, `POST /api/v1/items/{itemId}/copy/preview` shows the access and the counts, `POST /api/v1/items/{itemId}/copy` copies, and `GET /api/v1/copies/{copyId}` returns the progress of a copy running in the background.
 
 ## Pages
 

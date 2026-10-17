@@ -126,6 +126,14 @@ const english: Record<ContentNotificationType, Line> = {
     `Your export of ${text(p.name)} is ready to download until ${c.dateTime(text(p.expiresAt))}.`,
   "export.failed": (p) =>
     `Your export of ${text(p.name)} failed. Open your exports to see why and what to do.`,
+  "copy.finished": (p) => {
+    const left = Number(p.hidden) + Number(p.skipped);
+    return `Your copy ${text(p.itemTitle)} is ready in the space ${text(p.spaceKey)}.${
+      left > 0 ? ` ${left === 1 ? "1 item was" : `${left} items were`} not copied.` : ""
+    }`;
+  },
+  "copy.failed": (p) =>
+    `Copying ${text(p.itemTitle)} failed and nothing was created. Start the copy again; if it fails again, ask your administrator.`,
   "oneOnOne.started": (p, c) =>
     `${c.actor ?? "Someone"} started a one-on-one with you: ${text(p.itemTitle)}.`,
   "chatChannel.failing": (p) =>
@@ -208,6 +216,14 @@ const german: Record<ContentNotificationType, Line> = {
     `Ihr Export von ${text(p.name)} steht bis ${c.dateTime(text(p.expiresAt))} zum Herunterladen bereit.`,
   "export.failed": (p) =>
     `Ihr Export von ${text(p.name)} ist fehlgeschlagen. Öffnen Sie Ihre Exporte, um zu sehen, warum und was zu tun ist.`,
+  "copy.finished": (p) => {
+    const left = Number(p.hidden) + Number(p.skipped);
+    return `Ihre Kopie ${text(p.itemTitle)} ist im Space ${text(p.spaceKey)} fertig.${
+      left > 0 ? ` ${left === 1 ? "1 Element wurde" : `${left} Elemente wurden`} nicht kopiert.` : ""
+    }`;
+  },
+  "copy.failed": (p) =>
+    `Das Kopieren von ${text(p.itemTitle)} ist fehlgeschlagen, es wurde nichts angelegt. Starten Sie die Kopie erneut; schlägt sie wieder fehl, wenden Sie sich an Ihre Administration.`,
   "oneOnOne.started": (p, c) =>
     `${c.actor ?? "Jemand"} hat ein 1:1 mit Ihnen gestartet: ${text(p.itemTitle)}.`,
   "chatChannel.failing": (p) =>

@@ -8,7 +8,7 @@ Everything Excalidraw needs, including its fonts, is served by the instance. Whi
 
 ### Creating and organizing
 
-Create a whiteboard with **+** in the page tree of a space, or with **New whiteboard inside** in the menu of a page or folder. Whiteboards are renamed, moved, archived, moved to the trash and restored like pages. They can be starred and watched. Whiteboards cannot contain pages.
+Create a whiteboard with **+** in the page tree of a space, or with **New whiteboard inside** in the menu of a page or folder. Whiteboards are renamed, moved, copied, archived, moved to the trash and restored like pages; a copy keeps its images and preview (see [Copying](spaces.md#copying)). They can be starred and watched. Whiteboards cannot contain pages.
 
 Access follows the space and the page tree, like pages: view restrictions of parent pages apply, a whiteboard can be restricted and shared with people outside the space, and people without access cannot open it, connect to it or see its image.
 

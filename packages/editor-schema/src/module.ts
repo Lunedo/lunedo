@@ -363,6 +363,17 @@ export interface WordRenderer extends BaseRenderer {
 
 export type Unsupported = "unsupported";
 
+export interface CopiedAttachment {
+  id: string;
+  version: number | null;
+}
+
+export interface CopyMapping {
+  attachment(reference: CopiedAttachment): CopiedAttachment;
+  page(id: string): { id: string; spaceId: string } | null;
+  href(href: string): string;
+}
+
 export interface NodeDefinition {
   name: string;
   spec: Omit<NodeSpec, "attrs" | "toDOM" | "parseDOM" | "content" | "marks"> & {
@@ -377,6 +388,7 @@ export interface NodeDefinition {
   markdown: (node: ValidNode, renderer: MarkdownRenderer) => string;
   text?: (node: ValidNode) => string;
   heading?: (node: ValidNode, text: string) => { level: number; text: string };
+  copy?: (attrs: Record<string, unknown>, mapping: CopyMapping) => Record<string, unknown>;
 }
 
 export interface MarkDefinition {
@@ -386,6 +398,7 @@ export interface MarkDefinition {
   html: (mark: ValidMark, content: string, renderer: HtmlRenderer) => string;
   word?: (mark: ValidMark, style: WordTextStyle, renderer: WordRenderer) => WordTextStyle;
   markdown: (mark: ValidMark, content: string, renderer: MarkdownRenderer) => string;
+  copy?: (attrs: Record<string, unknown>, mapping: CopyMapping) => Record<string, unknown> | null;
 }
 
 export interface EditorModule {

@@ -687,6 +687,26 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
     },
   };
 
+  const copyOf: ResourceType = {
+    type: "copy",
+    actions: {
+      "copy.view": {
+        scope: "instance",
+        rule: "copyOwner",
+        tokenScope: { area: "spaces", level: "view" },
+      },
+    },
+    rules: {
+      copyOwner: async (context) => {
+        const id = context.resource.id;
+        if (!id || !UUID.test(id)) return false;
+        const result = await context.executor.execute<{ id: string }>(sql`
+          select id from item_copies where id = ${id.toLowerCase()} and account_id = ${context.accountId}`);
+        return result.rows.length > 0;
+      },
+    },
+  };
+
   return [
     instance,
     organization,
@@ -701,6 +721,7 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
     attachment,
     importOf,
     exportOf,
+    copyOf,
   ];
 }
 

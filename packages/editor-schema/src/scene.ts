@@ -405,6 +405,24 @@ export function visibleScene(scene: Scene): Scene {
   return { elements, files, settings: scene.settings };
 }
 
+export function copyScene(
+  scene: Scene,
+  mapping: { attachment(id: string): string; href(href: string): string },
+): Scene {
+  return {
+    ...scene,
+    elements: scene.elements.map((element) =>
+      typeof element.link === "string" ? { ...element, link: mapping.href(element.link) } : element,
+    ),
+    files: Object.fromEntries(
+      Object.entries(scene.files).map(([id, file]) => [
+        id,
+        { ...file, attachmentId: mapping.attachment(file.attachmentId) },
+      ]),
+    ),
+  };
+}
+
 export function emptyScene(): Scene {
   return { elements: [], files: {}, settings: { viewBackgroundColor: null } };
 }

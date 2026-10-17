@@ -5,6 +5,7 @@ import { MeetingsController } from "../meetings/meetings.controller.js";
 import { OneOnOnesController } from "../meetings/one-on-ones.controller.js";
 import { WhiteboardsController } from "../whiteboards/whiteboards.controller.js";
 import { ConfidentialSpacesController } from "./confidential-spaces.controller.js";
+import { CopiesController } from "./copies.controller.js";
 import { ItemsController } from "./items.controller.js";
 import { OrganizationSpacesController } from "./organization-spaces.controller.js";
 import { OwnershipController } from "./ownership.controller.js";
@@ -21,6 +22,7 @@ import { VersionsController } from "./versions.controller.js";
     OrganizationSpacesController,
     ConfidentialSpacesController,
     ItemsController,
+    CopiesController,
     OwnershipController,
     ShortcutsController,
     PersonalSpacesController,

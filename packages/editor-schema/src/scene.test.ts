@@ -3,6 +3,7 @@ import * as Y from "yjs";
 import {
   applyScene,
   boundText,
+  copyScene,
   emptyScene,
   hasOnlySceneTypes,
   isAllowedElementLink,
@@ -315,5 +316,29 @@ describe("scenes in Yjs", () => {
       ok: true,
       scene: emptyScene(),
     });
+  });
+});
+
+describe("copyScene", () => {
+  it("points image files to the copied attachments and rewrites element links", () => {
+    const scene: Scene = {
+      elements: [
+        {
+          ...base("a", "rectangle"),
+          link: "/spaces/HR/pages/old/intro",
+        } as unknown as Scene["elements"][number],
+        base("b", "ellipse") as unknown as Scene["elements"][number],
+      ],
+      files: { image: { attachmentId: "01929b1e-0000-7000-8000-000000000001", mimeType: "image/png" } },
+      settings: { viewBackgroundColor: null },
+    };
+    const copied = copyScene(scene, {
+      attachment: () => "01929b1e-0000-7000-8000-000000000002",
+      href: (href) => href.replace("old", "new"),
+    });
+    expect(copied.files.image?.attachmentId).toBe("01929b1e-0000-7000-8000-000000000002");
+    expect(copied.elements[0]?.link).toBe("/spaces/HR/pages/new/intro");
+    expect(copied.elements[1]).toEqual(scene.elements[1]);
+    expect(scene.files.image?.attachmentId).toBe("01929b1e-0000-7000-8000-000000000001");
   });
 });
