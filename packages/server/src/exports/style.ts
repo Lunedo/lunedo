@@ -97,6 +97,21 @@ const contentRules = [
   highlightRules,
   `.ph-index ul{list-style:none;padding-left:${space[5]}}.ph-index>ul{padding-left:0}.ph-index li{margin-top:${space[1]}}`,
   `.ph-unavailable{border:1px dashed var(--border);border-radius:${radius.md};padding:${space[2]} ${space[3]};color:var(--text-muted)}`,
+  ".ph-page-properties th{width:30%}",
+  `.ph-listing-meta,.ph-listing-more{color:var(--text-muted);font-size:${font.size.sm}}.ph-listing-meta{margin-left:${space[2]}}`,
+  `.ph-label-list{display:flex;flex-wrap:wrap;gap:${space[2]};list-style:none;padding-left:0}`,
+  `section.ph-include{border:1px solid var(--border);border-radius:${radius.md};padding:${space[3]} ${space[4]}}.ph-include-title{font-weight:600}`,
+  ".ph-include-note{color:var(--text-muted);font-style:italic}",
+  `.ph-roadmap svg{max-width:100%;height:auto}.ph-roadmap figcaption{color:var(--text-muted);font-size:${font.size.sm}}`,
+  ".ph-roadmap-grid{stroke:var(--border)}.ph-roadmap-month{fill:var(--text-muted)}.ph-roadmap-marker line{stroke:var(--red-text)}.ph-roadmap-marker text{fill:var(--red-text)}",
+  contentNames
+    .map(
+      (name) =>
+        `.ph-roadmap-lane[data-color="${name}"]{fill:var(--${name}-background);fill-opacity:.35}` +
+        `.ph-roadmap-bar[data-color="${name}"]{fill:var(--${name}-background)}` +
+        `:is(.ph-roadmap-lane-title,.ph-roadmap-bar-title)[data-color="${name}"]{fill:var(--${name}-text)}`,
+    )
+    .join(""),
 ];
 
 export const exportStyle = [
@@ -136,6 +151,7 @@ export function printStyle(options: PrintStyleOptions): string {
     "*,*::before,*::after{box-sizing:border-box}",
     `body{margin:0;background:var(--bg);color:var(--text);font-family:${font.family.sans};font-size:${font.size.content};line-height:${font.lineHeight.content};overflow-wrap:anywhere}`,
     ...contentRules,
+    ".ph-roadmap-list{display:none}",
     `.ph-front{margin-bottom:${space[6]}}`,
     `.ph-path{margin:0 0 ${space[1]};color:var(--text-muted);font-size:${font.size.sm}}`,
     `.ph-document-title,.ph-page-title{margin:0 0 ${space[2]};font-size:${font.size["2xl"]};line-height:${font.lineHeight.tight}}`,

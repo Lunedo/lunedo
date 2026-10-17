@@ -1,15 +1,26 @@
 import {
   type ChildPagesRequest,
+  type ContentByLabelRequest,
   type DecisionReportRequest,
   type DocumentJson,
   escapeHtml,
+  excerptContent,
   extractHeadings,
   formatBytes,
   type Heading,
+  type IncludedContent,
+  type IncludeRequest,
+  includeRequest,
+  type LabeledContent,
   type ListedAttachment,
   type ListedPage,
+  MAX_INCLUDE_DEPTH,
   markdownUrl,
   type PageReportRequest,
+  type PropertiesReport,
+  type PropertiesReportRequest,
+  type RelatedLabel,
+  type RelatedLabelsRequest,
   type RenderContext,
   type RenderLabels,
   type ReportedDecision,
@@ -36,13 +47,16 @@ import {
   type PageDocumentService,
   type PageReferences,
   pagePath,
+  relatedLabelsKey,
   reportKey,
 } from "../spaces/documents.js";
+import { type IncludeService, includeKey } from "../spaces/includes.js";
 import type { PeopleService } from "../spaces/people.js";
 import type { ReportService } from "../spaces/reports.js";
 import { visibleItem } from "../spaces/visibility.js";
 import { exportStyle } from "./style.js";
 import type { ExportTexts } from "./texts.js";
+import { svgPalette } from "./word.js";
 
 export type ExportFormat = "markdown" | "html";
 
@@ -53,8 +67,23 @@ const PAGE_ADDRESS = new RegExp(
 );
 const ATTACHMENT_ADDRESS = new RegExp(`^/api/v1/attachments/(${UUID})/content$`, "i");
 const MAX_REPORTED_TASKS = 200;
+const MAX_INCLUDES = 50;
+const MAX_INCLUDED_PAGES = 100;
+const INCLUDE_BLOCKS = ["includeExcerpt", "includePage"];
 
-type Module = "childPages" | "attachmentList" | "pageReport" | "decisionReport" | "taskReport" | "taskStatus";
+type Module =
+  | "childPages"
+  | "attachmentList"
+  | "pageReport"
+  | "decisionReport"
+  | "taskReport"
+  | "taskStatus"
+  | "propertiesReport"
+  | "include";
+
+export type PreparedInclusion =
+  | { state: "visible"; title: string; href: string; document: DocumentJson; page: PreparedPage }
+  | { state: "hidden" | "loop" | "depth" | "noExcerpt" };
 
 export interface Locator {
   page(pageId: string, format: ExportFormat): string | null;
@@ -99,6 +128,10 @@ export interface PreparedPage {
   pageReports: ReadonlyMap<string, readonly ReportedPage[]> | null;
   decisionReports: ReadonlyMap<string, readonly ReportedDecision[]> | null;
   taskReports: ReadonlyMap<string, readonly ReportedTask[]> | null;
+  propertiesReports: ReadonlyMap<string, PropertiesReport> | null;
+  contentByLabel: ReadonlyMap<string, readonly LabeledContent[]> | null;
+  relatedLabels: ReadonlyMap<string, readonly RelatedLabel[]> | null;
+  included: ReadonlyMap<string, PreparedInclusion> | null;
   taskStatus: ReadonlyMap<string, boolean> | null;
   meeting: { startsAt: Date | null; attendees: string[] } | null;
   unavailable: ReadonlySet<Module>;
@@ -133,12 +166,22 @@ function collectListedIds(pages: readonly ListedPage[], into: Set<string>): void
 
 type Target = ExportFormat | "print";
 
+type ContextTarget = "screen" | "print" | "word";
+
+const emptyModules = {
+  propertiesReports: null,
+  contentByLabel: null,
+  relatedLabels: null,
+  included: null,
+} as const;
+
 export class PageExportRenderer {
   readonly #database: Database;
   readonly #authorization: AuthorizationService;
   readonly #documents: PageDocumentService;
   readonly #attachments: AttachmentService;
   readonly #reports: ReportService;
+  readonly #includes: IncludeService;
   readonly #tasks: TaskService;
   readonly #people: PeopleService;
   readonly #logger: Logger;
@@ -153,6 +196,7 @@ export class PageExportRenderer {
     documents: PageDocumentService;
     attachments: AttachmentService;
     reports: ReportService;
+    includes: IncludeService;
     tasks: TaskService;
     people: PeopleService;
     logger: Logger;
@@ -166,6 +210,7 @@ export class PageExportRenderer {
     this.#documents = options.documents;
     this.#attachments = options.attachments;
     this.#reports = options.reports;
+    this.#includes = options.includes;
     this.#tasks = options.tasks;
     this.#people = options.people;
     this.#logger = options.logger;
@@ -230,7 +275,63 @@ export class PageExportRenderer {
     return (await this.#people.visibleNames(this.#viewer, [accountId])).get(accountId) ?? null;
   }
 
-  async prepare(pageId: string): Promise<PreparedPage | null> {
+  async #inclusions(
+    pageId: string,
+    document: DocumentJson,
+    chain: readonly string[],
+    budget: { left: number },
+  ): Promise<Map<string, PreparedInclusion>> {
+    const result = new Map<string, PreparedInclusion>();
+    const blocks = INCLUDE_BLOCKS.flatMap((type) => blocksOfType(document, type));
+    for (const block of blocks) {
+      const request = includeRequest({
+        type: block.type,
+        attrs: { pageId: null, sourceSpace: null, sourceTitle: null, name: null, ...block.attrs },
+      });
+      const key = includeKey(request);
+      if (result.has(key)) continue;
+      if (result.size >= MAX_INCLUDES) break;
+      result.set(key, await this.#inclusion(pageId, request, chain, budget));
+    }
+    return result;
+  }
+
+  async #inclusion(
+    pageId: string,
+    request: IncludeRequest,
+    chain: readonly string[],
+    budget: { left: number },
+  ): Promise<PreparedInclusion> {
+    const target = await this.#includes.target(this.#viewer, pageId, request);
+    if (!target || !(await this.#readerVisible([target.id])).has(target.id)) return { state: "hidden" };
+    if (
+      !(await this.#authorization.authorize(this.#viewer, "item.export", { type: "item", id: target.id }))
+    ) {
+      return { state: "hidden" };
+    }
+    if (target.id === pageId || chain.includes(target.id)) return { state: "loop" };
+    if (chain.length + 1 > MAX_INCLUDE_DEPTH || budget.left <= 0) return { state: "depth" };
+    budget.left -= 1;
+    const prepared = await this.prepare(target.id, [...chain, pageId], budget);
+    if (!prepared || prepared.failed) return { state: "hidden" };
+    const content = request.excerpt
+      ? excerptContent(prepared.document, request.name)
+      : (prepared.document.content ?? []);
+    if (!content) return { state: "noExcerpt" };
+    return {
+      state: "visible",
+      title: prepared.title,
+      href: target.path,
+      document: { type: "doc", content },
+      page: prepared,
+    };
+  }
+
+  async prepare(
+    pageId: string,
+    chain: readonly string[] = [],
+    budget = { left: MAX_INCLUDED_PAGES },
+  ): Promise<PreparedPage | null> {
     const readable = await this.#documents.readable(pageId);
     if (!readable) return null;
     const document = readable.document;
@@ -252,16 +353,33 @@ export class PageExportRenderer {
           )
         : null;
       const reports = await this.#load("pageReport", unavailable, () =>
-        this.#reports.forDocument(this.#viewer, document),
+        this.#reports.forDocument(this.#viewer, document, pageId),
       );
-      if (!reports) unavailable.add("decisionReport");
+      if (!reports) {
+        unavailable.add("decisionReport");
+        unavailable.add("propertiesReport");
+      }
+      const included = await this.#load("include", unavailable, () =>
+        this.#inclusions(pageId, document, chain, budget),
+      );
       const taskReports = await this.#load("taskReport", unavailable, () => this.#taskReports(document));
       const taskStatus = await this.#load("taskStatus", unavailable, async () => {
         const statuses = await this.#tasks.statuses(this.#viewer, pageId);
         return new Map(statuses.map((status) => [status.id, status.done]));
       });
       const meeting = await this.#meeting(pageId);
-      const referenced = new Set<string>(Object.keys(references.pages));
+      const merged: PageReferences = {
+        people: { ...reports?.references.people, ...references.people },
+        pages: { ...reports?.references.pages, ...references.pages },
+        topics: references.topics,
+      };
+      const referenced = new Set<string>(Object.keys(merged.pages));
+      for (const report of reports?.propertiesReports.values() ?? []) {
+        for (const row of report.rows) referenced.add(pageIdOf(row.href) ?? "");
+      }
+      for (const items of reports?.contentByLabel.values() ?? []) {
+        for (const item of items) referenced.add(pageIdOf(item.href) ?? "");
+      }
       for (const pages of childPages?.values() ?? []) collectListedIds(pages, referenced);
       for (const pages of reports?.pageReports.values() ?? []) {
         for (const page of pages) referenced.add(pageIdOf(page.href) ?? "");
@@ -287,9 +405,9 @@ export class PageExportRenderer {
         updatedAt: readable.updatedAt,
         document,
         references: {
-          ...references,
+          ...merged,
           pages: Object.fromEntries(
-            Object.entries(references.pages).map(([id, page]) => [
+            Object.entries(merged.pages).map(([id, page]) => [
               id,
               page.accessible && !visible.has(id)
                 ? { title: "", spaceKey: "", kind: "page", accessible: false, inTrash: false }
@@ -325,6 +443,24 @@ export class PageExportRenderer {
               ]),
             )
           : null,
+        propertiesReports: reports
+          ? new Map(
+              [...reports.propertiesReports].map(([key, report]) => {
+                const rows = report.rows.filter((row) => listedVisible(row.href));
+                return [key, { ...report, rows, total: report.total - (report.rows.length - rows.length) }];
+              }),
+            )
+          : null,
+        contentByLabel: reports
+          ? new Map(
+              [...reports.contentByLabel].map(([key, items]) => [
+                key,
+                items.filter((item) => listedVisible(item.href)),
+              ]),
+            )
+          : null,
+        relatedLabels: reports?.relatedLabels ?? null,
+        included,
         taskStatus,
         meeting,
         unavailable,
@@ -347,6 +483,7 @@ export class PageExportRenderer {
         pageReports: null,
         decisionReports: null,
         taskReports: null,
+        ...emptyModules,
         taskStatus: null,
         meeting: null,
         unavailable,
@@ -385,6 +522,7 @@ export class PageExportRenderer {
       pageReports: null,
       decisionReports: null,
       taskReports: null,
+      ...emptyModules,
       taskStatus: null,
       meeting: null,
       unavailable: new Set(),
@@ -472,6 +610,16 @@ export class PageExportRenderer {
       ...(page.unavailable.has("pageReport") ? { pageReport: unavailable("pageReport") } : {}),
       ...(page.unavailable.has("decisionReport") ? { decisionReport: unavailable("decisionReport") } : {}),
       ...(page.unavailable.has("taskReport") ? { taskReport: unavailable("taskReport") } : {}),
+      ...(page.unavailable.has("propertiesReport")
+        ? {
+            propertiesReport: unavailable("propertiesReport"),
+            contentByLabel: unavailable("contentByLabel"),
+            relatedLabels: unavailable("relatedLabels"),
+          }
+        : {}),
+      ...(page.unavailable.has("include")
+        ? { includedPage: unavailable("includedPage"), includedExcerpt: unavailable("includedExcerpt") }
+        : {}),
     };
   }
 
@@ -492,10 +640,16 @@ export class PageExportRenderer {
     };
   }
 
-  #context(page: PreparedPage, format: ExportFormat, locator: Locator, print = false): RenderContext {
+  #context(
+    page: PreparedPage,
+    format: ExportFormat,
+    locator: Locator,
+    target: ContextTarget = "screen",
+  ): RenderContext {
     const { references } = page;
     return {
-      ...(print ? { target: "print" as const } : {}),
+      ...(target === "print" ? { target: "print" as const } : {}),
+      ...(target === "word" ? { svgPalette } : {}),
       nodeTitle: (type) => this.#texts.nodeTitles[type] ?? this.#texts.someContent,
       labels: this.#labels(page),
       href: this.#address(format, locator),
@@ -528,6 +682,27 @@ export class PageExportRenderer {
         page.decisionReports ? (page.decisionReports.get(reportKey(request)) ?? []) : null,
       taskReport: (request: TaskReportRequest) =>
         page.taskReports ? (page.taskReports.get(taskKey(request)) ?? []) : null,
+      propertiesReport: (request: PropertiesReportRequest) =>
+        page.propertiesReports
+          ? (page.propertiesReports.get(reportKey(request)) ?? { columns: [], rows: [], total: 0 })
+          : null,
+      contentByLabel: (request: ContentByLabelRequest) =>
+        page.contentByLabel ? (page.contentByLabel.get(reportKey(request)) ?? []) : null,
+      relatedLabels: (request: RelatedLabelsRequest) =>
+        page.relatedLabels ? (page.relatedLabels.get(relatedLabelsKey(request.labels)) ?? []) : null,
+      include: (request: IncludeRequest): IncludedContent | null => {
+        if (!page.included) return null;
+        const entry = page.included.get(includeKey(request));
+        if (!entry) return { state: "hidden" };
+        if (entry.state !== "visible") return { state: entry.state };
+        return {
+          state: "visible",
+          title: entry.title,
+          href: entry.href,
+          document: entry.document,
+          context: this.#context(entry.page, format, locator, target),
+        };
+      },
       taskStatus: (id) => page.taskStatus?.get(id) ?? null,
     };
   }
@@ -553,7 +728,7 @@ export class PageExportRenderer {
     if (page.board) return this.#boardBody(page, format, locator);
     if (!page.failed) {
       try {
-        const context = this.#context(page, format, locator, target === "print");
+        const context = this.#context(page, format, locator, target === "print" ? "print" : "screen");
         return format === "html"
           ? renderHtml(page.document, context)
           : renderMarkdown(page.document, context);
@@ -587,7 +762,7 @@ export class PageExportRenderer {
     }
     if (!page.failed) {
       try {
-        return renderWord(page.document, this.#context(page, "html", locator));
+        return renderWord(page.document, this.#context(page, "html", locator, "word"));
       } catch (error) {
         this.#logger.warn({ err: error }, "A page could not be rendered for an export");
       }

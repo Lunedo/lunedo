@@ -23,6 +23,7 @@ import { timeFormatSetting } from "../settings/preferences.js";
 import type { SettingsService } from "../settings/service.js";
 import { auditScopeOf } from "../spaces/common.js";
 import type { PageDocumentService } from "../spaces/documents.js";
+import type { IncludeService } from "../spaces/includes.js";
 import type { PeopleService } from "../spaces/people.js";
 import type { ReportService } from "../spaces/reports.js";
 import { visibleItem } from "../spaces/visibility.js";
@@ -280,6 +281,7 @@ export class ExportService {
   readonly #documents: PageDocumentService;
   readonly #attachments: AttachmentService;
   readonly #reports: ReportService;
+  readonly #includes: IncludeService;
   readonly #tasks: TaskService;
   readonly #people: PeopleService;
   readonly #address: InstanceAddressService;
@@ -301,6 +303,7 @@ export class ExportService {
     documents: PageDocumentService;
     attachments: AttachmentService;
     reports: ReportService;
+    includes: IncludeService;
     tasks: TaskService;
     people: PeopleService;
     address: InstanceAddressService;
@@ -321,6 +324,7 @@ export class ExportService {
     this.#documents = options.documents;
     this.#attachments = options.attachments;
     this.#reports = options.reports;
+    this.#includes = options.includes;
     this.#tasks = options.tasks;
     this.#people = options.people;
     this.#address = options.address;
@@ -362,6 +366,7 @@ export class ExportService {
       documents: this.#documents,
       attachments: this.#attachments,
       reports: this.#reports,
+      includes: this.#includes,
       tasks: this.#tasks,
       people: this.#people,
       logger: this.#logger,

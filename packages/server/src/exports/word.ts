@@ -108,6 +108,10 @@ function content(name: string | undefined, part: "text" | "background"): string 
   return entry ? hex(entry[part]) : undefined;
 }
 
+export function svgPalette(name: ContentColorName, part: "text" | "background"): string {
+  return `#${content(name, part) ?? hex(color.light.textMuted)}`;
+}
+
 const MUTED = hex(color.light.textMuted);
 const BORDER = hex(color.light.border);
 const SUNKEN = hex(color.light.surfaceSunken);
@@ -259,6 +263,8 @@ class WordWriter {
         return [await this.box("quote", [], block.content)];
       case "image":
         return [await this.image(block)];
+      case "svg":
+        return [this.svg(block)];
       case "rule":
         return [new Paragraph({ border: { bottom: line(6) }, children: [] })];
       case "contents":
@@ -437,6 +443,24 @@ class WordWriter {
               fallback: { type: "png", data: SVG_FALLBACK },
             })
           : new ImageRun({ ...common, type: image.type, data: image.data }),
+      ],
+    });
+  }
+
+  svg(block: Extract<WordBlock, { type: "svg" }>): Paragraph {
+    const maximum = Math.floor(this.#textWidth * PIXELS_PER_TWIP);
+    const width = Math.min(block.width, maximum);
+    const height = Math.max(1, Math.round((block.height * width) / Math.max(1, block.width)));
+    return new Paragraph({
+      alignment: AlignmentType.CENTER,
+      children: [
+        new ImageRun({
+          type: "svg",
+          data: Buffer.from(block.svg, "utf8"),
+          fallback: { type: "png", data: SVG_FALLBACK },
+          transformation: { width, height },
+          altText: { name: block.alt, description: block.alt, title: block.alt },
+        }),
       ],
     });
   }

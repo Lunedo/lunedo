@@ -126,6 +126,52 @@ export function sampleDocument(): DocumentJson {
       { type: "pageReport", attrs: {} },
       { type: "decisionReport", attrs: {} },
       { type: "taskReport", attrs: {} },
+      {
+        type: "pageProperties",
+        attrs: {},
+        content: [
+          {
+            type: "pageProperty",
+            content: [
+              { type: "pagePropertyKey", content: [text("Uplink")] },
+              { type: "pagePropertyValue", content: [paragraph(text("1 Gbit/s fibre"))] },
+            ],
+          },
+        ],
+      },
+      { type: "propertiesReport", attrs: { columns: ["Uplink"] } },
+      { type: "contentByLabel", attrs: { labels: ["network"] } },
+      { type: "relatedLabels", attrs: {} },
+      { type: "excerpt", attrs: {}, content: [paragraph(text("Short summary"))] },
+      { type: "includeExcerpt", attrs: { pageId: SAMPLE_PAGE } },
+      { type: "includePage", attrs: { pageId: SAMPLE_PAGE } },
+      {
+        type: "roadmap",
+        attrs: {
+          roadmap: {
+            title: "Uplink upgrade",
+            start: "2026-01-01",
+            end: "2026-06-30",
+            lanes: [
+              {
+                title: "Core",
+                color: "blue",
+                bars: [
+                  {
+                    title: "Order fibre",
+                    description: "",
+                    start: "2026-02-01",
+                    end: "2026-03-15",
+                    row: 0,
+                    pageId: SAMPLE_PAGE,
+                  },
+                ],
+              },
+            ],
+            markers: [{ title: "Go-live", date: "2026-05-01" }],
+          },
+        },
+      },
       { type: "unsupportedMacro", attrs: { name: "jira" } },
       {
         type: "drawing",
