@@ -981,6 +981,7 @@ export class ImportService {
       await tx.execute(sql`
         update imports set file_kind = 'connection', upload_id = null, folder_file = null, folder_key = null,
           people_source = ${connection.kind === "cloud" ? "token" : "source"}, token_deleted_at = null,
+          source_url = coalesce(source_url, ${`https://${connection.site}${connection.kind === "cloud" ? "/wiki" : connection.basePath}`}),
           options = ${sameSite ? sql`options` : sql`'{}'::jsonb`}, found = null, error_code = null,
           checkpoint = '{}'::jsonb, progress_done = 0, progress_total = 0, staged_bytes = 0, throttled_until = null,
           updated_at = now()

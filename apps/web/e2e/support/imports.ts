@@ -87,3 +87,45 @@ export function importIdFrom(page: Page): string {
   if (!match?.[1]) throw new Error(`No import in ${page.url()}`);
   return match[1];
 }
+
+const WRITE_FILES = `
+const { writeFileSync } = await import("node:fs");
+const [kind, target] = process.argv.slice(1);
+if (kind === "markdown") {
+  const { createZip } = await import("@pagehall/server/testing");
+  writeFileSync(
+    target,
+    createZip([
+      { name: "handbook/README.md", data: "# Team handbook\\n\\nStart with [the laptop setup](setup/laptop.md).\\n" },
+      {
+        name: "handbook/setup/laptop.md",
+        data: "---\\ntitle: Laptop setup\\ntags: [it]\\n---\\nInstall the tools.\\n\\n<div>raw html</div>\\n",
+      },
+    ]),
+  );
+} else {
+  const { Document, HeadingLevel, Packer, Paragraph } = await import("docx");
+  const document = new Document({
+    title: "Security policy",
+    sections: [
+      {
+        children: [
+          new Paragraph({ text: "Applies to everyone." }),
+          new Paragraph({ text: "Passwords", heading: HeadingLevel.HEADING_1 }),
+          new Paragraph({ text: "Use a password manager." }),
+          new Paragraph({ text: "Devices", heading: HeadingLevel.HEADING_1 }),
+          new Paragraph({ text: "Lock the screen." }),
+        ],
+      },
+    ],
+  });
+  writeFileSync(target, await Packer.toBuffer(document));
+}
+`;
+
+export async function writeSourceFile(kind: "markdown" | "word", target: string): Promise<void> {
+  await run(process.execPath, ["--input-type=module", "-e", WRITE_FILES, kind, target], {
+    cwd: serverRoot,
+    timeout: 30_000,
+  });
+}

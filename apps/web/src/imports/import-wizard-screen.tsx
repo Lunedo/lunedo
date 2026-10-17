@@ -44,11 +44,23 @@ import {
   updateImport,
 } from "./imports-api.js";
 import { type PeopleChoice, PeopleStep } from "./people-step.js";
+import {
+  ConnectionStep,
+  DocumentsField,
+  inputOf,
+  MAX_DOCUMENT_BYTES,
+  type Selection,
+  SelectionStep,
+  SourceChoice,
+  type SourceInput,
+  SplitField,
+  selectionOf,
+  stepsFor,
+  ThrottleNotice,
+} from "./source-steps.js";
 import { UploadField } from "./upload-field.js";
 
 const route = getRouteApi("/app/settings/organizations/$organizationId/imports/$importId/setup");
-const STEPS = ["source", "people", "space", "check"] as const;
-const REIMPORT_STEPS = ["source", "people", "check"] as const;
 const SAVE_DELAY_MS = 600;
 const KEY_PATTERN = /^[A-Z0-9]{2,10}$/;
 
@@ -60,12 +72,10 @@ interface Form {
   sourceUrl: string;
 }
 
-function formBody(form: Form): ImportUpdate {
-  const body: ImportUpdate = {
-    archived: form.archived,
-    history: form.history,
-    sourceUrl: form.sourceUrl.trim() || null,
-  };
+function formBody(form: Form, input: SourceInput): ImportUpdate {
+  const body: ImportUpdate = { archived: form.archived };
+  if (input === "export") body.history = form.history;
+  if (input === "export" || input === "connection") body.sourceUrl = form.sourceUrl.trim() || null;
   if (form.spaceName.trim()) body.spaceName = form.spaceName.trim();
   if (KEY_PATTERN.test(form.spaceKey)) body.spaceKey = form.spaceKey;
   return body;
@@ -114,14 +124,19 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
   const state = useOrganizationState();
   const organization = state.organizations.find((candidate) => candidate.id === organizationId) ?? null;
   const reimport = entry.targetSpace;
-  const stepNames: readonly (typeof STEPS)[number][] = reimport ? REIMPORT_STEPS : STEPS;
+  const input = inputOf(entry.source);
+  const stepNames = stepsFor(entry.source, Boolean(reimport));
   const index = Math.max(0, Math.min(stepNames.length - 1, search.step ?? entry.draftStep));
   const step = stepNames[index] ?? "source";
   const [form, setForm] = useState<Form>(() => formOf(entry));
   const [saveError, setSaveError] = useState<unknown>(null);
   const [saving, setSaving] = useState(false);
-  const [errors, setErrors] = useState<Partial<Record<keyof Form | "file" | "people" | "start", string>>>({});
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof Form | "file" | "people" | "connection" | "selection" | "start", string>>
+  >({});
   const [peopleAttempt, setPeopleAttempt] = useState(0);
+  const [connectionAttempt, setConnectionAttempt] = useState(0);
+  const [selection, setSelection] = useState<Selection>(() => selectionOf(entry));
   const [peopleChoice, setPeopleChoice] = useState<PeopleChoice>(
     (entry.peopleSource?.kind as PeopleChoice | undefined) ?? "token",
   );
@@ -130,6 +145,13 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
   const failed = useFailureToast();
   const saved = useRef(JSON.stringify(formOf(entry)));
   const suggested = useRef({ name: entry.spaceName, key: entry.spaceKey });
+
+  useEffect(() => {
+    if (entry.sourceUrl) {
+      const url = entry.sourceUrl;
+      setForm((current) => (current.sourceUrl ? current : { ...current, sourceUrl: url }));
+    }
+  }, [entry.sourceUrl]);
 
   useEffect(() => {
     if (entry.spaceName !== suggested.current.name || entry.spaceKey !== suggested.current.key) {
@@ -173,14 +195,14 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
     const text = JSON.stringify(form);
     if (text === saved.current || reimport) return;
     const timer = setTimeout(() => {
-      patch(formBody(form))
+      patch(formBody(form, input))
         .then(() => {
           saved.current = text;
         })
         .catch(() => undefined);
     }, SAVE_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [form, patch, reimport]);
+  }, [form, patch, reimport, input]);
 
   const goTo = (next: number) => {
     void navigate({ to: ".", search: { step: next } });
@@ -188,7 +210,7 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
     const body: ImportUpdate =
       text === saved.current || !isEditable(entry.state) || reimport
         ? { draftStep: next }
-        : { draftStep: next, ...formBody(form) };
+        : { draftStep: next, ...formBody(form, input) };
     patch(body)
       .then(() => {
         saved.current = text;
@@ -216,24 +238,83 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
     return Object.keys(next).length === 0;
   };
 
+  const fail = (field: keyof typeof errors, message: string) => {
+    setErrors({ [field]: message });
+    focusFirstInvalidSoon();
+  };
+
+  const filesReady = () =>
+    input === "documents"
+      ? entry.files.length > 0 && entry.files.every((file) => file.complete)
+      : Boolean(entry.file?.complete);
+
+  const saveSelection = async (): Promise<boolean> => {
+    if (!selection.spaceKey) {
+      fail("selection", t("imports.selection.spaceRequired"));
+      return false;
+    }
+    if (selection.pageIds !== null && selection.pageIds.length === 0) {
+      fail("selection", t("imports.selection.treeRequired"));
+      return false;
+    }
+    await patch({
+      options: {
+        spaceKey: selection.spaceKey,
+        pageIds: selection.pageIds ?? [],
+        blogPosts: selection.pageIds === null && selection.blogPosts,
+      },
+      ...(reimport ? {} : { history: selection.history }),
+    });
+    return true;
+  };
+
   const next = async () => {
     if (step === "source") {
-      const ready = entry.file?.complete;
-      if (!ready) {
-        setErrors({ file: t("imports.wizard.source.fileRequired") });
-        focusFirstInvalidSoon();
+      if (input === "export" && !entry.file?.complete) {
+        fail("file", t("imports.wizard.source.fileRequired"));
         return;
       }
       setErrors({});
-      goTo(1);
+      goTo(index + 1);
       return;
     }
     if (step === "people") {
       const problem = peopleProblem();
       if (problem) {
-        setErrors({ people: problem });
+        fail("people", problem);
         setPeopleAttempt((count) => count + 1);
-        focusFirstInvalidSoon();
+        return;
+      }
+      setErrors({});
+      goTo(index + 1);
+      return;
+    }
+    if (step === "connection") {
+      if (!entry.connection) {
+        fail("connection", t("imports.connection.required"));
+        setConnectionAttempt((count) => count + 1);
+        return;
+      }
+      setErrors({});
+      goTo(index + 1);
+      return;
+    }
+    if (step === "selection") {
+      try {
+        if (!(await saveSelection())) return;
+      } catch {
+        return;
+      }
+      setErrors({});
+      goTo(index + 1);
+      return;
+    }
+    if (step === "upload") {
+      if (!filesReady()) {
+        fail(
+          "file",
+          t(input === "documents" ? "imports.documents.required" : "imports.wizard.source.fileRequired"),
+        );
         return;
       }
       setErrors({});
@@ -245,7 +326,7 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
         focusFirstInvalidSoon();
         return;
       }
-      goTo(3);
+      goTo(index + 1);
     }
   };
 
@@ -263,15 +344,22 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
     setStarting(true);
     setErrors({});
     try {
-      if (!entry.peopleSource) {
-        goTo(1);
+      if (input === "export" && peopleProblem()) {
+        goTo(stepNames.indexOf("people"));
         setErrors({ people: t(`imports.people.${peopleChoice}.missing`) });
         setPeopleAttempt((count) => count + 1);
         focusFirstInvalidSoon();
         return;
       }
+      if (input === "connection" && !entry.connection) {
+        goTo(stepNames.indexOf("connection"));
+        setErrors({ connection: t("imports.connection.required") });
+        setConnectionAttempt((count) => count + 1);
+        focusFirstInvalidSoon();
+        return;
+      }
       if (!reimport && !(await validateSpace())) {
-        goTo(2);
+        goTo(stepNames.indexOf("space"));
         focusFirstInvalidSoon();
         return;
       }
@@ -280,13 +368,7 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
         return;
       }
       if (!reimport) {
-        await patch({
-          spaceName: form.spaceName.trim(),
-          spaceKey: form.spaceKey,
-          archived: form.archived,
-          history: form.history,
-          sourceUrl: form.sourceUrl.trim() || null,
-        });
+        await patch({ ...formBody(form, input), spaceName: form.spaceName.trim(), spaceKey: form.spaceKey });
       }
       await startImport(entry.id);
       await queryClient.invalidateQueries({ queryKey: importKeys.all });
@@ -396,6 +478,24 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
           attempt={peopleAttempt}
         />
       ) : null}
+      {step === "connection" ? (
+        <ConnectionStep entry={entry} error={errors.connection} attempt={connectionAttempt} />
+      ) : null}
+      {step === "selection" ? (
+        <SelectionStep
+          entry={entry}
+          selection={selection}
+          onChange={(next) => {
+            setSelection(next);
+            setErrors({});
+          }}
+          error={errors.selection}
+          reimport={Boolean(reimport)}
+        />
+      ) : null}
+      {step === "upload" ? (
+        <UploadStep organizationId={organizationId} entry={entry} patch={patch} fileError={errors.file} />
+      ) : null}
       {step === "space" ? (
         <SpaceStep
           organizationId={organizationId}
@@ -477,6 +577,102 @@ function SourceStep({
   fileError: string | undefined;
 }) {
   const { t } = useTranslation();
+  const failed = useFailureToast();
+  const choose = (source: ImportView["source"]) => {
+    if (source === entry.source || (source === "confluence-xml" && entry.source === "confluence-csv")) return;
+    void patch({ source }).catch((error: unknown) => failed(t("imports.wizard.saveFailed"), error));
+  };
+  return (
+    <>
+      <SourceChoice entry={entry} onChoose={choose} />
+      {inputOf(entry.source) === "export" ? (
+        <>
+          <Section title={t("imports.wizard.source.formatTitle")}>
+            <div className="flex flex-col gap-3 p-4">
+              <RadioGroup
+                label={t("imports.wizard.source.formatTitle")}
+                variant="card"
+                value={entry.source}
+                onValueChange={(value) => choose(value as ImportView["source"])}
+                options={(["confluence-xml", "confluence-csv"] as const).map((value) => ({
+                  value,
+                  label: t(`imports.sources.${value}.label`),
+                  description: t(`imports.sources.${value}.description`),
+                }))}
+              />
+              <p className="text-sm text-text-muted">{t("imports.wizard.source.whereToFind")}</p>
+            </div>
+          </Section>
+          <FileSection organizationId={organizationId} entry={entry} patch={patch} fileError={fileError} />
+        </>
+      ) : null}
+    </>
+  );
+}
+
+function UploadStep({
+  organizationId,
+  entry,
+  patch,
+  fileError,
+}: {
+  organizationId: string;
+  entry: ImportView;
+  patch: (body: ImportUpdate) => Promise<ImportView>;
+  fileError: string | undefined;
+}) {
+  const { t } = useTranslation();
+  const folder = useQuery({ ...folderQuery(organizationId), throwOnError: false });
+  const analysis = entry.errorCode ? errorText(t, entry.errorCode) : null;
+  if (inputOf(entry.source) === "archive") {
+    return (
+      <>
+        <Notice variant="info" title={t("imports.markdown.title")}>
+          {t("imports.markdown.description")}
+        </Notice>
+        <FileSection organizationId={organizationId} entry={entry} patch={patch} fileError={fileError} />
+      </>
+    );
+  }
+  return (
+    <>
+      <Section title={t("imports.documents.title")}>
+        <div className="flex flex-col gap-4 p-4">
+          {fileError ? <FieldError>{fileError}</FieldError> : null}
+          <DocumentsField
+            organizationId={organizationId}
+            entry={entry}
+            maxBytes={Math.min(folder.data?.maxUploadBytes ?? MAX_DOCUMENT_BYTES, MAX_DOCUMENT_BYTES)}
+            patch={patch}
+            invalid={Boolean(fileError)}
+          />
+          <SplitField entry={entry} patch={patch} />
+          <p className="text-sm text-text-muted">{t("imports.documents.notes")}</p>
+        </div>
+      </Section>
+      {entry.state === "analyzing" ? <Reading entry={entry} /> : null}
+      {analysis ? <ErrorState title={analysis.what} cause={analysis.cause} action={analysis.action} /> : null}
+      {entry.state === "ready" && entry.found ? (
+        <Notice variant="success" title={t("imports.documents.readTitle")}>
+          {t("imports.documents.read", { pages: entry.found.pages, attachments: entry.found.attachments })}
+        </Notice>
+      ) : null}
+    </>
+  );
+}
+
+function FileSection({
+  organizationId,
+  entry,
+  patch,
+  fileError,
+}: {
+  organizationId: string;
+  entry: ImportView;
+  patch: (body: ImportUpdate) => Promise<ImportView>;
+  fileError: string | undefined;
+}) {
+  const { t } = useTranslation();
   const format = useFormat();
   const folder = useQuery({ ...folderQuery(organizationId), throwOnError: false });
   const [where, setWhere] = useState<"upload" | "folder">(
@@ -486,26 +682,6 @@ function SourceStep({
   const analysis = entry.errorCode ? errorText(t, entry.errorCode) : null;
   return (
     <>
-      <Section title={t("imports.wizard.source.formatTitle")}>
-        <div className="flex flex-col gap-3 p-4">
-          <RadioGroup
-            label={t("imports.wizard.source.formatTitle")}
-            variant="card"
-            value={entry.source}
-            onValueChange={(value) =>
-              void patch({ source: value as ImportView["source"] }).catch((error: unknown) =>
-                failed(t("imports.wizard.saveFailed"), error),
-              )
-            }
-            options={(["confluence-xml", "confluence-csv"] as const).map((value) => ({
-              value,
-              label: t(`imports.sources.${value}.label`),
-              description: t(`imports.sources.${value}.description`),
-            }))}
-          />
-          <p className="text-sm text-text-muted">{t("imports.wizard.source.whereToFind")}</p>
-        </div>
-      </Section>
       <Section title={t("imports.wizard.source.fileTitle")}>
         <div className="flex flex-col gap-3 p-4">
           <RadioGroup
@@ -633,15 +809,30 @@ function FolderField({
 }
 
 function Reading({ entry }: { entry: ImportView }) {
-  const { t } = useTranslation();
   const percent =
     entry.progress.total > 0
       ? Math.min(100, Math.round((entry.progress.done / entry.progress.total) * 100))
       : 0;
   return (
+    <>
+      <ThrottleNotice until={entry.throttledUntil} />
+      <ReadingProgress entry={entry} percent={percent} />
+    </>
+  );
+}
+
+function ReadingProgress({ entry, percent }: { entry: ImportView; percent: number }) {
+  const { t } = useTranslation();
+  return (
     <Notice variant="info" title={t("imports.wizard.reading")}>
       <div className="flex flex-col gap-2">
-        <span>{t("imports.wizard.readingDescription")}</span>
+        <span>
+          {t(
+            inputOf(entry.source) === "connection"
+              ? "imports.wizard.readingConnection"
+              : "imports.wizard.readingDescription",
+          )}
+        </span>
         <div
           role="progressbar"
           aria-label={t("imports.wizard.reading")}
@@ -675,6 +866,7 @@ function SpaceStep({
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const failed = useFailureToast();
+  const input = inputOf(entry.source);
   const [busy, setBusy] = useState(false);
   const changeReviewers = async (ids: string[]) => {
     setBusy(true);
@@ -723,41 +915,50 @@ function SpaceStep({
               }}
             />
           </Field>
-          <div className="md:col-span-2">
-            <Field
-              label={t("imports.wizard.space.sourceUrl")}
-              hint={t("imports.wizard.space.sourceUrlHint")}
-              {...(errors.sourceUrl ? { error: errors.sourceUrl } : {})}
-            >
-              <Input
-                value={form.sourceUrl}
-                type="url"
-                inputMode="url"
-                placeholder={t("imports.wizard.space.sourceUrlPlaceholder")}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  setForm((current) => ({ ...current, sourceUrl: value }));
-                }}
-              />
-            </Field>
-          </div>
+          {input === "export" || input === "connection" ? (
+            <div className="md:col-span-2">
+              <Field
+                label={t("imports.wizard.space.sourceUrl")}
+                hint={t("imports.wizard.space.sourceUrlHint")}
+                {...(errors.sourceUrl ? { error: errors.sourceUrl } : {})}
+              >
+                <Input
+                  value={form.sourceUrl}
+                  type="url"
+                  inputMode="url"
+                  placeholder={t("imports.wizard.space.sourceUrlPlaceholder")}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setForm((current) => ({ ...current, sourceUrl: value }));
+                  }}
+                />
+              </Field>
+            </div>
+          ) : null}
         </div>
       </Section>
       <Section title={t("imports.wizard.space.whatTitle")}>
-        <div className="flex flex-col gap-3 p-4">
-          <RadioGroup
-            label={t("imports.wizard.space.whatTitle")}
-            variant="card"
-            value={form.history ? "full" : "current"}
-            onValueChange={(value) => setForm((current) => ({ ...current, history: value === "full" }))}
-            options={(["current", "full"] as const).map((value) => ({
-              value,
-              label: t(`imports.wizard.space.history.${value}`),
-              description: t(`imports.wizard.space.history.${value}Description`),
-            }))}
-          />
-        </div>
-        <div className="flex flex-wrap items-center gap-3 border-t border-border p-4">
+        {input === "export" ? (
+          <div className="flex flex-col gap-3 p-4">
+            <RadioGroup
+              label={t("imports.wizard.space.whatTitle")}
+              variant="card"
+              value={form.history ? "full" : "current"}
+              onValueChange={(value) => setForm((current) => ({ ...current, history: value === "full" }))}
+              options={(["current", "full"] as const).map((value) => ({
+                value,
+                label: t(`imports.wizard.space.history.${value}`),
+                description: t(`imports.wizard.space.history.${value}Description`),
+              }))}
+            />
+          </div>
+        ) : null}
+        <div
+          className={classNames(
+            "flex flex-wrap items-center gap-3 p-4",
+            input === "export" && "border-t border-border",
+          )}
+        >
           <div className="flex min-w-0 flex-1 basis-field flex-col">
             <span className="font-medium">{t("imports.wizard.space.archived")}</span>
             <span className="text-sm text-text-muted">{t("imports.wizard.space.archivedDescription")}</span>
@@ -857,22 +1058,81 @@ function CheckStep({ entry, form }: { entry: ImportView; form: Form }) {
     </div>
   );
   const reviewers = entry.reviewers.map((reviewer) => reviewer.name);
+  const input = inputOf(entry.source);
+  const files = input === "archive" || input === "documents";
+  const history = input === "export" ? form.history : entry.history;
+  const attachments = stat(
+    format.number(found.attachments),
+    t("imports.wizard.check.attachments", {
+      count: found.attachments,
+      size: format.bytes(found.attachmentBytes),
+    }),
+  );
+  const space = (
+    <li className="flex flex-col gap-1 px-4 py-3">
+      <span className="font-medium">
+        {t("imports.wizard.check.spaceTitle", { name: form.spaceName, key: form.spaceKey })}
+      </span>
+      <span className="text-sm text-text-muted">
+        {t(form.archived ? "imports.wizard.check.archived" : "imports.wizard.check.notArchived", {
+          count: reviewers.length,
+        })}
+      </span>
+    </li>
+  );
+  const quarantine = (
+    <Notice variant="info" title={t("imports.wizard.check.quarantineTitle")}>
+      {reviewers.length > 0
+        ? t("imports.wizard.check.quarantineWithReviewers", { names: reviewers.join(", ") })
+        : t("imports.wizard.check.quarantineAlone")}
+    </Notice>
+  );
+  if (files) {
+    return (
+      <>
+        <p className="text-sm text-text-muted">{t("imports.wizard.check.introFiles")}</p>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          {stat(format.number(found.pages), t("imports.wizard.check.pages", { count: found.pages }))}
+          {attachments}
+        </div>
+        <Section title={t("imports.wizard.check.foundTitle")}>
+          <ul className="flex flex-col divide-y divide-border">
+            <li className="flex flex-col gap-1 px-4 py-3">
+              <span className="font-medium">
+                {t(
+                  input === "archive"
+                    ? "imports.wizard.check.markdownTitle"
+                    : "imports.wizard.check.wordTitle",
+                )}
+              </span>
+              <span className="text-sm text-text-muted">
+                {t(
+                  input === "archive"
+                    ? "imports.wizard.check.markdownDescription"
+                    : "imports.wizard.check.wordDescription",
+                )}
+              </span>
+            </li>
+            {space}
+          </ul>
+        </Section>
+        {quarantine}
+      </>
+    );
+  }
+  const peopleBy = input === "connection" && entry.peopleSource?.kind === "source" ? "source" : null;
   return (
     <>
-      <p className="text-sm text-text-muted">{t("imports.wizard.check.intro")}</p>
+      <p className="text-sm text-text-muted">
+        {t(input === "connection" ? "imports.wizard.check.introConnection" : "imports.wizard.check.intro")}
+      </p>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {stat(format.number(found.pages), t("imports.wizard.check.pages", { count: found.pages }))}
         {stat(
           format.number(found.blogPosts),
           t("imports.wizard.check.blogPosts", { count: found.blogPosts }),
         )}
-        {stat(
-          format.number(found.attachments),
-          t("imports.wizard.check.attachments", {
-            count: found.attachments,
-            size: format.bytes(found.attachmentBytes),
-          }),
-        )}
+        {attachments}
         {stat(format.number(found.comments), t("imports.wizard.check.comments", { count: found.comments }))}
       </div>
       <Section title={t("imports.wizard.check.foundTitle")}>
@@ -883,13 +1143,13 @@ function CheckStep({ entry, form }: { entry: ImportView; form: Form }) {
             </span>
             <span className="text-sm text-text-muted">
               {t(
-                `imports.wizard.check.peopleBy.${(entry.peopleSource?.kind as "token" | "list" | "skip" | undefined) ?? "skip"}`,
+                `imports.wizard.check.peopleBy.${peopleBy ?? (entry.peopleSource?.kind as "token" | "list" | "skip" | undefined) ?? "skip"}`,
               )}
             </span>
           </li>
           <li className="flex flex-col gap-1 px-4 py-3">
             <span className="font-medium">
-              {t(form.history ? "imports.wizard.check.historyFull" : "imports.wizard.check.historyCurrent", {
+              {t(history ? "imports.wizard.check.historyFull" : "imports.wizard.check.historyCurrent", {
                 count: found.versions,
               })}
             </span>
@@ -909,23 +1169,10 @@ function CheckStep({ entry, form }: { entry: ImportView; form: Form }) {
             </span>
             <span className="text-sm text-text-muted">{t("imports.wizard.check.macrosDescription")}</span>
           </li>
-          <li className="flex flex-col gap-1 px-4 py-3">
-            <span className="font-medium">
-              {t("imports.wizard.check.spaceTitle", { name: form.spaceName, key: form.spaceKey })}
-            </span>
-            <span className="text-sm text-text-muted">
-              {t(form.archived ? "imports.wizard.check.archived" : "imports.wizard.check.notArchived", {
-                count: reviewers.length,
-              })}
-            </span>
-          </li>
+          {space}
         </ul>
       </Section>
-      <Notice variant="info" title={t("imports.wizard.check.quarantineTitle")}>
-        {reviewers.length > 0
-          ? t("imports.wizard.check.quarantineWithReviewers", { names: reviewers.join(", ") })
-          : t("imports.wizard.check.quarantineAlone")}
-      </Notice>
+      {quarantine}
     </>
   );
 }

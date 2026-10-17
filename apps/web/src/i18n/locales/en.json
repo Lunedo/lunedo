@@ -1509,7 +1509,24 @@
     "tooManyPagesToPrint": "Browsers print up to 300 pages at once. Export as Word or HTML instead, or as PDF on the server if your administrator set up the render container.",
     "renderUnavailable": "PDF on the server needs the render container, which is not set up or not reachable. Print the PDF through your browser instead, or ask your instance administrator.",
     "renderFailed": "The render container could not create the PDF. Try again; if it fails again, tell your instance administrator.",
-    "invalidDiagram": "The draw.io diagram could not be stored because it contains something draw.io does not write, or it is damaged. Undo the last change in draw.io and save again."
+    "invalidDiagram": "The draw.io diagram could not be stored because it contains something draw.io does not write, or it is damaged. Undo the last change in draw.io and save again.",
+    "connectionMissing": "Connect the import to Confluence first: enter the address and the token and test the connection.",
+    "wrongInput": "This kind of import does not take this input. Reload the page and continue in the assistant.",
+    "wrongFileType": "This file has the wrong type for this import. Markdown folders are uploaded as one ZIP file, Word documents as .docx files.",
+    "macroDocument": "Word documents with macros (.docm) are not imported. Save the document as .docx without macros, then choose it again.",
+    "tooManyFiles": "An import reads up to 50 documents at once. Split them into several imports.",
+    "invalidOptions": "These options do not apply to this kind of import. Reload the page and try again.",
+    "invalidSelection": "Choose the space and page trees from the list.",
+    "invalidDataCenterAddress": "Enter the https address of your Confluence Data Center, such as https://wiki.example.com/confluence. An instance administrator must allow its host first.",
+    "invalidAccessToken": "Paste the personal access token exactly as Confluence showed it, without spaces.",
+    "confluenceUnauthorized": "Confluence refused the token. Check the e-mail address and the token, or create a new token.",
+    "confluenceCertificate": "Pagehall does not trust the certificate of this Confluence. Add the certificate of its authority under Advanced.",
+    "confluenceBlocked": "Pagehall may not connect to this address. Ask the instance administrators to allow its network.",
+    "confluenceRedirect": "Confluence redirected to another address. Enter the address Confluence really uses.",
+    "confluenceInvalidResponse": "Confluence sent an answer Pagehall cannot read. Check the address and try again.",
+    "confluenceUnreachable": "Pagehall could not reach Confluence. Check the address and that Confluence is running, then try again.",
+    "confluenceRateLimited": "Confluence asked to slow down. Wait a minute and try again.",
+    "confluenceSpaceMissing": "The space does not exist or the token cannot read it. Choose another space."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -6807,6 +6824,22 @@
       "confluence-csv": {
         "label": "CSV space export",
         "description": "Confluence Cloud. Same content as the XML export, packed differently."
+      },
+      "confluence-cloud": {
+        "label": "Confluence Cloud",
+        "description": "Read through the API with an API token."
+      },
+      "confluence-dc": {
+        "label": "Confluence Data Center",
+        "description": "Read through the REST API with a personal access token."
+      },
+      "markdown": {
+        "label": "Markdown folder",
+        "description": "A ZIP file of Markdown files."
+      },
+      "word": {
+        "label": "Word documents",
+        "description": "One or more .docx files."
       }
     },
     "phases": {
@@ -6866,7 +6899,10 @@
         "source": "Source",
         "space": "Space",
         "check": "Check and start",
-        "people": "People"
+        "people": "People",
+        "connection": "Connection",
+        "selection": "Selection",
+        "upload": "Upload"
       },
       "progress": "New import · step {step} of {total}",
       "close": "Close",
@@ -6958,15 +6994,47 @@
         "peopleBy": {
           "token": "Names and e-mail addresses come from the API token. People are matched to accounts by e-mail address; everyone else becomes a placeholder you can map in the report.",
           "list": "Names and e-mail addresses come from the user list. People are matched to accounts by e-mail address; everyone else becomes a placeholder you can map in the report.",
-          "skip": "They become placeholders named by their Atlassian ID. You can resolve them later with a user list or map them in the report."
+          "skip": "They become placeholders named by their Atlassian ID. You can resolve them later with a user list or map them in the report.",
+          "source": "Names come from Confluence Data Center, which does not share e-mail addresses. People become placeholders you can map in the report or resolve with a user list."
         },
         "historyFull": "{count, plural, one {# earlier version} other {# earlier versions}} imported with author and date",
         "historyCurrent": "Current state only · {count, plural, one {# earlier version} other {# earlier versions}} left out",
         "extras": "{likes, plural, one {# like becomes a 👍 reaction} other {# likes become 👍 reactions}}. {watchers, plural, one {# watcher is} other {# watchers are}} only counted.",
         "permissionsTitle": "Permissions",
         "permissionsDescription": "Taken over as far as they map to Pagehall roles and marked for review in the report. Anonymous access is not taken over.",
-        "peopleCount": "{count, plural, one {person} other {people}}"
-      }
+        "peopleCount": "{count, plural, one {person} other {people}}",
+        "introFiles": "Pagehall has read the files. Nothing is imported yet.",
+        "introConnection": "Pagehall has read the chosen content from Confluence. Nothing is imported yet.",
+        "markdownTitle": "Folders, links and images",
+        "markdownDescription": "Folders become the page tree, index.md or README.md the page of its folder. Links between files become page links, images and other files attachments. Elements Pagehall cannot convert stay as text and are listed in the report.",
+        "wordTitle": "Headings, tables and images",
+        "wordDescription": "Headings, lists, tables, links and images are taken over; footnotes become notes at the end of the page. Embedded objects become attachments, comments are left out. The report lists both."
+      },
+      "kinds": {
+        "fromConfluence": "From Confluence",
+        "fromFiles": "From files",
+        "confluence-xml": {
+          "label": "Confluence export file",
+          "description": "XML or CSV space export as a ZIP file, from Confluence Cloud or Data Center."
+        },
+        "confluence-cloud": {
+          "label": "Confluence Cloud",
+          "description": "Reads a space directly through the API with your e-mail address and an API token. No export needed; people come with names and e-mail addresses."
+        },
+        "confluence-dc": {
+          "label": "Confluence Data Center",
+          "description": "Reads a space through the REST API with a personal access token. For Server and Data Center 7.9 or newer."
+        },
+        "markdown": {
+          "label": "Markdown folder",
+          "description": "A ZIP file of Markdown files, for example from Obsidian, GitHub wikis or MkDocs. Folders become the page tree."
+        },
+        "word": {
+          "label": "Word documents",
+          "description": "One or more .docx files. Each file becomes a page with headings, lists, tables, images and footnotes."
+        }
+      },
+      "readingConnection": "Pagehall reads the chosen content from Confluence. Nothing changes in Confluence. You can leave this page; reading continues."
     },
     "upload": {
       "drop": "Drop the export here",
@@ -7194,6 +7262,41 @@
           "title": "{count, plural, one {# include points} other {# includes point}} to pages outside the export",
           "hint": "They show the page once it is imported into this organization.",
           "entry": "Macro {macro} includes “{title}” from space {spaceKey}, which was not part of the export."
+        },
+        "contentSkipped": {
+          "title": "{count, plural, one {# part} other {# parts}} could not be read with the token",
+          "hint": "Confluence refused them. Import with a token of an account that can read them, or add them later.",
+          "entry": "{title}: the {part, select, comments {comments} attachments {attachments} restrictions {restrictions} other {content}} could not be read."
+        },
+        "permissionsUnavailable": {
+          "title": "Space permissions could not be read",
+          "hint": "Only space administrators can read them through the API. Set the roles in Pagehall after accepting.",
+          "entry": "The space permissions could not be read with this token."
+        },
+        "unsupportedMarkdown": {
+          "title": "{count, plural, one {# element} other {# elements}} stayed as text",
+          "hint": "Pagehall could not convert them; the original text is kept on the page.",
+          "entry": "{file}: {construct, select, html {raw HTML stayed as text} frontMatter {the front matter could not be read} frontMatterValue {the front matter value “{name}” is not plain text and was left out} noteEmbed {an embedded note became a link} tooLarge {the file is larger than 5 MB and was not imported} other {an element stayed as text}}."
+        },
+        "unresolvedFileLink": {
+          "title": "{count, plural, one {# link points} other {# links point}} to missing files",
+          "hint": "The files are not in the ZIP file. The link text is kept.",
+          "entry": "{file}: “{target}” is not in the ZIP file."
+        },
+        "embeddedObject": {
+          "title": "{count, plural, one {# embedded object} other {# embedded objects}} became attachments",
+          "hint": "Pagehall cannot show them in the page; they are attached to it.",
+          "entry": "{file}: {name} was attached."
+        },
+        "wordCommentsDropped": {
+          "title": "Word comments left out",
+          "hint": "Comments in Word documents are not imported.",
+          "entry": "{file}: {count, plural, one {# comment was} other {# comments were}} left out."
+        },
+        "unreadableImage": {
+          "title": "{count, plural, one {# document has} other {# documents have}} images that could not be read",
+          "hint": "Linked or damaged images are left out.",
+          "entry": "{file}: some images could not be read."
         }
       },
       "people": "People",
@@ -7360,6 +7463,81 @@
         "what": "This export is from another Confluence space",
         "cause": "A re-import only accepts an export of the Confluence space this space was imported from.",
         "action": "Choose an export of the same Confluence space, or start a new import into a new space."
+      },
+      "noMarkdown": {
+        "what": "No Markdown files found",
+        "cause": "The ZIP file contains no .md or .markdown files outside hidden folders.",
+        "action": "Pack the folder with the Markdown files into a ZIP file and upload it again."
+      },
+      "macroDocument": {
+        "what": "Document with macros",
+        "cause": "A document contains macros. Pagehall never runs or imports macros.",
+        "action": "Open the document in Word, save it as .docx without macros and upload it again."
+      },
+      "documentTooLarge": {
+        "what": "Document too large",
+        "cause": "A document is larger than 100 MB.",
+        "action": "Remove large images or split the document, then upload it again."
+      },
+      "unreadableDocument": {
+        "what": "Document cannot be read",
+        "cause": "A file is damaged, encrypted, in the old .doc format or not a Word document.",
+        "action": "Open the document in Word, save it as .docx without a password and upload it again."
+      },
+      "selectionMissing": {
+        "what": "No space chosen",
+        "cause": "The import does not know which space to read.",
+        "action": "Choose the space in the selection step."
+      },
+      "connectionMissing": {
+        "what": "Token missing",
+        "cause": "Pagehall deleted the token of this import, or it was never entered.",
+        "action": "Test the connection again in the connection step."
+      },
+      "confluenceUnauthorized": {
+        "what": "Confluence refused the token",
+        "cause": "The token is wrong, has expired or was revoked.",
+        "action": "Create a new token and test the connection again."
+      },
+      "confluenceSpaceMissing": {
+        "what": "Space not found",
+        "cause": "The space was deleted or the token can no longer read it.",
+        "action": "Choose another space, or use a token of an account that can read the space."
+      },
+      "confluenceCertificate": {
+        "what": "Certificate not trusted",
+        "cause": "Confluence uses a certificate Pagehall does not trust.",
+        "action": "Add the certificate of the authority under Advanced in the connection step."
+      },
+      "confluenceBlocked": {
+        "what": "Address not allowed",
+        "cause": "The address of Confluence is in a private network that Pagehall may not contact.",
+        "action": "Ask the instance administrators to allow this network for outgoing connections."
+      },
+      "confluenceRedirect": {
+        "what": "Confluence redirected elsewhere",
+        "cause": "Confluence answered with a redirect to another address. Pagehall does not follow redirects.",
+        "action": "Enter the address Confluence really uses and test the connection again."
+      },
+      "confluenceInvalidResponse": {
+        "what": "Unexpected answer from Confluence",
+        "cause": "Confluence sent an answer Pagehall cannot read, possibly from a proxy in between.",
+        "action": "Check the address, then try again. If it keeps failing, use the XML export of the space."
+      },
+      "confluenceResponseTooLarge": {
+        "what": "Answer from Confluence too large",
+        "cause": "A page or a list from Confluence is larger than Pagehall reads at once.",
+        "action": "Import the space through its XML export instead."
+      },
+      "confluenceUnreachable": {
+        "what": "Confluence not reachable",
+        "cause": "Confluence did not answer, even after several attempts.",
+        "action": "Check that Confluence is running and reachable, then start reading again."
+      },
+      "confluenceRateLimited": {
+        "what": "Confluence keeps asking to slow down",
+        "cause": "Confluence limited the requests for longer than Pagehall waits.",
+        "action": "Try again later, for example outside office hours."
       }
     },
     "quarantine": {
@@ -7696,6 +7874,98 @@
       "restrictedBy": "Waits for the restriction of “{title}” from Confluence. Until it is applied, only “Keep Pagehall version” is possible and no Confluence content is stored.",
       "showDifference": "Show the permission difference",
       "selectionLimited": "Some selected pages wait for a restriction from Confluence, so only “Keep Pagehall version” is offered."
+    },
+    "throttled": {
+      "title": "Confluence asked to slow down",
+      "description": "Pagehall waits as Confluence asked and continues in {seconds, plural, one {# second} other {# seconds}}. Nothing needs to be done."
+    },
+    "connection": {
+      "cloudTitle": "Connect to Confluence Cloud",
+      "dataCenterTitle": "Connect to Confluence Data Center",
+      "site": "Site address",
+      "siteHint": "The address of your Confluence Cloud site, such as example.atlassian.net.",
+      "siteRequired": "Enter the address of your Confluence Cloud site.",
+      "email": "Your Atlassian e-mail address",
+      "emailInvalid": "Enter the e-mail address of the Atlassian account that created the API token.",
+      "baseUrl": "Base address",
+      "baseUrlHint": "The address you open Confluence with, including a context path like /confluence. An instance administrator must allow the host first.",
+      "baseUrlInvalid": "Enter the https address of your Confluence, such as https://wiki.example.com/confluence.",
+      "apiToken": "API token",
+      "apiTokenHint": "Create it at id.atlassian.com › Security › API tokens.",
+      "accessToken": "Personal access token",
+      "accessTokenHint": "In Confluence: profile › Personal Access Tokens › Create token. Use an account that can read every space you want to import.",
+      "tokenRequired": "Paste the token exactly as Confluence showed it.",
+      "advanced": "Advanced",
+      "certificates": "Certificate authority (PEM)",
+      "certificatesHint": "Only needed when the server uses a certificate from your own certificate authority. Paste the certificate of the authority, not the one of the server.",
+      "readOnly": "Pagehall only reads. The token is stored encrypted, used only for this import and deleted when the import is accepted, discarded, stopped or fails.",
+      "test": "Test connection",
+      "change": "Change connection",
+      "connected": "Connected to {site}",
+      "asCloud": "Connected as {name}. People are matched by e-mail address; Pagehall sees only what this account can read.",
+      "asDataCenter": "Connected as {name}. Pagehall sees only what this account can read.",
+      "connectedPlain": "Pagehall sees only what this account can read.",
+      "checkFailed": "The connection could not be tested",
+      "checkFailedAction": "Check the address and the token, then test the connection again.",
+      "required": "Test the connection first, then continue.",
+      "deletedTitle": "Enter the token again",
+      "deleted": "Pagehall deleted the token of this draft on {when}, because the draft was left alone for a week or because its importer lost the permission to import. Test the connection again to continue.",
+      "sitePlaceholder": "example.atlassian.net",
+      "baseUrlPlaceholder": "https://wiki.example.com/confluence",
+      "certificatesPlaceholder": "-----BEGIN CERTIFICATE-----"
+    },
+    "selection": {
+      "intro": "Choose a space and, if you like, only some of its page trees. Pagehall reads them in the next step; nothing changes in Confluence.",
+      "notConnected": "Connect to Confluence first. Go back one step and test the connection.",
+      "spaceTitle": "Space",
+      "space": "Confluence space",
+      "spaceHint": "{count, plural, one {# space} other {# spaces}} this account can read. Search by name or key.",
+      "spacePlaceholder": "Search spaces",
+      "noSpaces": "No space matches.",
+      "personalSpace": "Personal space · {key}",
+      "spacesFailed": "The spaces could not be read",
+      "spaceRequired": "Choose the space to import.",
+      "treesTitle": "Page trees",
+      "treeFailed": "The page trees could not be read",
+      "totals": "{pages, plural, one {# page} other {# pages}} · {blogPosts, plural, one {# blog post} other {# blog posts}} · {size} of attachments",
+      "totalsAtLeast": "At least {pages, plural, one {# page} other {# pages}} · {blogPosts, plural, one {# blog post} other {# blog posts}} · {size} of attachments. The space is too large to count in full.",
+      "noTrees": "The space has no pages below its home page.",
+      "untitled": "Untitled page",
+      "treeSize": "{pages, plural, one {# page} other {# pages}} · {size}",
+      "treeRequired": "Choose at least one page tree, or all of them.",
+      "blogPosts": "Blog posts ({count})",
+      "blogPostsHint": "Imported with the whole space.",
+      "blogPostsWithTrees": "Only imported with the whole space. Choose all page trees to include them.",
+      "restricted": "Pages the token cannot read are not listed by Confluence. Content that refuses to be read later is skipped and listed in the report.",
+      "optionsTitle": "Options",
+      "history": "Page history",
+      "historyHint": "Every version becomes a Pagehall version. Takes noticeably longer."
+    },
+    "markdown": {
+      "title": "Markdown folder as ZIP",
+      "description": "Folders become the page tree; index.md or README.md becomes the page of its folder. Front matter gives the title, labels and dates, other keys become page properties. Links between files become page links, [[wiki links]] included, and images and other files become attachments. Mermaid code blocks become diagrams."
+    },
+    "documents": {
+      "title": "Word documents",
+      "drop": "Drop .docx files here",
+      "choose": "Choose files",
+      "hint": "Several at once, up to {size} each. Save older .doc files as .docx first. Documents with macros (.docm) are not imported.",
+      "refused": "{count, plural, one {{names} was not added} other {{names} were not added}}",
+      "refusedCause": "Only .docx files up to {size} can be imported.",
+      "refusedAction": "Save the document as .docx without macros, or split it into smaller documents, then choose it again.",
+      "incomplete": "Upload not finished. Choose the file again to continue.",
+      "remove": "Remove {name}",
+      "removeFailed": "The document could not be removed",
+      "required": "Add at least one Word document and wait until every upload is finished.",
+      "split": "Pages",
+      "splitHint": "Changing this reads the documents again.",
+      "splitOptions": {
+        "file": "One page per document",
+        "heading": "A subpage per top-level heading"
+      },
+      "notes": "Embedded objects such as spreadsheets become attachments; Word comments are left out. The report lists both.",
+      "readTitle": "Documents read",
+      "read": "{pages, plural, one {# page} other {# pages}} with {attachments, plural, one {# attachment} other {# attachments}} found."
     }
   },
   "contentLanguage": {

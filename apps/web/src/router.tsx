@@ -673,7 +673,7 @@ const importWizardRoute = createRoute({
   getParentRoute: () => organizationRoute,
   path: "/imports/$importId/setup",
   params: { parse: (params) => ({ importId: z.uuid().parse(params.importId) }) },
-  validateSearch: z.object({ step: z.coerce.number().int().min(0).max(3).optional() }),
+  validateSearch: z.object({ step: z.coerce.number().int().min(0).max(9).optional() }),
   component: lazyRouteComponent(() => import("./imports/import-wizard-screen.js"), "ImportWizardScreen"),
 });
 const importRoute = createRoute({

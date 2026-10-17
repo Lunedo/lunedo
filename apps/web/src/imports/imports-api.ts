@@ -295,3 +295,50 @@ export function mapGroup(importId: string, groupKey: string, body: { groupId: st
     }),
   );
 }
+
+export type ConnectionBody =
+  paths["/api/v1/imports/{importId}/connection"]["put"]["requestBody"]["content"]["application/json"];
+export type ConfluenceSpace = Awaited<ReturnType<typeof fetchConnectionSpaces>>[number];
+export type ConfluenceTree = Awaited<ReturnType<typeof fetchConnectionTree>>;
+
+export const connectionKeys = {
+  spaces: (importId: string, site: string) => ["imports", "connection", importId, site, "spaces"] as const,
+  tree: (importId: string, site: string, spaceKey: string) =>
+    ["imports", "connection", importId, site, "tree", spaceKey] as const,
+};
+
+function fetchConnectionSpaces(importId: string) {
+  return request(() =>
+    api.GET("/api/v1/imports/{importId}/connection/spaces", { params: { path: { importId } } }),
+  );
+}
+
+function fetchConnectionTree(importId: string, spaceKey: string) {
+  return request(() =>
+    api.GET("/api/v1/imports/{importId}/connection/spaces/{spaceKey}", {
+      params: { path: { importId, spaceKey } },
+    }),
+  );
+}
+
+export function connectionSpacesQuery(importId: string, site: string) {
+  return queryOptions({
+    queryKey: connectionKeys.spaces(importId, site),
+    queryFn: () => fetchConnectionSpaces(importId),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function connectionTreeQuery(importId: string, site: string, spaceKey: string) {
+  return queryOptions({
+    queryKey: connectionKeys.tree(importId, site, spaceKey),
+    queryFn: () => fetchConnectionTree(importId, spaceKey),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function setConnection(importId: string, body: ConnectionBody) {
+  return request(() =>
+    api.PUT("/api/v1/imports/{importId}/connection", { params: { path: { importId } }, body }),
+  );
+}
