@@ -109,6 +109,42 @@ describe("include blocks", () => {
     expect(validateDocument(includeExcerpt({ pageId: PAGE, name: " contacts" })).ok).toBe(false);
   });
 
+  it("resolve diagram references in included content with the context of the included page", () => {
+    const diagramPage = "01929b1e-0000-7000-8000-000000000020";
+    const diagram = "01929b1e-0000-7000-8000-000000000021";
+    const preview = "01929b1e-0000-7000-8000-000000000022";
+    const included: IncludedContent = {
+      state: "visible",
+      title: "Runbook",
+      href: `/spaces/IT/pages/${PAGE}/runbook`,
+      document: doc({
+        type: "drawioReference",
+        attrs: {
+          id: "01929b1e-0000-7000-8000-000000000023",
+          pageId: diagramPage,
+          diagramId: diagram,
+          name: "Network",
+        },
+      }),
+      context: {
+        diagramReference: (pageId, diagramId) =>
+          pageId === diagramPage && diagramId === diagram
+            ? {
+                title: "Network plan",
+                href: "/spaces/IT/pages/x/network-plan",
+                found: true,
+                previewId: preview,
+                previewVersion: 2,
+              }
+            : null,
+        attachment: (id, version) => ({ href: `/files/${id}?version=${version ?? "current"}` }),
+      },
+    };
+    const outer: RenderContext = { ...including(included), diagramReference: () => null };
+    const html = renderHtml(includePage({ pageId: PAGE }), outer);
+    expect(html).toContain(`/files/${preview}?version=2`);
+  });
+
   it("keep included content out of the text of the including page", () => {
     const sections = extractSections(
       doc(paragraph(text("Own text")), { type: "includePage", attrs: { pageId: PAGE } }),
