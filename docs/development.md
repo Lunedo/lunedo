@@ -167,7 +167,7 @@ Screens are built from the components in `packages/ui`; `/dev/components` shows 
 |---|---|---|
 | `ci.yml` | pull requests, pushes to `main`, Saturdays 02:00 UTC (stress run), manual | see below |
 | `image.yml` | pushes to `main`, release tags `v*`, Mondays 03:00 UTC, manual | image build, not published; amd64 only on pushes to `main`, amd64 and arm64 otherwise |
-| `audit.yml` | Mondays 05:00 UTC, manual | `pnpm audit` on `main`; fails on any known vulnerability and lists the findings in the job summary |
+| `audit.yml` | Mondays 05:00 UTC, manual | `pnpm audit` on `main`; fails on any known vulnerability and lists the findings in the job summary. On self-hosted runners it also prunes the caches on the runner |
 
 `ci.yml` has two lanes. A newer push to the same pull request or branch cancels the running workflow.
 
@@ -181,7 +181,7 @@ Screens are built from the components in `packages/ui`; `/dev/components` shows 
 | Sign-in through identity providers | identity, authentication and sign-in code in server, API and web client including SAML and LDAP, the shared provider configuration, `apps/web/e2e/idp/`, the end-to-end setup, `docker/idp/`, `docker/compose.dev.yml` |
 | Backup round trip (builds the image for amd64 only) | `packages/server/src/backup/`, `packages/server/drizzle/`, `apps/worker/src/cli/`, `docker/Dockerfile`, `docker/start.sh`, `scripts/backup-roundtrip.sh` |
 
-The job `Scope` decides the lane and the areas (`scripts/ci-scope.ts`) and lists them in its summary. The job `Give the end-to-end tests a runner first` holds back all other jobs, the identity provider job included, for a few seconds, so the end-to-end job, the longest one, gets a runner before them. The identity provider job then runs alongside it on another runner; both jobs use their own ports, containers and state directories (see below). Both browser jobs record CPU, I/O wait, runnable processes and memory of the host every 5 s (`scripts/record-vm-load.ts`) and show them in their summary. The job `CI result` fails when any job failed or was cancelled and passes when the others passed or were skipped; it is the one check branch protection needs. The pnpm store, the Turborepo cache and Docker layers are cached between runs; on `main` the unit tests ignore cached results.
+The job `Scope` decides the lane and the areas (`scripts/ci-scope.ts`) and lists them in its summary. The job `Give the end-to-end tests a runner first` holds back all other jobs, the identity provider job included, for a few seconds, so the end-to-end job, the longest one, gets a runner before them. The identity provider job then runs alongside it on another runner; both jobs use their own ports, containers and state directories (see below). Both browser jobs record CPU, I/O wait, runnable processes and memory of the host every 5 s (`scripts/record-vm-load.ts`) and show them in their summary. The job `CI result` fails when any job failed or was cancelled and passes when the others passed or were skipped; it is the one check branch protection needs. The pnpm store, the Turborepo cache and Docker layers are cached between runs (on self-hosted runners in directories on the host, see below); on `main` the unit tests ignore cached results.
 
 In CI a failed test is retried once, in Vitest and in Playwright; a test that passes on the retry does not fail the run. Locally nothing is retried. The job `Flaky tests` lists every test that needed the retry (file, test, job) in its summary and attaches the list as the artifact `flaky-tests`; fix these tests, a retry only hides the instability. The stress run on Saturday nights starts every job of the full lane at the same time on `main` with `CI_RETRIES=0`, so load-dependent failures show up. Its summary lists every failed test. It blocks nothing and opens no issue.
 
@@ -195,8 +195,29 @@ The repository variable `CI_PARALLELISM` limits how many processes one job start
 
 Locally, `pnpm test` and `pnpm typecheck` run Turborepo through `scripts/run-turbo.ts`, which keeps the machine usable: it derives a process budget from the logical cores (all of them on Linux and macOS, half of them on Windows, where test processes crashed under full load) and splits it into Turborepo tasks of 4 Vitest workers or compiler threads each. `PAGEHALL_PARALLELISM` sets the budget, for example `PAGEHALL_PARALLELISM=16 pnpm test`; `PAGEHALL_TEST_WORKERS` sets the Vitest workers of a single package. In CI the script changes nothing. Turborepo runs with `--continue`: every package runs to the end, and the summary lists every package that failed. A test process that ends abnormally fails its package, and Vitest names the file it was running.
 
-Runners on one host must not share caches. Give each runner its own directories in the runner's `.env`: `npm_config_store_dir` (pnpm store), `PLAYWRIGHT_BROWSERS_PATH`, `COREPACK_HOME` and `XDG_CACHE_HOME`. The pnpm store is therefore not restored through `actions/cache` on self-hosted runners; the end-to-end job runs in a fresh container and keeps its store cache.
-
 Adding or removing the label `breaking-api-change` runs CI again in its own concurrency group, because it changes the result of the API check; other labels do not start a run. On self-hosted runners the backup job builds the image with the Docker daemon of the host and its local layer cache instead of the GitHub Actions cache, and a build that takes longer than 15 minutes is stopped.
 
 Dependabot opens one pull request per ecosystem every Monday (`.github/dependabot.yml`).
+
+### Caches on self-hosted runners
+
+On self-hosted runners no job uploads or downloads the pnpm store or the Turborepo cache through `actions/cache`; that took about two minutes per end-to-end job. The jobs use directories on the host instead, below the repository variable `CI_CACHE_DIR` (default `/srv/ci-cache`). `scripts/prepare-ci-cache.ts` checks the directory, creates the job's subdirectories and points pnpm and Turborepo at them:
+
+| Directory | Used by | Shared |
+|---|---|---|
+| `host/pnpm-store` | jobs that run directly on the runner, as the runner user | by all runners; pnpm installs may fill one store at the same time |
+| `host/turbo/<runner name>` | the same jobs | no, one per runner, so parallel jobs never write the same entries |
+| `container/pnpm-store` | the end-to-end job, as root inside its container (mounted at `/ci-cache`) | by all runners |
+| `container/turbo/<runner name>`, `container/pnpm-cache/<runner name>` | the same job | no, one per runner |
+
+Files written by root in the container and by the runner user on the host stay in separate trees, so neither side meets files it cannot change. A job fails at the start with a message pointing here when the directory is missing or not writable; inside the container a directory owned by root means Docker created it because it is missing on the host. GitHub-hosted runners keep `actions/cache`. `pnpm` reads only `pnpm_config_*` variables, so an `npm_config_store_dir` in a runner's `.env` has no effect; the job sets `pnpm_config_store_dir` itself. `PLAYWRIGHT_BROWSERS_PATH`, `COREPACK_HOME` and `XDG_CACHE_HOME` stay per runner in the runner's `.env`.
+
+Set the directory up once on the runner host, as root, with the user the runner services run as (here `runner`):
+
+```sh
+install -d -o runner -g runner -m 0755 /srv/ci-cache
+```
+
+The end-to-end container runs as root and creates `container/` itself; the runner user needs to own the top directory only. Use the same path in `CI_CACHE_DIR` if you choose another one.
+
+The weekly workflow `Audit` keeps the caches bounded on self-hosted runners: the job `Prune the caches on the runner` runs `pnpm store prune` on both stores and removes Turborepo entries older than three days. The container store loses the packages of workspaces it cannot see then; the next end-to-end job downloads them once.
