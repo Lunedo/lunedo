@@ -22,6 +22,20 @@ export {
   validateComment,
 } from "./comments.js";
 export {
+  defaultEmbedServices,
+  EMBED_ID_PATTERN,
+  type EmbedRule,
+  type EmbedService,
+  embedFrameSources,
+  embedRuleProblem,
+  embedServicesValue,
+  MAX_EMBED_RULES,
+  MAX_EMBED_SERVICES,
+  narrowEmbedServices,
+  type ResolvedEmbed,
+  resolveEmbed,
+} from "./embeds.js";
+export {
   documentSize,
   type ExtractedDecision,
   type ExtractedTask,
@@ -92,6 +106,7 @@ export {
   type PropertiesReportRequest,
   pageReportSorts,
   type ReferencedDiagram,
+  type ReferencedWhiteboard,
   type RelatedLabel,
   type RelatedLabelsRequest,
   type RenderContext,
@@ -101,6 +116,7 @@ export {
   type ReportedPage,
   type ReportedProperties,
   type ReportedTask,
+  type ResolvedAttachment,
   type ResolvedPageLink,
   required,
   type TaskReportRequest,
@@ -116,6 +132,14 @@ export {
   textDiagramTypes,
 } from "./modules/diagrams.js";
 export { MAX_DRAWING_TEXT } from "./modules/drawings.js";
+export {
+  EMBED_ALLOW,
+  EMBED_SANDBOX,
+  isEmbeddableUrl,
+  MAX_EMBED_HEIGHT,
+  MAX_EMBED_TITLE,
+  MIN_EMBED_HEIGHT,
+} from "./modules/embeds.js";
 export {
   excerptContent,
   includeRequest,
@@ -160,6 +184,13 @@ export {
   taskReportStatuses,
 } from "./modules/reports.js";
 export type { Roadmap } from "./modules/roadmap.js";
+export {
+  MAX_PREVIEW_HEIGHT,
+  MAX_PREVIEW_ZOOM,
+  MIN_PREVIEW_HEIGHT,
+  MIN_PREVIEW_ZOOM,
+} from "./modules/structure.js";
+export { cleanTabTitle, MAX_TAB_TITLE, MAX_TABS } from "./modules/tabs.js";
 export {
   MAX_PLACEHOLDER_LENGTH,
   MAX_TEMPLATE_BUTTON_LABEL,

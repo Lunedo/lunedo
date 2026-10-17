@@ -87,3 +87,7 @@ export function slugify(text: string): string {
     .replace(/-+$/g, "");
   return slug.length > 0 ? slug : "section";
 }
+
+export function headingNumberHtml(number: string | null): string {
+  return number ? `<span class="ph-heading-number">${escapeHtml(number)} </span>` : "";
+}

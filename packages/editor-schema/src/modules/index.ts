@@ -3,6 +3,7 @@ import { codeBlockModule } from "./code.js";
 import { coreModule } from "./core.js";
 import { diagramsModule } from "./diagrams.js";
 import { drawingModule } from "./drawings.js";
+import { embedModule } from "./embeds.js";
 import { excerptModule, includeModule } from "./includes.js";
 import { contentByLabelModule, relatedLabelsModule } from "./labels.js";
 import { attachmentListModule, childPagesModule } from "./listings.js";
@@ -24,7 +25,9 @@ import { decisionReportModule, pageReportModule, taskReportModule } from "./repo
 import { roadmapModule } from "./roadmap.js";
 import { fileModule, imageModule, sectionModule } from "./structure.js";
 import { tableModule } from "./table.js";
+import { tabsModule } from "./tabs.js";
 import { templateButtonModule, templatesModule } from "./templates.js";
+import { whiteboardModule } from "./whiteboards.js";
 
 export {
   attachmentListModule,
@@ -40,6 +43,7 @@ export {
   decisionReportModule,
   diagramsModule,
   drawingModule,
+  embedModule,
   emojiModule,
   excerptModule,
   expandModule,
@@ -62,12 +66,14 @@ export {
   statusModule,
   tableModule,
   tableOfContentsModule,
+  tabsModule,
   taskReportModule,
   tasksModule,
   templateButtonModule,
   templatesModule,
   topicUpdateModule,
   unsupportedMacroModule,
+  whiteboardModule,
 };
 
 export const defaultModules = [
@@ -95,6 +101,8 @@ export const defaultModules = [
   fileModule,
   drawingModule,
   diagramsModule,
+  embedModule,
+  whiteboardModule,
   attachmentListModule,
   childPagesModule,
   pagePropertiesModule,
@@ -103,6 +111,7 @@ export const defaultModules = [
   roadmapModule,
   calloutModule,
   expandModule,
+  tabsModule,
   statusModule,
   tableOfContentsModule,
   columnsModule,

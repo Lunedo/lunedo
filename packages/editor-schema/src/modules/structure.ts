@@ -1,10 +1,18 @@
 import { z } from "zod";
-import { type MacroConverter, macroReference } from "../importing.js";
+import { boundedInteger, type MacroConverter, macroReference, macroText } from "../importing.js";
 import type { ValidNode } from "../json.js";
-import { attrOf, defineModule, type HtmlRenderer, optional, required } from "../module.js";
-import { element, htmlAttributes, markdownUrl } from "../text.js";
+import {
+  attrOf,
+  defineModule,
+  type HtmlRenderer,
+  type MarkdownRenderer,
+  optional,
+  required,
+  type WordRenderer,
+} from "../module.js";
+import { element, headingNumberHtml, htmlAttributes, markdownUrl } from "../text.js";
 import { imageAlignments, uuidValue } from "../values.js";
-import { wordText } from "../word.js";
+import { type WordContent, wordText } from "../word.js";
 
 export const sectionModule = defineModule({
   name: "section",
@@ -16,24 +24,32 @@ export const sectionModule = defineModule({
         key: required(z.string().regex(/^[a-z][a-zA-Z0-9]{0,39}$/)),
         title: optional(z.string().max(255), ""),
       },
-      html: (node, renderer) =>
-        element(
+      html: (node, renderer) => {
+        const id = renderer.nextHeadingId();
+        const title = `${headingNumberHtml(renderer.headingNumber())}${renderer.escape(attrOf<string>(node, "title"))}`;
+        return element(
           "section",
           { class: "ph-section", "data-section": attrOf<string>(node, "key") },
-          `${element("h2", { id: renderer.nextHeadingId() }, renderer.escape(attrOf<string>(node, "title")))}${renderer.children(node)}`,
-        ),
-      word: (node, renderer) => [
-        {
-          type: "heading",
-          level: 2,
-          anchor: renderer.nextHeadingId(),
-          content: [wordText(attrOf<string>(node, "title"))],
-        },
-        ...renderer.blocks(node),
-      ],
+          `${element("h2", { id }, title)}${renderer.children(node)}`,
+        );
+      },
+      word: (node, renderer) => {
+        const anchor = renderer.nextHeadingId();
+        const number = renderer.headingNumber();
+        return [
+          {
+            type: "heading",
+            level: 2,
+            anchor,
+            content: [wordText(`${number ? `${number} ` : ""}${attrOf<string>(node, "title")}`)],
+          },
+          ...renderer.blocks(node),
+        ];
+      },
       markdown: (node, renderer) => {
         renderer.nextHeadingId();
-        return `## ${renderer.escape(attrOf<string>(node, "title"))}\n\n${renderer.blocks(node)}`;
+        const number = renderer.headingNumber();
+        return `## ${number ? `${number} ` : ""}${renderer.escape(attrOf<string>(node, "title"))}\n\n${renderer.blocks(node)}`;
       },
       text: (node) => attrOf<string>(node, "title"),
       heading: (node) => ({ level: 2, text: attrOf<string>(node, "title") }),
@@ -104,17 +120,103 @@ export const imageModule = defineModule({
   ],
 });
 
+export const MIN_PREVIEW_HEIGHT = 150;
+export const MAX_PREVIEW_HEIGHT = 2000;
+export const MIN_PREVIEW_ZOOM = 25;
+export const MAX_PREVIEW_ZOOM = 400;
+
+function previewHeight(value: string | null): number | null {
+  const height = boundedInteger(
+    (value ?? "").trim().replace(/px$/i, ""),
+    MIN_PREVIEW_HEIGHT,
+    MAX_PREVIEW_HEIGHT,
+  );
+  return height;
+}
+
 const fileImporter: MacroConverter = {
   source: "confluence",
-  macros: ["view-file", "viewpdf", "viewxls"],
+  macros: ["view-file", "viewpdf", "viewxls", "viewdoc", "viewppt"],
   convert: (macro, context) => {
     const reference = macroReference(macro, "name", "ri:attachment");
     if (!reference) return null;
     const found = context.attachment(reference, macroReference(macro, "page", "ri:page"));
     if (!found) return null;
-    return [{ type: "file", attrs: { attachmentId: found.attachmentId, name: found.name.slice(0, 255) } }];
+    return [
+      {
+        type: "file",
+        attrs: {
+          attachmentId: found.attachmentId,
+          name: found.name.slice(0, 255),
+          preview: true,
+          height: previewHeight(macroText(macro, "height")),
+        },
+      },
+    ];
   },
 };
+
+type AnyRenderer = HtmlRenderer | MarkdownRenderer | WordRenderer;
+
+function fileLink(
+  node: ValidNode,
+  renderer: AnyRenderer,
+): { name: string; href: string | null; image: boolean } {
+  const name = attrOf<string>(node, "name") || renderer.label("file");
+  const resolved = renderer.context.attachment?.(attrOf<string>(node, "attachmentId")) ?? null;
+  return {
+    name,
+    href: resolved ? renderer.safeHref(resolved.href) : null,
+    image: resolved?.image === true,
+  };
+}
+
+function fileHtml(node: ValidNode, renderer: HtmlRenderer): string {
+  const id = attrOf<string>(node, "attachmentId");
+  const { name, href } = fileLink(node, renderer);
+  const content = href
+    ? element("a", { href, rel: "noopener noreferrer" }, renderer.escape(name))
+    : renderer.escape(name);
+  const preview = attrOf<boolean>(node, "preview");
+  return element(
+    "div",
+    {
+      class: "ph-file",
+      "data-attachment-id": id,
+      "data-preview": preview ? "true" : null,
+      "data-height": preview ? attrOf<number | null>(node, "height") : null,
+      "data-zoom": preview ? attrOf<number | null>(node, "zoom") : null,
+    },
+    content,
+  );
+}
+
+function filePrint(node: ValidNode, renderer: HtmlRenderer): string {
+  const { name, href, image } = fileLink(node, renderer);
+  if (!attrOf<boolean>(node, "preview") || !image || !href) return fileHtml(node, renderer);
+  return element(
+    "figure",
+    { class: "ph-file-preview", "data-attachment-id": attrOf<string>(node, "attachmentId") },
+    `<img${htmlAttributes({ src: href, alt: name })}>${element("figcaption", {}, element("a", { href }, renderer.escape(name)))}`,
+  );
+}
+
+function fileWord(node: ValidNode, renderer: WordRenderer): WordContent[] {
+  const { name, href, image } = fileLink(node, renderer);
+  const link: WordContent = { type: "paragraph", content: [wordText(name, href ? { link: href } : {})] };
+  if (!attrOf<boolean>(node, "preview") || !image) return [link];
+  return [
+    {
+      type: "image",
+      attachmentId: attrOf<string>(node, "attachmentId"),
+      href,
+      alt: name,
+      width: null,
+      align: "center",
+    },
+    link,
+  ];
+}
 
 export const fileModule = defineModule({
   name: "file",
@@ -125,28 +227,17 @@ export const fileModule = defineModule({
       attrs: {
         attachmentId: required(uuidValue),
         name: optional(z.string().max(255), ""),
+        preview: optional(z.boolean(), false),
+        height: optional(z.number().int().min(MIN_PREVIEW_HEIGHT).max(MAX_PREVIEW_HEIGHT).nullable(), null),
+        zoom: optional(z.number().int().min(MIN_PREVIEW_ZOOM).max(MAX_PREVIEW_ZOOM).nullable(), null),
       },
-      html: (node, renderer) => {
-        const id = attrOf<string>(node, "attachmentId");
-        const name = attrOf<string>(node, "name") || renderer.label("file");
-        const resolved = renderer.context.attachment?.(id) ?? null;
-        const href = resolved ? renderer.safeHref(resolved.href) : null;
-        const content = href
-          ? element("a", { href, rel: "noopener noreferrer" }, renderer.escape(name))
-          : renderer.escape(name);
-        return element("div", { class: "ph-file", "data-attachment-id": id }, content);
-      },
-      word: (node, renderer) => {
-        const name = attrOf<string>(node, "name") || renderer.label("file");
-        const resolved = renderer.context.attachment?.(attrOf<string>(node, "attachmentId")) ?? null;
-        const href = resolved ? renderer.safeHref(resolved.href) : null;
-        return [{ type: "paragraph", content: [wordText(name, href ? { link: href } : {})] }];
-      },
+      html: fileHtml,
+      print: filePrint,
+      word: fileWord,
       markdown: (node, renderer) => {
-        const name = renderer.escape(attrOf<string>(node, "name") || renderer.label("file"));
-        const resolved = renderer.context.attachment?.(attrOf<string>(node, "attachmentId")) ?? null;
-        const href = resolved ? renderer.safeHref(resolved.href) : null;
-        return href ? `[${name}](${markdownUrl(href)})` : name;
+        const { name, href } = fileLink(node, renderer);
+        const text = renderer.escape(name);
+        return href ? `[${text}](${markdownUrl(href)})` : text;
       },
       text: (node) => attrOf<string>(node, "name"),
     },

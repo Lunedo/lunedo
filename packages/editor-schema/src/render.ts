@@ -90,6 +90,13 @@ export const defaultLabels: RenderLabels = {
   roadmap: "Roadmap",
   roadmapReadOnly: "Imported roadmap. Roadmaps can be edited once planning is available.",
   roadmapAsList: "Show as list",
+  embed: "External embed",
+  embedNotAllowed:
+    "Not on the embed allowlist, shown as a link. Organization administrators manage the list.",
+  embedFrom: "Embedded from {service}",
+  whiteboard: "Whiteboard",
+  chooseWhiteboard: "Choose a whiteboard for this block.",
+  filePreview: "File preview",
   callout: { info: "Info", tip: "Tip", note: "Note", warning: "Warning", error: "Error" },
 };
 
@@ -112,10 +119,32 @@ export function formatBytes(bytes: number): string {
 
 export const MAX_EXPENSIVE_RENDER_COST = 20_000;
 
+export function headingNumbers(headings: readonly Heading[]): string[] {
+  const open: { level: number; count: number }[] = [];
+  const numbers: string[] = [];
+  let top = 0;
+  for (const heading of headings) {
+    while (open.length > 0 && (open.at(-1) as { level: number }).level > heading.level) open.pop();
+    const current = open.at(-1);
+    if (current && current.level === heading.level) {
+      current.count += 1;
+      if (open.length === 1) top = current.count;
+    } else if (open.length === 0) {
+      top += 1;
+      open.push({ level: heading.level, count: top });
+    } else {
+      open.push({ level: heading.level, count: 1 });
+    }
+    numbers.push(open.map((entry) => entry.count).join("."));
+  }
+  return numbers;
+}
+
 class RenderState {
   index = 0;
   spent = 0;
   included = 0;
+  #numbers: string[] | null = null;
 
   constructor(
     readonly headings: readonly Heading[],
@@ -126,6 +155,11 @@ class RenderState {
     const heading = this.headings[this.index];
     this.index += 1;
     return `${this.prefix}${heading?.id ?? `section-${this.index}`}`;
+  }
+
+  currentNumber(): string | null {
+    this.#numbers ??= headingNumbers(this.headings);
+    return this.#numbers[this.index - 1] ?? null;
   }
 }
 
@@ -166,6 +200,10 @@ abstract class Renderer {
 
   nextHeadingId(): string {
     return this.state.next();
+  }
+
+  headingNumber(): string | null {
+    return this.context.numberHeadings ? this.state.currentNumber() : null;
   }
 
   spendRenderBudget(cost: number): boolean {

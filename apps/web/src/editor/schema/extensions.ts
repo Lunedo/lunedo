@@ -438,7 +438,13 @@ export function schemaExtensions(): AnyExtension[] {
     atomNode("roadmap", "div", { roadmap: dataAttribute("roadmap", "json") }),
     atomNode("templateButton", "div"),
     atomNode("image", "div", { width: dataAttribute("width", "number") }),
-    atomNode("file", "div"),
+    atomNode("file", "div", {
+      preview: dataAttribute("preview", "boolean"),
+      height: dataAttribute("height", "number"),
+      zoom: dataAttribute("zoom", "number"),
+    }),
+    atomNode("embed", "div", { height: dataAttribute("height", "number") }),
+    atomNode("whiteboard", "div"),
     atomNode("drawing", "div", {
       id: dataAttribute("drawingId"),
       sceneVersion: dataAttribute("sceneVersion", "number"),
@@ -471,6 +477,8 @@ export function schemaExtensions(): AnyExtension[] {
     containerNode("pagePropertyKey"),
     containerNode("pagePropertyValue"),
     containerNode("excerpt", { hidden: dataAttribute("hidden", "boolean") }),
+    containerNode("tabs"),
+    containerNode("tab"),
     Bold.extend(markFields("bold")),
     Italic.extend(markFields("italic")),
     Underline.extend(markFields("underline")),
