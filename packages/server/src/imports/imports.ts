@@ -1,7 +1,8 @@
 import { uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
-import type { Principal } from "../accounts/principal.js";
+import { accountPrincipal, type Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
+import type { AccessReduction } from "../authorization/access-reductions.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Encryption } from "../crypto/envelope.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
@@ -40,6 +41,7 @@ import type { UploadService } from "./uploads.js";
 import { parseUserList } from "./user-list.js";
 
 export const MAX_REVIEWERS = 50;
+export const ABANDONED_DRAFT_DAYS = 7;
 const SOURCE_URL_MAX_LENGTH = 500;
 
 const EDITABLE: readonly ImportState[] = ["draft", "analyzing", "ready"];
@@ -573,7 +575,8 @@ export class ImportService {
       if (input.sourceUrl !== undefined) changes.push(sql`source_url = ${cleanSourceUrl(input.sourceUrl)}`);
       if (fileChanged) {
         changes.push(
-          sql`found = null, error_code = null, checkpoint = '{}'::jsonb, progress_done = 0, progress_total = 0`,
+          sql`found = null, error_code = null, checkpoint = '{}'::jsonb, progress_done = 0, progress_total = 0,
+            staged_bytes = 0`,
         );
         await tx.execute(sql`delete from import_records where import_id = ${importId}`);
         await tx.execute(sql`delete from import_problems where import_id = ${importId}`);
@@ -737,6 +740,59 @@ export class ImportService {
     return this.get(actor, importId);
   }
 
+  async afterAccessReduced(tx: Transaction, reduction: AccessReduction): Promise<void> {
+    const drafts = await tx.execute<{ id: string; organization_id: string; importer_id: string }>(sql`
+      select i.id, i.organization_id, i.importer_id from imports i
+      where i.state in ('draft', 'analyzing', 'ready')
+        and exists (select 1 from import_credentials c where c.import_id = i.id)
+        ${reduction.organizationId ? sql`and i.organization_id = ${reduction.organizationId}` : sql``}
+        ${reduction.accountId ? sql`and i.importer_id = ${reduction.accountId}` : sql``}
+      order by i.id
+      for update of i`);
+    for (const draft of drafts.rows) {
+      const decision = await this.#authorization.explain(
+        accountPrincipal(draft.importer_id),
+        "organization.imports.manage",
+        { type: "organization", id: draft.organization_id },
+        { executor: tx, fresh: true },
+      );
+      if (decision.allowed) continue;
+      await deleteCredentials(tx, this.#audit, {
+        importId: draft.id,
+        organizationId: draft.organization_id,
+        reason: "permissionLost",
+      });
+      await signalImportChange(tx, { importId: draft.id, organizationId: draft.organization_id });
+    }
+  }
+
+  async removeAbandonedCredentials(limit = 100): Promise<number> {
+    const stale = await this.#database.execute<{ id: string }>(sql`
+      select i.id from imports i join import_credentials c on c.import_id = i.id
+      where i.state in ('draft', 'ready') and i.updated_at < now() - make_interval(days => ${ABANDONED_DRAFT_DAYS})
+      order by i.updated_at limit ${limit}`);
+    let removed = 0;
+    for (const { id } of stale.rows) {
+      await this.#database.transaction(async (tx) => {
+        const locked = await tx.execute<{ organization_id: string }>(sql`
+          select organization_id from imports
+          where id = ${id} and state in ('draft', 'ready')
+            and updated_at < now() - make_interval(days => ${ABANDONED_DRAFT_DAYS})
+          for update`);
+        const row = locked.rows[0];
+        if (!row) return;
+        await deleteCredentials(tx, this.#audit, {
+          importId: id,
+          organizationId: row.organization_id,
+          reason: "abandoned",
+        });
+        await signalImportChange(tx, { importId: id, organizationId: row.organization_id });
+        removed += 1;
+      });
+    }
+    return removed;
+  }
+
   async remove(actor: Principal, importId: string): Promise<void> {
     await this.#authorization.require(actor, "import.manage", { type: "import", id: importId });
     await this.#database.transaction(async (tx) => {
@@ -840,6 +896,12 @@ export class ImportService {
         throw new ImportError(
           "peopleSourceMissing",
           "Choose how Pagehall recognizes people: an API token, a user list, or skip with confirmation.",
+        );
+      }
+      if (row.people_source === "token" && row.credential_site === null) {
+        throw new ImportError(
+          "tokenMissing",
+          "Pagehall deleted the API token of this draft. Enter the token again to continue.",
         );
       }
       if (row.target_space_id) {

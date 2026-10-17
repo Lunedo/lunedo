@@ -170,6 +170,8 @@ export const problems = {
   importNotHeld: { status: 409, title: "The import is not waiting for an administrator" },
   importFinished: { status: 409, title: "The import is finished" },
   peopleSourceMissing: { status: 409, title: "Choose how people are recognized first" },
+  tokenMissing: { status: 409, title: "The API token of the draft was deleted" },
+  organizationImportLimit: { status: 409, title: "The imports of the organization reached their limit" },
   importNotResolvable: { status: 409, title: "People and groups can be mapped once the import has finished" },
   groupAlreadyMapped: { status: 409, title: "The group is mapped already" },
   userListTooLarge: { status: 413, title: "The user list is too large" },
@@ -412,7 +414,14 @@ export const problemSchema = z
       .number()
       .int()
       .optional()
-      .describe("Largest allowed file size in bytes, for `fileTooLarge` and `uploadTooLarge`."),
+      .describe(
+        "Largest allowed file size in bytes, for `fileTooLarge` and `uploadTooLarge`; storage limit of the organization's imports, for `organizationImportLimit`.",
+      ),
+    usedBytes: z
+      .number()
+      .int()
+      .optional()
+      .describe("Bytes the organization's imports use already, for `organizationImportLimit`."),
     missing: z.number().int().optional().describe("Number of parts still missing, for `uploadIncomplete`."),
     uncoveredPages: z
       .number()

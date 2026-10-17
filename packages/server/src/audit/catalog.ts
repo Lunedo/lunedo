@@ -1569,7 +1569,16 @@ export const auditCatalog = {
     actor: ["system", "account"],
     target: "import",
     fields: z.object({
-      reason: z.enum(["accepted", "discarded", "stopped", "failed", "replaced", "removed"]),
+      reason: z.enum([
+        "accepted",
+        "discarded",
+        "stopped",
+        "failed",
+        "replaced",
+        "removed",
+        "permissionLost",
+        "abandoned",
+      ]),
     }),
     visibility: "organization",
   }),

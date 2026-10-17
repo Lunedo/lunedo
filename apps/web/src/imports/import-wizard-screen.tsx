@@ -250,7 +250,12 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
   };
 
   function peopleProblem(): string | null {
-    if (entry.peopleSource?.kind === peopleChoice) return null;
+    if (
+      entry.peopleSource?.kind === peopleChoice &&
+      (peopleChoice !== "token" || entry.peopleSource.site !== null)
+    ) {
+      return null;
+    }
     return t(`imports.people.${peopleChoice}.missing`);
   }
 

@@ -22,6 +22,7 @@ import { SignInService } from "./auth/sign-in.js";
 import { RateLimiter, SignInThrottle } from "./auth/throttle.js";
 import { RecoveryCodeService, TotpService } from "./auth/two-factor.js";
 import { WebAuthnService } from "./auth/webauthn.js";
+import { AccessReductions } from "./authorization/access-reductions.js";
 import { AuthorizationRegistry } from "./authorization/registry.js";
 import { resourceTypes } from "./authorization/resources.js";
 import { AuthorizationService } from "./authorization/service.js";
@@ -364,8 +365,9 @@ export function createAccountServices(options: {
   const organizations = new OrganizationService({ database, settings, audit });
   const memberships = new MembershipService({ database, audit, authorization });
   const overview = new AccountOverviewService({ database, accounts });
-  const roles = new RoleService({ database, audit, authorization });
-  const groups = new GroupService({ database, audit, authorization });
+  const accessReductions = new AccessReductions();
+  const roles = new RoleService({ database, audit, authorization, reductions: accessReductions });
+  const groups = new GroupService({ database, audit, authorization, reductions: accessReductions });
   const signer = new ValueSigner({ database, encryption });
   const unsubscribe = new UnsubscribeService({ database, settings, signer });
   const notifications = new NotificationService({
@@ -394,6 +396,7 @@ export function createAccountServices(options: {
     audit,
     notifications,
     home: homeOrganizations,
+    reductions: accessReductions,
   });
   const identityProviders = new IdentityProviderService({
     database,
@@ -430,6 +433,7 @@ export function createAccountServices(options: {
     breakGlass,
     notifications,
     settings,
+    reductions: accessReductions,
   });
   const invitations = new InvitationService({
     database,
@@ -786,6 +790,13 @@ export function createAccountServices(options: {
     pipeline: importPipeline,
     readers: importReaders,
   });
+  accessReductions.on((tx, reduction) => imports.afterAccessReduced(tx, reduction));
+  memberships.onMembershipEnded((tx, organizationId, accountId) =>
+    accessReductions.reduced(tx, { organizationId, accountId }),
+  );
+  memberships.onDeactivated((tx, accountId) =>
+    accessReductions.reduced(tx, { organizationId: null, accountId }),
+  );
   const importWorker = new ImportWorker({
     database,
     pool: options.pool,
@@ -1037,6 +1048,7 @@ export async function workAccountJobs(
   });
   await jobs.work(importCleanupJob, async (job) => {
     while ((await services.importUploads.removeExpired()) > 0) job.signal.throwIfAborted();
+    while ((await services.imports.removeAbandonedCredentials()) > 0) job.signal.throwIfAborted();
   });
   await jobs.work(exportBuildJob, services.exports.work, { concurrency: 2 });
   await jobs.work(exportWatchdogJob, async () => {

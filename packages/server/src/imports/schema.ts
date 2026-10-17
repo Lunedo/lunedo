@@ -110,6 +110,7 @@ export const imports = pgTable(
     peopleSource: text(),
     tokenDeletedAt: timestampColumn(),
     sourceUrl: text(),
+    stagedBytes: bigint({ mode: "number" }).notNull().default(0),
     phase: text(),
     progressDone: integer().notNull().default(0),
     progressTotal: integer().notNull().default(0),

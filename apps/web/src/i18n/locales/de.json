@@ -1451,6 +1451,8 @@
     "methodNotAllowed": "Diese Adresse nimmt diese Art von Anfrage nicht an. Lade die Seite neu und versuche es erneut.",
     "unknownSetupAction": "Der Einrichtungsschritt hat sich vielleicht durch ein Update geändert. Lade die Seite neu und setze die Einrichtung fort.",
     "peopleSourceMissing": "Wähle, wie Pagehall Personen erkennt: mit einem API-Token, einer Benutzerliste oder ohne, mit Bestätigung. Starte dann den Import.",
+    "organizationImportLimit": "Die Importe dieser Organisation haben ihr Speicherlimit erreicht. Lösche nicht mehr benötigte Entwürfe, übernimm oder verwirf fertige Importe oder bitte die Instanz-Administration, das Limit zu erhöhen.",
+    "tokenMissing": "Pagehall hat das API-Token dieses Entwurfs gelöscht. Gib das Token im Schritt „Personen“ erneut ein und starte dann den Import.",
     "importNotResolvable": "Warte, bis der Import abgeschlossen ist, und ordne dann Personen und Gruppen in seinem Bericht zu.",
     "groupAlreadyMapped": "Jemand hat diese Gruppe inzwischen zugeordnet. Lade die Liste neu.",
     "userListTooLarge": "Die Benutzerliste darf bis zu 10 MB groß sein. Exportiere nur die Personen dieser Site und lade die kleinere Datei hoch.",
@@ -2241,6 +2243,10 @@
       "imports_maxUploadMegabytes": {
         "label": "Größter hochladbarer Export",
         "description": "Exporte über dieser Größe werden vor dem Upload abgelehnt, mit dem Hinweis, dieses Limit zu erhöhen oder den Import-Ordner der Organisation auf dem Server zu verwenden."
+      },
+      "imports_maxOrganizationMegabytes": {
+        "label": "Import-Speicher je Organisation",
+        "description": "Hochgeladene Exporte und die daraus gelesenen Daten zählen für jede Organisation zusammen. Erreicht eine Organisation dieses Limit, werden neue Uploads und das Lesen abgelehnt, bis frühere Importe abgeschlossen, verworfen oder gelöscht sind."
       },
       "imports_folderEnabled": {
         "label": "Import-Ordner",
@@ -7340,6 +7346,11 @@
         "cause": "Dem Speicher ging der Platz aus, während der Import Dateien schrieb. Pagehall hat ihn deshalb angehalten.",
         "action": "Bitte die Person, die Pagehall betreibt, Speicher freizugeben oder zu erweitern. Verwirf dann diesen Import und starte ihn neu."
       },
+      "organizationImportLimit": {
+        "what": "Import-Speicher der Organisation voll",
+        "cause": "Hochgeladene Exporte und die daraus gelesenen Daten haben das Limit dieser Organisation erreicht, während dieser Export gelesen wurde.",
+        "action": "Lösche nicht mehr benötigte Entwürfe, übernimm oder verwirf fertige Importe oder bitte die Instanz-Administration, das Limit zu erhöhen. Wähle die Datei danach erneut."
+      },
       "internalError": {
         "what": "Der Import hat nach mehreren Versuchen aufgehört",
         "cause": "Ein unerwartetes Problem ist wiederholt aufgetreten.",
@@ -7383,7 +7394,9 @@
         "connected": "Verbunden mit {site}",
         "connectedPlain": "Das Token funktioniert. Pagehall liest die Personen, wenn der Import läuft.",
         "found": "{people, plural, one {# Person} other {# Personen}} des Exports gefunden, {withEmail} mit sichtbarer E-Mail-Adresse.",
-        "replace": "Token ersetzen"
+        "replace": "Token ersetzen",
+        "deletedTitle": "API-Token erneut eingeben",
+        "deleted": "Pagehall hat das Token dieses Entwurfs am {when} gelöscht, weil der Entwurf eine Woche lang unbearbeitet blieb oder weil die importierende Person das Recht zum Importieren verloren hat. Gib es erneut ein, um fortzufahren."
       },
       "list": {
         "label": "Benutzerliste aus der Atlassian-Administration",

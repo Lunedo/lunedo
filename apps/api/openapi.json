@@ -40968,7 +40968,7 @@
             }
           },
           "409": {
-            "description": "`importNotReady`: The export is still being read. `importStarted`: The import has started. `keyTaken`: The space key is taken.",
+            "description": "`importNotReady`: The export is still being read. `importStarted`: The import has started. `keyTaken`: The space key is taken. `peopleSourceMissing`: Choose how people are recognized first. `tokenMissing`: The API token of the draft was deleted.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -40997,6 +40997,22 @@
                       "title": "The space key is taken",
                       "status": 409,
                       "code": "keyTaken"
+                    }
+                  },
+                  "peopleSourceMissing": {
+                    "value": {
+                      "type": "urn:pagehall:problem:peopleSourceMissing",
+                      "title": "Choose how people are recognized first",
+                      "status": 409,
+                      "code": "peopleSourceMissing"
+                    }
+                  },
+                  "tokenMissing": {
+                    "value": {
+                      "type": "urn:pagehall:problem:tokenMissing",
+                      "title": "The API token of the draft was deleted",
+                      "status": 409,
+                      "code": "tokenMissing"
                     }
                   }
                 }
@@ -135064,6 +135080,26 @@
               }
             }
           },
+          "409": {
+            "description": "`organizationImportLimit`: The imports of the organization reached their limit.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "organizationImportLimit": {
+                    "value": {
+                      "type": "urn:pagehall:problem:organizationImportLimit",
+                      "title": "The imports of the organization reached their limit",
+                      "status": 409,
+                      "code": "organizationImportLimit"
+                    }
+                  }
+                }
+              }
+            }
+          },
           "413": {
             "description": "`uploadTooLarge`: The file is larger than uploads allow.",
             "content": {
@@ -208027,7 +208063,13 @@
             "type": "string"
           },
           "maxBytes": {
-            "description": "Largest allowed file size in bytes, for `fileTooLarge` and `uploadTooLarge`.",
+            "description": "Largest allowed file size in bytes, for `fileTooLarge` and `uploadTooLarge`; storage limit of the organization's imports, for `organizationImportLimit`.",
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "usedBytes": {
+            "description": "Bytes the organization's imports use already, for `organizationImportLimit`.",
             "type": "integer",
             "minimum": -9007199254740991,
             "maximum": 9007199254740991

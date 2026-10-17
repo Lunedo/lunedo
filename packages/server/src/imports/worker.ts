@@ -33,7 +33,7 @@ import type { ImportState } from "./schema.js";
 import { signalImportChange } from "./signals.js";
 import type { ImportReaderRegistry, ImportSource } from "./source.js";
 import { StagingStore } from "./staging.js";
-import type { UploadService } from "./uploads.js";
+import { importStorageUsed, OrganizationImportLimitError, type UploadService } from "./uploads.js";
 
 const SEGMENT_MS = 25 * 60 * 1000;
 
@@ -226,7 +226,16 @@ export class ImportWorker {
         update imports set checkpoint = ${JSON.stringify({ run: runId })}::jsonb where id = ${row.id} and state = 'analyzing'`);
     }
     const scanCheckpoint = (row.checkpoint.scan as Record<string, unknown> | undefined) ?? null;
-    const staging = new StagingStore(this.#database, row.id);
+    const maxBytes = await this.#options.uploads.organizationMaxBytes();
+    const staging = new StagingStore(this.#database, row.id, async (executor) => {
+      const used = await importStorageUsed(executor, row.organization_id);
+      if (used > maxBytes) {
+        throw new ImportFormatError(
+          "organizationImportLimit",
+          new OrganizationImportLimitError(used, maxBytes).message,
+        );
+      }
+    });
     if (!scanCheckpoint) {
       await staging.clear();
       await this.#database.execute(sql`delete from import_problems where import_id = ${row.id}`);

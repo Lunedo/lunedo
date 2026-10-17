@@ -272,7 +272,7 @@ export class ImportsController {
     bodyExample: { name: "export.zip", size: 20971520 },
     status: 201,
     response: { description: "The upload.", schema: uploadSchema, example: { ...exampleUpload, parts: [] } },
-    errors: ["uploadTooLarge", "invalidFileName", "invalidUpload", "storageFull"],
+    errors: ["uploadTooLarge", "organizationImportLimit", "invalidFileName", "invalidUpload", "storageFull"],
   })
   async createUpload(
     @Param("organizationId") organizationId: string,
@@ -496,6 +496,8 @@ export class ImportsController {
       "keyTaken",
       "invalidSpaceName",
       "invalidSpaceKey",
+      "peopleSourceMissing",
+      "tokenMissing",
       "storageFull",
     ],
   })

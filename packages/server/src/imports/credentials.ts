@@ -7,7 +7,15 @@ import type { AtlassianCredentials, AtlassianDirectory } from "./atlassian.js";
 import { ImportError, ImportFormatError } from "./errors.js";
 import { type Directory, type DirectoryEntry, NO_DIRECTORY } from "./people.js";
 
-export type TokenDeletion = "accepted" | "discarded" | "stopped" | "failed" | "replaced" | "removed";
+export type TokenDeletion =
+  | "accepted"
+  | "discarded"
+  | "stopped"
+  | "failed"
+  | "replaced"
+  | "removed"
+  | "permissionLost"
+  | "abandoned";
 
 export function tokenContext(importId: string): string {
   return `import_credentials.token:${importId}`;

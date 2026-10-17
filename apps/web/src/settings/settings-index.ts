@@ -132,6 +132,7 @@ export const SPACE_FILE_KEYS = ["files.keepVersions"] as const;
 
 export const IMPORT_KEYS = [
   "imports.maxUploadMegabytes",
+  "imports.maxOrganizationMegabytes",
   "imports.folderEnabled",
   "imports.atlassianHosts",
 ] as const;

@@ -1451,6 +1451,8 @@
     "methodNotAllowed": "This address does not accept this kind of request. Reload the page and try again.",
     "unknownSetupAction": "The setup step may have changed after an update. Reload the page and continue the setup.",
     "peopleSourceMissing": "Choose how Pagehall recognizes people: an API token, a user list, or skip with confirmation. Then start the import.",
+    "organizationImportLimit": "The imports of this organization have reached their storage limit. Delete drafts you no longer need, accept or discard finished imports, or ask the instance administrators to raise the limit.",
+    "tokenMissing": "Pagehall deleted the API token of this draft. Enter the token again in the people step, then start the import.",
     "importNotResolvable": "Wait until the import has finished, then map people and groups in its report.",
     "groupAlreadyMapped": "Someone mapped this group in the meantime. Reload the list.",
     "userListTooLarge": "The user list can have up to 10 MB. Export only the people of this site and upload the smaller file.",
@@ -2241,6 +2243,10 @@
       "imports_maxUploadMegabytes": {
         "label": "Largest export to upload",
         "description": "Exports above this size are refused before the upload starts, with a hint to raise this limit or to use the organization's import folder on the server."
+      },
+      "imports_maxOrganizationMegabytes": {
+        "label": "Import storage per organization",
+        "description": "Uploaded exports and the data Pagehall reads from them count together for each organization. When an organization reaches this limit, new uploads and reading are refused until earlier imports are finished, discarded or deleted."
       },
       "imports_folderEnabled": {
         "label": "Import folder",
@@ -7340,6 +7346,11 @@
         "cause": "The storage ran out of room while the import was writing files, so Pagehall stopped it.",
         "action": "Ask the person who runs Pagehall to free up or add storage. Then discard this import and start it again."
       },
+      "organizationImportLimit": {
+        "what": "Import storage of the organization full",
+        "cause": "Uploaded exports and the data Pagehall read from them reached the limit for this organization while this export was being read.",
+        "action": "Delete drafts you no longer need, accept or discard finished imports, or ask the instance administrators to raise the limit. Then choose the file again."
+      },
       "internalError": {
         "what": "The import stopped after several attempts",
         "cause": "An unexpected problem occurred again and again.",
@@ -7383,7 +7394,9 @@
         "connected": "Connected to {site}",
         "connectedPlain": "The token works. Pagehall reads the people when the import runs.",
         "found": "{people, plural, one {# person} other {# people}} of the export found, {withEmail} with a visible e-mail address.",
-        "replace": "Replace token"
+        "replace": "Replace token",
+        "deletedTitle": "Enter the API token again",
+        "deleted": "Pagehall deleted the token of this draft on {when}, because the draft was left alone for a week or because its importer lost the permission to import. Enter it again to continue."
       },
       "list": {
         "label": "User list from the Atlassian administration",
