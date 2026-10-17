@@ -15,6 +15,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { problemMessage } from "../errors/problem-message.js";
+import { useFormat } from "../preferences/preferences-provider.js";
 import { type ImportView, importKeys, setPeopleSource, setUserList } from "./imports-api.js";
 import { UserListField } from "./user-list-field.js";
 
@@ -34,6 +35,7 @@ export function PeopleStep({
   attempt: number;
 }) {
   const { t } = useTranslation();
+  const format = useFormat();
   const queryClient = useQueryClient();
   const source = entry.peopleSource;
   const store = (updated: ImportView) => queryClient.setQueryData(importKeys.detail(entry.id), updated);
@@ -62,6 +64,11 @@ export function PeopleStep({
             }))}
           />
           {error ? <FieldError>{error}</FieldError> : null}
+          {choice === "token" && source?.kind === "token" && source.site === null && entry.tokenDeletedAt ? (
+            <Notice variant="warning" title={t("imports.people.token.deletedTitle")}>
+              {t("imports.people.token.deleted", { when: format.dateTime(entry.tokenDeletedAt) })}
+            </Notice>
+          ) : null}
           {choice === "token" ? <TokenForm entry={entry} onSaved={store} attempt={attempt} /> : null}
           {choice === "list" ? (
             <UserListField
@@ -111,7 +118,8 @@ function TokenForm({
   attempt: number;
 }) {
   const { t } = useTranslation();
-  const connected = entry.peopleSource?.kind === "token" ? entry.peopleSource : null;
+  const connected =
+    entry.peopleSource?.kind === "token" && entry.peopleSource.site !== null ? entry.peopleSource : null;
   const [editing, setEditing] = useState(connected === null);
   const [site, setSite] = useState(connected?.site ?? "");
   const [email, setEmail] = useState(connected?.email ?? "");

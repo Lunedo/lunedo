@@ -4,7 +4,7 @@ import { uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";
-import type { Database } from "../database/database.js";
+import type { Database, Executor } from "../database/database.js";
 import { type FileService, FileTooLargeError } from "../files/files.js";
 import { cleanFileName } from "../files/names.js";
 import { MEGABYTE } from "../files/settings.js";
@@ -12,8 +12,8 @@ import type { SettingsService } from "../settings/service.js";
 import { actorIdOf } from "../spaces/common.js";
 import type { StorageService } from "../storage/storage.js";
 import { ImportError } from "./errors.js";
-import type { ByteSource } from "./formats/bytes.js";
-import { maxUploadSetting } from "./settings.js";
+import { type BundledFile, type ByteBundle, type ByteSource, bundleOf } from "./formats/bytes.js";
+import { maxOrganizationSetting, maxUploadSetting } from "./settings.js";
 
 export const UPLOAD_PART_BYTES = 16 * MEGABYTE;
 const UPLOAD_LIFETIME_DAYS = 7;
@@ -52,6 +52,41 @@ export class UploadTooLargeError extends ImportError {
   constructor(readonly maxBytes: number) {
     super("uploadTooLarge", `The file is larger than ${Math.floor(maxBytes / MEGABYTE)} MB.`, { maxBytes });
   }
+}
+
+export class OrganizationImportLimitError extends ImportError {
+  constructor(usedBytes: number, maxBytes: number) {
+    super(
+      "organizationImportLimit",
+      `The imports of this organization use ${Math.ceil(usedBytes / MEGABYTE)} of ${Math.floor(maxBytes / MEGABYTE)} MB. Delete drafts, discard or accept earlier imports, or ask the instance administrators to raise the limit.`,
+      { maxBytes, usedBytes },
+    );
+  }
+}
+
+export async function importStorageUsed(executor: Executor, organizationId: string): Promise<number> {
+  const result = await executor.execute<{ used: string | number | null }>(sql`
+    select coalesce((select sum(size) from import_uploads where organization_id = ${organizationId}), 0)
+      + coalesce((select sum(staged_bytes) from imports where organization_id = ${organizationId}
+          and state not in ('accepted', 'discarded', 'stopped', 'superseded')), 0) as used`);
+  return Number(result.rows[0]?.used ?? 0);
+}
+
+export async function lockImportStorage(executor: Executor, organizationId: string): Promise<void> {
+  await executor.execute(
+    sql`select pg_advisory_xact_lock(hashtextextended(${`pagehall.importStorage:${organizationId}`}, 0))`,
+  );
+}
+
+export async function releaseUploads(
+  executor: Executor,
+  input: { importId: string; uploadId: string | null; days: number; keepEarlier?: boolean },
+): Promise<void> {
+  const expiry = sql`now() + make_interval(days => ${input.days})`;
+  await executor.execute(sql`
+    update import_uploads set expires_at = ${input.keepEarlier ? sql`least(expires_at, ${expiry})` : expiry}
+    where id = ${input.uploadId}
+      or id in (select upload_id from import_files where import_id = ${input.importId})`);
 }
 
 export function cleanUploadName(name: string): string {
@@ -102,6 +137,16 @@ export class UploadService {
     return (await this.#settings.get(maxUploadSetting, {})) * MEGABYTE;
   }
 
+  async organizationMaxBytes(): Promise<number> {
+    return (await this.#settings.get(maxOrganizationSetting, {})) * MEGABYTE;
+  }
+
+  async requireRoom(executor: Executor, organizationId: string, bytes: number): Promise<void> {
+    const limit = await this.organizationMaxBytes();
+    const used = await importStorageUsed(executor, organizationId);
+    if (used + bytes > limit) throw new OrganizationImportLimitError(used, limit);
+  }
+
   async create(
     actor: Principal,
     organizationId: string,
@@ -118,12 +163,16 @@ export class UploadService {
     const limit = await this.maxBytes();
     if (input.size > limit) throw new UploadTooLargeError(limit);
     await this.#storage.requireLargeWrite(input.size);
-    const result = await this.#database.execute<UploadRow>(sql`
-      insert into import_uploads (id, organization_id, created_by, name, size, part_size, expires_at)
-      values (${uuidv7()}, ${organizationId}, ${actorIdOf(actor)}, ${name}, ${input.size}, ${UPLOAD_PART_BYTES},
-        now() + make_interval(days => ${UPLOAD_LIFETIME_DAYS}))
-      returning *`);
-    const row = result.rows[0];
+    const row = await this.#database.transaction(async (tx) => {
+      await lockImportStorage(tx, organizationId);
+      await this.requireRoom(tx, organizationId, input.size);
+      const result = await tx.execute<UploadRow>(sql`
+        insert into import_uploads (id, organization_id, created_by, name, size, part_size, expires_at)
+        values (${uuidv7()}, ${organizationId}, ${actorIdOf(actor)}, ${name}, ${input.size}, ${UPLOAD_PART_BYTES},
+          now() + make_interval(days => ${UPLOAD_LIFETIME_DAYS}))
+        returning *`);
+      return result.rows[0];
+    });
     if (!row) throw new Error("The upload was not created");
     return this.#toUpload(row, []);
   }
@@ -233,7 +282,9 @@ export class UploadService {
     await this.#owned(actor, uploadId);
     await this.#database.execute(sql`
       delete from import_uploads u where u.id = ${uploadId}
-        and not exists (select 1 from imports i where i.upload_id = u.id and i.state not in ('draft', 'ready'))`);
+        and not exists (select 1 from imports i where i.state not in ('draft', 'ready')
+          and (i.upload_id = u.id
+            or exists (select 1 from import_files f where f.import_id = i.id and f.upload_id = u.id)))`);
   }
 
   async source(uploadId: string): Promise<ByteSource> {
@@ -271,6 +322,19 @@ export class UploadService {
     };
   }
 
+  async bundle(importId: string): Promise<ByteBundle> {
+    const result = await this.#database.execute<{ id: string; name: string; complete: boolean }>(sql`
+      select u.id, u.name, u.complete from import_files f join import_uploads u on u.id = f.upload_id
+      where f.import_id = ${importId} order by f.position`);
+    if (result.rows.length === 0) throw new ImportError("fileMissing", "Choose the files first.");
+    if (result.rows.some((row) => !row.complete)) {
+      throw new ImportError("uploadIncomplete", "The upload is not complete.");
+    }
+    const files: BundledFile[] = [];
+    for (const row of result.rows) files.push({ name: row.name, source: await this.source(row.id) });
+    return bundleOf(files);
+  }
+
   async removeExpired(limit = 50): Promise<number> {
     const result = await this.#database.execute<{ id: string }>(sql`
       delete from import_uploads u
@@ -278,7 +342,8 @@ export class UploadService {
         select u2.id from import_uploads u2
         where u2.expires_at < now()
           and not exists (
-            select 1 from imports i where i.upload_id = u2.id
+            select 1 from imports i where (i.upload_id = u2.id
+                or exists (select 1 from import_files f where f.import_id = i.id and f.upload_id = u2.id))
               and (i.state in ('analyzing', 'ready', 'running', 'held', 'stopping', 'review', 'accepting', 'discarding')
                 or (i.file_expires_at is not null and i.file_expires_at > now())))
         limit ${limit})

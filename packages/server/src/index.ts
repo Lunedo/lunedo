@@ -404,14 +404,17 @@ export {
 export { type SyncRunSignal, signalRun } from "./identity/sync-signals.js";
 export type { WithheldRole } from "./identity/withheld.js";
 export { atlassianHostsSetting } from "./imports/atlassian.js";
+export type { ConfluenceSpaceSummary, ConfluenceTree } from "./imports/confluence/api-reader.js";
 export { ImportError } from "./imports/errors.js";
 export type { FolderFile } from "./imports/folder.js";
 export {
+  type ConnectionInput,
   type ImportFound,
   type ImportPerson,
   type ImportService,
   type ImportUpdate,
   type ImportView,
+  MAX_DOCUMENTS,
   MAX_REVIEWERS,
   type MacroUsage,
   type PeopleSourceInput,

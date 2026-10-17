@@ -170,6 +170,25 @@ export const problems = {
   importNotHeld: { status: 409, title: "The import is not waiting for an administrator" },
   importFinished: { status: 409, title: "The import is finished" },
   peopleSourceMissing: { status: 409, title: "Choose how people are recognized first" },
+  tokenMissing: { status: 409, title: "The API token of the draft was deleted" },
+  connectionMissing: { status: 409, title: "The import is not connected to Confluence" },
+  wrongInput: { status: 400, title: "This kind of import does not take this input" },
+  wrongFileType: { status: 400, title: "The file has the wrong type for this import" },
+  macroDocument: { status: 400, title: "Word documents with macros are not imported" },
+  tooManyFiles: { status: 400, title: "Too many files for one import" },
+  invalidOptions: { status: 400, title: "The options do not apply to this import" },
+  invalidSelection: { status: 400, title: "The selection is not valid" },
+  invalidDataCenterAddress: { status: 400, title: "The Confluence Data Center address is not allowed" },
+  invalidAccessToken: { status: 400, title: "The personal access token is not valid" },
+  confluenceUnauthorized: { status: 400, title: "Confluence refused the token" },
+  confluenceCertificate: { status: 502, title: "The certificate of Confluence is not trusted" },
+  confluenceBlocked: { status: 400, title: "Pagehall may not connect to this address" },
+  confluenceRedirect: { status: 502, title: "Confluence redirected to another address" },
+  confluenceInvalidResponse: { status: 502, title: "Confluence sent an answer Pagehall cannot read" },
+  confluenceUnreachable: { status: 502, title: "Confluence could not be reached" },
+  confluenceRateLimited: { status: 503, title: "Confluence asked to slow down" },
+  confluenceSpaceMissing: { status: 404, title: "The Confluence space does not exist or cannot be read" },
+  organizationImportLimit: { status: 409, title: "The imports of the organization reached their limit" },
   importNotResolvable: { status: 409, title: "People and groups can be mapped once the import has finished" },
   groupAlreadyMapped: { status: 409, title: "The group is mapped already" },
   userListTooLarge: { status: 413, title: "The user list is too large" },
@@ -416,7 +435,14 @@ export const problemSchema = z
       .number()
       .int()
       .optional()
-      .describe("Largest allowed file size in bytes, for `fileTooLarge` and `uploadTooLarge`."),
+      .describe(
+        "Largest allowed file size in bytes, for `fileTooLarge` and `uploadTooLarge`; storage limit of the organization's imports, for `organizationImportLimit`.",
+      ),
+    usedBytes: z
+      .number()
+      .int()
+      .optional()
+      .describe("Bytes the organization's imports use already, for `organizationImportLimit`."),
     missing: z.number().int().optional().describe("Number of parts still missing, for `uploadIncomplete`."),
     uncoveredPages: z
       .number()

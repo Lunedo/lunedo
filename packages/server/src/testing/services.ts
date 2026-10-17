@@ -13,6 +13,7 @@ import { runMigrations } from "../database/migrate.js";
 import { createDatabasePool, type DatabasePool } from "../database/pool.js";
 import type { RenderConnection } from "../exports/rendering.js";
 import type { DirectoryConnector } from "../identity/ldap-connection.js";
+import type { ConfluenceTransport } from "../imports/confluence/api-client.js";
 import { createLogger } from "../logging/logger.js";
 import type { OutboundPolicy } from "../outbound/guarded-request.js";
 import { type AccountServices, createAccountServices } from "../services.js";
@@ -41,6 +42,7 @@ export async function createTestServices(
     masterKey?: Buffer;
     keyProvider?: KeyProvider;
     atlassianFetch?: typeof fetch;
+    confluenceTransport?: ConfluenceTransport;
     chatPolicy?: OutboundPolicy;
     pushPolicy?: OutboundPolicy;
     render?: RenderConnection;
@@ -83,6 +85,7 @@ export async function createTestServices(
       configuredInstanceUrl: options.configuredInstanceUrl,
       ...(options.directoryConnector ? { directoryConnector: options.directoryConnector } : {}),
       ...(options.atlassianFetch ? { atlassianFetch: options.atlassianFetch } : {}),
+      ...(options.confluenceTransport ? { confluenceTransport: options.confluenceTransport } : {}),
       ...(options.chatPolicy ? { chatPolicy: options.chatPolicy } : {}),
       ...(options.pushPolicy ? { pushPolicy: options.pushPolicy } : {}),
       ...(options.render ? { render: options.render } : {}),

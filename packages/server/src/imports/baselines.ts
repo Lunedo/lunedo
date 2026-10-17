@@ -8,7 +8,6 @@ import { groupKey } from "./permissions.js";
 import type { ImportReader, ReadContext, SourceContentType, SourcePage, SourceTemplate } from "./source.js";
 
 const PAGE_BATCH = 50;
-export const CONFLUENCE_SOURCE = "confluence";
 
 export interface PageRestrictionState {
   readonly kinds: readonly ("view" | "edit")[];
@@ -208,11 +207,11 @@ export async function sourceHolders(
 
 export async function recordImportedSpace(
   executor: Executor,
-  input: { spaceId: string; importId: string; sourceSpaceId: string; sourceSpaceKey: string },
+  input: { spaceId: string; importId: string; source: string; sourceSpaceId: string; sourceSpaceKey: string },
 ): Promise<void> {
   await executor.execute(sql`
     insert into imported_spaces (space_id, import_id, source, source_space_id, source_space_key)
-    values (${input.spaceId}, ${input.importId}, ${CONFLUENCE_SOURCE}, ${input.sourceSpaceId},
+    values (${input.spaceId}, ${input.importId}, ${input.source}, ${input.sourceSpaceId},
       ${input.sourceSpaceKey.toLowerCase()})
     on conflict (space_id) do update set source_space_key = excluded.source_space_key`);
 }

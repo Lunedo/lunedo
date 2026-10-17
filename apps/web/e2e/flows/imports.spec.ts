@@ -5,6 +5,7 @@ import {
   importIdFrom,
   placeFolderExport,
   waitForImportState,
+  writeSourceFile,
   writeSyntheticExport,
 } from "../support/imports.js";
 import { unique } from "../support/people.js";
@@ -136,4 +137,72 @@ test("an administrator imports a CSV export from the import folder and discards 
   await expect(page.getByText("The import was discarded")).toBeVisible();
   const space = await page.request.get(`/api/v1/spaces?q=${key}`);
   expect(JSON.stringify(await space.json())).not.toContain(key);
+});
+
+test("an administrator imports a Markdown folder and a Word document through the assistant", async ({
+  page,
+  organization,
+}) => {
+  test.slow();
+  const markdown = test.info().outputPath("handbook.zip");
+  const word = test.info().outputPath("security-policy.docx");
+  await writeSourceFile("markdown", markdown);
+  await writeSourceFile("word", word);
+
+  const markdownKey = `M${unique()}`.slice(0, 10);
+  await page.goto(`/settings/organizations/${organization.id}/imports`);
+  await page.getByRole("button", { name: "New import" }).first().click();
+  await expect(page).toHaveURL(/\/imports\/[0-9a-f-]+\/setup/);
+  const markdownImport = importIdFrom(page);
+  await page.getByRole("radio", { name: /Markdown folder/ }).check();
+  await expectAccessible(page, "import source choice");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByRole("heading", { name: "Upload", level: 1 })).toBeVisible();
+  await page.locator('input[type="file"]').setInputFiles(markdown);
+  await expect(page.getByText("Export read")).toBeVisible({ timeout: 60_000 });
+  await expectAccessible(page, "markdown upload step");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByRole("heading", { name: "Space", level: 1 })).toBeVisible();
+  await page.getByLabel("Name", { exact: true }).fill("Team handbook");
+  await page.getByLabel("Key", { exact: true }).fill(markdownKey);
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByRole("heading", { name: "Check and start", level: 1 })).toBeVisible();
+  await expect(page.getByText("Folders, links and images")).toBeVisible();
+  await expectAccessible(page, "markdown check step");
+  await page.getByRole("button", { name: "Start import" }).click();
+  await waitForImportState(markdownImport, "review");
+  await page.reload();
+  await expect(page.getByText("1 element stayed as text")).toBeVisible();
+  await expectAccessible(page, "markdown import report");
+  await page.goto(`/spaces/${markdownKey}`);
+  await expect(page.getByText("Start with").first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "setup" }).first()).toBeVisible();
+
+  const wordKey = `W${unique()}`.slice(0, 10);
+  await page.goto(`/settings/organizations/${organization.id}/imports`);
+  await page.getByRole("button", { name: "New import" }).first().click();
+  await expect(page).toHaveURL(/\/imports\/[0-9a-f-]+\/setup/);
+  const wordImport = importIdFrom(page);
+  await page.getByRole("radio", { name: /Word documents/ }).check();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(
+    page.getByText("Add at least one Word document and wait until every upload is finished."),
+  ).toBeVisible();
+  await page.locator('input[type="file"]').setInputFiles(word);
+  await expect(page.getByText("Documents read")).toBeVisible({ timeout: 60_000 });
+  await page.getByRole("combobox", { name: "Pages" }).click();
+  await page.getByRole("option", { name: "A subpage per top-level heading" }).click();
+  await expect(page.getByText("3 pages with 0 attachments found.")).toBeVisible({ timeout: 60_000 });
+  await expectAccessible(page, "word upload step");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByLabel("Key", { exact: true }).fill(wordKey);
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByText("Headings, tables and images")).toBeVisible();
+  await page.getByRole("button", { name: "Start import" }).click();
+  await waitForImportState(wordImport, "review");
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Accept import" })).toBeVisible();
+  await page.goto(`/spaces/${wordKey}`);
+  await expect(page.getByRole("link", { name: "Security policy" }).first()).toBeVisible();
 });

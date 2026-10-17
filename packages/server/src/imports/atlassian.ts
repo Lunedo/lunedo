@@ -51,6 +51,43 @@ export function atlassianSite(input: string, allowedHosts: string): string {
   return host;
 }
 
+export interface DataCenterBase {
+  readonly site: string;
+  readonly basePath: string;
+}
+
+const PATH_SEGMENT = /^[A-Za-z0-9._~-]{1,100}$/;
+
+export function dataCenterBase(input: string, allowedHosts: string): DataCenterBase {
+  const invalid = () =>
+    new ImportError(
+      "invalidDataCenterAddress",
+      "Enter the https address of your Confluence Data Center, such as https://wiki.example.com/confluence. An instance administrator must allow its host first.",
+    );
+  let value = input.trim();
+  if (value.length === 0 || value.length > 500) throw invalid();
+  if (!value.includes("://")) value = `https://${value}`;
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw invalid();
+  }
+  if (url.protocol !== "https:" || url.username !== "" || url.password !== "" || url.search || url.hash) {
+    throw invalid();
+  }
+  const host = url.hostname.toLowerCase();
+  if (!HOST_PATTERN.test(host) || !splitHosts(allowedHosts).includes(host)) throw invalid();
+  const segments = url.pathname.split("/").filter((segment) => segment.length > 0);
+  if (segments.length > 5 || !segments.every((segment) => PATH_SEGMENT.test(segment) && segment !== "..")) {
+    throw invalid();
+  }
+  return {
+    site: url.port ? `${host}:${url.port}` : host,
+    basePath: segments.length > 0 ? `/${segments.join("/")}` : "",
+  };
+}
+
 function invalidSite(): ImportError {
   return new ImportError(
     "invalidAtlassianSite",

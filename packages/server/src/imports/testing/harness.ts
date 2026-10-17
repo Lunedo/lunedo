@@ -7,12 +7,16 @@ import { createLogger } from "../../logging/logger.js";
 import { testJobContext } from "../../testing/jobs.js";
 import type { TestServices } from "../../testing/services.js";
 import { AtlassianDirectory } from "../atlassian.js";
+import type { ConfluenceTransport } from "../confluence/api-client.js";
+import { ConfluenceApiReader } from "../confluence/api-reader.js";
 import { ConfluenceCsvReader } from "../confluence/csv-reader.js";
 import { ConfluenceXmlReader } from "../confluence/xml-reader.js";
-import type { PeopleSourceInput } from "../imports.js";
+import type { OptionsInput, PeopleSourceInput } from "../imports.js";
+import { MarkdownReader } from "../markdown/reader.js";
 import { ImportPipeline } from "../pipeline.js";
 import { ImportReaderRegistry } from "../source.js";
 import { combinedDigest } from "../uploads.js";
+import { WordReader } from "../word/reader.js";
 import { ImportWorker } from "../worker.js";
 import { createCsvExport, createXmlExport, type SyntheticExport } from "./confluence-export.js";
 
@@ -23,10 +27,30 @@ function sha256(data: Buffer): string {
 export interface ImportHarnessOptions {
   readonly fetch?: typeof fetch;
   readonly logger?: Logger;
+  readonly transport?: ConfluenceTransport;
 }
+
+const NO_TRANSPORT: ConfluenceTransport = {
+  async get() {
+    throw new Error("No Confluence transport in this test");
+  },
+};
 
 export function importHarness(test: () => TestServices, options: ImportHarnessOptions = {}) {
   const as = (id: string) => accountPrincipal(id);
+
+  function readers(): ImportReaderRegistry {
+    const { database, encryption } = test();
+    const transport = options.transport ?? NO_TRANSPORT;
+    return new ImportReaderRegistry().register(
+      new ConfluenceXmlReader(),
+      new ConfluenceCsvReader(),
+      new ConfluenceApiReader("confluence-cloud", { database, encryption, transport }),
+      new ConfluenceApiReader("confluence-dc", { database, encryption, transport }),
+      new MarkdownReader(),
+      new WordReader(),
+    );
+  }
 
   function worker(segmentMs?: number): ImportWorker {
     const { services, database, encryption, settings, pool } = test();
@@ -39,7 +63,7 @@ export function importHarness(test: () => TestServices, options: ImportHarnessOp
       encryption,
       atlassian: new AtlassianDirectory(options.fetch ? { fetch: options.fetch } : {}),
       uploads: services.importUploads,
-      readers: new ImportReaderRegistry().register(new ConfluenceXmlReader(), new ConfluenceCsvReader()),
+      readers: readers(),
       pipeline: new ImportPipeline({
         database,
         files: services.files,
@@ -67,10 +91,15 @@ export function importHarness(test: () => TestServices, options: ImportHarnessOp
     return runs;
   }
 
-  async function upload(owner: string, organizationId: string, archive: Buffer): Promise<string> {
+  async function upload(
+    owner: string,
+    organizationId: string,
+    archive: Buffer,
+    name = "export.zip",
+  ): Promise<string> {
     const services = test().services.importUploads;
     const created = await services.create(as(owner), organizationId, {
-      name: "export.zip",
+      name,
       size: archive.length,
     });
     const digests: string[] = [];
@@ -187,9 +216,51 @@ export function importHarness(test: () => TestServices, options: ImportHarnessOp
     return result.rows[0]?.target_id ?? "";
   }
 
+  async function analyzedFiles(input: {
+    organizationId: string;
+    admin: string;
+    source: "markdown" | "word";
+    files: readonly { name: string; data: Buffer }[];
+    options?: OptionsInput;
+    spaceId?: string;
+  }): Promise<string> {
+    const imports = test().services.imports;
+    const created = await imports.create(as(input.admin), input.organizationId, {
+      source: input.source,
+      ...(input.spaceId ? { spaceId: input.spaceId } : {}),
+    });
+    if (input.options) await imports.update(as(input.admin), created.id, { options: input.options });
+    const ids: string[] = [];
+    for (const file of input.files)
+      ids.push(await upload(input.admin, input.organizationId, file.data, file.name));
+    if (input.source === "markdown") {
+      const [first] = ids;
+      if (first)
+        await imports.update(as(input.admin), created.id, { file: { kind: "upload", uploadId: first } });
+    } else await imports.update(as(input.admin), created.id, { files: ids });
+    await drive(created.id);
+    return created.id;
+  }
+
+  async function importedFiles(input: Parameters<typeof analyzedFiles>[0] & { key: string }) {
+    const id = await analyzedFiles(input);
+    const imports = test().services.imports;
+    const ready = await imports.get(as(input.admin), id);
+    if (ready.state !== "ready") return ready;
+    if (!input.spaceId) {
+      await imports.update(as(input.admin), id, { spaceName: `Imported ${input.key}`, spaceKey: input.key });
+    }
+    await imports.start(as(input.admin), id);
+    await drive(id);
+    return imports.get(as(input.admin), id);
+  }
+
   return {
     as,
     worker,
+    readers,
+    analyzedFiles,
+    importedFiles,
     drive,
     upload,
     prepared,

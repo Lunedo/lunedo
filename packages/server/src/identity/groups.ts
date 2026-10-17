@@ -3,6 +3,7 @@ import { SYSTEM } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import { instanceAdministratorIds } from "../auth/emergency-recipients.js";
+import type { AccessReductions } from "../authorization/access-reductions.js";
 import type { Executor, Transaction } from "../database/database.js";
 import type { NotificationService } from "../notifications/service.js";
 import { groupMembers, groups, memberships, roleAssignments } from "../organizations/access-schema.js";
@@ -123,6 +124,7 @@ export class GroupMappingService {
   readonly #audit: AuditLog;
   readonly #notifications: NotificationService | undefined;
   readonly #home: HomeOrganizationService | undefined;
+  readonly #reductions: AccessReductions | undefined;
 
   constructor(options: {
     roles: RoleService;
@@ -130,12 +132,14 @@ export class GroupMappingService {
     audit: AuditLog;
     notifications?: NotificationService;
     home?: HomeOrganizationService;
+    reductions?: AccessReductions;
   }) {
     this.#roles = options.roles;
     this.#memberships = options.memberships;
     this.#audit = options.audit;
     this.#notifications = options.notifications;
     this.#home = options.home;
+    this.#reductions = options.reductions;
   }
 
   async dispatch(mailIds: readonly string[]): Promise<void> {
@@ -624,6 +628,7 @@ export class GroupMappingService {
             ? { scope: { type: "organization" as const, id: grant.organizationId } }
             : {}),
         });
+        await this.#reductions?.reduced(tx, { organizationId: grant.organizationId, accountId });
         report.changes.push({
           kind: "groupMemberRemoved",
           accountId,

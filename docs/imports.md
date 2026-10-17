@@ -1,17 +1,63 @@
 # Imports
 
-Organization administrators import a Confluence space export into a new space. Both export formats are supported: the XML export and the CSV export of Confluence Cloud and Data Center.
+Organization administrators import into a new space: a Confluence space from its XML or CSV export or directly through the API of Confluence Cloud and Data Center, a folder of Markdown files, or Word documents.
 
 ## Flow
 
-1. Choose the file: upload it in the browser or pick it from the import folder.
-2. Choose how people are recognized: a read-only Atlassian API token, a user list exported from the Atlassian administration, or skip with a confirmation.
+1. Choose the source and provide it: upload a file in the browser, pick it from the import folder, or connect to Confluence and choose what to read (see [Sources](#sources)).
+2. For a Confluence export, choose how people are recognized: a read-only Atlassian API token, a user list exported from the Atlassian administration, or skip with a confirmation.
 3. Name the new space, choose its key, whether the full page history is imported, whether it is archived after accepting, and the reviewers.
 4. Check the analysis and start the import.
 
 The import runs as a background job in the phases space, people, pages, attachments, templates, content, comments, reactions, permissions, baseline and finish. It is resumable: after a restart or a node failure, another worker continues from the last checkpoint. Every imported object is mapped by its source ID, so repeating a phase never creates duplicates. Only one worker runs an import at a time.
 
 Unfinished setups are kept as drafts and can be continued.
+
+## Sources
+
+The first step of the assistant chooses where the content comes from. All sources run through the same staging, quarantine, report and re-import; only the reading differs.
+
+| Source | Input | People | Steps |
+| --- | --- | --- | --- |
+| Confluence export file | XML or CSV space export as ZIP | API token, user list or skip | Source, People, Space, Check |
+| Confluence Cloud | Site, e-mail address, API token | From the same token | Source, Connection, Selection, Space, Check |
+| Confluence Data Center | Base address, personal access token | Names from the API, no e-mail addresses | Source, Connection, Selection, Space, Check |
+| Markdown folder | ZIP file | None | Source, Upload, Space, Check |
+| Word documents | One or more `.docx` files | None | Source, Upload, Space, Check |
+
+### Confluence Cloud and Data Center through the API
+
+The connection step tests the connection before anything is stored: it reads the account the token belongs to and refuses a wrong token at once. The token is stored with envelope encryption, used only for this import and the imports of further spaces chosen with it, and deleted when the last of them is accepted, discarded, stopped, fails or is removed, when the importer loses the permission to import or leaves the organization, and when every draft using it was not touched for 7 days. A started import keeps the token while it is held, so that another administrator can take it over. A draft whose token was deleted says so and asks for the token again.
+
+- Cloud: the site must be an `https` host under `atlassian.net` or a host the instance administrators allowed in the import settings. Pagehall authenticates with the e-mail address and the API token.
+- Data Center and Server 7.9 or newer: the base address includes the context path, such as `https://wiki.example.com/confluence`. The host must be allowed in the import settings. Pagehall authenticates with a personal access token. For servers with a certificate from an own certificate authority, paste the certificate of the authority under Advanced; it is kept and deleted with the token.
+
+Outgoing requests go only to the configured host, through the same protection as chat and mail deliveries: addresses in private or reserved networks are refused unless `PAGEHALL_OUTBOUND_ALLOWED_NETWORKS` allows them, which a Data Center in the own network usually needs. Redirects are not followed. The only exception are attachment downloads from Confluence Cloud, which Atlassian answers with a redirect to its media service `api.media.atlassian.com`; that one redirect is followed over HTTPS without the credentials. The token never appears in responses, logs, error messages, job payloads, audit entries or the report.
+
+The selection step lists the spaces the token can read; choose one or more. Each space becomes an import of its own, into its own new space, with its own check, dry run, report and later re-import. Further spaces appear as drafts in the import list, sharing the connection and its token; taking a space out of the selection removes its draft. Imports over one connection read and run one after another, and the waiting ones say which space goes first. For the space of the current import, the step shows the page trees below the home page with their page counts and attachment sizes: import the whole space, or only chosen page trees. The page trees of the other spaces are chosen in their own imports. Blog posts come with the whole space. A re-import reads only the space it came from. Page history is optional and takes noticeably longer.
+
+Pagehall reads the same content as an XML export of the space contains, into the same records, so the converters, the report and the result are the same: pages and blog posts with their tree, bodies in the storage format, attachments, page and inline comments with their resolution, labels, likes (Cloud), page restrictions, space permissions (only for tokens of space administrators; otherwise the report says so), templates and, when chosen, the earlier versions. Confluence lists only what the token can read; content that refuses to be read later is skipped and listed in the report. Page states and watchers are not read through the API.
+
+Reading is resumable: after a restart Pagehall continues with the next page of results or the next page, never from the start. When Confluence asks to slow down, Pagehall waits as long as `Retry-After` or Atlassian's rate limit headers ask, up to 5 minutes per wait, and shows "Confluence asked to slow down" while waiting. Longer pauses hand the work back to the job queue. Attachments are streamed into the file storage; no space is held in memory as a whole.
+
+A space imported from its XML export can be re-imported through the API and the other way round, because both carry the same Confluence IDs.
+
+### Markdown folders
+
+Upload the folder as one ZIP file, or place it in the import folder. A single top-level folder in the ZIP file is the space; its name is suggested as the space name.
+
+- Folders become the page tree. `index.md`, `_index.md` or `README.md` becomes the page of its folder; a folder without one gets an empty page named after it. The root `README.md` or `index.md` becomes the home page. Pages are sorted by file name, numbers in natural order.
+- Front matter in YAML gives the title (`title`), labels (`tags`, `labels`, `keywords`, `categories`) and dates (`date`, `created`, `updated`, `modified`, `lastmod`). Other plain keys become page properties at the top of the page. Without a title, a first-level heading at the start of the file becomes the title, otherwise the file name.
+- CommonMark with GitHub tables, strikethrough, task lists and autolinks is converted. Code blocks keep their language; `mermaid` code blocks become Mermaid diagrams.
+- Relative links between files become page links, also to a folder; links to other files and images become attachments of the page that uses them. Obsidian `[[wiki links]]` and `[[page|text]]` find the page by file name, preferring the same folder; `![[image.png]]` embeds an image, `![[note]]` alone in a paragraph includes the other page.
+- Files no page refers to become attachments of their folder's page. Hidden files and folders (such as `.obsidian` or `.git`) are ignored.
+- Raw HTML and other constructs Pagehall cannot convert stay as text with a report entry; links to missing files keep their text with a report entry. Markdown files larger than 5 MB are not converted and are listed in the report.
+
+### Word documents
+
+Add one or more `.docx` files, up to 50 per import and 100 MB each. Each document becomes a page named after its title, or after the file name when it has none. Headings, paragraphs, bulleted and numbered lists, tables, links and images are taken over; images become attachments of the page, footnotes and endnotes become numbered notes at the end of the page. Optionally every top-level heading starts a subpage of the document's page.
+
+Pagehall converts documents with [mammoth](https://github.com/mwilliamson/mammoth.js) on the server, without a browser or office suite. Embedded objects such as spreadsheets become attachments with a report entry; Word comments are left out with a report entry. Documents with macros are never run or imported: `.docm` files are refused when they are added, and documents with macro parts are refused while reading. Encrypted, damaged and old `.doc` files fail with a message that names the file. Before mammoth reads a document, Pagehall checks the archive with the same limits as exports and rebuilds it without embedded objects and macro parts.
 
 ## Quarantine
 
@@ -89,7 +135,7 @@ An include of a page that is not part of the export keeps the Confluence space k
 
 Confluence exports name people only by an Atlassian account ID. The people step adds names and e-mail addresses:
 
-- **API token.** The importer enters the Confluence Cloud site, their Atlassian e-mail address and a read-only API token. Pagehall checks it at once against that site only, stores it with envelope encryption, uses it only while the import runs and deletes it when the import is accepted, discarded, stopped or fails. The token never appears in responses, logs, job payloads or audit entries. Sites must be `https` hosts under `atlassian.net`; instance administrators can allow further host names in the instance setting for imports.
+- **API token.** The importer enters the Confluence Cloud site, their Atlassian e-mail address and a read-only API token. Pagehall checks it at once against that site only, stores it with envelope encryption, uses it only while the import runs and deletes it when the import is accepted, discarded, stopped or fails, when the importer loses the permission to import, and when the draft was not touched for 7 days. The token never appears in responses, logs, job payloads or audit entries. Sites must be `https` hosts under `atlassian.net`; instance administrators can allow further host names in the instance setting for imports.
 - **User list.** A CSV file from admin.atlassian.com › Directory › Users › Export users, up to 10 MB.
 - **Skip.** Every author becomes a placeholder named by the Atlassian ID.
 
@@ -186,7 +232,7 @@ There are two ways to import a large export.
 
 This is the normal way. Uploads are sent in parts of 16 MB, continue after an interruption without sending finished parts again, and are checked with a SHA-256 checksum at the end. Files of several gigabytes work.
 
-The instance setting for the largest export to upload defaults to 2 GB. Instance administrators can raise it. When a file is above the limit, the wizard names the limit and both ways: ask the instance administrators to raise the limit, or to place the file in the organization's import folder.
+The instance setting for the largest export to upload defaults to 2 GB. Uploaded files and the data Pagehall reads from them also count against a limit per organization, 20 GB by default (instance setting "Import storage per organization"); when it is reached, new uploads and reading are refused until earlier imports are accepted, discarded or deleted. Instance administrators can raise it. When a file is above the limit, the wizard names the limit and both ways: ask the instance administrators to raise the limit, or to place the file in the organization's import folder.
 
 ### Import folder on the server
 
@@ -212,4 +258,5 @@ Exports are treated as untrusted input:
 - XML is read as a stream without DTDs or entities, with limits on depth, element size, the size of each object with all its fields, and the number of spaces. Only the fields Pagehall imports are kept in memory.
 - CSV is read as a stream with limits on field size, row size and field count. Cells that start like a spreadsheet formula are escaped in the CSV report.
 - Converted content is validated against the editor schema. Content that does not fit becomes an unsupported-macro block.
+- Markdown files are read with a size limit per file; front matter is parsed as plain YAML data without custom types. Word documents are checked like archives and rebuilt without macro parts and embedded objects before they are converted.
 - Files from the export never leave the quarantined space, and the only accounts an import creates are placeholders.

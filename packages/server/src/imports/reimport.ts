@@ -29,7 +29,7 @@ import {
 } from "./reimport-compare.js";
 import { FILE_RETENTION_DAYS } from "./settings.js";
 import { signalImportChange } from "./signals.js";
-import type { ImportReaderRegistry, ImportSource } from "./source.js";
+import { type ImportReaderRegistry, type ImportSource, sourceFamily } from "./source.js";
 import { StagingStore } from "./staging.js";
 
 export const changeTabs = ["conflicts", "updates", "deleted", "moved", "permissions"] as const;
@@ -245,11 +245,13 @@ export class ReimportService {
       organization_id: string;
       gone: boolean;
       imported: boolean;
+      family: string | null;
       known: boolean;
     }>(sql`
       select s.key, s.name, s.quarantined, s.organization_id,
         exists (select 1 from trash_entries e where e.space_id = s.id and e.kind = 'space') as gone,
         exists (select 1 from imported_spaces i where i.space_id = s.id) as imported,
+        (select i.source from imported_spaces i where i.space_id = s.id) as family,
         exists (select 1 from imports i where i.quarantine_space_id = s.id and i.state = 'accepted') as known
       from spaces s where s.id = ${input.spaceId}`);
     const row = space.rows[0];
@@ -273,9 +275,16 @@ export class ReimportService {
           : "Choose a space of this organization that was created by an import.",
       );
     }
+    const family = row.family ?? "confluence";
+    const source =
+      sourceFamily(input.source) === family
+        ? input.source
+        : family === "confluence"
+          ? "confluence-xml"
+          : family;
     await tx.execute(sql`
       insert into imports (id, organization_id, importer_id, source, target_space_id, space_name, space_key)
-      values (${input.id}, ${input.organizationId}, ${input.importerId}, ${input.source}, ${input.spaceId},
+      values (${input.id}, ${input.organizationId}, ${input.importerId}, ${source}, ${input.spaceId},
         ${row.name}, ${row.key})`);
   }
 

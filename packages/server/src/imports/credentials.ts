@@ -4,13 +4,26 @@ import type { AuditLog } from "../audit/audit-log.js";
 import type { Encryption } from "../crypto/envelope.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import type { AtlassianCredentials, AtlassianDirectory } from "./atlassian.js";
+import type { ConfluenceConnection, ConfluenceKind } from "./confluence/api-client.js";
 import { ImportError, ImportFormatError } from "./errors.js";
 import { type Directory, type DirectoryEntry, NO_DIRECTORY } from "./people.js";
 
-export type TokenDeletion = "accepted" | "discarded" | "stopped" | "failed" | "replaced" | "removed";
+export type TokenDeletion =
+  | "accepted"
+  | "discarded"
+  | "stopped"
+  | "failed"
+  | "replaced"
+  | "removed"
+  | "permissionLost"
+  | "abandoned";
 
 export function tokenContext(importId: string): string {
   return `import_credentials.token:${importId}`;
+}
+
+export function connectionContext(connectionId: string): string {
+  return `import_connections.token:${connectionId}`;
 }
 
 export async function deleteCredentials(
@@ -20,8 +33,21 @@ export async function deleteCredentials(
 ): Promise<void> {
   await tx.execute(sql`delete from import_directory where import_id = ${input.importId}`);
   const deleted = await tx.execute(sql`delete from import_credentials where import_id = ${input.importId}`);
-  if ((deleted.rowCount ?? 0) === 0) return;
+  const attached = await tx.execute<{ connection_id: string }>(sql`
+    select c.id as connection_id from imports i join import_connections c on c.id = i.connection_id
+    where i.id = ${input.importId} for update of c`);
+  const connectionId = attached.rows[0]?.connection_id;
+  if (connectionId) {
+    await tx.execute(sql`update imports set connection_id = null where id = ${input.importId}`);
+  }
+  const unused = connectionId
+    ? await tx.execute(sql`
+        delete from import_connections c where c.id = ${connectionId}
+          and not exists (select 1 from imports i where i.connection_id = c.id)`)
+    : null;
+  if ((deleted.rowCount ?? 0) === 0 && !connectionId) return;
   await tx.execute(sql`update imports set token_deleted_at = now() where id = ${input.importId}`);
+  if ((deleted.rowCount ?? 0) === 0 && (unused?.rowCount ?? 0) === 0) return;
   await audit.record(tx, {
     name: "import.tokenDeleted",
     actor: input.actor ?? SYSTEM,
@@ -36,15 +62,47 @@ export async function readCredentials(
   encryption: Encryption,
   importId: string,
 ): Promise<AtlassianCredentials | null> {
-  const result = await executor.execute<{ site: string; email: string; token: Buffer }>(
-    sql`select site, email, token from import_credentials where import_id = ${importId}`,
-  );
+  const result = await executor.execute<{ site: string; email: string; token: Buffer }>(sql`
+    select site, email, token from import_credentials where import_id = ${importId}`);
+  const row = result.rows[0];
+  if (row) {
+    return {
+      site: row.site,
+      email: row.email,
+      token: encryption.decryptString(row.token, tokenContext(importId)),
+    };
+  }
+  const connection = await readConnection(executor, encryption, importId);
+  if (connection?.kind !== "cloud" || !connection.email) return null;
+  return { site: connection.site, email: connection.email, token: connection.token };
+}
+
+export async function readConnection(
+  executor: Executor,
+  encryption: Encryption,
+  importId: string,
+): Promise<ConfluenceConnection | null> {
+  const result = await executor.execute<{
+    id: string;
+    kind: ConfluenceKind;
+    site: string;
+    base_path: string;
+    email: string | null;
+    token: Buffer;
+    ca_certificates: string | null;
+  }>(sql`
+    select c.id, c.kind, c.site, c.base_path, c.email, c.token, c.ca_certificates
+    from imports i join import_connections c on c.id = i.connection_id
+    where i.id = ${importId}`);
   const row = result.rows[0];
   if (!row) return null;
   return {
+    kind: row.kind,
     site: row.site,
+    basePath: row.base_path,
     email: row.email,
-    token: encryption.decryptString(row.token, tokenContext(importId)),
+    token: encryption.decryptString(row.token, connectionContext(row.id)),
+    caCertificates: row.ca_certificates,
   };
 }
 
@@ -74,6 +132,32 @@ export function directoryFor(options: {
       for (const person of people) {
         const row = person.accountId ? byId.get(person.accountId) : undefined;
         if (row) result.set(person.sourceId, { name: row.name, email: row.email });
+      }
+      return result;
+    };
+  }
+  if (options.peopleSource === "source") {
+    return async (people) => {
+      const keys = people.flatMap((person) => (person.userKey ? [person.userKey] : []));
+      const result = new Map<string, DirectoryEntry>();
+      if (keys.length === 0) return result;
+      const rows = await options.database.execute<{
+        source_id: string;
+        name: string | null;
+        email: string | null;
+      }>(
+        sql`select source_id, data ->> 'name' as name, data ->> 'email' as email from import_records
+          where import_id = ${options.importId} and kind = 'user' and source_id = any(${sql.param(keys)}::text[])`,
+      );
+      const byKey = new Map(rows.rows.map((row) => [row.source_id, row]));
+      for (const person of people) {
+        const row = person.userKey ? byKey.get(person.userKey) : undefined;
+        if (row && (row.name || row.email)) {
+          result.set(person.sourceId, {
+            name: row.name?.trim().slice(0, 200) || null,
+            email: row.email?.includes("@") ? row.email.trim() : null,
+          });
+        }
       }
       return result;
     };
