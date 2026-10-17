@@ -9,6 +9,7 @@ import type { ByteSource } from "../formats/bytes.js";
 import { signalImportChange } from "../signals.js";
 import type { ReadContext, ScanContext } from "../source.js";
 import { ConfluenceApi, type ConfluenceConnection, type ConfluenceTransport } from "./api-client.js";
+import { scanCloud } from "./cloud-scan.js";
 import {
   confluenceDate,
   formerTitleRecord,
@@ -155,8 +156,6 @@ const attachmentSearchSchema = listSchema(
   }),
 );
 
-const likesSchema = listSchema(z.looseObject({ accountId: text(255) }));
-
 const currentUserSchema = userSchema;
 
 const serverInfoSchema = z.looseObject({ version: text(50).nullish() });
@@ -234,9 +233,8 @@ function attachmentId(value: string): string {
   return value.startsWith("att") ? value.slice(3) : value;
 }
 
-function userKeyOf(user: ApiUser | null | undefined, cloud: boolean): string | null {
+function userKeyOf(user: ApiUser | null | undefined): string | null {
   if (!user || user.type === "anonymous") return null;
-  if (cloud) return user.accountId?.trim() || null;
   return user.userKey?.trim() || null;
 }
 
@@ -451,7 +449,10 @@ export class ConfluenceApiReader extends StagedConfluenceReader {
     const importId = context.staging.importId;
     const connection = await this.#connection(importId);
     const api = this.api(connection, context.signal, importId);
-    const cloud = connection.kind === "cloud";
+    if (connection.kind === "cloud") {
+      await scanCloud(api, context, spaceKey);
+      return;
+    }
     let checkpoint: Checkpoint = {
       step: (context.checkpoint.step as Step | undefined) ?? "space",
       next: typeof context.checkpoint.next === "string" ? context.checkpoint.next : null,
@@ -464,7 +465,7 @@ export class ConfluenceApiReader extends StagedConfluenceReader {
     };
     const users = new Set<string>();
     const user = async (value: ApiUser | null | undefined): Promise<string | null> => {
-      const key = userKeyOf(value, cloud);
+      const key = userKeyOf(value);
       if (!key || !value) return null;
       if (users.has(key)) return key;
       users.add(key);
@@ -477,7 +478,7 @@ export class ConfluenceApiReader extends StagedConfluenceReader {
         kind: kinds.user,
         sourceId: key,
         data: {
-          accountId: cloud ? key : null,
+          accountId: null,
           name: name || existing?.data.name || null,
           email: email.includes("@") ? email : (existing?.data.email ?? null),
         },
@@ -592,7 +593,7 @@ export class ConfluenceApiReader extends StagedConfluenceReader {
       for await (const record of context.staging.iterate<{ title: string; type?: string }>(kinds.page)) {
         done += 1;
         if (checkpoint.after !== null && record.sourceId <= checkpoint.after) continue;
-        await this.#details(api, context, record.sourceId, record.data, user, cloud);
+        await this.#details(api, context, record.sourceId, record.data, user);
         if (done % PROGRESS_STEP === 0 || done === total) {
           await context.progress({ done, total });
         }
@@ -674,7 +675,6 @@ export class ConfluenceApiReader extends StagedConfluenceReader {
     pageId: string,
     page: { title: string; type?: string },
     user: (value: ApiUser | null | undefined) => Promise<string | null>,
-    cloud: boolean,
   ): Promise<void> {
     const skipped = async (part: string) => context.problem("contentSkipped", { title: page.title, part });
     const comments = await api.json(
@@ -719,7 +719,7 @@ export class ConfluenceApiReader extends StagedConfluenceReader {
           ["inline-marker-ref", extensions?.inlineProperties?.markerRef],
           ["inline-original-selection", extensions?.inlineProperties?.originalSelection],
           ["status", extensions?.resolution?.status],
-          ["status-lastmodifier", userKeyOf(extensions?.resolution?.lastModifier, cloud)],
+          ["status-lastmodifier", userKeyOf(extensions?.resolution?.lastModifier)],
           ["status-lastmoddate", apiDate(extensions?.resolution?.lastModifiedDate)],
         ];
         if (extensions?.resolution?.lastModifier) await user(extensions.resolution.lastModifier);
@@ -792,7 +792,7 @@ export class ConfluenceApiReader extends StagedConfluenceReader {
             kind,
             origin: "table",
             userKey: key,
-            accountId: cloud ? key : null,
+            accountId: null,
             group: null,
           },
         });
@@ -805,23 +805,6 @@ export class ConfluenceApiReader extends StagedConfluenceReader {
           sourceId: `${pageId}/${kind}/group/${name.toLowerCase()}`,
           ref: pageId,
           data: { kind, origin: "table", userKey: null, accountId: null, group: name },
-        });
-      }
-    }
-    if (cloud) {
-      const collection = page.type === "blogPost" ? "blogposts" : "pages";
-      for await (const like of pages(
-        api,
-        `/api/v2/${collection}/${pageId}/likes/users?limit=100`,
-        likesSchema,
-      )) {
-        const key = await user({ accountId: like.accountId, type: "known" });
-        if (!key) continue;
-        await context.staging.put({
-          kind: kinds.like,
-          sourceId: `${pageId}/${key}`,
-          ref: pageId,
-          data: { userKey: key, created: null },
         });
       }
     }

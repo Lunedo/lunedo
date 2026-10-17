@@ -381,10 +381,25 @@ describe.skipIf(!baseUrl)("Confluence API imports", () => {
       blogPosts: 1,
       comments: 3,
       attachments: 2,
-      likes: 1,
+      likes: 0,
       people: fromXml.found?.people,
     });
-    expect(await snapshot(fromApi.id)).toEqual(await snapshot(fromXml.id));
+    const { reactions: apiReactions, ...apiContent } = (await snapshot(fromApi.id)) as Record<
+      string,
+      unknown
+    >;
+    const { reactions: xmlReactions, ...xmlContent } = (await snapshot(fromXml.id)) as Record<
+      string,
+      unknown
+    >;
+    expect(apiContent).toEqual(xmlContent);
+    expect(xmlReactions).toHaveLength(1);
+    expect(apiReactions).toEqual([]);
+    const skipped = await test.services.imports.entries(as(organization.owner), fromApi.id, {
+      code: "likesAndWatchersSkipped",
+      limit: 10,
+    });
+    expect(skipped.entries).toHaveLength(1);
   });
 
   it("imports the page history as far as the API provides it", async () => {
@@ -597,7 +612,7 @@ describe.skipIf(!baseUrl)("Confluence API imports", () => {
     let throttled = 0;
     const fake = serve(apiModel(), {
       before: (url) => {
-        if (url.pathname === "/wiki/rest/api/content" && throttled < 2) {
+        if (url.pathname === "/wiki/api/v2/spaces/7001/pages" && throttled < 2) {
           throttled += 1;
           return response(429, { "retry-after": "1" });
         }
@@ -609,7 +624,9 @@ describe.skipIf(!baseUrl)("Confluence API imports", () => {
     expect(view.state).toBe("ready");
     expect(throttled).toBe(2);
     expect(view.throttledUntil).not.toBeNull();
-    expect(fake.requests.filter((url) => url.includes("/rest/api/content?")).length).toBeGreaterThan(2);
+    expect(fake.requests.filter((url) => url.includes("/api/v2/spaces/7001/pages?")).length).toBeGreaterThan(
+      2,
+    );
   });
 
   it("continues after a restart from the last completed step without reading anything twice", async () => {
@@ -622,9 +639,9 @@ describe.skipIf(!baseUrl)("Confluence API imports", () => {
     expect(runs).toBeGreaterThan(3);
     expect(view.state).toBe("ready");
     expect(view.found).toMatchObject({ pages: 4, comments: 3 });
-    const listings = fake.requests.filter((url) => url.includes("/rest/api/content?"));
+    const listings = fake.requests.filter((url) => url.includes("/api/v2/spaces/7001/pages?"));
     expect(new Set(listings).size).toBe(listings.length);
-    const details = fake.requests.filter((url) => url.includes("/child/comment"));
+    const details = fake.requests.filter((url) => url.includes("/footer-comments?"));
     expect(new Set(details).size).toBe(details.length);
   });
 
@@ -632,7 +649,7 @@ describe.skipIf(!baseUrl)("Confluence API imports", () => {
     const organization = await fixtures.organization();
     const fake = serve(apiModel(), {
       before: (url): TransportResponse | null =>
-        url.pathname.includes("/download/attachments/7101/report.pdf")
+        url.pathname.endsWith("/child/attachment/att7302/download")
           ? response(302, { location: "https://attacker.example/steal?file=report.pdf" })
           : null,
     });
@@ -649,8 +666,8 @@ describe.skipIf(!baseUrl)("Confluence API imports", () => {
     const second = await fixtures.organization();
     serve(apiModel(), {
       before: (url) =>
-        url.pathname === "/wiki/rest/api/space/APIX"
-          ? response(301, { location: "https://attacker.example/wiki/rest/api/space/APIX" })
+        url.pathname === "/wiki/api/v2/spaces"
+          ? response(301, { location: "https://attacker.example/wiki/api/v2/spaces" })
           : null,
     });
     const id = await analyzed(second.id, second.owner);
@@ -660,7 +677,9 @@ describe.skipIf(!baseUrl)("Confluence API imports", () => {
 
   it("lists content the token cannot read as skipped", async () => {
     const organization = await fixtures.organization();
-    serve(apiModel(), { restricted: new Set(["7101/child"]) });
+    serve(apiModel(), {
+      restricted: new Set(["7101/footer-comments", "7101/inline-comments", "7101/attachments"]),
+    });
     const view = await imported(organization.id, organization.owner, "SKIPPED");
     expect(view.state).toBe("review");
     const report = await test.services.imports.entries(as(organization.owner), view.id, {
@@ -687,7 +706,7 @@ describe.skipIf(!baseUrl)("Confluence API imports", () => {
     let failing = true;
     serve(apiModel(), {
       before: (url) => {
-        if (failing && url.pathname.includes("/child/attachment")) {
+        if (failing && url.pathname.endsWith("/attachments")) {
           failing = false;
           throw new Error(`connection reset while reading ${url.pathname}`);
         }

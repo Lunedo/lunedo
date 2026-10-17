@@ -4,11 +4,17 @@ import { accountPrincipal } from "../../accounts/principal.js";
 import { testDatabaseBaseUrl } from "../../testing/database.js";
 import { createTestServices, type TestServices } from "../../testing/services.js";
 import { spaceFixtures } from "../../testing/spaces.js";
+import { fakeConfluence } from "../testing/confluence-api.js";
 import { createXmlExport, type SyntheticExport } from "../testing/confluence-export.js";
 import { ALICE, BOB } from "../testing/fixture.js";
 import { importHarness } from "../testing/harness.js";
+import type { ConfluenceTransport } from "./api-client.js";
 
 const baseUrl = testDatabaseBaseUrl();
+const SITE = "example.atlassian.net";
+const EMAIL = "importer@example.org";
+const TOKEN = "confluence-api-token-cloud";
+const BASIC = `Basic ${Buffer.from(`${EMAIL}:${TOKEN}`).toString("base64")}`;
 const as = (id: string) => accountPrincipal(id);
 
 function cloudModel(): SyntheticExport {
@@ -71,13 +77,36 @@ function cloudModel(): SyntheticExport {
   };
 }
 
+function directory(): typeof fetch {
+  return (async (input: string | URL | Request) => {
+    const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
+    if (url.pathname === "/wiki/rest/api/user/current")
+      return Response.json({ accountId: "557058:importer" });
+    if (url.pathname === "/wiki/rest/api/user/bulk") {
+      return Response.json({
+        results: url.searchParams.getAll("accountId").map((accountId) => ({
+          accountId,
+          displayName: accountId === BOB.accountId ? "Diagram app" : "Alice Archer",
+          accountType: accountId === BOB.accountId ? "app" : "atlassian",
+        })),
+      });
+    }
+    return new Response("{}", { status: 404 });
+  }) as typeof fetch;
+}
+
 describe.skipIf(!baseUrl)("Confluence Cloud content types, archive and trash", () => {
   let test: TestServices;
+  let current: ConfluenceTransport;
+  const transport: ConfluenceTransport = { get: (url, request) => current.get(url, request) };
   const fixtures = spaceFixtures(() => test);
-  const harness = importHarness(() => test);
+  const harness = importHarness(() => test, { transport, fetch: directory() });
 
   beforeAll(async () => {
-    test = await createTestServices(baseUrl as string);
+    test = await createTestServices(baseUrl as string, {
+      confluenceTransport: transport,
+      atlassianFetch: directory(),
+    });
   });
 
   afterAll(async () => {
@@ -179,6 +208,51 @@ describe.skipIf(!baseUrl)("Confluence Cloud content types, archive and trash", (
       { holder_kind: "account", group_key: null, role: "admin", code: null },
       { holder_kind: "organizationMembers", group_key: null, role: "editor", code: "widened" },
     ]);
+  });
+
+  it("imports the same Confluence Cloud content through the API and leaves app accounts without a role", async () => {
+    const organization = await fixtures.organization();
+    current = fakeConfluence(cloudModel(), {
+      kind: "cloud",
+      site: SITE,
+      authorization: BASIC,
+    });
+    const imports = test.services.imports;
+    const admin = as(organization.owner);
+    const draft = await imports.create(admin, organization.id, { source: "confluence-cloud" });
+    await imports.setConnection(admin, draft.id, { kind: "cloud", site: SITE, email: EMAIL, token: TOKEN });
+    await imports.update(admin, draft.id, { options: { spaceKey: "CLD" } });
+    await harness.drive(draft.id);
+    await imports.update(admin, draft.id, { spaceName: "Cloud API", spaceKey: "CLAPI" });
+    await imports.start(admin, draft.id);
+    await harness.drive(draft.id);
+    expect((await imports.get(admin, draft.id)).state).toBe("review");
+    expect(await expectCloudContent(draft.id)).toEqual([
+      { holder_kind: "account", group_key: null, role: "admin", code: null },
+      { holder_kind: "account", group_key: null, role: null, code: "app" },
+      { holder_kind: "organizationMembers", group_key: null, role: "editor", code: "widened" },
+    ]);
+    expect(
+      (await problems(draft.id)).filter((problem) => problem.code === "likesAndWatchersSkipped"),
+    ).toHaveLength(1);
+  });
+
+  it("imports a chosen page tree through the API with the folders and pages inside it", async () => {
+    const organization = await fixtures.organization();
+    current = fakeConfluence(cloudModel(), { kind: "cloud", site: SITE, authorization: BASIC });
+    const imports = test.services.imports;
+    const admin = as(organization.owner);
+    const draft = await imports.create(admin, organization.id, { source: "confluence-cloud" });
+    await imports.setConnection(admin, draft.id, { kind: "cloud", site: SITE, email: EMAIL, token: TOKEN });
+    await imports.update(admin, draft.id, { options: { spaceKey: "CLD", pageIds: ["9114"] } });
+    await harness.drive(draft.id);
+    await imports.update(admin, draft.id, { spaceName: "Cloud tree", spaceKey: "CLTREE" });
+    await imports.start(admin, draft.id);
+    await harness.drive(draft.id);
+    const found = await items(draft.id);
+    expect([...found.keys()].sort()).toEqual(["Closed projects", "Cloud tree", "Old project", "Projects"]);
+    expect(found.get("Closed projects")).toMatchObject({ kind: "folder", parent: "Projects" });
+    expect(found.get("Old project")?.parent).toBe("Closed projects");
   });
 
   it("asks for the space of a site backup and imports only the chosen one", async () => {
