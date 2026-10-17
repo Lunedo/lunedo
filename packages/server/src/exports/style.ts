@@ -1,4 +1,5 @@
 import designTokens from "@pagehall/tokens/design-tokens.json" with { type: "json" };
+import type { Orientation, PaperSize } from "./options.js";
 
 type ModeColors = (typeof designTokens.color)["light"];
 type ContentColors = (typeof designTokens.color.content)["light"];
@@ -56,15 +57,7 @@ const highlightRules = [
   .map(([selector, rule]) => `${selector}{${rule}}`)
   .join("");
 
-export const exportStyle = [
-  `:root{color-scheme:light dark;${variables(color.light, color.content.light)}}`,
-  `@media (prefers-color-scheme:dark){:root{${variables(color.dark, color.content.dark)}}}`,
-  "*,*::before,*::after{box-sizing:border-box}",
-  `body{margin:0;background:var(--bg);color:var(--text);font-family:${font.family.sans};font-size:${font.size.content};line-height:${font.lineHeight.content};overflow-wrap:anywhere}`,
-  `main{max-width:${layout.contentWidth};margin:0 auto;padding:${space[8]} ${space[4]} ${space[12]}}`,
-  `nav{margin-bottom:${space[4]};font-size:${font.size.sm}}`,
-  `header{margin-bottom:${space[6]}}`,
-  `header h1{margin:0 0 ${space[2]};font-size:${font.size["2xl"]};line-height:${font.lineHeight.tight}}`,
+const contentRules = [
   `.ph-meta{margin:0;color:var(--text-muted);font-size:${font.size.sm}}`,
   `article>*+*,.ph-callout-content>*+*,.ph-expand>div>*+*,.ph-column>*+*,.ph-section>*+*,.ph-topic-update-content>*+*{margin-top:${space[3]}}`,
   "article>*:first-child{margin-top:0}",
@@ -81,6 +74,7 @@ export const exportStyle = [
   `hr{border:0;border-top:1px solid var(--border);margin:${space[6]} 0}`,
   "img{max-width:100%;height:auto}",
   ".ph-image{text-align:center}.ph-image[data-align=left]{text-align:left}.ph-image[data-align=right]{text-align:right}",
+  ".ph-whiteboard{text-align:center}",
   `table{border-collapse:collapse;width:100%}th,td{border:1px solid var(--border);padding:${space[1]} ${space[2]};text-align:left;vertical-align:top}th{background:var(--surface-sunken)}`,
   ".ph-table{overflow-x:auto}",
   `.ph-callout{border-left:4px solid var(--info);background:var(--info-soft);border-radius:${radius.md};padding:${space[3]} ${space[4]}}`,
@@ -102,4 +96,78 @@ export const exportStyle = [
   ".ph-math .katex-html{display:none}",
   highlightRules,
   `.ph-index ul{list-style:none;padding-left:${space[5]}}.ph-index>ul{padding-left:0}.ph-index li{margin-top:${space[1]}}`,
+  `.ph-unavailable{border:1px dashed var(--border);border-radius:${radius.md};padding:${space[2]} ${space[3]};color:var(--text-muted)}`,
+];
+
+export const exportStyle = [
+  `:root{color-scheme:light dark;${variables(color.light, color.content.light)}}`,
+  `@media (prefers-color-scheme:dark){:root{${variables(color.dark, color.content.dark)}}}`,
+  "*,*::before,*::after{box-sizing:border-box}",
+  `body{margin:0;background:var(--bg);color:var(--text);font-family:${font.family.sans};font-size:${font.size.content};line-height:${font.lineHeight.content};overflow-wrap:anywhere}`,
+  `main{max-width:${layout.contentWidth};margin:0 auto;padding:${space[8]} ${space[4]} ${space[12]}}`,
+  `nav{margin-bottom:${space[4]};font-size:${font.size.sm}}`,
+  `header{margin-bottom:${space[6]}}`,
+  `header h1{margin:0 0 ${space[2]};font-size:${font.size["2xl"]};line-height:${font.lineHeight.tight}}`,
+  ...contentRules,
 ].join("\n");
+
+export interface PrintStyleOptions {
+  paper: PaperSize;
+  orientation: Orientation;
+  pageNumber: { before: string; between: string };
+  footer: string;
+}
+
+const PAPER: Record<PaperSize, string> = { a4: "A4", letter: "letter" };
+
+export function cssString(text: string): string {
+  return `"${text.replace(/["\\]/g, "\\$&").replace(/\s+/g, " ")}"`;
+}
+
+export function printStyle(options: PrintStyleOptions): string {
+  const margin = `font-family:${font.family.sans};font-size:${font.size.xs};color:${color.light.textMuted}`;
+  return [
+    `@page{size:${PAPER[options.paper]} ${options.orientation};margin:18mm 16mm 20mm;` +
+      `@top-left{content:string(ph-path) " \\203A  " string(ph-title);${margin}}` +
+      `@bottom-left{content:${cssString(options.footer)};${margin}}` +
+      `@bottom-right{content:${cssString(options.pageNumber.before)} counter(page) ${cssString(options.pageNumber.between)} counter(pages);${margin}}}`,
+    "@page :first{@top-left{content:none}}",
+    `:root{color-scheme:light;${variables(color.light, color.content.light)}}`,
+    "*,*::before,*::after{box-sizing:border-box}",
+    `body{margin:0;background:var(--bg);color:var(--text);font-family:${font.family.sans};font-size:${font.size.content};line-height:${font.lineHeight.content};overflow-wrap:anywhere}`,
+    ...contentRules,
+    `.ph-front{margin-bottom:${space[6]}}`,
+    `.ph-path{margin:0 0 ${space[1]};color:var(--text-muted);font-size:${font.size.sm}}`,
+    `.ph-document-title,.ph-page-title{margin:0 0 ${space[2]};font-size:${font.size["2xl"]};line-height:${font.lineHeight.tight}}`,
+    ".ph-front .ph-path{string-set:ph-path content(text)}",
+    ".ph-front .ph-document-title{string-set:ph-title content(text)}",
+    ".ph-print-page>.ph-title-block .ph-path{string-set:ph-path content(text)}",
+    ".ph-print-page>.ph-title-block .ph-page-title{string-set:ph-title content(text)}",
+    `.ph-title-block{margin-bottom:${space[6]}}`,
+    ".ph-print-page,.ph-appendix{break-before:page}",
+    `.ph-contents{margin-top:${space[8]}}`,
+    `.ph-contents h2{margin:0 0 ${space[3]};font-size:${font.size.xl}}`,
+    `.ph-contents ol{list-style:none;margin:0;padding:0}.ph-contents li{margin-top:${space[1]}}`,
+    `.ph-contents a{display:flex;gap:${space[2]};color:var(--text);text-decoration:none}`,
+    ".ph-contents .ph-entry{flex:1;min-width:0}",
+    ".ph-contents a::after{content:target-counter(attr(href url),page)}",
+    ...[1, 2, 3, 4, 5].map(
+      (level) => `.ph-contents li[data-level="${level}"]{padding-left:calc(${level} * ${space[5]})}`,
+    ),
+    "a{text-decoration:none}",
+    "h1,h2,h3,h4,h5,h6{break-after:avoid}",
+    "figure,.ph-callout,.ph-decision,.ph-comment-thread,tr{break-inside:avoid}",
+    "thead{display:table-header-group}",
+    "pre{white-space:pre-wrap;overflow:visible}",
+    ".ph-table{overflow:visible}",
+    ".ph-expand-title{font-weight:600}",
+    ".ph-whiteboard img{max-height:150mm}",
+    `.ph-comments{margin-top:${space[8]};border-top:1px solid var(--border);padding-top:${space[4]}}`,
+    `.ph-comments h2{font-size:${font.size.lg};margin:0 0 ${space[3]}}`,
+    `.ph-comment-thread{border-left:3px solid var(--border);padding-left:${space[3]};margin-top:${space[4]}}`,
+    `.ph-comment-reply{margin-left:${space[4]};margin-top:${space[2]}}`,
+    `.ph-comment-quote{color:var(--text-muted);font-style:italic}`,
+    `.ph-comment-meta{color:var(--text-muted);font-size:${font.size.sm}}`,
+    `.ph-appendix h2{font-size:${font.size.xl};margin:0 0 ${space[3]}}`,
+  ].join("\n");
+}

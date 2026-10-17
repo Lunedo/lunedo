@@ -15,6 +15,7 @@ export const instanceKeys = {
   breakGlass: ["instance", "breakGlass"] as const,
   address: ["instance", "address"] as const,
   storage: ["instance", "storage"] as const,
+  rendering: ["instance", "rendering"] as const,
 };
 
 export const instanceAddressQuery = queryOptions({
@@ -85,3 +86,10 @@ export const breakGlassQuery = queryOptions({
       request(() => api.GET("/api/v1/instance/break-glass", { params: { query: page(cursor) } })),
     ),
 });
+
+export const renderingQuery = queryOptions({
+  queryKey: instanceKeys.rendering,
+  queryFn: () => request(() => api.GET("/api/v1/instance/rendering")),
+});
+
+export type RenderingStatus = Awaited<ReturnType<NonNullable<(typeof renderingQuery)["queryFn"]>>>;

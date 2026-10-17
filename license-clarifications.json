@@ -1,6 +1,11 @@
 {
   "$comment": "Packages whose package.json names a license that is not a valid SPDX identifier, or none at all, while their license file is an approved license. Each entry names the exact version, the declared value (Unknown when package.json has none), the license of the license file and where it was checked. Entries for packages without a declared license pin the reviewed license file with licenseFileSha256, so a changed file needs a new review.",
   "packages": {
+    "@vivliostyle/core@2.45.2": {
+      "declared": "AGPL-3.0",
+      "license": "AGPL-3.0-or-later",
+      "reason": "Pagination library of the print view and the render container. package.json uses the deprecated identifier AGPL-3.0; the header of every source file in lib/vivliostyle.d.ts and lib/vivliostyle/*.d.ts grants the GNU Affero General Public License version 3 or any later version."
+    },
     "duck@0.1.12": {
       "declared": "BSD",
       "license": "BSD-2-Clause",

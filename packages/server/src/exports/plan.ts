@@ -1,7 +1,7 @@
 import { MAX_NAME_LENGTH, NameScope } from "./names.js";
 import type { ExportFormat, Locator } from "./renderer.js";
 
-export type PlannedKind = "page" | "folder" | "link";
+export type PlannedKind = "page" | "whiteboard" | "folder" | "link";
 
 export interface PlanInput {
   id: string;
@@ -25,6 +25,15 @@ export interface PlannedAttachment extends PlanAttachment {
   path: string;
 }
 
+export interface PlanPreview {
+  itemId: string;
+  fileId: string;
+}
+
+export interface PlannedPreview extends PlanPreview {
+  path: string;
+}
+
 export interface PlannedNode {
   id: string;
   kind: PlannedKind;
@@ -35,12 +44,14 @@ export interface PlannedNode {
   stem: string | null;
   children: PlannedNode[];
   attachments: PlannedAttachment[];
+  preview: PlannedPreview | null;
 }
 
 export interface ExportPlan {
   roots: PlannedNode[];
   pages: PlannedNode[];
   attachments: PlannedAttachment[];
+  previews: PlannedPreview[];
   locator(node: PlannedNode | null): Locator;
 }
 
@@ -49,6 +60,7 @@ export const MAX_PATH_LENGTH = 239;
 export const MIN_NAME_LENGTH = 16;
 const LONGEST_EXTENSION = 11;
 const PAGE_EXTENSION = ".html".length;
+const PREVIEW_EXTENSION = ".svg";
 const MIN_FILE_LENGTH = MIN_NAME_LENGTH + LONGEST_EXTENSION;
 
 function lengthOf(text: string): number {
@@ -73,6 +85,7 @@ export function planExport(options: {
   rootId: string | null;
   items: readonly PlanInput[];
   attachments: readonly PlanAttachment[];
+  previews?: readonly PlanPreview[];
   untitledPage: string;
   untitledFolder: string;
   flat?: boolean;
@@ -101,6 +114,7 @@ export function planExport(options: {
     list.push(attachment);
     attachmentsOf.set(attachment.itemId, list);
   }
+  const previewOf = new Map((options.previews ?? []).map((preview) => [preview.itemId, preview]));
   const heights = new Map<string, number>();
   const height = (item: PlanInput): number => {
     const known = heights.get(item.id);
@@ -114,6 +128,7 @@ export function planExport(options: {
   };
   const pages: PlannedNode[] = [];
   const attachments: PlannedAttachment[] = [];
+  const previews: PlannedPreview[] = [];
   const rootScope = new NameScope();
   rootScope.reserve(`${INDEX_NAME}.html`);
   rootScope.reserve(`${INDEX_NAME}.md`);
@@ -130,6 +145,7 @@ export function planExport(options: {
       stem: null,
       children: [],
       attachments: [],
+      preview: null,
     };
     nodes.set(item.id, node);
     if (item.kind === "link") return node;
@@ -142,13 +158,18 @@ export function planExport(options: {
     const own = flat ? folder : [...folder, scope.take(item.title.trim() || fallback, [""], folderLength)];
     const inner = flat ? scope : new NameScope();
     const fileRoom = MAX_PATH_LENGTH - prefixLength(own);
-    if (item.kind === "page") {
+    if (item.kind === "page" || item.kind === "whiteboard") {
       node.stem = inner.take(
         item.title.trim() || fallback,
-        [".md", ".html"],
+        [".md", ".html", PREVIEW_EXTENSION],
         Math.min(MAX_NAME_LENGTH, fileRoom - PAGE_EXTENSION),
       );
       pages.push(node);
+      const preview = item.kind === "whiteboard" ? previewOf.get(item.id) : undefined;
+      if (preview) {
+        node.preview = { ...preview, path: [...own, `${node.stem}${PREVIEW_EXTENSION}`].join("/") };
+        previews.push(node.preview);
+      }
     }
     node.folder = own;
     for (const child of children.get(item.id) ?? []) node.children.push(place(child, own, inner));
@@ -170,11 +191,13 @@ export function planExport(options: {
   const attachmentPaths = new Map(
     attachments.map((attachment) => [attachment.id, attachment.path.split("/")]),
   );
+  const previewPaths = new Map(previews.map((preview) => [preview.itemId, preview.path.split("/")]));
 
   return {
     roots,
     pages,
     attachments,
+    previews,
     locator(from) {
       const folder = from?.folder ?? [];
       return {
@@ -184,6 +207,10 @@ export function planExport(options: {
         },
         attachment(attachmentId) {
           const path = attachmentPaths.get(attachmentId);
+          return path ? relative(folder, path) : null;
+        },
+        preview(itemId) {
+          const path = previewPaths.get(itemId);
           return path ? relative(folder, path) : null;
         },
         index(format) {

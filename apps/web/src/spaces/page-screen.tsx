@@ -44,7 +44,7 @@ import { PageReadView, type ReadViewCollaboration } from "../editor/read-view.js
 import { CollaborationProblemNotice } from "../editor/save-indicator.js";
 import type { SaveState } from "../editor/save-state.js";
 import { LoadError } from "../errors/failure.js";
-import { PageExportDialog } from "../exports/page-export-dialog.js";
+import { ExportDialog } from "../exports/export-dialog.js";
 import { AttachmentsSection, PageDropZone } from "../files/attachments-section.js";
 import { AttachmentPreviewProvider } from "../files/preview-host.js";
 import { UploadsProvider } from "../files/uploads.js";
@@ -450,10 +450,12 @@ function PageArticle({
           onOpenChange={setConfirmingLive}
         />
         {sharing.dialog}
-        <PageExportDialog
+        <ExportDialog
           page={{ id: page.id, title, publishable: !publishMode || page.published }}
           space={{
+            id: space.id,
             key: space.key,
+            name: space.name,
             exportEnabled: space.exportEnabled,
             admin: space.role === "admin",
             mayExportPages: space.mayExport,

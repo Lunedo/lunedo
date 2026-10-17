@@ -12,6 +12,7 @@ import { ReportsController } from "../collaboration/reports.controller.js";
 import { TasksController } from "../collaboration/tasks.controller.js";
 import { DocsController } from "../docs/docs.controller.js";
 import { ExportsController } from "../exports/exports.controller.js";
+import { RenderingController } from "../exports/rendering.controller.js";
 import { AttachmentsController } from "../files/attachments.controller.js";
 import { API_ROUTE, type ApiRouteDefinition } from "../http/api-route.js";
 import { IdentityProvidersController } from "../identity/identity-providers.controller.js";
@@ -94,6 +95,7 @@ export const apiControllers = (): Type[] => [
   AccessRequestsController,
   ImportsController,
   ExportsController,
+  RenderingController,
   StorageController,
   SearchController,
   SavedSearchesController,

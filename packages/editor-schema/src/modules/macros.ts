@@ -14,7 +14,8 @@ import type { NodeJson, ValidNode } from "../json.js";
 import type { Heading, HtmlRenderer } from "../module.js";
 import { attrOf, defineModule, optional, required } from "../module.js";
 import { element, escapeHtml, fenceFor, inlineCode, markdownUrl, prefixLines } from "../text.js";
-import { calloutVariants, colorValue } from "../values.js";
+import { type CalloutVariant, type ContentColor, calloutVariants, colorValue } from "../values.js";
+import { wordText } from "../word.js";
 
 const ALERTS: Record<string, string> = {
   info: "NOTE",
@@ -172,6 +173,17 @@ export const calloutModule = defineModule({
         const alert = ALERTS[attrOf<string>(node, "variant")] ?? "NOTE";
         return prefixLines(`[!${alert}]\n${renderer.blocks(node)}`, "> ", "> ");
       },
+      word: (node, renderer) => {
+        const variant = attrOf<CalloutVariant>(node, "variant");
+        return [
+          {
+            type: "box",
+            variant,
+            title: [wordText(renderer.calloutLabel(variant), { bold: true })],
+            content: renderer.blocks(node),
+          },
+        ];
+      },
     },
   ],
   importers: [calloutImporter],
@@ -190,6 +202,23 @@ export const expandModule = defineModule({
           { class: "ph-expand" },
           `${element("summary", {}, renderer.escape(attrOf<string>(node, "title")))}${element("div", {}, renderer.children(node))}`,
         ),
+      print: (node, renderer) =>
+        element(
+          "section",
+          { class: "ph-expand" },
+          `${element("p", { class: "ph-expand-title" }, renderer.escape(attrOf<string>(node, "title")))}${element("div", {}, renderer.children(node))}`,
+        ),
+      word: (node, renderer) => {
+        const title = attrOf<string>(node, "title");
+        return [
+          {
+            type: "box",
+            variant: "neutral",
+            title: title ? [wordText(title, { bold: true })] : [],
+            content: renderer.blocks(node),
+          },
+        ];
+      },
       markdown: (node, renderer) =>
         `<details>\n<summary>${escapeHtml(attrOf<string>(node, "title"))}</summary>\n\n${renderer.blocks(node)}\n\n</details>`,
       text: (node) => attrOf<string>(node, "title"),
@@ -219,6 +248,12 @@ export const statusModule = defineModule({
           { class: "ph-status", "data-color": attrOf<string>(node, "color") },
           renderer.escape(attrOf<string>(node, "text")),
         ),
+      word: (node) => [
+        wordText(attrOf<string>(node, "text").toUpperCase(), {
+          bold: true,
+          highlight: attrOf<ContentColor>(node, "color"),
+        }),
+      ],
       markdown: (node, renderer) => `**${renderer.escape(attrOf<string>(node, "text"))}**`,
       text: (node) => attrOf<string>(node, "text"),
     },
@@ -281,6 +316,13 @@ export const tableOfContentsModule = defineModule({
           { class: "ph-toc", "aria-label": renderer.label("tableOfContents") },
           tocHtml(tocTree(renderer.headings, node), renderer.escape),
         ),
+      word: (node) => [
+        {
+          type: "contents",
+          minLevel: attrOf<number>(node, "minLevel"),
+          maxLevel: attrOf<number>(node, "maxLevel"),
+        },
+      ],
       markdown: (node, renderer) => {
         const headings = tocTree(renderer.headings, node);
         if (headings.length === 0) return "";
@@ -309,6 +351,24 @@ export const columnsModule = defineModule({
       },
       html: (node, renderer) =>
         element("div", { class: "ph-columns", "data-count": node.content.length }, renderer.children(node)),
+      word: (node, renderer) => [
+        {
+          type: "table",
+          borderless: true,
+          rows: [
+            {
+              cells: node.content.map((column) => ({
+                header: false,
+                colspan: 1,
+                rowspan: 1,
+                width: attrOf<number>(column, "width"),
+                background: null,
+                content: renderer.blocks(column),
+              })),
+            },
+          ],
+        },
+      ],
       markdown: (node, renderer) => renderer.blocks(node),
     },
     {
@@ -321,6 +381,7 @@ export const columnsModule = defineModule({
           { class: "ph-column", "data-width": attrOf<number>(node, "width") },
           renderer.children(node),
         ),
+      word: (node, renderer) => renderer.blocks(node),
       markdown: (node, renderer) => renderer.blocks(node),
     },
   ],
@@ -336,6 +397,7 @@ export const mathModule = defineModule({
       spec: { inline: true, group: "inline", atom: true },
       attrs: { latex: required(latexValue) },
       html: (node, renderer) => renderMath(attrOf<string>(node, "latex"), false, renderer),
+      word: (node) => [wordText(attrOf<string>(node, "latex"), { code: true })],
       markdown: (node) => `$${inlineCode(attrOf<string>(node, "latex").replace(/\s*\n\s*/g, " "))}$`,
       text: (node) => attrOf<string>(node, "latex"),
     },
@@ -344,6 +406,7 @@ export const mathModule = defineModule({
       spec: { group: "block", atom: true },
       attrs: { latex: required(latexValue) },
       html: (node, renderer) => renderMath(attrOf<string>(node, "latex"), true, renderer),
+      word: (node) => [{ type: "code", text: attrOf<string>(node, "latex"), language: "latex" }],
       markdown: (node) => {
         const latex = attrOf<string>(node, "latex");
         const fence = fenceFor(latex);
@@ -380,6 +443,12 @@ export const unsupportedMacroModule = defineModule({
           element("p", {}, renderer.escape(renderer.label("unsupportedMacro", { name }))),
         );
       },
+      word: (node, renderer) => [
+        {
+          type: "placeholder",
+          text: renderer.label("unsupportedMacro", { name: attrOf<string>(node, "name") }),
+        },
+      ],
       markdown: (node, renderer) =>
         `> ${renderer.escape(renderer.label("unsupportedMacro", { name: attrOf<string>(node, "name") }))}`,
     },

@@ -2,13 +2,15 @@ import { accountAttemptLimitSetting, clientAttemptLimitSetting } from "@pagehall
 import { testJobContext } from "@pagehall/server/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
+  addTotp,
   completeConfiguredSetup,
   configuredSetupEnv,
   createAccount,
   firstOrganizationId,
+  OWNER,
   signedInClient,
 } from "../testing/accounts.js";
-import { type AuthTestApp, createAuthTestApp, databaseBaseUrl } from "../testing/auth-app.js";
+import { type AuthTestApp, createAuthTestApp, databaseBaseUrl, TestClient } from "../testing/auth-app.js";
 
 describe.skipIf(!databaseBaseUrl)("exports through the API", () => {
   let test: AuthTestApp;
@@ -185,6 +187,114 @@ describe.skipIf(!databaseBaseUrl)("exports through the API", () => {
     expect(exporter.json()).toMatchObject({ role: "admin", mayExport: true });
     const started = await context.exporter.client.post(`/api/v1/pages/${context.pageId}/exports`);
     expect(started.statusCode, started.body).toBe(202);
+  });
+
+  it("sends a page as print-ready HTML or Word and explains that PDF needs the render container", async () => {
+    const context = await setup();
+    const printed = await context.reader.client.get(
+      `/api/v1/pages/${context.pageId}/export?format=print&paper=letter&orientation=landscape&contents=false`,
+    );
+    expect(printed.statusCode, printed.body).toBe(200);
+    expect(printed.headers["content-type"]).toBe("text/html; charset=utf-8");
+    expect(printed.headers["content-disposition"]).toContain('filename="Restart the VPN gateway.html"');
+    expect(printed.body).toContain("@page{size:letter landscape;");
+    expect(printed.body).toContain("Hold the button");
+    expect(printed.body).not.toContain('<nav class="ph-contents"');
+
+    const word = await context.reader.client.get(`/api/v1/pages/${context.pageId}/export?format=docx`);
+    expect(word.statusCode, word.body).toBe(200);
+    expect(word.headers["content-type"]).toBe(
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    );
+    expect(word.headers["content-disposition"]).toContain('filename="Restart the VPN gateway.docx"');
+    expect(word.rawPayload.subarray(0, 2).toString("latin1")).toBe("PK");
+
+    const pdf = await context.reader.client.get(`/api/v1/pages/${context.pageId}/export?format=pdf`);
+    expect(pdf.statusCode).toBe(503);
+    expect(pdf.json()).toMatchObject({
+      code: "renderUnavailable",
+      detail: "Server-side PDF needs the render container; see the documentation",
+    });
+    const job = await context.exporter.client.post(`/api/v1/spaces/${context.space.id}/exports`, {
+      format: "pdf",
+    });
+    expect(job.statusCode).toBe(503);
+    expect(job.json()).toMatchObject({ code: "renderUnavailable" });
+
+    const invalid = await context.reader.client.get(
+      `/api/v1/pages/${context.pageId}/export?format=print&paper=a3`,
+    );
+    expect(invalid.statusCode).toBe(400);
+  });
+
+  it("builds a Word document of a space with the chosen options and counts what it contains", async () => {
+    const context = await setup();
+    const counted = await context.exporter.client.get(`/api/v1/spaces/${context.space.id}/exports/summary`);
+    expect(counted.statusCode, counted.body).toBe(200);
+    expect(counted.json()).toEqual({ pages: 2, blogPosts: 0, printLimit: 300, serverPdf: false });
+    const subtree = await context.exporter.client.get(`/api/v1/pages/${context.pageId}/exports/summary`);
+    expect(subtree.json()).toMatchObject({ pages: 1 });
+    for (const response of [
+      await context.reader.client.get(`/api/v1/spaces/${context.space.id}/exports/summary`),
+      await context.reader.client.get(`/api/v1/pages/${context.pageId}/exports/summary`),
+    ]) {
+      expect(response.statusCode).toBe(403);
+    }
+
+    const started = await context.exporter.client.post(`/api/v1/spaces/${context.space.id}/exports`, {
+      format: "docx",
+      comments: true,
+      paper: "letter",
+    });
+    expect(started.statusCode, started.body).toBe(202);
+    const exported = started.json() as { id: string; format: string; options: Record<string, unknown> };
+    expect(exported.format).toBe("docx");
+    expect(exported.options).toEqual({
+      attachments: true,
+      comments: true,
+      contents: true,
+      paper: "letter",
+      orientation: "portrait",
+    });
+    await run(exported.id);
+    const download = await context.exporter.client.get(`/api/v1/exports/${exported.id}/content`);
+    expect(download.statusCode).toBe(200);
+    expect(download.headers["content-type"]).toBe(
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    );
+    expect(download.headers["content-disposition"]).toMatch(/filename=".+\.docx"/);
+
+    const unknown = await context.exporter.client.post(`/api/v1/spaces/${context.space.id}/exports`, {
+      format: "epub",
+    });
+    expect(unknown.statusCode).toBe(400);
+  });
+
+  it("shows the state of rendering to instance administrators only", async () => {
+    const context = await setup();
+    const refused = await context.exporter.client.get("/api/v1/instance/rendering");
+    expect(refused.statusCode).toBe(403);
+    const owner = new TestClient(test.app);
+    await owner.post("/api/v1/auth/sign-in", OWNER);
+    await addTotp(owner);
+    const status = await owner.get("/api/v1/instance/rendering");
+    expect(status.statusCode, status.body).toBe(200);
+    expect(status.json()).toEqual({
+      pdf: {
+        state: "notConfigured",
+        reason: null,
+        url: null,
+        checkedAt: null,
+        version: null,
+        browser: null,
+        concurrency: null,
+        running: null,
+        waiting: null,
+        maxBytes: null,
+        timeoutSeconds: null,
+      },
+      word: { available: true },
+    });
   });
 
   it("keeps a download for 24 hours after it was first sent completely, and resumes with ranges", async () => {

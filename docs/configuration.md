@@ -59,6 +59,8 @@ The master keys and the backup keys are needed to read encrypted data and backup
 | `PAGEHALL_MASTER_KEYS_PATH` | `master-keys` in the secrets directory | | Master key ring file for the file key provider. |
 | `PAGEHALL_BACKUP_KEY` | generated | yes | Key ring that encrypts backups, in the same format as the master keys. |
 | `PAGEHALL_METRICS_TOKEN` | generated | yes | Bearer token required by `/metrics`. |
+| `PAGEHALL_RENDER_URL` | none | | Address of the optional render container that creates PDF files on the server, for example `http://pagehall-render:3000`. Set it together with `PAGEHALL_RENDER_TOKEN`; see [rendering.md](rendering.md). |
+| `PAGEHALL_RENDER_TOKEN` | none | yes | Token the worker and the API send to the render container, at least 32 characters. Must be the same as `RENDER_TOKEN` of the container. |
 | `PAGEHALL_WEB_ROOT` | `/app/web` in the image | | Directory with the built web client, served by the API. |
 | `PAGEHALL_SHUTDOWN_TIMEOUT_SECONDS` | `30` | | Time running requests and jobs get to finish on shutdown. |
 | `PAGEHALL_TRUSTED_PROXIES` | none | | Comma-separated IP addresses and CIDR ranges of reverse proxies. Only requests from them may set the client address and protocol through `X-Forwarded-For` and `X-Forwarded-Proto`. |

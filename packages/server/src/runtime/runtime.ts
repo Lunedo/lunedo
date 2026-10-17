@@ -220,6 +220,7 @@ export async function createServerRuntime(options: {
       passwordHashConcurrency: config.passwordHashConcurrency,
       insecureIdentityProviders: config.insecureIdentityProviders,
       outboundAllowedNetworks: config.outboundAllowedNetworks,
+      ...(config.render ? { render: config.render } : {}),
       ...(options.mailTransport ? { mailTransport: options.mailTransport } : {}),
     });
 

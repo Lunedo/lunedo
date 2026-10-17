@@ -1,4 +1,4 @@
-import { type Readable, Transform, type TransformCallback } from "node:stream";
+import { Readable, Transform, type TransformCallback } from "node:stream";
 import { escapeHtml } from "@pagehall/editor-schema";
 import { formatDate, uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
@@ -8,6 +8,7 @@ import { accountScopeChain } from "../accounts/scope.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import { ForbiddenError } from "../authorization/service.js";
+import type { CommentService } from "../collaboration/comments.js";
 import type { TaskService } from "../collaboration/tasks.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import type { DatabasePool } from "../database/pool.js";
@@ -31,6 +32,14 @@ import { type ArchiveEntry, zipArchive } from "./archive.js";
 import { exportBuildJob } from "./jobs.js";
 import { safeName } from "./names.js";
 import {
+  defaultExportOptions,
+  type ExportFormat,
+  type ExportOptions,
+  MAX_BROWSER_PRINT_PAGES,
+  readExportOptions,
+} from "./options.js";
+import { type PagedEntry, PagedExport } from "./paged.js";
+import {
   type ExportPlan,
   INDEX_NAME,
   type PlanInput,
@@ -45,6 +54,7 @@ import {
   PageExportRenderer,
   type PreparedPage,
 } from "./renderer.js";
+import { RenderError, type RenderService } from "./rendering.js";
 import type { ExportScope, ExportState } from "./schema.js";
 import { exportTexts } from "./texts.js";
 
@@ -62,22 +72,67 @@ const HEARTBEAT_MS = 5_000;
 const MAX_LISTED_EXPORTS = 50;
 export const MAX_KEPT_EXPORTS = 5;
 
-export type PageExportFormat = "markdown" | "html" | "zip";
+export const pageExportFormats = ["markdown", "html", "zip", "print", "pdf", "docx"] as const;
+export type PageExportFormat = (typeof pageExportFormats)[number];
 
 export type ExportErrorCode =
   | "exportNotFound"
   | "exportRunning"
   | "notEnoughStorage"
   | "nothingToExport"
-  | "tooManyExports";
+  | "tooManyExports"
+  | "tooManyPagesToPrint"
+  | "renderUnavailable"
+  | "renderFailed";
 
 export type ExportFailureCode =
   | "exportDisabled"
   | "noAccess"
   | "tokenRevoked"
   | "notEnoughStorage"
+  | "renderUnavailable"
+  | "renderFailed"
+  | "renderTooLarge"
   | "interrupted"
   | "internalError";
+
+const RENDER_UNAVAILABLE = "Server-side PDF needs the render container; see the documentation";
+
+const CONTENT_TYPES: Record<ExportFormat, string> = {
+  archive: "application/zip",
+  html: "application/zip",
+  markdown: "application/zip",
+  print: "text/html; charset=utf-8",
+  pdf: "application/pdf",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+};
+
+const EXTENSIONS: Record<ExportFormat, string> = {
+  archive: "zip",
+  html: "zip",
+  markdown: "zip",
+  print: "html",
+  pdf: "pdf",
+  docx: "docx",
+};
+
+function renderFailure(error: RenderError): ExportFailureCode {
+  if (error.reason === "unavailable") return "renderUnavailable";
+  if (error.reason === "tooLarge") return "renderTooLarge";
+  return "renderFailed";
+}
+
+export interface ExportRequest {
+  format: ExportFormat;
+  options: ExportOptions;
+}
+
+export interface ExportSummaryCounts {
+  pages: number;
+  blogPosts: number;
+  printLimit: number;
+  serverPdf: boolean;
+}
 
 export class ExportError extends Error {
   override name = "ExportError";
@@ -105,6 +160,8 @@ class ExportRemoved extends Error {
 export interface ExportSummary {
   id: string;
   scope: ExportScope;
+  format: ExportFormat;
+  options: ExportOptions;
   spaceId: string | null;
   rootItemId: string | null;
   name: string;
@@ -120,6 +177,7 @@ export interface ExportSummary {
 
 export interface ExportArchive {
   fileName: string;
+  contentType: string;
   size: number;
   read(range?: ByteRange): Promise<Readable>;
   delivered(): Promise<void>;
@@ -139,6 +197,8 @@ type ExportRow = {
   started_with_token: boolean;
   organization_id: string | null;
   scope: ExportScope;
+  format: ExportFormat;
+  options: unknown;
   space_id: string | null;
   root_item_id: string | null;
   name: string;
@@ -159,7 +219,7 @@ type ItemRow = {
   id: string;
   parent_id: string | null;
   path: string[];
-  kind: "page" | "folder" | "link" | "meetingSeries";
+  kind: "page" | "whiteboard" | "folder" | "link" | "meetingSeries";
   title: string;
   link_url: string | null;
   link_item_id: string | null;
@@ -173,6 +233,8 @@ function summary(row: ExportRow): ExportSummary {
   return {
     id: row.id,
     scope: row.scope,
+    format: row.format,
+    options: readExportOptions(row.options),
     spaceId: row.space_id,
     rootItemId: row.root_item_id,
     name: row.name,
@@ -221,6 +283,8 @@ export class ExportService {
   readonly #tasks: TaskService;
   readonly #people: PeopleService;
   readonly #address: InstanceAddressService;
+  readonly #comments: CommentService;
+  readonly #render: RenderService;
   readonly #jobs: JobQueue | undefined;
   readonly #logger: Logger;
 
@@ -240,6 +304,8 @@ export class ExportService {
     tasks: TaskService;
     people: PeopleService;
     address: InstanceAddressService;
+    comments: CommentService;
+    render: RenderService;
     jobs: JobQueue | undefined;
     logger: Logger;
   }) {
@@ -258,6 +324,8 @@ export class ExportService {
     this.#tasks = options.tasks;
     this.#people = options.people;
     this.#address = options.address;
+    this.#comments = options.comments;
+    this.#render = options.render;
     this.#jobs = options.jobs;
     this.#logger = options.logger;
   }
@@ -265,7 +333,7 @@ export class ExportService {
   async #renderer(
     viewer: Principal,
     accountId: string,
-  ): Promise<{ renderer: PageExportRenderer; language: string }> {
+  ): Promise<{ renderer: PageExportRenderer; language: string; origin: string }> {
     const language = await this.#mail.languageOf(accountId);
     const timeZone = await this.#mail.timeZoneOf(accountId);
     const dateFormat = await this.#mail.dateFormatOf(accountId);
@@ -287,8 +355,10 @@ export class ExportService {
           : iso,
       dateTime: (value) => `${formatDate(value, dateFormat, timeZone, language)} ${time.format(value)}`,
     };
+    const origin = (await this.#address.get()).url ?? "";
     const renderer = new PageExportRenderer({
       database: this.#database,
+      authorization: this.#authorization,
       documents: this.#documents,
       attachments: this.#attachments,
       reports: this.#reports,
@@ -298,9 +368,52 @@ export class ExportService {
       viewer,
       texts: exportTexts(language),
       format,
-      origin: (await this.#address.get()).url ?? "",
+      origin,
     });
-    return { renderer, language };
+    return { renderer, language, origin };
+  }
+
+  #paged(viewer: Principal, renderer: PageExportRenderer, language: string): PagedExport {
+    return new PagedExport({
+      database: this.#database,
+      authorization: this.#authorization,
+      attachments: this.#attachments,
+      files: this.#files,
+      comments: this.#comments,
+      logger: this.#logger,
+      renderer,
+      viewer,
+      language,
+    });
+  }
+
+  async #exported(renderer: PageExportRenderer, accountId: string, now: Date): Promise<string> {
+    const result = await this.#database.execute<{ name: string }>(
+      sql`select name from accounts where id = ${accountId}`,
+    );
+    const date = renderer.format.date(now);
+    const name = result.rows[0]?.name;
+    return name ? renderer.texts.exportedBy(date, name) : renderer.texts.exported(date);
+  }
+
+  async #pdf(
+    paged: PagedExport,
+    html: string,
+    pages: readonly PreparedPage[],
+    origin: string,
+    signal?: AbortSignal,
+  ) {
+    if (!this.#render.configured) throw new ExportFailure("renderUnavailable");
+    try {
+      return await this.#render.pdf(html, await paged.assets(pages), origin, signal);
+    } catch (error) {
+      if (error instanceof RenderError) throw new ExportFailure(renderFailure(error));
+      throw error;
+    }
+  }
+
+  get serverPdf(): boolean {
+    return this.#render.configured;
   }
 
   async #publishedAttachments(itemIds: readonly string[]) {
@@ -326,13 +439,24 @@ export class ExportService {
     }));
   }
 
-  async page(actor: Principal, pageId: string, format: PageExportFormat): Promise<ExportFile> {
+  async page(
+    actor: Principal,
+    pageId: string,
+    format: PageExportFormat,
+    options: ExportOptions = defaultExportOptions,
+  ): Promise<ExportFile> {
     if (actor.type !== "account") throw new ExportError("nothingToExport", "Only people can export pages");
     await this.#authorization.require(actor, "item.export", { type: "item", id: pageId });
-    const { renderer, language } = await this.#renderer(actor, actor.id);
+    if (format === "pdf" && !this.#render.configured) {
+      throw new ExportError("renderUnavailable", RENDER_UNAVAILABLE);
+    }
+    const { renderer, language, origin } = await this.#renderer(actor, actor.id);
     const prepared = await renderer.prepare(pageId);
     if (!prepared) throw new ExportError("nothingToExport", "The page has no published content to export");
     const stem = safeName(renderer.title(prepared), renderer.texts.untitledPage);
+    if (format === "print" || format === "pdf" || format === "docx") {
+      return this.#pagedPage(actor, prepared, format, options, { renderer, language, origin, stem });
+    }
     if (format === "markdown") {
       return {
         fileName: `${stem}.md`,
@@ -391,16 +515,110 @@ export class ExportService {
     return { fileName: `${stem}.zip`, contentType: "application/zip", body: zipArchive(entries) };
   }
 
-  async start(actor: Principal, target: { spaceId: string } | { pageId: string }): Promise<ExportSummary> {
-    if (actor.type !== "account") throw new ExportError("nothingToExport", "Only people can export");
-    const scope: ExportScope = "spaceId" in target ? "space" : "pages";
+  async #pagedPage(
+    actor: Extract<Principal, { type: "account" }>,
+    prepared: PreparedPage,
+    format: "print" | "pdf" | "docx",
+    options: ExportOptions,
+    context: { renderer: PageExportRenderer; language: string; origin: string; stem: string },
+  ): Promise<ExportFile> {
+    const { renderer, language, origin, stem } = context;
+    const paged = this.#paged(actor, renderer, language);
+    const input = {
+      entries: [{ id: prepared.id, depth: 0 }],
+      title: renderer.title(prepared),
+      path: prepared.path,
+      exported: await this.#exported(renderer, actor.id, new Date()),
+      options,
+      prepare: async () => prepared,
+      progress: async () => {},
+    };
+    if (format === "docx") {
+      return { fileName: `${stem}.docx`, contentType: CONTENT_TYPES.docx, body: await paged.word(input) };
+    }
+    const { html, pages } = await paged.print(input);
+    if (format === "print") {
+      return { fileName: `${stem}.html`, contentType: CONTENT_TYPES.print, body: Buffer.from(html, "utf8") };
+    }
+    try {
+      return {
+        fileName: `${stem}.pdf`,
+        contentType: CONTENT_TYPES.pdf,
+        body: await this.#pdf(paged, html, pages, origin),
+      };
+    } catch (error) {
+      if (error instanceof ExportFailure && error.code === "renderUnavailable") {
+        throw new ExportError("renderUnavailable", RENDER_UNAVAILABLE);
+      }
+      if (error instanceof ExportFailure) {
+        throw new ExportError("renderFailed", "The render container could not create the PDF");
+      }
+      throw error;
+    }
+  }
+
+  async #requireTarget(actor: Principal, target: { spaceId: string } | { pageId: string }): Promise<void> {
     if ("spaceId" in target) {
       await this.#authorization.require(actor, "space.export", { type: "space", id: target.spaceId });
     } else {
       await this.#authorization.require(actor, "item.exportPages", { type: "item", id: target.pageId });
     }
+  }
+
+  async #countPages(
+    viewer: Principal,
+    spaceId: string,
+    rootItemId: string | null,
+  ): Promise<{ pages: number; blogPosts: number }> {
+    const result = await this.#database.execute<{ pages: number; blog_posts: number }>(sql`
+      select count(*) filter (where t.kind in ('page', 'whiteboard'))::int as pages,
+        count(*) filter (where t.kind = 'blogPost' and b.published_at is not null)::int as blog_posts
+      from tree_items t join spaces s on s.id = t.space_id left join blog_posts b on b.item_id = t.id
+      where t.space_id = ${spaceId} and t.kind in ('page', 'whiteboard', 'blogPost') and t.reader_visible
+        and t.trash_entry_id is null
+        and ${rootItemId ? sql`${rootItemId}::uuid = any(t.path) and t.kind in ('page', 'whiteboard')` : sql`t.archived_root_id is null`}
+        and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}`);
+    const row = result.rows[0];
+    return { pages: Number(row?.pages ?? 0), blogPosts: Number(row?.blog_posts ?? 0) };
+  }
+
+  async counts(
+    actor: Principal,
+    target: { spaceId: string } | { pageId: string },
+  ): Promise<ExportSummaryCounts> {
+    if (actor.type !== "account") throw new ExportError("nothingToExport", "Only people can export");
+    await this.#requireTarget(actor, target);
     const subject = await this.#subject(target);
     if (!subject) throw new ExportError("nothingToExport", "There is nothing to export");
+    return {
+      ...(await this.#countPages(actor, subject.spaceId, subject.rootItemId)),
+      printLimit: MAX_BROWSER_PRINT_PAGES,
+      serverPdf: this.#render.configured,
+    };
+  }
+
+  async start(
+    actor: Principal,
+    target: { spaceId: string } | { pageId: string },
+    request: ExportRequest = { format: "archive", options: defaultExportOptions },
+  ): Promise<ExportSummary> {
+    if (actor.type !== "account") throw new ExportError("nothingToExport", "Only people can export");
+    const scope: ExportScope = "spaceId" in target ? "space" : "pages";
+    await this.#requireTarget(actor, target);
+    if (request.format === "pdf" && !this.#render.configured) {
+      throw new ExportError("renderUnavailable", RENDER_UNAVAILABLE);
+    }
+    const subject = await this.#subject(target);
+    if (!subject) throw new ExportError("nothingToExport", "There is nothing to export");
+    if (request.format === "print") {
+      const counted = await this.#countPages(actor, subject.spaceId, subject.rootItemId);
+      if (counted.pages + counted.blogPosts > MAX_BROWSER_PRINT_PAGES) {
+        throw new ExportError(
+          "tooManyPagesToPrint",
+          `Browsers can print up to ${MAX_BROWSER_PRINT_PAGES} pages at once. Export as Word or HTML instead, or as PDF on the server if the render container is set up.`,
+        );
+      }
+    }
     const running = await this.#database.execute(sql`
       select 1 from exports where account_id = ${actor.id} and state in ('queued', 'running') limit 1`);
     if (running.rows.length > 0) {
@@ -417,6 +635,7 @@ export class ExportService {
         await this.#delete(
           tx,
           sql`account_id = ${actor.id} and state in ('ready', 'failed') and scope = ${scope}
+            and format = ${request.format}
             and space_id = ${subject.spaceId} and root_item_id is not distinct from ${subject.rootItemId}`,
         );
         const kept = await tx.execute<{ count: number }>(sql`
@@ -442,17 +661,17 @@ export class ExportService {
           }
         }
         await tx.execute(sql`
-          insert into exports (id, account_id, token_id, started_with_token, organization_id, scope, space_id,
-            root_item_id, name, estimated_size)
+          insert into exports (id, account_id, token_id, started_with_token, organization_id, scope, format, options,
+            space_id, root_item_id, name, estimated_size)
           values (${id}, ${actor.id}, ${actor.token?.id ?? null}, ${actor.token !== undefined},
-            ${subject.organizationId}, ${scope}, ${subject.spaceId}, ${subject.rootItemId}, ${subject.name},
-            ${estimate})`);
+            ${subject.organizationId}, ${scope}, ${request.format}, ${JSON.stringify(request.options)}::jsonb,
+            ${subject.spaceId}, ${subject.rootItemId}, ${subject.name}, ${estimate})`);
         if (scope === "space") {
           await this.#audit.record(tx, {
             name: "space.exported",
             actor,
             targetId: subject.spaceId,
-            fields: { name: subject.spaceName, key: subject.spaceKey, exportId: id },
+            fields: { name: subject.spaceName, key: subject.spaceKey, exportId: id, format: request.format },
             scope: auditScopeOf(subject),
           });
         } else {
@@ -460,7 +679,7 @@ export class ExportService {
             name: "page.subtreeExported",
             actor,
             targetId: subject.rootItemId,
-            fields: { spaceId: subject.spaceId, title: subject.name, exportId: id },
+            fields: { spaceId: subject.spaceId, title: subject.name, exportId: id, format: request.format },
             scope: auditScopeOf(subject),
           });
         }
@@ -535,6 +754,11 @@ export class ExportService {
           join attachment_versions v on v.id = a.published_version_id
           join stored_files f on f.id = v.file_id
           join tree_items t on t.id = a.item_id
+          where t.space_id = ${spaceId} and t.trash_entry_id is null ${within})
+        + (select coalesce(sum(f.size), 0) from whiteboard_documents d
+          join whiteboard_previews p on p.id = d.preview_id
+          join stored_files f on f.id = p.file_id
+          join tree_items t on t.id = d.item_id
           where t.space_id = ${spaceId} and t.trash_entry_id is null ${within}) as attachments,
         (select coalesce(sum(octet_length(coalesce(v.document::text, d.snapshot::text, ''))), 0)
           from tree_items t
@@ -542,7 +766,8 @@ export class ExportService {
           left join page_documents d on d.item_id = t.id and t.mode = 'live'
           where t.space_id = ${spaceId} and t.kind in ('page', 'blogPost') and t.trash_entry_id is null ${within}) as text,
         (select count(*)::int from tree_items t
-          where t.space_id = ${spaceId} and t.kind in ('page', 'blogPost') and t.trash_entry_id is null ${within}) as pages`);
+          where t.space_id = ${spaceId} and t.kind in ('page', 'blogPost', 'whiteboard')
+            and t.trash_entry_id is null ${within}) as pages`);
     const row = result.rows[0];
     return (
       Number(row?.attachments ?? 0) +
@@ -641,7 +866,8 @@ export class ExportService {
     }
     const fileId = row.file_id;
     return {
-      fileName: row.file_name ?? "export.zip",
+      fileName: row.file_name ?? `export.${EXTENSIONS[row.format]}`,
+      contentType: CONTENT_TYPES[row.format],
       size: Number(row.size ?? 0),
       read: (range) => this.#files.read(fileId, range),
       delivered: async () => {
@@ -837,7 +1063,7 @@ export class ExportService {
       left join page_versions v on v.id = t.published_version_id
       where t.space_id = ${row.space_id}
         ${root ? sql`and ${root}::uuid = any(t.path)` : sql``}
-        and t.kind in ('page', 'folder', 'link', 'meetingSeries')
+        and t.kind in ('page', 'whiteboard', 'folder', 'link', 'meetingSeries')
         and t.reader_visible
         and t.archived_root_id is not distinct from ${archivedRoot}
         and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}
@@ -853,25 +1079,47 @@ export class ExportService {
     }));
   }
 
+  async #previews(itemIds: readonly string[]) {
+    if (itemIds.length === 0) return [];
+    const result = await this.#database.execute<{ item_id: string; file_id: string }>(sql`
+      select d.item_id, f.id as file_id
+      from whiteboard_documents d join whiteboard_previews p on p.id = d.preview_id
+      join stored_files f on f.id = p.file_id and f.state = 'ready'
+      where d.item_id = any(${sql.param([...itemIds])}::uuid[])`);
+    return result.rows.map((preview) => ({ itemId: preview.item_id, fileId: preview.file_id }));
+  }
+
   async #build(row: ExportRow, signal: AbortSignal): Promise<void> {
     const viewer = await this.#viewer(row);
     await this.#requireRoot(viewer, row);
-    const { renderer, language } = await this.#renderer(viewer, row.account_id);
+    const { renderer, language, origin } = await this.#renderer(viewer, row.account_id);
+    const options = readExportOptions(row.options);
     const items = [
       ...(await this.#items(viewer, row)),
       ...(row.root_item_id ? [] : await this.#blogPosts(viewer, row, renderer.texts.blog)),
     ];
     const pageIds = items.filter((item) => item.kind === "page").map((item) => item.id);
+    const boardIds = new Set(items.filter((item) => item.kind === "whiteboard").map((item) => item.id));
     if (row.root_item_id && !pageIds.includes(row.root_item_id)) throw new ExportFailure("noAccess");
     const prepared = new Map<string, PreparedPage>();
     const plan = planExport({
       rootId: row.root_item_id,
       items,
       attachments: await this.#publishedAttachments(pageIds),
+      previews: await this.#previews([...boardIds]),
       untitledPage: renderer.texts.untitledPage,
       untitledFolder: renderer.texts.untitledFolder,
     });
-    const total = plan.pages.length * 2 + plan.attachments.length + 1;
+    const paged = row.format === "print" || row.format === "pdf" || row.format === "docx";
+    const withMarkdown = row.format === "archive" || row.format === "markdown";
+    const withHtml = row.format === "archive" || row.format === "html";
+    const withAttachments = row.format === "archive" || options.attachments;
+    const total = paged
+      ? plan.pages.length + 1
+      : plan.pages.length * (withMarkdown && withHtml ? 2 : 1) +
+        (withAttachments ? plan.attachments.length : 0) +
+        plan.previews.length +
+        1;
     let done = 0;
     let beat = 0;
     const progress = async () => {
@@ -884,67 +1132,118 @@ export class ExportService {
         where id = ${row.id} and state = 'running' returning id`);
       if (alive.rows.length === 0) throw new ExportRemoved();
     };
+    const load = async (id: string) => {
+      const page = boardIds.has(id) ? await renderer.prepareBoard(id) : await renderer.prepare(id);
+      if (!page) throw new ExportFailure("noAccess");
+      return page;
+    };
     const prepare = async (node: PlannedNode) => {
       const cached = prepared.get(node.id);
       if (cached) {
         prepared.delete(node.id);
         return cached;
       }
-      const page = await renderer.prepare(node.id);
-      if (!page) throw new ExportFailure("noAccess");
+      const page = await load(node.id);
       prepared.set(node.id, page);
       return page;
     };
     const now = new Date();
-    const entries: ArchiveEntry[] = [
-      {
-        path: `${INDEX_NAME}.html`,
-        mtime: now,
-        compress: true,
-        content: async () => {
-          await progress();
-          return Buffer.from(this.#index(plan, row.name, renderer, language, now), "utf8");
-        },
-      },
-    ];
-    for (const node of plan.pages) {
-      entries.push(
-        {
-          path: pageFile(node, "markdown"),
-          mtime: now,
-          compress: true,
-          content: async () => {
-            const page = await prepare(node);
-            await progress();
-            return Buffer.from(renderer.markdown(page, plan.locator(node)), "utf8");
-          },
-        },
-        {
-          path: pageFile(node, "html"),
-          mtime: now,
-          compress: true,
-          content: async () => {
-            const page = await prepare(node);
-            await progress();
-            return Buffer.from(renderer.html(page, plan.locator(node), language), "utf8");
-          },
-        },
-      );
-      for (const attachment of node.attachments) {
-        entries.push({
-          path: attachment.path,
-          mtime: now,
-          compress: false,
-          content: async () => {
-            await progress();
-            return this.#files.read(attachment.fileId);
-          },
-        });
+    let archive: Readable;
+    if (paged) {
+      const depths = new Map(items.map((item) => [item.id, item.path.length]));
+      const base = Math.min(...plan.pages.map((node) => depths.get(node.id) ?? 1));
+      const pagedExport = this.#paged(viewer, renderer, language);
+      const input = {
+        entries: plan.pages.map(
+          (node): PagedEntry => ({
+            id: node.id,
+            depth: Math.max(0, (depths.get(node.id) ?? base) - base),
+          }),
+        ),
+        title: row.name,
+        path: row.root_item_id ? await renderer.path(row.root_item_id) : [],
+        exported: await this.#exported(renderer, row.account_id, now),
+        options,
+        prepare: load,
+        progress,
+      };
+      let file: Buffer;
+      if (row.format === "docx") {
+        file = await pagedExport.word(input);
+      } else {
+        const printed = await pagedExport.print(input);
+        file =
+          row.format === "pdf"
+            ? await this.#pdf(pagedExport, printed.html, printed.pages, origin, signal)
+            : Buffer.from(printed.html, "utf8");
       }
+      await progress();
+      archive = Readable.from([file]);
+    } else {
+      const entries: ArchiveEntry[] = [
+        {
+          path: `${INDEX_NAME}.html`,
+          mtime: now,
+          compress: true,
+          content: async () => {
+            await progress();
+            return Buffer.from(this.#index(plan, row.name, renderer, language, now), "utf8");
+          },
+        },
+      ];
+      for (const node of plan.pages) {
+        if (withMarkdown) {
+          entries.push({
+            path: pageFile(node, "markdown"),
+            mtime: now,
+            compress: true,
+            content: async () => {
+              const page = await prepare(node);
+              await progress();
+              return Buffer.from(renderer.markdown(page, plan.locator(node)), "utf8");
+            },
+          });
+        }
+        if (withHtml) {
+          entries.push({
+            path: pageFile(node, "html"),
+            mtime: now,
+            compress: true,
+            content: async () => {
+              const page = await prepare(node);
+              await progress();
+              return Buffer.from(renderer.html(page, plan.locator(node), language), "utf8");
+            },
+          });
+        }
+        if (node.preview) {
+          const preview = node.preview;
+          entries.push({
+            path: preview.path,
+            mtime: now,
+            compress: true,
+            content: async () => {
+              await progress();
+              return this.#files.read(preview.fileId);
+            },
+          });
+        }
+        for (const attachment of withAttachments ? node.attachments : []) {
+          entries.push({
+            path: attachment.path,
+            mtime: now,
+            compress: false,
+            content: async () => {
+              await progress();
+              return this.#files.read(attachment.fileId);
+            },
+          });
+        }
+      }
+      archive = zipArchive(entries);
     }
-    const fileName = `${safeName(row.name, renderer.texts.untitledPage)} ${now.toISOString().slice(0, 10)}.zip`;
+    const fileName = `${safeName(row.name, renderer.texts.untitledPage)} ${now.toISOString().slice(0, 10)}.${EXTENSIONS[row.format]}`;
     const watch = this.#watchFreeSpace();
-    const archive = zipArchive(entries);
     archive.once("error", (error) => watch.stream.destroy(error));
     watch.stream.once("error", (error) => archive.destroy(error));
     const abort = () =>
@@ -1002,7 +1301,7 @@ export class ExportService {
             (node.kind === "folder" ? renderer.texts.untitledFolder : renderer.texts.untitledPage),
         );
         let entry = title;
-        if (node.kind === "page") {
+        if (node.kind === "page" || node.kind === "whiteboard") {
           entry = `<a href="${escapeHtml(locator.page(node.id, "html") ?? "")}">${title}</a>`;
         } else if (node.kind === "link") {
           const local = node.linkItemId ? locator.page(node.linkItemId, "html") : null;

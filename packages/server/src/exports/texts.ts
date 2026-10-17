@@ -16,6 +16,19 @@ export interface ExportTexts {
   link: string;
   unavailable: (what: string) => string;
   pageUnavailable: string;
+  whiteboardWithoutImage: string;
+  someContent: string;
+  nodeTitles: Readonly<Record<string, string>>;
+  pageNumber: { before: string; between: string };
+  exportedBy: (date: string, name: string) => string;
+  comments: string;
+  commentOn: (quote: string) => string;
+  deletedComment: string;
+  appendix: string;
+  appendixFile: string;
+  appendixPage: string;
+  appendixSize: string;
+  contentsHint: string;
 }
 
 const english: ExportTexts = {
@@ -51,6 +64,7 @@ const english: ExportTexts = {
     reportDue: "Due",
     reportPage: "Page",
     templateButton: "Create from template",
+    unavailableHere: "{name} cannot be shown in this format. Open the page in Pagehall to see it.",
     callout: { info: "Info", tip: "Tip", note: "Note", warning: "Warning", error: "Error" },
   },
   contents: "Contents",
@@ -66,6 +80,20 @@ const english: ExportTexts = {
   link: "Link",
   unavailable: (what) => `${what} could not be exported.`,
   pageUnavailable: "The content of this page could not be exported.",
+  whiteboardWithoutImage:
+    "This whiteboard has no saved image yet, for example because nothing was drawn on it. Open it in Pagehall to see it.",
+  someContent: "This content",
+  nodeTitles: {},
+  pageNumber: { before: "Page ", between: " of " },
+  exportedBy: (date, name) => `Exported on ${date} by ${name}`,
+  comments: "Comments",
+  commentOn: (quote) => `On “${quote}”`,
+  deletedComment: "Deleted comment",
+  appendix: "Appendix: attachments",
+  appendixFile: "File",
+  appendixPage: "Page",
+  appendixSize: "Size",
+  contentsHint: "Word fills in the contents when you update the fields of the document.",
 };
 
 const german: ExportTexts = {
@@ -101,6 +129,8 @@ const german: ExportTexts = {
     reportDue: "Fällig",
     reportPage: "Seite",
     templateButton: "Aus Vorlage erstellen",
+    unavailableHere:
+      "{name} kann in diesem Format nicht dargestellt werden. Öffnen Sie die Seite in Pagehall, um es zu sehen.",
     callout: { info: "Info", tip: "Tipp", note: "Notiz", warning: "Warnung", error: "Fehler" },
   },
   contents: "Inhalt",
@@ -116,6 +146,20 @@ const german: ExportTexts = {
   link: "Link",
   unavailable: (what) => `${what} konnte nicht exportiert werden.`,
   pageUnavailable: "Der Inhalt dieser Seite konnte nicht exportiert werden.",
+  whiteboardWithoutImage:
+    "Von diesem Whiteboard ist noch kein Bild gespeichert, zum Beispiel weil noch nichts darauf gezeichnet wurde. Öffnen Sie es in Pagehall, um es zu sehen.",
+  someContent: "Dieser Inhalt",
+  nodeTitles: {},
+  pageNumber: { before: "Seite ", between: " von " },
+  exportedBy: (date, name) => `Exportiert am ${date} von ${name}`,
+  comments: "Kommentare",
+  commentOn: (quote) => `Zu „${quote}“`,
+  deletedComment: "Gelöschter Kommentar",
+  appendix: "Anhang: Dateien",
+  appendixFile: "Datei",
+  appendixPage: "Seite",
+  appendixSize: "Größe",
+  contentsHint: "Word füllt das Inhaltsverzeichnis, wenn Sie die Felder des Dokuments aktualisieren.",
 };
 
 const texts: Record<Language, ExportTexts> = { en: english, de: german };

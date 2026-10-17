@@ -1,6 +1,7 @@
 import { Badge, Button, ConfirmDialog, EmptyState, IconButton, List, Skeleton } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, FileArchive, FolderTree, Trash2 } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { Download, FileArchive, FolderTree, Printer, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LoadError, useFailureToast } from "../errors/failure.js";
@@ -20,6 +21,9 @@ const ERROR_CODES = new Set([
   "noAccess",
   "tokenRevoked",
   "notEnoughStorage",
+  "renderUnavailable",
+  "renderFailed",
+  "renderTooLarge",
   "interrupted",
   "internalError",
 ]);
@@ -92,7 +96,9 @@ function ExportRow({ entry, onRemove }: { entry: ExportEntry; onRemove: () => vo
     entry.progress.total > 0
       ? Math.min(100, Math.round((entry.progress.done / entry.progress.total) * 100))
       : 0;
-  const scope = entry.scope === "space" ? t("exports.list.scopeSpace") : t("exports.list.scopePages");
+  const scope = `${translateKey(t, `exports.formats.${entry.format}`)} · ${
+    entry.scope === "space" ? t("exports.list.scopeSpace") : t("exports.list.scopePages")
+  }`;
   const details =
     entry.state === "ready" && entry.expiresAt
       ? t("exports.list.readyDetails", {
@@ -134,6 +140,14 @@ function ExportRow({ entry, onRemove }: { entry: ExportEntry; onRemove: () => vo
         </div>
       </div>
       <div className="flex items-center gap-2 pl-8 sm:pl-0">
+        {entry.state === "ready" && entry.format === "print" ? (
+          <Button asChild variant="secondary">
+            <Link to="/print" search={{ export: entry.id }}>
+              <Printer aria-hidden="true" className="size-icon" />
+              {t("exports.list.openPrint")}
+            </Link>
+          </Button>
+        ) : null}
         {entry.state === "ready" ? (
           <Button asChild variant="secondary">
             <a href={exportDownloadUrl(entry.id)} download={entry.fileName ?? undefined}>

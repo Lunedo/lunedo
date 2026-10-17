@@ -7,9 +7,11 @@ import {
   type MarkdownRenderer,
   optional,
   type RenderContext,
+  type WordRenderer,
 } from "../module.js";
 import { element, prefixLines } from "../text.js";
 import { isoDateValue, uuidValue } from "../values.js";
+import { type WordContent, type WordListItem, wordText } from "../word.js";
 
 const LIST_TYPES = new Set(["bulletList", "orderedList", "taskList"]);
 
@@ -32,6 +34,10 @@ function listMarkdown(node: ValidNode, renderer: MarkdownRenderer, marker: (inde
   return node.content.map((item, index) => itemMarkdown(item, renderer, marker(index))).join("\n");
 }
 
+function listItems(node: ValidNode, renderer: WordRenderer): WordListItem[] {
+  return node.content.map((item) => ({ checked: null, content: renderer.blocks(item) }));
+}
+
 export const listsModule = defineModule({
   name: "lists",
   nodes: [
@@ -39,6 +45,9 @@ export const listsModule = defineModule({
       name: "bulletList",
       spec: { content: "listItem+", group: "block" },
       html: (node, renderer) => element("ul", {}, renderer.children(node)),
+      word: (node, renderer) => [
+        { type: "list", ordered: false, start: 1, items: listItems(node, renderer) },
+      ],
       markdown: (node, renderer) => listMarkdown(node, renderer, () => "- "),
     },
     {
@@ -49,6 +58,14 @@ export const listsModule = defineModule({
         const start = attrOf<number>(node, "start");
         return element("ol", { start: start === 1 ? null : start }, renderer.children(node));
       },
+      word: (node, renderer) => [
+        {
+          type: "list",
+          ordered: true,
+          start: attrOf<number>(node, "start"),
+          items: listItems(node, renderer),
+        },
+      ],
       markdown: (node, renderer) => {
         const start = attrOf<number>(node, "start");
         return listMarkdown(node, renderer, (index) => `${start + index}. `);
@@ -58,6 +75,14 @@ export const listsModule = defineModule({
       name: "listItem",
       spec: { content: "paragraph block*", defining: true },
       html: (node, renderer) => element("li", {}, renderer.children(node)),
+      word: (node, renderer) => [
+        {
+          type: "list",
+          ordered: false,
+          start: 1,
+          items: [{ checked: null, content: renderer.blocks(node) }],
+        },
+      ],
       markdown: (node, renderer) => itemMarkdown(node, renderer, "- "),
     },
   ],
@@ -101,6 +126,25 @@ function taskMeta(node: ValidNode, renderer: HtmlRenderer): string {
   return parts ? element("span", { class: "ph-task-meta" }, parts) : "";
 }
 
+function taskItem(node: ValidNode, renderer: WordRenderer): WordListItem {
+  const assignee = attrOf<string | null>(node, "assignee");
+  const dueDate = attrOf<string | null>(node, "dueDate");
+  const meta = [
+    ...(assignee ? [`@${renderer.mentionName(assignee)}`] : []),
+    ...(dueDate ? [renderer.formatDate(dueDate)] : []),
+  ].join(" · ");
+  const [first, ...rest] = renderer.blocks(node);
+  const content =
+    meta && first?.type === "paragraph"
+      ? [{ ...first, content: [...first.content, wordText(` ${meta}`, { muted: true })] }, ...rest]
+      : [...(first ? [first] : []), ...rest];
+  return { checked: taskDone(node, renderer), content };
+}
+
+function taskList(items: WordListItem[]): WordContent[] {
+  return [{ type: "list", ordered: false, start: 1, items }];
+}
+
 export const tasksModule = defineModule({
   name: "tasks",
   nodes: [
@@ -108,6 +152,7 @@ export const tasksModule = defineModule({
       name: "taskList",
       spec: { content: "taskItem+", group: "block" },
       html: (node, renderer) => element("ul", { class: "ph-task-list" }, renderer.children(node)),
+      word: (node, renderer) => taskList(node.content.map((item) => taskItem(item, renderer))),
       markdown: (node, renderer) => node.content.map((item) => taskMarkdown(item, renderer)).join("\n"),
     },
     {
@@ -132,6 +177,7 @@ export const tasksModule = defineModule({
           `<input type="checkbox" disabled aria-label="${renderer.escape(renderer.label(done ? "taskDone" : "taskOpen"))}"${done ? " checked" : ""}>${element("div", {}, `${renderer.children(node)}${taskMeta(node, renderer)}`)}`,
         );
       },
+      word: (node, renderer) => taskList([taskItem(node, renderer)]),
       markdown: (node, renderer) => taskMarkdown(node, renderer),
     },
   ],

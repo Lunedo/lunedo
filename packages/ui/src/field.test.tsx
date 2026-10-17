@@ -165,3 +165,26 @@ describe("Hit areas of small controls", () => {
     expect(toggle.className).toContain("after:min-w-hit");
   });
 });
+
+describe("Disabled radio options", () => {
+  it("cannot be chosen and keep their description visible", async () => {
+    const chosen: string[] = [];
+    const user = userEvent.setup();
+    renderUi(
+      <RadioGroup
+        label="What to export"
+        value="page"
+        onValueChange={(value) => chosen.push(value)}
+        options={[
+          { value: "page", label: "This page" },
+          { value: "space", label: "The whole space", description: "Only space admins", disabled: true },
+        ]}
+      />,
+    );
+    const space = screen.getByRole("radio", { name: /The whole space/ });
+    expect(space.hasAttribute("disabled")).toBe(true);
+    expect(screen.getByText("Only space admins")).toBeTruthy();
+    await user.click(space);
+    expect(chosen).toEqual([]);
+  });
+});

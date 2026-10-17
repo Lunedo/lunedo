@@ -26,7 +26,7 @@ export const everythingPaths = [
   "packages/config/",
 ];
 
-export const endToEndPaths = ["apps/web/", "packages/ui/", "packages/tokens/"];
+export const endToEndPaths = ["apps/web/", "apps/render/", "packages/ui/", "packages/tokens/"];
 
 export const sweepPaths = [
   "apps/web/src/",

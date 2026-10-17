@@ -2,6 +2,7 @@ import type { MarkSpec, NodeSpec } from "prosemirror-model";
 import type { z } from "zod";
 import type { ImportSource, MacroConverter } from "./importing.js";
 import type { ValidMark, ValidNode } from "./json.js";
+import type { WordBlock, WordContent, WordInline, WordTextStyle } from "./word.js";
 
 export interface AttributeSpec {
   schema: z.ZodType;
@@ -152,10 +153,15 @@ export interface RenderLabels {
   reportDue: string;
   reportPage: string;
   templateButton: string;
+  unavailableHere: string;
   callout: Record<"info" | "tip" | "note" | "warning" | "error", string>;
 }
 
+export type RenderTarget = "screen" | "print";
+
 export interface RenderContext {
+  target?: RenderTarget;
+  nodeTitle?: (type: string) => string | null;
   mention?: (id: string) => { name: string } | null;
   pageLink?: (link: PageLinkTarget) => ResolvedPageLink | null;
   attachment?: (id: string, version?: number) => { href: string } | null;
@@ -184,6 +190,7 @@ interface BaseRenderer {
   mentionName(id: string): string;
   topicTitle(id: string): string;
   pageLink(link: PageLinkTarget): ResolvedPageLink | null;
+  unavailableHere(type: string): string;
 }
 
 export interface HtmlRenderer extends BaseRenderer {
@@ -203,6 +210,15 @@ export interface MarkdownRenderer extends BaseRenderer {
   safeHref(href: string): string | null;
 }
 
+export interface WordRenderer extends BaseRenderer {
+  render(node: ValidNode): WordContent[];
+  blocks(node: ValidNode): WordBlock[];
+  inline(node: ValidNode): WordInline[];
+  safeHref(href: string): string | null;
+}
+
+export type Unsupported = "unsupported";
+
 export interface NodeDefinition {
   name: string;
   spec: Omit<NodeSpec, "attrs" | "toDOM" | "parseDOM" | "content" | "marks"> & {
@@ -212,6 +228,8 @@ export interface NodeDefinition {
   attrs?: Record<string, AttributeSpec>;
   validate?: (node: ValidNode) => string | null;
   html: (node: ValidNode, renderer: HtmlRenderer) => string;
+  print?: ((node: ValidNode, renderer: HtmlRenderer) => string) | Unsupported;
+  word?: (node: ValidNode, renderer: WordRenderer) => WordContent[];
   markdown: (node: ValidNode, renderer: MarkdownRenderer) => string;
   text?: (node: ValidNode) => string;
   heading?: (node: ValidNode, text: string) => { level: number; text: string };
@@ -222,6 +240,7 @@ export interface MarkDefinition {
   spec: Omit<MarkSpec, "attrs" | "toDOM" | "parseDOM">;
   attrs?: Record<string, AttributeSpec>;
   html: (mark: ValidMark, content: string, renderer: HtmlRenderer) => string;
+  word?: (mark: ValidMark, style: WordTextStyle, renderer: WordRenderer) => WordTextStyle;
   markdown: (mark: ValidMark, content: string, renderer: MarkdownRenderer) => string;
 }
 

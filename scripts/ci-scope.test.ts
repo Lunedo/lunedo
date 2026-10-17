@@ -87,7 +87,12 @@ describe("scopeOf", () => {
     ]) {
       assert.equal(ready([file]).sweeps, true, file);
     }
-    for (const file of ["apps/web/package.json", "apps/web/vitest.config.ts", "apps/web/tsconfig.json"]) {
+    for (const file of [
+      "apps/web/package.json",
+      "apps/web/vitest.config.ts",
+      "apps/web/tsconfig.json",
+      "apps/render/src/chromium.ts",
+    ]) {
       assert.deepEqual(ready([file]), { lane: "full", ...none, endToEnd: true }, file);
     }
   });

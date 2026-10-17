@@ -1,11 +1,26 @@
 import { z } from "zod";
-import { attrOf, defineModule, optional, required } from "../module.js";
+import type { ValidNode } from "../json.js";
+import { attrOf, defineModule, type HtmlRenderer, optional, required } from "../module.js";
 import { element, htmlAttributes, markdownUrl } from "../text.js";
 import { uuidValue } from "../values.js";
+import { wordText } from "../word.js";
 
 export const MAX_DRAWING_TEXT = 20_000;
 
 const version = z.number().int().min(1).max(1_000_000).nullable();
+
+function drawingHtml(node: ValidNode, renderer: HtmlRenderer, lazy: boolean): string {
+  const preview = attrOf<string | null>(node, "previewId");
+  const resolved = preview
+    ? (renderer.context.attachment?.(preview, attrOf<number>(node, "previewVersion") ?? undefined) ?? null)
+    : null;
+  const href = resolved ? renderer.safeHref(resolved.href) : null;
+  const label = renderer.label("drawing");
+  const content = href
+    ? `<img${htmlAttributes({ src: href, alt: label, loading: lazy ? "lazy" : null })}>`
+    : element("span", { class: "ph-drawing-empty" }, renderer.escape(label));
+  return element("figure", { class: "ph-drawing", "data-drawing-id": attrOf<string>(node, "id") }, content);
+}
 
 export const drawingModule = defineModule({
   name: "drawing",
@@ -33,22 +48,25 @@ export const drawingModule = defineModule({
         if (preview !== null && scene === null) return "A preview needs a scene";
         return null;
       },
-      html: (node, renderer) => {
+      html: (node, renderer) => drawingHtml(node, renderer, true),
+      print: (node, renderer) => drawingHtml(node, renderer, false),
+      word: (node, renderer) => {
         const preview = attrOf<string | null>(node, "previewId");
-        const resolved = preview
-          ? (renderer.context.attachment?.(preview, attrOf<number>(node, "previewVersion") ?? undefined) ??
-            null)
-          : null;
-        const href = resolved ? renderer.safeHref(resolved.href) : null;
         const label = renderer.label("drawing");
-        const content = href
-          ? `<img${htmlAttributes({ src: href, alt: label, loading: "lazy" })}>`
-          : element("span", { class: "ph-drawing-empty" }, renderer.escape(label));
-        return element(
-          "figure",
-          { class: "ph-drawing", "data-drawing-id": attrOf<string>(node, "id") },
-          content,
-        );
+        if (!preview)
+          return [{ type: "paragraph", content: [wordText(label, { muted: true, italic: true })] }];
+        const resolved =
+          renderer.context.attachment?.(preview, attrOf<number>(node, "previewVersion") ?? undefined) ?? null;
+        return [
+          {
+            type: "image",
+            attachmentId: preview,
+            href: resolved ? renderer.safeHref(resolved.href) : null,
+            alt: label,
+            width: null,
+            align: "center",
+          },
+        ];
       },
       markdown: (node, renderer) => {
         const preview = attrOf<string | null>(node, "previewId");

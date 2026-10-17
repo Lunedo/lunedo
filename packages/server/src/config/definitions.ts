@@ -131,6 +131,22 @@ export const configSettings = [
   ),
   setting("PAGEHALL_BACKUP_KEY", nonEmpty.optional(), "Key ring that encrypts backups.", true),
   setting("PAGEHALL_METRICS_TOKEN", nonEmpty.optional(), "Bearer token required by /metrics.", true),
+  setting(
+    "PAGEHALL_RENDER_URL",
+    nonEmpty
+      .refine(
+        (value) => /^https?:\/\/[^/?#]+\/?$/.test(value),
+        "must be an http:// or https:// address without a path",
+      )
+      .optional(),
+    "Address of the optional render container that creates PDF files on the server, for example http://pagehall-render:3000.",
+  ),
+  setting(
+    "PAGEHALL_RENDER_TOKEN",
+    z.string().trim().min(32, "must have at least 32 characters").optional(),
+    "Token the worker sends to the render container. Must match RENDER_TOKEN of the container.",
+    true,
+  ),
   setting("PAGEHALL_WEB_ROOT", path.optional(), "Directory with the built web client, served by the API."),
   setting(
     "PAGEHALL_TRUSTED_PROXIES",

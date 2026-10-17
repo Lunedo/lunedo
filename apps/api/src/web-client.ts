@@ -15,6 +15,18 @@ export const PREVIEW_CONTENT_SECURITY_POLICY = [
   "frame-ancestors 'self'",
 ].join("; ");
 
+export const PRINT_CONTENT_SECURITY_POLICY = [
+  "default-src 'none'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob:",
+  "font-src 'self' data:",
+  "connect-src 'self' data: blob:",
+  "frame-ancestors 'self'",
+  "base-uri 'none'",
+  "form-action 'none'",
+].join("; ");
+
 /**
  * Serves the built web client. Unknown paths outside the API return the
  * single-page application so that client-side routes can be reloaded.
@@ -31,6 +43,11 @@ export async function registerWebClient(fastify: FastifyInstance, root: string):
         response.header("access-control-allow-origin", "*");
       } else {
         response.header("cache-control", "no-cache");
+      }
+      if (path.basename(filePath) === "print.html") {
+        response.header("content-security-policy", PRINT_CONTENT_SECURITY_POLICY);
+        response.header("x-content-type-options", "nosniff");
+        response.header("referrer-policy", "no-referrer");
       }
       if (path.basename(filePath) === "preview.html") {
         response.header("content-security-policy", PREVIEW_CONTENT_SECURITY_POLICY);

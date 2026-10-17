@@ -56,6 +56,7 @@ import {
   exportWatchdogJob,
 } from "./exports/jobs.js";
 import { exportNotificationTypes } from "./exports/notifications.js";
+import { type RenderConnection, RenderService } from "./exports/rendering.js";
 import { AttachmentService } from "./files/attachments.js";
 import { FileService } from "./files/files.js";
 import { FILE_CLEANUP_SCHEDULE, fileCleanupJob } from "./files/jobs.js";
@@ -291,6 +292,7 @@ export interface AccountServices {
   imports: ImportService;
   importWorker: ImportWorker;
   exports: ExportService;
+  rendering: RenderService;
 }
 
 export function createAccountServices(options: {
@@ -314,6 +316,8 @@ export function createAccountServices(options: {
   mailFetch?: typeof fetch;
   atlassianFetch?: typeof fetch;
   outboundAllowedNetworks?: readonly string[];
+  render?: RenderConnection;
+  renderFetch?: typeof fetch;
   chatPolicy?: OutboundPolicy;
   pushPolicy?: OutboundPolicy;
   nodeId?: string;
@@ -791,6 +795,11 @@ export function createAccountServices(options: {
     jobs,
     logger,
   });
+  const render = new RenderService({
+    connection: options.render,
+    logger,
+    ...(options.renderFetch ? { fetch: options.renderFetch } : {}),
+  });
   const exports = new ExportService({
     database,
     pool: options.pool,
@@ -807,6 +816,8 @@ export function createAccountServices(options: {
     tasks,
     people,
     address: instanceAddress,
+    comments,
+    render,
     jobs,
     logger,
   });
@@ -924,6 +935,7 @@ export function createAccountServices(options: {
     imports,
     importWorker,
     exports,
+    rendering: render,
   };
 }
 

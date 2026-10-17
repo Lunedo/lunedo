@@ -118,3 +118,49 @@ describe("export paths", () => {
     expect(new Set(all.map((path) => path.toLowerCase())).size).toBe(all.length);
   });
 });
+
+describe("whiteboards", () => {
+  const item = (id: string, kind: PlanInput["kind"], title: string, parent: string | null): PlanInput => ({
+    id,
+    parentId: parent,
+    path: parent ? [parent, id] : [id],
+    kind,
+    title,
+    linkUrl: null,
+    linkItemId: null,
+  });
+
+  it("gives a whiteboard its own page and puts its image next to it", () => {
+    const planned = planExport({
+      rootId: null,
+      items: [
+        item("guide", "page", "Guide", null),
+        item("map", "whiteboard", "Map", "guide"),
+        item("sketch", "whiteboard", "Map", "guide"),
+        item("empty", "whiteboard", "Empty", "guide"),
+      ],
+      attachments: [{ id: "a", itemId: "guide", name: "Map.svg", fileId: "f-a", size: 1 }],
+      previews: [
+        { itemId: "map", fileId: "f-map" },
+        { itemId: "sketch", fileId: "f-sketch" },
+      ],
+      untitledPage: "Untitled page",
+      untitledFolder: "Untitled folder",
+    });
+    expect(planned.pages.map((node) => pageFile(node, "html"))).toEqual([
+      "Guide/Guide.html",
+      "Guide/Map/Map.html",
+      "Guide/Map (2)/Map.html",
+      "Guide/Empty/Empty.html",
+    ]);
+    expect(planned.previews).toEqual([
+      { itemId: "map", fileId: "f-map", path: "Guide/Map/Map.svg" },
+      { itemId: "sketch", fileId: "f-sketch", path: "Guide/Map (2)/Map.svg" },
+    ]);
+    expect(planned.attachments.map((attachment) => attachment.path)).toEqual(["Guide/Map.svg"]);
+    const guide = planned.pages[0] ?? null;
+    expect(planned.locator(guide).preview("map")).toBe("Map/Map.svg");
+    expect(planned.locator(guide).preview("empty")).toBeNull();
+    expect(planned.locator(guide).page("map", "markdown")).toBe("Map/Map.md");
+  });
+});

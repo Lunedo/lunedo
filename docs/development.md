@@ -8,6 +8,7 @@
 | `apps/api` | HTTP API: NestJS on Fastify, Drizzle ORM |
 | `apps/collab` | Real-time collaboration server: Hocuspocus |
 | `apps/worker` | Background jobs |
+| `apps/render` | Optional render container: headless Chromium that turns print-ready HTML into PDF |
 | `packages/editor-schema` | Document schema shared by client, server, importers and exporters |
 | `packages/shared` | Types, validation and utilities for client and server |
 | `packages/server` | Server foundation: configuration, database, encryption, settings, jobs, observability, backups |
@@ -107,7 +108,7 @@ Microsoft Graph and the Google Directory API are replaced in tests by small loca
 
 ## Operations
 
-All settings are described in [configuration.md](configuration.md). The database conventions are in [database.md](database.md), encryption and key rotation in [encryption.md](encryption.md), backups in [backup.md](backup.md). Setup is described in [setup.md](setup.md), sign-in and sessions in [authentication.md](authentication.md), the audit log in [audit.md](audit.md) e-mail in [email.md](email.md) and the storage warnings in [storage.md](storage.md).
+All settings are described in [configuration.md](configuration.md). The database conventions are in [database.md](database.md), encryption and key rotation in [encryption.md](encryption.md), backups in [backup.md](backup.md). Setup is described in [setup.md](setup.md), sign-in and sessions in [authentication.md](authentication.md), the audit log in [audit.md](audit.md), e-mail in [email.md](email.md), the storage warnings in [storage.md](storage.md) and PDF and Word rendering with the optional render container in [rendering.md](rendering.md).
 
 Every process exposes `GET /health/live`, `GET /health/ready` and `GET /metrics`. Readiness covers the database, the migration state and the master key; metrics require the metrics token. Logs are JSON lines on stdout and carry the request ID, also in jobs enqueued by a request.
 
@@ -123,6 +124,8 @@ docker run --rm -e PAGEHALL_DATABASE_URL=... -p 3000:3000 pagehall api
 ```
 
 Roles are `api`, `collab`, `worker` and `all` (default), which runs all three processes in one container.
+
+`docker/render.Dockerfile` builds the optional render container with Debian's Chromium, the service of `apps/render` and the print viewer of the web client (see [rendering.md](rendering.md)).
 
 ## Design tokens
 
@@ -173,7 +176,7 @@ Screens are built from the components in `packages/ui`; `/dev/components` shows 
 
 | Job | Runs on pull requests when these change |
 |---|---|
-| End-to-end, accessibility and visual tests | `apps/web/`, `packages/ui/`, `packages/tokens/` |
+| End-to-end, accessibility and visual tests | `apps/web/`, `apps/render/`, `packages/ui/`, `packages/tokens/` |
 | Accessibility and screenshot sweeps, inside the end-to-end job | `apps/web/src/`, `apps/web/e2e/`, `apps/web/public/`, `apps/web/index.html`, `apps/web/vite.config.ts`, `apps/web/playwright.config.ts`, `packages/ui/`, `packages/tokens/` |
 | Sign-in through identity providers | identity, authentication and sign-in code in server, API and web client including SAML and LDAP, the shared provider configuration, `apps/web/e2e/idp/`, the end-to-end setup, `docker/idp/`, `docker/compose.dev.yml` |
 | Backup round trip (builds the image for amd64 only) | `packages/server/src/backup/`, `packages/server/drizzle/`, `apps/worker/src/cli/`, `docker/Dockerfile`, `docker/start.sh`, `scripts/backup-roundtrip.sh` |

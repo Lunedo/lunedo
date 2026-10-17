@@ -48,7 +48,7 @@ export {
   tasks,
 } from "../collaboration/schema.js";
 export { keyRotationStatus, keyRotations } from "../crypto/schema.js";
-export { exportScope, exportState, exports } from "../exports/schema.js";
+export { exportFormat, exportScope, exportState, exports } from "../exports/schema.js";
 export {
   attachments,
   attachmentVersions,

@@ -4,6 +4,7 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -17,6 +18,7 @@ import { storedFiles } from "../files/schema.js";
 import { organizations } from "../organizations/schema.js";
 import { spaces, treeItems } from "../spaces/schema.js";
 import { apiTokens } from "../tokens/schema.js";
+import { exportFormats } from "./options.js";
 
 const timestampColumn = () => timestamp({ withTimezone: true, mode: "date" });
 
@@ -27,6 +29,8 @@ export const exportState = pgEnum("export_state", exportStates);
 export const exportScopes = ["space", "pages"] as const;
 export type ExportScope = (typeof exportScopes)[number];
 export const exportScope = pgEnum("export_scope", exportScopes);
+
+export const exportFormat = pgEnum("export_format", exportFormats);
 
 export const exports = pgTable(
   "exports",
@@ -39,6 +43,8 @@ export const exports = pgTable(
     startedWithToken: boolean().notNull().default(false),
     organizationId: uuid().references(() => organizations.id, { onDelete: "set null" }),
     scope: exportScope().notNull(),
+    format: exportFormat().notNull().default("archive"),
+    options: jsonb().notNull().default({}),
     spaceId: uuid().references(() => spaces.id, { onDelete: "set null" }),
     rootItemId: uuid().references(() => treeItems.id, { onDelete: "set null" }),
     name: text().notNull(),

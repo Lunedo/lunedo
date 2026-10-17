@@ -4,6 +4,7 @@ import { createEditorKit, type Section } from "./kit.js";
 import type { Heading, RenderContext } from "./module.js";
 import { createDefaultRegistry } from "./modules/index.js";
 import type { ValidationResult } from "./validate.js";
+import type { WordBlock } from "./word.js";
 
 export {
   ANCHOR_CONTEXT_LENGTH,
@@ -79,12 +80,15 @@ export {
   pageReportSorts,
   type RenderContext,
   type RenderLabels,
+  type RenderTarget,
   type ReportedDecision,
   type ReportedPage,
   type ReportedTask,
   type ResolvedPageLink,
   required,
   type TaskReportRequest,
+  type Unsupported,
+  type WordRenderer,
 } from "./module.js";
 export { MAX_DRAWING_TEXT } from "./modules/drawings.js";
 export { createDefaultRegistry, defaultModules } from "./modules/index.js";
@@ -118,7 +122,7 @@ export {
   titlePatternFields,
 } from "./modules/templates.js";
 export { defaultLabels, formatBytes, MAX_EXPENSIVE_RENDER_COST } from "./render.js";
-export { escapeHtml, slugify } from "./text.js";
+export { escapeHtml, markdownUrl, slugify } from "./text.js";
 export {
   InvalidDocumentError,
   limits,
@@ -146,6 +150,21 @@ export {
   type TextAlignment,
   textAlignments,
 } from "./values.js";
+export {
+  isWordInline,
+  type WordBlock,
+  type WordBoxVariant,
+  type WordContent,
+  type WordInline,
+  type WordListItem,
+  type WordTableCell,
+  type WordTableRow,
+  type WordTextStyle,
+  wordBlocks,
+  wordInlines,
+  wordParagraph,
+  wordText,
+} from "./word.js";
 
 export const modules = createDefaultRegistry();
 
@@ -167,6 +186,10 @@ export function renderHtml(doc: unknown, context?: RenderContext): string {
 
 export function renderMarkdown(doc: unknown, context?: RenderContext): string {
   return editorKit.renderMarkdown(doc, context);
+}
+
+export function renderWord(doc: unknown, context?: RenderContext): WordBlock[] {
+  return editorKit.renderWord(doc, context);
 }
 
 export function extractHeadings(doc: DocumentJson): Heading[] {

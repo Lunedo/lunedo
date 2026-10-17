@@ -324,7 +324,7 @@ function operation(
     ...(definition.body
       ? {
           requestBody: {
-            required: true,
+            required: !definition.body.safeParse(undefined).success,
             content: {
               "application/json": {
                 schema: collector.convert(definition.body, "input"),

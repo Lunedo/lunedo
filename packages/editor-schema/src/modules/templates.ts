@@ -3,6 +3,7 @@ import { type MacroConverter, macroSpaceKeys, macroText, singleLine } from "../i
 import { attrOf, defineModule, optional, required } from "../module.js";
 import { element } from "../text.js";
 import { templateIdValue } from "../values.js";
+import { wordText } from "../word.js";
 
 export const MAX_PLACEHOLDER_LENGTH = 500;
 export const TEMPLATE_FIELD_KEY = /^[a-z][a-zA-Z0-9]{0,39}$/;
@@ -106,6 +107,10 @@ export const templatesModule = defineModule({
         renderer.context.showPlaceholders
           ? element("span", { class: "ph-placeholder" }, renderer.escape(attrOf<string>(node, "text")))
           : "",
+      word: (node, renderer) =>
+        renderer.context.showPlaceholders
+          ? [wordText(attrOf<string>(node, "text"), { muted: true, italic: true })]
+          : [],
       markdown: () => "",
       text: () => "",
     },
@@ -119,6 +124,7 @@ export const templatesModule = defineModule({
           { class: "ph-template-field", "data-field": attrOf<string>(node, "field") },
           renderer.escape(`{${attrOf<string>(node, "field")}}`),
         ),
+      word: (node) => [wordText(`{${attrOf<string>(node, "field")}}`, { code: true })],
       markdown: (node, renderer) => renderer.escape(`{${attrOf<string>(node, "field")}}`),
       text: () => "",
     },
@@ -149,6 +155,17 @@ export const templateButtonModule = defineModule({
           element("span", { class: "ph-template-button-label" }, renderer.escape(label)),
         );
       },
+      word: (node, renderer) => [
+        {
+          type: "paragraph",
+          content: [
+            wordText(attrOf<string>(node, "label").trim() || renderer.label("templateButton"), {
+              italic: true,
+              muted: true,
+            }),
+          ],
+        },
+      ],
       markdown: (node, renderer) =>
         `*${renderer.escape(attrOf<string>(node, "label").trim() || renderer.label("templateButton"))}*`,
       text: () => "",
