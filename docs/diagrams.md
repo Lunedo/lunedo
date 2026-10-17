@@ -53,8 +53,13 @@ These blocks come from imported `inc-drawio` macros.
 | `drawio` | draw.io block with the attached diagram file (`<name>` or `<name>.drawio`) and its preview (`<name>.png`) |
 | `inc-drawio` | reference to the draw.io block of the other page, see [Diagrams of other pages](#diagrams-of-other-pages) |
 | `gliffy` | draw.io block that shows the Gliffy preview and keeps the Gliffy file |
+| draw.io app of Confluence Cloud: draw.io Diagram, draw.io Board | draw.io block with the attached diagram file and its preview, like `drawio`; boards are draw.io files too |
+| draw.io app of Confluence Cloud: Embed draw.io Diagram | reference to the draw.io block of the other page, like `inc-drawio` |
+| Gliffy app of Confluence Cloud | draw.io block that shows the Gliffy preview and keeps the Gliffy file, like `gliffy` |
 | `mermaid`, `mermaid-macro`, `mermaid-diagram`, `mermaid-cloud` with the source in the macro body | Mermaid block with that source |
 | `plantuml` | PlantUML block with its source |
+
+Confluence Cloud stores the draw.io and Gliffy apps as app extensions (`ac:adf-extension`) whose key ends in `drawio`, `drawio-sketch`, `inc-drawio` or `gliffy`. Pagehall reads the diagram name and page from their parameters in any order and ignores the copy Confluence keeps as fallback. A diagram name with or without `.drawio` finds the same file and the same diagram of another page.
 
 - An `inc-drawio` macro whose page is not part of the import shows a note with the diagram name; the report lists it under "included diagrams are on pages that were not imported".
 - A draw.io diagram whose file is missing keeps its preview image. The import report lists it under "diagram files are missing"; editing it starts an empty diagram.

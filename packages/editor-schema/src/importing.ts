@@ -112,6 +112,31 @@ export function macroText(macro: SourceElement, name: string): string | null {
   return parameter ? sourceText(parameter).trim() : null;
 }
 
+export function adfParameter(macro: SourceElement, name: string): string | null {
+  const node = macro.name === "ac:adf-node" ? macro : firstSourceElement(macro, "ac:adf-node");
+  if (!node) return null;
+  const search = (parent: SourceElement): string | null => {
+    for (const child of sourceElements(parent)) {
+      if (
+        child.name === "ac:adf-parameter" &&
+        child.attributes.key === name &&
+        sourceElements(child).length === 0
+      ) {
+        return sourceText(child).trim();
+      }
+      const nested = search(child);
+      if (nested !== null) return nested;
+    }
+    return null;
+  };
+  for (const attribute of sourceElements(node, "ac:adf-attribute")) {
+    if (attribute.attributes.key !== "parameters") continue;
+    const found = search(attribute);
+    if (found !== null) return found;
+  }
+  return null;
+}
+
 export function macroParameterNames(macro: SourceElement): string[] {
   return sourceElements(macro, "ac:parameter").map((parameter) => parameter.attributes["ac:name"] ?? "");
 }

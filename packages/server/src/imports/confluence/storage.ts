@@ -168,6 +168,7 @@ const BLOCK_ELEMENTS = new Set([
   "ac:image",
   "img",
 ]);
+const FORGE_EXTENSION_TYPE = "com.atlassian.ecosystem";
 const SOURCE_PAGE_PATTERNS = [/\/pages\/(\d+)(?:[/?#]|$)/, /[?&]pageId=(\d+)(?:&|#|$)/];
 
 type Item = { readonly inline: NodeJson } | { readonly block: NodeJson };
@@ -934,11 +935,23 @@ class Converter {
 function macroName(node: XmlNode): string {
   if (node.name === "ac:adf-extension") {
     const inner = firstChild(node, "ac:adf-node");
+    const app = inner ? forgeApp(inner) : null;
+    if (app) return `app:${app}`.slice(0, 200);
     return `adf:${inner?.attributes.type ?? "extension"}`.slice(0, 200);
   }
   if (node.name === "ac:adf-node") return `adf:${node.attributes.type ?? "node"}`.slice(0, 200);
   const name = (node.attributes["ac:name"] ?? "").trim();
   return (name.length > 0 ? name : "unknown").slice(0, 200);
+}
+
+function forgeApp(node: XmlNode): string | null {
+  const attribute = (key: string) =>
+    childElements(node, "ac:adf-attribute").find((child) => child.attributes.key === key);
+  const type = attribute("extension-type");
+  const key = attribute("extension-key");
+  if (!type || !key || textContent(type).trim() !== FORGE_EXTENSION_TYPE) return null;
+  const app = textContent(key).trim().split("/").at(-1)?.trim() ?? "";
+  return app.length > 0 ? app : null;
 }
 
 function count(counts: Map<string, number>, name: string): void {
