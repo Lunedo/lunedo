@@ -6,7 +6,10 @@ export {
   DEFAULT_PAGE_REPORT_LIMIT,
   DEFAULT_PROPERTIES_REPORT_PAGE_SIZE,
   decisionReportOrders,
+  defaultEmbedServices,
   diagramTypes,
+  type EmbedService,
+  embedFrameSources,
   labeledContentKinds,
   MAX_CONTENT_BY_LABEL_LIMIT,
   MAX_EXCERPT_NAME_LENGTH,
@@ -721,6 +724,8 @@ export {
   renderPageMarkdown,
 } from "./spaces/documents.js";
 export { type IncludedPage, IncludeService, type Inclusion } from "./spaces/includes.js";
+export { EmbedServices } from "./embeds/embeds.js";
+export { allowedEmbedServicesSetting, embedServicesSetting, embedSettings } from "./embeds/settings.js";
 export {
   cleanLinkUrl,
   ITEM_DESCRIPTION_MAX_LENGTH,

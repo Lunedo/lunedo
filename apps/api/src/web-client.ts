@@ -55,6 +55,10 @@ export const DRAWIO_CONTENT_SECURITY_POLICY = [
   "frame-ancestors 'self'",
 ].join("; ");
 
+export function applicationContentSecurityPolicy(frameSources: readonly string[]): string {
+  return `frame-src ${["'self'", ...frameSources].join(" ")}`;
+}
+
 function isDrawioFile(root: string, filePath: string): boolean {
   return path.relative(root, filePath).split(path.sep)[0] === "drawio";
 }
@@ -63,7 +67,21 @@ function isDrawioFile(root: string, filePath: string): boolean {
  * Serves the built web client. Unknown paths outside the API return the
  * single-page application so that client-side routes can be reloaded.
  */
-export async function registerWebClient(fastify: FastifyInstance, root: string): Promise<void> {
+export async function registerWebClient(
+  fastify: FastifyInstance,
+  root: string,
+  frameSources: () => Promise<readonly string[]>,
+): Promise<void> {
+  let policy = applicationContentSecurityPolicy([]);
+  const currentPolicy = async () => {
+    try {
+      policy = applicationContentSecurityPolicy(await frameSources());
+    } catch (error) {
+      fastify.log.warn({ err: error }, "The embed allowlist could not be read for the frame policy");
+      policy = applicationContentSecurityPolicy([]);
+    }
+    return policy;
+  };
   await fastify.register(fastifyStatic, {
     root: path.resolve(root),
     wildcard: false,
@@ -84,6 +102,7 @@ export async function registerWebClient(fastify: FastifyInstance, root: string):
       } else {
         response.header("cache-control", "no-cache");
       }
+      if (path.basename(filePath) === "index.html") response.header("content-security-policy", policy);
       if (path.basename(filePath) === "print.html") {
         response.header("content-security-policy", PRINT_CONTENT_SECURITY_POLICY);
         response.header("x-content-type-options", "nosniff");
@@ -102,11 +121,12 @@ export async function registerWebClient(fastify: FastifyInstance, root: string):
     },
   });
 
-  fastify.get("/*", (request, reply) => {
+  fastify.get("/*", async (request, reply) => {
     const pathname = request.url.split("?")[0] ?? "/";
     if (SERVER_PREFIXES.some((prefix) => `${pathname}/`.startsWith(prefix))) {
       return reply.callNotFound();
     }
+    await currentPolicy();
     return reply.header("cache-control", "no-cache").sendFile("index.html");
   });
 }

@@ -374,17 +374,30 @@ describe("decision list", () => {
 });
 
 describe("file view macros", () => {
-  for (const name of ["view-file", "viewpdf", "viewxls"]) {
-    it(`converts ${name} to a file block`, async () => {
+  for (const name of ["view-file", "viewpdf", "viewxls", "viewdoc", "viewppt"]) {
+    it(`converts ${name} to a file block with an inline preview`, async () => {
       const page = await convert(
         macro(name, { name: '<ri:attachment ri:filename="report.pdf" ri:version-at-save="3" />' }),
       );
       expect(page.document.content).toEqual([
-        { type: "file", attrs: { attachmentId: REPORT, name: "report.pdf" } },
+        {
+          type: "file",
+          attrs: { attachmentId: REPORT, name: "report.pdf", preview: true, height: null, zoom: null },
+        },
       ]);
       expect(Object.fromEntries(page.converted)).toEqual({ [name]: 1 });
     });
   }
+
+  it("keeps the height of the preview within the limits of the file block", async () => {
+    const height = async (value: string) =>
+      (await convert(macro("viewpdf", { name: '<ri:attachment ri:filename="report.pdf" />', height: value })))
+        .document.content?.[0]?.attrs?.height;
+    expect(await height("600px")).toBe(600);
+    expect(await height("450")).toBe(450);
+    expect(await height("20px")).toBeNull();
+    expect(await height("100%")).toBeNull();
+  });
 
   it("finds an attachment of another page named in the macro", async () => {
     const page = await convert(

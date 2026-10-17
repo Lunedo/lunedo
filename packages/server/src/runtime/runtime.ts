@@ -28,6 +28,7 @@ import { encryptedStreamOwnersOf, fileStoreOf } from "../files/owners.js";
 import { fileSettings } from "../files/settings.js";
 import { readinessChecks } from "../health/readiness.js";
 import { syncLogRetentionDaysSetting } from "../identity/sync.js";
+import { embedSettings } from "../embeds/settings.js";
 import { importSettings } from "../imports/settings.js";
 import type { JobQueue } from "../jobs/job-queue.js";
 import { PgBossQueue } from "../jobs/pg-boss-queue.js";
@@ -170,6 +171,7 @@ export async function createServerRuntime(options: {
         ...fileSettings,
         ...storageSettings,
         ...importSettings,
+        ...embedSettings,
         ...searchSettings,
         auditRetentionSetting,
         smtpSetting,

@@ -167,6 +167,7 @@ import { ArchiveService } from "./spaces/archive.js";
 import { ConfidentialSpaceService } from "./spaces/confidential.js";
 import { PageDocumentService } from "./spaces/documents.js";
 import { IncludeService } from "./spaces/includes.js";
+import { EmbedServices } from "./embeds/embeds.js";
 import { TreeService } from "./spaces/items.js";
 import {
   applyTrashRetention,
@@ -290,6 +291,7 @@ export interface AccountServices {
   decisions: DecisionService;
   reports: ReportService;
   includes: IncludeService;
+  embeds: EmbedServices;
   privateNotes: PrivateNotesService;
   oneOnOnes: OneOnOneService;
   importUploads: UploadService;
@@ -750,6 +752,7 @@ export function createAccountServices(options: {
   const decisions = new DecisionService({ database, authorization });
   const reports = new ReportService({ database, authorization, people, documents });
   const includes = new IncludeService({ database, authorization, documents });
+  const embeds = new EmbedServices({ settings });
   const privateNotes = new PrivateNotesService({ database, authorization });
   const oneOnOnes = new OneOnOneService({
     database,
@@ -938,6 +941,7 @@ export function createAccountServices(options: {
     decisions,
     reports,
     includes,
+    embeds,
     privateNotes,
     oneOnOnes,
     importUploads,

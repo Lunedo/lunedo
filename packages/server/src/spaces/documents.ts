@@ -132,6 +132,27 @@ export function pagePath(spaceKey: string, itemId: string, title: string): strin
   return `/spaces/${encodeURIComponent(spaceKey)}/pages/${itemId}/${slugify(title)}`;
 }
 
+export function whiteboardPath(spaceKey: string, itemId: string, title: string): string {
+  return `/spaces/${encodeURIComponent(spaceKey)}/whiteboards/${itemId}/${slugify(title)}`;
+}
+
+export const MAX_REFERENCED_WHITEBOARDS = 50;
+
+export interface ReferencedBoard {
+  readonly id: string;
+  readonly title: string;
+  readonly href: string;
+  readonly preview: { readonly fileId: string; readonly size: number } | null;
+}
+
+export function whiteboardReferences(document: DocumentJson): string[] {
+  const ids = blocksOfType(document, "whiteboard").flatMap((block) => {
+    const id = block.attrs?.whiteboardId;
+    return typeof id === "string" ? [id] : [];
+  });
+  return [...new Set(ids)].slice(0, MAX_REFERENCED_WHITEBOARDS);
+}
+
 export const MAX_LISTED_CHILD_PAGES = 500;
 
 const childPagesDefaults = { pageId: null, depth: null, sort: "tree", reverse: false };
@@ -662,6 +683,35 @@ export class PageDocumentService {
           previewVersion: typeof previewVersion === "number" ? previewVersion : null,
         });
       }
+    }
+    return result;
+  }
+
+  async referencedWhiteboards(viewer: Principal, document: DocumentJson): Promise<Map<string, ReferencedBoard>> {
+    const ids = whiteboardReferences(document);
+    const result = new Map<string, ReferencedBoard>();
+    if (ids.length === 0) return result;
+    const boards = await this.#database.execute<{
+      id: string;
+      title: string;
+      key: string;
+      file_id: string | null;
+      size: string | number | null;
+    }>(sql`
+      select t.id, t.title, s.key, f.id as file_id, f.size
+      from tree_items t join spaces s on s.id = t.space_id
+      left join whiteboard_documents d on d.item_id = t.id
+      left join whiteboard_previews p on p.id = d.preview_id
+      left join stored_files f on f.id = p.file_id and f.state = 'ready'
+      where t.id = any(${sql.param(ids)}::uuid[]) and t.kind = 'whiteboard'
+        and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}`);
+    for (const row of boards.rows) {
+      result.set(row.id, {
+        id: row.id,
+        title: row.title,
+        href: whiteboardPath(row.key, row.id, row.title),
+        preview: row.file_id ? { fileId: row.file_id, size: Number(row.size ?? 0) } : null,
+      });
     }
     return result;
   }

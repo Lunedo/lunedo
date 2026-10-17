@@ -98,7 +98,7 @@ export class PagedExport {
     return {
       page: (pageId) => (ids.has(pageId) ? `#${pageAnchor(pageId)}` : null),
       attachment: (attachmentId) => `/api/v1/attachments/${attachmentId}/content`,
-      preview: (itemId) => (ids.has(itemId) ? whiteboardPreviewPath(itemId) : null),
+      preview: (itemId) => whiteboardPreviewPath(itemId),
       index: () => null,
     };
   }
@@ -193,6 +193,9 @@ export class PagedExport {
       await input.progress();
       if (!page) continue;
       if (page.board?.preview) this.#boards.set(page.id, page.board.preview);
+      for (const [id, board] of page.whiteboards ?? []) {
+        if (board.preview) this.#boards.set(id, board.preview);
+      }
       pages.push({ entry, page });
     }
     return pages;
@@ -318,8 +321,18 @@ export class PagedExport {
             data: read.data,
           });
       }
+      for (const [id, board] of page.whiteboards ?? []) {
+        if (!board.preview) continue;
+        const read = await this.#boardImage(id, board.preview);
+        if (read) assets.push({ path: whiteboardPreviewPath(id), contentType: read.contentType, data: read.data });
+      }
       for (const image of blocksOfType(page.document, "image")) {
         const id = image.attrs?.attachmentId;
+        if (typeof id === "string") ids.add(id);
+      }
+      for (const id of page.images) ids.add(id);
+      for (const embed of blocksOfType(page.document, "embed")) {
+        const id = embed.attrs?.thumbnailId;
         if (typeof id === "string") ids.add(id);
       }
       for (const type of ["drawing", ...diagramTypes]) {

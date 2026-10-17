@@ -28,6 +28,7 @@ export function itemHref(
   if (target.kind === "folder")
     return target.spaceKey ? folderPath(target.spaceKey, link.itemId, slug) : null;
   if (target.kind === "blogPost") return blogPostPath(target.spaceKey, link.itemId, slug);
+  if (target.kind === "whiteboard") return whiteboardPath(target.spaceKey, link.itemId, slug);
   return null;
 }
 

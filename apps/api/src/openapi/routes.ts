@@ -12,6 +12,7 @@ import { ReportsController } from "../collaboration/reports.controller.js";
 import { TasksController } from "../collaboration/tasks.controller.js";
 import { DiagramsController } from "../diagrams/diagrams.controller.js";
 import { DocsController } from "../docs/docs.controller.js";
+import { EmbedsController } from "../embeds/embeds.controller.js";
 import { ExportsController } from "../exports/exports.controller.js";
 import { RenderingController } from "../exports/rendering.controller.js";
 import { AttachmentsController } from "../files/attachments.controller.js";
@@ -82,6 +83,7 @@ export const apiControllers = (): Type[] => [
   VersionsController,
   WhiteboardsController,
   DiagramsController,
+  EmbedsController,
   TrashController,
   TemplatesController,
   MeetingsController,

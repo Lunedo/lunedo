@@ -512,6 +512,13 @@
       "when": 1792239125884,
       "tag": "0072_page_properties",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1792254387577,
+      "tag": "0073_page_number_headings",
+      "breakpoints": true
     }
   ]
 }

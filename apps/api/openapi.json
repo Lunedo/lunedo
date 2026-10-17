@@ -53,6 +53,10 @@
       "description": "Files and images of draw.io, Mermaid and PlantUML diagrams in pages."
     },
     {
+      "name": "Embeds",
+      "description": "External services whose content pages can embed, from the allowlist of the instance and organization."
+    },
+    {
       "name": "Exports",
       "description": ""
     },
@@ -109395,6 +109399,10 @@
                         ],
                         "description": "Page width: `fixed` or `full`."
                       },
+                      "numberHeadings": {
+                        "type": "boolean",
+                        "description": "Whether the headings of the page are numbered in the page, in print and in Word."
+                      },
                       "mode": {
                         "type": "string",
                         "enum": [
@@ -109447,7 +109455,7 @@
                                     "type": "null"
                                   }
                                 ],
-                                "description": "Linked page or folder, or null for an address or when the caller cannot read it."
+                                "description": "Linked page, folder or whiteboard, or null for an address or when the caller cannot read it."
                               },
                               "url": {
                                 "description": "Linked `http` or `https` address, or null.",
@@ -109508,7 +109516,7 @@
                                     "type": "null"
                                   }
                                 ],
-                                "description": "The linked page or folder, or null."
+                                "description": "The linked page, folder or whiteboard, or null."
                               }
                             },
                             "required": [
@@ -109688,6 +109696,7 @@
                       "title",
                       "description",
                       "width",
+                      "numberHeadings",
                       "mode",
                       "published",
                       "archived",
@@ -109720,6 +109729,7 @@
                     "title": "VPN access for remote staff",
                     "description": "",
                     "width": "fixed",
+                    "numberHeadings": false,
                     "mode": "publish",
                     "published": true,
                     "archived": false,
@@ -110314,6 +110324,10 @@
                       ],
                       "description": "Page width: `fixed` or `full`."
                     },
+                    "numberHeadings": {
+                      "type": "boolean",
+                      "description": "Whether the headings of the page are numbered in the page, in print and in Word."
+                    },
                     "mode": {
                       "type": "string",
                       "enum": [
@@ -110366,7 +110380,7 @@
                                   "type": "null"
                                 }
                               ],
-                              "description": "Linked page or folder, or null for an address or when the caller cannot read it."
+                              "description": "Linked page, folder or whiteboard, or null for an address or when the caller cannot read it."
                             },
                             "url": {
                               "description": "Linked `http` or `https` address, or null.",
@@ -110427,7 +110441,7 @@
                                   "type": "null"
                                 }
                               ],
-                              "description": "The linked page or folder, or null."
+                              "description": "The linked page, folder or whiteboard, or null."
                             }
                           },
                           "required": [
@@ -110736,6 +110750,7 @@
                     "title",
                     "description",
                     "width",
+                    "numberHeadings",
                     "mode",
                     "published",
                     "archived",
@@ -110770,6 +110785,7 @@
                   "title": "VPN access for remote staff",
                   "description": "",
                   "width": "fixed",
+                  "numberHeadings": false,
                   "mode": "publish",
                   "published": true,
                   "archived": false,
@@ -110927,7 +110943,7 @@
       "patch": {
         "operationId": "items.update",
         "summary": "Change an item",
-        "description": "Changes the title, the description of a folder or the width of a page.\n\nRequires the permission `item.edit` on the item in `itemId`.",
+        "description": "Changes the title, the description of a folder, or the width and heading numbers of a page.\n\nRequires the permission `item.edit` on the item in `itemId`.",
         "tags": [
           "Pages"
         ],
@@ -110980,6 +110996,10 @@
                       "fixed",
                       "full"
                     ]
+                  },
+                  "numberHeadings": {
+                    "description": "Whether to number the headings of the page in the page, in print and in Word.",
+                    "type": "boolean"
                   }
                 },
                 "additionalProperties": false,
@@ -111050,6 +111070,10 @@
                       ],
                       "description": "Page width: `fixed` or `full`."
                     },
+                    "numberHeadings": {
+                      "type": "boolean",
+                      "description": "Whether the headings of the page are numbered in the page, in print and in Word."
+                    },
                     "mode": {
                       "type": "string",
                       "enum": [
@@ -111102,7 +111126,7 @@
                                   "type": "null"
                                 }
                               ],
-                              "description": "Linked page or folder, or null for an address or when the caller cannot read it."
+                              "description": "Linked page, folder or whiteboard, or null for an address or when the caller cannot read it."
                             },
                             "url": {
                               "description": "Linked `http` or `https` address, or null.",
@@ -111163,7 +111187,7 @@
                                   "type": "null"
                                 }
                               ],
-                              "description": "The linked page or folder, or null."
+                              "description": "The linked page, folder or whiteboard, or null."
                             }
                           },
                           "required": [
@@ -111335,6 +111359,7 @@
                     "title",
                     "description",
                     "width",
+                    "numberHeadings",
                     "mode",
                     "published",
                     "archived",
@@ -111362,6 +111387,7 @@
                   "title": "VPN access for remote staff",
                   "description": "",
                   "width": "fixed",
+                  "numberHeadings": false,
                   "mode": "publish",
                   "published": true,
                   "archived": false,
@@ -112270,6 +112296,10 @@
                       ],
                       "description": "Page width: `fixed` or `full`."
                     },
+                    "numberHeadings": {
+                      "type": "boolean",
+                      "description": "Whether the headings of the page are numbered in the page, in print and in Word."
+                    },
                     "mode": {
                       "type": "string",
                       "enum": [
@@ -112322,7 +112352,7 @@
                                   "type": "null"
                                 }
                               ],
-                              "description": "Linked page or folder, or null for an address or when the caller cannot read it."
+                              "description": "Linked page, folder or whiteboard, or null for an address or when the caller cannot read it."
                             },
                             "url": {
                               "description": "Linked `http` or `https` address, or null.",
@@ -112383,7 +112413,7 @@
                                   "type": "null"
                                 }
                               ],
-                              "description": "The linked page or folder, or null."
+                              "description": "The linked page, folder or whiteboard, or null."
                             }
                           },
                           "required": [
@@ -112555,6 +112585,7 @@
                     "title",
                     "description",
                     "width",
+                    "numberHeadings",
                     "mode",
                     "published",
                     "archived",
@@ -112582,6 +112613,7 @@
                   "title": "VPN access for remote staff",
                   "description": "",
                   "width": "fixed",
+                  "numberHeadings": false,
                   "mode": "publish",
                   "published": true,
                   "archived": false,
@@ -112920,6 +112952,10 @@
                       ],
                       "description": "Page width: `fixed` or `full`."
                     },
+                    "numberHeadings": {
+                      "type": "boolean",
+                      "description": "Whether the headings of the page are numbered in the page, in print and in Word."
+                    },
                     "mode": {
                       "type": "string",
                       "enum": [
@@ -112972,7 +113008,7 @@
                                   "type": "null"
                                 }
                               ],
-                              "description": "Linked page or folder, or null for an address or when the caller cannot read it."
+                              "description": "Linked page, folder or whiteboard, or null for an address or when the caller cannot read it."
                             },
                             "url": {
                               "description": "Linked `http` or `https` address, or null.",
@@ -113033,7 +113069,7 @@
                                   "type": "null"
                                 }
                               ],
-                              "description": "The linked page or folder, or null."
+                              "description": "The linked page, folder or whiteboard, or null."
                             }
                           },
                           "required": [
@@ -113205,6 +113241,7 @@
                     "title",
                     "description",
                     "width",
+                    "numberHeadings",
                     "mode",
                     "published",
                     "archived",
@@ -113232,6 +113269,7 @@
                   "title": "VPN access for remote staff",
                   "description": "",
                   "width": "fixed",
+                  "numberHeadings": false,
                   "mode": "publish",
                   "published": true,
                   "archived": false,
@@ -133171,6 +133209,277 @@
                       "code": "csrfRejected"
                     }
                   },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{organizationId}/embed-services": {
+      "get": {
+        "operationId": "embeds.list",
+        "summary": "List the services pages can embed",
+        "description": "Returns the external services whose content pages of the organization can embed: the instance allowlist, narrowed by the organization. Links to other addresses are shown as links.\n\nRequires the permission `organization.view` on the organization in `organizationId`.",
+        "tags": [
+          "Embeds"
+        ],
+        "x-pagehall-permission": {
+          "action": "organization.view",
+          "resource": "organization",
+          "parameter": "organizationId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the organization.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The allowed services.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "services": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "ID of the service, such as `youtube`."
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Name of the service."
+                          },
+                          "rules": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "pattern": {
+                                  "type": "string",
+                                  "description": "Address pattern of a share link, an `https` address with placeholders such as `{video}` for one part of the address and `{*}` for any number of path segments."
+                                },
+                                "embed": {
+                                  "type": "string",
+                                  "description": "Embed address built from the placeholders of the pattern; `{url}` stands for the whole link, encoded."
+                                }
+                              },
+                              "required": [
+                                "pattern",
+                                "embed"
+                              ],
+                              "additionalProperties": false,
+                              "description": "How share links of a service become embed addresses."
+                            },
+                            "description": "Rules, tried in order."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "rules"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A service whose content pages can embed."
+                      },
+                      "description": "Services in the order they are tried."
+                    }
+                  },
+                  "required": [
+                    "services"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Services whose content pages of the organization can embed."
+                },
+                "example": {
+                  "services": [
+                    {
+                      "id": "youtube",
+                      "name": "YouTube",
+                      "rules": [
+                        {
+                          "pattern": "https://www.youtube.com/watch?v={video}",
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                        },
+                        {
+                          "pattern": "https://www.youtube.com/embed/{video}",
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                        },
+                        {
+                          "pattern": "https://www.youtube.com/shorts/{video}",
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                        },
+                        {
+                          "pattern": "https://youtube.com/watch?v={video}",
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                        },
+                        {
+                          "pattern": "https://youtube.com/embed/{video}",
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                        },
+                        {
+                          "pattern": "https://youtube.com/shorts/{video}",
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                        },
+                        {
+                          "pattern": "https://m.youtube.com/watch?v={video}",
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                        },
+                        {
+                          "pattern": "https://m.youtube.com/embed/{video}",
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                        },
+                        {
+                          "pattern": "https://m.youtube.com/shorts/{video}",
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                        },
+                        {
+                          "pattern": "https://youtu.be/{video}",
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                        },
+                        {
+                          "pattern": "https://www.youtube-nocookie.com/embed/{video}",
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
                   "forbidden": {
                     "value": {
                       "type": "urn:pagehall:problem:forbidden",
@@ -161166,6 +161475,10 @@
                       ],
                       "description": "Page width: `fixed` or `full`."
                     },
+                    "numberHeadings": {
+                      "type": "boolean",
+                      "description": "Whether the headings of the page are numbered in the page, in print and in Word."
+                    },
                     "mode": {
                       "type": "string",
                       "enum": [
@@ -161218,7 +161531,7 @@
                                   "type": "null"
                                 }
                               ],
-                              "description": "Linked page or folder, or null for an address or when the caller cannot read it."
+                              "description": "Linked page, folder or whiteboard, or null for an address or when the caller cannot read it."
                             },
                             "url": {
                               "description": "Linked `http` or `https` address, or null.",
@@ -161279,7 +161592,7 @@
                                   "type": "null"
                                 }
                               ],
-                              "description": "The linked page or folder, or null."
+                              "description": "The linked page, folder or whiteboard, or null."
                             }
                           },
                           "required": [
@@ -161451,6 +161764,7 @@
                     "title",
                     "description",
                     "width",
+                    "numberHeadings",
                     "mode",
                     "published",
                     "archived",
@@ -161478,6 +161792,7 @@
                   "title": "VPN access for remote staff",
                   "description": "",
                   "width": "fixed",
+                  "numberHeadings": false,
                   "mode": "publish",
                   "published": true,
                   "archived": false,
@@ -188280,6 +188595,10 @@
                             ],
                             "description": "Page width: `fixed` or `full`."
                           },
+                          "numberHeadings": {
+                            "type": "boolean",
+                            "description": "Whether the headings of the page are numbered in the page, in print and in Word."
+                          },
                           "mode": {
                             "type": "string",
                             "enum": [
@@ -188332,7 +188651,7 @@
                                         "type": "null"
                                       }
                                     ],
-                                    "description": "Linked page or folder, or null for an address or when the caller cannot read it."
+                                    "description": "Linked page, folder or whiteboard, or null for an address or when the caller cannot read it."
                                   },
                                   "url": {
                                     "description": "Linked `http` or `https` address, or null.",
@@ -188393,7 +188712,7 @@
                                         "type": "null"
                                       }
                                     ],
-                                    "description": "The linked page or folder, or null."
+                                    "description": "The linked page, folder or whiteboard, or null."
                                   }
                                 },
                                 "required": [
@@ -188565,6 +188884,7 @@
                           "title",
                           "description",
                           "width",
+                          "numberHeadings",
                           "mode",
                           "published",
                           "archived",
@@ -188611,6 +188931,7 @@
                       "title": "VPN access for remote staff",
                       "description": "",
                       "width": "fixed",
+                      "numberHeadings": false,
                       "mode": "publish",
                       "published": true,
                       "archived": false,
@@ -188906,7 +189227,7 @@
                             "type": "null"
                           }
                         ],
-                        "description": "Page or folder to link to, in any space the caller can read."
+                        "description": "Page, folder or whiteboard to link to, in any space the caller can read."
                       },
                       "url": {
                         "description": "`http` or `https` address to link to.",
@@ -188999,6 +189320,10 @@
                       ],
                       "description": "Page width: `fixed` or `full`."
                     },
+                    "numberHeadings": {
+                      "type": "boolean",
+                      "description": "Whether the headings of the page are numbered in the page, in print and in Word."
+                    },
                     "mode": {
                       "type": "string",
                       "enum": [
@@ -189051,7 +189376,7 @@
                                   "type": "null"
                                 }
                               ],
-                              "description": "Linked page or folder, or null for an address or when the caller cannot read it."
+                              "description": "Linked page, folder or whiteboard, or null for an address or when the caller cannot read it."
                             },
                             "url": {
                               "description": "Linked `http` or `https` address, or null.",
@@ -189112,7 +189437,7 @@
                                   "type": "null"
                                 }
                               ],
-                              "description": "The linked page or folder, or null."
+                              "description": "The linked page, folder or whiteboard, or null."
                             }
                           },
                           "required": [
@@ -189284,6 +189609,7 @@
                     "title",
                     "description",
                     "width",
+                    "numberHeadings",
                     "mode",
                     "published",
                     "archived",
@@ -189311,6 +189637,7 @@
                   "title": "VPN access for remote staff",
                   "description": "",
                   "width": "fixed",
+                  "numberHeadings": false,
                   "mode": "publish",
                   "published": true,
                   "archived": false,
@@ -206841,6 +207168,202 @@
                       "title": "Storage is almost full",
                       "status": 507,
                       "code": "storageFull"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/whiteboards/{itemId}/reference": {
+      "get": {
+        "operationId": "whiteboards.reference",
+        "summary": "Get a whiteboard for a whiteboard block",
+        "description": "Returns the title, the address and whether an image exists, for showing the whiteboard in a page. Answers 404 for whiteboards the caller cannot see, so a block shows nothing to them.\n\nRequires the permission `item.view` on the item in `itemId`.",
+        "tags": [
+          "Whiteboards"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.view",
+          "resource": "item",
+          "parameter": "itemId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the whiteboard.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The whiteboard as a block shows it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "itemId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the whiteboard."
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "Title of the whiteboard."
+                    },
+                    "href": {
+                      "type": "string",
+                      "description": "Address of the whiteboard in Pagehall."
+                    },
+                    "preview": {
+                      "type": "boolean",
+                      "description": "Whether an image of the whiteboard exists."
+                    }
+                  },
+                  "required": [
+                    "itemId",
+                    "title",
+                    "href",
+                    "preview"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A whiteboard as a whiteboard block in a page shows it."
+                },
+                "example": {
+                  "itemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a21",
+                  "title": "Network 2027",
+                  "href": "/spaces/IT/whiteboards/01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a21/network-2027",
+                  "preview": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
                     }
                   }
                 }
