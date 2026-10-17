@@ -47,9 +47,9 @@ export { type TaskReportDue, type TaskReportStatus, taskReportDueWindows, taskRe
 export const MAX_PAGE_REPORT_LIMIT = 100;
 export const DEFAULT_PAGE_REPORT_LIMIT = 20;
 
-const CURRENT_SPACE_KEYS = new Set(["@self", "currentspace()"]);
+export const CURRENT_SPACE_KEYS = new Set(["@self", "currentspace()"]);
 const IGNORED_TASK_REPORT_PARAMETERS = new Set(["isMissingRequiredParameters", "pageSize", "columns"]);
-const IGNORED_PAGE_REPORT_PARAMETERS = new Set([
+export const IGNORED_PAGE_REPORT_PARAMETERS = new Set([
   "analyticsKey",
   "blueprintModuleCompleteKey",
   "contentBlueprintId",
@@ -94,13 +94,13 @@ export function decisionReportRequest(node: { attrs: Record<string, unknown> }):
   };
 }
 
-function onlyKnownParameters(macro: SourceElement, known: ReadonlySet<string>): boolean {
+export function onlyKnownParameters(macro: SourceElement, known: ReadonlySet<string>): boolean {
   return macroParameterNames(macro).every(
     (name) => known.has(name) || (macroText(macro, name) ?? "").length === 0,
   );
 }
 
-function importedLabels(value: string | null): string[] | null {
+export function importedLabels(value: string | null): string[] | null {
   const labels: string[] = [];
   for (const part of listValues(value)) {
     if (part.startsWith("+") || part.startsWith("-")) return null;
@@ -111,7 +111,10 @@ function importedLabels(value: string | null): string[] | null {
   return labels.length <= MAX_FILTER_LABELS ? labels : null;
 }
 
-function importedSpace(keys: readonly string[], context: MacroImportContext): string | null | undefined {
+export function importedSpace(
+  keys: readonly string[],
+  context: MacroImportContext,
+): string | null | undefined {
   if (keys.length > 1) return undefined;
   const key = keys[0];
   if (key === undefined || CURRENT_SPACE_KEYS.has(key.toLowerCase())) return context.space(null) ?? undefined;
@@ -297,7 +300,7 @@ const taskReportImporter: MacroConverter = {
   },
 };
 
-function formatDay(iso: string, renderer: HtmlRenderer | MarkdownRenderer | WordRenderer): string {
+export function formatDay(iso: string, renderer: HtmlRenderer | MarkdownRenderer | WordRenderer): string {
   return renderer.formatDate(iso.slice(0, 10));
 }
 
@@ -351,7 +354,7 @@ function taskReportHtml(tasks: readonly ReportedTask[] | null, renderer: HtmlRen
   return element("table", {}, `${head}${element("tbody", {}, rows.join(""))}`);
 }
 
-function wordCell(content: WordInline[], header = false): WordTableCell {
+export function wordCell(content: WordInline[], header = false): WordTableCell {
   return {
     header,
     colspan: 1,
@@ -362,7 +365,7 @@ function wordCell(content: WordInline[], header = false): WordTableCell {
   };
 }
 
-function wordTable(headings: readonly string[], rows: readonly WordInline[][][]): WordContent[] {
+export function wordTable(headings: readonly string[], rows: readonly WordInline[][][]): WordContent[] {
   return [
     {
       type: "table",
@@ -375,11 +378,11 @@ function wordTable(headings: readonly string[], rows: readonly WordInline[][][])
   ];
 }
 
-function wordLink(title: string, href: string | null): WordInline {
+export function wordLink(title: string, href: string | null): WordInline {
   return wordText(title, href ? { link: href } : {});
 }
 
-function wordNote(text: string): WordContent[] {
+export function wordNote(text: string): WordContent[] {
   return [{ type: "paragraph", content: [wordText(text, { muted: true, italic: true })] }];
 }
 
@@ -402,7 +405,7 @@ function taskReportWord(tasks: readonly ReportedTask[] | null, renderer: WordRen
   );
 }
 
-function markdownCell(text: string): string {
+export function markdownCell(text: string): string {
   return text.replace(/\s*[\r\n]+\s*/g, " ");
 }
 

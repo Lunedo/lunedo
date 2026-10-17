@@ -1,0 +1,73 @@
+{
+  "type": "doc",
+  "content": [
+    {
+      "type": "excerpt",
+      "attrs": { "name": null, "hidden": false },
+      "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "The uplink is 1 Gbit/s." }] }]
+    },
+    {
+      "type": "excerpt",
+      "attrs": { "name": "contacts", "hidden": true },
+      "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Call the service desk." }] }]
+    },
+    {
+      "type": "includeExcerpt",
+      "attrs": {
+        "pageId": "01929b1e-0000-7000-8000-000000000004",
+        "sourceSpace": null,
+        "sourceTitle": null,
+        "name": "contacts",
+        "panel": false
+      }
+    },
+    {
+      "type": "includeExcerpt",
+      "attrs": { "pageId": null, "sourceSpace": "OPS", "sourceTitle": "Runbook", "name": null, "panel": true }
+    },
+    {
+      "type": "includePage",
+      "attrs": { "pageId": "01929b1e-0000-7000-8000-000000000004", "sourceSpace": null, "sourceTitle": null }
+    },
+    {
+      "type": "includePage",
+      "attrs": { "pageId": null, "sourceSpace": "OPS", "sourceTitle": "Escalation" }
+    },
+    {
+      "type": "roadmap",
+      "attrs": {
+        "roadmap": {
+          "title": "Network upgrade",
+          "start": "2027-01-01",
+          "end": "2027-06-30",
+          "lanes": [
+            {
+              "title": "Core",
+              "color": "blue",
+              "bars": [
+                {
+                  "title": "Order switches",
+                  "description": "Six switches for the core",
+                  "start": "2027-01-15",
+                  "end": "2027-02-28",
+                  "row": 0,
+                  "pageId": "01929b1e-0000-7000-8000-000000000004"
+                },
+                {
+                  "title": "Cabling",
+                  "description": "",
+                  "start": "2027-02-01",
+                  "end": "2027-03-31",
+                  "row": 1,
+                  "pageId": null
+                }
+              ]
+            },
+            { "title": "Access", "color": "green", "bars": [] }
+          ],
+          "markers": [{ "title": "Go-live", "date": "2027-04-01" }]
+        }
+      }
+    }
+  ]
+}

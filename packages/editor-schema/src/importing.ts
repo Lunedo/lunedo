@@ -15,7 +15,20 @@ export interface ImportedAttachment {
   readonly name: string;
 }
 
+export type MacroNote =
+  | { readonly code: "unmappedQuery"; readonly macro: string; readonly query: string }
+  | { readonly code: "macroOptionDropped"; readonly macro: string; readonly option: string }
+  | {
+      readonly code: "unresolvedInclude";
+      readonly macro: string;
+      readonly title: string;
+      readonly spaceKey: string | null;
+    }
+  | { readonly code: "externalPageLink"; readonly title: string; readonly spaceKey: string | null };
+
 export interface MacroImportContext {
+  readonly spaceKey: string | null;
+  note(note: MacroNote): void;
   blocks(content: readonly SourceContent[]): NodeJson[];
   inline(content: readonly SourceContent[]): NodeJson[];
   attachment(reference: SourceElement, page: SourceElement | null): ImportedAttachment | null;

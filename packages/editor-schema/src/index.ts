@@ -41,6 +41,7 @@ export type {
   ImportSource,
   MacroConverter,
   MacroImportContext,
+  MacroNote,
   MacroReferences,
   SourceContent,
   SourceElement,
@@ -59,7 +60,10 @@ export {
   attrOf,
   type ChildPageSort,
   type ChildPagesRequest,
+  type ContentByLabelRequest,
+  type ContentLabelSort,
   childPageSorts,
+  contentLabelSorts,
   type DecisionReportOrder,
   type DecisionReportRequest,
   decisionReportOrders,
@@ -67,8 +71,13 @@ export {
   type EditorModule,
   type Heading,
   type HtmlRenderer,
+  type IncludedContent,
+  type IncludeRequest,
+  type LabeledContent,
+  type LabeledContentKind,
   type ListedAttachment,
   type ListedPage,
+  labeledContentKinds,
   type MarkDefinition,
   type MarkdownRenderer,
   ModuleRegistry,
@@ -77,12 +86,17 @@ export {
   type PageLinkTarget,
   type PageReportRequest,
   type PageReportSort,
+  type PropertiesReport,
+  type PropertiesReportRequest,
   pageReportSorts,
+  type RelatedLabel,
+  type RelatedLabelsRequest,
   type RenderContext,
   type RenderLabels,
   type RenderTarget,
   type ReportedDecision,
   type ReportedPage,
+  type ReportedProperties,
   type ReportedTask,
   type ResolvedPageLink,
   required,
@@ -91,7 +105,19 @@ export {
   type WordRenderer,
 } from "./module.js";
 export { MAX_DRAWING_TEXT } from "./modules/drawings.js";
+export {
+  excerptContent,
+  includeRequest,
+  MAX_EXCERPT_NAME_LENGTH,
+  MAX_INCLUDE_DEPTH,
+} from "./modules/includes.js";
 export { createDefaultRegistry, defaultModules } from "./modules/index.js";
+export {
+  contentByLabelRequest,
+  DEFAULT_CONTENT_BY_LABEL_LIMIT,
+  MAX_CONTENT_BY_LABEL_LIMIT,
+  MAX_LABEL_BLOCK_TITLE,
+} from "./modules/labels.js";
 export {
   childPagesRequest,
   fileExtension,
@@ -100,6 +126,16 @@ export {
   matchesFileTypes,
 } from "./modules/listings.js";
 export { MAX_LATEX_LENGTH, MAX_MACRO_DATA_BYTES } from "./modules/macros.js";
+export {
+  DEFAULT_PROPERTIES_REPORT_PAGE_SIZE,
+  type ExtractedProperty,
+  extractPageProperties,
+  MAX_IMPORTED_QUERY_LENGTH,
+  MAX_PROPERTIES_REPORT_COLUMNS,
+  MAX_PROPERTIES_REPORT_PAGE_SIZE,
+  propertiesReportRequest,
+  propertySortKey,
+} from "./modules/properties.js";
 export {
   DEFAULT_PAGE_REPORT_LIMIT,
   decisionReportRequest,
@@ -112,6 +148,7 @@ export {
   taskReportRequest,
   taskReportStatuses,
 } from "./modules/reports.js";
+export type { Roadmap } from "./modules/roadmap.js";
 export {
   MAX_PLACEHOLDER_LENGTH,
   MAX_TEMPLATE_BUTTON_LABEL,
@@ -145,8 +182,12 @@ export {
   isTemplateId,
   MAX_FILTER_LABELS,
   MAX_FILTER_PAGES,
+  MAX_FILTER_SPACES,
   MAX_HREF_LENGTH,
   MAX_LABEL_LENGTH,
+  MAX_PROPERTY_KEY_LENGTH,
+  MAX_PROPERTY_SET_ID_LENGTH,
+  propertyKeyOf,
   type TextAlignment,
   textAlignments,
 } from "./values.js";
