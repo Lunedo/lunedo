@@ -4,9 +4,11 @@ import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defaultClientConditions, defineConfig, type Plugin } from "vite";
+import { drawioContentType, drawioFile, ensureDrawio } from "./src/dev/drawio-assets.js";
 import { fontPath, isExcalidrawChunk, withoutFontFallback } from "./src/dev/excalidraw-assets.js";
 import { isPreviewFrameAsset } from "./src/dev/preview-frame-assets.js";
 import { publicAddress } from "./src/dev/public-address.js";
+import { DRAWIO_VERSION } from "./src/diagrams/drawio-version.js";
 
 function previewFrameAssets(): Plugin {
   return {
@@ -57,11 +59,56 @@ function excalidrawAssets(): Plugin {
   };
 }
 
+function drawioAssets(): Plugin {
+  let root = "";
+  let ready: Promise<string> | null = null;
+  const prepare = () => {
+    ready ??= ensureDrawio(
+      process.env.PAGEHALL_DRAWIO_CACHE ?? path.resolve(root, "../../.cache/drawio"),
+      path.join(root, "drawio"),
+    );
+    return ready;
+  };
+  return {
+    name: "pagehall-drawio-assets",
+    configResolved(config) {
+      root = config.root;
+    },
+    configureServer(server) {
+      server.middlewares.use((request, response, next) => {
+        const file = drawioFile(request.url);
+        if (!file) {
+          next();
+          return;
+        }
+        prepare()
+          .then((directory) => {
+            response.setHeader("content-type", drawioContentType(file));
+            response.setHeader("access-control-allow-origin", "*");
+            createReadStream(path.join(directory, file))
+              .on("error", () => {
+                response.statusCode = 404;
+                response.end();
+              })
+              .pipe(response);
+          })
+          .catch(next);
+      });
+    },
+    async writeBundle(options) {
+      if (!options.dir) return;
+      const target = path.join(options.dir, "drawio", DRAWIO_VERSION);
+      await cp(await prepare(), target, { recursive: true, filter: (source) => !source.endsWith(".ready") });
+      await cp(path.join(root, "drawio", "LICENSE"), path.join(target, "LICENSE"));
+    },
+  };
+}
+
 const polling = process.env.PAGEHALL_DEV_POLLING === "true";
 const instance = publicAddress(process.env.PAGEHALL_INSTANCE_URL);
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), previewFrameAssets(), excalidrawAssets()],
+  plugins: [react(), tailwindcss(), previewFrameAssets(), excalidrawAssets(), drawioAssets()],
   resolve: {
     conditions: ["@pagehall/source", ...defaultClientConditions],
   },
@@ -97,7 +144,7 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
-      input: { main: "index.html", preview: "preview.html", print: "print.html" },
+      input: { main: "index.html", preview: "preview.html", print: "print.html", diagram: "diagram.html" },
     },
   },
   preview: {

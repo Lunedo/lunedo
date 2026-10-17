@@ -1,0 +1,17 @@
+window.DRAWIO_PUBLIC_BUILD = true;
+window.EXPORT_URL = null;
+window.DRAWIO_BASE_URL = null;
+window.DRAWIO_VIEWER_URL = null;
+window.DRAWIO_LIGHTBOX_URL = window.location.origin;
+window.DRAW_MATH_URL = "math4/es5";
+window.VSS_CONVERT_URL = window.location.origin;
+window.ALLOW_CUSTOM_PLUGINS = false;
+window.PLUGINS_BASE_PATH = ".";
+window.DRAWIO_LOG_URL = "";
+window.DRAWIO_CONFIG = { plugins: [], showStartScreen: false };
+urlParams.sync = "manual";
+urlParams.plugins = "0";
+urlParams.pwa = "0";
+urlParams.offline = "0";
+urlParams.lockdown = "1";
+urlParams.stealth = "1";

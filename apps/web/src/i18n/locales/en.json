@@ -1506,7 +1506,8 @@
     "invalidStorageSettings": "The storage settings are not valid. Check the marked fields and try again.",
     "tooManyPagesToPrint": "Browsers print up to 300 pages at once. Export as Word or HTML instead, or as PDF on the server if your administrator set up the render container.",
     "renderUnavailable": "PDF on the server needs the render container, which is not set up or not reachable. Print the PDF through your browser instead, or ask your instance administrator.",
-    "renderFailed": "The render container could not create the PDF. Try again; if it fails again, tell your instance administrator."
+    "renderFailed": "The render container could not create the PDF. Try again; if it fails again, tell your instance administrator.",
+    "invalidDiagram": "The draw.io diagram could not be stored because it contains something draw.io does not write, or it is damaged. Undo the last change in draw.io and save again."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -4293,7 +4294,13 @@
       "templateButton": "Template button",
       "templateButtonDescription": "Button that creates a page from a template",
       "drawing": "Drawing",
-      "drawingDescription": "Sketch by hand with shapes, arrows and sticky notes"
+      "drawingDescription": "Sketch by hand with shapes, arrows and sticky notes",
+      "drawio": "draw.io diagram",
+      "drawioDescription": "Network, flow and UML diagrams, edited in draw.io",
+      "mermaid": "Mermaid diagram",
+      "mermaidDescription": "Diagram from text in Mermaid syntax",
+      "plantuml": "PlantUML diagram",
+      "plantumlDescription": "Sequence, class and other UML diagrams from text"
     },
     "mention": {
       "unknown": "Unknown person"
@@ -4676,6 +4683,60 @@
       "discardDescription": "Your changes since opening the drawing are lost. The drawing on the page stays as it was.",
       "discard": "Discard changes",
       "keepEditing": "Keep editing"
+    },
+    "drawio": {
+      "label": "draw.io diagram",
+      "edit": "Edit in draw.io",
+      "editTitle": "Edit draw.io diagram",
+      "editDescription": "Others can keep editing the page. They see that you are editing this diagram.",
+      "version": "Version {version}",
+      "empty": "Empty diagram. Choose Edit in draw.io to start.",
+      "emptyReadOnly": "This diagram is empty.",
+      "gliffyNote": "Imported from Gliffy. draw.io converts it when you first edit it; the page keeps showing the Gliffy image until you save.",
+      "fileMissing": "The diagram file was missing in the import, so only its image was kept. Editing starts an empty diagram.",
+      "save": "Save and close",
+      "saveFailed": "The diagram could not be saved",
+      "exportFailed": "draw.io did not hand over the diagram in time. Wait a moment and choose Save and close again.",
+      "loadFailed": "The diagram could not be loaded",
+      "startFailed": "draw.io did not start",
+      "startFailedHint": "The editor is served by this Pagehall instance. Check your connection to Pagehall, then try again. If it keeps failing, ask your administrator to check the draw.io files of the instance.",
+      "gliffyFailed": "The Gliffy diagram could not be converted",
+      "gliffyFailedHint": "draw.io could not read this Gliffy file. The page keeps showing its image. Download the Gliffy file from the attachments of the page to keep it, or close and draw the diagram again.",
+      "discardDescription": "Your changes since opening the diagram are lost. The diagram on the page stays as it was.",
+      "discard": "Discard changes",
+      "keepEditing": "Keep editing",
+      "servedLocally": "draw.io {version} is served by this Pagehall instance and works without internet access. Diagrams never leave the server.",
+      "frameTitle": "draw.io editor",
+      "starting": "draw.io {version} is starting from this Pagehall instance. You can save once it has opened."
+    },
+    "mermaid": {
+      "label": "Mermaid diagram"
+    },
+    "plantuml": {
+      "label": "PlantUML diagram"
+    },
+    "diagram": {
+      "editedBy": "{count, plural, one {{name} is editing this diagram} other {{name} are editing this diagram}}",
+      "show": "Show",
+      "preview": "Preview",
+      "source": "Source",
+      "edit": "Edit",
+      "sourceLabel": "Source of the {name}",
+      "problemTitle": "The diagram cannot be shown yet",
+      "saveFailed": "The diagram could not be saved",
+      "rendering": "The preview appears here while you type.",
+      "save": "Save diagram",
+      "notRendered": "{name} has no image yet. Its source is shown instead.",
+      "empty": "Empty diagram. Choose Edit to write its source.",
+      "emptyReadOnly": "This diagram is empty.",
+      "failures": {
+        "syntax": "The source has an error, so the last working preview is kept. Fix the line the message names: {detail}",
+        "include": "Including files or addresses is turned off for safety ({detail}). Copy the content into the diagram instead.",
+        "htmlLabels": "HTML labels are turned off for safety. Remove the htmlLabels setting from the diagram.",
+        "tooLarge": "The diagram is too large to store. Split it into smaller diagrams.",
+        "timeout": "Drawing the diagram took longer than 10 seconds and was stopped. Simplify the diagram or split it.",
+        "unavailable": "The diagram renderer did not start. Reload the page and try again."
+      }
     }
   },
   "spaces": {
@@ -6973,6 +7034,16 @@
           "title": "{count, plural, one {# comment over the limit} other {# comments over the limit}}",
           "hint": "A page keeps up to 2,000 comments; the rest were left out.",
           "entry": "Comment left out: the page already has 2,000 comments."
+        },
+        "diagramFileMissing": {
+          "title": "{count, plural, one {# diagram file is} other {# diagram files are}} missing",
+          "hint": "The pages show the last image of the diagram. Editing starts an empty draw.io diagram.",
+          "entry": "The file of diagram “{name}” ({macro}) is not in the export; only its image was kept."
+        },
+        "gliffyDiagram": {
+          "title": "{count, plural, one {# Gliffy diagram is} other {# Gliffy diagrams are}} converted on first edit",
+          "hint": "They show their Gliffy image and keep the Gliffy file. draw.io converts them in the browser when someone first edits them.",
+          "entry": "Gliffy diagram “{name}” is converted to draw.io when it is first edited."
         }
       },
       "people": "People",
@@ -8324,7 +8395,12 @@
       "title": "Other formats",
       "word": "Word (.docx)",
       "wordDescription": "Created by Pagehall itself. Always available.",
-      "available": "Available"
+      "available": "Available",
+      "diagrams": "Diagram images",
+      "diagramsDescription": "Excalidraw, draw.io, Mermaid and PlantUML images are created in the browser of the person who saves the diagram and stored with the page. PlantUML runs in the browser too; no Java or render service is needed.",
+      "drawio": "draw.io editor",
+      "drawioDescription": "Version {version}, shipped with Pagehall. It never connects to diagrams.net.",
+      "servedLocally": "Served locally"
     }
   }
 }

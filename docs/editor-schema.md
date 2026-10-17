@@ -36,6 +36,8 @@ Documents are ProseMirror JSON. The server validates every stored document and e
 | `unsupportedMacro` | | `name`, `data` (the original data, up to 256 KiB) |
 | `image` | | `attachmentId`, `alt`, `width`, `align` |
 | `file` | | `attachmentId`, `name` |
+| `drawio` | | `id` (block ID), `sourceFormat` (`drawio`, or `gliffy` for an imported Gliffy file that draw.io converts on first edit), `sourceId` and `sourceVersion` (attachment version of the diagram file), `previewId` and `previewVersion` (attachment version of the image), `text` (up to 20,000 characters, for search) |
+| `mermaid`, `plantuml` | | `id` (block ID), `source` (up to 50,000 characters), `previewId` and `previewVersion` (attachment version of the SVG image), `text` (up to 20,000 characters, for search) |
 | `drawing` | | `id` (block ID), `sceneId` and `sceneVersion` (attachment version of the scene), `previewId` and `previewVersion` (attachment version of the SVG image), `text` (up to 20,000 characters, for search) |
 
 ## Marks
