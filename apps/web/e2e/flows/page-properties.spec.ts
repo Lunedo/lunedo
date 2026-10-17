@@ -22,16 +22,21 @@ function content(page: Page) {
   return page.getByRole("textbox", { name: "Page content" });
 }
 
-async function openEditor(page: Page, path: string) {
+async function openEditor(page: Page, path: string, intro: string) {
   await page.goto(`${path}?edit=true`);
   await expect(content(page)).toBeEditable();
-  await content(page).focus();
+  await expect(content(page)).toHaveAttribute("contenteditable", "true");
+  await expect(page.getByText("Saved").or(page.getByText("Editing")).first()).toBeVisible();
+  await content(page).click();
+  await page.keyboard.type(intro);
+  await page.keyboard.press("Enter");
 }
 
 async function insert(page: Page, query: string, option: RegExp) {
   await page.keyboard.type(`/${query}`);
-  await expect(page.getByRole("option", { name: option })).toBeVisible();
-  await page.keyboard.press("Enter");
+  const choice = page.getByRole("option", { name: option });
+  await expect(choice).toBeVisible();
+  await choice.click();
 }
 
 async function waitSaved(page: Page) {
@@ -47,8 +52,8 @@ async function siteWithProperties(
 ) {
   const created = await createPage(page, spaceId, spaceKey, title);
   await callApi(page, "POST", `/api/v1/pages/${created.id}/labels`, { label: "site" });
-  await openEditor(page, created.path);
-  await insert(page, "key value", /^Page properties/);
+  await openEditor(page, created.path, `${title} in short`);
+  await insert(page, "properties", /^Page properties\s*Names and values/);
   const keys = page.locator('[data-type="pagePropertyKey"]');
   await expect(keys).toHaveCount(2);
   await keys.first().click();
@@ -73,13 +78,13 @@ test("collects page properties of two pages in a report on a third page and incl
   await siteWithProperties(page, spaceId, spaceKey, "Site Linz", "500 Mbit/s cable");
 
   const sites = await createPage(page, spaceId, spaceKey, "All sites");
-  await openEditor(page, sites.path);
-  await insert(page, "details summary", /^Page properties report/);
+  await openEditor(page, sites.path, "Our sites");
+  await insert(page, "properties", /^Page properties report/);
   const report = page.locator(".ph-properties-report-block");
   await expect(report.getByRole("link", { name: "Site Graz" })).toBeVisible();
   await expect(report.getByRole("link", { name: "Site Linz" })).toBeVisible();
   await page.keyboard.press("Control+End");
-  await insert(page, "auszug einbinden", /^Include excerpt/);
+  await insert(page, "einbinden", /^Include excerpt/);
   const include = page.locator(".ph-include-block");
   await include.getByRole("combobox", { name: "Page" }).fill("Site Graz");
   await page.getByRole("option", { name: /^Site Graz/ }).click();
