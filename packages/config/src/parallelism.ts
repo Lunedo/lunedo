@@ -53,6 +53,8 @@ export function vitestWorkers(
 }
 
 export function endToEndWorkers(env: NodeJS.ProcessEnv = process.env): number {
+  const workers = positiveInteger(env.PAGEHALL_E2E_WORKERS);
+  if (workers !== undefined) return workers;
   if (env.CI) return parallelismLimit(env) ?? DEFAULT_END_TO_END_WORKERS;
-  return positiveInteger(env.PAGEHALL_E2E_WORKERS) ?? DEFAULT_END_TO_END_WORKERS;
+  return DEFAULT_END_TO_END_WORKERS;
 }

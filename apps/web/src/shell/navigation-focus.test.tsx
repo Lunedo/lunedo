@@ -15,7 +15,7 @@ function Frame() {
   return <Outlet />;
 }
 
-function setup() {
+function setup(nextScreenReady: Promise<void> = Promise.resolve()) {
   const root = createRootRoute({ component: Frame });
   const first = createRoute({
     getParentRoute: () => root,
@@ -30,6 +30,7 @@ function setup() {
   const second = createRoute({
     getParentRoute: () => root,
     path: "/next",
+    loader: () => nextScreenReady,
     component: () => (
       <main>
         <h1>Next screen</h1>
@@ -55,6 +56,25 @@ describe("focus after navigation", () => {
     const button = await screen.findByRole("button", { name: "Go" });
     button.focus();
     await act(async () => router.history.push("/next"));
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Next screen" })),
+    );
+  });
+
+  it("waits for the new screen instead of focusing the heading of the screen that is still shown", async () => {
+    let finishLoading = () => {};
+    const router = setup(
+      new Promise<void>((resolve) => {
+        finishLoading = resolve;
+      }),
+    );
+    render(<RouterProvider router={router} />);
+    await screen.findByRole("heading", { name: "Start" });
+    await act(async () => {
+      router.history.push("/next");
+    });
+    expect(screen.getByRole("heading", { name: "Start" })).toBeTruthy();
+    await act(async () => finishLoading());
     await waitFor(() =>
       expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Next screen" })),
     );

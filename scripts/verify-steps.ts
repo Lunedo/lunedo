@@ -6,7 +6,7 @@ export interface VerifyStep {
 
 export const VERIFIED_JOBS = ["checks", "quick-checks"] as const;
 
-const SETUP_COMMANDS = ["corepack enable", "pnpm install ", "echo "];
+const SETUP_COMMANDS = ["corepack enable", "pnpm install ", "echo ", "node scripts/prepare-ci-cache.ts "];
 const SHELL_SYNTAX = /^(if|then|else|elif|fi|for|while|do|done)\b/;
 
 export function verifySteps(base: string): VerifyStep[] {
@@ -39,7 +39,7 @@ function indentOf(line: string): number {
 
 function jobLines(workflow: string, job: string): string[] {
   const lines = workflow.split(/\r?\n/);
-  const start = lines.findIndex((line) => line === `  ${job}:`);
+  const start = lines.indexOf(`  ${job}:`);
   if (start < 0) throw new Error(`The workflow has no job ${job}.`);
   const end = lines.findIndex((line, index) => index > start && /^ {2}\S/.test(line));
   return lines.slice(start + 1, end < 0 ? undefined : end);

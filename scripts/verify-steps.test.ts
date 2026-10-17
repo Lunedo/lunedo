@@ -10,6 +10,7 @@ const sample = `jobs:
   checks:
     steps:
       - run: corepack enable
+      - run: node scripts/prepare-ci-cache.ts host "$CI_CACHE_DIR"
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - name: Compare

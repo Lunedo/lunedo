@@ -39,3 +39,31 @@ jobs:
       - name: Compare the pinned SheetJS release
         if: ${{ !cancelled() }}
         run: node scripts/check-sheetjs.ts
+
+  prune-runner-caches:
+    name: Prune the caches on the runner
+    if: ${{ contains(vars.RUNNER_LABELS, 'self-hosted') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
+    timeout-minutes: 15
+    env:
+      CI_CACHE_DIR: ${{ vars.CI_CACHE_DIR || '/srv/ci-cache' }}
+      PLAYWRIGHT_IMAGE: mcr.microsoft.com/playwright@sha256:06a9939e57531807f8d5fd76ce44b53165ffb7d7501d87ab10e285c20b1e971f # v1.64.0-noble
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+      - name: Use the caches on the runner
+        run: node scripts/prepare-ci-cache.ts host "$CI_CACHE_DIR"
+      - run: corepack enable
+      - name: Prune the pnpm store of the jobs on the runner
+        run: pnpm store prune
+      - name: Prune the pnpm store of the end-to-end container and old Turborepo entries
+        run: >-
+          docker run --rm --volume "$CI_CACHE_DIR:/ci-cache" --volume "$GITHUB_WORKSPACE:/repo:ro" --workdir /repo
+          --env COREPACK_ENABLE_DOWNLOAD_PROMPT=0 "$PLAYWRIGHT_IMAGE" sh -ec
+          'mkdir -p /ci-cache/container/pnpm-store /ci-cache/container/turbo;
+          corepack pnpm store prune --store-dir /ci-cache/container/pnpm-store;
+          find /ci-cache/host/turbo /ci-cache/container/turbo -type f -mtime +3 -delete'
