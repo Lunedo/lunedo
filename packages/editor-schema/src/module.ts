@@ -208,6 +208,16 @@ export interface RenderLabels {
   file: string;
   image: string;
   drawing: string;
+  drawio: string;
+  mermaid: string;
+  plantuml: string;
+  diagramSource: string;
+  diagramNotRendered: string;
+  drawioReference: string;
+  diagramFrom: string;
+  diagramRemoved: string;
+  diagramNotImported: string;
+  restrictedContent: string;
   childPages: string;
   noChildPages: string;
   attachmentList: string;
@@ -241,7 +251,6 @@ export interface RenderLabels {
   hiddenExcerpt: string;
   includedPage: string;
   includedExcerpt: string;
-  restrictedContent: string;
   notImportedYet: string;
   includeLoop: string;
   includeTooDeep: string;
@@ -254,12 +263,21 @@ export interface RenderLabels {
 
 export type RenderTarget = "screen" | "print";
 
+export interface ReferencedDiagram {
+  readonly title: string;
+  readonly href: string;
+  readonly found: boolean;
+  readonly previewId: string | null;
+  readonly previewVersion: number | null;
+}
+
 export interface RenderContext {
   target?: RenderTarget;
   nodeTitle?: (type: string) => string | null;
   mention?: (id: string) => { name: string } | null;
   pageLink?: (link: PageLinkTarget) => ResolvedPageLink | null;
   attachment?: (id: string, version?: number) => { href: string } | null;
+  diagramReference?: (pageId: string, diagramId: string) => ReferencedDiagram | null;
   formatDate?: (iso: string) => string;
   labels?: Partial<RenderLabels>;
   showPlaceholders?: boolean;

@@ -60,3 +60,7 @@ Settings of the container:
 ## Word
 
 Word documents need no container. They contain headings, paragraphs, lists and task lists, tables with merged cells, code in the paragraph style "Code", callouts and decisions as framed boxes, embedded images that the exporting person may read, other attachments and pages as links, mentions, status and dates as text, a table of contents, and a header and footer with "Page n of m". Word fills in the table of contents when it updates the fields of the document; it asks for that when the document opens.
+
+## Diagrams
+
+Images of drawings, whiteboards and draw.io, Mermaid and PlantUML diagrams are created in the browser of the person who saves them and stored with the page; print, PDF and Word use these stored images. PlantUML therefore needs neither Java nor this container. See [diagrams.md](diagrams.md).

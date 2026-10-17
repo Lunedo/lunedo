@@ -36,6 +36,9 @@ Documents are ProseMirror JSON. The server validates every stored document and e
 | `unsupportedMacro` | | `name`, `data` (the original data, up to 256 KiB) |
 | `image` | | `attachmentId`, `alt`, `width`, `align` |
 | `file` | | `attachmentId`, `name` |
+| `drawio` | | `id` (block ID), `sourceFormat` (`drawio`, or `gliffy` for an imported Gliffy file that draw.io converts on first edit), `sourceId` and `sourceVersion` (attachment version of the diagram file), `previewId` and `previewVersion` (attachment version of the image), `text` (up to 20,000 characters, for search) |
+| `drawioReference` | | `id` (block ID), `pageId` and `diagramId` (the page and the `drawio` block whose current image it shows; both empty when the page was not imported), `name` (diagram name from the import, up to 255 characters). Rendered through the `diagramReference` resolver of the render context with the reader's permissions; without a resolver it becomes a placeholder for the client. It has no text for search. |
+| `mermaid`, `plantuml` | | `id` (block ID), `source` (up to 50,000 characters), `previewId` and `previewVersion` (attachment version of the SVG image), `text` (up to 20,000 characters, for search) |
 | `drawing` | | `id` (block ID), `sceneId` and `sceneVersion` (attachment version of the scene), `previewId` and `previewVersion` (attachment version of the SVG image), `text` (up to 20,000 characters, for search) |
 | `pageProperties` | `pageProperty` rows | `setId` (up to 100 characters or null), `hidden` |
 | `pageProperty` | `pagePropertyKey`, then `pagePropertyValue` | |

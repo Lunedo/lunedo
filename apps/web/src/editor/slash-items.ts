@@ -31,6 +31,7 @@ import {
   ListTree,
   type LucideIcon,
   Minus,
+  Network,
   Paperclip,
   PenLine,
   Pilcrow,
@@ -44,12 +45,14 @@ import {
   Tag,
   Tags,
   TextQuote,
+  Workflow,
 } from "lucide-react";
 import { translateKey } from "../i18n/translate.js";
 import { editorActions } from "./actions.js";
 import { pageScopeOf } from "./extensions/page-scope.js";
 import type { SuggestionItem } from "./extensions/suggestions.js";
 import { COLUMN_LAYOUTS } from "./nodes/block-views.js";
+import { DIAGRAM_STARTERS, openDiagramWhenInserted } from "./nodes/diagram-views.js";
 import { openDrawingWhenInserted } from "./nodes/drawing-view.js";
 import { emptyProperty } from "./properties.js";
 
@@ -550,6 +553,49 @@ export const slashCommands: SlashCommandDefinition[] = [
       editor.chain().focus().deleteRange(range).insertContent({ type: "drawing", attrs: { id } }).run();
     },
   },
+  {
+    id: "drawio",
+    group: "blocks",
+    icon: Network,
+    labelKey: "editor.blocks.drawio",
+    descriptionKey: "editor.blocks.drawioDescription",
+    keywords: [
+      "drawio",
+      "draw.io",
+      "diagram",
+      "diagrams.net",
+      "network",
+      "flowchart",
+      "uml",
+      "diagramm",
+      "netzwerk",
+    ],
+    run: (editor, range) => {
+      const id = crypto.randomUUID();
+      openDiagramWhenInserted(id);
+      editor.chain().focus().deleteRange(range).insertContent({ type: "drawio", attrs: { id } }).run();
+    },
+  },
+  ...(["mermaid", "plantuml"] as const).map(
+    (type): SlashCommandDefinition => ({
+      id: type,
+      group: "blocks",
+      icon: Workflow,
+      labelKey: `editor.blocks.${type}`,
+      descriptionKey: `editor.blocks.${type}Description`,
+      keywords: [type, "diagram", "text", "uml", "sequence", "diagramm", "sequenz"],
+      run: (editor, range) => {
+        const id = crypto.randomUUID();
+        openDiagramWhenInserted(id);
+        editor
+          .chain()
+          .focus()
+          .deleteRange(range)
+          .insertContent({ type, attrs: { id, source: DIAGRAM_STARTERS[type] } })
+          .run();
+      },
+    }),
+  ),
   {
     id: "emoji",
     group: "inline",

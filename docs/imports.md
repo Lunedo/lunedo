@@ -25,8 +25,9 @@ Discarding and stopping require typing the space key. Reviewers can read the spa
 
 ## Report
 
-The report lists problems by category: macros, attachments, links, content and archive. Each entry is typed and can be exported as CSV.
+The report lists problems by category: macros, diagrams, attachments, links, content and archive. Each entry is typed and can be exported as CSV.
 
+- draw.io, Gliffy, Mermaid and PlantUML macros become diagram blocks; see [diagrams.md](diagrams.md#importing-from-confluence).
 - Macros without a converter, and macros whose parameters a converter cannot take over, are kept as unsupported-macro blocks with their original data. Readers see a neutral notice; editors see the macro name. The report counts each macro by name.
 - Links to pages inside the export are rewritten. Links to other pages keep their original address and are reported.
 - Only the current version of each page is imported, unless the full page history was chosen. Attachments keep all versions.

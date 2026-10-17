@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { type DocumentJson, editorSchemaVersion, extractMentions, slugify } from "@pagehall/editor-schema";
 import { yDocFromDocument } from "@pagehall/editor-schema/yjs";
 import { uuidv7 } from "@pagehall/shared";
@@ -190,6 +191,12 @@ function pageTitle(page: Pick<SourcePage, "title" | "sourceId">): string {
   return title.length > 0 ? title : `Page ${page.sourceId}`.slice(0, ITEM_TITLE_MAX_LENGTH);
 }
 
+function stableId(key: string): string {
+  const hex = createHash("sha256").update(key).digest("hex");
+  const variant = ((Number.parseInt(hex.slice(16, 17), 16) & 0x3) | 0x8).toString(16);
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-8${hex.slice(13, 16)}-${variant}${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+}
+
 function noteProblem(note: ConversionNote, itemId: string, sourceId: string): ProblemInput {
   const base = { sourceKind: "page", sourceId, itemId };
   switch (note.code) {
@@ -207,6 +214,11 @@ function noteProblem(note: ConversionNote, itemId: string, sourceId: string): Pr
       return { ...base, code: note.code, details: { element: note.element } };
     case "macroDataTruncated":
       return { ...base, code: note.code, details: { macro: note.macro } };
+    case "diagramFileMissing":
+      return { ...base, code: note.code, details: { macro: note.macro, name: note.name.slice(0, 255) } };
+    case "gliffyDiagram":
+    case "diagramPageMissing":
+      return { ...base, code: note.code, details: { name: note.name.slice(0, 255) } };
     case "unmappedQuery":
       return { ...base, code: note.code, details: { macro: note.macro, query: note.query.slice(0, 255) } };
     case "macroOptionDropped":
@@ -898,7 +910,10 @@ export class ImportPipeline {
                   ? (byTitle.get(reference.pageTitle.trim().toLocaleLowerCase("en")) ?? "")
                   : "";
             const id = attachments.get(`${page}/${fileNameKey(reference.fileName)}`);
-            return id ? { attachmentId: id, name: attachmentNames.get(id) ?? reference.fileName } : null;
+            const found = id ? attachmentNames.get(id) : undefined;
+            return id
+              ? { attachmentId: id, name: found?.name ?? reference.fileName, version: found?.version ?? 1 }
+              : null;
           },
           person: (reference) => {
             const sourceId = personKeys.get(`${reference.accountId ?? ""}\u0000${reference.userKey ?? ""}`);
@@ -910,6 +925,10 @@ export class ImportPipeline {
           template: (sourceId) => templates.get(sourceId) ?? null,
           spaceKey: sourceKey,
           newId: () => uuidv7(),
+          diagramId: (name, pageSourceId) => {
+            const page = pageSourceId ?? owner;
+            return page ? stableId(`drawio\u0000${page}\u0000${name}`) : uuidv7();
+          },
           ...(inlineComment ? { inlineComment } : {}),
           ...(variables.has(key) ? { templateVariables: variables.get(key) } : {}),
         };
@@ -1661,11 +1680,13 @@ export class ImportPipeline {
     return new Map(rows.rows.map((row) => [row.id, row.title]));
   }
 
-  async #attachmentNames(ids: readonly string[]): Promise<Map<string, string>> {
+  async #attachmentNames(ids: readonly string[]): Promise<Map<string, { name: string; version: number }>> {
     if (ids.length === 0) return new Map();
-    const rows = await this.#database.execute<{ id: string; name: string }>(sql`
-      select id, name from attachments where id = any(${sql.param([...new Set(ids)])}::uuid[])`);
-    return new Map(rows.rows.map((row) => [row.id, row.name]));
+    const rows = await this.#database.execute<{ id: string; name: string; number: number | null }>(sql`
+      select a.id, a.name, v.number from attachments a
+      left join attachment_versions v on v.id = a.current_version_id
+      where a.id = any(${sql.param([...new Set(ids)])}::uuid[])`);
+    return new Map(rows.rows.map((row) => [row.id, { name: row.name, version: Number(row.number ?? 1) }]));
   }
 
   async #writeDocument(

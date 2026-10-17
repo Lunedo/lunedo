@@ -20,7 +20,8 @@ FROM base AS build
 COPY . .
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm install --frozen-lockfile
-RUN pnpm turbo run build --filter=@pagehall/api --filter=@pagehall/collab --filter=@pagehall/worker --filter=@pagehall/web
+RUN --mount=type=cache,id=drawio,target=/repo/.cache/drawio \
+    pnpm turbo run build --filter=@pagehall/api --filter=@pagehall/collab --filter=@pagehall/worker --filter=@pagehall/web
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     for app in api collab worker; do \
       pnpm --filter="@pagehall/$app" deploy --prod "/out/$app" || exit 1; \

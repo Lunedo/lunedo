@@ -7,6 +7,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { CommentHighlights } from "../collaboration/comment-highlights.js";
 import { reportFilters, TaskReport } from "../collaboration/task-report.js";
+import { ReferencedDiagram } from "../diagrams/referenced-diagram.js";
 import { contentUrl } from "../files/attachments-api.js";
 import { useAttachmentPreview } from "../files/preview-host.js";
 import type { Formatter } from "../format/format.js";
@@ -82,6 +83,12 @@ export function readViewContext(
       file: t("editor.readView.file"),
       image: t("editor.readView.image"),
       drawing: t("editor.drawing.label"),
+      drawio: t("editor.drawio.label"),
+      drawioReference: t("editor.drawioReference.label"),
+      mermaid: t("editor.mermaid.label"),
+      plantuml: t("editor.plantuml.label"),
+      diagramSource: t("editor.diagram.source"),
+      diagramNotRendered: t("editor.diagram.notRendered", { name: "{name}" }),
       childPages: t("editor.childPages.title"),
       noChildPages: t("editor.childPages.empty"),
       attachmentList: t("editor.attachmentList.title"),
@@ -107,7 +114,7 @@ export function readViewContext(
       hiddenExcerpt: t("editor.excerpt.hiddenTitle"),
       includedPage: t("editor.include.pageTitle"),
       includedExcerpt: t("editor.include.excerptTitle"),
-      restrictedContent: t("editor.include.restricted"),
+      restrictedContent: t("editor.readView.restrictedContent"),
       includeLoop: t("editor.include.loop"),
       includeTooDeep: t("editor.include.tooDeep"),
       noExcerpt: t("editor.include.noExcerpt"),
@@ -200,6 +207,7 @@ export function PageReadView({
   const [labelLists, setLabelLists] = useState<HTMLElement[]>([]);
   const [relatedLabels, setRelatedLabels] = useState<HTMLElement[]>([]);
   const [includes, setIncludes] = useState<HTMLElement[]>([]);
+  const [diagramReferences, setDiagramReferences] = useState<HTMLElement[]>([]);
   const [selection, setSelection] = useState<{ anchor: TextAnchor; top: number; left: number } | null>(null);
   const { taskStatuses, canToggleTask, onToggleTask, openThreads = [], activeThread = null } = collaboration;
   const html = useMemo(() => {
@@ -233,6 +241,7 @@ export function PageReadView({
     setLabelLists(placeholders(".ph-content-by-label"));
     setRelatedLabels(placeholders(".ph-related-labels"));
     setIncludes(placeholders(".ph-include"));
+    setDiagramReferences(placeholders(".ph-diagram-reference"));
   }, [html]);
 
   useLayoutEffect(() => {
@@ -431,6 +440,17 @@ export function PageReadView({
             )}
             hostId={pageId}
             panel={element.dataset.panel === "true"}
+          />,
+          element,
+        ),
+      )}
+      {diagramReferences.map((element) =>
+        createPortal(
+          <ReferencedDiagram
+            pageId={element.dataset.pageId ?? null}
+            diagramId={element.dataset.diagramRef ?? null}
+            name={element.dataset.name ?? ""}
+            framed
           />,
           element,
         ),

@@ -98,6 +98,7 @@ export const problems = {
   invalidItem: { status: 400, title: "Files can only be attached to pages, blog posts and whiteboards" },
   invalidScene: { status: 400, title: "The drawing contains something Pagehall cannot store" },
   invalidDrawingImage: { status: 400, title: "The image of the drawing is not a valid SVG image" },
+  invalidDiagram: { status: 400, title: "The file is not a draw.io diagram Pagehall can store" },
   revisionNotStored: { status: 409, title: "The whiteboard has not been saved in this state yet" },
   invalidCover: { status: 400, title: "The cover must be an image attached to the post" },
   invalidFocus: { status: 400, title: "The focal point lies outside the image" },

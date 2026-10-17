@@ -20,6 +20,7 @@ import {
   type PageReportRequest,
   type PropertiesReport,
   type PropertiesReportRequest,
+  type ReferencedDiagram,
   type RelatedLabel,
   type RelatedLabelsRequest,
   type ReportedDecision,
@@ -43,6 +44,7 @@ import { signalDocumentChange, signalSpaceChange } from "./signals.js";
 import { publishedFor, spaceKeyFor, spaceNameFor, visibleItem } from "./visibility.js";
 
 export const LABEL_MAX_LENGTH = 100;
+export const MAX_REFERENCED_DIAGRAM_PAGES = 50;
 export const MAX_LABELS_PER_PAGE = 100;
 export const MERGE_ORIGIN = "pagehall:merge";
 export const API_ORIGIN = "pagehall:api";
@@ -136,6 +138,7 @@ const childPagesDefaults = { pageId: null, depth: null, sort: "tree", reverse: f
 
 export interface PageListings {
   childPages: ReadonlyMap<string, readonly ListedPage[]>;
+  diagrams?: ReadonlyMap<string, ReferencedDiagram>;
   attachments: readonly ListedAttachment[] | null;
   pageReports?: ReadonlyMap<string, readonly ReportedPage[]>;
   decisionReports?: ReadonlyMap<string, readonly ReportedDecision[]>;
@@ -162,6 +165,18 @@ export function childPagesKey(request: ChildPagesRequest): string {
   return JSON.stringify([request.pageId, request.depth, request.sort, request.reverse]);
 }
 
+export function diagramKey(pageId: string, diagramId: string): string {
+  return `${pageId}/${diagramId}`;
+}
+
+export function diagramReferences(document: DocumentJson): { pageId: string; diagramId: string }[] {
+  return blocksOfType(document, "drawioReference").flatMap((block) => {
+    const pageId = block.attrs?.pageId;
+    const diagramId = block.attrs?.diagramId;
+    return typeof pageId === "string" && typeof diagramId === "string" ? [{ pageId, diagramId }] : [];
+  });
+}
+
 export function blocksOfType(node: NodeJson, type: string): NodeJson[] {
   return [
     ...(node.type === type ? [node] : []),
@@ -184,6 +199,8 @@ export function renderPageMarkdown(
           childPages: (request: ChildPagesRequest) => listings.childPages.get(childPagesKey(request)) ?? [],
           attachmentList: () => listings.attachments,
           attachment: (id: string) => ({ href: `/api/v1/attachments/${id}/content` }),
+          diagramReference: (pageId: string, diagramId: string) =>
+            listings.diagrams?.get(diagramKey(pageId, diagramId)) ?? null,
           pageReport: (request: PageReportRequest) => listings.pageReports?.get(reportKey(request)) ?? [],
           decisionReport: (request: DecisionReportRequest) =>
             listings.decisionReports?.get(reportKey(request)) ?? [],
@@ -595,6 +612,58 @@ export class PageDocumentService {
         }),
       ),
     };
+  }
+
+  async referencedDiagram(
+    viewer: Principal,
+    pageId: string,
+    diagramId: string,
+  ): Promise<ReferencedDiagram | null> {
+    const found = await this.referencedDiagrams(viewer, {
+      type: "doc",
+      content: [{ type: "drawioReference", attrs: { pageId, diagramId } }],
+    });
+    return found.get(diagramKey(pageId, diagramId)) ?? null;
+  }
+
+  async referencedDiagrams(
+    viewer: Principal,
+    document: DocumentJson,
+  ): Promise<Map<string, ReferencedDiagram>> {
+    const wanted = diagramReferences(document);
+    const pageIds = [...new Set(wanted.map((reference) => reference.pageId))].slice(
+      0,
+      MAX_REFERENCED_DIAGRAM_PAGES,
+    );
+    const result = new Map<string, ReferencedDiagram>();
+    if (pageIds.length === 0) return result;
+    const pages = await this.#database.execute<{ id: string; kind: string; key: string }>(sql`
+      select t.id, t.kind::text as kind, s.key from tree_items t join spaces s on s.id = t.space_id
+      where t.id = any(${sql.param(pageIds)}::uuid[]) and t.kind in ('page', 'blogPost')
+        and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}`);
+    for (const page of pages.rows) {
+      const readable = await this.readable(page.id);
+      if (!readable) continue;
+      const href =
+        page.kind === "blogPost"
+          ? `/spaces/${encodeURIComponent(page.key)}/blog/${page.id}/${slugify(readable.title)}`
+          : pagePath(page.key, page.id, readable.title);
+      const diagrams = blocksOfType(readable.document, "drawio");
+      for (const reference of wanted) {
+        if (reference.pageId !== page.id) continue;
+        const block = diagrams.find((candidate) => candidate.attrs?.id === reference.diagramId);
+        const previewId = block?.attrs?.previewId;
+        const previewVersion = block?.attrs?.previewVersion;
+        result.set(diagramKey(reference.pageId, reference.diagramId), {
+          title: readable.title,
+          href,
+          found: block !== undefined,
+          previewId: typeof previewId === "string" ? previewId : null,
+          previewVersion: typeof previewVersion === "number" ? previewVersion : null,
+        });
+      }
+    }
+    return result;
   }
 
   async childPages(

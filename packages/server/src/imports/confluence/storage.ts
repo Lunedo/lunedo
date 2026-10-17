@@ -8,6 +8,7 @@ import {
   MAX_PLACEHOLDER_LENGTH,
   type MacroConverter,
   type MacroImportContext,
+  type MacroNote,
   type MarkJson,
   modules,
   type NodeJson,
@@ -31,6 +32,12 @@ export interface AttachmentReference {
   readonly spaceKey: string | null;
 }
 
+export interface FoundAttachment {
+  readonly attachmentId: string;
+  readonly name: string;
+  readonly version: number;
+}
+
 export interface PersonReference {
   readonly accountId: string | null;
   readonly userKey: string | null;
@@ -42,7 +49,7 @@ export type ResolvedPage =
 
 export interface StorageLookup {
   page(reference: PageReference): ResolvedPage;
-  attachment(reference: AttachmentReference): { readonly attachmentId: string; readonly name: string } | null;
+  attachment(reference: AttachmentReference): FoundAttachment | null;
   person(reference: PersonReference): string | null;
   space(spaceKey: string): string | null;
   spaceId?(spaceKey: string | null): string | null;
@@ -51,6 +58,7 @@ export interface StorageLookup {
   inlineComment?(ref: string): string | null;
   readonly spaceKey?: string;
   newId(): string;
+  diagramId?(name: string, pageSourceId: string | null): string;
 }
 
 export type ConversionNote =
@@ -63,14 +71,7 @@ export type ConversionNote =
   | { readonly code: "invalidContent"; readonly element: string }
   | { readonly code: "contentTruncated" }
   | { readonly code: "macroDataTruncated"; readonly macro: string }
-  | { readonly code: "unmappedQuery"; readonly macro: string; readonly query: string }
-  | { readonly code: "macroOptionDropped"; readonly macro: string; readonly option: string }
-  | {
-      readonly code: "unresolvedInclude";
-      readonly macro: string;
-      readonly title: string;
-      readonly spaceKey: string | null;
-    };
+  | MacroNote;
 
 export interface ConvertedTask {
   readonly id: string;
@@ -253,6 +254,9 @@ export function storageReferences(root: XmlNode): {
         if (/^\d{1,19}$/.test(sourceId)) pages.push({ title: null, spaceKey: null, sourceId });
       }
       for (const title of declared.pageTitles ?? []) pages.push({ title, spaceKey: null, sourceId: null });
+      for (const file of declared.files ?? []) {
+        attachments.push({ fileName: file.fileName, pageTitle: null, spaceKey: null });
+      }
     }
     if (!macro) {
       if (node.name === "ri:page") {
@@ -322,11 +326,11 @@ class Converter {
   notes: ConversionNote[] = [];
   tasks: ConvertedTask[] = [];
   readonly context: MacroImportContext;
+  readonly #diagrams = new Set<string>();
 
   constructor(private readonly lookup: StorageLookup) {
     this.context = {
       spaceKey: lookup.spaceKey ?? null,
-      note: (note) => this.note(note),
       blocks: (content) => this.blocks(content as (XmlNode | string)[]),
       inline: (content) => {
         const items = this.items(content as (XmlNode | string)[], []);
@@ -341,6 +345,17 @@ class Converter {
           pageTitle: target?.attributes["ri:content-title"] ?? null,
           spaceKey: target?.attributes["ri:space-key"] ?? null,
         });
+      },
+      file: (reference) =>
+        this.lookup.attachment({ fileName: reference.fileName, pageTitle: null, spaceKey: null }),
+      note: (note) => this.note(note),
+      newId: () => this.lookup.newId(),
+      diagramId: (name, pageSourceId) => {
+        const id = this.lookup.diagramId?.(name, pageSourceId) ?? this.lookup.newId();
+        if (pageSourceId !== null) return id;
+        if (this.#diagrams.has(id)) return this.lookup.newId();
+        this.#diagrams.add(id);
+        return id;
       },
       page: (reference, options) => {
         const resolved = this.lookup.page({

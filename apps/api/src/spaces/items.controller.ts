@@ -437,6 +437,7 @@ export class ItemsController {
             size,
           }))
         : null,
+      diagrams: await this.#services.documents.referencedDiagrams(actor, snapshot.document),
       ...(await this.#services.reports.forDocument(actor, snapshot.document, pageId)),
     };
     const merged = {

@@ -16,7 +16,7 @@ import { ConfluenceXmlReader } from "./confluence/xml-reader.js";
 import { ImportPipeline } from "./pipeline.js";
 import { ImportReaderRegistry } from "./source.js";
 import { createCsvExport, createXmlExport, type SyntheticExport } from "./testing/confluence-export.js";
-import { ALICE, BOB, largeExport, PAGE, STRANGER_ACCOUNT, syntheticExport } from "./testing/fixture.js";
+import { ALICE, BOB, largeExport, PAGE, PNG, STRANGER_ACCOUNT, syntheticExport } from "./testing/fixture.js";
 import { combinedDigest } from "./uploads.js";
 import { ImportWorker } from "./worker.js";
 
@@ -250,6 +250,113 @@ describe.skipIf(!baseUrl)("Confluence imports", () => {
     await drive(created.id);
     const result = await imports.get(as(admin), created.id);
     expect(result).toMatchObject({ state: "draft", errorCode: "wrongFormat" });
+  });
+
+  it("keeps draw.io, Gliffy, Mermaid and PlantUML diagrams and reports the fallbacks", async () => {
+    const base = syntheticExport();
+    const macro = (name: string, parameters: Record<string, string>, body = "") =>
+      `<ac:structured-macro ac:name="${name}" ac:schema-version="1">${Object.entries(parameters)
+        .map(([key, value]) => `<ac:parameter ac:name="${key}">${value}</ac:parameter>`)
+        .join("")}${body}</ac:structured-macro>`;
+    const plain = (text: string) => `<ac:plain-text-body><![CDATA[${text}]]></ac:plain-text-body>`;
+    const pages = [
+      ...base.pages.map((entry) =>
+        entry.id === PAGE.alpha
+          ? { ...entry, body: `${entry.body}${macro("drawio", { diagramName: "Shared" })}` }
+          : entry,
+      ),
+      {
+        id: "1950",
+        title: "Diagrams",
+        parentId: PAGE.home,
+        position: 9,
+        creatorKey: ALICE.key,
+        body: [
+          macro("drawio", { diagramName: "Network", revision: "2" }),
+          macro("drawio", { diagramName: "Lost" }),
+          macro("gliffy", { name: "Floor plan" }),
+          macro("inc-drawio", { diagramName: "Shared", pageId: PAGE.alpha }),
+          macro("inc-drawio", { diagramName: "Elsewhere", pageId: "99999" }),
+          macro("mermaid", {}, plain("flowchart LR\n  A[Router] --> B[Switch]")),
+          macro("plantuml", {}, plain("@startuml\nAlice -> Bob: Hello\n@enduml")),
+        ].join(""),
+      },
+    ];
+    const file = (pageId: string, fileName: string, id: string, data: string | Buffer, version = 1) => ({
+      pageId,
+      fileName,
+      versions: Array.from({ length: version }, (_, index) => ({
+        id: `${id}${index}`,
+        version: index + 1,
+        data,
+      })),
+    });
+    const attachments = [
+      ...base.attachments,
+      file("1950", "Network", "961", '<mxfile><diagram name="Page-1"><mxGraphModel/></diagram></mxfile>', 2),
+      file("1950", "Network.png", "962", PNG, 2),
+      file("1950", "Lost.png", "963", PNG),
+      file("1950", "Floor plan", "964", '{"contentType":"application/gliffy+json","stage":{}}'),
+      file("1950", "Floor plan.png", "965", PNG),
+      file(PAGE.alpha, "Shared", "966", "<mxfile/>"),
+      file(PAGE.alpha, "Shared.png", "967", PNG),
+    ];
+    const result = await imported({ ...base, pages, attachments }, { key: "SYDG", reviewers: [reviewer] });
+    expect(result.state).toBe("review");
+    const page = await itemFor(result.id, "1950");
+    const alpha = await itemFor(result.id, PAGE.alpha);
+    const blocks = nodes(await documentOf(page)).filter((node) =>
+      ["drawio", "drawioReference", "mermaid", "plantuml"].includes(node.type),
+    );
+    const files = await test.database.execute<{
+      id: string;
+      item_id: string;
+      name: string;
+      number: number;
+    }>(sql`
+      select a.id, a.item_id, a.name, v.number from attachments a join attachment_versions v on v.id = a.current_version_id
+      where a.item_id in (${page}, ${alpha})`);
+    const named = (name: string) => files.rows.find((row) => row.name === name);
+    expect(blocks.map((node) => node.type)).toEqual([
+      "drawio",
+      "drawio",
+      "drawio",
+      "drawioReference",
+      "drawioReference",
+      "mermaid",
+      "plantuml",
+    ]);
+    expect(blocks[0]?.attrs).toMatchObject({
+      sourceFormat: "drawio",
+      sourceId: named("Network")?.id,
+      sourceVersion: 2,
+      previewId: named("Network.png")?.id,
+      previewVersion: 2,
+    });
+    expect(blocks[1]?.attrs).toMatchObject({ sourceId: null, previewId: named("Lost.png")?.id });
+    expect(blocks[2]?.attrs).toMatchObject({
+      sourceFormat: "gliffy",
+      sourceId: named("Floor plan")?.id,
+      previewId: named("Floor plan.png")?.id,
+    });
+    const shared = nodes(await documentOf(alpha)).find((node) => node.type === "drawio");
+    expect(shared?.attrs).toMatchObject({
+      sourceId: named("Shared")?.id,
+      previewId: named("Shared.png")?.id,
+    });
+    expect(blocks[3]?.attrs).toMatchObject({ pageId: alpha, diagramId: shared?.attrs?.id, name: "Shared" });
+    expect(blocks[4]?.attrs).toMatchObject({ pageId: null, diagramId: null, name: "Elsewhere" });
+    expect(files.rows.filter((row) => row.item_id === page).map((row) => row.name)).not.toContain("Shared");
+    expect(blocks[5]?.attrs?.source).toBe("flowchart LR\n  A[Router] --> B[Switch]");
+    expect(blocks[6]?.attrs?.source).toBe("@startuml\nAlice -> Bob: Hello\n@enduml");
+    const report = await test.services.imports.report(as(admin), result.id);
+    const codes = Object.fromEntries(report.categories.map((row) => [row.code, row.count]));
+    expect(codes).toMatchObject({ diagramFileMissing: 1, gliffyDiagram: 1, diagramPageMissing: 1 });
+    expect(report.categories.find((row) => row.code === "diagramFileMissing")?.category).toBe("diagrams");
+    const macros = await test.services.imports.macros(as(admin), result.id);
+    expect(macros.map((entry) => entry.name)).not.toEqual(
+      expect.arrayContaining(["drawio", "gliffy", "inc-drawio", "mermaid", "plantuml"]),
+    );
   });
 
   it("imports the space, the page tree, content, attachments, labels and people into a quarantine space", async () => {

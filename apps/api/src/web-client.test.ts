@@ -15,6 +15,13 @@ beforeAll(async () => {
   writeFileSync(path.join(webRoot, "assets", "app-1234.js"), "console.log(1)");
   writeFileSync(path.join(webRoot, "preview.html"), "<!doctype html><title>Preview</title>");
   writeFileSync(path.join(webRoot, "print.html"), "<!doctype html><title>Print</title>");
+  writeFileSync(path.join(webRoot, "diagram.html"), "<!doctype html><title>Diagram</title>");
+  mkdirSync(path.join(webRoot, "drawio", "31.4.6", "js"), { recursive: true });
+  writeFileSync(
+    path.join(webRoot, "drawio", "31.4.6", "index.html"),
+    "<!doctype html><title>draw.io</title>",
+  );
+  writeFileSync(path.join(webRoot, "drawio", "31.4.6", "js", "app.min.js"), "var App = {};");
   app = await createTestApp({ webRoot });
 });
 
@@ -69,6 +76,34 @@ describe("web client", () => {
     expect(policy).toContain("frame-ancestors 'self'");
     expect(policy).toContain("img-src 'self' data: blob:");
     expect(response.headers["x-content-type-options"]).toBe("nosniff");
+  });
+
+  it("serves draw.io in a sandbox that may only reach the instance", async () => {
+    const page = await app.inject({ method: "GET", url: "/drawio/31.4.6/index.html?embed=1&proto=json" });
+    expect(page.statusCode).toBe(200);
+    const policy = String(page.headers["content-security-policy"]);
+    expect(policy).toMatch(/^sandbox allow-scripts allow-downloads;/);
+    expect(policy).not.toContain("allow-same-origin");
+    expect(policy).toContain("default-src 'none'");
+    expect(policy).toContain("connect-src 'self';");
+    expect(policy).toContain("script-src 'self';");
+    expect(policy).toContain("frame-src 'none'");
+    expect(policy).not.toMatch(/https?:|\*/);
+    const script = await app.inject({ method: "GET", url: "/drawio/31.4.6/js/app.min.js" });
+    expect(script.headers["access-control-allow-origin"]).toBe("*");
+    expect(script.headers["x-content-type-options"]).toBe("nosniff");
+    const missing = await app.inject({ method: "GET", url: "/drawio/31.4.6/js/missing.js" });
+    expect(missing.statusCode).toBe(404);
+    expect(missing.body).not.toContain("<title>Pagehall</title>");
+  });
+
+  it("renders text diagrams in a sandbox without any network access", async () => {
+    const response = await app.inject({ method: "GET", url: "/diagram.html" });
+    const policy = String(response.headers["content-security-policy"]);
+    expect(policy).toMatch(/^sandbox allow-scripts;/);
+    expect(policy).toContain("connect-src 'none'");
+    expect(policy).toContain("img-src data: blob:");
+    expect(policy).not.toContain("allow-same-origin");
   });
 
   it("keeps the health endpoints", async () => {
