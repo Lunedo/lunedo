@@ -10,6 +10,7 @@ import {
   Columns2,
   Columns3,
   Columns4,
+  FileInput,
   FilePlus,
   FileStack,
   Files,
@@ -38,7 +39,11 @@ import {
   Smile,
   SquareFunction,
   Table,
+  Table2,
+  TableProperties,
   Tag,
+  Tags,
+  TextQuote,
 } from "lucide-react";
 import { translateKey } from "../i18n/translate.js";
 import { editorActions } from "./actions.js";
@@ -46,6 +51,7 @@ import { pageScopeOf } from "./extensions/page-scope.js";
 import type { SuggestionItem } from "./extensions/suggestions.js";
 import { COLUMN_LAYOUTS } from "./nodes/block-views.js";
 import { openDrawingWhenInserted } from "./nodes/drawing-view.js";
+import { emptyProperty } from "./properties.js";
 
 export type SlashGroup = "text" | "lists" | "blocks" | "inline";
 
@@ -263,6 +269,110 @@ export const slashCommands: SlashCommandDefinition[] = [
         .deleteRange(range)
         .insertContent({ type: "decisionReport", attrs: { spaceId: pageScopeOf(editor) } })
         .run(),
+  },
+  {
+    id: "pageProperties",
+    group: "blocks",
+    icon: TableProperties,
+    labelKey: "editor.blocks.pageProperties",
+    descriptionKey: "editor.blocks.pagePropertiesDescription",
+    keywords: [
+      "page properties",
+      "properties",
+      "details",
+      "key value",
+      "seiteneigenschaften",
+      "eigenschaften",
+    ],
+    run: (editor, range) =>
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({
+          type: "pageProperties",
+          content: [emptyProperty(), emptyProperty()],
+        })
+        .run(),
+  },
+  {
+    id: "propertiesReport",
+    group: "blocks",
+    icon: Table2,
+    labelKey: "editor.blocks.propertiesReport",
+    descriptionKey: "editor.blocks.propertiesReportDescription",
+    keywords: ["page properties report", "details summary", "report", "eigenschaften", "bericht"],
+    run: (editor, range) => {
+      const spaceId = pageScopeOf(editor);
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({ type: "propertiesReport", attrs: { spaceIds: spaceId ? [spaceId] : [] } })
+        .run();
+    },
+  },
+  {
+    id: "contentByLabel",
+    group: "blocks",
+    icon: Tags,
+    labelKey: "editor.blocks.contentByLabel",
+    descriptionKey: "editor.blocks.contentByLabelDescription",
+    keywords: ["content by label", "labels", "tagged pages", "inhalte nach label", "labels"],
+    run: (editor, range) => {
+      const spaceId = pageScopeOf(editor);
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({ type: "contentByLabel", attrs: { spaceIds: spaceId ? [spaceId] : [] } })
+        .run();
+    },
+  },
+  {
+    id: "relatedLabels",
+    group: "blocks",
+    icon: Tag,
+    labelKey: "editor.blocks.relatedLabels",
+    descriptionKey: "editor.blocks.relatedLabelsDescription",
+    keywords: ["related labels", "labels", "verwandte labels"],
+    run: (editor, range) =>
+      editor.chain().focus().deleteRange(range).insertContent({ type: "relatedLabels" }).run(),
+  },
+  {
+    id: "excerpt",
+    group: "blocks",
+    icon: Quote,
+    labelKey: "editor.blocks.excerpt",
+    descriptionKey: "editor.blocks.excerptDescription",
+    keywords: ["excerpt", "summary", "reuse", "auszug", "zusammenfassung"],
+    run: (editor, range) =>
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({ type: "excerpt", content: [{ type: "paragraph" }] })
+        .run(),
+  },
+  {
+    id: "includeExcerpt",
+    group: "blocks",
+    icon: TextQuote,
+    labelKey: "editor.blocks.includeExcerpt",
+    descriptionKey: "editor.blocks.includeExcerptDescription",
+    keywords: ["excerpt include", "include", "reuse", "auszug einbinden", "einbinden"],
+    run: (editor, range) =>
+      editor.chain().focus().deleteRange(range).insertContent({ type: "includeExcerpt" }).run(),
+  },
+  {
+    id: "includePage",
+    group: "blocks",
+    icon: FileInput,
+    labelKey: "editor.blocks.includePage",
+    descriptionKey: "editor.blocks.includePageDescription",
+    keywords: ["include page", "include", "reuse", "seite einbinden", "einbinden"],
+    run: (editor, range) =>
+      editor.chain().focus().deleteRange(range).insertContent({ type: "includePage" }).run(),
   },
   {
     id: "templateButton",

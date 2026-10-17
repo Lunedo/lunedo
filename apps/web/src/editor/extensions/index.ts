@@ -10,6 +10,8 @@ import { User } from "lucide-react";
 import type { ComponentType } from "react";
 import type * as Y from "yjs";
 import { translateKey } from "../../i18n/translate.js";
+import { ExcerptView, IncludeView } from "../includes.js";
+import { ContentByLabelView, RelatedLabelsView } from "../label-blocks.js";
 import { AttachmentListView, ChildPagesView } from "../listings.js";
 import {
   AttachmentView,
@@ -37,8 +39,10 @@ import { DecisionView, TopicUpdateView } from "../nodes/meeting-views.js";
 import { TaskItemView } from "../nodes/task-item-view.js";
 import { TaskReportView } from "../nodes/task-report-view.js";
 import { hiddenCaret, type PresenceUser, selectionAttributes } from "../presence.js";
+import { PagePropertiesView, PagePropertyView, PropertiesReportView } from "../properties.js";
 import { searchPeople } from "../references.js";
 import { DecisionReportView, PageReportView } from "../reports.js";
+import { RoadmapView } from "../roadmap-view.js";
 import { schemaExtensions } from "../schema/extensions.js";
 import { slashSuggestionItems } from "../slash-items.js";
 import { TemplateButtonView } from "../template-button.js";
@@ -50,6 +54,7 @@ import { SchemaGuard } from "./guard.js";
 import { PageScope } from "./page-scope.js";
 import { CleanPaste } from "./paste.js";
 import { TemplatePlaceholders } from "./placeholders.js";
+import { PropertyNavigation } from "./property-navigation.js";
 import { PageLinkSuggestion, SlashCommand, type SuggestionItem, suggestionRender } from "./suggestions.js";
 import { TaskIds } from "./task-ids.js";
 
@@ -82,6 +87,15 @@ const BLOCK_VIEWS: Record<string, ComponentType<ReactNodeViewProps>> = {
   attachmentList: AttachmentListView,
   pageReport: PageReportView,
   decisionReport: DecisionReportView,
+  propertiesReport: PropertiesReportView,
+  contentByLabel: ContentByLabelView,
+  relatedLabels: RelatedLabelsView,
+  includeExcerpt: IncludeView,
+  includePage: IncludeView,
+  roadmap: RoadmapView,
+  pageProperties: PagePropertiesView,
+  pageProperty: PagePropertyView,
+  excerpt: ExcerptView,
   templateButton: TemplateButtonView,
   topicUpdate: TopicUpdateView,
   decision: DecisionView,
@@ -192,6 +206,7 @@ export function createEditorExtensions(options: EditorExtensionOptions): AnyExte
     FileDrop.configure({ onFiles: options.onFiles ?? null }),
     CleanPaste,
     TaskIds,
+    PropertyNavigation,
     PageScope.configure({ spaceId: options.spaceId }),
     SchemaGuard,
     TemplatePlaceholders,

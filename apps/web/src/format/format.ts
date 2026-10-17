@@ -24,6 +24,7 @@ export interface Formatter {
   date(value: Date | string): string;
   time(value: Date | string): string;
   dateTime(value: Date | string): string;
+  month(value: Date | string): string;
   relative(value: Date | string, now?: Date): string;
   number(value: number): string;
   percent(value: number): string;
@@ -43,6 +44,11 @@ export function createFormatter(settings: FormatSettings): Formatter {
     minute: "2-digit",
     hour12: settings.timeFormat === "12h",
   });
+  const monthFormatter = new Intl.DateTimeFormat(settings.language, {
+    timeZone: "UTC",
+    month: "short",
+    year: "numeric",
+  });
   const numbers = new Intl.NumberFormat(numberLocale);
   const percent = new Intl.NumberFormat(numberLocale, { style: "percent", maximumFractionDigits: 2 });
   const relative = new Intl.RelativeTimeFormat(settings.language, { numeric: "auto" });
@@ -56,6 +62,7 @@ export function createFormatter(settings: FormatSettings): Formatter {
     date,
     time,
     dateTime: (value) => `${date(value)}, ${time(value)}`,
+    month: (value) => monthFormatter.format(toDate(value)),
     relative(value, now = new Date()) {
       const seconds = Math.round((toDate(value).getTime() - now.getTime()) / 1000);
       const absolute = Math.abs(seconds);

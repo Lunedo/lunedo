@@ -35,6 +35,13 @@ describe("slash commands", () => {
       "pageLink",
       "emoji",
       "drawing",
+      "pageProperties",
+      "propertiesReport",
+      "contentByLabel",
+      "relatedLabels",
+      "excerpt",
+      "includeExcerpt",
+      "includePage",
     ]) {
       expect(ids).toContain(id);
     }
