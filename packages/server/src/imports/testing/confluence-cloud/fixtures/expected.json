@@ -1,0 +1,1795 @@
+{
+  "site": "https://example.atlassian.net",
+  "accounts": [
+    {
+      "role": "admin",
+      "displayName": "Test User 1",
+      "accountId": "712020:00000000-0000-4000-8000-000000000001",
+      "email": "user1@example.org"
+    },
+    {
+      "role": "user2",
+      "displayName": "Test User 2",
+      "accountId": "712020:00000000-0000-4000-8000-000000000002",
+      "email": "user2@example.org"
+    },
+    {
+      "role": "user3",
+      "displayName": "Test User 3",
+      "accountId": "712020:00000000-0000-4000-8000-000000000003",
+      "email": "user3@example.org"
+    }
+  ],
+  "spaces": {
+    "PHKB": {
+      "pages": 12,
+      "liveDocs": 0,
+      "archivedPages": 0,
+      "trashedPages": 0,
+      "blogPosts": 1,
+      "folders": 0,
+      "whiteboards": 0,
+      "databases": 0,
+      "smartLinks": 0,
+      "versions": 19,
+      "pageComments": 2,
+      "inlineComments": {
+        "open": 1,
+        "resolved": 1
+      },
+      "attachments": 0,
+      "attachmentVersions": 0,
+      "attachmentKiB": 0,
+      "labels": {
+        "distinct": 13,
+        "assignments": 21
+      },
+      "viewRestrictedPages": 0,
+      "editRestrictedPages": 0,
+      "templates": 1
+    },
+    "PHPROJ": {
+      "pages": 25,
+      "liveDocs": 1,
+      "archivedPages": 0,
+      "trashedPages": 0,
+      "blogPosts": 2,
+      "folders": 2,
+      "whiteboards": 1,
+      "databases": 1,
+      "smartLinks": 0,
+      "versions": 42,
+      "pageComments": 2,
+      "inlineComments": {
+        "open": 0,
+        "resolved": 0
+      },
+      "attachments": 5,
+      "attachmentVersions": 5,
+      "attachmentKiB": 59,
+      "labels": {
+        "distinct": 6,
+        "assignments": 11
+      },
+      "viewRestrictedPages": 0,
+      "editRestrictedPages": 0,
+      "templates": 0
+    },
+    "PHGF": {
+      "pages": 3,
+      "liveDocs": 0,
+      "archivedPages": 0,
+      "trashedPages": 0,
+      "blogPosts": 0,
+      "folders": 0,
+      "whiteboards": 0,
+      "databases": 0,
+      "smartLinks": 0,
+      "versions": 4,
+      "pageComments": 1,
+      "inlineComments": {
+        "open": 0,
+        "resolved": 0
+      },
+      "attachments": 1,
+      "attachmentVersions": 1,
+      "attachmentKiB": 2,
+      "labels": {
+        "distinct": 2,
+        "assignments": 2
+      },
+      "viewRestrictedPages": 0,
+      "editRestrictedPages": 0,
+      "templates": 0
+    },
+    "PHEDGE": {
+      "pages": 26,
+      "liveDocs": 1,
+      "archivedPages": 0,
+      "trashedPages": 0,
+      "blogPosts": 0,
+      "folders": 1,
+      "whiteboards": 1,
+      "databases": 1,
+      "smartLinks": 1,
+      "versions": 44,
+      "pageComments": 2,
+      "inlineComments": {
+        "open": 1,
+        "resolved": 0
+      },
+      "attachments": 213,
+      "attachmentVersions": 213,
+      "attachmentKiB": 142,
+      "labels": {
+        "distinct": 1,
+        "assignments": 6
+      },
+      "viewRestrictedPages": 0,
+      "editRestrictedPages": 0,
+      "templates": 0
+    },
+    "PHIT": {
+      "pages": 31,
+      "liveDocs": 0,
+      "archivedPages": 1,
+      "trashedPages": 1,
+      "blogPosts": 3,
+      "folders": 0,
+      "whiteboards": 0,
+      "databases": 0,
+      "smartLinks": 0,
+      "versions": 51,
+      "pageComments": 3,
+      "inlineComments": {
+        "open": 1,
+        "resolved": 1
+      },
+      "attachments": 28,
+      "attachmentVersions": 32,
+      "attachmentKiB": 243,
+      "labels": {
+        "distinct": 14,
+        "assignments": 26
+      },
+      "viewRestrictedPages": 3,
+      "editRestrictedPages": 1,
+      "templates": 1
+    }
+  },
+  "restrictions": [
+    {
+      "space": "PHIT",
+      "view": [
+        "Freigabe nur für Test User 3",
+        "Personalplanung IT",
+        "Zugangsdaten Infrastruktur (eingeschränkt)"
+      ],
+      "edit": [
+        "Firewall-Regeln"
+      ]
+    }
+  ],
+  "macros": {
+    "adf-extension": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Aufgaben, Entscheidungen und Eigenschaften"
+      },
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Panels, Text und Layout"
+      },
+      {
+        "space": "PHGF",
+        "title": "Strategie-Klausur 2026"
+      },
+      {
+        "space": "PHIT",
+        "title": "Jour fixe IT 2026-09-15"
+      },
+      {
+        "space": "PHIT",
+        "title": "Jour fixe IT 2026-09-29"
+      },
+      {
+        "space": "PHIT",
+        "title": "Jour fixe IT 2026-10-13"
+      },
+      {
+        "space": "PHIT",
+        "title": "Jour fixe IT 2026-10-27 (Editor)"
+      },
+      {
+        "space": "PHIT",
+        "title": "Netzwerkplan (draw.io)"
+      },
+      {
+        "space": "PHIT",
+        "title": "Onboarding-Ablauf (draw.io)"
+      },
+      {
+        "space": "PHIT",
+        "title": "Rack-Belegung (Gliffy)"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Architektur (draw.io)"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Bestellprozess (Gliffy)"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Meilensteine und Jira-Tickets"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Netzwerkplan (eingebunden)"
+      }
+    ],
+    "adf-panel": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Panels, Text und Layout"
+      }
+    ],
+    "align": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Inhaltsformatierung (Altbestand)"
+      }
+    ],
+    "anchor": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Panels, Text und Layout"
+      },
+      {
+        "space": "PHKB",
+        "title": "Glossar"
+      }
+    ],
+    "anchor-link": [
+      {
+        "space": "PHEDGE",
+        "title": "Links zwischen Seiten und Bereichen"
+      },
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Panels, Text und Layout"
+      },
+      {
+        "space": "PHKB",
+        "title": "Glossar"
+      },
+      {
+        "space": "PHKB",
+        "title": "Häufige Fragen"
+      },
+      {
+        "space": "PHKB",
+        "title": "MFA-Gerät verloren"
+      },
+      {
+        "space": "PHKB",
+        "title": "Netzlaufwerk fehlt nach Anmeldung"
+      },
+      {
+        "space": "PHKB",
+        "title": "Outlook startet nur im abgesicherten Modus"
+      },
+      {
+        "space": "PHKB",
+        "title": "Printer shows offline"
+      },
+      {
+        "space": "PHKB",
+        "title": "Teams audio not working"
+      },
+      {
+        "space": "PHKB",
+        "title": "VPN-Verbindung bricht ab"
+      }
+    ],
+    "app:drawio": [
+      {
+        "space": "PHIT",
+        "title": "Onboarding-Ablauf (draw.io)"
+      }
+    ],
+    "app:drawio-sketch": [
+      {
+        "space": "PHIT",
+        "title": "Netzwerkplan (draw.io)"
+      },
+      {
+        "space": "PHIT",
+        "title": "Onboarding-Ablauf (draw.io)"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Architektur (draw.io)"
+      }
+    ],
+    "app:gliffy": [
+      {
+        "space": "PHIT",
+        "title": "Rack-Belegung (Gliffy)"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Bestellprozess (Gliffy)"
+      }
+    ],
+    "app:inc-drawio": [
+      {
+        "space": "PHPROJ",
+        "title": "Netzwerkplan (eingebunden)"
+      }
+    ],
+    "attachments": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Dateien und Medien"
+      },
+      {
+        "space": "PHEDGE",
+        "title": "Seite mit 200 Anhängen"
+      },
+      {
+        "space": "PHIT",
+        "title": "Bilder und Logos"
+      },
+      {
+        "space": "PHIT",
+        "title": "Dokumente und Dateien"
+      }
+    ],
+    "bgcolor": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Inhaltsformatierung (Altbestand)"
+      }
+    ],
+    "blog-posts": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Navigation, Listen und Berichte"
+      }
+    ],
+    "calendar": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Einbinden, Vorlagen und Jira"
+      }
+    ],
+    "card": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Einbinden, Vorlagen und Jira"
+      }
+    ],
+    "center": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Inhaltsformatierung (Altbestand)"
+      }
+    ],
+    "change-history": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Navigation, Listen und Berichte"
+      }
+    ],
+    "chart": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Aufgaben, Entscheidungen und Eigenschaften"
+      }
+    ],
+    "cheese": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Panels, Text und Layout"
+      }
+    ],
+    "children": [
+      {
+        "space": "PHEDGE",
+        "title": "Makro-Referenz"
+      },
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Navigation, Listen und Berichte"
+      },
+      {
+        "space": "PHEDGE",
+        "title": "Nur ein Makro"
+      },
+      {
+        "space": "PHEDGE",
+        "title": "Sonderfälle"
+      },
+      {
+        "space": "PHGF",
+        "title": "Geschäftsführung"
+      },
+      {
+        "space": "PHIT",
+        "title": "IT-Team – Startseite"
+      },
+      {
+        "space": "PHIT",
+        "title": "Jour fixe"
+      },
+      {
+        "space": "PHIT",
+        "title": "Netzwerk"
+      },
+      {
+        "space": "PHIT",
+        "title": "Onboarding"
+      },
+      {
+        "space": "PHIT",
+        "title": "Zugangsdaten Infrastruktur (eingeschränkt)"
+      },
+      {
+        "space": "PHKB",
+        "title": "Artikel"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Adressen mit Postfach"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Anforderungen Schnittstellen"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Arbeitspaket 1.1 Anforderungen"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Feldzuordnung Kunden"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Phase 1 – Konzeption"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Schnittstelle ERP"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Sonderfälle Adressen"
+      }
+    ],
+    "clickable": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Inhaltsformatierung (Altbestand)"
+      }
+    ],
+    "code": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Panels, Text und Layout"
+      },
+      {
+        "space": "PHIT",
+        "title": "Firewall-Regeln"
+      }
+    ],
+    "colgroup": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Inhaltsformatierung (Altbestand)"
+      }
+    ],
+    "column": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Panels, Text und Layout"
+      }
+    ],
+    "content-by-user": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Navigation, Listen und Berichte"
+      }
+    ],
+    "content-report-table": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Navigation, Listen und Berichte"
+      }
+    ],
+    "contentbylabel": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Navigation, Listen und Berichte"
+      },
+      {
+        "space": "PHIT",
+        "title": "How-tos"
+      },
+      {
+        "space": "PHIT",
+        "title": "IT-Team – Startseite"
+      },
+      {
+        "space": "PHKB",
+        "title": "Zusammenfassungen"
+      }
+    ],
+    "contributors": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Navigation, Listen und Berichte"
+      }
+    ],
+    "contributors-summary": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Navigation, Listen und Berichte"
+      }
+    ],
+    "copyright": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Inhaltsformatierung (Altbestand)"
+      }
+    ],
+    "create-from-template": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Einbinden, Vorlagen und Jira"
+      },
+      {
+        "space": "PHIT",
+        "title": "IT-Team – Startseite"
+      },
+      {
+        "space": "PHIT",
+        "title": "Jour fixe"
+      },
+      {
+        "space": "PHKB",
+        "title": "Wissensdatenbank"
+      }
+    ],
+    "create-space-button": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Navigation, Listen und Berichte"
+      }
+    ],
+    "date": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Aufgaben, Entscheidungen und Eigenschaften"
+      },
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Panels, Text und Layout"
+      },
+      {
+        "space": "PHGF",
+        "title": "Strategie-Klausur 2026"
+      },
+      {
+        "space": "PHIT",
+        "title": "Checkliste erster Arbeitstag"
+      },
+      {
+        "space": "PHIT",
+        "title": "Jour fixe IT 2026-09-15"
+      },
+      {
+        "space": "PHIT",
+        "title": "Jour fixe IT 2026-09-29"
+      },
+      {
+        "space": "PHIT",
+        "title": "Jour fixe IT 2026-10-13"
+      },
+      {
+        "space": "PHIT",
+        "title": "Jour fixe IT 2026-10-27 (Editor)"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Meilensteine und Jira-Tickets"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Projektstatus"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Statusbericht Oktober"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Statusbericht September"
+      }
+    ],
+    "decisionreport": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Aufgaben, Entscheidungen und Eigenschaften"
+      },
+      {
+        "space": "PHIT",
+        "title": "Aufgaben und Entscheidungen"
+      }
+    ],
+    "decisions": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Aufgaben, Entscheidungen und Eigenschaften"
+      },
+      {
+        "space": "PHGF",
+        "title": "Strategie-Klausur 2026"
+      },
+      {
+        "space": "PHIT",
+        "title": "Jour fixe IT 2026-09-15"
+      },
+      {
+        "space": "PHIT",
+        "title": "Jour fixe IT 2026-09-29"
+      },
+      {
+        "space": "PHIT",
+        "title": "Jour fixe IT 2026-10-13"
+      },
+      {
+        "space": "PHIT",
+        "title": "Jour fixe IT 2026-10-27 (Editor)"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Meilensteine und Jira-Tickets"
+      }
+    ],
+    "deck": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Einbinden, Vorlagen und Jira"
+      }
+    ],
+    "details": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Aufgaben, Entscheidungen und Eigenschaften"
+      },
+      {
+        "space": "PHGF",
+        "title": "Budget 2027"
+      },
+      {
+        "space": "PHIT",
+        "title": "Jour fixe IT 2026-09-15"
+      },
+      {
+        "space": "PHIT",
+        "title": "Jour fixe IT 2026-09-29"
+      },
+      {
+        "space": "PHIT",
+        "title": "Jour fixe IT 2026-10-13"
+      },
+      {
+        "space": "PHKB",
+        "title": "MFA-Gerät verloren"
+      },
+      {
+        "space": "PHKB",
+        "title": "Netzlaufwerk fehlt nach Anmeldung"
+      },
+      {
+        "space": "PHKB",
+        "title": "Outlook startet nur im abgesicherten Modus"
+      },
+      {
+        "space": "PHKB",
+        "title": "Printer shows offline"
+      },
+      {
+        "space": "PHKB",
+        "title": "Teams audio not working"
+      },
+      {
+        "space": "PHKB",
+        "title": "VPN-Verbindung bricht ab"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Projektstatus"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Statusbericht Oktober"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Statusbericht September"
+      }
+    ],
+    "detailssummary": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Aufgaben, Entscheidungen und Eigenschaften"
+      },
+      {
+        "space": "PHIT",
+        "title": "Aufgaben und Entscheidungen"
+      },
+      {
+        "space": "PHKB",
+        "title": "Wissensdatenbank"
+      },
+      {
+        "space": "PHKB",
+        "title": "Zusammenfassungen"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Projekt Phoenix"
+      }
+    ],
+    "div": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Inhaltsformatierung (Altbestand)"
+      }
+    ],
+    "emoticon": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Panels, Text und Layout"
+      },
+      {
+        "space": "PHIT",
+        "title": "Jour fixe IT 2026-10-27 (Editor)"
+      }
+    ],
+    "excerpt": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Einbinden, Vorlagen und Jira"
+      },
+      {
+        "space": "PHIT",
+        "title": "How-to: Drucker verbinden"
+      },
+      {
+        "space": "PHIT",
+        "title": "How-to: Set up multi-factor authentication"
+      },
+      {
+        "space": "PHIT",
+        "title": "How-to: VPN einrichten"
+      },
+      {
+        "space": "PHKB",
+        "title": "MFA-Gerät verloren"
+      },
+      {
+        "space": "PHKB",
+        "title": "Netzlaufwerk fehlt nach Anmeldung"
+      },
+      {
+        "space": "PHKB",
+        "title": "Outlook startet nur im abgesicherten Modus"
+      },
+      {
+        "space": "PHKB",
+        "title": "Printer shows offline"
+      },
+      {
+        "space": "PHKB",
+        "title": "Teams audio not working"
+      },
+      {
+        "space": "PHKB",
+        "title": "VPN-Verbindung bricht ab"
+      }
+    ],
+    "excerpt-include": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Einbinden, Vorlagen und Jira"
+      },
+      {
+        "space": "PHEDGE",
+        "title": "Seite bindet sich selbst ein"
+      },
+      {
+        "space": "PHKB",
+        "title": "Zusammenfassungen"
+      }
+    ],
+    "expand": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Panels, Text und Layout"
+      },
+      {
+        "space": "PHIT",
+        "title": "Jour fixe IT 2026-10-27 (Editor)"
+      },
+      {
+        "space": "PHIT",
+        "title": "WLAN und Gastzugang"
+      },
+      {
+        "space": "PHKB",
+        "title": "Häufige Fragen"
+      }
+    ],
+    "fancy-bullets": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Inhaltsformatierung (Altbestand)"
+      }
+    ],
+    "favpages": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Navigation, Listen und Berichte"
+      }
+    ],
+    "gadget": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Einbinden, Vorlagen und Jira"
+      }
+    ],
+    "gallery": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Dateien und Medien"
+      },
+      {
+        "space": "PHIT",
+        "title": "Bilder und Logos"
+      }
+    ],
+    "global-reports": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Navigation, Listen und Berichte"
+      }
+    ],
+    "highlight": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Inhaltsformatierung (Altbestand)"
+      }
+    ],
+    "htmlcomment": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Inhaltsformatierung (Altbestand)"
+      }
+    ],
+    "iframe": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Dateien und Medien"
+      }
+    ],
+    "image": [
+      {
+        "space": "PHEDGE",
+        "title": "Links zwischen Seiten und Bereichen"
+      },
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Dateien und Medien"
+      },
+      {
+        "space": "PHEDGE",
+        "title": "Seite mit 200 Anhängen"
+      },
+      {
+        "space": "PHIT",
+        "title": "Dokumente und Dateien"
+      },
+      {
+        "space": "PHIT",
+        "title": "IT-Team – Startseite"
+      },
+      {
+        "space": "PHIT",
+        "title": "Neue Firewall ist live"
+      },
+      {
+        "space": "PHIT",
+        "title": "Onboarding"
+      },
+      {
+        "space": "PHKB",
+        "title": "VPN-Verbindung bricht ab"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Projekt Phoenix"
+      }
+    ],
+    "img": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Dateien und Medien"
+      }
+    ],
+    "include": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Einbinden, Vorlagen und Jira"
+      },
+      {
+        "space": "PHEDGE",
+        "title": "Seite bindet sich selbst ein"
+      },
+      {
+        "space": "PHEDGE",
+        "title": "Zyklus A"
+      },
+      {
+        "space": "PHEDGE",
+        "title": "Zyklus B"
+      }
+    ],
+    "index": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Navigation, Listen und Berichte"
+      }
+    ],
+    "info": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Panels, Text und Layout"
+      },
+      {
+        "space": "PHIT",
+        "title": "IT-Team – Startseite"
+      }
+    ],
+    "jira": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Einbinden, Vorlagen und Jira"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Meilensteine und Jira-Tickets"
+      }
+    ],
+    "jirachart": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Einbinden, Vorlagen und Jira"
+      }
+    ],
+    "jiraissues": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Einbinden, Vorlagen und Jira"
+      }
+    ],
+    "layout": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Panels, Text und Layout"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Projekt Phoenix"
+      }
+    ],
+    "li": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Inhaltsformatierung (Altbestand)"
+      }
+    ],
+    "listlabels": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Navigation, Listen und Berichte"
+      }
+    ],
+    "livesearch": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Navigation, Listen und Berichte"
+      },
+      {
+        "space": "PHKB",
+        "title": "Wissensdatenbank"
+      }
+    ],
+    "loremipsum": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Panels, Text und Layout"
+      }
+    ],
+    "lozenge": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Inhaltsformatierung (Altbestand)"
+      }
+    ],
+    "mention": [
+      {
+        "space": "PHEDGE",
+        "title": "Links zwischen Seiten und Bereichen"
+      },
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Aufgaben, Entscheidungen und Eigenschaften"
+      },
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Panels, Text und Layout"
+      },
+      {
+        "space": "PHGF",
+        "title": "Strategie-Klausur 2026"
+      },
+      {
+        "space": "PHIT",
+        "title": "Checkliste erster Arbeitstag"
+      },
+      {
+        "space": "PHIT",
+        "title": "IT-Team – Startseite"
+      },
+      {
+        "space": "PHIT",
+        "title": "Jour fixe IT 2026-09-15"
+      },
+      {
+        "space": "PHIT",
+        "title": "Jour fixe IT 2026-09-29"
+      },
+      {
+        "space": "PHIT",
+        "title": "Jour fixe IT 2026-10-13"
+      },
+      {
+        "space": "PHIT",
+        "title": "Jour fixe IT 2026-10-27 (Editor)"
+      },
+      {
+        "space": "PHIT",
+        "title": "Neue Firewall ist live"
+      },
+      {
+        "space": "PHIT",
+        "title": "Welcome to our new colleagues"
+      },
+      {
+        "space": "PHKB",
+        "title": "MFA-Gerät verloren"
+      },
+      {
+        "space": "PHKB",
+        "title": "Netzlaufwerk fehlt nach Anmeldung"
+      },
+      {
+        "space": "PHKB",
+        "title": "Outlook startet nur im abgesicherten Modus"
+      },
+      {
+        "space": "PHKB",
+        "title": "Printer shows offline"
+      },
+      {
+        "space": "PHKB",
+        "title": "Teams audio not working"
+      },
+      {
+        "space": "PHKB",
+        "title": "VPN-Verbindung bricht ab"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Meilensteine und Jira-Tickets"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Projekt Phoenix"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Projektstatus"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Risiken und Maßnahmen"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Statusbericht Oktober"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Statusbericht September"
+      }
+    ],
+    "multimedia": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Dateien und Medien"
+      },
+      {
+        "space": "PHIT",
+        "title": "Dokumente und Dateien"
+      }
+    ],
+    "navmap": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Navigation, Listen und Berichte"
+      }
+    ],
+    "network": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Navigation, Listen und Berichte"
+      }
+    ],
+    "noformat": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Panels, Text und Layout"
+      }
+    ],
+    "note": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Panels, Text und Layout"
+      },
+      {
+        "space": "PHGF",
+        "title": "Geschäftsführung"
+      },
+      {
+        "space": "PHIT",
+        "title": "Zugangsdaten Infrastruktur (eingeschränkt)"
+      }
+    ],
+    "ol": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Inhaltsformatierung (Altbestand)"
+      }
+    ],
+    "p": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Inhaltsformatierung (Altbestand)"
+      }
+    ],
+    "pagetree": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Navigation, Listen und Berichte"
+      },
+      {
+        "space": "PHEDGE",
+        "title": "Sonderfälle und Makros"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Projekt Phoenix"
+      }
+    ],
+    "pagetreesearch": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Navigation, Listen und Berichte"
+      }
+    ],
+    "panel": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Panels, Text und Layout"
+      },
+      {
+        "space": "PHIT",
+        "title": "Jour fixe IT 2026-10-27 (Editor)"
+      }
+    ],
+    "popular-labels": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Navigation, Listen und Berichte"
+      },
+      {
+        "space": "PHKB",
+        "title": "Wissensdatenbank"
+      }
+    ],
+    "portfolioforjiraplan": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Einbinden, Vorlagen und Jira"
+      }
+    ],
+    "pre": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Inhaltsformatierung (Altbestand)"
+      }
+    ],
+    "privacy-mark": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Inhaltsformatierung (Altbestand)"
+      }
+    ],
+    "privacy-policy": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Inhaltsformatierung (Altbestand)"
+      }
+    ],
+    "profile": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Navigation, Listen und Berichte"
+      }
+    ],
+    "profile-picture": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Navigation, Listen und Berichte"
+      }
+    ],
+    "questionslist-macro-native": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Einbinden, Vorlagen und Jira"
+      }
+    ],
+    "recently-updated": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Navigation, Listen und Berichte"
+      },
+      {
+        "space": "PHIT",
+        "title": "IT-Team – Startseite"
+      }
+    ],
+    "recently-updated-dashboard": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Navigation, Listen und Berichte"
+      }
+    ],
+    "recently-used-labels": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Navigation, Listen und Berichte"
+      }
+    ],
+    "reg-tm": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Inhaltsformatierung (Altbestand)"
+      }
+    ],
+    "related-labels": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Navigation, Listen und Berichte"
+      },
+      {
+        "space": "PHKB",
+        "title": "MFA-Gerät verloren"
+      },
+      {
+        "space": "PHKB",
+        "title": "Netzlaufwerk fehlt nach Anmeldung"
+      },
+      {
+        "space": "PHKB",
+        "title": "Outlook startet nur im abgesicherten Modus"
+      },
+      {
+        "space": "PHKB",
+        "title": "Printer shows offline"
+      },
+      {
+        "space": "PHKB",
+        "title": "Teams audio not working"
+      }
+    ],
+    "roadmap": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Einbinden, Vorlagen und Jira"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Roadmap 2026/27"
+      }
+    ],
+    "roundrect": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Inhaltsformatierung (Altbestand)"
+      }
+    ],
+    "search": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Navigation, Listen und Berichte"
+      }
+    ],
+    "search-box": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Navigation, Listen und Berichte"
+      }
+    ],
+    "section": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Panels, Text und Layout"
+      }
+    ],
+    "sharelinks-urlmacro": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Einbinden, Vorlagen und Jira"
+      }
+    ],
+    "sm": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Inhaltsformatierung (Altbestand)"
+      }
+    ],
+    "space-attachments": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Dateien und Medien"
+      }
+    ],
+    "space-details": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Navigation, Listen und Berichte"
+      }
+    ],
+    "spaces": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Navigation, Listen und Berichte"
+      }
+    ],
+    "span": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Inhaltsformatierung (Altbestand)"
+      }
+    ],
+    "status": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Aufgaben, Entscheidungen und Eigenschaften"
+      },
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Panels, Text und Layout"
+      },
+      {
+        "space": "PHIT",
+        "title": "Firewall-Regeln"
+      },
+      {
+        "space": "PHIT",
+        "title": "Jour fixe IT 2026-09-15"
+      },
+      {
+        "space": "PHIT",
+        "title": "Jour fixe IT 2026-09-29"
+      },
+      {
+        "space": "PHIT",
+        "title": "Jour fixe IT 2026-10-13"
+      },
+      {
+        "space": "PHIT",
+        "title": "Jour fixe IT 2026-10-27 (Editor)"
+      },
+      {
+        "space": "PHIT",
+        "title": "VLAN-Übersicht"
+      },
+      {
+        "space": "PHKB",
+        "title": "MFA-Gerät verloren"
+      },
+      {
+        "space": "PHKB",
+        "title": "Netzlaufwerk fehlt nach Anmeldung"
+      },
+      {
+        "space": "PHKB",
+        "title": "Outlook startet nur im abgesicherten Modus"
+      },
+      {
+        "space": "PHKB",
+        "title": "Printer shows offline"
+      },
+      {
+        "space": "PHKB",
+        "title": "Teams audio not working"
+      },
+      {
+        "space": "PHKB",
+        "title": "VPN-Verbindung bricht ab"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Projekt Phoenix"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Projektstatus"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Risiken und Maßnahmen"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Statusbericht Oktober"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Statusbericht September"
+      }
+    ],
+    "strike": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Inhaltsformatierung (Altbestand)"
+      }
+    ],
+    "style": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Inhaltsformatierung (Altbestand)"
+      }
+    ],
+    "table": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Inhaltsformatierung (Altbestand)"
+      }
+    ],
+    "tasklist": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Aufgaben, Entscheidungen und Eigenschaften"
+      }
+    ],
+    "tasks": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Aufgaben, Entscheidungen und Eigenschaften"
+      },
+      {
+        "space": "PHGF",
+        "title": "Strategie-Klausur 2026"
+      },
+      {
+        "space": "PHIT",
+        "title": "Checkliste erster Arbeitstag"
+      },
+      {
+        "space": "PHIT",
+        "title": "Jour fixe IT 2026-09-15"
+      },
+      {
+        "space": "PHIT",
+        "title": "Jour fixe IT 2026-09-29"
+      },
+      {
+        "space": "PHIT",
+        "title": "Jour fixe IT 2026-10-13"
+      },
+      {
+        "space": "PHIT",
+        "title": "Jour fixe IT 2026-10-27 (Editor)"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Meilensteine und Jira-Tickets"
+      }
+    ],
+    "tasks-report-macro": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Aufgaben, Entscheidungen und Eigenschaften"
+      },
+      {
+        "space": "PHIT",
+        "title": "Aufgaben und Entscheidungen"
+      }
+    ],
+    "tbody": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Inhaltsformatierung (Altbestand)"
+      }
+    ],
+    "td": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Inhaltsformatierung (Altbestand)"
+      }
+    ],
+    "th": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Inhaltsformatierung (Altbestand)"
+      }
+    ],
+    "thead": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Inhaltsformatierung (Altbestand)"
+      }
+    ],
+    "tip": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Panels, Text und Layout"
+      },
+      {
+        "space": "PHIT",
+        "title": "How-to: Drucker verbinden"
+      },
+      {
+        "space": "PHIT",
+        "title": "How-to: Set up multi-factor authentication"
+      },
+      {
+        "space": "PHIT",
+        "title": "How-to: VPN einrichten"
+      },
+      {
+        "space": "PHIT",
+        "title": "Jour fixe IT 2026-10-27 (Editor)"
+      }
+    ],
+    "tm": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Inhaltsformatierung (Altbestand)"
+      }
+    ],
+    "toc": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Navigation, Listen und Berichte"
+      },
+      {
+        "space": "PHEDGE",
+        "title": "Sehr lange Seite"
+      },
+      {
+        "space": "PHIT",
+        "title": "VLAN-Übersicht"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Phase 2 – Umsetzung"
+      }
+    ],
+    "toc-zone": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Navigation, Listen und Berichte"
+      }
+    ],
+    "tr": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Inhaltsformatierung (Altbestand)"
+      }
+    ],
+    "ul": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Inhaltsformatierung (Altbestand)"
+      }
+    ],
+    "unmigrated-inline-wiki-markup": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Einbinden, Vorlagen und Jira"
+      }
+    ],
+    "unmigrated-wiki-markup": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Einbinden, Vorlagen und Jira"
+      }
+    ],
+    "userlister": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Navigation, Listen und Berichte"
+      }
+    ],
+    "view-file": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Dateien und Medien"
+      },
+      {
+        "space": "PHIT",
+        "title": "Dokumente und Dateien"
+      }
+    ],
+    "viewdoc": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Dateien und Medien"
+      }
+    ],
+    "viewfile": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Dateien und Medien"
+      }
+    ],
+    "viewpdf": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Dateien und Medien"
+      },
+      {
+        "space": "PHIT",
+        "title": "Netzwerkplan (draw.io)"
+      }
+    ],
+    "viewppt": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Dateien und Medien"
+      },
+      {
+        "space": "PHIT",
+        "title": "Dokumente und Dateien"
+      }
+    ],
+    "viewxls": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Dateien und Medien"
+      },
+      {
+        "space": "PHGF",
+        "title": "Budget 2027"
+      },
+      {
+        "space": "PHIT",
+        "title": "Dokumente und Dateien"
+      }
+    ],
+    "warning": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Panels, Text und Layout"
+      },
+      {
+        "space": "PHIT",
+        "title": "Firewall-Regeln"
+      },
+      {
+        "space": "PHPROJ",
+        "title": "Projektstatus"
+      }
+    ],
+    "welcome-message": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Navigation, Listen und Berichte"
+      }
+    ],
+    "widget": [
+      {
+        "space": "PHEDGE",
+        "title": "Makros: Dateien und Medien"
+      }
+    ]
+  },
+  "thirdParty": [
+    {
+      "space": "PHIT",
+      "title": "Netzwerkplan (draw.io)",
+      "macros": [
+        "app:drawio-sketch"
+      ]
+    },
+    {
+      "space": "PHIT",
+      "title": "Onboarding-Ablauf (draw.io)",
+      "macros": [
+        "app:drawio",
+        "app:drawio-sketch"
+      ]
+    },
+    {
+      "space": "PHPROJ",
+      "title": "Architektur (draw.io)",
+      "macros": [
+        "app:drawio-sketch"
+      ]
+    },
+    {
+      "space": "PHPROJ",
+      "title": "Netzwerkplan (eingebunden)",
+      "macros": [
+        "app:inc-drawio"
+      ]
+    },
+    {
+      "space": "PHIT",
+      "title": "Rack-Belegung (Gliffy)",
+      "macros": [
+        "app:gliffy"
+      ]
+    },
+    {
+      "space": "PHPROJ",
+      "title": "Bestellprozess (Gliffy)",
+      "macros": [
+        "app:gliffy"
+      ]
+    }
+  ],
+  "checks": [
+    "Baum mit 7 Ebenen: PHPROJ › Phase 1 – Konzeption › … › Adressen mit Postfach",
+    "Seiten mit vielen Versionen: PHIT › VLAN-Übersicht (8, Version 4 entfernt den Abschnitt Gast-WLAN, Version 5 ergänzt ihn wieder), PHPROJ › Projektstatus (12), PHEDGE › Seite mit vielen Versionen (15, Abschnitt fehlt in Version 5, 10, 15), PHKB › VPN-Verbindung bricht ab (6)",
+    "Verschoben: PHIT › How-to: Passwort zurücksetzen (von Onboarding nach How-tos)",
+    "Umbenannt: PHIT › WLAN → WLAN und Gastzugang (Version 2)",
+    "Archiviert: PHIT › Altes Telefonsystem (abgelöst)",
+    "Papierkorb: PHIT › Entwurf Druckerkonzept (verworfen)",
+    "Startseiten umbenannt und mit Version 2 befüllt in allen Bereichen",
+    "Sehr lange Seite: PHEDGE › Sehr lange Seite (3000 Absätze, 12 Überschriften)",
+    "Tabelle mit 500 Datenzeilen, colspan und rowspan: PHEDGE › Große Tabelle mit verbundenen Zellen",
+    "Umlaute, Emoji, RTL in Titel und Inhalt: PHEDGE › Größenübersicht: Maße & Gewichte (äöü ÄÖÜ ß), 🚀 Emoji im Titel 🎉, مرحبا بالعالم – Arabischer Titel, שלום עולם – Hebräischer Titel",
+    "Gleicher Titel in zwei Bereichen: „Onboarding“ (PHIT, PHKB), „Häufige Fragen“ (PHKB, PHEDGE)",
+    "Links zwischen Seiten und Bereichen, Blogpost-, Bereichs-, Anhang- und Benutzerlinks, defekte Links (fehlende Seite, fehlender Bereich NOSPACE, fehlender Anker, fehlender Anhang, fehlendes Bild): PHEDGE › Links zwischen Seiten und Bereichen",
+    "Einbindungszyklus: PHEDGE › Zyklus A ⇄ Zyklus B; direkte Selbsteinbindung: PHEDGE › Seite bindet sich selbst ein",
+    "200 Anhänge: PHEDGE › Seite mit 200 Anhängen (180 .txt, 20 .png, von drei Konten hochgeladen)",
+    "Anhang mit drei Versionen (drei Konten): PHIT › Dokumente und Dateien › Preisliste.csv",
+    "Bild aus einer Seite in mehreren Seiten eingebunden: firmenlogo.png von PHIT › Bilder und Logos (in PHIT, PHKB, PHPROJ, PHEDGE)",
+    "Dateiname mit Umlauten, Leerzeichen, Gedankenstrich und Klammern: „Prüfbericht Brandschutz 2026 – Übersicht (final).pdf“",
+    "Seite im neuen Editor (ADF) mit Entscheidungen, Aufgaben, Status, Emoji, Panels: PHIT › Jour fixe IT 2026-10-27 (Editor)",
+    "Inhaltseigenschaften: PHIT › VLAN-Übersicht (example-meta), PHKB › VPN-Verbindung bricht ab (example-review)",
+    "Leere Seite, Seite nur mit Makro, Sonderformatierung (Farben, verschachtelte Tabelle, Einrückung): PHEDGE › Sonderfälle",
+    "Kommentar eines später aus dem Bereich entfernten Kontos: PHGF › Strategie-Klausur 2026 (user3)"
+  ]
+}

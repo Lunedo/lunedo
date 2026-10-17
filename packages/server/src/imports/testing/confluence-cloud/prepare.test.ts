@@ -88,7 +88,26 @@ describe("anonymizing the Confluence Cloud test data", () => {
     expect(findProblems("page", "Authorization: Bearer abcdefghijklmnopqrstuvwxyz0123", clean)).toEqual([
       "page: looks like a bearer token",
     ]);
-    expect(findProblems("page", "user1@example.org and app@connect.atlassian.com", clean)).toEqual([]);
+    expect(findProblems("page", "user1@example.org and app@connect.atlassian.com", clean)).toEqual([
+      "page: e-mail address left at domain connect.atlassian.com",
+    ]);
+    expect(findProblems("page", "see https://other.atlassian.net/wiki", clean)).toEqual([
+      "page: Atlassian site other.atlassian.net left",
+    ]);
+    expect(findProblems("page", "https://api.media.atlassian.com/file/1", clean)).toEqual([
+      "page: avatar or media address left",
+    ]);
+    expect(findProblems("page", '{"displayName":"Erika Muster"}', clean, new Set(["Draw app"]))).toEqual([
+      "page: person name left in a name field (12 characters)",
+    ]);
+    expect(
+      findProblems(
+        "page",
+        '{"displayName":"Draw app","publicName":"Test User 2"}',
+        clean,
+        new Set(["Draw app"]),
+      ),
+    ).toEqual([]);
   });
 
   it("keys recorded requests by their sorted query", () => {
@@ -167,9 +186,10 @@ describe("preparing the fixtures", () => {
     for (const folder of folders.splice(0)) rmSync(folder, { recursive: true, force: true });
   });
 
-  function source(page: string): string {
-    const folder = mkdtempSync(path.join(tmpdir(), "confluence-fixtures-"));
-    folders.push(folder);
+  function source(page: string, spaceKey = "AA", entry = "entities.xml"): string {
+    const parent = mkdtempSync(path.join(tmpdir(), "confluence-fixtures-"));
+    folders.push(parent);
+    const folder = path.join(parent, "confluence-cloud");
     mkdirSync(path.join(folder, "api-recording", "requests"), { recursive: true });
     mkdirSync(path.join(folder, "xml"));
     const request = {
@@ -186,6 +206,7 @@ describe("preparing the fixtures", () => {
       JSON.stringify({
         site: SITE,
         actors: Object.fromEntries(ACTORS.map(({ role, ...actor }) => [role, actor])),
+        spaces: [{ key: "AA" }],
         entries: [{ key: "admin GET /wiki/api/v2/pages/1?", file: "requests/page.json", status: 200 }],
       }),
     );
@@ -193,7 +214,14 @@ describe("preparing the fixtures", () => {
       path.join(folder, "xml", "AA.zip"),
       createZip([
         {
-          name: "entities.xml",
+          name: "exportDescriptor.properties",
+          data: `exportType=space
+spaceKey=${spaceKey}
+source=cloud
+`,
+        },
+        {
+          name: entry,
           data: `<title>${page}</title><key>${ACTORS[1]?.accountId}</key>`,
           deflate: true,
         },
@@ -234,6 +262,26 @@ describe("preparing the fixtures", () => {
       key: "admin GET /wiki/api/v2/pages/1?",
       body: { title: "Notes of Test User 1", authorId: "712020:00000000-0000-4000-8000-000000000001" },
     });
+  });
+
+  it("reads only from the folder of the test site", () => {
+    const folder = source("Notes");
+    expect(() => prepare(path.join(folder, "..", "other"), path.join(folder, "out"))).toThrow(
+      "does not exist",
+    );
+    mkdirSync(path.join(folder, "..", "confluence"));
+    expect(() => prepare(path.join(folder, "..", "confluence"), path.join(folder, "out"))).toThrow(
+      "only from the folder confluence-cloud",
+    );
+  });
+
+  it("refuses archives of other spaces and archive entries that leave the archive", () => {
+    expect(() => prepare(source("Notes", "RMA"), path.join(tmpdir(), "unused"))).toThrow(
+      "AA.zip is not an export of the test site",
+    );
+    expect(() => prepare(source("Notes", "AA", "../entities.xml"), path.join(tmpdir(), "unused"))).toThrow(
+      "unsafe entry",
+    );
   });
 
   it("writes nothing when something looks like a secret", () => {

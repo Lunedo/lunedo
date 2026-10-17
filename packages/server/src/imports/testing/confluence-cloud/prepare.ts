@@ -1,4 +1,4 @@
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { gzipSync, inflateRawSync } from "node:zlib";
 
@@ -51,8 +51,18 @@ const LEGACY_ACCOUNT_ID = /\b[0-9a-f]{24}\b/g;
 const ENCODED_ARI = /("base64EncodedAri"\s*:\s*")([A-Za-z0-9+/]+={0,2})"/g;
 const BASE64 = /[A-Za-z0-9+/]{24,}={0,2}/g;
 const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
+const TEST_SITE_FOLDER = "confluence-cloud";
 const REPLACEMENT_WORDS = ["test user", "example.org", "example-team"];
-const KEPT_EMAIL_DOMAINS = ["example.org", "connect.atlassian.com", "atlassian.com"];
+const FAKE_DOMAIN = "example.org";
+const FAKE_SITE = "example.atlassian.net";
+const AVATAR =
+  /(?:https?:\/\/[^\s"'<>]*)?\/(?:wiki\/)?aa-avatar\/[^\s"'<>&]*|https?:\/\/[a-z0-9.-]*(?:avatar|gravatar)[a-z0-9.-]*\/[^\s"'<>]*/gi;
+const FAKE_AVATAR = "/wiki/images/icons/profilepics/default.svg";
+const ATLASSIAN_SITE = /\b[a-z0-9-]+\.atlassian\.net\b/gi;
+const MEDIA =
+  /\b(?:api\.media\.atlassian\.com|media-cdn\.atlassian\.com)\b|aa-avatar|gravatar\.com|avatar-management/i;
+const NAME_FIELD =
+  /"(?:displayName|publicName|fullName|authorFullName)"\s*:\s*"([^"]*)"|name="(?:displayName|fullName|firstName|lastName|authorFullName)"><!\[CDATA\[([^\]]*)/g;
 
 const SECRETS: readonly { readonly name: string; readonly pattern: RegExp }[] = [
   { name: "Atlassian API token", pattern: /ATATT[A-Za-z0-9_\-=]{20,}/ },
@@ -84,6 +94,7 @@ export function createAnonymizer(input: {
   accountIds: Iterable<string>;
   legacyIds: Iterable<string>;
   cloudIds: Iterable<string>;
+  emails?: Iterable<string>;
 }): Anonymizer {
   const uuids = new Map<string, string>();
   input.actors.forEach((actor, index) => {
@@ -101,8 +112,13 @@ export function createAnonymizer(input: {
   const compact = new Map([...uuids].map(([real, fake]) => [real.replace(/-/g, ""), fake.replace(/-/g, "")]));
   const names = input.actors.map((actor, index) => [actor.displayName, `Test User ${index + 1}`] as const);
   const emails = new Map(
-    input.actors.map((actor, index) => [actor.email.toLowerCase(), `user${index + 1}@example.org`]),
+    input.actors.map((actor, index) => [actor.email.toLowerCase(), `user${index + 1}@${FAKE_DOMAIN}`]),
   );
+  let other = 1;
+  for (const email of [...(input.emails ?? [])].map((value) => value.toLowerCase()).sort()) {
+    if (!emails.has(email) && !email.endsWith(`@${FAKE_DOMAIN}`))
+      emails.set(email, `app${other++}@${FAKE_DOMAIN}`);
+  }
   const host = new URL(input.site).hostname.split(".")[0] ?? "";
   const residues = new Set<string>();
   for (const actor of input.actors) {
@@ -144,7 +160,8 @@ export function createAnonymizer(input: {
           return fake ? `~${prefix}${fake}` : match;
         })
         .replace(LEGACY_ACCOUNT_ID, (match) => legacy.get(match) ?? match)
-        .replace(EMAIL, (match) => emails.get(match.toLowerCase()) ?? match);
+        .replace(EMAIL, (match) => emails.get(match.toLowerCase()) ?? match)
+        .replace(AVATAR, FAKE_AVATAR);
       if (names.length > 0) {
         result = result.replace(namePattern, (match) => {
           const fake = replacements.get(match.toLowerCase()) ?? match;
@@ -162,19 +179,27 @@ export function collectIds(texts: Iterable<string>): {
   accountIds: Set<string>;
   legacyIds: Set<string>;
   cloudIds: Set<string>;
+  emails: Set<string>;
 } {
   const accountIds = new Set<string>();
   const legacyIds = new Set<string>();
   const cloudIds = new Set<string>();
+  const emails = new Set<string>();
   for (const text of texts) {
+    for (const match of text.matchAll(EMAIL)) emails.add(match[0]);
     for (const match of text.matchAll(ACCOUNT_ID)) accountIds.add((match[2] ?? "").toLowerCase());
     for (const match of text.matchAll(LEGACY_ACCOUNT_ID)) legacyIds.add(match[0]);
     for (const match of text.matchAll(CLOUD_ID)) cloudIds.add((match[1] ?? "").toLowerCase());
   }
-  return { accountIds, legacyIds, cloudIds };
+  return { accountIds, legacyIds, cloudIds, emails };
 }
 
-export function findProblems(name: string, content: string, anonymizer: Anonymizer): string[] {
+export function findProblems(
+  name: string,
+  content: string,
+  anonymizer: Anonymizer,
+  names?: ReadonlySet<string>,
+): string[] {
   const problems: string[] = [];
   const lower = content.toLowerCase();
   const decoded = [...content.matchAll(BASE64)]
@@ -191,8 +216,16 @@ export function findProblems(name: string, content: string, anonymizer: Anonymiz
   }
   for (const match of content.matchAll(EMAIL)) {
     const domain = match[0].split("@")[1]?.toLowerCase() ?? "";
-    if (!KEPT_EMAIL_DOMAINS.some((kept) => domain === kept || domain.endsWith(`.${kept}`))) {
-      problems.push(`${name}: e-mail address left at domain ${domain}`);
+    if (domain !== FAKE_DOMAIN) problems.push(`${name}: e-mail address left at domain ${domain}`);
+  }
+  for (const match of content.matchAll(ATLASSIAN_SITE)) {
+    if (match[0].toLowerCase() !== FAKE_SITE) problems.push(`${name}: Atlassian site ${match[0]} left`);
+  }
+  if (MEDIA.test(content.replaceAll(FAKE_AVATAR, ""))) problems.push(`${name}: avatar or media address left`);
+  for (const match of content.matchAll(NAME_FIELD)) {
+    const value = (match[1] ?? match[2] ?? "").trim();
+    if (value && !/^(?:Test User \d+|System)$/.test(value) && !(names?.has(value) ?? false)) {
+      problems.push(`${name}: person name left in a name field (${value.length} characters)`);
     }
   }
   for (const secret of SECRETS) {
@@ -233,6 +266,9 @@ export function readZip(data: Buffer): { name: string; data: Buffer }[] {
     const commentLength = data.readUInt16LE(offset + 32);
     const local = data.readUInt32LE(offset + 42);
     const name = data.subarray(offset + 46, offset + 46 + nameLength).toString("utf8");
+    if (name.startsWith("/") || name.split(/[\\/]/).includes("..") || /^[A-Za-z]:/.test(name)) {
+      throw new Error(`The archive contains the unsafe entry ${name}.`);
+    }
     const start = local + 30 + data.readUInt16LE(local + 26) + data.readUInt16LE(local + 28);
     const raw = data.subarray(start, start + compressedSize);
     entries.push({ name, data: method === 8 ? inflateRawSync(raw) : Buffer.from(raw) });
@@ -367,21 +403,85 @@ function readActors(index: { actors: Record<string, Omit<Actor, "role">> }): Act
   return Object.entries(index.actors).map(([role, actor]) => ({ role, ...actor }));
 }
 
+export function testSiteFolder(source: string): (relative: string) => Buffer {
+  let root: string;
+  try {
+    root = realpathSync(source);
+  } catch {
+    throw new Error(`The folder ${source} does not exist.`);
+  }
+  if (path.basename(root) !== TEST_SITE_FOLDER) {
+    throw new Error(
+      `Fixtures are made only from the folder ${TEST_SITE_FOLDER} of the test site, not from ${root}.`,
+    );
+  }
+  return (relative) => {
+    const file = realpathSync(path.join(root, relative));
+    if (!file.startsWith(`${root}${path.sep}`))
+      throw new Error(`${relative} lies outside the test site folder.`);
+    return readFileSync(file);
+  };
+}
+
+function checkArchive(
+  name: string,
+  entries: readonly { name: string; data: Buffer }[],
+  keys: ReadonlySet<string>,
+) {
+  const descriptor =
+    entries
+      .find((entry) => entry.name.replace(/^\.\//, "") === "exportDescriptor.properties")
+      ?.data.toString("utf8") ?? "";
+  const spaceKey = /^spaceKey=(.*)$/m.exec(descriptor)?.[1]?.trim();
+  const entities =
+    entries.find((entry) => entry.name.replace(/^\.\//, "") === "entities.xml")?.data.toString("utf8") ?? "";
+  const known = spaceKey
+    ? keys.has(spaceKey)
+    : keys.size > 0 &&
+      [...keys].every((key) => entities.includes(`<property name="key"><![CDATA[${key}]]></property>`));
+  if (!/^source=cloud$/m.test(descriptor) || !known)
+    throw new Error(`${name} is not an export of the test site.`);
+}
+
+function appNames(texts: Iterable<string>): Set<string> {
+  const names = new Set<string>();
+  const walk = (value: unknown) => {
+    if (Array.isArray(value)) value.forEach(walk);
+    else if (value && typeof value === "object") {
+      const record = value as Record<string, unknown>;
+      if (record.accountType === "app") {
+        for (const field of ["displayName", "publicName"]) {
+          if (typeof record[field] === "string") names.add(record[field] as string);
+        }
+      }
+      Object.values(record).forEach(walk);
+    }
+  };
+  for (const text of texts) walk(JSON.parse(text));
+  return names;
+}
+
 export function prepare(source: string, target: string): { files: { name: string; bytes: number }[] } {
-  const recording = path.join(source, "api-recording");
-  const index = JSON.parse(readFileSync(path.join(recording, "index.json"), "utf8")) as {
+  const read = testSiteFolder(source);
+  const index = JSON.parse(read("api-recording/index.json").toString("utf8")) as {
     site: string;
     actors: Record<string, Omit<Actor, "role">>;
+    spaces?: { key: string }[];
     entries: { key: string; file: string }[];
   };
+  const keys = new Set((index.spaces ?? []).map((space) => space.key));
   const requests = new Map(
-    index.entries.map((entry) => [entry.file, readFileSync(path.join(recording, entry.file), "utf8")]),
+    index.entries.map((entry) => [entry.file, read(path.join("api-recording", entry.file)).toString("utf8")]),
   );
-  const exports = readdirSync(path.join(source, "xml"))
+  const exports = readdirSync(path.join(realpathSync(source), "xml"))
     .filter((name) => name.endsWith(".zip"))
     .sort()
-    .map((name) => ({ name, entries: readZip(readFileSync(path.join(source, "xml", name))) }));
-  const expectedMarkdown = readFileSync(path.join(source, "expected.md"), "utf8");
+    .map((name) => {
+      const entries = readZip(read(path.join("xml", name)));
+      checkArchive(name, entries, keys);
+      return { name, entries };
+    });
+  const expectedMarkdown = read("expected.md").toString("utf8");
   const texts = function* () {
     yield* requests.values();
     for (const archive of exports) {
@@ -397,6 +497,8 @@ export function prepare(source: string, target: string): { files: { name: string
     site: index.site,
     ...collectIds(texts()),
   });
+  const cleanRequests = new Map([...requests].map(([file, text]) => [file, anonymizer.text(text)]));
+  const names = appNames(cleanRequests.values());
   const problems: string[] = [];
   const written: { name: string; bytes: number }[] = [];
   mkdirSync(target, { recursive: true });
@@ -410,11 +512,11 @@ export function prepare(source: string, target: string): { files: { name: string
       const text = asText(entry.data);
       if (text !== null) {
         const clean = anonymizer.text(text);
-        problems.push(...findProblems(`${archive.name}/${entry.name}`, clean, anonymizer));
+        problems.push(...findProblems(`${archive.name}/${entry.name}`, clean, anonymizer, names));
         return { name: entry.name, text: clean };
       }
       problems.push(
-        ...findProblems(`${archive.name}/${entry.name}`, entry.data.toString("latin1"), anonymizer),
+        ...findProblems(`${archive.name}/${entry.name}`, entry.data.toString("latin1"), anonymizer, names),
       );
       return { name: entry.name, base64: entry.data.toString("base64") };
     });
@@ -424,9 +526,8 @@ export function prepare(source: string, target: string): { files: { name: string
   const entries: RecordedEntry[] = [];
   const seen = new Set<string>();
   for (const entry of index.entries) {
-    const text = requests.get(entry.file) ?? "";
-    const clean = anonymizer.text(text);
-    problems.push(...findProblems(`api-recording/${entry.file}`, clean, anonymizer));
+    const clean = cleanRequests.get(entry.file) ?? "";
+    problems.push(...findProblems(`api-recording/${entry.file}`, clean, anonymizer, names));
     const recorded = JSON.parse(clean) as {
       request: RecordedRequest;
       response: {
@@ -449,12 +550,12 @@ export function prepare(source: string, target: string): { files: { name: string
       link: response.link ?? null,
     };
     if (response.bodyFile) {
-      const data = readFileSync(path.join(recording, response.bodyFile));
+      const data = read(path.join("api-recording", response.bodyFile));
       const text = asText(data);
       const isText = text !== null && /^(text\/|application\/(json|xml))/.test(response.contentType ?? "");
       const content = isText ? Buffer.from(anonymizer.text(text), "utf8") : data;
       problems.push(
-        ...findProblems(`api-recording/${response.bodyFile}`, content.toString("latin1"), anonymizer),
+        ...findProblems(`api-recording/${response.bodyFile}`, content.toString("latin1"), anonymizer, names),
       );
       entries.push({ ...base, base64: content.toString("base64") });
     } else entries.push({ ...base, ...(response.body === undefined ? {} : { body: response.body }) });
@@ -462,10 +563,10 @@ export function prepare(source: string, target: string): { files: { name: string
   write("api-recording.jsonl.gz", bundle(entries));
 
   const expectedText = anonymizer.text(expectedMarkdown);
-  problems.push(...findProblems("expected.md", expectedText, anonymizer));
+  problems.push(...findProblems("expected.md", expectedText, anonymizer, names));
   const expected = parseExpected(expectedText);
   const expectedJson = `${JSON.stringify({ site: anonymizer.text(index.site), ...expected }, null, 2)}\n`;
-  problems.push(...findProblems("expected.json", expectedJson, anonymizer));
+  problems.push(...findProblems("expected.json", expectedJson, anonymizer, names));
   if (problems.length > 0) {
     throw new Error(`The fixtures were not written completely:\n${[...new Set(problems)].join("\n")}`);
   }
