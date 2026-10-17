@@ -49,6 +49,7 @@ function importView(overrides: Record<string, unknown> = {}) {
     files: [],
     options: {},
     throttledUntil: null,
+    waitingFor: null,
     tokenDeletedAt: null,
     sourceUrl: null,
     reviewers: [{ id: "01929b1e-0000-7000-8000-0000000000c4", name: "Lukas Hofer" }],
@@ -747,6 +748,7 @@ describe("new import sources in the wizard", () => {
               basePath: "",
               email: "olivia@example.org",
               account: "Olivia Owner",
+              selection: [],
             },
             peopleSource: {
               kind: "token",
@@ -783,18 +785,34 @@ describe("new import sources in the wizard", () => {
     expect(screen.queryByDisplayValue("secret-token")).toBeNull();
   });
 
-  it("lets people choose a space and page trees and saves the selection when continuing", async () => {
+  it("lets people choose spaces and page trees and saves the selection when continuing", async () => {
     const connection = {
       kind: "cloud",
       site: "example.atlassian.net",
       basePath: "",
       email: "olivia@example.org",
       account: "Olivia Owner",
+      selection: [] as { importId: string; spaceKey: string }[],
     };
-    let current = draft({ source: "confluence-cloud", draftStep: 2, connection });
+    let current: Record<string, unknown> = draft({ source: "confluence-cloud", draftStep: 2, connection });
     const api = setup(
       {
         [`GET /api/v1/imports/${IMPORT_ID}`]: () => ({ body: current }),
+        [`PUT /api/v1/imports/${IMPORT_ID}/connection/selection`]: () => {
+          const body = api.requests.at(-1)?.body as { spaceKeys: string[] };
+          current = {
+            ...current,
+            options: { spaceKey: body.spaceKeys[0] },
+            connection: {
+              ...connection,
+              selection: body.spaceKeys.map((spaceKey, index) => ({
+                importId: index === 0 ? IMPORT_ID : `0190a7c0-0000-7000-8000-00000000000${index}`,
+                spaceKey,
+              })),
+            },
+          };
+          return { body: current };
+        },
         [`PATCH /api/v1/imports/${IMPORT_ID}`]: () => {
           const body = (api.requests.at(-1)?.body ?? {}) as { options?: Record<string, unknown> };
           if (body.options) current = { ...current, options: body.options, state: "analyzing" };
@@ -825,11 +843,15 @@ describe("new import sources in the wizard", () => {
     );
     await open(`/settings/organizations/${ORGANIZATION.id}/imports/${IMPORT_ID}/setup?step=2`);
     await userEvent.click(await screen.findByRole("button", { name: "Continue" }));
-    expect(await screen.findByText("Choose the space to import.")).toBeTruthy();
-    await userEvent.click(screen.getByRole("combobox", { name: "Confluence space" }));
-    await userEvent.click(await screen.findByRole("option", { name: /IT Operations/ }));
+    const required = await screen.findByText("Choose at least one space to import.");
+    await waitFor(() => expect(document.activeElement).toBe(required.closest("[data-field-error]")));
+    await userEvent.click(screen.getByRole("checkbox", { name: /IT Operations/ }));
     const onboarding = await screen.findByRole("checkbox", { name: "Onboarding" });
     await userEvent.click(onboarding);
+    await userEvent.click(screen.getByRole("checkbox", { name: /Sales/ }));
+    expect(screen.getByText("2 imports, one per space")).toBeTruthy();
+    expect(screen.getByText("Page trees of IT Operations")).toBeTruthy();
+    expect(screen.getByRole("checkbox", { name: "Onboarding" })).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     await waitFor(() =>
       expect(
@@ -841,6 +863,10 @@ describe("new import sources in the wizard", () => {
         ),
       ).toBe(true),
     );
+    const selections = api.requests.filter((request) => request.path.endsWith("/connection/selection"));
+    expect(selections.map((request) => request.body)).toEqual([{ spaceKeys: ["ITOPS", "SALES"] }]);
+    const order = api.requests.map((request) => request.method);
+    expect(order.indexOf("PUT")).toBeLessThan(order.lastIndexOf("PATCH"));
   });
 
   it("refuses Word documents with macros before uploading anything", async () => {
@@ -875,6 +901,7 @@ describe("new import sources in the wizard", () => {
         basePath: "",
         email: "olivia@example.org",
         account: null,
+        selection: [],
       },
     });
     setup({ [`GET /api/v1/imports/${IMPORT_ID}`]: () => ({ body: current }) }, [
@@ -882,5 +909,28 @@ describe("new import sources in the wizard", () => {
     ]);
     await open(`/settings/organizations/${ORGANIZATION.id}/imports/${IMPORT_ID}/setup?step=4`);
     expect(await screen.findByText("Confluence asked to slow down")).toBeTruthy();
+  });
+
+  it("says which import goes first when imports share a connection", async () => {
+    const current = draft({
+      source: "confluence-cloud",
+      draftStep: 4,
+      state: "analyzing",
+      waitingFor: "ITOPS",
+      connection: {
+        kind: "cloud",
+        site: "example.atlassian.net",
+        basePath: "",
+        email: "olivia@example.org",
+        account: null,
+        selection: [],
+      },
+    });
+    setup({ [`GET /api/v1/imports/${IMPORT_ID}`]: () => ({ body: current }) }, [
+      "organization.imports.manage",
+    ]);
+    await open(`/settings/organizations/${ORGANIZATION.id}/imports/${IMPORT_ID}/setup?step=4`);
+    expect(await screen.findByText("Waiting for the import of another space")).toBeTruthy();
+    expect(screen.getByText(/with the import of space ITOPS, which goes first/)).toBeTruthy();
   });
 });

@@ -3,10 +3,16 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accountPrincipal } from "../../accounts/principal.js";
 import { createLogger } from "../../logging/logger.js";
 import { testDatabaseBaseUrl } from "../../testing/database.js";
+import { testJobContext } from "../../testing/jobs.js";
 import { createTestServices, type TestServices } from "../../testing/services.js";
 import { spaceFixtures } from "../../testing/spaces.js";
 import { atlassianHostsSetting } from "../atlassian.js";
-import { type FakeConfluence, fakeConfluence, response } from "../testing/confluence-api.js";
+import {
+  type FakeConfluence,
+  fakeConfluence,
+  fakeConfluenceSpaces,
+  response,
+} from "../testing/confluence-api.js";
 import type { SyntheticExport } from "../testing/confluence-export.js";
 import { ALICE, BOB, PNG } from "../testing/fixture.js";
 import { importHarness } from "../testing/harness.js";
@@ -172,6 +178,32 @@ function atlassianDirectory(): typeof fetch {
   }) as typeof fetch;
 }
 
+function secondModel(): SyntheticExport {
+  return {
+    space: { id: "8001", key: "APIY", name: "Second space", homePageId: "8100" },
+    users: [ALICE],
+    pages: [
+      {
+        id: "8100",
+        title: "Second home",
+        parentId: null,
+        position: null,
+        body: "<p>Second</p>",
+        creatorKey: ALICE.key,
+      },
+      {
+        id: "8101",
+        title: "Runbook",
+        parentId: "8100",
+        position: 1,
+        body: "<p>Steps</p>",
+        creatorKey: ALICE.key,
+      },
+    ],
+    attachments: [],
+  };
+}
+
 describe.skipIf(!baseUrl)("Confluence API imports", () => {
   let test: TestServices;
   let current: ConfluenceTransport;
@@ -298,7 +330,7 @@ describe.skipIf(!baseUrl)("Confluence API imports", () => {
     expect(refused).toMatchObject({ code: "confluenceUnauthorized" });
     expect(JSON.stringify(refused)).not.toContain("wrong");
     const stored = await test.database.execute(
-      sql`select 1 from import_credentials where import_id = ${draft.id}`,
+      sql`select 1 from import_connections where organization_id = ${organization.id}`,
     );
     expect(stored.rows).toHaveLength(0);
     const view = await imports.setConnection(as(organization.owner), draft.id, {
@@ -310,8 +342,9 @@ describe.skipIf(!baseUrl)("Confluence API imports", () => {
     expect(view.connection).toMatchObject({ kind: "cloud", site: SITE, account: "Importer" });
     expect(view.peopleSource?.kind).toBe("token");
     const token = await test.database.execute<{ token: Buffer }>(
-      sql`select token from import_credentials where import_id = ${draft.id}`,
+      sql`select c.token from import_connections c join imports i on i.connection_id = c.id where i.id = ${draft.id}`,
     );
+    expect(token.rows).toHaveLength(1);
     expect(token.rows[0]?.token.toString("utf8")).not.toContain(TOKEN);
   });
 
@@ -388,6 +421,162 @@ describe.skipIf(!baseUrl)("Confluence API imports", () => {
       sql`select title from page_versions where item_id = ${notes} order by number`,
     );
     expect(versions.rows.map((row) => row.title)).toEqual(["Old notes", "Notes", "Notes"]);
+  });
+
+  function serveSpaces(): FakeConfluence {
+    const fake = fakeConfluenceSpaces([apiModel(), secondModel()], {
+      kind: "cloud",
+      site: SITE,
+      authorization: BASIC,
+    });
+    current = fake;
+    return fake;
+  }
+
+  async function connections(organizationId: string) {
+    const result = await test.database.execute<{ id: string }>(
+      sql`select id from import_connections where organization_id = ${organizationId}`,
+    );
+    return result.rows.map((row) => row.id);
+  }
+
+  async function tokenDeletions(importIds: readonly string[]) {
+    const result = await test.database.execute<{ target_id: string; reason: string }>(sql`
+      select target_id, fields ->> 'reason' as reason from audit_events
+      where name = 'import.tokenDeleted' and target_id = any(${sql.param([...importIds])}::text[])
+      order by id`);
+    return result.rows;
+  }
+
+  async function bothSpaces(organizationId: string, admin: string) {
+    const id = await connected(organizationId, admin);
+    const view = await test.services.imports.selectSpaces(as(admin), id, ["APIX", "APIY"]);
+    const sibling = view.connection?.selection.find((entry) => entry.spaceKey === "APIY")?.importId as string;
+    return { id, sibling };
+  }
+
+  it("imports several spaces as one import each over one connection, one after another", async () => {
+    const organization = await fixtures.organization();
+    const fake = serveSpaces();
+    const imports = test.services.imports;
+    const id = await connected(organization.id, organization.owner);
+    const spaces = await imports.connectionSpaces(as(organization.owner), id);
+    expect(spaces.map((space) => space.key)).toEqual(["APIX", "APIY"]);
+    const view = await imports.selectSpaces(as(organization.owner), id, ["APIX", "APIY"]);
+    expect(view.options.spaceKey).toBe("APIX");
+    expect(view.connection?.selection.map((entry) => entry.spaceKey)).toEqual(["APIX", "APIY"]);
+    const sibling = view.connection?.selection.find((entry) => entry.spaceKey === "APIY")?.importId as string;
+    expect(sibling).not.toBe(id);
+    const shared = await test.database.execute<{ connection_id: string }>(
+      sql`select connection_id from imports where id = any(${sql.param([id, sibling])}::uuid[])`,
+    );
+    expect(new Set(shared.rows.map((row) => row.connection_id)).size).toBe(1);
+    expect(await connections(organization.id)).toHaveLength(1);
+
+    const waiting = await imports.get(as(organization.owner), sibling);
+    expect(waiting).toMatchObject({ state: "analyzing", source: "confluence-cloud", waitingFor: "APIX" });
+    expect(waiting.connection).toMatchObject({ kind: "cloud", site: SITE });
+    await harness.worker().work(testJobContext("imports.work", { importId: sibling }));
+    expect(fake.requests.some((url) => url.includes("APIY") || url.includes("/8100"))).toBe(false);
+    expect((await imports.get(as(organization.owner), sibling)).state).toBe("analyzing");
+
+    await harness.drive(id);
+    expect((await imports.get(as(organization.owner), sibling)).waitingFor).toBeNull();
+    await harness.drive(sibling);
+    const first = await imports.get(as(organization.owner), id);
+    const second = await imports.get(as(organization.owner), sibling);
+    expect(first).toMatchObject({ state: "ready", found: { spaceKey: "APIX", pages: 4 } });
+    expect(second).toMatchObject({ state: "ready", found: { spaceKey: "APIY", pages: 2, blogPosts: 0 } });
+
+    await imports.update(as(organization.owner), id, { spaceName: "First", spaceKey: "FIRSTAPI" });
+    await imports.update(as(organization.owner), sibling, { spaceName: "Second", spaceKey: "SECONDAPI" });
+    await imports.start(as(organization.owner), id);
+    await imports.start(as(organization.owner), sibling);
+    await harness.worker().work(testJobContext("imports.work", { importId: sibling }));
+    expect((await imports.get(as(organization.owner), sibling)).state).toBe("running");
+    await harness.drive(id);
+    await harness.drive(sibling);
+    const started = [
+      await imports.get(as(organization.owner), id),
+      await imports.get(as(organization.owner), sibling),
+    ];
+    expect(started.map((entry) => entry.state)).toEqual(["review", "review"]);
+    expect(new Set(started.map((entry) => entry.quarantineSpace?.id)).size).toBe(2);
+    const titles = await test.database.execute<{ id: string; title: string }>(sql`
+      select i.id, t.title from imports i join tree_items t on t.space_id = i.quarantine_space_id
+      where i.id = any(${sql.param([id, sibling])}::uuid[]) and t.title in ('Guide', 'Runbook')`);
+    expect(titles.rows.map((row) => [row.id === id ? "first" : "second", row.title]).sort()).toEqual([
+      ["first", "Guide"],
+      ["second", "Runbook"],
+    ]);
+  });
+
+  it("removes the drafts of spaces taken out of the selection", async () => {
+    const organization = await fixtures.organization();
+    serveSpaces();
+    const imports = test.services.imports;
+    const { id, sibling } = await bothSpaces(organization.id, organization.owner);
+    const view = await imports.selectSpaces(as(organization.owner), id, ["APIX"]);
+    expect(view.connection?.selection).toEqual([{ importId: id, spaceKey: "APIX" }]);
+    const left = await test.database.execute(sql`select 1 from imports where id = ${sibling}`);
+    expect(left.rows).toHaveLength(0);
+    expect(await connections(organization.id)).toHaveLength(1);
+    await expect(imports.selectSpaces(as(organization.owner), id, [])).rejects.toMatchObject({
+      code: "invalidSelection",
+    });
+    await expect(imports.selectSpaces(as(organization.owner), id, ["not a key"])).rejects.toMatchObject({
+      code: "invalidSelection",
+    });
+  });
+
+  it("keeps the shared token until the last import of the connection has ended", async () => {
+    const organization = await fixtures.organization();
+    serveSpaces();
+    const imports = test.services.imports;
+    const { id, sibling } = await bothSpaces(organization.id, organization.owner);
+    await harness.drive(id);
+    await harness.drive(sibling);
+    await imports.update(as(organization.owner), id, { spaceName: "First", spaceKey: "KEEPA" });
+    await imports.update(as(organization.owner), sibling, { spaceName: "Second", spaceKey: "KEEPB" });
+    await imports.start(as(organization.owner), id);
+    await harness.drive(id);
+    await imports.accept(as(organization.owner), id, { visibility: "private", grants: [] });
+    expect(await connections(organization.id)).toHaveLength(1);
+    expect(await tokenDeletions([id, sibling])).toEqual([]);
+    const accepted = await imports.get(as(organization.owner), id);
+    expect(accepted.connection).toBeNull();
+    expect((await imports.get(as(organization.owner), sibling)).connection).toMatchObject({ site: SITE });
+
+    await imports.start(as(organization.owner), sibling);
+    await harness.drive(sibling);
+    await imports.discard(as(organization.owner), sibling, "KEEPB");
+    await harness.drive(sibling);
+    expect((await imports.get(as(organization.owner), sibling)).state).toBe("discarded");
+    expect(await connections(organization.id)).toEqual([]);
+    expect(await tokenDeletions([id, sibling])).toEqual([{ target_id: sibling, reason: "discarded" }]);
+  });
+
+  it("deletes the shared token when every draft using it was removed or left alone", async () => {
+    const organization = await fixtures.organization();
+    serveSpaces();
+    const imports = test.services.imports;
+    const { id, sibling } = await bothSpaces(organization.id, organization.owner);
+    await harness.drive(id);
+    await harness.drive(sibling);
+    await test.database.execute(
+      sql`update imports set updated_at = now() - interval '8 days' where id = ${sibling}`,
+    );
+    await imports.removeAbandonedCredentials();
+    expect(await connections(organization.id)).toHaveLength(1);
+    expect((await imports.get(as(organization.owner), sibling)).tokenDeletedAt).not.toBeNull();
+    expect((await imports.get(as(organization.owner), id)).connection).toMatchObject({ site: SITE });
+
+    await imports.remove(as(organization.owner), id);
+    expect(await connections(organization.id)).toEqual([]);
+    expect(await tokenDeletions([id, sibling])).toEqual([{ target_id: id, reason: "removed" }]);
+    await expect(imports.start(as(organization.owner), sibling)).rejects.toMatchObject({
+      code: "tokenMissing",
+    });
   });
 
   it("imports only the chosen page trees", async () => {
@@ -523,7 +712,9 @@ describe.skipIf(!baseUrl)("Confluence API imports", () => {
     const view = await imports.get(as(organization.owner), id);
     expect(JSON.stringify(view)).not.toContain(TOKEN);
     await imports.accept(as(organization.owner), id, { visibility: "private", grants: [] });
-    const left = await test.database.execute(sql`select 1 from import_credentials where import_id = ${id}`);
+    const left = await test.database.execute(
+      sql`select 1 from import_connections where organization_id = ${organization.id}`,
+    );
     expect(left.rows).toHaveLength(0);
     const deleted = await test.database.execute<{ reason: string }>(sql`
       select fields ->> 'reason' as reason from audit_events where name = 'import.tokenDeleted' and target_id = ${id}`);

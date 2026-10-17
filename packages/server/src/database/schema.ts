@@ -90,6 +90,7 @@ export {
   accountExternalIds,
   importBaselines,
   importChanges,
+  importConnections,
   importCredentials,
   importDirectory,
   importedSpaces,

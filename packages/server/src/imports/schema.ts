@@ -110,6 +110,7 @@ export const imports = pgTable(
     peopleSource: text(),
     tokenDeletedAt: timestampColumn(),
     sourceUrl: text(),
+    connectionId: uuid().references(() => importConnections.id, { onDelete: "set null" }),
     options: jsonb().notNull().default({}),
     stagedBytes: bigint({ mode: "number" }).notNull().default(0),
     throttledUntil: timestampColumn(),
@@ -137,6 +138,7 @@ export const imports = pgTable(
     index().on(table.uploadId),
     index().on(table.decidedBy),
     index().on(table.fileExpiresAt),
+    index().on(table.connectionId),
     uniqueIndex("imports_quarantine_space_unique").on(table.quarantineSpaceId),
     uniqueIndex("imports_active_reimport_unique")
       .on(table.targetSpaceId)
@@ -153,28 +155,40 @@ export const imports = pgTable(
   ],
 );
 
-export const importCredentials = pgTable(
-  "import_credentials",
+export const importConnections = pgTable(
+  "import_connections",
   {
-    importId: uuid()
-      .primaryKey()
-      .references(() => imports.id, { onDelete: "cascade" }),
-    kind: text().notNull().default("cloud"),
+    id: primaryId(),
+    organizationId: uuid()
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    kind: text().notNull(),
     site: text().notNull(),
     basePath: text().notNull().default(""),
     email: text(),
     token: encrypted().notNull(),
     caCertificates: text(),
     accountName: text(),
-    people: integer(),
-    withEmail: integer(),
     createdAt: timestampColumn().notNull().defaultNow(),
   },
   (table) => [
-    check("import_credentials_kind", sql`${table.kind} in ('cloud', 'dataCenter')`),
-    check("import_credentials_email", sql`${table.kind} = 'dataCenter' or ${table.email} is not null`),
+    index().on(table.organizationId),
+    check("import_connections_kind", sql`${table.kind} in ('cloud', 'dataCenter')`),
+    check("import_connections_email", sql`${table.kind} = 'dataCenter' or ${table.email} is not null`),
   ],
 );
+
+export const importCredentials = pgTable("import_credentials", {
+  importId: uuid()
+    .primaryKey()
+    .references(() => imports.id, { onDelete: "cascade" }),
+  site: text().notNull(),
+  email: text().notNull(),
+  token: encrypted().notNull(),
+  people: integer(),
+  withEmail: integer(),
+  createdAt: timestampColumn().notNull().defaultNow(),
+});
 
 export const importFiles = pgTable(
   "import_files",

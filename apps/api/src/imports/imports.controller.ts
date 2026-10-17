@@ -63,6 +63,7 @@ import {
   reportEntriesSchema,
   reportSchema,
   reviewersSchema,
+  spaceSelectionSchema,
   updateImportSchema,
   uploadSchema,
   userListResultSchema,
@@ -700,7 +701,7 @@ export class ImportsController {
   @ApiRoute({
     summary: "Connect an import to Confluence",
     description:
-      "Sets how an import of the source `confluence-cloud` or `confluence-dc` reads Confluence through its API. Pagehall tests the connection at once, stores the token encrypted, uses it only for this import and deletes it when the import is accepted, discarded, stopped or fails, when the importer loses the permission to import, or when the draft is left alone for a week. Only `https` sites under `atlassian.net` or hosts the instance administrator allowed are contacted, never addresses in private networks unless the instance allows them, and redirects are not followed.",
+      "Sets how an import of the source `confluence-cloud` or `confluence-dc` reads Confluence through its API. Pagehall tests the connection at once, stores the token encrypted, uses it only for this import and the imports of further spaces chosen with it, and deletes it when the last of them is accepted, discarded, stopped or fails, when the importer loses the permission to import, or when the draft is left alone for a week. Only `https` sites under `atlassian.net` or hosts the instance administrator allowed are contacted, never addresses in private networks unless the instance allows them, and redirects are not followed.",
     tags: [TAG],
     params: importParams,
     body: connectionSchema,
@@ -735,6 +736,27 @@ export class ImportsController {
     @Req() request: FastifyRequest,
   ) {
     return this.#services.imports.setConnection(actorOf(request), importId, body);
+  }
+
+  @Put("imports/:importId/connection/selection")
+  @Permission("import.manage", importResource)
+  @ApiRoute({
+    summary: "Choose the Confluence spaces to import",
+    description:
+      "Chooses one or more spaces of the connection of an import draft. Each space is imported on its own, into its own new space, with its own check, dry run, report and re-import. The import keeps its space when it is chosen; Pagehall creates a draft for every other space that shares the connection and its token, and removes the drafts of spaces no longer chosen. Imports sharing a connection read and run one after another. The shared token is deleted when the last of them has ended or been removed. A re-import reads only the space it came from.",
+    tags: [TAG],
+    params: importParams,
+    body: spaceSelectionSchema,
+    bodyExample: { spaceKeys: ["ITOPS", "HR"] },
+    response: { description: "The import.", schema: importSchema, example: exampleImport },
+    errors: ["importStarted", "wrongInput", "connectionMissing", "invalidSelection", "reimportSpaceFixed"],
+  })
+  async selection(
+    @Param("importId") importId: string,
+    @Body() body: z.output<typeof spaceSelectionSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.#services.imports.selectSpaces(actorOf(request), importId, body.spaceKeys);
   }
 
   @Get("imports/:importId/connection/spaces")

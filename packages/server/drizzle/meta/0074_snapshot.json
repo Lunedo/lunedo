@@ -1,5 +1,5 @@
 {
-  "id": "f96dcff9-1989-4a38-8215-1bef69bcadd4",
+  "id": "0a47c706-2347-4fa4-b564-c63aefd9e8c2",
   "prevId": "8a669bed-29e6-4c7c-8fbf-875646977208",
   "version": "7",
   "dialect": "postgresql",
@@ -6244,22 +6244,27 @@
       },
       "isRLSEnabled": false
     },
-    "public.import_credentials": {
-      "name": "import_credentials",
+    "public.import_connections": {
+      "name": "import_connections",
       "schema": "",
       "columns": {
-        "import_id": {
-          "name": "import_id",
+        "id": {
+          "name": "id",
           "type": "uuid",
           "primaryKey": true,
+          "notNull": true
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "uuid",
+          "primaryKey": false,
           "notNull": true
         },
         "kind": {
           "name": "kind",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "'cloud'"
+          "notNull": true
         },
         "site": {
           "name": "site",
@@ -6297,6 +6302,89 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "import_connections_organization_id_index": {
+          "name": "import_connections_organization_id_index",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "import_connections_organization_id_organizations_id_fk": {
+          "name": "import_connections_organization_id_organizations_id_fk",
+          "tableFrom": "import_connections",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "import_connections_kind": {
+          "name": "import_connections_kind",
+          "value": "\"import_connections\".\"kind\" in ('cloud', 'dataCenter')"
+        },
+        "import_connections_email": {
+          "name": "import_connections_email",
+          "value": "\"import_connections\".\"kind\" = 'dataCenter' or \"import_connections\".\"email\" is not null"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.import_credentials": {
+      "name": "import_credentials",
+      "schema": "",
+      "columns": {
+        "import_id": {
+          "name": "import_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "site": {
+          "name": "site",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token": {
+          "name": "token",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
         },
         "people": {
           "name": "people",
@@ -6337,16 +6425,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {
-        "import_credentials_kind": {
-          "name": "import_credentials_kind",
-          "value": "\"import_credentials\".\"kind\" in ('cloud', 'dataCenter')"
-        },
-        "import_credentials_email": {
-          "name": "import_credentials_email",
-          "value": "\"import_credentials\".\"kind\" = 'dataCenter' or \"import_credentials\".\"email\" is not null"
-        }
-      },
+      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.import_directory": {
@@ -7958,6 +8037,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "connection_id": {
+          "name": "connection_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "options": {
           "name": "options",
           "type": "jsonb",
@@ -8175,6 +8260,21 @@
           "method": "btree",
           "with": {}
         },
+        "imports_connection_id_index": {
+          "name": "imports_connection_id_index",
+          "columns": [
+            {
+              "expression": "connection_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "imports_quarantine_space_unique": {
           "name": "imports_quarantine_space_unique",
           "columns": [
@@ -8240,6 +8340,19 @@
           "tableTo": "import_uploads",
           "columnsFrom": [
             "upload_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "imports_connection_id_import_connections_id_fk": {
+          "name": "imports_connection_id_import_connections_id_fk",
+          "tableFrom": "imports",
+          "tableTo": "import_connections",
+          "columnsFrom": [
+            "connection_id"
           ],
           "columnsTo": [
             "id"

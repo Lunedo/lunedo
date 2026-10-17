@@ -7970,6 +7970,10 @@
       "title": "Confluence hat um Verlangsamung gebeten",
       "description": "Pagehall wartet wie von Confluence verlangt und macht in {seconds, plural, one {# Sekunde} other {# Sekunden}} weiter. Du musst nichts tun."
     },
+    "waiting": {
+      "title": "Wartet auf den Import eines anderen Bereichs",
+      "description": "Dieser Import teilt seine Confluence-Verbindung mit dem Import des Bereichs {key}, der zuerst läuft. Importe über eine Verbindung laufen nacheinander; dieser macht von selbst weiter."
+    },
     "connection": {
       "cloudTitle": "Mit Confluence Cloud verbinden",
       "dataCenterTitle": "Mit Confluence Data Center verbinden",
@@ -8006,16 +8010,14 @@
       "certificatesPlaceholder": "-----BEGIN CERTIFICATE-----"
     },
     "selection": {
-      "intro": "Wähle einen Bereich und, wenn du willst, nur einige seiner Seitenbäume. Pagehall liest sie im nächsten Schritt; in Confluence ändert sich nichts.",
+      "intro": "Wähle einen oder mehrere Bereiche und, wenn du willst, nur einige Seitenbäume des Bereichs dieses Imports. Pagehall liest sie im nächsten Schritt; in Confluence ändert sich nichts.",
       "notConnected": "Verbinde dich zuerst mit Confluence. Geh einen Schritt zurück und teste die Verbindung.",
       "spaceTitle": "Bereich",
       "space": "Confluence-Bereich",
-      "spaceHint": "{count, plural, one {# Bereich} other {# Bereiche}}, die dieses Konto lesen kann. Suche nach Name oder Schlüssel.",
-      "spacePlaceholder": "Bereiche suchen",
       "noSpaces": "Kein Bereich passt.",
       "personalSpace": "Persönlicher Bereich · {key}",
       "spacesFailed": "Die Bereiche konnten nicht gelesen werden",
-      "spaceRequired": "Wähle den Bereich, der importiert werden soll.",
+      "spaceRequired": "Wähle mindestens einen Bereich zum Importieren.",
       "treesTitle": "Seitenbäume",
       "treeFailed": "Die Seitenbäume konnten nicht gelesen werden",
       "totals": "{pages, plural, one {# Seite} other {# Seiten}} · {blogPosts, plural, one {# Blogbeitrag} other {# Blogbeiträge}} · {size} Anhänge",
@@ -8030,7 +8032,16 @@
       "restricted": "Seiten, die das Token nicht lesen kann, listet Confluence nicht auf. Inhalte, die sich später nicht lesen lassen, werden übersprungen und im Bericht genannt.",
       "optionsTitle": "Optionen",
       "history": "Seitenverlauf",
-      "historyHint": "Jede Version wird eine Pagehall-Version. Dauert deutlich länger."
+      "historyHint": "Jede Version wird eine Pagehall-Version. Dauert deutlich länger.",
+      "spacesHint": "{count, plural, one {# Bereich} other {# Bereiche}}, die dieses Konto lesen kann. Jeder gewählte Bereich wird ein eigener Import in einen neuen Bereich.",
+      "spaceHintReimport": "{count, plural, one {# Bereich} other {# Bereiche}}, die dieses Konto lesen kann. Ein erneuter Import liest nur den Bereich, aus dem er stammt.",
+      "filter": "Bereiche suchen",
+      "filterPlaceholder": "Name oder Schlüssel",
+      "noSpacesReadable": "Dieses Konto kann keinen Bereich lesen. Verbinde dich mit einem Konto, das die zu importierenden Bereiche lesen kann.",
+      "severalTitle": "{count} Importe, einer je Bereich",
+      "severalDescription": "Pagehall legt für jeden weiteren Bereich einen eigenen Import an. Sie teilen diese Verbindung und lesen nacheinander, jeder mit eigener Prüfung, eigenem Probelauf und eigenem Bericht. Setze sie in der Importliste fort; das Token wird gelöscht, wenn der letzte von ihnen beendet ist.",
+      "treesOfTitle": "Seitenbäume von {name}",
+      "treesOfHint": "Die anderen Bereiche werden vollständig importiert. Ihre Seitenbäume wählst du in ihren eigenen Importen."
     },
     "markdown": {
       "title": "Markdown-Ordner als ZIP",

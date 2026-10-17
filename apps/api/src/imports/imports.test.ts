@@ -264,7 +264,18 @@ describe.skipIf(!databaseBaseUrl)("imports through the API", () => {
     const spaces = await owner.get(`/api/v1/imports/${id}/connection/spaces`);
     expect(spaces.statusCode).toBe(409);
     expect(spaces.json()).toMatchObject({ code: "connectionMissing" });
+    const selection = await owner.put(`/api/v1/imports/${id}/connection/selection`, {
+      spaceKeys: ["ITOPS", "HR"],
+    });
+    expect(selection.statusCode).toBe(409);
+    expect(selection.json()).toMatchObject({ code: "connectionMissing" });
+    const empty = await owner.put(`/api/v1/imports/${id}/connection/selection`, { spaceKeys: [] });
+    expect(empty.statusCode).toBe(400);
     const other = await member();
+    const foreignSelection = await other.client.put(`/api/v1/imports/${id}/connection/selection`, {
+      spaceKeys: ["ITOPS"],
+    });
+    expect([403, 404]).toContain(foreignSelection.statusCode);
     const foreign = await other.client.put(`/api/v1/imports/${id}/connection`, {
       kind: "dataCenter",
       baseUrl: "https://intranet.example.com",

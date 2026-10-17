@@ -39,6 +39,7 @@ import {
   importKeys,
   importQuery,
   removeImport,
+  selectSpaces,
   setReviewers,
   startImport,
   updateImport,
@@ -49,6 +50,7 @@ import {
   DocumentsField,
   inputOf,
   MAX_DOCUMENT_BYTES,
+  ownSpaceOf,
   type Selection,
   SelectionStep,
   SourceChoice,
@@ -57,6 +59,7 @@ import {
   selectionOf,
   stepsFor,
   ThrottleNotice,
+  WaitingNotice,
 } from "./source-steps.js";
 import { UploadField } from "./upload-field.js";
 
@@ -249,7 +252,8 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
       : Boolean(entry.file?.complete);
 
   const saveSelection = async (): Promise<boolean> => {
-    if (!selection.spaceKey) {
+    const own = ownSpaceOf(entry, selection);
+    if (!own) {
       fail("selection", t("imports.selection.spaceRequired"));
       return false;
     }
@@ -257,9 +261,24 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
       fail("selection", t("imports.selection.treeRequired"));
       return false;
     }
+    const chosen = entry.connection?.selection.map((item) => item.spaceKey) ?? [];
+    if (JSON.stringify([...chosen].sort()) !== JSON.stringify([...selection.spaceKeys].sort())) {
+      setSaving(true);
+      try {
+        const updated = await selectSpaces(entry.id, selection.spaceKeys);
+        queryClient.setQueryData(importKeys.detail(entry.id), updated);
+        setSaveError(null);
+      } catch (error) {
+        setSaveError(error);
+        throw error;
+      } finally {
+        setSaving(false);
+      }
+      await queryClient.invalidateQueries({ queryKey: importKeys.all });
+    }
     await patch({
       options: {
-        spaceKey: selection.spaceKey,
+        spaceKey: own,
         pageIds: selection.pageIds ?? [],
         blogPosts: selection.pageIds === null && selection.blogPosts,
       },
@@ -816,6 +835,7 @@ function Reading({ entry }: { entry: ImportView }) {
   return (
     <>
       <ThrottleNotice until={entry.throttledUntil} />
+      <WaitingNotice spaceKey={entry.waitingFor} />
       <ReadingProgress entry={entry} percent={percent} />
     </>
   );

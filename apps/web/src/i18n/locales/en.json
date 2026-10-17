@@ -7970,6 +7970,10 @@
       "title": "Confluence asked to slow down",
       "description": "Pagehall waits as Confluence asked and continues in {seconds, plural, one {# second} other {# seconds}}. Nothing needs to be done."
     },
+    "waiting": {
+      "title": "Waiting for the import of another space",
+      "description": "This import shares its Confluence connection with the import of space {key}, which goes first. Imports over one connection run one after another; this one continues by itself."
+    },
     "connection": {
       "cloudTitle": "Connect to Confluence Cloud",
       "dataCenterTitle": "Connect to Confluence Data Center",
@@ -8006,16 +8010,14 @@
       "certificatesPlaceholder": "-----BEGIN CERTIFICATE-----"
     },
     "selection": {
-      "intro": "Choose a space and, if you like, only some of its page trees. Pagehall reads them in the next step; nothing changes in Confluence.",
+      "intro": "Choose one or more spaces and, if you like, only some page trees of this import's space. Pagehall reads them in the next step; nothing changes in Confluence.",
       "notConnected": "Connect to Confluence first. Go back one step and test the connection.",
       "spaceTitle": "Space",
       "space": "Confluence space",
-      "spaceHint": "{count, plural, one {# space} other {# spaces}} this account can read. Search by name or key.",
-      "spacePlaceholder": "Search spaces",
       "noSpaces": "No space matches.",
       "personalSpace": "Personal space · {key}",
       "spacesFailed": "The spaces could not be read",
-      "spaceRequired": "Choose the space to import.",
+      "spaceRequired": "Choose at least one space to import.",
       "treesTitle": "Page trees",
       "treeFailed": "The page trees could not be read",
       "totals": "{pages, plural, one {# page} other {# pages}} · {blogPosts, plural, one {# blog post} other {# blog posts}} · {size} of attachments",
@@ -8030,7 +8032,16 @@
       "restricted": "Pages the token cannot read are not listed by Confluence. Content that refuses to be read later is skipped and listed in the report.",
       "optionsTitle": "Options",
       "history": "Page history",
-      "historyHint": "Every version becomes a Pagehall version. Takes noticeably longer."
+      "historyHint": "Every version becomes a Pagehall version. Takes noticeably longer.",
+      "spacesHint": "{count, plural, one {# space} other {# spaces}} this account can read. Each chosen space becomes an import of its own, into a new space.",
+      "spaceHintReimport": "{count, plural, one {# space} other {# spaces}} this account can read. A re-import reads only the space it came from.",
+      "filter": "Search spaces",
+      "filterPlaceholder": "Name or key",
+      "noSpacesReadable": "This account cannot read any space. Connect with an account that can read the spaces to import.",
+      "severalTitle": "{count} imports, one per space",
+      "severalDescription": "Pagehall creates one import for each further space. They share this connection and read one after another, each with its own check, dry run and report. Continue them from the import list; the token is deleted when the last of them has ended.",
+      "treesOfTitle": "Page trees of {name}",
+      "treesOfHint": "The other spaces are imported whole. Choose their page trees in their own imports."
     },
     "markdown": {
       "title": "Markdown folder as ZIP",

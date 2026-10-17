@@ -47,6 +47,7 @@ function importView(overrides: Record<string, unknown> = {}) {
     files: [],
     options: {},
     throttledUntil: null,
+    waitingFor: null,
     tokenDeletedAt: null,
     sourceUrl: null,
     reviewers: [],

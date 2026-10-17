@@ -26770,6 +26770,29 @@
                                 "string",
                                 "null"
                               ]
+                            },
+                            "selection": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "importId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the import that reads the space."
+                                  },
+                                  "spaceKey": {
+                                    "type": "string",
+                                    "description": "Key of the Confluence space."
+                                  }
+                                },
+                                "required": [
+                                  "importId",
+                                  "spaceKey"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "description": "Spaces chosen with this connection whose imports are not started yet, one import per space, this import included. Empty once the import has started."
                             }
                           },
                           "required": [
@@ -26777,7 +26800,8 @@
                             "site",
                             "basePath",
                             "email",
-                            "account"
+                            "account",
+                            "selection"
                           ],
                           "additionalProperties": false
                         },
@@ -26785,7 +26809,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "The connection of an import through the Confluence API, or null. The token is never returned."
+                      "description": "The connection of an import through the Confluence API, or null. Several imports of the same importer can share one connection; the token is never returned."
                     },
                     "files": {
                       "type": "array",
@@ -26885,6 +26909,13 @@
                         }
                       ],
                       "description": "Until when Confluence asked Pagehall to slow down, or null. The import continues by itself. ISO 8601 timestamp in UTC."
+                    },
+                    "waitingFor": {
+                      "description": "Key of the Confluence space whose import over the same connection reads or runs first, or null. Imports sharing a connection run one after another; this one continues by itself.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "tokenDeletedAt": {
                       "anyOf": [
@@ -27257,6 +27288,7 @@
                     "files",
                     "options",
                     "throttledUntil",
+                    "waitingFor",
                     "tokenDeletedAt",
                     "sourceUrl",
                     "reviewers",
@@ -27339,6 +27371,7 @@
                   "files": [],
                   "options": {},
                   "throttledUntil": null,
+                  "waitingFor": null,
                   "tokenDeletedAt": null,
                   "counts": {
                     "pages": 120,
@@ -27954,6 +27987,29 @@
                                 "string",
                                 "null"
                               ]
+                            },
+                            "selection": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "importId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the import that reads the space."
+                                  },
+                                  "spaceKey": {
+                                    "type": "string",
+                                    "description": "Key of the Confluence space."
+                                  }
+                                },
+                                "required": [
+                                  "importId",
+                                  "spaceKey"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "description": "Spaces chosen with this connection whose imports are not started yet, one import per space, this import included. Empty once the import has started."
                             }
                           },
                           "required": [
@@ -27961,7 +28017,8 @@
                             "site",
                             "basePath",
                             "email",
-                            "account"
+                            "account",
+                            "selection"
                           ],
                           "additionalProperties": false
                         },
@@ -27969,7 +28026,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "The connection of an import through the Confluence API, or null. The token is never returned."
+                      "description": "The connection of an import through the Confluence API, or null. Several imports of the same importer can share one connection; the token is never returned."
                     },
                     "files": {
                       "type": "array",
@@ -28069,6 +28126,13 @@
                         }
                       ],
                       "description": "Until when Confluence asked Pagehall to slow down, or null. The import continues by itself. ISO 8601 timestamp in UTC."
+                    },
+                    "waitingFor": {
+                      "description": "Key of the Confluence space whose import over the same connection reads or runs first, or null. Imports sharing a connection run one after another; this one continues by itself.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "tokenDeletedAt": {
                       "anyOf": [
@@ -28441,6 +28505,7 @@
                     "files",
                     "options",
                     "throttledUntil",
+                    "waitingFor",
                     "tokenDeletedAt",
                     "sourceUrl",
                     "reviewers",
@@ -28523,6 +28588,7 @@
                   "files": [],
                   "options": {},
                   "throttledUntil": null,
+                  "waitingFor": null,
                   "tokenDeletedAt": null,
                   "counts": {
                     "pages": 120,
@@ -29180,6 +29246,29 @@
                                 "string",
                                 "null"
                               ]
+                            },
+                            "selection": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "importId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the import that reads the space."
+                                  },
+                                  "spaceKey": {
+                                    "type": "string",
+                                    "description": "Key of the Confluence space."
+                                  }
+                                },
+                                "required": [
+                                  "importId",
+                                  "spaceKey"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "description": "Spaces chosen with this connection whose imports are not started yet, one import per space, this import included. Empty once the import has started."
                             }
                           },
                           "required": [
@@ -29187,7 +29276,8 @@
                             "site",
                             "basePath",
                             "email",
-                            "account"
+                            "account",
+                            "selection"
                           ],
                           "additionalProperties": false
                         },
@@ -29195,7 +29285,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "The connection of an import through the Confluence API, or null. The token is never returned."
+                      "description": "The connection of an import through the Confluence API, or null. Several imports of the same importer can share one connection; the token is never returned."
                     },
                     "files": {
                       "type": "array",
@@ -29295,6 +29385,13 @@
                         }
                       ],
                       "description": "Until when Confluence asked Pagehall to slow down, or null. The import continues by itself. ISO 8601 timestamp in UTC."
+                    },
+                    "waitingFor": {
+                      "description": "Key of the Confluence space whose import over the same connection reads or runs first, or null. Imports sharing a connection run one after another; this one continues by itself.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "tokenDeletedAt": {
                       "anyOf": [
@@ -29667,6 +29764,7 @@
                     "files",
                     "options",
                     "throttledUntil",
+                    "waitingFor",
                     "tokenDeletedAt",
                     "sourceUrl",
                     "reviewers",
@@ -29749,6 +29847,7 @@
                   "files": [],
                   "options": {},
                   "throttledUntil": null,
+                  "waitingFor": null,
                   "tokenDeletedAt": null,
                   "counts": {
                     "pages": 120,
@@ -30232,6 +30331,29 @@
                                 "string",
                                 "null"
                               ]
+                            },
+                            "selection": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "importId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the import that reads the space."
+                                  },
+                                  "spaceKey": {
+                                    "type": "string",
+                                    "description": "Key of the Confluence space."
+                                  }
+                                },
+                                "required": [
+                                  "importId",
+                                  "spaceKey"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "description": "Spaces chosen with this connection whose imports are not started yet, one import per space, this import included. Empty once the import has started."
                             }
                           },
                           "required": [
@@ -30239,7 +30361,8 @@
                             "site",
                             "basePath",
                             "email",
-                            "account"
+                            "account",
+                            "selection"
                           ],
                           "additionalProperties": false
                         },
@@ -30247,7 +30370,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "The connection of an import through the Confluence API, or null. The token is never returned."
+                      "description": "The connection of an import through the Confluence API, or null. Several imports of the same importer can share one connection; the token is never returned."
                     },
                     "files": {
                       "type": "array",
@@ -30347,6 +30470,13 @@
                         }
                       ],
                       "description": "Until when Confluence asked Pagehall to slow down, or null. The import continues by itself. ISO 8601 timestamp in UTC."
+                    },
+                    "waitingFor": {
+                      "description": "Key of the Confluence space whose import over the same connection reads or runs first, or null. Imports sharing a connection run one after another; this one continues by itself.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "tokenDeletedAt": {
                       "anyOf": [
@@ -30719,6 +30849,7 @@
                     "files",
                     "options",
                     "throttledUntil",
+                    "waitingFor",
                     "tokenDeletedAt",
                     "sourceUrl",
                     "reviewers",
@@ -30801,6 +30932,7 @@
                   "files": [],
                   "options": {},
                   "throttledUntil": null,
+                  "waitingFor": null,
                   "tokenDeletedAt": null,
                   "counts": {
                     "pages": 120,
@@ -33703,7 +33835,7 @@
       "put": {
         "operationId": "imports.connection",
         "summary": "Connect an import to Confluence",
-        "description": "Sets how an import of the source `confluence-cloud` or `confluence-dc` reads Confluence through its API. Pagehall tests the connection at once, stores the token encrypted, uses it only for this import and deletes it when the import is accepted, discarded, stopped or fails, when the importer loses the permission to import, or when the draft is left alone for a week. Only `https` sites under `atlassian.net` or hosts the instance administrator allowed are contacted, never addresses in private networks unless the instance allows them, and redirects are not followed.\n\nRequires the permission `import.manage` on the import in `importId`.",
+        "description": "Sets how an import of the source `confluence-cloud` or `confluence-dc` reads Confluence through its API. Pagehall tests the connection at once, stores the token encrypted, uses it only for this import and the imports of further spaces chosen with it, and deletes it when the last of them is accepted, discarded, stopped or fails, when the importer loses the permission to import, or when the draft is left alone for a week. Only `https` sites under `atlassian.net` or hosts the instance administrator allowed are contacted, never addresses in private networks unless the instance allows them, and redirects are not followed.\n\nRequires the permission `import.manage` on the import in `importId`.",
         "tags": [
           "Imports"
         ],
@@ -34085,6 +34217,29 @@
                                 "string",
                                 "null"
                               ]
+                            },
+                            "selection": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "importId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the import that reads the space."
+                                  },
+                                  "spaceKey": {
+                                    "type": "string",
+                                    "description": "Key of the Confluence space."
+                                  }
+                                },
+                                "required": [
+                                  "importId",
+                                  "spaceKey"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "description": "Spaces chosen with this connection whose imports are not started yet, one import per space, this import included. Empty once the import has started."
                             }
                           },
                           "required": [
@@ -34092,7 +34247,8 @@
                             "site",
                             "basePath",
                             "email",
-                            "account"
+                            "account",
+                            "selection"
                           ],
                           "additionalProperties": false
                         },
@@ -34100,7 +34256,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "The connection of an import through the Confluence API, or null. The token is never returned."
+                      "description": "The connection of an import through the Confluence API, or null. Several imports of the same importer can share one connection; the token is never returned."
                     },
                     "files": {
                       "type": "array",
@@ -34200,6 +34356,13 @@
                         }
                       ],
                       "description": "Until when Confluence asked Pagehall to slow down, or null. The import continues by itself. ISO 8601 timestamp in UTC."
+                    },
+                    "waitingFor": {
+                      "description": "Key of the Confluence space whose import over the same connection reads or runs first, or null. Imports sharing a connection run one after another; this one continues by itself.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "tokenDeletedAt": {
                       "anyOf": [
@@ -34572,6 +34735,7 @@
                     "files",
                     "options",
                     "throttledUntil",
+                    "waitingFor",
                     "tokenDeletedAt",
                     "sourceUrl",
                     "reviewers",
@@ -34654,6 +34818,7 @@
                   "files": [],
                   "options": {},
                   "throttledUntil": null,
+                  "waitingFor": null,
                   "tokenDeletedAt": null,
                   "counts": {
                     "pages": 120,
@@ -34958,6 +35123,1148 @@
                       "title": "Confluence asked to slow down",
                       "status": 503,
                       "code": "confluenceRateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/imports/{importId}/connection/selection": {
+      "put": {
+        "operationId": "imports.selection",
+        "summary": "Choose the Confluence spaces to import",
+        "description": "Chooses one or more spaces of the connection of an import draft. Each space is imported on its own, into its own new space, with its own check, dry run, report and re-import. The import keeps its space when it is chosen; Pagehall creates a draft for every other space that shares the connection and its token, and removes the drafts of spaces no longer chosen. Imports sharing a connection read and run one after another. The shared token is deleted when the last of them has ended or been removed. A re-import reads only the space it came from.\n\nRequires the permission `import.manage` on the import in `importId`.",
+        "tags": [
+          "Imports"
+        ],
+        "x-pagehall-permission": {
+          "action": "import.manage",
+          "resource": "import",
+          "parameter": "importId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "importId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the import.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "spaceKeys": {
+                    "minItems": 1,
+                    "maxItems": 50,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 255
+                    },
+                    "description": "Keys of the Confluence spaces to import, 1 to 50. The import keeps its space when it is in the list; every other space gets an import of its own over the same connection, and drafts of spaces no longer listed are removed."
+                  }
+                },
+                "required": [
+                  "spaceKeys"
+                ],
+                "additionalProperties": false,
+                "description": "The Confluence spaces to import."
+              },
+              "example": {
+                "spaceKeys": [
+                  "ITOPS",
+                  "HR"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The import.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the import."
+                    },
+                    "organizationId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "Organization the import belongs to."
+                    },
+                    "importer": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "ID of the account."
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "Name of the person."
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The administrator who imports."
+                    },
+                    "source": {
+                      "type": "string",
+                      "description": "What is imported: `confluence-xml` for the XML space export of Confluence Cloud or Data Center, `confluence-csv` for the CSV space export of Confluence Cloud, `confluence-cloud` and `confluence-dc` to read a space through the Confluence API, `markdown` for a ZIP file of Markdown files, `word` for Word documents (`.docx`). New values can be added in later versions; handle unknown values.",
+                      "x-extensible-enum": [
+                        "confluence-xml",
+                        "confluence-csv",
+                        "confluence-cloud",
+                        "confluence-dc",
+                        "markdown",
+                        "word"
+                      ]
+                    },
+                    "state": {
+                      "type": "string",
+                      "description": "State of the import. `draft` while the wizard is filled in, `analyzing` while the export is read, `ready` when it can be started, `running` while it imports, `held` when the importing administrator lost the permission and another administrator has to take over, `stopping` and `discarding` while the quarantine space is deleted, `review` when the quarantine space waits for a decision, `accepted`, `discarded`, `stopped` and `failed` at the end. A re-import is in `running` while it compares or applies, in `review` while changes wait for a decision, `accepted` when everything is applied, and `superseded` when a newer re-import of the same space replaced it. New values can be added in later versions; handle unknown values.",
+                      "x-extensible-enum": [
+                        "draft",
+                        "analyzing",
+                        "ready",
+                        "running",
+                        "held",
+                        "stopping",
+                        "review",
+                        "accepting",
+                        "accepted",
+                        "discarding",
+                        "discarded",
+                        "stopped",
+                        "failed",
+                        "superseded"
+                      ]
+                    },
+                    "draftStep": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Step of the wizard the importer was on, for continuing a draft."
+                    },
+                    "file": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "description": "Where the export comes from. New values can be added in later versions; handle unknown values.",
+                              "x-extensible-enum": [
+                                "upload",
+                                "folder"
+                              ]
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "Name of the file."
+                            },
+                            "size": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Size in bytes, or null when not known yet."
+                            },
+                            "uploadId": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "ID of the upload, or null for a file in the import folder."
+                            },
+                            "complete": {
+                              "type": "boolean",
+                              "description": "Whether the file is complete and can be read."
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "name",
+                            "size",
+                            "uploadId",
+                            "complete"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The export file, or null when none is chosen yet."
+                    },
+                    "spaceName": {
+                      "description": "Name of the new space.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "spaceKey": {
+                      "description": "Key of the new space.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "archived": {
+                      "type": "boolean",
+                      "description": "Whether the space becomes archived when the import is accepted."
+                    },
+                    "history": {
+                      "type": "boolean",
+                      "description": "Whether every Confluence version becomes a Pagehall version, or only the current state is imported."
+                    },
+                    "peopleSource": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "description": "How people are recognized: `token` reads names and e-mail addresses with a read-only Atlassian API token, `list` uses a user list exported from the Atlassian administration, `skip` keeps every author as a placeholder, `source` takes the names Confluence Data Center returns through its API. New values can be added in later versions; handle unknown values.",
+                              "x-extensible-enum": [
+                                "token",
+                                "list",
+                                "skip",
+                                "source"
+                              ]
+                            },
+                            "site": {
+                              "description": "Confluence site the token is used with, or null.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "email": {
+                              "description": "Atlassian e-mail address the token belongs to, or null.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "people": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "People of the export the token could read, or people in the user list; null when unknown."
+                            },
+                            "withEmail": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Of these, people with a visible e-mail address."
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "site",
+                            "email",
+                            "people",
+                            "withEmail"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "How people are recognized. The token itself is never returned."
+                    },
+                    "connection": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "description": "Kind of Confluence the import reads through its API. New values can be added in later versions; handle unknown values.",
+                              "x-extensible-enum": [
+                                "cloud",
+                                "dataCenter"
+                              ]
+                            },
+                            "site": {
+                              "type": "string",
+                              "description": "Host name of the Confluence site, with the port when it is not 443."
+                            },
+                            "basePath": {
+                              "type": "string",
+                              "description": "Context path of Confluence Data Center, such as `/confluence`, or empty."
+                            },
+                            "email": {
+                              "description": "Atlassian e-mail address the API token belongs to, or null.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "account": {
+                              "description": "Name of the Confluence account the token belongs to.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "selection": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "importId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the import that reads the space."
+                                  },
+                                  "spaceKey": {
+                                    "type": "string",
+                                    "description": "Key of the Confluence space."
+                                  }
+                                },
+                                "required": [
+                                  "importId",
+                                  "spaceKey"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "description": "Spaces chosen with this connection whose imports are not started yet, one import per space, this import included. Empty once the import has started."
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "site",
+                            "basePath",
+                            "email",
+                            "account",
+                            "selection"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The connection of an import through the Confluence API, or null. Several imports of the same importer can share one connection; the token is never returned."
+                    },
+                    "files": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "description": "Where the document comes from. New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
+                              "upload"
+                            ]
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Name of the file."
+                          },
+                          "size": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Size in bytes."
+                          },
+                          "uploadId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "ID of the upload."
+                          },
+                          "complete": {
+                            "type": "boolean",
+                            "description": "Whether the upload is complete and can be read."
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "name",
+                          "size",
+                          "uploadId",
+                          "complete"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "The Word documents of a `word` import, in their order. Empty for other imports."
+                    },
+                    "options": {
+                      "type": "object",
+                      "properties": {
+                        "spaceKey": {
+                          "description": "Key of the Confluence space read through the API.",
+                          "type": "string"
+                        },
+                        "pageIds": {
+                          "description": "IDs of the top-level pages whose trees are imported; all pages when left out.",
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "blogPosts": {
+                          "description": "Whether blog posts are imported; true when left out.",
+                          "type": "boolean"
+                        },
+                        "split": {
+                          "type": "string",
+                          "description": "`file` makes each Word document one page, `heading` adds a subpage per top-level heading. New values can be added in later versions; handle unknown values.",
+                          "x-extensible-enum": [
+                            "file",
+                            "heading"
+                          ]
+                        }
+                      },
+                      "additionalProperties": false,
+                      "description": "Options of the source."
+                    },
+                    "throttledUntil": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Until when Confluence asked Pagehall to slow down, or null. The import continues by itself. ISO 8601 timestamp in UTC."
+                    },
+                    "waitingFor": {
+                      "description": "Key of the Confluence space whose import over the same connection reads or runs first, or null. Imports sharing a connection run one after another; this one continues by itself.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "tokenDeletedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the API token was deleted: when the import was accepted, discarded, stopped or failed, when the importer lost the permission to import, or when the draft was left alone for a week. ISO 8601 timestamp in UTC."
+                    },
+                    "sourceUrl": {
+                      "description": "Address of the Confluence site. Links to pages outside the export point there.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "reviewers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the account."
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Name of the person."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A person."
+                      },
+                      "description": "People who can read the quarantine space and the report."
+                    },
+                    "phase": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "x-extensible-enum": [
+                            "read",
+                            "compare",
+                            "space",
+                            "people",
+                            "pages",
+                            "attachments",
+                            "templates",
+                            "content",
+                            "comments",
+                            "reactions",
+                            "permissions",
+                            "baseline",
+                            "finish",
+                            "lineage",
+                            "moves",
+                            "labels",
+                            "deletions",
+                            "done"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Step the import is in: `read` reads the export, then `space`, `people`, `pages`, `attachments`, `templates`, `content`, `comments`, `reactions`, `permissions`, `baseline` and `finish`; `done` after the last step. A re-import compares in `compare` and applies in `lineage`, `people`, `pages`, `moves`, `attachments`, `templates`, `content`, `labels`, `comments`, `reactions`, `deletions`, `baseline` and `finish`. New values can be added in later versions; handle unknown values."
+                    },
+                    "progress": {
+                      "type": "object",
+                      "properties": {
+                        "done": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Units done in the current step."
+                        },
+                        "total": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Units of the current step, or 0 when not known."
+                        }
+                      },
+                      "required": [
+                        "done",
+                        "total"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Progress of the current step."
+                    },
+                    "found": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "pages": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991,
+                              "description": "Pages in the export."
+                            },
+                            "blogPosts": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991,
+                              "description": "Blog posts in the export."
+                            },
+                            "versions": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991,
+                              "description": "Earlier versions of pages and blog posts."
+                            },
+                            "comments": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991,
+                              "description": "Comments, including inline comments and replies."
+                            },
+                            "likes": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991,
+                              "description": "Likes on pages, blog posts and comments."
+                            },
+                            "watchers": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991,
+                              "description": "Watchers of pages and the space. They are counted, not imported."
+                            },
+                            "attachments": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991,
+                              "description": "Attachments of these pages."
+                            },
+                            "attachmentBytes": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991,
+                              "description": "Size of the current attachment versions in bytes."
+                            },
+                            "people": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991,
+                              "description": "People named in the export."
+                            },
+                            "macroKinds": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991,
+                              "description": "Different macros used on the pages."
+                            },
+                            "spaceKey": {
+                              "type": "string",
+                              "description": "Key of the space in Confluence."
+                            },
+                            "spaceName": {
+                              "type": "string",
+                              "description": "Name of the space in Confluence."
+                            }
+                          },
+                          "required": [
+                            "pages",
+                            "blogPosts",
+                            "versions",
+                            "comments",
+                            "likes",
+                            "watchers",
+                            "attachments",
+                            "attachmentBytes",
+                            "people",
+                            "macroKinds",
+                            "spaceKey",
+                            "spaceName"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "What the export contains, once it was read."
+                    },
+                    "counts": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      "description": "What was imported, by kind: `pages`, `blogPosts`, `versions`, `attachments`, `attachmentVersions`, `comments`, `inlineAnchored`, `inlineMoved`, `likes`, `watchers`, `people`, `peopleMatched`, `restrictions`, `groupsMissing` and `problems`."
+                    },
+                    "errorCode": {
+                      "description": "Why the export could not be read or the import failed, such as `notAnArchive`, `wrongFormat`, `archiveTooLarge`, `unsafeEntryName`, `xmlDeclaration` or `internalError`.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "quarantineSpace": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the space."
+                            },
+                            "key": {
+                              "type": "string",
+                              "description": "Key of the space."
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "key"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The space the import writes into."
+                    },
+                    "targetSpace": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the space."
+                            },
+                            "key": {
+                              "type": "string",
+                              "description": "Key of the space."
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "Name of the space."
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "key",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "For a re-import, the space created by the earlier import that the changes go into; otherwise null."
+                    },
+                    "reimportSpaceId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Space a newer export of the same Confluence space can be imported into again, or null when this import offers no re-import."
+                    },
+                    "canManage": {
+                      "type": "boolean",
+                      "description": "Whether the caller can change, start, stop, accept or discard the import."
+                    },
+                    "canResolve": {
+                      "type": "boolean",
+                      "description": "Whether the caller can map people and groups of the import or apply a user list."
+                    },
+                    "canTakeOver": {
+                      "type": "boolean",
+                      "description": "Whether the caller can take over a held import."
+                    },
+                    "startedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the import started. ISO 8601 timestamp in UTC."
+                    },
+                    "finishedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the import finished or failed. ISO 8601 timestamp in UTC."
+                    },
+                    "decidedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the import was accepted, discarded or stopped. ISO 8601 timestamp in UTC."
+                    },
+                    "fileExpiresAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When an uploaded file is deleted. ISO 8601 timestamp in UTC."
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the import was created. ISO 8601 timestamp in UTC."
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the import last changed. ISO 8601 timestamp in UTC."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "organizationId",
+                    "importer",
+                    "source",
+                    "state",
+                    "draftStep",
+                    "file",
+                    "spaceName",
+                    "spaceKey",
+                    "archived",
+                    "history",
+                    "peopleSource",
+                    "connection",
+                    "files",
+                    "options",
+                    "throttledUntil",
+                    "waitingFor",
+                    "tokenDeletedAt",
+                    "sourceUrl",
+                    "reviewers",
+                    "phase",
+                    "progress",
+                    "found",
+                    "counts",
+                    "errorCode",
+                    "quarantineSpace",
+                    "targetSpace",
+                    "reimportSpaceId",
+                    "canManage",
+                    "canResolve",
+                    "canTakeOver",
+                    "startedAt",
+                    "finishedAt",
+                    "decidedAt",
+                    "fileExpiresAt",
+                    "createdAt",
+                    "updatedAt"
+                  ],
+                  "additionalProperties": false,
+                  "description": "An import of a Confluence space."
+                },
+                "example": {
+                  "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f0001",
+                  "organizationId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f0002",
+                  "importer": {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f0003",
+                    "name": "Alex Admin"
+                  },
+                  "source": "confluence-xml",
+                  "state": "review",
+                  "draftStep": 3,
+                  "file": {
+                    "kind": "upload",
+                    "name": "export.zip",
+                    "size": 1048576,
+                    "uploadId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f0004",
+                    "complete": true
+                  },
+                  "spaceName": "IT Operations",
+                  "spaceKey": "ITOPS",
+                  "archived": false,
+                  "sourceUrl": "https://example.atlassian.net/wiki",
+                  "reviewers": [
+                    {
+                      "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f0005",
+                      "name": "Robin Reviewer"
+                    }
+                  ],
+                  "phase": null,
+                  "progress": {
+                    "done": 0,
+                    "total": 0
+                  },
+                  "found": {
+                    "pages": 120,
+                    "blogPosts": 6,
+                    "versions": 340,
+                    "comments": 85,
+                    "likes": 30,
+                    "watchers": 44,
+                    "attachments": 40,
+                    "attachmentBytes": 2048000,
+                    "people": 12,
+                    "macroKinds": 6,
+                    "spaceKey": "ITOPS",
+                    "spaceName": "IT Operations"
+                  },
+                  "history": false,
+                  "peopleSource": {
+                    "kind": "token",
+                    "site": "example.atlassian.net",
+                    "email": "alex@example.com",
+                    "people": 12,
+                    "withEmail": 10
+                  },
+                  "connection": null,
+                  "files": [],
+                  "options": {},
+                  "throttledUntil": null,
+                  "waitingFor": null,
+                  "tokenDeletedAt": null,
+                  "counts": {
+                    "pages": 120,
+                    "blogPosts": 6,
+                    "attachments": 40,
+                    "attachmentVersions": 52,
+                    "comments": 85,
+                    "people": 12,
+                    "problems": 7
+                  },
+                  "errorCode": null,
+                  "quarantineSpace": {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f0006",
+                    "key": "ITOPS"
+                  },
+                  "targetSpace": null,
+                  "reimportSpaceId": null,
+                  "canManage": true,
+                  "canResolve": true,
+                  "canTakeOver": false,
+                  "startedAt": "2026-10-10T08:00:00.000Z",
+                  "finishedAt": "2026-10-10T08:05:00.000Z",
+                  "decidedAt": null,
+                  "fileExpiresAt": null,
+                  "createdAt": "2026-10-10T07:50:00.000Z",
+                  "updatedAt": "2026-10-10T08:05:00.000Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidSelection`: The selection is not valid. `reimportSpaceFixed`: The space of a re-import cannot change. `wrongInput`: This kind of import does not take this input.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidSelection": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidSelection",
+                      "title": "The selection is not valid",
+                      "status": 400,
+                      "code": "invalidSelection"
+                    }
+                  },
+                  "reimportSpaceFixed": {
+                    "value": {
+                      "type": "urn:pagehall:problem:reimportSpaceFixed",
+                      "title": "The space of a re-import cannot change",
+                      "status": 400,
+                      "code": "reimportSpaceFixed"
+                    }
+                  },
+                  "wrongInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:wrongInput",
+                      "title": "This kind of import does not take this input",
+                      "status": 400,
+                      "code": "wrongInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`connectionMissing`: The import is not connected to Confluence. `importStarted`: The import has started.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "connectionMissing": {
+                    "value": {
+                      "type": "urn:pagehall:problem:connectionMissing",
+                      "title": "The import is not connected to Confluence",
+                      "status": 409,
+                      "code": "connectionMissing"
+                    }
+                  },
+                  "importStarted": {
+                    "value": {
+                      "type": "urn:pagehall:problem:importStarted",
+                      "title": "The import has started",
+                      "status": 409,
+                      "code": "importStarted"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
                     }
                   }
                 }
@@ -35895,6 +37202,29 @@
                                 "string",
                                 "null"
                               ]
+                            },
+                            "selection": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "importId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the import that reads the space."
+                                  },
+                                  "spaceKey": {
+                                    "type": "string",
+                                    "description": "Key of the Confluence space."
+                                  }
+                                },
+                                "required": [
+                                  "importId",
+                                  "spaceKey"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "description": "Spaces chosen with this connection whose imports are not started yet, one import per space, this import included. Empty once the import has started."
                             }
                           },
                           "required": [
@@ -35902,7 +37232,8 @@
                             "site",
                             "basePath",
                             "email",
-                            "account"
+                            "account",
+                            "selection"
                           ],
                           "additionalProperties": false
                         },
@@ -35910,7 +37241,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "The connection of an import through the Confluence API, or null. The token is never returned."
+                      "description": "The connection of an import through the Confluence API, or null. Several imports of the same importer can share one connection; the token is never returned."
                     },
                     "files": {
                       "type": "array",
@@ -36010,6 +37341,13 @@
                         }
                       ],
                       "description": "Until when Confluence asked Pagehall to slow down, or null. The import continues by itself. ISO 8601 timestamp in UTC."
+                    },
+                    "waitingFor": {
+                      "description": "Key of the Confluence space whose import over the same connection reads or runs first, or null. Imports sharing a connection run one after another; this one continues by itself.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "tokenDeletedAt": {
                       "anyOf": [
@@ -36382,6 +37720,7 @@
                     "files",
                     "options",
                     "throttledUntil",
+                    "waitingFor",
                     "tokenDeletedAt",
                     "sourceUrl",
                     "reviewers",
@@ -36464,6 +37803,7 @@
                   "files": [],
                   "options": {},
                   "throttledUntil": null,
+                  "waitingFor": null,
                   "tokenDeletedAt": null,
                   "counts": {
                     "pages": 120,
@@ -38036,6 +39376,29 @@
                                 "string",
                                 "null"
                               ]
+                            },
+                            "selection": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "importId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the import that reads the space."
+                                  },
+                                  "spaceKey": {
+                                    "type": "string",
+                                    "description": "Key of the Confluence space."
+                                  }
+                                },
+                                "required": [
+                                  "importId",
+                                  "spaceKey"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "description": "Spaces chosen with this connection whose imports are not started yet, one import per space, this import included. Empty once the import has started."
                             }
                           },
                           "required": [
@@ -38043,7 +39406,8 @@
                             "site",
                             "basePath",
                             "email",
-                            "account"
+                            "account",
+                            "selection"
                           ],
                           "additionalProperties": false
                         },
@@ -38051,7 +39415,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "The connection of an import through the Confluence API, or null. The token is never returned."
+                      "description": "The connection of an import through the Confluence API, or null. Several imports of the same importer can share one connection; the token is never returned."
                     },
                     "files": {
                       "type": "array",
@@ -38151,6 +39515,13 @@
                         }
                       ],
                       "description": "Until when Confluence asked Pagehall to slow down, or null. The import continues by itself. ISO 8601 timestamp in UTC."
+                    },
+                    "waitingFor": {
+                      "description": "Key of the Confluence space whose import over the same connection reads or runs first, or null. Imports sharing a connection run one after another; this one continues by itself.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "tokenDeletedAt": {
                       "anyOf": [
@@ -38523,6 +39894,7 @@
                     "files",
                     "options",
                     "throttledUntil",
+                    "waitingFor",
                     "tokenDeletedAt",
                     "sourceUrl",
                     "reviewers",
@@ -38605,6 +39977,7 @@
                   "files": [],
                   "options": {},
                   "throttledUntil": null,
+                  "waitingFor": null,
                   "tokenDeletedAt": null,
                   "counts": {
                     "pages": 120,
@@ -39172,6 +40545,29 @@
                                 "string",
                                 "null"
                               ]
+                            },
+                            "selection": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "importId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the import that reads the space."
+                                  },
+                                  "spaceKey": {
+                                    "type": "string",
+                                    "description": "Key of the Confluence space."
+                                  }
+                                },
+                                "required": [
+                                  "importId",
+                                  "spaceKey"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "description": "Spaces chosen with this connection whose imports are not started yet, one import per space, this import included. Empty once the import has started."
                             }
                           },
                           "required": [
@@ -39179,7 +40575,8 @@
                             "site",
                             "basePath",
                             "email",
-                            "account"
+                            "account",
+                            "selection"
                           ],
                           "additionalProperties": false
                         },
@@ -39187,7 +40584,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "The connection of an import through the Confluence API, or null. The token is never returned."
+                      "description": "The connection of an import through the Confluence API, or null. Several imports of the same importer can share one connection; the token is never returned."
                     },
                     "files": {
                       "type": "array",
@@ -39287,6 +40684,13 @@
                         }
                       ],
                       "description": "Until when Confluence asked Pagehall to slow down, or null. The import continues by itself. ISO 8601 timestamp in UTC."
+                    },
+                    "waitingFor": {
+                      "description": "Key of the Confluence space whose import over the same connection reads or runs first, or null. Imports sharing a connection run one after another; this one continues by itself.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "tokenDeletedAt": {
                       "anyOf": [
@@ -39659,6 +41063,7 @@
                     "files",
                     "options",
                     "throttledUntil",
+                    "waitingFor",
                     "tokenDeletedAt",
                     "sourceUrl",
                     "reviewers",
@@ -39741,6 +41146,7 @@
                   "files": [],
                   "options": {},
                   "throttledUntil": null,
+                  "waitingFor": null,
                   "tokenDeletedAt": null,
                   "counts": {
                     "pages": 120,
@@ -42647,6 +44053,29 @@
                                 "string",
                                 "null"
                               ]
+                            },
+                            "selection": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "importId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the import that reads the space."
+                                  },
+                                  "spaceKey": {
+                                    "type": "string",
+                                    "description": "Key of the Confluence space."
+                                  }
+                                },
+                                "required": [
+                                  "importId",
+                                  "spaceKey"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "description": "Spaces chosen with this connection whose imports are not started yet, one import per space, this import included. Empty once the import has started."
                             }
                           },
                           "required": [
@@ -42654,7 +44083,8 @@
                             "site",
                             "basePath",
                             "email",
-                            "account"
+                            "account",
+                            "selection"
                           ],
                           "additionalProperties": false
                         },
@@ -42662,7 +44092,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "The connection of an import through the Confluence API, or null. The token is never returned."
+                      "description": "The connection of an import through the Confluence API, or null. Several imports of the same importer can share one connection; the token is never returned."
                     },
                     "files": {
                       "type": "array",
@@ -42762,6 +44192,13 @@
                         }
                       ],
                       "description": "Until when Confluence asked Pagehall to slow down, or null. The import continues by itself. ISO 8601 timestamp in UTC."
+                    },
+                    "waitingFor": {
+                      "description": "Key of the Confluence space whose import over the same connection reads or runs first, or null. Imports sharing a connection run one after another; this one continues by itself.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "tokenDeletedAt": {
                       "anyOf": [
@@ -43134,6 +44571,7 @@
                     "files",
                     "options",
                     "throttledUntil",
+                    "waitingFor",
                     "tokenDeletedAt",
                     "sourceUrl",
                     "reviewers",
@@ -43216,6 +44654,7 @@
                   "files": [],
                   "options": {},
                   "throttledUntil": null,
+                  "waitingFor": null,
                   "tokenDeletedAt": null,
                   "counts": {
                     "pages": 120,
@@ -43707,6 +45146,29 @@
                                 "string",
                                 "null"
                               ]
+                            },
+                            "selection": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "importId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the import that reads the space."
+                                  },
+                                  "spaceKey": {
+                                    "type": "string",
+                                    "description": "Key of the Confluence space."
+                                  }
+                                },
+                                "required": [
+                                  "importId",
+                                  "spaceKey"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "description": "Spaces chosen with this connection whose imports are not started yet, one import per space, this import included. Empty once the import has started."
                             }
                           },
                           "required": [
@@ -43714,7 +45176,8 @@
                             "site",
                             "basePath",
                             "email",
-                            "account"
+                            "account",
+                            "selection"
                           ],
                           "additionalProperties": false
                         },
@@ -43722,7 +45185,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "The connection of an import through the Confluence API, or null. The token is never returned."
+                      "description": "The connection of an import through the Confluence API, or null. Several imports of the same importer can share one connection; the token is never returned."
                     },
                     "files": {
                       "type": "array",
@@ -43822,6 +45285,13 @@
                         }
                       ],
                       "description": "Until when Confluence asked Pagehall to slow down, or null. The import continues by itself. ISO 8601 timestamp in UTC."
+                    },
+                    "waitingFor": {
+                      "description": "Key of the Confluence space whose import over the same connection reads or runs first, or null. Imports sharing a connection run one after another; this one continues by itself.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "tokenDeletedAt": {
                       "anyOf": [
@@ -44194,6 +45664,7 @@
                     "files",
                     "options",
                     "throttledUntil",
+                    "waitingFor",
                     "tokenDeletedAt",
                     "sourceUrl",
                     "reviewers",
@@ -44276,6 +45747,7 @@
                   "files": [],
                   "options": {},
                   "throttledUntil": null,
+                  "waitingFor": null,
                   "tokenDeletedAt": null,
                   "counts": {
                     "pages": 120,
@@ -44844,6 +46316,29 @@
                                 "string",
                                 "null"
                               ]
+                            },
+                            "selection": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "importId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the import that reads the space."
+                                  },
+                                  "spaceKey": {
+                                    "type": "string",
+                                    "description": "Key of the Confluence space."
+                                  }
+                                },
+                                "required": [
+                                  "importId",
+                                  "spaceKey"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "description": "Spaces chosen with this connection whose imports are not started yet, one import per space, this import included. Empty once the import has started."
                             }
                           },
                           "required": [
@@ -44851,7 +46346,8 @@
                             "site",
                             "basePath",
                             "email",
-                            "account"
+                            "account",
+                            "selection"
                           ],
                           "additionalProperties": false
                         },
@@ -44859,7 +46355,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "The connection of an import through the Confluence API, or null. The token is never returned."
+                      "description": "The connection of an import through the Confluence API, or null. Several imports of the same importer can share one connection; the token is never returned."
                     },
                     "files": {
                       "type": "array",
@@ -44959,6 +46455,13 @@
                         }
                       ],
                       "description": "Until when Confluence asked Pagehall to slow down, or null. The import continues by itself. ISO 8601 timestamp in UTC."
+                    },
+                    "waitingFor": {
+                      "description": "Key of the Confluence space whose import over the same connection reads or runs first, or null. Imports sharing a connection run one after another; this one continues by itself.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "tokenDeletedAt": {
                       "anyOf": [
@@ -45331,6 +46834,7 @@
                     "files",
                     "options",
                     "throttledUntil",
+                    "waitingFor",
                     "tokenDeletedAt",
                     "sourceUrl",
                     "reviewers",
@@ -45413,6 +46917,7 @@
                   "files": [],
                   "options": {},
                   "throttledUntil": null,
+                  "waitingFor": null,
                   "tokenDeletedAt": null,
                   "counts": {
                     "pages": 120,
@@ -45896,6 +47401,29 @@
                                 "string",
                                 "null"
                               ]
+                            },
+                            "selection": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "importId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the import that reads the space."
+                                  },
+                                  "spaceKey": {
+                                    "type": "string",
+                                    "description": "Key of the Confluence space."
+                                  }
+                                },
+                                "required": [
+                                  "importId",
+                                  "spaceKey"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "description": "Spaces chosen with this connection whose imports are not started yet, one import per space, this import included. Empty once the import has started."
                             }
                           },
                           "required": [
@@ -45903,7 +47431,8 @@
                             "site",
                             "basePath",
                             "email",
-                            "account"
+                            "account",
+                            "selection"
                           ],
                           "additionalProperties": false
                         },
@@ -45911,7 +47440,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "The connection of an import through the Confluence API, or null. The token is never returned."
+                      "description": "The connection of an import through the Confluence API, or null. Several imports of the same importer can share one connection; the token is never returned."
                     },
                     "files": {
                       "type": "array",
@@ -46011,6 +47540,13 @@
                         }
                       ],
                       "description": "Until when Confluence asked Pagehall to slow down, or null. The import continues by itself. ISO 8601 timestamp in UTC."
+                    },
+                    "waitingFor": {
+                      "description": "Key of the Confluence space whose import over the same connection reads or runs first, or null. Imports sharing a connection run one after another; this one continues by itself.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "tokenDeletedAt": {
                       "anyOf": [
@@ -46383,6 +47919,7 @@
                     "files",
                     "options",
                     "throttledUntil",
+                    "waitingFor",
                     "tokenDeletedAt",
                     "sourceUrl",
                     "reviewers",
@@ -46465,6 +48002,7 @@
                   "files": [],
                   "options": {},
                   "throttledUntil": null,
+                  "waitingFor": null,
                   "tokenDeletedAt": null,
                   "counts": {
                     "pages": 120,
@@ -140792,6 +142330,29 @@
                                   "string",
                                   "null"
                                 ]
+                              },
+                              "selection": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "importId": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "description": "ID of the import that reads the space."
+                                    },
+                                    "spaceKey": {
+                                      "type": "string",
+                                      "description": "Key of the Confluence space."
+                                    }
+                                  },
+                                  "required": [
+                                    "importId",
+                                    "spaceKey"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "description": "Spaces chosen with this connection whose imports are not started yet, one import per space, this import included. Empty once the import has started."
                               }
                             },
                             "required": [
@@ -140799,7 +142360,8 @@
                               "site",
                               "basePath",
                               "email",
-                              "account"
+                              "account",
+                              "selection"
                             ],
                             "additionalProperties": false
                           },
@@ -140807,7 +142369,7 @@
                             "type": "null"
                           }
                         ],
-                        "description": "The connection of an import through the Confluence API, or null. The token is never returned."
+                        "description": "The connection of an import through the Confluence API, or null. Several imports of the same importer can share one connection; the token is never returned."
                       },
                       "files": {
                         "type": "array",
@@ -140907,6 +142469,13 @@
                           }
                         ],
                         "description": "Until when Confluence asked Pagehall to slow down, or null. The import continues by itself. ISO 8601 timestamp in UTC."
+                      },
+                      "waitingFor": {
+                        "description": "Key of the Confluence space whose import over the same connection reads or runs first, or null. Imports sharing a connection run one after another; this one continues by itself.",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
                       },
                       "tokenDeletedAt": {
                         "anyOf": [
@@ -141279,6 +142848,7 @@
                       "files",
                       "options",
                       "throttledUntil",
+                      "waitingFor",
                       "tokenDeletedAt",
                       "sourceUrl",
                       "reviewers",
@@ -141364,6 +142934,7 @@
                     "files": [],
                     "options": {},
                     "throttledUntil": null,
+                    "waitingFor": null,
                     "tokenDeletedAt": null,
                     "counts": {
                       "pages": 120,
@@ -141847,6 +143418,29 @@
                                 "string",
                                 "null"
                               ]
+                            },
+                            "selection": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "importId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the import that reads the space."
+                                  },
+                                  "spaceKey": {
+                                    "type": "string",
+                                    "description": "Key of the Confluence space."
+                                  }
+                                },
+                                "required": [
+                                  "importId",
+                                  "spaceKey"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "description": "Spaces chosen with this connection whose imports are not started yet, one import per space, this import included. Empty once the import has started."
                             }
                           },
                           "required": [
@@ -141854,7 +143448,8 @@
                             "site",
                             "basePath",
                             "email",
-                            "account"
+                            "account",
+                            "selection"
                           ],
                           "additionalProperties": false
                         },
@@ -141862,7 +143457,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "The connection of an import through the Confluence API, or null. The token is never returned."
+                      "description": "The connection of an import through the Confluence API, or null. Several imports of the same importer can share one connection; the token is never returned."
                     },
                     "files": {
                       "type": "array",
@@ -141962,6 +143557,13 @@
                         }
                       ],
                       "description": "Until when Confluence asked Pagehall to slow down, or null. The import continues by itself. ISO 8601 timestamp in UTC."
+                    },
+                    "waitingFor": {
+                      "description": "Key of the Confluence space whose import over the same connection reads or runs first, or null. Imports sharing a connection run one after another; this one continues by itself.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "tokenDeletedAt": {
                       "anyOf": [
@@ -142334,6 +143936,7 @@
                     "files",
                     "options",
                     "throttledUntil",
+                    "waitingFor",
                     "tokenDeletedAt",
                     "sourceUrl",
                     "reviewers",
@@ -142416,6 +144019,7 @@
                   "files": [],
                   "options": {},
                   "throttledUntil": null,
+                  "waitingFor": null,
                   "tokenDeletedAt": null,
                   "counts": {
                     "pages": 120,

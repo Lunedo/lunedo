@@ -372,3 +372,52 @@ export function fakeConfluence(model: SyntheticExport, options: FakeConfluenceOp
 
   return { requests, get };
 }
+
+export function fakeConfluenceSpaces(
+  models: readonly SyntheticExport[],
+  options: FakeConfluenceOptions,
+): FakeConfluence {
+  const fakes = models.map((model) => ({
+    model,
+    fake: fakeConfluence(model, options),
+    ids: new Set([...model.pages, ...(model.blogPosts ?? [])].map((page) => page.id)),
+  }));
+  const requests: string[] = [];
+  const byKey = (key: string | null | undefined) => fakes.find((entry) => entry.model.space.key === key);
+  const byId = (id: string | null | undefined) => fakes.find((entry) => id && entry.ids.has(id));
+
+  async function get(raw: string, request: TransportRequest): Promise<TransportResponse> {
+    const url = new URL(raw);
+    requests.push(url.toString());
+    const segments = url.pathname.split("/").filter(Boolean).map(decodeURIComponent);
+    if (url.pathname.endsWith("/rest/api/space")) {
+      const results: unknown[] = [];
+      for (const entry of fakes) {
+        const listed = await entry.fake.get(raw, request);
+        if (listed.status !== 200) return listed;
+        const chunks: Buffer[] = [];
+        for await (const chunk of listed.body) chunks.push(Buffer.from(chunk as Buffer));
+        results.push(
+          ...(JSON.parse(Buffer.concat(chunks).toString("utf8")) as { results: unknown[] }).results,
+        );
+      }
+      return json(200, { results, size: results.length, _links: {} });
+    }
+    const cqlSpace = /space="([^"]+)"/.exec(url.searchParams.get("cql") ?? "")?.[1];
+    const spaceIndex = segments.indexOf("space");
+    const pathId = (["content", "pages", "blogposts", "attachments"] as const)
+      .map((segment) => segments[segments.indexOf(segment) + 1])
+      .find((id) => id && /^\d+$/.test(id));
+    const target =
+      byKey(url.searchParams.get("spaceKey")) ??
+      byKey(cqlSpace) ??
+      (spaceIndex >= 0 ? byKey(segments[spaceIndex + 1]) : undefined) ??
+      byId(url.searchParams.get("page")) ??
+      byId(pathId) ??
+      fakes[0];
+    if (!target) return response(404);
+    return target.fake.get(raw, request);
+  }
+
+  return { requests, get };
+}

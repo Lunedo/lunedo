@@ -22,6 +22,10 @@ export function tokenContext(importId: string): string {
   return `import_credentials.token:${importId}`;
 }
 
+export function connectionContext(connectionId: string): string {
+  return `import_connections.token:${connectionId}`;
+}
+
 export async function deleteCredentials(
   tx: Transaction,
   audit: AuditLog,
@@ -29,8 +33,21 @@ export async function deleteCredentials(
 ): Promise<void> {
   await tx.execute(sql`delete from import_directory where import_id = ${input.importId}`);
   const deleted = await tx.execute(sql`delete from import_credentials where import_id = ${input.importId}`);
-  if ((deleted.rowCount ?? 0) === 0) return;
+  const attached = await tx.execute<{ connection_id: string }>(sql`
+    select c.id as connection_id from imports i join import_connections c on c.id = i.connection_id
+    where i.id = ${input.importId} for update of c`);
+  const connectionId = attached.rows[0]?.connection_id;
+  if (connectionId) {
+    await tx.execute(sql`update imports set connection_id = null where id = ${input.importId}`);
+  }
+  const unused = connectionId
+    ? await tx.execute(sql`
+        delete from import_connections c where c.id = ${connectionId}
+          and not exists (select 1 from imports i where i.connection_id = c.id)`)
+    : null;
+  if ((deleted.rowCount ?? 0) === 0 && !connectionId) return;
   await tx.execute(sql`update imports set token_deleted_at = now() where id = ${input.importId}`);
+  if ((deleted.rowCount ?? 0) === 0 && (unused?.rowCount ?? 0) === 0) return;
   await audit.record(tx, {
     name: "import.tokenDeleted",
     actor: input.actor ?? SYSTEM,
@@ -45,6 +62,16 @@ export async function readCredentials(
   encryption: Encryption,
   importId: string,
 ): Promise<AtlassianCredentials | null> {
+  const result = await executor.execute<{ site: string; email: string; token: Buffer }>(sql`
+    select site, email, token from import_credentials where import_id = ${importId}`);
+  const row = result.rows[0];
+  if (row) {
+    return {
+      site: row.site,
+      email: row.email,
+      token: encryption.decryptString(row.token, tokenContext(importId)),
+    };
+  }
   const connection = await readConnection(executor, encryption, importId);
   if (connection?.kind !== "cloud" || !connection.email) return null;
   return { site: connection.site, email: connection.email, token: connection.token };
@@ -56,6 +83,7 @@ export async function readConnection(
   importId: string,
 ): Promise<ConfluenceConnection | null> {
   const result = await executor.execute<{
+    id: string;
     kind: ConfluenceKind;
     site: string;
     base_path: string;
@@ -63,8 +91,9 @@ export async function readConnection(
     token: Buffer;
     ca_certificates: string | null;
   }>(sql`
-    select kind, site, base_path, email, token, ca_certificates from import_credentials
-    where import_id = ${importId}`);
+    select c.id, c.kind, c.site, c.base_path, c.email, c.token, c.ca_certificates
+    from imports i join import_connections c on c.id = i.connection_id
+    where i.id = ${importId}`);
   const row = result.rows[0];
   if (!row) return null;
   return {
@@ -72,7 +101,7 @@ export async function readConnection(
     site: row.site,
     basePath: row.base_path,
     email: row.email,
-    token: encryption.decryptString(row.token, tokenContext(importId)),
+    token: encryption.decryptString(row.token, connectionContext(row.id)),
     caCertificates: row.ca_certificates,
   };
 }

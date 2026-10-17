@@ -79,6 +79,7 @@ interface WorkRow {
   source_url: string | null;
   history: boolean;
   people_source: string | null;
+  connection_id: string | null;
   options: ImportOptions;
   checkpoint: Record<string, unknown>;
   found: Record<string, unknown> | null;
@@ -158,10 +159,13 @@ export class ImportWorker {
     const unlock = await this.#lock(importId);
     if (!unlock) return;
     const deadline = Date.now() + (this.#options.segmentMs ?? SEGMENT_MS);
+    let connectionId: string | null = null;
     try {
       for (let pass = 0; pass < 20; pass++) {
         const row = await this.#load(importId);
         if (!row) return;
+        connectionId = row.connection_id ?? connectionId;
+        if (await this.#waiting(row)) return;
         if (row.state === "analyzing") await this.#analyze(row, job.signal, deadline);
         else if (row.state === "running") await this.#run(row, job.signal, deadline);
         else if (row.state === "stopping" || row.state === "discarding") await this.#purge(row, job.signal);
@@ -191,8 +195,29 @@ export class ImportWorker {
       throw error;
     } finally {
       await unlock();
+      if (connectionId) await this.#wake(importId, connectionId);
     }
   };
+
+  async #waiting(row: WorkRow): Promise<boolean> {
+    if (!row.connection_id || (row.state !== "analyzing" && row.state !== "running")) return false;
+    const first = await this.#database.execute<{ id: string }>(sql`
+      select id from imports where connection_id = ${row.connection_id} and state in ('analyzing', 'running')
+      order by created_at, id limit 1`);
+    return (first.rows[0]?.id ?? row.id) !== row.id;
+  }
+
+  async #wake(importId: string, connectionId: string): Promise<void> {
+    const current = await this.#database.execute<{ state: ImportState }>(sql`
+      select state from imports where id = ${importId}`);
+    const state = current.rows[0]?.state;
+    if (state === "analyzing" || state === "running") return;
+    const next = await this.#database.execute<{ id: string }>(sql`
+      select id from imports where connection_id = ${connectionId} and state in ('analyzing', 'running')
+      order by created_at, id limit 1`);
+    const id = next.rows[0]?.id;
+    if (id) await this.#continue(id);
+  }
 
   async #continue(importId: string): Promise<void> {
     await this.#options.jobs?.enqueue(

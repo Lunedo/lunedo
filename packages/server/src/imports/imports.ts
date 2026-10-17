@@ -32,7 +32,7 @@ import {
   type ConfluenceTree,
   isSpaceKey,
 } from "./confluence/api-reader.js";
-import { deleteCredentials, readConnection, tokenContext } from "./credentials.js";
+import { connectionContext, deleteCredentials, readConnection, tokenContext } from "./credentials.js";
 import { ImportError } from "./errors.js";
 import { type FolderFile, ImportFolder, isSafeFolderName } from "./folder.js";
 import { spreadsheetCell } from "./formats/csv.js";
@@ -70,6 +70,8 @@ const STARTED: readonly ImportState[] = ["running", "held", "stopping", "review"
 const REIMPORT_FIXED =
   "A re-import goes into the space of the earlier import; its space settings cannot change.";
 const FINAL: readonly ImportState[] = ["accepted", "discarded", "stopped"];
+const RESET_READING = sql`found = null, error_code = null, checkpoint = '{}'::jsonb, progress_done = 0,
+  progress_total = 0, staged_bytes = 0, throttled_until = null`;
 
 export interface ImportPerson {
   readonly id: string;
@@ -116,6 +118,7 @@ export interface ImportView {
   readonly files: readonly ImportFileView[];
   readonly options: ImportOptions;
   readonly throttledUntil: Date | null;
+  readonly waitingFor: string | null;
   readonly tokenDeletedAt: Date | null;
   readonly sourceUrl: string | null;
   readonly reviewers: readonly ImportPerson[];
@@ -144,6 +147,12 @@ export interface ConnectionView {
   readonly basePath: string;
   readonly email: string | null;
   readonly account: string | null;
+  readonly selection: readonly ConnectionSelection[];
+}
+
+export interface ConnectionSelection {
+  readonly importId: string;
+  readonly spaceKey: string;
 }
 
 export type ConnectionInput =
@@ -233,9 +242,14 @@ type ImportRow = Record<string, unknown> & {
   people_source: "token" | "list" | "skip" | "source" | null;
   options: ImportOptions | null;
   throttled_until: Date | string | null;
-  credential_kind: ConfluenceKind | null;
-  credential_base_path: string | null;
-  credential_account: string | null;
+  connection_id: string | null;
+  connection_kind: ConfluenceKind | null;
+  connection_site: string | null;
+  connection_base_path: string | null;
+  connection_email: string | null;
+  connection_account: string | null;
+  connection_selection: ConnectionSelection[] | null;
+  waiting_for: string | null;
   token_deleted_at: Date | string | null;
   credential_site: string | null;
   credential_email: string | null;
@@ -271,16 +285,28 @@ const SELECT = sql`
       where x.space_id = coalesce(i.target_space_id, i.quarantine_space_id) and not xs.quarantined
         and i.state in ('accepted', 'review', 'superseded')
         and not exists (select 1 from trash_entries e where e.space_id = xs.id and e.kind = 'space')) as reimport_space_id,
-    c.site as credential_site, c.email as credential_email, c.kind as credential_kind,
-    c.base_path as credential_base_path, c.account_name as credential_account,
+    c.site as credential_site, c.email as credential_email,
     c.people as credential_people, c.with_email as credential_with_email,
+    ic.kind as connection_kind, ic.site as connection_site, ic.base_path as connection_base_path,
+    ic.email as connection_email, ic.account_name as connection_account,
+    case when i.connection_id is not null and i.state in ('draft', 'analyzing', 'ready') then
+      (select coalesce(jsonb_agg(jsonb_build_object('importId', o.id, 'spaceKey', o.options ->> 'spaceKey')
+          order by o.created_at, o.id), '[]'::jsonb)
+        from imports o where o.connection_id = i.connection_id and o.importer_id = i.importer_id
+          and o.state in ('draft', 'analyzing', 'ready') and o.options ? 'spaceKey') end as connection_selection,
+    case when i.connection_id is not null and i.state in ('analyzing', 'running') then
+      (select o.options ->> 'spaceKey' from imports o
+        where o.connection_id = i.connection_id and o.id <> i.id and o.state in ('analyzing', 'running')
+          and (o.created_at, o.id) < (i.created_at, i.id)
+        order by o.created_at, o.id limit 1) end as waiting_for,
     (select count(*)::int from import_directory d where d.import_id = i.id) as directory_people,
     (select count(d.email)::int from import_directory d where d.import_id = i.id) as directory_with_email
   from imports i join accounts a on a.id = i.importer_id
   left join import_uploads u on u.id = i.upload_id
   left join spaces s on s.id = i.quarantine_space_id
   left join spaces ts on ts.id = i.target_space_id
-  left join import_credentials c on c.import_id = i.id`;
+  left join import_credentials c on c.import_id = i.id
+  left join import_connections ic on ic.id = i.connection_id`;
 
 function date(value: Date | string | null): Date | null {
   return value === null ? null : new Date(value);
@@ -288,6 +314,7 @@ function date(value: Date | string | null): Date | null {
 
 export const MAX_DOCUMENTS = 50;
 const MAX_SELECTED_TREES = 500;
+export const MAX_SELECTED_SPACES = 50;
 
 export function checkFileName(source: ImportSource, name: string): void {
   const lower = name.trim().toLowerCase();
@@ -549,23 +576,25 @@ export class ImportService {
       archived: row.archived,
       history: row.history,
       connection:
-        row.file_kind === "connection" && row.credential_kind && row.credential_site
+        row.file_kind === "connection" && row.connection_kind && row.connection_site
           ? {
-              kind: row.credential_kind,
-              site: row.credential_site,
-              basePath: row.credential_base_path ?? "",
-              email: row.credential_email,
-              account: row.credential_account,
+              kind: row.connection_kind,
+              site: row.connection_site,
+              basePath: row.connection_base_path ?? "",
+              email: row.connection_email,
+              account: row.connection_account,
+              selection: row.connection_selection ?? [],
             }
           : null,
       files,
       options: row.options ?? {},
       throttledUntil: date(row.throttled_until),
+      waitingFor: row.waiting_for,
       peopleSource: row.people_source
         ? {
             kind: row.people_source,
-            site: row.people_source === "token" ? row.credential_site : null,
-            email: row.people_source === "token" ? row.credential_email : null,
+            site: row.people_source === "token" ? (row.credential_site ?? row.connection_site) : null,
+            email: row.people_source === "token" ? (row.credential_email ?? row.connection_email) : null,
             people:
               row.people_source === "token"
                 ? row.credential_people
@@ -800,10 +829,7 @@ export class ImportService {
       }
       if (input.sourceUrl !== undefined) changes.push(sql`source_url = ${cleanSourceUrl(input.sourceUrl)}`);
       if (restart) {
-        changes.push(
-          sql`found = null, error_code = null, checkpoint = '{}'::jsonb, progress_done = 0, progress_total = 0,
-            staged_bytes = 0, throttled_until = null`,
-        );
+        changes.push(RESET_READING);
         await tx.execute(sql`delete from import_records where import_id = ${importId}`);
         await tx.execute(sql`delete from import_problems where import_id = ${importId}`);
       }
@@ -839,7 +865,7 @@ export class ImportService {
       }
       case "connection":
         return (
-          row.file_kind === "connection" && row.credential_site !== null && Boolean(row.options?.spaceKey)
+          row.file_kind === "connection" && row.connection_site !== null && Boolean(row.options?.spaceKey)
         );
       default:
         return false;
@@ -966,25 +992,41 @@ export class ImportService {
       if (!EDITABLE.includes(row.state)) {
         throw new ImportError("importStarted", "The import has started; its settings cannot change anymore.");
       }
-      const sameSite = row.credential_site === connection.site && row.credential_kind === connection.kind;
+      const sameSite =
+        row.connection_id !== null &&
+        row.connection_kind === connection.kind &&
+        row.connection_site === connection.site &&
+        row.connection_base_path === connection.basePath;
       await tx.execute(sql`delete from import_directory where import_id = ${importId}`);
-      await tx.execute(sql`
-        insert into import_credentials (import_id, kind, site, base_path, email, token, ca_certificates, account_name)
-        values (${importId}, ${connection.kind}, ${connection.site}, ${connection.basePath}, ${connection.email},
-          ${this.#encryption.encrypt(token, tokenContext(importId))}, ${connection.caCertificates}, ${account.name})
-        on conflict (import_id) do update set kind = excluded.kind, site = excluded.site,
-          base_path = excluded.base_path, email = excluded.email, token = excluded.token,
-          ca_certificates = excluded.ca_certificates, account_name = excluded.account_name,
-          people = null, with_email = null, created_at = now()`);
+      if (sameSite && row.connection_id) {
+        await tx.execute(sql`
+          update import_connections set email = ${connection.email},
+            token = ${this.#encryption.encrypt(token, connectionContext(row.connection_id))},
+            ca_certificates = ${connection.caCertificates}, account_name = ${account.name}, created_at = now()
+          where id = ${row.connection_id}`);
+      } else {
+        await deleteCredentials(tx, this.#audit, {
+          importId,
+          organizationId: row.organization_id,
+          reason: "replaced",
+          actor,
+        });
+        const connectionId = uuidv7();
+        await tx.execute(sql`
+          insert into import_connections (id, organization_id, kind, site, base_path, email, token, ca_certificates,
+            account_name)
+          values (${connectionId}, ${row.organization_id}, ${connection.kind}, ${connection.site},
+            ${connection.basePath}, ${connection.email}, ${this.#encryption.encrypt(token, connectionContext(connectionId))},
+            ${connection.caCertificates}, ${account.name})`);
+        await tx.execute(sql`update imports set connection_id = ${connectionId} where id = ${importId}`);
+      }
       await tx.execute(sql`delete from import_records where import_id = ${importId}`);
       await tx.execute(sql`delete from import_problems where import_id = ${importId}`);
       await tx.execute(sql`
         update imports set file_kind = 'connection', upload_id = null, folder_file = null, folder_key = null,
           people_source = ${connection.kind === "cloud" ? "token" : "source"}, token_deleted_at = null,
           source_url = coalesce(source_url, ${`https://${connection.site}${connection.kind === "cloud" ? "/wiki" : connection.basePath}`}),
-          options = ${sameSite ? sql`options` : sql`'{}'::jsonb`}, found = null, error_code = null,
-          checkpoint = '{}'::jsonb, progress_done = 0, progress_total = 0, staged_bytes = 0, throttled_until = null,
-          updated_at = now()
+          options = ${sameSite ? sql`options` : sql`'{}'::jsonb`}, ${RESET_READING}, updated_at = now()
         where id = ${importId}`);
       analyze = await this.#readyToRead(tx, await this.#row(tx, importId));
       await tx.execute(sql`
@@ -1120,7 +1162,7 @@ export class ImportService {
     const drafts = await tx.execute<{ id: string; organization_id: string; importer_id: string }>(sql`
       select i.id, i.organization_id, i.importer_id from imports i
       where i.state in ('draft', 'analyzing', 'ready')
-        and exists (select 1 from import_credentials c where c.import_id = i.id)
+        and (i.connection_id is not null or exists (select 1 from import_credentials c where c.import_id = i.id))
         ${reduction.organizationId ? sql`and i.organization_id = ${reduction.organizationId}` : sql``}
         ${reduction.accountId ? sql`and i.importer_id = ${reduction.accountId}` : sql``}
       order by i.id
@@ -1144,8 +1186,9 @@ export class ImportService {
 
   async removeAbandonedCredentials(limit = 100): Promise<number> {
     const stale = await this.#database.execute<{ id: string }>(sql`
-      select i.id from imports i join import_credentials c on c.import_id = i.id
-      where i.state in ('draft', 'ready') and i.updated_at < now() - make_interval(days => ${ABANDONED_DRAFT_DAYS})
+      select i.id from imports i
+      where (i.connection_id is not null or exists (select 1 from import_credentials c where c.import_id = i.id))
+        and i.state in ('draft', 'ready') and i.updated_at < now() - make_interval(days => ${ABANDONED_DRAFT_DAYS})
       order by i.updated_at limit ${limit}`);
     let removed = 0;
     for (const { id } of stale.rows) {
@@ -1171,7 +1214,7 @@ export class ImportService {
 
   async remove(actor: Principal, importId: string): Promise<void> {
     await this.#authorization.require(actor, "import.manage", { type: "import", id: importId });
-    await this.#database.transaction(async (tx) => {
+    const connectionId = await this.#database.transaction(async (tx) => {
       const row = await this.#locked(tx, importId);
       if (!EDITABLE.includes(row.state)) {
         throw new ImportError(
@@ -1179,21 +1222,118 @@ export class ImportService {
           "A started import is stopped or discarded instead of removed.",
         );
       }
-      await deleteCredentials(tx, this.#audit, {
-        importId,
-        organizationId: row.organization_id,
-        reason: "removed",
-        actor,
-      });
-      await releaseUploads(tx, {
-        importId,
-        uploadId: row.upload_id,
-        days: FILE_RETENTION_DAYS,
-        keepEarlier: true,
-      });
-      await tx.execute(sql`delete from imports where id = ${importId}`);
-      await signalImportChange(tx, { importId, organizationId: row.organization_id });
+      await this.#removeDraft(tx, actor, row);
+      return row.connection_id;
     });
+    if (connectionId) await this.#wakeConnection(connectionId);
+  }
+
+  async #removeDraft(
+    tx: Transaction,
+    actor: Principal,
+    row: Pick<ImportRow, "id" | "organization_id" | "upload_id">,
+  ): Promise<void> {
+    await deleteCredentials(tx, this.#audit, {
+      importId: row.id,
+      organizationId: row.organization_id,
+      reason: "removed",
+      actor,
+    });
+    await releaseUploads(tx, {
+      importId: row.id,
+      uploadId: row.upload_id,
+      days: FILE_RETENTION_DAYS,
+      keepEarlier: true,
+    });
+    await tx.execute(sql`delete from imports where id = ${row.id}`);
+    await signalImportChange(tx, { importId: row.id, organizationId: row.organization_id });
+  }
+
+  async #wakeConnection(connectionId: string): Promise<void> {
+    const next = await this.#database.execute<{ id: string }>(sql`
+      select id from imports where connection_id = ${connectionId} and state in ('analyzing', 'running')
+      order by created_at, id limit 1`);
+    const id = next.rows[0]?.id;
+    if (id) await this.#enqueue(id);
+  }
+
+  async selectSpaces(actor: Principal, importId: string, spaceKeys: readonly string[]): Promise<ImportView> {
+    await this.#authorization.require(actor, "import.manage", { type: "import", id: importId });
+    const keys = [...new Set(spaceKeys)];
+    if (keys.length === 0 || keys.length > MAX_SELECTED_SPACES || keys.some((key) => !isSpaceKey(key))) {
+      throw new ImportError("invalidSelection", `Choose 1 to ${MAX_SELECTED_SPACES} spaces from the list.`);
+    }
+    let restart = false;
+    const created: string[] = [];
+    const connectionId = await this.#database.transaction(async (tx) => {
+      const row = await this.#locked(tx, importId);
+      if (!EDITABLE.includes(row.state)) {
+        throw new ImportError("importStarted", "The import has started; its settings cannot change anymore.");
+      }
+      this.#apiReader(row.source);
+      if (!row.connection_id) {
+        throw new ImportError(
+          "connectionMissing",
+          "Connect to Confluence first. Enter the address and the token.",
+        );
+      }
+      if (row.target_space_id && keys.length > 1) {
+        throw new ImportError("reimportSpaceFixed", REIMPORT_FIXED);
+      }
+      await tx.execute(sql`select id from import_connections where id = ${row.connection_id} for share`);
+      const siblings = await tx.execute<{
+        id: string;
+        organization_id: string;
+        upload_id: null;
+        space_key: string | null;
+      }>(sql`
+        select id, organization_id, upload_id, options ->> 'spaceKey' as space_key from imports
+        where connection_id = ${row.connection_id} and importer_id = ${row.importer_id} and id <> ${importId}
+          and state in ('draft', 'analyzing', 'ready')
+        order by created_at, id
+        for update`);
+      const current = row.options?.spaceKey;
+      const own = current && keys.includes(current) ? current : keys[0];
+      const kept = new Set(own ? [own] : []);
+      for (const sibling of siblings.rows) {
+        if (sibling.space_key && keys.includes(sibling.space_key) && !kept.has(sibling.space_key)) {
+          kept.add(sibling.space_key);
+          continue;
+        }
+        await this.#removeDraft(tx, actor, sibling);
+      }
+      if (own && own !== current) {
+        const options = cleanOptions("connection", row.options ?? {}, { spaceKey: own });
+        await tx.execute(sql`delete from import_records where import_id = ${importId}`);
+        await tx.execute(sql`delete from import_problems where import_id = ${importId}`);
+        await tx.execute(sql`
+          update imports set options = ${JSON.stringify(options)}::jsonb, ${RESET_READING},
+            state = 'analyzing', phase = 'read', updated_at = now()
+          where id = ${importId}`);
+        restart = true;
+      }
+      const shared: ImportOptions =
+        row.options?.blogPosts === undefined ? {} : { blogPosts: row.options.blogPosts };
+      for (const key of keys) {
+        if (kept.has(key)) continue;
+        const id = uuidv7();
+        await tx.execute(sql`
+          insert into imports (id, organization_id, importer_id, source, state, phase, draft_step, file_kind,
+            connection_id, people_source, source_url, history, options)
+          values (${id}, ${row.organization_id}, ${row.importer_id}, ${row.source}, 'analyzing', 'read',
+            ${row.draft_step}, 'connection', ${row.connection_id}, ${row.people_source}, ${row.source_url},
+            ${row.history}, ${JSON.stringify({ ...shared, spaceKey: key })}::jsonb)`);
+        await signalImportChange(tx, { importId: id, organizationId: row.organization_id });
+        created.push(id);
+      }
+      await tx.execute(sql`update imports set updated_at = now() where id = ${importId}`);
+      await signalImportChange(tx, { importId, organizationId: row.organization_id });
+      return row.connection_id;
+    });
+    if (restart) await this.#enqueue(importId);
+    for (const id of created) await this.#enqueue(id);
+    await this.#wakeConnection(connectionId);
+    return this.get(actor, importId);
   }
 
   async #validReviewers(tx: Transaction, organizationId: string, importerId: string, ids: readonly string[]) {
@@ -1275,7 +1415,7 @@ export class ImportService {
           "Choose how Pagehall recognizes people: an API token, a user list, or skip with confirmation.",
         );
       }
-      if (row.people_source === "token" && row.credential_site === null) {
+      if (row.people_source === "token" && row.credential_site === null && row.connection_site === null) {
         throw new ImportError(
           "tokenMissing",
           "Pagehall deleted the API token of this draft. Enter the token again to continue.",

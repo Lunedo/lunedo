@@ -99,10 +99,20 @@ export const importSchema = z
           .describe("Context path of Confluence Data Center, such as `/confluence`, or empty."),
         email: z.string().nullable().describe("Atlassian e-mail address the API token belongs to, or null."),
         account: z.string().nullable().describe("Name of the Confluence account the token belongs to."),
+        selection: z
+          .array(
+            z.object({
+              importId: uuid("ID of the import that reads the space."),
+              spaceKey: z.string().describe("Key of the Confluence space."),
+            }),
+          )
+          .describe(
+            "Spaces chosen with this connection whose imports are not started yet, one import per space, this import included. Empty once the import has started.",
+          ),
       })
       .nullable()
       .describe(
-        "The connection of an import through the Confluence API, or null. The token is never returned.",
+        "The connection of an import through the Confluence API, or null. Several imports of the same importer can share one connection; the token is never returned.",
       ),
     files: z
       .array(
@@ -132,6 +142,12 @@ export const importSchema = z
     throttledUntil: timestamp(
       "Until when Confluence asked Pagehall to slow down, or null. The import continues by itself.",
     ).nullable(),
+    waitingFor: z
+      .string()
+      .nullable()
+      .describe(
+        "Key of the Confluence space whose import over the same connection reads or runs first, or null. Imports sharing a connection run one after another; this one continues by itself.",
+      ),
     tokenDeletedAt: timestamp(
       "When the API token was deleted: when the import was accepted, discarded, stopped or failed, when the importer lost the permission to import, or when the draft was left alone for a week.",
     ).nullable(),
@@ -252,6 +268,7 @@ export const exampleImport = {
   files: [],
   options: {},
   throttledUntil: null,
+  waitingFor: null,
   tokenDeletedAt: null,
   counts: {
     pages: 120,
@@ -583,6 +600,19 @@ export const connectionSchema = z
       .strict(),
   ])
   .describe("How Pagehall reads Confluence through its API.");
+
+export const spaceSelectionSchema = z
+  .object({
+    spaceKeys: z
+      .array(z.string().max(255))
+      .min(1)
+      .max(50)
+      .describe(
+        "Keys of the Confluence spaces to import, 1 to 50. The import keeps its space when it is in the list; every other space gets an import of its own over the same connection, and drafts of spaces no longer listed are removed.",
+      ),
+  })
+  .strict()
+  .describe("The Confluence spaces to import.");
 
 export const confluenceSpacesSchema = z
   .array(

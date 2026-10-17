@@ -2,7 +2,6 @@ import {
   Badge,
   Button,
   Checkbox,
-  Combobox,
   classNames,
   ErrorState,
   Field,
@@ -331,19 +330,38 @@ export function ConnectionStep({
 }
 
 export interface Selection {
-  spaceKey: string | null;
+  spaceKeys: string[];
   pageIds: string[] | null;
   blogPosts: boolean;
   history: boolean;
 }
 
 export function selectionOf(entry: ImportView): Selection {
+  const chosen = entry.connection?.selection.map((item) => item.spaceKey) ?? [];
+  const own = entry.options.spaceKey;
   return {
-    spaceKey: entry.options.spaceKey ?? null,
+    spaceKeys: own && !chosen.includes(own) ? [own, ...chosen] : chosen,
     pageIds: entry.options.pageIds ? [...entry.options.pageIds] : null,
     blogPosts: entry.options.blogPosts ?? true,
     history: entry.history,
   };
+}
+
+export function ownSpaceOf(entry: ImportView, selection: Selection): string | null {
+  const current = entry.options.spaceKey;
+  return current && selection.spaceKeys.includes(current) ? current : (selection.spaceKeys[0] ?? null);
+}
+
+const SPACE_FILTER_FROM = 10;
+
+export function WaitingNotice({ spaceKey }: { spaceKey: string | null }) {
+  const { t } = useTranslation();
+  if (!spaceKey) return null;
+  return (
+    <Notice variant="info" title={t("imports.waiting.title")}>
+      {t("imports.waiting.description", { key: spaceKey })}
+    </Notice>
+  );
 }
 
 export function SelectionStep({
@@ -361,11 +379,13 @@ export function SelectionStep({
 }) {
   const { t } = useTranslation();
   const format = useFormat();
+  const [filter, setFilter] = useState("");
   const site = entry.connection?.site ?? "";
+  const own = ownSpaceOf(entry, selection);
   const spaces = useQuery({ ...connectionSpacesQuery(entry.id, site), enabled: Boolean(entry.connection) });
   const tree = useQuery({
-    ...connectionTreeQuery(entry.id, site, selection.spaceKey ?? ""),
-    enabled: Boolean(entry.connection && selection.spaceKey),
+    ...connectionTreeQuery(entry.id, site, own ?? ""),
+    enabled: Boolean(entry.connection && own),
   });
   if (!entry.connection) {
     return <Notice variant="warning">{t("imports.selection.notConnected")}</Notice>;
@@ -378,6 +398,26 @@ export function SelectionStep({
     else next.delete(id);
     onChange({ ...selection, pageIds: next.size === all.length ? null : [...next] });
   };
+  const choose = (key: string, on: boolean) => {
+    const keys = reimport
+      ? on
+        ? [key]
+        : []
+      : on
+        ? [...selection.spaceKeys.filter((item) => item !== key), key]
+        : selection.spaceKeys.filter((item) => item !== key);
+    const ownAfter = ownSpaceOf(entry, { ...selection, spaceKeys: keys });
+    onChange({ ...selection, spaceKeys: keys, ...(ownAfter === own ? {} : { pageIds: null }) });
+  };
+  const needle = filter.trim().toLowerCase();
+  const listed = (spaces.data ?? []).filter(
+    (space) =>
+      needle.length === 0 ||
+      space.name.toLowerCase().includes(needle) ||
+      space.key.toLowerCase().includes(needle) ||
+      selection.spaceKeys.includes(space.key),
+  );
+  const ownName = spaces.data?.find((space) => space.key === own)?.name || own;
   return (
     <>
       <p className="text-sm text-text-muted">{t("imports.selection.intro")}</p>
@@ -392,32 +432,68 @@ export function SelectionStep({
             />
           ) : null}
           {spaces.data ? (
-            <Field
-              label={t("imports.selection.space")}
-              hint={t("imports.selection.spaceHint", { count: spaces.data.length })}
-              {...(error ? { error } : {})}
-            >
-              <Combobox
-                aria-label={t("imports.selection.space")}
-                placeholder={t("imports.selection.spacePlaceholder")}
-                emptyText={t("imports.selection.noSpaces")}
-                invalid={Boolean(error)}
-                value={selection.spaceKey}
-                items={spaces.data.map((space) => ({
-                  value: space.key,
-                  label: space.name || space.key,
-                  description: space.personal
-                    ? t("imports.selection.personalSpace", { key: space.key })
-                    : space.key,
-                }))}
-                onValueChange={(value) => onChange({ ...selection, spaceKey: value, pageIds: null })}
-              />
-            </Field>
+            <>
+              {spaces.data.length > SPACE_FILTER_FROM ? (
+                <Field label={t("imports.selection.filter")}>
+                  <Input
+                    type="search"
+                    value={filter}
+                    placeholder={t("imports.selection.filterPlaceholder")}
+                    onChange={(event) => setFilter(event.target.value)}
+                  />
+                </Field>
+              ) : null}
+              <p className="text-sm text-text-muted">
+                {t(reimport ? "imports.selection.spaceHintReimport" : "imports.selection.spacesHint", {
+                  count: spaces.data.length,
+                })}
+              </p>
+              {spaces.data.length === 0 ? (
+                <p className="text-sm text-text-muted">{t("imports.selection.noSpacesReadable")}</p>
+              ) : listed.length === 0 ? (
+                <p className="text-sm text-text-muted">{t("imports.selection.noSpaces")}</p>
+              ) : (
+                <ul
+                  aria-label={t("imports.selection.space")}
+                  className="flex max-h-96 flex-col gap-2 overflow-y-auto"
+                >
+                  {listed.map((space) => (
+                    <li key={space.key}>
+                      <Checkbox
+                        checked={selection.spaceKeys.includes(space.key)}
+                        onCheckedChange={(checked) => choose(space.key, checked === true)}
+                        label={space.name || space.key}
+                        description={
+                          space.personal
+                            ? t("imports.selection.personalSpace", { key: space.key })
+                            : space.key
+                        }
+                      />
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {error ? <FieldError>{error}</FieldError> : null}
+              {selection.spaceKeys.length > 1 ? (
+                <Notice
+                  variant="info"
+                  title={t("imports.selection.severalTitle", { count: selection.spaceKeys.length })}
+                >
+                  {t("imports.selection.severalDescription")}
+                </Notice>
+              ) : null}
+            </>
           ) : null}
         </div>
       </Section>
-      {selection.spaceKey ? (
-        <Section title={t("imports.selection.treesTitle")}>
+      {own ? (
+        <Section
+          title={
+            selection.spaceKeys.length > 1
+              ? t("imports.selection.treesOfTitle", { name: ownName })
+              : t("imports.selection.treesTitle")
+          }
+        >
           <div className="flex flex-col gap-3 p-4">
             {tree.isPending ? <Skeleton className="h-control-field w-full" /> : null}
             {tree.isError ? (
@@ -426,6 +502,9 @@ export function SelectionStep({
                 error={tree.error}
                 onRetry={() => void tree.refetch()}
               />
+            ) : null}
+            {selection.spaceKeys.length > 1 ? (
+              <p className="text-sm text-text-muted">{t("imports.selection.treesOfHint")}</p>
             ) : null}
             {tree.data ? (
               <>

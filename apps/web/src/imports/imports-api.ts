@@ -342,3 +342,12 @@ export function setConnection(importId: string, body: ConnectionBody) {
     api.PUT("/api/v1/imports/{importId}/connection", { params: { path: { importId } }, body }),
   );
 }
+
+export function selectSpaces(importId: string, spaceKeys: string[]) {
+  return request(() =>
+    api.PUT("/api/v1/imports/{importId}/connection/selection", {
+      params: { path: { importId } },
+      body: { spaceKeys },
+    }),
+  );
+}
