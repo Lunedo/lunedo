@@ -22,7 +22,6 @@ const DIAGRAM_FILES: Readonly<Record<string, number>> = {
   "/Lost.png": 22,
   "/Floor plan": 23,
   "/Floor plan.png": 24,
-  "98765/Shared": 25,
 };
 
 function lookup(): StorageLookup {
@@ -30,6 +29,9 @@ function lookup(): StorageLookup {
   return {
     page(reference) {
       if (reference.title === "Runbook" || (reference.formerTitles && reference.title === "Old runbook")) {
+        return { kind: "page", pageId: RUNBOOK, path: `/spaces/SYN/pages/${RUNBOOK}/runbook` };
+      }
+      if (reference.sourceId === "98765") {
         return { kind: "page", pageId: RUNBOOK, path: `/spaces/SYN/pages/${RUNBOOK}/runbook` };
       }
       if (reference.sourceId === "181305345") {
@@ -47,7 +49,7 @@ function lookup(): StorageLookup {
         return { attachmentId: REPORT, name: "report.pdf", version: 1 };
       }
       if (reference.fileName === "costs.xlsx") return { attachmentId: SHEET, name: "costs.xlsx", version: 1 };
-      const diagram = DIAGRAM_FILES[`${reference.pageSourceId ?? ""}/${reference.fileName}`];
+      const diagram = DIAGRAM_FILES[`/${reference.fileName}`];
       return diagram ? { attachmentId: ID(diagram), name: reference.fileName, version: 3 } : null;
     },
     person: () => ID(50),
@@ -56,6 +58,7 @@ function lookup(): StorageLookup {
       next += 1;
       return ID(next);
     },
+    diagramId: (name, pageSourceId) => (pageSourceId === "98765" && name === "Shared" ? ID(60) : ID(61)),
   };
 }
 
@@ -990,18 +993,29 @@ describe("diagram macros", () => {
     expect(page.notes).toEqual([{ code: "diagramFileMissing", macro: "drawio", name: "Lost" }]);
   });
 
-  it("read included diagrams from the page that holds them", async () => {
-    const page = await convert(macro("inc-drawio", { diagramName: "Shared", pageId: "98765" }));
-    expect(page.document.content?.[0]?.attrs).toMatchObject({ sourceId: ID(25), previewId: null });
-    const references = storageReferences(
-      await parseStorage(macro("inc-drawio", { diagramName: "Shared", pageId: "98765" })),
-    );
-    expect(references.attachments).toContainEqual({
-      fileName: "Shared",
-      pageTitle: null,
-      spaceKey: null,
-      pageSourceId: "98765",
+  it("turn included diagrams into references to the diagram on the page that holds them", async () => {
+    const included = macro("inc-drawio", { diagramName: "Shared", pageId: "98765" });
+    const page = await convert(included);
+    expect(page.document.content?.[0]).toEqual({
+      type: "drawioReference",
+      attrs: { id: expect.any(String), pageId: RUNBOOK, diagramId: ID(60), name: "Shared" },
     });
+    expect(page.notes).toEqual([]);
+    const references = storageReferences(await parseStorage(included));
+    expect(references.pages).toContainEqual({ title: null, spaceKey: null, sourceId: "98765" });
+    expect(references.attachments).toEqual([]);
+    const missing = await convert(macro("inc-drawio", { diagramName: "Gone", pageId: "11111" }));
+    expect(missing.document.content?.[0]?.attrs).toMatchObject({ pageId: null, diagramId: null });
+    expect(missing.notes).toEqual([{ code: "diagramPageMissing", name: "Gone" }]);
+  });
+
+  it("give a diagram the stable ID its name has on the page, once per page", async () => {
+    const page = await convert(
+      macro("drawio", { diagramName: "Network" }) + macro("drawio", { diagramName: "Network" }),
+    );
+    const ids = page.document.content?.map((block) => block.attrs?.id);
+    expect(ids?.[0]).toBe(ID(61));
+    expect(ids?.[1]).not.toBe(ID(61));
   });
 
   it("keep Gliffy diagrams with their file and preview and note the conversion on first edit", async () => {

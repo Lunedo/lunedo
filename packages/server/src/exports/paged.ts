@@ -328,6 +328,9 @@ export class PagedExport {
           if (typeof id === "string") ids.add(id);
         }
       }
+      for (const diagram of page.diagrams?.values() ?? []) {
+        if (diagram.previewId) ids.add(diagram.previewId);
+      }
     }
     for (const id of ids) {
       const read = await this.#readable(id);

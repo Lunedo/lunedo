@@ -31,6 +31,22 @@
       }
     },
     {
+      "type": "drawioReference",
+      "attrs": {
+        "id": "01929b1e-0000-7000-8000-00000000001d",
+        "pageId": "01929b1e-0000-7000-8000-00000000001e",
+        "diagramId": "01929b1e-0000-7000-8000-000000000011",
+        "name": "Network"
+      }
+    },
+    {
+      "type": "drawioReference",
+      "attrs": {
+        "id": "01929b1e-0000-7000-8000-00000000001f",
+        "name": "Floor plan"
+      }
+    },
+    {
       "type": "mermaid",
       "attrs": {
         "id": "01929b1e-0000-7000-8000-000000000018",

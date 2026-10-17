@@ -16,6 +16,7 @@ import {
   type MarkdownRenderer,
   type NodeDefinition,
   optional,
+  type ReferencedDiagram,
   required,
   type WordRenderer,
 } from "../module.js";
@@ -174,13 +175,9 @@ function candidates(name: string, extension: string): { sources: string[]; previ
   };
 }
 
-function firstFile(
-  context: MacroImportContext,
-  names: readonly string[],
-  pageSourceId: string | null,
-): ImportedFile | null {
+function firstFile(context: MacroImportContext, names: readonly string[]): ImportedFile | null {
   for (const fileName of names) {
-    const found = context.file({ fileName, pageSourceId });
+    const found = context.file({ fileName });
     if (found) return found;
   }
   return null;
@@ -195,7 +192,7 @@ interface DiagramMacro {
 function fileReferences(macro: DiagramMacro | null): FileReference[] {
   if (!macro) return [];
   const { sources, previews } = candidates(macro.name, macro.extension);
-  return [...sources, ...previews].map((fileName) => ({ fileName, pageSourceId: macro.pageSourceId }));
+  return [...sources, ...previews].map((fileName) => ({ fileName }));
 }
 
 function drawioMacro(macro: SourceElement): DiagramMacro | null {
@@ -220,15 +217,15 @@ function convertDiagram(
 ): NodeJson[] | null {
   if (!macro) return null;
   const { sources, previews } = candidates(macro.name, macro.extension);
-  const source = firstFile(context, sources, macro.pageSourceId);
-  const preview = firstFile(context, previews, macro.pageSourceId);
+  const source = firstFile(context, sources);
+  const preview = firstFile(context, previews);
   if (!source) context.note({ code: "diagramFileMissing", macro: macroName, name: macro.name.slice(0, 255) });
   else if (format === "gliffy") context.note({ code: "gliffyDiagram", name: macro.name.slice(0, 255) });
   return [
     {
       type: "drawio",
       attrs: {
-        id: context.newId(),
+        id: context.diagramId(macro.name, null),
         sourceFormat: source ? format : "drawio",
         sourceId: source?.attachmentId ?? null,
         sourceVersion: source?.version ?? null,
@@ -240,12 +237,39 @@ function convertDiagram(
   ];
 }
 
+function convertReference(macro: DiagramMacro & { pageSourceId: string }, context: MacroImportContext) {
+  const pageId = context.pageById(macro.pageSourceId);
+  if (!pageId) context.note({ code: "diagramPageMissing", name: macro.name });
+  return [
+    {
+      type: "drawioReference",
+      attrs: {
+        id: context.newId(),
+        pageId,
+        diagramId: pageId ? context.diagramId(macro.name, macro.pageSourceId) : null,
+        name: macro.name,
+      },
+    },
+  ];
+}
+
+function isReference(macro: DiagramMacro | null): macro is DiagramMacro & { pageSourceId: string } {
+  return macro?.pageSourceId != null;
+}
+
 const drawioImporter: MacroConverter = {
   source: "confluence",
   macros: ["drawio", "inc-drawio"],
-  references: (macro) => ({ files: fileReferences(drawioMacro(macro)) }),
-  convert: (macro, context) =>
-    convertDiagram(drawioMacro(macro), macro.attributes["ac:name"] ?? "drawio", "drawio", context),
+  references: (macro) => {
+    const diagram = drawioMacro(macro);
+    return isReference(diagram) ? { pageIds: [diagram.pageSourceId] } : { files: fileReferences(diagram) };
+  },
+  convert: (macro, context) => {
+    const diagram = drawioMacro(macro);
+    return isReference(diagram)
+      ? convertReference(diagram, context)
+      : convertDiagram(diagram, macro.attributes["ac:name"] ?? "drawio", "drawio", context);
+  },
 };
 
 const gliffyImporter: MacroConverter = {
@@ -267,6 +291,140 @@ function textDiagramImporter(type: TextDiagramType, macros: readonly string[]): 
   };
 }
 
+type AnyRenderer = HtmlRenderer | MarkdownRenderer | WordRenderer;
+
+function referenced(node: ValidNode, renderer: AnyRenderer): ReferencedDiagram | null | undefined {
+  const resolve = renderer.context.diagramReference;
+  if (!resolve) return undefined;
+  const pageId = attrOf<string | null>(node, "pageId");
+  const diagramId = attrOf<string | null>(node, "diagramId");
+  return pageId && diagramId ? resolve(pageId, diagramId) : null;
+}
+
+function hiddenNote(node: ValidNode, renderer: AnyRenderer): string | null {
+  if (!renderer.context.showPlaceholders) return null;
+  return attrOf<string | null>(node, "pageId") === null
+    ? renderer.label("diagramNotImported", { name: attrOf<string>(node, "name") })
+    : renderer.label("restrictedContent");
+}
+
+function referencedPreview(diagram: ReferencedDiagram, renderer: AnyRenderer): string | null {
+  if (!diagram.previewId) return null;
+  const resolved =
+    renderer.context.attachment?.(diagram.previewId, diagram.previewVersion ?? undefined) ?? null;
+  return resolved ? renderer.safeHref(resolved.href) : null;
+}
+
+function sourceTitle(diagram: ReferencedDiagram, renderer: AnyRenderer): string {
+  return diagram.title.trim() || renderer.label("untitledPage");
+}
+
+function referenceHtml(node: ValidNode, renderer: HtmlRenderer): string {
+  const diagram = referenced(node, renderer);
+  const attributes = {
+    class: "ph-diagram ph-diagram-reference",
+    "data-diagram": "drawioReference",
+    "data-page-id": attrOf<string | null>(node, "pageId"),
+    "data-diagram-ref": attrOf<string | null>(node, "diagramId"),
+  };
+  const hint = (text: string) => element("p", { class: "ph-diagram-hint" }, renderer.escape(text));
+  if (diagram === undefined) {
+    return element(
+      "figure",
+      { ...attributes, "data-name": attrOf<string>(node, "name") },
+      element("span", { class: "ph-diagram-empty" }, renderer.escape(renderer.label("drawioReference"))),
+    );
+  }
+  if (diagram === null) {
+    const note = hiddenNote(node, renderer);
+    return note ? element("figure", { class: "ph-diagram ph-diagram-reference" }, hint(note)) : "";
+  }
+  const label = renderer.label("drawio");
+  const preview = referencedPreview(diagram, renderer);
+  const content = !diagram.found
+    ? hint(renderer.label("diagramRemoved"))
+    : preview
+      ? `<img${htmlAttributes({ src: preview, alt: label })}>`
+      : element("span", { class: "ph-diagram-empty" }, renderer.escape(label));
+  const href = renderer.safeHref(diagram.href);
+  const title = renderer.escape(sourceTitle(diagram, renderer));
+  const caption = renderer
+    .escape(renderer.label("diagramFrom"))
+    .replace("{title}", href ? element("a", { href }, title) : title);
+  return element("figure", attributes, content + element("figcaption", {}, caption));
+}
+
+function referenceWord(node: ValidNode, renderer: WordRenderer): WordContent[] {
+  const diagram = referenced(node, renderer);
+  const note = (text: string): WordContent => ({
+    type: "paragraph",
+    content: [wordText(text, { muted: true, italic: true })],
+  });
+  if (diagram === undefined) return [note(renderer.label("drawioReference"))];
+  if (diagram === null) {
+    const hidden = hiddenNote(node, renderer);
+    return hidden ? [note(hidden)] : [];
+  }
+  const label = renderer.label("drawio");
+  const href = renderer.safeHref(diagram.href);
+  const caption: WordContent = {
+    type: "paragraph",
+    content: [
+      wordText(
+        renderer.label("diagramFrom", { title: sourceTitle(diagram, renderer) }),
+        href ? { muted: true, link: href } : { muted: true },
+      ),
+    ],
+  };
+  if (!diagram.found) return [note(renderer.label("diagramRemoved")), caption];
+  if (!diagram.previewId) return [note(label), caption];
+  return [
+    {
+      type: "image",
+      attachmentId: diagram.previewId,
+      href: referencedPreview(diagram, renderer),
+      alt: label,
+      width: null,
+      align: "center",
+    },
+    caption,
+  ];
+}
+
+function referenceMarkdown(node: ValidNode, renderer: MarkdownRenderer): string {
+  const diagram = referenced(node, renderer);
+  if (diagram === undefined) return `*${renderer.escape(renderer.label("drawioReference"))}*`;
+  if (diagram === null) {
+    const hidden = hiddenNote(node, renderer);
+    return hidden ? `*${renderer.escape(hidden)}*` : "";
+  }
+  const href = renderer.safeHref(diagram.href);
+  const title = renderer.escape(sourceTitle(diagram, renderer));
+  const caption = `*${renderer
+    .escape(renderer.label("diagramFrom"))
+    .replace("{title}", href ? `[${title}](${markdownUrl(href)})` : title)}*`;
+  if (!diagram.found) return `*${renderer.escape(renderer.label("diagramRemoved"))}*\n\n${caption}`;
+  const preview = referencedPreview(diagram, renderer);
+  const label = renderer.escape(renderer.label("drawio"));
+  return `${preview ? `![${label}](${markdownUrl(preview)})` : `*${label}*`}\n\n${caption}`;
+}
+
+const drawioReference: NodeDefinition = {
+  name: "drawioReference",
+  spec: { group: "block", atom: true, draggable: true },
+  attrs: {
+    id: required(uuidValue),
+    pageId: optional(uuidValue.nullable(), null),
+    diagramId: optional(uuidValue.nullable(), null),
+    name: optional(z.string().max(255), ""),
+  },
+  validate: (node) => pair(node, "pageId", "diagramId"),
+  html: referenceHtml,
+  word: referenceWord,
+  markdown: referenceMarkdown,
+  text: () => "",
+};
+
 export const diagramsModule = defineModule({
   name: "diagrams",
   nodes: [
@@ -279,6 +437,7 @@ export const diagramsModule = defineModule({
       },
       (node) => pair(node, "sourceId", "sourceVersion"),
     ),
+    drawioReference,
     textDiagram("mermaid"),
     textDiagram("plantuml"),
   ],

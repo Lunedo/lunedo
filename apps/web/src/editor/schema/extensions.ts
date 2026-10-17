@@ -425,6 +425,10 @@ export function schemaExtensions(): AnyExtension[] {
       sourceVersion: dataAttribute("sourceVersion", "number"),
       previewVersion: dataAttribute("previewVersion", "number"),
     }),
+    atomNode("drawioReference", "div", {
+      pageId: dataAttribute("pageId"),
+      diagramId: dataAttribute("diagramRef"),
+    }),
     ...(["mermaid", "plantuml"] as const).map((name) =>
       atomNode(name, "div", {
         id: dataAttribute("diagramId"),

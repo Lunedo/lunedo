@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { type DocumentJson, editorSchemaVersion, extractMentions, slugify } from "@pagehall/editor-schema";
 import { yDocFromDocument } from "@pagehall/editor-schema/yjs";
 import { uuidv7 } from "@pagehall/shared";
@@ -189,6 +190,12 @@ function pageTitle(page: Pick<SourcePage, "title" | "sourceId">): string {
   return title.length > 0 ? title : `Page ${page.sourceId}`.slice(0, ITEM_TITLE_MAX_LENGTH);
 }
 
+function stableId(key: string): string {
+  const hex = createHash("sha256").update(key).digest("hex");
+  const variant = ((Number.parseInt(hex.slice(16, 17), 16) & 0x3) | 0x8).toString(16);
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-8${hex.slice(13, 16)}-${variant}${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+}
+
 function noteProblem(note: ConversionNote, itemId: string, sourceId: string): ProblemInput {
   const base = { sourceKind: "page", sourceId, itemId };
   switch (note.code) {
@@ -209,6 +216,7 @@ function noteProblem(note: ConversionNote, itemId: string, sourceId: string): Pr
     case "diagramFileMissing":
       return { ...base, code: note.code, details: { macro: note.macro, name: note.name.slice(0, 255) } };
     case "gliffyDiagram":
+    case "diagramPageMissing":
       return { ...base, code: note.code, details: { name: note.name.slice(0, 255) } };
     default:
       return { ...base, code: note.code };
@@ -815,12 +823,11 @@ export class ImportPipeline {
       const owner = entries[index]?.owner ?? "";
       return list.attachments.map((reference) => {
         const page =
-          reference.pageSourceId ??
-          (reference.pageTitle === null
+          reference.pageTitle === null
             ? owner
             : sameSpace(reference)
               ? (byTitle.get(reference.pageTitle.trim().toLocaleLowerCase("en")) ?? "")
-              : "");
+              : "";
         return `${page}/${fileNameKey(reference.fileName)}`;
       });
     });
@@ -886,12 +893,11 @@ export class ImportPipeline {
           page: resolvePage,
           attachment: (reference) => {
             const page =
-              reference.pageSourceId ??
-              (reference.pageTitle === null
+              reference.pageTitle === null
                 ? owner
                 : sameSpace(reference)
                   ? (byTitle.get(reference.pageTitle.trim().toLocaleLowerCase("en")) ?? "")
-                  : "");
+                  : "";
             const id = attachments.get(`${page}/${fileNameKey(reference.fileName)}`);
             const found = id ? attachmentNames.get(id) : undefined;
             return id
@@ -907,6 +913,10 @@ export class ImportPipeline {
             spaceKey === null || spaceKey.toLowerCase() === sourceKey.toLowerCase() ? space.spaceId : null,
           template: (sourceId) => templates.get(sourceId) ?? null,
           newId: () => uuidv7(),
+          diagramId: (name, pageSourceId) => {
+            const page = pageSourceId ?? owner;
+            return page ? stableId(`drawio\u0000${page}\u0000${name}`) : uuidv7();
+          },
           ...(inlineComment ? { inlineComment } : {}),
           ...(variables.has(key) ? { templateVariables: variables.get(key) } : {}),
         };

@@ -7,6 +7,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { CommentHighlights } from "../collaboration/comment-highlights.js";
 import { reportFilters, TaskReport } from "../collaboration/task-report.js";
+import { ReferencedDiagram } from "../diagrams/referenced-diagram.js";
 import { contentUrl } from "../files/attachments-api.js";
 import { useAttachmentPreview } from "../files/preview-host.js";
 import type { Formatter } from "../format/format.js";
@@ -69,6 +70,7 @@ export function readViewContext(
       image: t("editor.readView.image"),
       drawing: t("editor.drawing.label"),
       drawio: t("editor.drawio.label"),
+      drawioReference: t("editor.drawioReference.label"),
       mermaid: t("editor.mermaid.label"),
       plantuml: t("editor.plantuml.label"),
       diagramSource: t("editor.diagram.source"),
@@ -167,6 +169,7 @@ export function PageReadView({
   const [pageReports, setPageReports] = useState<HTMLElement[]>([]);
   const [decisionReports, setDecisionReports] = useState<HTMLElement[]>([]);
   const [templateButtons, setTemplateButtons] = useState<HTMLElement[]>([]);
+  const [diagramReferences, setDiagramReferences] = useState<HTMLElement[]>([]);
   const [selection, setSelection] = useState<{ anchor: TextAnchor; top: number; left: number } | null>(null);
   const { taskStatuses, canToggleTask, onToggleTask, openThreads = [], activeThread = null } = collaboration;
   const html = useMemo(() => {
@@ -196,6 +199,7 @@ export function PageReadView({
     setPageReports(placeholders(".ph-page-report"));
     setDecisionReports(placeholders(".ph-decision-report"));
     setTemplateButtons(placeholders(".ph-template-button"));
+    setDiagramReferences(placeholders(".ph-diagram-reference"));
   }, [html]);
 
   useLayoutEffect(() => {
@@ -354,6 +358,17 @@ export function PageReadView({
       )}
       {decisionReports.map((element) =>
         createPortal(<DecisionReportList request={decisionReportFromAttrs(element.dataset)} />, element),
+      )}
+      {diagramReferences.map((element) =>
+        createPortal(
+          <ReferencedDiagram
+            pageId={element.dataset.pageId ?? null}
+            diagramId={element.dataset.diagramRef ?? null}
+            name={element.dataset.name ?? ""}
+            framed
+          />,
+          element,
+        ),
       )}
       {templateButtons.map((element) =>
         createPortal(

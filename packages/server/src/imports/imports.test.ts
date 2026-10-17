@@ -260,7 +260,11 @@ describe.skipIf(!baseUrl)("Confluence imports", () => {
         .join("")}${body}</ac:structured-macro>`;
     const plain = (text: string) => `<ac:plain-text-body><![CDATA[${text}]]></ac:plain-text-body>`;
     const pages = [
-      ...base.pages,
+      ...base.pages.map((entry) =>
+        entry.id === PAGE.alpha
+          ? { ...entry, body: `${entry.body}${macro("drawio", { diagramName: "Shared" })}` }
+          : entry,
+      ),
       {
         id: "1950",
         title: "Diagrams",
@@ -272,6 +276,7 @@ describe.skipIf(!baseUrl)("Confluence imports", () => {
           macro("drawio", { diagramName: "Lost" }),
           macro("gliffy", { name: "Floor plan" }),
           macro("inc-drawio", { diagramName: "Shared", pageId: PAGE.alpha }),
+          macro("inc-drawio", { diagramName: "Elsewhere", pageId: "99999" }),
           macro("mermaid", {}, plain("flowchart LR\n  A[Router] --> B[Switch]")),
           macro("plantuml", {}, plain("@startuml\nAlice -> Bob: Hello\n@enduml")),
         ].join(""),
@@ -301,7 +306,7 @@ describe.skipIf(!baseUrl)("Confluence imports", () => {
     const page = await itemFor(result.id, "1950");
     const alpha = await itemFor(result.id, PAGE.alpha);
     const blocks = nodes(await documentOf(page)).filter((node) =>
-      ["drawio", "mermaid", "plantuml"].includes(node.type),
+      ["drawio", "drawioReference", "mermaid", "plantuml"].includes(node.type),
     );
     const files = await test.database.execute<{
       id: string;
@@ -316,7 +321,8 @@ describe.skipIf(!baseUrl)("Confluence imports", () => {
       "drawio",
       "drawio",
       "drawio",
-      "drawio",
+      "drawioReference",
+      "drawioReference",
       "mermaid",
       "plantuml",
     ]);
@@ -333,16 +339,19 @@ describe.skipIf(!baseUrl)("Confluence imports", () => {
       sourceId: named("Floor plan")?.id,
       previewId: named("Floor plan.png")?.id,
     });
-    expect(named("Shared")?.item_id).toBe(alpha);
-    expect(blocks[3]?.attrs).toMatchObject({
+    const shared = nodes(await documentOf(alpha)).find((node) => node.type === "drawio");
+    expect(shared?.attrs).toMatchObject({
       sourceId: named("Shared")?.id,
       previewId: named("Shared.png")?.id,
     });
-    expect(blocks[4]?.attrs?.source).toBe("flowchart LR\n  A[Router] --> B[Switch]");
-    expect(blocks[5]?.attrs?.source).toBe("@startuml\nAlice -> Bob: Hello\n@enduml");
+    expect(blocks[3]?.attrs).toMatchObject({ pageId: alpha, diagramId: shared?.attrs?.id, name: "Shared" });
+    expect(blocks[4]?.attrs).toMatchObject({ pageId: null, diagramId: null, name: "Elsewhere" });
+    expect(files.rows.filter((row) => row.item_id === page).map((row) => row.name)).not.toContain("Shared");
+    expect(blocks[5]?.attrs?.source).toBe("flowchart LR\n  A[Router] --> B[Switch]");
+    expect(blocks[6]?.attrs?.source).toBe("@startuml\nAlice -> Bob: Hello\n@enduml");
     const report = await test.services.imports.report(as(admin), result.id);
     const codes = Object.fromEntries(report.categories.map((row) => [row.code, row.count]));
-    expect(codes).toMatchObject({ diagramFileMissing: 1, gliffyDiagram: 1 });
+    expect(codes).toMatchObject({ diagramFileMissing: 1, gliffyDiagram: 1, diagramPageMissing: 1 });
     expect(report.categories.find((row) => row.code === "diagramFileMissing")?.category).toBe("diagrams");
     const macros = await test.services.imports.macros(as(admin), result.id);
     expect(macros.map((entry) => entry.name)).not.toEqual(

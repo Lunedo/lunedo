@@ -35,16 +35,28 @@ A diagram follows the permissions, drafts and versions of its page:
 
 Search finds the text inside diagrams: the labels of draw.io shapes and connectors and the text of Mermaid and PlantUML images, or their source while they have no image yet. The page, the print view, PDF, Word, HTML and Markdown exports show the stored image. A Mermaid or PlantUML diagram without an image appears with its source and a note.
 
+### Diagrams of other pages
+
+A page can show a draw.io diagram of another page. Such a block is read-only and always shows the diagram as readers of the other page currently see it, so a change there appears here the next time the page is opened. Its caption links to the other page, and **Edit on its page** opens that page for editing.
+
+- People who cannot read the other page see "Restricted content" without the page title. Print, PDF, Word, HTML and Markdown leave such a block out.
+- When the diagram was removed from the other page, the block says so.
+- Search finds the diagram only on the page that holds it.
+- The block keeps no file or image of its own, so moving, deleting or cleaning up the other page never leaves it with an outdated copy.
+
+These blocks come from imported `inc-drawio` macros.
+
 ## Importing from Confluence
 
 | Confluence macro | Becomes |
 | --- | --- |
 | `drawio` | draw.io block with the attached diagram file (`<name>` or `<name>.drawio`) and its preview (`<name>.png`) |
-| `inc-drawio` | draw.io block that shows the diagram attached to the included page; editing it creates this page's own copy |
+| `inc-drawio` | reference to the draw.io block of the other page, see [Diagrams of other pages](#diagrams-of-other-pages) |
 | `gliffy` | draw.io block that shows the Gliffy preview and keeps the Gliffy file |
 | `mermaid`, `mermaid-macro`, `mermaid-diagram`, `mermaid-cloud` with the source in the macro body | Mermaid block with that source |
 | `plantuml` | PlantUML block with its source |
 
+- An `inc-drawio` macro whose page is not part of the import shows a note with the diagram name; the report lists it under "included diagrams are on pages that were not imported".
 - A draw.io diagram whose file is missing keeps its preview image. The import report lists it under "diagram files are missing"; editing it starts an empty diagram.
 - Gliffy diagrams are converted to draw.io in the browser when someone first chooses **Edit in draw.io**; the report lists them. Until then, the page shows the Gliffy image. A server-side conversion would need the draw.io converter, which runs only in a browser.
 - Mermaid macros whose source is stored in another form, such as compressed in a parameter, stay unsupported-macro blocks with their original data.

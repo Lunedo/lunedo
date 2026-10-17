@@ -21,12 +21,12 @@ export interface ImportedFile extends ImportedAttachment {
 
 export interface FileReference {
   readonly fileName: string;
-  readonly pageSourceId?: string | null;
 }
 
 export type MacroNote =
   | { readonly code: "diagramFileMissing"; readonly macro: string; readonly name: string }
-  | { readonly code: "gliffyDiagram"; readonly name: string };
+  | { readonly code: "gliffyDiagram"; readonly name: string }
+  | { readonly code: "diagramPageMissing"; readonly name: string };
 
 export interface MacroImportContext {
   blocks(content: readonly SourceContent[]): NodeJson[];
@@ -39,6 +39,7 @@ export interface MacroImportContext {
   template(sourceId: string): string | null;
   note(note: MacroNote): void;
   newId(): string;
+  diagramId(name: string, pageSourceId: string | null): string;
 }
 
 export interface MacroReferences {

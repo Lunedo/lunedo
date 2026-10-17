@@ -5,6 +5,7 @@ import { lazy, type ReactNode, Suspense, useEffect, useId, useRef, useState } fr
 import { useTranslation } from "react-i18next";
 import type { TextDiagram } from "../../diagram-frame/protocol.js";
 import { storeImage } from "../../diagrams/diagram-api.js";
+import { ReferencedDiagram } from "../../diagrams/referenced-diagram.js";
 import { type RenderResult, textDiagramRenderer } from "../../diagrams/text-renderer.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { contentUrl } from "../../files/attachments-api.js";
@@ -150,6 +151,22 @@ export function DrawioView({ node, selected, editor, updateAttributes }: NodeVie
           />
         </Suspense>
       ) : null}
+    </NodeViewWrapper>
+  );
+}
+
+export function DrawioReferenceView({ node, selected }: NodeViewProps) {
+  return (
+    <NodeViewWrapper
+      className={`ph-diagram flex flex-col overflow-hidden rounded-md border border-border bg-surface${selected ? " ph-node-selected" : ""}`}
+      contentEditable={false}
+      data-diagram="drawioReference"
+    >
+      <ReferencedDiagram
+        pageId={(node.attrs.pageId as string | null) ?? null}
+        diagramId={(node.attrs.diagramId as string | null) ?? null}
+        name={String(node.attrs.name ?? "")}
+      />
     </NodeViewWrapper>
   );
 }

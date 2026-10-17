@@ -4709,6 +4709,16 @@
       "frameTitle": "draw.io-Editor",
       "starting": "draw.io {version} startet von dieser Pagehall-Instanz. Speichern ist möglich, sobald der Editor geöffnet ist."
     },
+    "drawioReference": {
+      "label": "draw.io-Diagramm von einer anderen Seite",
+      "edit": "Auf seiner Seite bearbeiten",
+      "from": "Aus {title}",
+      "restricted": "Eingeschränkter Inhalt",
+      "restrictedHint": "Dieses Diagramm liegt auf einer Seite, die du nicht öffnen kannst.",
+      "removed": "Das draw.io-Diagramm wurde von seiner Seite entfernt.",
+      "notImported": "Das draw.io-Diagramm {name} liegt auf einer Seite, die nicht importiert wurde.",
+      "loadFailed": "Das Diagramm von einer anderen Seite konnte nicht geladen werden"
+    },
     "mermaid": {
       "label": "Mermaid-Diagramm"
     },
@@ -7044,6 +7054,11 @@
           "title": "{count, plural, one {# Gliffy-Diagramm wird} other {# Gliffy-Diagramme werden}} beim ersten Bearbeiten umgewandelt",
           "hint": "Sie zeigen ihr Gliffy-Bild und behalten die Gliffy-Datei. draw.io wandelt sie im Browser um, wenn sie zum ersten Mal bearbeitet werden.",
           "entry": "Das Gliffy-Diagramm „{name}“ wird beim ersten Bearbeiten in draw.io umgewandelt."
+        },
+        "diagramPageMissing": {
+          "title": "{count, plural, one {# eingebundenes Diagramm liegt} other {# eingebundene Diagramme liegen}} auf Seiten, die nicht importiert wurden",
+          "hint": "Die Blöcke zeigen einen Hinweis mit dem Diagrammnamen. Um ein solches Diagramm zu behalten, füge es der Seite als eigenes draw.io-Diagramm hinzu.",
+          "entry": "Das Diagramm „{name}“ wird von einer Seite eingebunden, die nicht im Import enthalten ist."
         }
       },
       "people": "Personen",

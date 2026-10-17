@@ -30,7 +30,6 @@ export interface AttachmentReference {
   readonly fileName: string;
   readonly pageTitle: string | null;
   readonly spaceKey: string | null;
-  readonly pageSourceId?: string | null;
 }
 
 export interface FoundAttachment {
@@ -58,6 +57,7 @@ export interface StorageLookup {
   readonly templateVariables?: ReadonlyMap<string, string>;
   inlineComment?(ref: string): string | null;
   newId(): string;
+  diagramId?(name: string, pageSourceId: string | null): string;
 }
 
 export type ConversionNote =
@@ -254,9 +254,7 @@ export function storageReferences(root: XmlNode): {
       }
       for (const title of declared.pageTitles ?? []) pages.push({ title, spaceKey: null, sourceId: null });
       for (const file of declared.files ?? []) {
-        const pageSourceId =
-          file.pageSourceId && /^\d{1,19}$/.test(file.pageSourceId) ? file.pageSourceId : null;
-        attachments.push({ fileName: file.fileName, pageTitle: null, spaceKey: null, pageSourceId });
+        attachments.push({ fileName: file.fileName, pageTitle: null, spaceKey: null });
       }
     }
     if (!macro) {
@@ -327,6 +325,7 @@ class Converter {
   notes: ConversionNote[] = [];
   tasks: ConvertedTask[] = [];
   readonly context: MacroImportContext;
+  readonly #diagrams = new Set<string>();
 
   constructor(private readonly lookup: StorageLookup) {
     this.context = {
@@ -345,18 +344,17 @@ class Converter {
           spaceKey: target?.attributes["ri:space-key"] ?? null,
         });
       },
-      file: (reference) => {
-        const pageSourceId =
-          reference.pageSourceId && /^\d{1,19}$/.test(reference.pageSourceId) ? reference.pageSourceId : null;
-        return this.lookup.attachment({
-          fileName: reference.fileName,
-          pageTitle: null,
-          spaceKey: null,
-          pageSourceId,
-        });
-      },
+      file: (reference) =>
+        this.lookup.attachment({ fileName: reference.fileName, pageTitle: null, spaceKey: null }),
       note: (note) => this.note(note),
       newId: () => this.lookup.newId(),
+      diagramId: (name, pageSourceId) => {
+        const id = this.lookup.diagramId?.(name, pageSourceId) ?? this.lookup.newId();
+        if (pageSourceId !== null) return id;
+        if (this.#diagrams.has(id)) return this.lookup.newId();
+        this.#diagrams.add(id);
+        return id;
+      },
       page: (reference, options) => {
         const resolved = this.lookup.page({
           title: reference.attributes["ri:content-title"] ?? "",

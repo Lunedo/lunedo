@@ -1,5 +1,5 @@
 import type { Readable } from "node:stream";
-import { Controller, Inject, Param, Put, Query, Req } from "@nestjs/common";
+import { Controller, Get, Inject, Param, Put, Query, Req } from "@nestjs/common";
 import { diagramTypes } from "@pagehall/server";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
@@ -7,7 +7,7 @@ import { Permission } from "../access/route-access.js";
 import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
-import { ProblemException } from "../http/problems.js";
+import { notFound, ProblemException } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
 import { extensibleEnum, uuid } from "../http/schemas.js";
 
@@ -43,6 +43,59 @@ export class DiagramsController {
 
   get #services() {
     return servicesOf(this.context);
+  }
+
+  @Get("pages/:pageId/diagrams/:blockId")
+  @Permission("item.view", page)
+  @ApiRoute({
+    summary: "Get the current image of a draw.io diagram",
+    description:
+      "Returns what readers of the page currently see of one of its draw.io diagrams: the title and address of the page and the attachment that holds the image. Other pages show a diagram of this page through it, so they always show its current version. Pages the caller may not see are not found.",
+    tags: [TAG],
+    params: diagramParams,
+    response: {
+      description: "The page and the image of the diagram.",
+      schema: z
+        .object({
+          pageId: uuid("ID of the page or blog post that holds the diagram."),
+          title: z.string().describe("Title of the page as readers see it."),
+          path: z.string().describe("Address of the page in the web interface."),
+          found: z.boolean().describe("Whether the page still holds the diagram."),
+          previewId: uuid("ID of the attachment that holds the image.")
+            .nullable()
+            .describe("ID of the attachment that holds the image, or null while the diagram has none."),
+          previewVersion: z
+            .number()
+            .int()
+            .nullable()
+            .describe("Version of the attachment that readers see, or null while the diagram has no image."),
+        })
+        .describe("The diagram."),
+      example: {
+        pageId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+        title: "Network",
+        path: "/spaces/NET/pages/01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20/network",
+        found: true,
+        previewId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a23",
+        previewVersion: 3,
+      },
+    },
+  })
+  async referenced(
+    @Param("pageId") pageId: string,
+    @Param("blockId") blockId: string,
+    @Req() request: FastifyRequest,
+  ) {
+    const diagram = await this.#services.documents.referencedDiagram(actorOf(request), pageId, blockId);
+    if (!diagram) throw notFound();
+    return {
+      pageId,
+      title: diagram.title,
+      path: diagram.href,
+      found: diagram.found,
+      previewId: diagram.previewId,
+      previewVersion: diagram.previewVersion,
+    };
   }
 
   @Put("pages/:pageId/diagrams/:blockId/drawio")

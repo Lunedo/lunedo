@@ -4709,6 +4709,16 @@
       "frameTitle": "draw.io editor",
       "starting": "draw.io {version} is starting from this Pagehall instance. You can save once it has opened."
     },
+    "drawioReference": {
+      "label": "draw.io diagram from another page",
+      "edit": "Edit on its page",
+      "from": "From {title}",
+      "restricted": "Restricted content",
+      "restrictedHint": "This diagram is on a page you cannot open.",
+      "removed": "The draw.io diagram was removed from its page.",
+      "notImported": "The draw.io diagram {name} is on a page that was not part of the import.",
+      "loadFailed": "The diagram from another page could not be loaded"
+    },
     "mermaid": {
       "label": "Mermaid diagram"
     },
@@ -7044,6 +7054,11 @@
           "title": "{count, plural, one {# Gliffy diagram is} other {# Gliffy diagrams are}} converted on first edit",
           "hint": "They show their Gliffy image and keep the Gliffy file. draw.io converts them in the browser when someone first edits them.",
           "entry": "Gliffy diagram “{name}” is converted to draw.io when it is first edited."
+        },
+        "diagramPageMissing": {
+          "title": "{count, plural, one {# included diagram is} other {# included diagrams are}} on pages that were not imported",
+          "hint": "The blocks show a note with the diagram name. To keep such a diagram, add it to the page as a draw.io diagram of its own.",
+          "entry": "Diagram “{name}” is included from a page that is not part of the import."
         }
       },
       "people": "People",

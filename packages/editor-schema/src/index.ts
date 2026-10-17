@@ -81,6 +81,7 @@ export {
   type PageReportRequest,
   type PageReportSort,
   pageReportSorts,
+  type ReferencedDiagram,
   type RenderContext,
   type RenderLabels,
   type RenderTarget,

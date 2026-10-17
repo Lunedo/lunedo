@@ -4,6 +4,7 @@ import {
   type DocumentJson,
   modules,
   plainText,
+  type ReferencedDiagram,
   renderHtml,
   renderMarkdown,
   renderWord,
@@ -13,6 +14,8 @@ import {
 const BLOCK = "01929b1e-0000-7000-8000-000000000001";
 const SOURCE = "01929b1e-0000-7000-8000-000000000002";
 const PREVIEW = "01929b1e-0000-7000-8000-000000000003";
+const PAGE = "01929b1e-0000-7000-8000-000000000004";
+const DIAGRAM = "01929b1e-0000-7000-8000-000000000005";
 
 function diagram(type: string, attrs: Record<string, unknown>): DocumentJson {
   return { type: "doc", content: [{ type, attrs: { id: BLOCK, ...attrs } }] };
@@ -99,6 +102,81 @@ describe("diagram blocks", () => {
   });
 });
 
+describe("draw.io diagrams of other pages", () => {
+  const document = diagram("drawioReference", { pageId: PAGE, diagramId: DIAGRAM, name: "Shared" });
+  const resolved = (found: Partial<ReferencedDiagram> | null) => ({
+    ...context,
+    diagramReference: (pageId: string, diagramId: string) =>
+      pageId === PAGE && diagramId === DIAGRAM && found
+        ? {
+            title: "Network <core>",
+            href: `/spaces/NET/pages/${PAGE}/network`,
+            found: true,
+            previewId: PREVIEW,
+            previewVersion: 7,
+            ...found,
+          }
+        : null,
+  });
+
+  it("show the current image of the diagram with a link to its page", () => {
+    const html = renderHtml(document, resolved({}));
+    expect(html).toContain(`src="/files/${PREVIEW}?version=7"`);
+    expect(html).toContain(`From <a href="/spaces/NET/pages/${PAGE}/network">Network &lt;core&gt;</a>`);
+    expect(renderMarkdown(document, resolved({}))).toContain(
+      `![draw.io diagram](/files/${PREVIEW}?version=7)\n\n*From [Network \\<core\\>](/spaces/NET/pages/${PAGE}/network)*`,
+    );
+    expect(renderWord(document, resolved({}))).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: "image", attachmentId: PREVIEW }),
+        expect.objectContaining({
+          content: [
+            expect.objectContaining({
+              text: "From Network <core>",
+              style: expect.objectContaining({ link: `/spaces/NET/pages/${PAGE}/network` }),
+            }),
+          ],
+        }),
+      ]),
+    );
+  });
+
+  it("say when the diagram is no longer on its page", () => {
+    const html = renderHtml(document, resolved({ found: false, previewId: null, previewVersion: null }));
+    expect(html).toContain("The draw.io diagram was removed from its page.");
+    expect(html).not.toContain("<img");
+  });
+
+  it("show nothing of a page the reader cannot see, and no title in placeholders", () => {
+    expect(renderHtml(document, resolved(null))).toBe("");
+    expect(renderMarkdown(document, resolved(null)).trim()).toBe("");
+    expect(renderWord(document, resolved(null))).toEqual([]);
+    const placeholder = renderHtml(document, { ...resolved(null), showPlaceholders: true });
+    expect(placeholder).toContain("Restricted content");
+    expect(placeholder).not.toContain("Network");
+    expect(
+      renderHtml(diagram("drawioReference", { name: "Shared" }), {
+        ...resolved(null),
+        showPlaceholders: true,
+      }),
+    ).toContain("The draw.io diagram Shared is on a page that was not imported.");
+  });
+
+  it("leave the image to the client when the page has no resolver, and stay out of search", () => {
+    const html = renderHtml(document, context);
+    expect(html).toContain(`data-page-id="${PAGE}"`);
+    expect(html).toContain(`data-diagram-ref="${DIAGRAM}"`);
+    expect(html).not.toContain("<img");
+    expect(plainText(document).trim()).toBe("");
+  });
+
+  it("refuse a reference with only one of page and diagram", () => {
+    expect(validateDocument(diagram("drawioReference", { pageId: PAGE })).ok).toBe(false);
+    expect(validateDocument(diagram("drawioReference", { diagramId: DIAGRAM })).ok).toBe(false);
+    expect(validateDocument(document).ok).toBe(true);
+  });
+});
+
 function parameter(name: string, value: string): SourceElement {
   return { name: "ac:parameter", attributes: { "ac:name": name }, children: [value] };
 }
@@ -111,7 +189,7 @@ function plain(text: string): SourceElement {
   return { name: "ac:plain-text-body", attributes: {}, children: [text] };
 }
 
-function importContext(files: Record<string, number>) {
+function importContext(files: Record<string, number>, pages: Record<string, string> = {}) {
   const notes: MacroNote[] = [];
   const requested: FileReference[] = [];
   let next = 0;
@@ -121,24 +199,25 @@ function importContext(files: Record<string, number>) {
     attachment: () => null,
     file: (reference) => {
       requested.push(reference);
-      const key = `${reference.pageSourceId ?? "own"}/${reference.fileName}`;
+      const key = `own/${reference.fileName}`;
       const version = files[key];
       return version ? { attachmentId: `id:${key}`, name: reference.fileName, version } : null;
     },
     page: () => null,
-    pageById: () => null,
+    pageById: (sourceId) => pages[sourceId] ?? null,
     space: () => null,
     template: () => null,
     note: (note) => notes.push(note),
     newId: () => `01929b1e-0000-7000-8000-00000000010${(next++).toString(16)}`,
+    diagramId: (name, pageSourceId) => `diagram:${pageSourceId ?? "own"}/${name}`,
   };
   return { context, notes, requested };
 }
 
-function convert(source: SourceElement, files: Record<string, number>) {
+function convert(source: SourceElement, files: Record<string, number>, pages: Record<string, string> = {}) {
   const importer = modules.importer("confluence", source.attributes["ac:name"] ?? "");
   if (!importer) throw new Error("No converter");
-  const { context, notes, requested } = importContext(files);
+  const { context, notes, requested } = importContext(files, pages);
   return {
     blocks: importer.convert(source, context),
     notes,
@@ -157,6 +236,7 @@ describe("diagram macros from Confluence", () => {
       {
         type: "drawio",
         attrs: expect.objectContaining({
+          id: "diagram:own/Network",
           sourceFormat: "drawio",
           sourceId: "id:own/Network",
           sourceVersion: 3,
@@ -166,7 +246,7 @@ describe("diagram macros from Confluence", () => {
       },
     ]);
     expect(notes).toEqual([]);
-    expect(references?.files).toContainEqual({ fileName: "Network.drawio", pageSourceId: null });
+    expect(references?.files).toContainEqual({ fileName: "Network.drawio" });
   });
 
   it("finds the diagram file with the .drawio extension of newer versions", () => {
@@ -192,13 +272,30 @@ describe("diagram macros from Confluence", () => {
     expect(notes).toEqual([{ code: "diagramFileMissing", macro: "drawio", name: "Lost" }]);
   });
 
-  it("reads included diagrams from the page they are attached to", () => {
-    const { blocks, references } = convert(
-      macro("inc-drawio", [parameter("diagramName", "Shared"), parameter("pageId", "98765")]),
-      { "98765/Shared": 1, "98765/Shared.png": 1 },
+  it("turns an included diagram into a reference to the diagram block of its page", () => {
+    const included = macro("inc-drawio", [parameter("diagramName", "Shared"), parameter("pageId", "98765")]);
+    const { blocks, notes, references, requested } = convert(
+      included,
+      { "own/Shared": 1 },
+      { "98765": PAGE },
     );
-    expect(blocks?.[0]?.attrs).toMatchObject({ sourceId: "id:98765/Shared" });
-    expect(references?.files).toContainEqual({ fileName: "Shared", pageSourceId: "98765" });
+    expect(blocks).toEqual([
+      {
+        type: "drawioReference",
+        attrs: { id: expect.any(String), pageId: PAGE, diagramId: "diagram:98765/Shared", name: "Shared" },
+      },
+    ]);
+    expect(notes).toEqual([]);
+    expect(requested).toEqual([]);
+    expect(references).toEqual({ pageIds: ["98765"] });
+  });
+
+  it("reports an included diagram whose page was not imported", () => {
+    const included = macro("inc-drawio", [parameter("diagramName", "Shared"), parameter("pageId", "98765")]);
+    const { blocks, notes } = convert(included, {});
+    expect(blocks?.[0]?.attrs).toMatchObject({ pageId: null, diagramId: null, name: "Shared" });
+    expect(notes).toEqual([{ code: "diagramPageMissing", name: "Shared" }]);
+    expect(validateDocument({ type: "doc", content: blocks ?? [] }).ok).toBe(true);
   });
 
   it("keeps a Gliffy diagram with its preview for conversion on first edit", () => {

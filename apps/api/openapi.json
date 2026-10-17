@@ -38175,6 +38175,7 @@
                               "unsupportedMacro",
                               "diagramFileMissing",
                               "gliffyDiagram",
+                              "diagramPageMissing",
                               "missingAttachment",
                               "attachmentFileMissing",
                               "attachmentTooLarge",
@@ -161570,6 +161571,242 @@
                       "code": "csrfRejected"
                     }
                   },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pages/{pageId}/diagrams/{blockId}": {
+      "get": {
+        "operationId": "diagrams.referenced",
+        "summary": "Get the current image of a draw.io diagram",
+        "description": "Returns what readers of the page currently see of one of its draw.io diagrams: the title and address of the page and the attachment that holds the image. Other pages show a diagram of this page through it, so they always show its current version. Pages the caller may not see are not found.\n\nRequires the permission `item.view` on the item in `pageId`.",
+        "tags": [
+          "Diagrams"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.view",
+          "resource": "item",
+          "parameter": "pageId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "pageId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the page or blog post.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "blockId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the diagram block in the page.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The page and the image of the diagram.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "pageId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the page or blog post that holds the diagram."
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "Title of the page as readers see it."
+                    },
+                    "path": {
+                      "type": "string",
+                      "description": "Address of the page in the web interface."
+                    },
+                    "found": {
+                      "type": "boolean",
+                      "description": "Whether the page still holds the diagram."
+                    },
+                    "previewId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "ID of the attachment that holds the image."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "ID of the attachment that holds the image, or null while the diagram has none."
+                    },
+                    "previewVersion": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Version of the attachment that readers see, or null while the diagram has no image."
+                    }
+                  },
+                  "required": [
+                    "pageId",
+                    "title",
+                    "path",
+                    "found",
+                    "previewId",
+                    "previewVersion"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The diagram."
+                },
+                "example": {
+                  "pageId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                  "title": "Network",
+                  "path": "/spaces/NET/pages/01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20/network",
+                  "found": true,
+                  "previewId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a23",
+                  "previewVersion": 3
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
                   "forbidden": {
                     "value": {
                       "type": "urn:pagehall:problem:forbidden",

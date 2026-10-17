@@ -10,6 +10,7 @@ import {
   type ListedPage,
   markdownUrl,
   type PageReportRequest,
+  type ReferencedDiagram,
   type RenderContext,
   type RenderLabels,
   type ReportedDecision,
@@ -33,6 +34,7 @@ import type { Logger } from "../logging/logger.js";
 import {
   blocksOfType,
   childPagesKey,
+  diagramKey,
   type PageDocumentService,
   type PageReferences,
   pagePath,
@@ -100,6 +102,7 @@ export interface PreparedPage {
   decisionReports: ReadonlyMap<string, readonly ReportedDecision[]> | null;
   taskReports: ReadonlyMap<string, readonly ReportedTask[]> | null;
   taskStatus: ReadonlyMap<string, boolean> | null;
+  diagrams: ReadonlyMap<string, ReferencedDiagram> | null;
   meeting: { startsAt: Date | null; attendees: string[] } | null;
   unavailable: ReadonlySet<Module>;
   failed: boolean;
@@ -260,6 +263,7 @@ export class PageExportRenderer {
         const statuses = await this.#tasks.statuses(this.#viewer, pageId);
         return new Map(statuses.map((status) => [status.id, status.done]));
       });
+      const diagrams = await this.#documents.referencedDiagrams(this.#viewer, document);
       const meeting = await this.#meeting(pageId);
       const referenced = new Set<string>(Object.keys(references.pages));
       for (const pages of childPages?.values() ?? []) collectListedIds(pages, referenced);
@@ -326,6 +330,7 @@ export class PageExportRenderer {
             )
           : null,
         taskStatus,
+        diagrams,
         meeting,
         unavailable,
         failed: false,
@@ -348,6 +353,7 @@ export class PageExportRenderer {
         decisionReports: null,
         taskReports: null,
         taskStatus: null,
+        diagrams: null,
         meeting: null,
         unavailable,
         failed: true,
@@ -386,6 +392,7 @@ export class PageExportRenderer {
       decisionReports: null,
       taskReports: null,
       taskStatus: null,
+      diagrams: null,
       meeting: null,
       unavailable: new Set(),
       failed: false,
@@ -519,6 +526,7 @@ export class PageExportRenderer {
           : { href: "", title: "", accessible: false };
       },
       attachment: (id) => ({ href: `/api/v1/attachments/${id}/content` }),
+      diagramReference: (pageId, diagramId) => page.diagrams?.get(diagramKey(pageId, diagramId)) ?? null,
       attachmentList: () => page.attachments,
       childPages: (request: ChildPagesRequest) =>
         page.childPages ? (page.childPages.get(childPagesKey(request)) ?? []) : null,

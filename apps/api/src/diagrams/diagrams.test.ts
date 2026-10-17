@@ -57,7 +57,7 @@ describe.skipIf(!databaseBaseUrl)("diagram blocks through the API", () => {
     return { id, client: await signedInClient(test, email, password) };
   }
 
-  async function page(grants: unknown[] = []) {
+  async function page(grants: unknown[] = [], title = "Standort Graz") {
     counter += 1;
     const created = await owner.post(`/api/v1/organizations/${organizationId}/spaces`, {
       name: `Diagrams ${counter}`,
@@ -68,7 +68,7 @@ describe.skipIf(!databaseBaseUrl)("diagram blocks through the API", () => {
     expect(created.statusCode, created.body).toBe(201);
     const item = await owner.post(`/api/v1/spaces/${created.json().id}/items`, {
       kind: "page",
-      title: "Standort Graz",
+      title,
       parentId: null,
       mode: "publish",
     });
@@ -281,5 +281,93 @@ describe.skipIf(!databaseBaseUrl)("diagram blocks through the API", () => {
       expect(hidden.statusCode).toBe(404);
       expect(hidden.body).not.toContain("Secret");
     }
+  });
+
+  it("show the current diagram of another page to readers of that page only", async () => {
+    const both = await person();
+    const including = await person();
+    const word = `routername${Date.now()}x`;
+    const source = await page(
+      [{ principalKind: "account", principalId: both.id, role: "reader" }],
+      "Netzplan Linz",
+    );
+    const target = await page([
+      { principalKind: "account", principalId: both.id, role: "reader" },
+      { principalKind: "account", principalId: including.id, role: "reader" },
+    ]);
+    const store = async (label: string) => {
+      const file = await owner.put(
+        `/api/v1/pages/${source.pageId}/diagrams/${blockId}/drawio`,
+        drawio(label),
+        octet,
+      );
+      const image = await owner.put(
+        `/api/v1/pages/${source.pageId}/diagrams/${blockId}/image?type=drawio`,
+        svg(`<text>${label}</text>`),
+        octet,
+      );
+      await publish(source.pageId, [
+        { type: "drawio", attrs: { id: blockId, ...file.json(), ...image.json(), text: label } },
+      ]);
+      return image.json().previewId as string;
+    };
+    const previewId = await store(word);
+    await publish(target.pageId, [
+      {
+        type: "drawioReference",
+        attrs: {
+          id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5ab2",
+          pageId: source.pageId,
+          diagramId: blockId,
+          name: "Netzplan",
+        },
+      },
+    ]);
+    const path = `/api/v1/pages/${source.pageId}/diagrams/${blockId}`;
+    const first = await both.client.get(path);
+    expect(first.statusCode, first.body).toBe(200);
+    expect(first.json()).toMatchObject({
+      pageId: source.pageId,
+      title: "Netzplan Linz",
+      found: true,
+      previewId,
+      previewVersion: 1,
+    });
+    expect(first.json().path).toContain(`/pages/${source.pageId}/`);
+
+    await store("Firewall");
+    expect((await both.client.get(path)).json()).toMatchObject({ previewId, previewVersion: 2 });
+    const markdown = await both.client.get(`/api/v1/pages/${target.pageId}/markdown`);
+    expect(markdown.json().markdown).toContain(`/api/v1/attachments/${previewId}/content`);
+    expect(markdown.json().markdown).toContain("Netzplan Linz");
+    const printed = await both.client.get(`/api/v1/pages/${target.pageId}/export?format=print`);
+    expect(printed.statusCode, printed.body).toBe(200);
+    expect(printed.body).toContain(`/api/v1/attachments/${previewId}/content`);
+    expect(printed.body).toContain("Netzplan Linz");
+
+    const hidden = await including.client.get(path);
+    expect(hidden.statusCode).toBe(404);
+    expect(hidden.body).not.toContain("Netzplan Linz");
+    expect((await including.client.get(`/api/v1/attachments/${previewId}/content`)).statusCode).toBe(404);
+    const unknown = await both.client.get(`/api/v1/pages/${source.pageId}/diagrams/${target.pageId}`);
+    expect(unknown.statusCode).toBe(200);
+    expect(unknown.json()).toMatchObject({ found: false, previewId: null });
+    for (const format of ["markdown", "print"]) {
+      const exported = await including.client.get(`/api/v1/pages/${target.pageId}/export?format=${format}`);
+      expect(exported.statusCode, exported.body).toBe(200);
+      expect(exported.body).not.toContain("Netzplan Linz");
+      expect(exported.body).not.toContain(previewId);
+    }
+    const own = await including.client.get(`/api/v1/pages/${target.pageId}/markdown`);
+    expect(own.json().markdown).not.toContain("Netzplan Linz");
+    const word2 = await including.client.get(`/api/v1/pages/${target.pageId}/export?format=docx`);
+    expect(word2.statusCode).toBe(200);
+    expect(word2.rawPayload.toString("latin1")).not.toMatch(/word\/media\/[^/]+\.svg/);
+
+    await test.runtime.services.search.indexer.drain();
+    const found = await owner.get(`/api/v1/organizations/${organizationId}/search?q=Firewall`);
+    const ids = found.json().results.map((result: { id: string }) => result.id);
+    expect(ids).toContain(source.pageId);
+    expect(ids).not.toContain(target.pageId);
   });
 });
