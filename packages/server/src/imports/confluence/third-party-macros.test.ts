@@ -240,6 +240,52 @@ describe("tab macros", () => {
   });
 });
 
+describe("the built-in panel macro", () => {
+  it("becomes an info callout with the title in bold and reports colors and borders", async () => {
+    const page = await convert(
+      macro(
+        "panel",
+        {
+          title: "Wichtig",
+          borderStyle: "dashed",
+          borderColor: "#ccc",
+          borderWidth: "2",
+          bgColor: "#FFFFCE",
+          titleBGColor: "#F7D6C1",
+          titleColor: "",
+        },
+        rich(p("Panel text")),
+      ),
+    );
+    expect(content(page)).toEqual([
+      {
+        type: "callout",
+        attrs: { variant: "info" },
+        content: [
+          { type: "paragraph", content: [{ type: "text", text: "Wichtig", marks: [{ type: "bold" }] }] },
+          paragraph("Panel text"),
+        ],
+      },
+    ]);
+    expect(page.notes).toEqual(
+      ["bgColor", "borderColor", "borderStyle", "borderWidth", "titleBGColor"].map((option) => ({
+        code: "macroOptionDropped",
+        macro: "panel",
+        option,
+      })),
+    );
+    expect(page.macros.size).toBe(0);
+  });
+
+  it("keeps a panel without title or options as a plain callout", async () => {
+    const page = await convert(macro("panel", {}, rich(p("Only text"))));
+    expect(content(page)).toEqual([
+      { type: "callout", attrs: { variant: "info" }, content: [paragraph("Only text")] },
+    ]);
+    expect(page.notes).toEqual([]);
+  });
+});
+
 describe("Table Filter and Charts", () => {
   it("keeps the table of a table filter and reports filter and sort as dropped", async () => {
     const page = await convert(macro("table-filter", { sort: "Agent ⇧", column: "Agent" }, rich(table)));

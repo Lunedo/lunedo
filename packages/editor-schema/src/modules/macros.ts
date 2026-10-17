@@ -4,6 +4,7 @@ import {
   bodyBlocks,
   boundedInteger,
   type MacroConverter,
+  macroParameterNames,
   macroText,
   richBody,
   type SourceElement,
@@ -81,6 +82,24 @@ const calloutImporter: MacroConverter = {
       content: [...titleParagraph(macroText(macro, "title")), ...bodyBlocks(macro, context)],
     },
   ],
+};
+
+const panelImporter: MacroConverter = {
+  source: "confluence",
+  macros: ["panel"],
+  convert: (macro, context) => {
+    for (const option of macroParameterNames(macro).sort()) {
+      if (option === "title" || (macroText(macro, option) ?? "").trim().length === 0) continue;
+      context.note({ code: "macroOptionDropped", macro: "panel", option });
+    }
+    return [
+      {
+        type: "callout",
+        attrs: { variant: "info" },
+        content: [...titleParagraph(macroText(macro, "title")), ...bodyBlocks(macro, context)],
+      },
+    ];
+  },
 };
 
 const expandImporter: MacroConverter = {
@@ -186,7 +205,7 @@ export const calloutModule = defineModule({
       },
     },
   ],
-  importers: [calloutImporter],
+  importers: [calloutImporter, panelImporter],
 });
 
 export const expandModule = defineModule({

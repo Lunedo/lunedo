@@ -40,6 +40,7 @@ These Confluence macros become Pagehall blocks. A macro falls back to an unsuppo
 | Macro | Becomes | Fallback |
 |---|---|---|
 | `info`, `tip`, `note`, `warning` | Callout | |
+| `panel` (`title`) | Info callout with the title in bold. Colors and border options (`bgColor`, `titleBGColor`, `titleColor`, `borderColor`, `borderStyle`, `borderWidth`) are listed as options not taken over. | |
 | `expand` | Expand | |
 | `status` | Status | |
 | `code` | Code block | |
