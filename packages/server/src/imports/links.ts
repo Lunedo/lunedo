@@ -98,11 +98,12 @@ export function importedTitleCandidates(spaceKey: string, title: string, kind: "
   return sql`
     select b.target_id as id, 0 as rank, b.recorded_at as at from import_titles n
     join import_baselines b on b.space_id = n.space_id and b.kind = 'page' and b.source_id = n.source_id
+    join imported_spaces x on x.space_id = n.space_id and x.source = 'confluence'
     where n.space_key = ${spaceKey.toLowerCase()} and n.title_key = ${titleKey(title)}
       and b.target_id is not null
     union all
     select t.id, 1, t.updated_at from imported_spaces x join tree_items t on t.space_id = x.space_id
-    where x.source_space_key = ${spaceKey.toLowerCase()}
+    where x.source_space_key = ${spaceKey.toLowerCase()} and x.source = 'confluence'
       and lower(trim(t.title)) = ${titleKey(title)}
       and t.kind = ${kind}`;
 }

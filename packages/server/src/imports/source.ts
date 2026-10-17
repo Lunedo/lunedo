@@ -27,6 +27,10 @@ export function inputOf(source: string): SourceInput | null {
   return (sourceInputs as Readonly<Record<string, SourceInput>>)[source] ?? null;
 }
 
+export function sourceFamily(source: string): string {
+  return source.startsWith("confluence-") ? "confluence" : source;
+}
+
 export interface ImportOptions {
   readonly spaceKey?: string | undefined;
   readonly pageIds?: readonly string[] | undefined;

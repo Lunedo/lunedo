@@ -56,6 +56,7 @@ import {
   importSources,
   inputOf,
   type SourceInput,
+  sourceFamily,
 } from "./source.js";
 import { releaseUploads, type UploadService } from "./uploads.js";
 import { parseUserList } from "./user-list.js";
@@ -705,7 +706,7 @@ export class ImportService {
       if (input.source !== undefined && input.source !== row.source) {
         if (!importSources.includes(input.source))
           throw new ImportError("invalidSource", "Choose an export format.");
-        if (row.target_space_id && inputOf(row.source) !== inputOf(input.source)) {
+        if (row.target_space_id && sourceFamily(row.source) !== sourceFamily(input.source)) {
           throw new ImportError("reimportSpaceFixed", REIMPORT_FIXED);
         }
         changes.push(sql`source = ${input.source}`);

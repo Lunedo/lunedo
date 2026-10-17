@@ -70,14 +70,15 @@ import {
   openSessions,
 } from "./reimport-compare.js";
 import { type ProblemInput, recordProblems } from "./report.js";
-import type {
-  ImportReader,
-  ReadContext,
-  SourceComment,
-  SourcePage,
-  SourcePerson,
-  SourceRestriction,
-  SourceTemplate,
+import {
+  type ImportReader,
+  type ReadContext,
+  type SourceComment,
+  type SourcePage,
+  type SourcePerson,
+  type SourceRestriction,
+  type SourceTemplate,
+  sourceFamily,
 } from "./source.js";
 import type { StagingStore } from "./staging.js";
 import {
@@ -2105,6 +2106,7 @@ export class ImportPipeline {
     await recordImportedSpace(this.#database, {
       spaceId: space.spaceId,
       importId: run.importId,
+      source: sourceFamily(run.reader.source),
       sourceSpaceId: source.sourceId,
       sourceSpaceKey: source.key,
     });
@@ -2310,6 +2312,7 @@ export class ImportPipeline {
     await recordImportedSpace(this.#database, {
       spaceId: reimport.spaceId,
       importId: run.importId,
+      source: sourceFamily(run.reader.source),
       sourceSpaceId: source.sourceId,
       sourceSpaceKey: source.key,
     });

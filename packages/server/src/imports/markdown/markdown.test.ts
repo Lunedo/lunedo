@@ -198,6 +198,58 @@ describe.skipIf(!baseUrl)("Markdown folder imports", () => {
     expect(textOf(document)).toContain("Start with");
   });
 
+  it("re-imports a newer ZIP of the same folder and lists only the changed pages", async () => {
+    const organization = await fixtures.organization();
+    const first = await harness.importedFiles({
+      organizationId: organization.id,
+      admin: organization.owner,
+      source: "markdown",
+      files: [{ name: "handbook.zip", data: createZip(wiki) }],
+      key: "MDAGAIN",
+    });
+    await test.services.imports.accept(harness.as(organization.owner), first.id, {
+      visibility: "private",
+      grants: [],
+    });
+    const changed = wiki.map((file) =>
+      file.name === "handbook/guides/02-printers.md" ? { ...file, data: "Printers moved to floor 3." } : file,
+    );
+    const again = await harness.importedFiles({
+      organizationId: organization.id,
+      admin: organization.owner,
+      source: "markdown",
+      files: [{ name: "handbook-2.zip", data: createZip(changed) }],
+      spaceId: first.quarantineSpace?.id ?? "",
+      key: "MDAGAIN",
+    });
+    expect(again.source).toBe("markdown");
+    expect(again.state).toBe("review");
+    expect(again.counts).toMatchObject({ new: 0, updated: 1, conflicts: 0, deleted: 0 });
+  });
+
+  it("starts a re-import of a Markdown space as a Markdown import", async () => {
+    const organization = await fixtures.organization();
+    const first = await harness.importedFiles({
+      organizationId: organization.id,
+      admin: organization.owner,
+      source: "markdown",
+      files: [{ name: "handbook.zip", data: createZip(wiki) }],
+      key: "MDKIND",
+    });
+    await test.services.imports.accept(harness.as(organization.owner), first.id, {
+      visibility: "private",
+      grants: [],
+    });
+    const draft = await test.services.imports.create(harness.as(organization.owner), organization.id, {
+      source: "confluence-xml",
+      spaceId: first.quarantineSpace?.id ?? "",
+    });
+    expect(draft.source).toBe("markdown");
+    await expect(
+      test.services.imports.update(harness.as(organization.owner), draft.id, { source: "confluence-xml" }),
+    ).rejects.toMatchObject({ code: "reimportSpaceFixed" });
+  });
+
   it.each([
     ["a path outside the archive", [{ name: "../outside.md", data: "x" }], "unsafeEntryName"],
     ["a symbolic link", [{ name: "link.md", data: "/etc/passwd", symbolicLink: true }], "unsafeEntryName"],
