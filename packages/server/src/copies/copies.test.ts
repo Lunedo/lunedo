@@ -5,6 +5,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 import { accountPrincipal, type Principal } from "../accounts/principal.js";
 import { ForbiddenError } from "../authorization/service.js";
 import type { PageMode } from "../spaces/schema.js";
+import { StorageUsage } from "../storage/usage.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { testJobContext } from "../testing/jobs.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
@@ -118,6 +119,13 @@ describe.skipIf(!baseUrl)("copying content", () => {
     });
   }
 
+  async function purgeSource(actor: Principal, ownerId: string, itemId: string, spaceId: string) {
+    const entry = await test.services.trash.deleteItem(actor, itemId);
+    await test.services.trash.empty(actor, spaceId);
+    await test.services.trash.deleteImmediately(accountPrincipal(ownerId), entry.id, "Erasure request");
+    await test.services.files.deleteOrphaned();
+  }
+
   function upload(actor: Principal, itemId: string, name: string, content: string) {
     return test.services.attachments.upload(actor, itemId, {
       name,
@@ -221,9 +229,16 @@ describe.skipIf(!baseUrl)("copying content", () => {
       const outsider = await member(org.id, "member", "Otto Outside");
       await grant(as, other.id, outsider, "reader");
       const shown = await test.services.copies.sources(accountPrincipal(outsider), versions);
-      expect(shown[0]?.copiedFrom).toEqual({ itemId: null, title: "Policy" });
+      expect(shown[0]?.copiedFrom).toEqual({ itemId: null, title: null, path: null });
       const forEditor = await test.services.copies.sources(as, versions);
-      expect(forEditor[0]?.copiedFrom).toEqual({ itemId: source.id, title: "Policy" });
+      expect(forEditor[0]?.copiedFrom).toEqual({
+        itemId: source.id,
+        title: "Policy",
+        path: `/spaces/${wiki.key}/pages/${source.id}/policy`,
+      });
+      await purgeSource(as, org.owner, source.id, wiki.id);
+      const afterPurge = await test.services.copies.sources(as, await test.services.versions.list(item.id));
+      expect(afterPurge[0]?.copiedFrom).toEqual({ itemId: null, title: null, path: null });
     });
 
     it("numbers titles that already exist at the target and ignores titles the person cannot see", async () => {
@@ -330,6 +345,48 @@ describe.skipIf(!baseUrl)("copying content", () => {
       const drawingAttrs = drawing?.attrs as Record<string, string>;
       expect(ids.has(drawingAttrs.sceneId ?? "")).toBe(true);
       expect(ids.has(drawingAttrs.previewId ?? "")).toBe(true);
+    });
+
+    it("keeps a shared stored file while the copy uses it and counts it once in the storage total", async () => {
+      const { org, wiki, other, as } = await setup();
+      const usage = new StorageUsage({ database: test.database });
+      const source = await page(as, wiki.id, "Contract");
+      const content = "shared contract text";
+      const empty = await usage.total();
+      const uploaded = await upload(as, source.id, "contract.txt", content);
+      const [original] = await attachmentsOf(source.id);
+      const fileId = original?.file_id ?? "";
+      const before = await usage.total();
+      expect(before).toBeGreaterThan(empty);
+
+      const { item } = await copyRoot(as, source.id, other.id);
+      const [copied] = await attachmentsOf(item.id);
+      expect(copied?.file_id).toBe(fileId);
+      expect(await usage.total()).toBe(before);
+      const objects = await test.database.execute<{ count: number }>(sql`
+        select count(distinct v.file_id)::int as count from attachment_versions v
+        join attachments a on a.id = v.attachment_id where a.item_id in (${source.id}, ${item.id})`);
+      expect(objects.rows[0]?.count).toBe(1);
+
+      const fileState = async () => {
+        const result = await test.database.execute<{ state: string }>(
+          sql`select state from stored_files where id = ${fileId}`,
+        );
+        return result.rows[0]?.state ?? null;
+      };
+      const purge = (itemId: string, spaceId: string) => purgeSource(as, org.owner, itemId, spaceId);
+
+      await test.services.attachments.delete(as, uploaded.id);
+      await purge(source.id, wiki.id);
+      expect(await attachmentsOf(source.id)).toEqual([]);
+      expect(await fileState()).toBe("ready");
+      expect(await usage.total()).toBe(before);
+      const read = await test.services.files.readAll(fileId, 1000);
+      expect(read.toString()).toBe(content);
+
+      await purge(item.id, other.id);
+      expect(await fileState()).toBeNull();
+      expect(await usage.total()).toBe(empty);
     });
 
     it("rewrites links between copied pages and keeps other links, includes and live references", async () => {
@@ -766,6 +823,110 @@ describe.skipIf(!baseUrl)("copying content", () => {
       const notifications = await test.database.execute<{ type: string }>(sql`
         select type from notifications where recipient_id = ${editor} and target_id = ${done?.item?.id}`);
       expect(notifications.rows.map((row) => row.type)).toEqual(["copy.finished"]);
+    });
+
+    it("lets people create pages in the target space while the copy runs", async () => {
+      const { wiki, other, as } = await setup();
+      const { root, pages } = await bigTree(as, wiki.id);
+      const queued = await test.services.copies.copy(as, root.id, {
+        spaceId: other.id,
+        parentId: null,
+        descendants: true,
+      });
+      const job = testJobContext("copies.run", { copyId: queued.id });
+      let created: { id: string } | null = null;
+      job.reportProgress = async () => {
+        if (!created) created = await page(as, other.id, "Written meanwhile");
+      };
+      await test.services.copies.work(job);
+      expect(created).not.toBeNull();
+      const done = await test.services.copies.get(queued.id);
+      expect(done).toMatchObject({ state: "done", copied: pages.length + 1 });
+      const top = await test.database.execute<{ title: string }>(sql`
+        select title from tree_items where space_id = ${other.id} and parent_id is null order by position`);
+      expect(top.rows.map((row) => row.title).slice(-2)).toEqual(["Archive", "Written meanwhile"]);
+    });
+
+    it("gives way to a deletion of its place and fails on the retry without leaving anything", async () => {
+      const { wiki, other, as } = await setup();
+      const { root } = await bigTree(as, wiki.id);
+      const place = await page(as, other.id, "Place");
+      const queued = await test.services.copies.copy(as, root.id, {
+        spaceId: other.id,
+        parentId: place.id,
+        descendants: true,
+      });
+      const first = testJobContext("copies.run", { copyId: queued.id });
+      let deletion: Promise<unknown> | null = null;
+      first.reportProgress = async () => {
+        deletion ??= test.services.trash.deleteItem(as, place.id);
+      };
+      await expect(test.services.copies.work(first)).rejects.toThrow();
+      await deletion;
+      await test.services.copies.work(testJobContext("copies.run", { copyId: queued.id }, 1));
+      expect(await test.services.copies.get(queued.id)).toMatchObject({
+        state: "failed",
+        errorCode: "invalidPlacement",
+      });
+      expect(await children(place.id)).toEqual([]);
+    });
+
+    it("starts again when a parent of its place moves while it runs, so the copy inherits the new place", async () => {
+      const { wiki, other, as } = await setup();
+      const { root } = await bigTree(as, wiki.id);
+      const section = await page(as, other.id, "Section");
+      const place = await page(as, other.id, "Place", section.id);
+      const locked = await page(as, other.id, "Locked");
+      await test.services.pageAccess.change(as, locked.id, [{ action: "restrict", kind: "view" }]);
+      const queued = await test.services.copies.copy(as, root.id, {
+        spaceId: other.id,
+        parentId: place.id,
+        descendants: true,
+      });
+      const first = testJobContext("copies.run", { copyId: queued.id });
+      const preview = await test.services.tree.moveImpact(as, section.id, { parentId: locked.id });
+      let move: Promise<unknown> | null = null;
+      first.reportProgress = async () => {
+        move ??= test.services.tree.move(as, section.id, {
+          parentId: locked.id,
+          confirmation: preview.confirmation ?? "",
+        });
+      };
+      await expect(test.services.copies.work(first)).rejects.toThrow();
+      await move;
+      await test.services.copies.work(testJobContext("copies.run", { copyId: queued.id }, 1));
+      const done = await test.services.copies.get(queued.id);
+      expect(done?.state).toBe("done");
+      const stale = await test.database.execute<{ count: number }>(sql`
+        select count(*)::int as count from tree_items
+        where ${done?.item?.id ?? ""}::uuid = any(path) and not (${locked.id}::uuid = any(path))`);
+      expect(stale.rows[0]?.count).toBe(0);
+    });
+
+    it("checks the confirmed access again before it finishes", async () => {
+      const { wiki, other, as } = await setup();
+      const { root } = await bigTree(as, wiki.id);
+      await test.services.pageAccess.change(as, root.id, [{ action: "restrict", kind: "view" }]);
+      const place = await page(as, other.id, "Board only");
+      await test.services.pageAccess.change(as, place.id, [{ action: "restrict", kind: "view" }]);
+      const queued = await test.services.copies.copy(as, root.id, {
+        spaceId: other.id,
+        parentId: place.id,
+        descendants: true,
+      });
+      const first = testJobContext("copies.run", { copyId: queued.id });
+      let opened: Promise<unknown> | null = null;
+      first.reportProgress = async () => {
+        opened ??= test.services.pageAccess.change(as, place.id, [{ action: "unrestrict", kind: "view" }]);
+      };
+      await expect(test.services.copies.work(first)).rejects.toThrow();
+      await opened;
+      expect(await children(place.id)).toEqual([]);
+      await test.services.copies.work(testJobContext("copies.run", { copyId: queued.id }, 1));
+      expect(await test.services.copies.get(queued.id)).toMatchObject({
+        state: "failed",
+        errorCode: "copyChangesAccess",
+      });
     });
 
     it("leaves nothing behind when the job fails and tells the person", async () => {

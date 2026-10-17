@@ -19,8 +19,9 @@ import type { Database, Transaction } from "../database/database.js";
 import type { JobContext, JobQueue } from "../jobs/job-queue.js";
 import type { NotificationService } from "../notifications/service.js";
 import type { ValueSigner } from "../sharing/signer.js";
-import { actorIdOf, auditScopeOf, SpaceError } from "../spaces/common.js";
+import { actorIdOf, auditScopeOf, isUniqueViolation, SpaceError } from "../spaces/common.js";
 import { encodeState, insertInitialDocument, migrated, recomputeLinks } from "../spaces/documents.js";
+import { positionBetween } from "../spaces/fractional-index.js";
 import {
   checkParent,
   endPosition,
@@ -57,6 +58,8 @@ const FINISHED_COPY_DAYS = 30;
 const COPYABLE_ROOTS: ReadonlySet<TreeItemKind> = new Set(["page", "folder", "whiteboard"]);
 const ITEM_PATH = /^\/spaces\/[^/?#]+\/(pages|whiteboards)\/([0-9a-f-]{36})(?=$|[/?#])/i;
 const RETRYABLE_CODES = new Set(["40001", "40P01"]);
+const SPACE_LOCK_ATTEMPTS = 20;
+const SPACE_LOCK_PAUSE_MS = 100;
 
 const COPY_PREFIX: Record<Language, (title: string) => string> = {
   en: (title) => `Copy of ${title}`,
@@ -159,6 +162,18 @@ interface CopyContext {
 
 type Copier = (context: CopyContext, item: PlannedItem) => Promise<void>;
 
+class CurrentAccess extends Error {
+  constructor(readonly digest: string) {
+    super("Current access");
+  }
+}
+
+class CopyRetry extends Error {
+  constructor() {
+    super("The target space was busy while the copy finished");
+  }
+}
+
 class Preview extends Error {
   constructor(readonly impact: CopyImpact) {
     super("Preview");
@@ -205,12 +220,17 @@ function digest(gains: LevelChange[]): string {
 
 function retryable(error: unknown): boolean {
   const cause = (error as { cause?: unknown }).cause ?? error;
-  return RETRYABLE_CODES.has(String((cause as { code?: unknown }).code ?? ""));
+  return (
+    error instanceof CopyRetry ||
+    RETRYABLE_CODES.has(String((cause as { code?: unknown }).code ?? "")) ||
+    isUniqueViolation(error, "tree_items_position_unique")
+  );
 }
 
 function errorCodeOf(error: unknown): string {
   if (error instanceof SpaceError) return error.code;
   if (isStorageFull(error)) return "storageFull";
+  if (error instanceof CopyRetry || retryable(error)) return "copyInterrupted";
   if (error instanceof ForbiddenError) return "forbidden";
   return "copyFailed";
 }
@@ -360,7 +380,6 @@ export class CopyService {
       const located = await this.#locate(actor, sourceItemId, request.spaceId);
       const mailIds = await this.#database.transaction(
         async (tx) => {
-          await lockSpaces(tx, [located.targetSpaceId]);
           await checkParent(tx, this.#authorization, actor, located.targetSpaceId, request.parentId);
           const plan = await this.#plan(tx, actor, sourceItemId, row.descendants);
           const access = await this.#access(tx, actor, plan, located, request.parentId);
@@ -371,9 +390,10 @@ export class CopyService {
             );
           }
           await this.#requireStorage(tx, plan);
-          return this.#execute(tx, actor, row.id, plan, located, request, row.wider_access, (done) =>
-            job.reportProgress(done, plan.items.length),
-          );
+          return this.#execute(tx, actor, row.id, plan, located, request, row.wider_access, {
+            confirmed: row.access,
+            report: (done) => job.reportProgress(done, plan.items.length),
+          });
         },
         { isolationLevel: "repeatable read" },
       );
@@ -652,16 +672,11 @@ export class CopyService {
     located: Located,
     request: CopyTarget & { descendants: boolean },
     widerAccess: boolean,
-    report: ((done: number) => Promise<void>) | null,
+    background: { confirmed: string; report: (done: number) => Promise<void> } | null,
   ): Promise<string[]> {
     const actorId = actorIdOf(actor);
     const titles = await this.#titles(tx, actor, plan, located.targetSpaceId);
-    const position = await placementPosition(
-      tx,
-      located.targetSpaceId,
-      { parentId: request.parentId, beforeId: request.beforeId, afterId: request.afterId },
-      null,
-    );
+    const position = await this.#position(tx, located.targetSpaceId, request);
     const copies = new Map(plan.items.map((item) => [item.id, item]));
     const context: CopyContext = { tx, actor, actorId, plan, located, copies, linked: [] };
     for (const [index, item] of plan.items.entries()) {
@@ -680,10 +695,11 @@ export class CopyService {
         insert into page_labels (item_id, label, created_by)
         select ${item.copyId}, label, ${actorId} from page_labels where item_id = ${item.id}`);
       await this.#copiers[item.kind]?.(context, item);
-      if (report && index % 10 === 9) await report(index + 1);
+      if (background && index % 10 === 9) await background.report(index + 1);
     }
     for (const page of context.linked) await recomputeLinks(tx, page.itemId, page.content);
     const root = plan.items[0] as PlannedItem;
+    if (background) await this.#settle(tx, actor, plan, located, request.parentId, background.confirmed);
     await carryStatusesInto(tx, root.copyId, located.targetSpaceId, actorId);
     await refreshReaderVisibility(tx, [root.copyId]);
     await signalSpaceChange(tx, { spaceId: located.targetSpaceId, kind: "tree", itemId: root.copyId });
@@ -710,7 +726,7 @@ export class CopyService {
       },
       scope: auditScopeOf({ organizationId: located.organizationId }),
     });
-    if (!report || !actorId) return [];
+    if (!background || !actorId) return [];
     const notified = await this.#notifications.notify(tx, {
       type: "copy.finished",
       recipients: [actorId],
@@ -726,6 +742,71 @@ export class CopyService {
       },
     });
     return notified.mailIds;
+  }
+
+  async #position(tx: Transaction, spaceId: string, request: CopyTarget): Promise<string> {
+    if (request.beforeId || request.afterId) return placementPosition(tx, spaceId, request, null);
+    const last = await tx.execute<{ position: string | null }>(sql`
+      select max(position) as position from tree_items
+      where space_id = ${spaceId} and parent_id is not distinct from ${request.parentId}`);
+    const lower = last.rows[0]?.position ?? null;
+    return positionBetween(lower, positionBetween(lower, null));
+  }
+
+  async #settle(
+    tx: Transaction,
+    actor: Principal,
+    plan: Plan,
+    located: Located,
+    parentId: string | null,
+    confirmed: string,
+  ): Promise<void> {
+    const spaceId = located.targetSpaceId;
+    await this.#lockSpaceWithoutWaiting(tx, spaceId);
+    if ((await this.#currentAccess(actor, plan, located, parentId)) !== confirmed) throw new CopyRetry();
+    if (parentId === null) return;
+    const read = sql`select space_id, path::text as path, (trash_entry_id is null and archived_root_id is null) as in_tree
+      from tree_items where id = ${parentId}`;
+    const current = (await this.#database.execute<{ space_id: string; path: string; in_tree: boolean }>(read))
+      .rows[0];
+    if (!current?.in_tree || current.space_id !== spaceId) {
+      throw new SpaceError("invalidPlacement", "The place of the copy was moved or deleted while copying");
+    }
+    const seen = (await tx.execute<{ path: string }>(read)).rows[0];
+    if (seen?.path !== current.path) throw new CopyRetry();
+  }
+
+  async #currentAccess(
+    actor: Principal,
+    plan: Plan,
+    located: Located,
+    parentId: string | null,
+  ): Promise<string> {
+    try {
+      await this.#database.transaction(async (fresh) => {
+        throw new CurrentAccess(digest((await this.#access(fresh, actor, plan, located, parentId)).gains));
+      });
+    } catch (error) {
+      if (error instanceof CurrentAccess) return error.digest;
+      throw error;
+    }
+    throw new Error("The current access of the copy was not computed");
+  }
+
+  async #lockSpaceWithoutWaiting(tx: Transaction, spaceId: string): Promise<void> {
+    for (let attempt = 0; attempt < SPACE_LOCK_ATTEMPTS; attempt += 1) {
+      try {
+        await tx.transaction((savepoint) =>
+          savepoint.execute(sql`select id from spaces where id = ${spaceId} for no key update nowait`),
+        );
+        return;
+      } catch (error) {
+        const cause = (error as { cause?: unknown }).cause ?? error;
+        if ((cause as { code?: unknown }).code !== "55P03") throw error;
+        await new Promise((resolve) => setTimeout(resolve, SPACE_LOCK_PAUSE_MS));
+      }
+    }
+    throw new CopyRetry();
   }
 
   async #titles(
