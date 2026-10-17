@@ -16,6 +16,14 @@ const OTHER_REPORT = ID(4);
 const SPACE = ID(5);
 const PROJECT = ID(6);
 const TEMPLATE = ID(7);
+const DIAGRAM_FILES: Readonly<Record<string, number>> = {
+  "/Network": 20,
+  "/Network.png": 21,
+  "/Lost.png": 22,
+  "/Floor plan": 23,
+  "/Floor plan.png": 24,
+  "98765/Shared": 25,
+};
 
 function lookup(): StorageLookup {
   let next = 100;
@@ -33,13 +41,14 @@ function lookup(): StorageLookup {
     template: (sourceId) => (sourceId === "235077637" ? TEMPLATE : null),
     attachment(reference) {
       if (reference.fileName === "report.pdf" && reference.pageTitle === "Runbook") {
-        return { attachmentId: OTHER_REPORT, name: "report.pdf" };
+        return { attachmentId: OTHER_REPORT, name: "report.pdf", version: 1 };
       }
       if (reference.fileName === "report.pdf" && reference.pageTitle === null) {
-        return { attachmentId: REPORT, name: "report.pdf" };
+        return { attachmentId: REPORT, name: "report.pdf", version: 1 };
       }
-      if (reference.fileName === "costs.xlsx") return { attachmentId: SHEET, name: "costs.xlsx" };
-      return null;
+      if (reference.fileName === "costs.xlsx") return { attachmentId: SHEET, name: "costs.xlsx", version: 1 };
+      const diagram = DIAGRAM_FILES[`${reference.pageSourceId ?? ""}/${reference.fileName}`];
+      return diagram ? { attachmentId: ID(diagram), name: reference.fileName, version: 3 } : null;
     },
     person: () => ID(50),
     space: () => null,
@@ -953,5 +962,70 @@ describe("space templates", () => {
       '<p>A<ac:placeholder>Describe the goal</ac:placeholder> <at:var at:name="Owner" /></p>',
     );
     expect(page.document.content?.map(strip)).toEqual([{ type: "paragraph", content: [text("A")] }]);
+  });
+});
+
+describe("diagram macros", () => {
+  it("turn draw.io macros into draw.io blocks with the attached file and its preview", async () => {
+    const page = await convert(macro("drawio", { diagramName: "Network", revision: "3" }));
+    expect(page.document.content).toEqual([
+      {
+        type: "drawio",
+        attrs: expect.objectContaining({
+          sourceFormat: "drawio",
+          sourceId: ID(20),
+          sourceVersion: 3,
+          previewId: ID(21),
+          previewVersion: 3,
+        }),
+      },
+    ]);
+    expect(Object.fromEntries(page.converted)).toEqual({ drawio: 1 });
+    expect(page.notes).toEqual([]);
+  });
+
+  it("keep the preview of a diagram whose file is missing and note it for the report", async () => {
+    const page = await convert(macro("drawio", { diagramName: "Lost" }));
+    expect(page.document.content?.[0]?.attrs).toMatchObject({ sourceId: null, previewId: ID(22) });
+    expect(page.notes).toEqual([{ code: "diagramFileMissing", macro: "drawio", name: "Lost" }]);
+  });
+
+  it("read included diagrams from the page that holds them", async () => {
+    const page = await convert(macro("inc-drawio", { diagramName: "Shared", pageId: "98765" }));
+    expect(page.document.content?.[0]?.attrs).toMatchObject({ sourceId: ID(25), previewId: null });
+    const references = storageReferences(
+      await parseStorage(macro("inc-drawio", { diagramName: "Shared", pageId: "98765" })),
+    );
+    expect(references.attachments).toContainEqual({
+      fileName: "Shared",
+      pageTitle: null,
+      spaceKey: null,
+      pageSourceId: "98765",
+    });
+  });
+
+  it("keep Gliffy diagrams with their file and preview and note the conversion on first edit", async () => {
+    const page = await convert(macro("gliffy", { name: "Floor plan" }));
+    expect(page.document.content?.[0]?.attrs).toMatchObject({
+      sourceFormat: "gliffy",
+      sourceId: ID(23),
+      previewId: ID(24),
+    });
+    expect(page.notes).toEqual([{ code: "gliffyDiagram", name: "Floor plan" }]);
+  });
+
+  it("turn Mermaid and PlantUML macros into blocks with their source", async () => {
+    const page = await convert(
+      macro("mermaid", {}, plain("graph TD\n  A-->B")) +
+        macro("plantuml", {}, plain("@startuml\nA -> B\n@enduml")),
+    );
+    expect(page.document.content?.map((node) => [node.type, node.attrs?.source])).toEqual([
+      ["mermaid", "graph TD\n  A-->B"],
+      ["plantuml", "@startuml\nA -> B\n@enduml"],
+    ]);
+  });
+
+  it("keep Mermaid macros whose storage format is not recognizable with their data", async () => {
+    await unsupported(macro("mermaid-cloud", { data: "eJzLSM3JyQcABiwCFQ==" }), "mermaid-cloud");
   });
 });

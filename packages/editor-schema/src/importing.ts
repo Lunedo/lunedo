@@ -15,19 +15,36 @@ export interface ImportedAttachment {
   readonly name: string;
 }
 
+export interface ImportedFile extends ImportedAttachment {
+  readonly version: number;
+}
+
+export interface FileReference {
+  readonly fileName: string;
+  readonly pageSourceId?: string | null;
+}
+
+export type MacroNote =
+  | { readonly code: "diagramFileMissing"; readonly macro: string; readonly name: string }
+  | { readonly code: "gliffyDiagram"; readonly name: string };
+
 export interface MacroImportContext {
   blocks(content: readonly SourceContent[]): NodeJson[];
   inline(content: readonly SourceContent[]): NodeJson[];
   attachment(reference: SourceElement, page: SourceElement | null): ImportedAttachment | null;
+  file(reference: FileReference): ImportedFile | null;
   page(reference: SourceElement, options?: { formerTitles?: boolean }): string | null;
   pageById(sourceId: string): string | null;
   space(key: string | null): string | null;
   template(sourceId: string): string | null;
+  note(note: MacroNote): void;
+  newId(): string;
 }
 
 export interface MacroReferences {
   readonly pageIds?: readonly string[];
   readonly pageTitles?: readonly string[];
+  readonly files?: readonly FileReference[];
 }
 
 export interface MacroConverter {

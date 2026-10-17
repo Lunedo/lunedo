@@ -8,6 +8,7 @@ import {
   MAX_PLACEHOLDER_LENGTH,
   type MacroConverter,
   type MacroImportContext,
+  type MacroNote,
   type MarkJson,
   modules,
   type NodeJson,
@@ -29,6 +30,13 @@ export interface AttachmentReference {
   readonly fileName: string;
   readonly pageTitle: string | null;
   readonly spaceKey: string | null;
+  readonly pageSourceId?: string | null;
+}
+
+export interface FoundAttachment {
+  readonly attachmentId: string;
+  readonly name: string;
+  readonly version: number;
 }
 
 export interface PersonReference {
@@ -42,7 +50,7 @@ export type ResolvedPage =
 
 export interface StorageLookup {
   page(reference: PageReference): ResolvedPage;
-  attachment(reference: AttachmentReference): { readonly attachmentId: string; readonly name: string } | null;
+  attachment(reference: AttachmentReference): FoundAttachment | null;
   person(reference: PersonReference): string | null;
   space(spaceKey: string): string | null;
   spaceId?(spaceKey: string | null): string | null;
@@ -61,7 +69,8 @@ export type ConversionNote =
   | { readonly code: "unresolvedPerson" }
   | { readonly code: "invalidContent"; readonly element: string }
   | { readonly code: "contentTruncated" }
-  | { readonly code: "macroDataTruncated"; readonly macro: string };
+  | { readonly code: "macroDataTruncated"; readonly macro: string }
+  | MacroNote;
 
 export interface ConvertedTask {
   readonly id: string;
@@ -244,6 +253,11 @@ export function storageReferences(root: XmlNode): {
         if (/^\d{1,19}$/.test(sourceId)) pages.push({ title: null, spaceKey: null, sourceId });
       }
       for (const title of declared.pageTitles ?? []) pages.push({ title, spaceKey: null, sourceId: null });
+      for (const file of declared.files ?? []) {
+        const pageSourceId =
+          file.pageSourceId && /^\d{1,19}$/.test(file.pageSourceId) ? file.pageSourceId : null;
+        attachments.push({ fileName: file.fileName, pageTitle: null, spaceKey: null, pageSourceId });
+      }
     }
     if (!macro) {
       if (node.name === "ri:page") {
@@ -331,6 +345,18 @@ class Converter {
           spaceKey: target?.attributes["ri:space-key"] ?? null,
         });
       },
+      file: (reference) => {
+        const pageSourceId =
+          reference.pageSourceId && /^\d{1,19}$/.test(reference.pageSourceId) ? reference.pageSourceId : null;
+        return this.lookup.attachment({
+          fileName: reference.fileName,
+          pageTitle: null,
+          spaceKey: null,
+          pageSourceId,
+        });
+      },
+      note: (note) => this.note(note),
+      newId: () => this.lookup.newId(),
       page: (reference, options) => {
         const resolved = this.lookup.page({
           title: reference.attributes["ri:content-title"] ?? "",

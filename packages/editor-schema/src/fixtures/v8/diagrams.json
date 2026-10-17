@@ -1,0 +1,61 @@
+{
+  "type": "doc",
+  "content": [
+    {
+      "type": "drawio",
+      "attrs": {
+        "id": "01929b1e-0000-7000-8000-000000000011",
+        "sourceFormat": "drawio",
+        "sourceId": "01929b1e-0000-7000-8000-000000000012",
+        "sourceVersion": 6,
+        "previewId": "01929b1e-0000-7000-8000-000000000013",
+        "previewVersion": 6,
+        "text": "Core switch\nFirewall"
+      }
+    },
+    {
+      "type": "drawio",
+      "attrs": {
+        "id": "01929b1e-0000-7000-8000-000000000014",
+        "sourceFormat": "gliffy",
+        "sourceId": "01929b1e-0000-7000-8000-000000000015",
+        "sourceVersion": 1,
+        "previewId": "01929b1e-0000-7000-8000-000000000016",
+        "previewVersion": 1
+      }
+    },
+    {
+      "type": "drawio",
+      "attrs": {
+        "id": "01929b1e-0000-7000-8000-000000000017"
+      }
+    },
+    {
+      "type": "mermaid",
+      "attrs": {
+        "id": "01929b1e-0000-7000-8000-000000000018",
+        "source": "flowchart LR\n  A[Incident reported] --> B[Ticket]",
+        "previewId": "01929b1e-0000-7000-8000-000000000019",
+        "previewVersion": 2,
+        "text": "Incident reported\nTicket"
+      }
+    },
+    {
+      "type": "plantuml",
+      "attrs": {
+        "id": "01929b1e-0000-7000-8000-00000000001a",
+        "source": "@startuml\nAlice -> Bob: Hello\n@enduml"
+      }
+    },
+    {
+      "type": "plantuml",
+      "attrs": {
+        "id": "01929b1e-0000-7000-8000-00000000001b",
+        "source": "@startuml\nclass Server\n@enduml",
+        "previewId": "01929b1e-0000-7000-8000-00000000001c",
+        "previewVersion": 1,
+        "text": "Server"
+      }
+    }
+  ]
+}

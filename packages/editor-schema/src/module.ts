@@ -136,6 +136,11 @@ export interface RenderLabels {
   file: string;
   image: string;
   drawing: string;
+  drawio: string;
+  mermaid: string;
+  plantuml: string;
+  diagramSource: string;
+  diagramNotRendered: string;
   childPages: string;
   noChildPages: string;
   attachmentList: string;

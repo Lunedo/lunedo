@@ -29,8 +29,10 @@ function lookup(): StorageLookup {
       return { kind: "external", href: "https://example.atlassian.net/wiki/display/ELSE/Elsewhere" };
     },
     attachment(reference) {
-      if (reference.fileName === "diagram.png") return { attachmentId: DIAGRAM, name: "diagram.png" };
-      if (reference.fileName === "report.pdf") return { attachmentId: REPORT, name: "report.pdf" };
+      if (reference.fileName === "diagram.png")
+        return { attachmentId: DIAGRAM, name: "diagram.png", version: 1 };
+      if (reference.fileName === "report.pdf")
+        return { attachmentId: REPORT, name: "report.pdf", version: 1 };
       return null;
     },
     person(reference) {

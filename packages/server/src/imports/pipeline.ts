@@ -206,6 +206,10 @@ function noteProblem(note: ConversionNote, itemId: string, sourceId: string): Pr
       return { ...base, code: note.code, details: { element: note.element } };
     case "macroDataTruncated":
       return { ...base, code: note.code, details: { macro: note.macro } };
+    case "diagramFileMissing":
+      return { ...base, code: note.code, details: { macro: note.macro, name: note.name.slice(0, 255) } };
+    case "gliffyDiagram":
+      return { ...base, code: note.code, details: { name: note.name.slice(0, 255) } };
     default:
       return { ...base, code: note.code };
   }
@@ -811,11 +815,12 @@ export class ImportPipeline {
       const owner = entries[index]?.owner ?? "";
       return list.attachments.map((reference) => {
         const page =
-          reference.pageTitle === null
+          reference.pageSourceId ??
+          (reference.pageTitle === null
             ? owner
             : sameSpace(reference)
               ? (byTitle.get(reference.pageTitle.trim().toLocaleLowerCase("en")) ?? "")
-              : "";
+              : "");
         return `${page}/${fileNameKey(reference.fileName)}`;
       });
     });
@@ -881,13 +886,17 @@ export class ImportPipeline {
           page: resolvePage,
           attachment: (reference) => {
             const page =
-              reference.pageTitle === null
+              reference.pageSourceId ??
+              (reference.pageTitle === null
                 ? owner
                 : sameSpace(reference)
                   ? (byTitle.get(reference.pageTitle.trim().toLocaleLowerCase("en")) ?? "")
-                  : "";
+                  : "");
             const id = attachments.get(`${page}/${fileNameKey(reference.fileName)}`);
-            return id ? { attachmentId: id, name: attachmentNames.get(id) ?? reference.fileName } : null;
+            const found = id ? attachmentNames.get(id) : undefined;
+            return id
+              ? { attachmentId: id, name: found?.name ?? reference.fileName, version: found?.version ?? 1 }
+              : null;
           },
           person: (reference) => {
             const sourceId = personKeys.get(`${reference.accountId ?? ""}\u0000${reference.userKey ?? ""}`);
@@ -1649,11 +1658,13 @@ export class ImportPipeline {
     return new Map(rows.rows.map((row) => [row.id, row.title]));
   }
 
-  async #attachmentNames(ids: readonly string[]): Promise<Map<string, string>> {
+  async #attachmentNames(ids: readonly string[]): Promise<Map<string, { name: string; version: number }>> {
     if (ids.length === 0) return new Map();
-    const rows = await this.#database.execute<{ id: string; name: string }>(sql`
-      select id, name from attachments where id = any(${sql.param([...new Set(ids)])}::uuid[])`);
-    return new Map(rows.rows.map((row) => [row.id, row.name]));
+    const rows = await this.#database.execute<{ id: string; name: string; number: number | null }>(sql`
+      select a.id, a.name, v.number from attachments a
+      left join attachment_versions v on v.id = a.current_version_id
+      where a.id = any(${sql.param([...new Set(ids)])}::uuid[])`);
+    return new Map(rows.rows.map((row) => [row.id, { name: row.name, version: Number(row.number ?? 1) }]));
   }
 
   async #writeDocument(
