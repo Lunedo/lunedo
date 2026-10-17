@@ -16,6 +16,7 @@ import { languageSetting } from "../settings/builtin.js";
 import type { SettingsService } from "../settings/service.js";
 import { encodeState, MAX_LABELS_PER_PAGE, normalizeLabel, recomputeLinks } from "../spaces/documents.js";
 import { endPosition, ITEM_TITLE_MAX_LENGTH, lockSpaces } from "../spaces/items.js";
+import { syncReusableContent } from "../spaces/properties.js";
 import { signalSpaceChange } from "../spaces/signals.js";
 import { applyImportedStatus } from "../spaces/status.js";
 import type { TrashService } from "../spaces/trash.js";
@@ -206,6 +207,16 @@ function noteProblem(note: ConversionNote, itemId: string, sourceId: string): Pr
       return { ...base, code: note.code, details: { element: note.element } };
     case "macroDataTruncated":
       return { ...base, code: note.code, details: { macro: note.macro } };
+    case "unmappedQuery":
+      return { ...base, code: note.code, details: { macro: note.macro, query: note.query.slice(0, 255) } };
+    case "macroOptionDropped":
+      return { ...base, code: note.code, details: { macro: note.macro, option: note.option.slice(0, 50) } };
+    case "unresolvedInclude":
+      return {
+        ...base,
+        code: note.code,
+        details: { macro: note.macro, title: note.title.slice(0, 255), spaceKey: note.spaceKey },
+      };
     default:
       return { ...base, code: note.code };
   }
@@ -897,6 +908,7 @@ export class ImportPipeline {
           spaceId: (spaceKey) =>
             spaceKey === null || spaceKey.toLowerCase() === sourceKey.toLowerCase() ? space.spaceId : null,
           template: (sourceId) => templates.get(sourceId) ?? null,
+          spaceKey: sourceKey,
           newId: () => uuidv7(),
           ...(inlineComment ? { inlineComment } : {}),
           ...(variables.has(key) ? { templateVariables: variables.get(key) } : {}),
@@ -1700,6 +1712,7 @@ export class ImportPipeline {
   ): Promise<void> {
     await publishTasks(tx, itemId, claimed);
     await syncDecisions(tx, itemId, claimed);
+    await syncReusableContent(tx, itemId, claimed);
     await tx.execute(sql`
       update tasks set notified_assignee_id = assignee_id where item_id = ${itemId} and assignee_id is not null`);
     await tx.execute(sql`

@@ -49,6 +49,7 @@ export interface StorageLookup {
   template?(sourceId: string): string | null;
   readonly templateVariables?: ReadonlyMap<string, string>;
   inlineComment?(ref: string): string | null;
+  readonly spaceKey?: string;
   newId(): string;
 }
 
@@ -61,7 +62,15 @@ export type ConversionNote =
   | { readonly code: "unresolvedPerson" }
   | { readonly code: "invalidContent"; readonly element: string }
   | { readonly code: "contentTruncated" }
-  | { readonly code: "macroDataTruncated"; readonly macro: string };
+  | { readonly code: "macroDataTruncated"; readonly macro: string }
+  | { readonly code: "unmappedQuery"; readonly macro: string; readonly query: string }
+  | { readonly code: "macroOptionDropped"; readonly macro: string; readonly option: string }
+  | {
+      readonly code: "unresolvedInclude";
+      readonly macro: string;
+      readonly title: string;
+      readonly spaceKey: string | null;
+    };
 
 export interface ConvertedTask {
   readonly id: string;
@@ -316,6 +325,8 @@ class Converter {
 
   constructor(private readonly lookup: StorageLookup) {
     this.context = {
+      spaceKey: lookup.spaceKey ?? null,
+      note: (note) => this.note(note),
       blocks: (content) => this.blocks(content as (XmlNode | string)[]),
       inline: (content) => {
         const items = this.items(content as (XmlNode | string)[], []);
