@@ -35,7 +35,11 @@ Documents are ProseMirror JSON. The server validates every stored document and e
 | `section` | blocks | `key` (a semantic key such as `resolution`), `title` |
 | `unsupportedMacro` | | `name`, `data` (the original data, up to 256 KiB) |
 | `image` | | `attachmentId`, `alt`, `width`, `align` |
-| `file` | | `attachmentId`, `name` |
+| `file` | | `attachmentId`, `name`, `preview` (show the file inline), `height` (150 to 2,000 pixels or null), `zoom` (25 to 400 percent, or null to fit the width) |
+| `embed` | | `url` (`http` or `https` link), `title` (up to 255 characters), `height` (100 to 2,000 pixels or null), `thumbnailId` (an image stored with the block, for print and Word, or null). Whether it shows a frame is decided at render time by the `embed` resolver of the render context, from the allowlist that applies to the reader; without a resolver it becomes a link. It never stores frame markup. |
+| `tabs` | 1 to 20 `tab` | |
+| `tab` | blocks, but no further tabs block | `title` (1 to 100 characters) |
+| `whiteboard` | | `whiteboardId` (or null until one is chosen). Rendered through the `whiteboard` resolver with the reader's permissions; it has no text for search. |
 | `drawio` | | `id` (block ID), `sourceFormat` (`drawio`, or `gliffy` for an imported Gliffy file that draw.io converts on first edit), `sourceId` and `sourceVersion` (attachment version of the diagram file), `previewId` and `previewVersion` (attachment version of the image), `text` (up to 20,000 characters, for search) |
 | `drawioReference` | | `id` (block ID), `pageId` and `diagramId` (the page and the `drawio` block whose current image it shows; both empty when the page was not imported), `name` (diagram name from the import, up to 255 characters). Rendered through the `diagramReference` resolver of the render context with the reader's permissions; without a resolver it becomes a placeholder for the client. It has no text for search. |
 | `mermaid`, `plantuml` | | `id` (block ID), `source` (up to 50,000 characters), `previewId` and `previewVersion` (attachment version of the SVG image), `text` (up to 20,000 characters, for search) |
@@ -71,6 +75,8 @@ Links allow `http`, `https` and `mailto` addresses and internal paths that start
 On success it returns the normalized document: missing attributes are filled with their defaults and marks are in a canonical order.
 
 ## Rendering
+
+Headings are numbered when the render context has `numberHeadings` (a page option): numbers follow the nesting of the headings, counting section titles, in HTML, print, Word and Markdown.
 
 `renderHtml` produces the HTML of the read view and `renderMarkdown` GitHub-flavored Markdown, both from the same module definitions. A render context resolves mentions, page links, attachments and dates and provides translated labels. The HTML renderer escapes all content, renders only allowed links and writes colors as names (`data-color`), never as values. Formulas render with KaTeX up to 20,000 characters of LaTeX per document; further formulas appear as their source. In Markdown, formulas stay inside code (`` $`…`$ `` and ```` ```math ```` blocks), so their content cannot turn into Markdown or HTML.
 

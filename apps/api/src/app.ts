@@ -1,7 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { NestFactory } from "@nestjs/core";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
-import { ANONYMOUS, enterRequestContext, type Logger, type RequestContext } from "@pagehall/server";
+import {
+  ANONYMOUS,
+  defaultEmbedServices,
+  embedFrameSources,
+  enterRequestContext,
+  type Logger,
+  type RequestContext,
+} from "@pagehall/server";
 import { type FastifyRequest, LogController } from "fastify";
 import { AppModule } from "./app.module.js";
 import type { ApiContext } from "./context.js";
@@ -135,7 +142,13 @@ export async function configureApp(app: NestFastifyApplication, context: ApiCont
     else request.log.info(entry, "Request completed");
   });
 
-  if (context.webRoot) await registerWebClient(fastify, context.webRoot);
+  if (context.webRoot) {
+    await registerWebClient(fastify, context.webRoot, () =>
+      context.services
+        ? context.services.embeds.frameSources()
+        : Promise.resolve(embedFrameSources(defaultEmbedServices)),
+    );
+  }
   app.enableShutdownHooks();
 }
 

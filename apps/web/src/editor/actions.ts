@@ -7,6 +7,7 @@ export interface EditorActions {
   focusToolbar(): void;
   comment?(): void;
   pickFiles?(): void;
+  openEmbedDialog?(): void;
 }
 
 const registry = new WeakMap<Editor, EditorActions>();

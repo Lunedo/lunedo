@@ -77,6 +77,7 @@ The report lists problems by category: macros, diagrams, attachments, links, con
 - Macros without a converter, and macros whose parameters a converter cannot take over, are kept as unsupported-macro blocks with their original data. Readers see a neutral notice; editors see the macro name. The report counts each macro by name.
 - Links to pages inside the export are rewritten. Links to other pages keep their original address and are reported.
 - Only the current version of each page is imported, unless the full page history was chosen. Attachments keep all versions.
+- Notes that the import writes into pages, such as "Jira content not imported", use the default language of the organization.
 
 ## Macros
 
@@ -85,12 +86,14 @@ These Confluence macros become Pagehall blocks. A macro falls back to an unsuppo
 | Macro | Becomes | Fallback |
 |---|---|---|
 | `info`, `tip`, `note`, `warning` | Callout | |
+| `panel` (`title`) | Info callout with the title in bold. Colors and border options (`bgColor`, `titleBGColor`, `titleColor`, `borderColor`, `borderStyle`, `borderWidth`) are listed as options not taken over. | |
 | `expand` | Expand | |
 | `status` | Status | |
 | `code` | Code block | |
 | `toc`, `toc-zone` | Table of contents | Unsupported with `include` or `exclude` |
 | `children` | Child pages | Unsupported when the page is not part of the export |
-| `attachments`, `view-file`, `viewpdf`, `viewxls` | Attachment list, file | |
+| `attachments` | Attachment list | |
+| `view-file`, `viewpdf`, `viewxls`, `viewdoc`, `viewppt` (`name`, `page`, `height`) | File block with an inline preview, its height taken over from 150 to 2,000 pixels | Unsupported when the attachment is not in the export |
 | `content-report-table`, `recently-updated` | Page report | |
 | `decisionreport`, decision lists | Decision report, decisions | |
 | `tasks-report-macro` | Task report | |
@@ -103,6 +106,26 @@ These Confluence macros become Pagehall blocks. A macro falls back to an unsuppo
 | `excerpt-include` (page, `name`, `nopanel`) | Include excerpt | |
 | `include` (page) | Include page | |
 | `roadmap` | Read-only roadmap | Unsupported when the roadmap data cannot be read |
+| `widget` (Widget Connector: `url`, `height`) | Embed when the address is on the embed allowlist of the organization (an `http` address counts when its `https` form is allowed), otherwise a link | The report lists each link as "shown as a link" |
+| `section` with `column` children (`width` in percent) | Columns, 2 to 4 | One column becomes its content; more than four or other content stays unsupported |
+| Composition Tabs and Content Formatting Macros `deck` with `card` (`label`), `deck-container` | Tabs; the deck container is unwrapped | Unsupported when the deck holds content outside its cards, more than 20 cards or nested tabs |
+| Content Formatting Macros `localtabgroup` with `localtab`, `auitabs` with `auitabspage` (`title`) | Tabs | As for decks |
+| Refined `ui-tabs` with `ui-tab` (`title`); `rw-ui-tabs-macro` with `rw-tab` and `refined-tabs` with `refined-tab` (Cloud, the tabs mark where their content starts) | Tabs | As for decks |
+| Aura `aura-tab-collection` with `aura-tab` (title in `summary` or in the encoded `params`) | Tabs | As for decks |
+| `tabs-group` with `tab-pane`, `horizontal-nav-group` with `horizontal-nav-item`, `vertical-nav-group` with `vertical-nav-item` (`name`) | Tabs | As for decks |
+| Aura `aura-panel` (`summary`), Content Formatting Macros `roundrect` (`title`) | Info callout with the title in bold | |
+| Refined `ui-expand` (`title`) | Expand | |
+| Table Filter and Charts `table-filter` | Its table. Filters, sorting, hidden columns, column order, pagination and row numbers are listed as options not taken over; the table block has no filter or sort options. | |
+| Table Filter and Charts `table-chart`, `pivot-table` | A note that the chart or pivot table was not imported, followed by the source table | Listed in the report |
+| Numbered Headings `numberedheadings`, `numbered-headings` | Its content; the page option "Number headings" is turned on (on the first import of the page) | Number formats other than decimal, start numbers, start levels, skipped levels and custom heading formats are listed as options not taken over |
+| MultiExcerpt `multiexcerpt`, `multiexcerpt-macro`, `multiexcerpt-fast-block-macro` (`MultiExcerptName` or `name`, `hidden`) | Excerpt | |
+| MultiExcerpt `multiexcerpt-include`, `multiexcerpt-include-macro`, `multiexcerpt-fast-include-block-macro` (`MultiExcerptName` or `name`, `PageWithExcerpt` or `page`, `addpanel`) | Include excerpt; pages outside the export are kept as with `excerpt-include` | |
+| Lucidchart `lucidchart` (`documentId`, `documentName`) | The preview image stored as `<documentName>.png`, if the export has one, and a link to the document on lucid.app; an embed instead when lucid.app is on the allowlist | Listed as kept as an image, or as without a preview |
+| Balsamiq `mockup` (`Name`) and `wireframe` (`initialResourceID`, `initialBranchID`, `platformArchiveName`) | The preview image (`mockup_<Name>.png`, `balsamiq_wireframe_<resource>_<branch>.png`) and the source file (`.bmml`, `.bmpr`) as a file block | Listed as kept as an image |
+| Miro `miro`, `miro-board`, `miro-embed`, `realtimeboard` (`url`, `boardUrl`, `link` or `board`) | Embed when the board address is on the allowlist, otherwise a link | Listed |
+| Jira `jira` (`key`, or `jqlQuery`) and `jiraissues` (`url` or `jqlQuery`) | The issue key, linked to the issue on Atlassian Cloud sites, or the query as code, followed by "Jira content not imported" | Listed in the report |
+
+The storage formats of the third-party macros were taken from public samples and migration tools, not from an export of the IT organization, which contains none of them. Not verified: the Miro macros (the names and parameters above are assumptions), the preview attachment of Lucidchart on Data Center, Aura on Data Center, Composition Tabs on Cloud, MultiExcerpt with a plain-text page name or `nopanel`, Table Filter's `table-transformer`, `table-excerpt` and `table-spreadsheet` (they stay unsupported) and Jira's `showSummary`. Jira summaries are not stored in Confluence exports, so only keys and queries are kept.
 
 Queries are converted when they combine labels (`label = …`, `label in (…)`, or several labels joined with `or`), spaces (`space = …`, `currentSpace()`) and the type with `and`. For content by label, labels joined with `and` become "all of the labels".
 

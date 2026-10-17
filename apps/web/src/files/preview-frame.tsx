@@ -16,11 +16,15 @@ export function PreviewFrame({
   name,
   bytes,
   onFailed,
+  zoom,
+  className = "size-full min-h-card",
 }: {
   kind: FramePreviewKind;
   name: string;
   bytes: ArrayBuffer;
   onFailed: () => void;
+  zoom?: number | undefined;
+  className?: string;
 }) {
   const { t } = useTranslation();
   const frame = useRef<HTMLIFrameElement>(null);
@@ -37,6 +41,7 @@ export function PreviewFrame({
           name,
           bytes: bytes.slice(0),
           theme: currentTheme(),
+          ...(zoom === undefined ? {} : { zoom }),
           labels: {
             page: t("files.preview.pageNumber", { number: "{number}" }),
             sheet: t("files.preview.sheet", { name: "{name}" }),
@@ -54,10 +59,10 @@ export function PreviewFrame({
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [bytes, kind, name, onFailed, t]);
+  }, [bytes, kind, name, onFailed, t, zoom]);
 
   return (
-    <div className="relative h-full min-h-card">
+    <div className={`relative ${className}`}>
       {rendered ? null : <Skeleton className="absolute inset-0" />}
       <iframe
         ref={frame}
@@ -65,7 +70,7 @@ export function PreviewFrame({
         src={PREVIEW_URL}
         sandbox="allow-scripts"
         referrerPolicy="no-referrer"
-        className="size-full min-h-card rounded-md border border-border bg-bg"
+        className="size-full rounded-md border border-border bg-bg"
       />
     </div>
   );

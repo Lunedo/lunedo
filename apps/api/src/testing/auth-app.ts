@@ -31,7 +31,7 @@ export interface AuthTestApp {
 
 export async function createAuthTestApp(
   env: Env = {},
-  options: { captureMail?: boolean } = {},
+  options: { captureMail?: boolean; webRoot?: string } = {},
 ): Promise<AuthTestApp> {
   if (!databaseBaseUrl) throw new Error("PAGEHALL_TEST_DATABASE_URL is not set");
   const database: TemporaryDatabase = await createMigratedDatabase(databaseBaseUrl, "pagehall_api_test");
@@ -53,7 +53,10 @@ export async function createAuthTestApp(
       ...(options.captureMail === false ? {} : { mailTransport: () => mail }),
     });
     const started = runtime;
-    const app = await createTestApp(apiContextOf(started));
+    const app = await createTestApp({
+      ...apiContextOf(started),
+      ...(options.webRoot ? { webRoot: options.webRoot } : {}),
+    });
     return {
       app,
       runtime: started,

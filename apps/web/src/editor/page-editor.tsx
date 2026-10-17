@@ -16,7 +16,9 @@ import { useSession } from "../shell/shell-context.js";
 import { type EditorActions, registerEditorActions } from "./actions.js";
 import { closeCollaboration, openCollaboration, type PageCollaboration } from "./collaboration.js";
 import { PageContextValue } from "./context.js";
+import { EmbedDialog } from "./embed-dialog.js";
 import { EmojiPicker } from "./emoji-picker.js";
+import { setHeadingNumbers } from "./extensions/heading-numbers.js";
 import { createEditorExtensions } from "./extensions/index.js";
 import { FindBar } from "./find-bar.js";
 import { LinkDialog } from "./link-dialog.js";
@@ -43,6 +45,7 @@ export interface PageEditorProps {
   openThreads?: readonly string[];
   activeThread?: string | null;
   onThreadClick?: (threadId: string) => void;
+  numberHeadings?: boolean;
 }
 
 const READ_ONLY_PROBLEMS = new Set(["permissionRevoked", "noEditPermission", "pageNotFound"]);
@@ -70,6 +73,7 @@ function CollaborativeEditor({
   activeThread = null,
   onThreadClick,
   collaboration,
+  numberHeadings = false,
 }: PageEditorProps & { collaboration: PageCollaboration }) {
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -81,6 +85,7 @@ function CollaborativeEditor({
   const surface = useRef<HTMLDivElement>(null);
   const [findOpen, setFindOpen] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
+  const [embedOpen, setEmbedOpen] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const uploads = useUploads();
   const fileInput = useRef<HTMLInputElement>(null);
@@ -95,6 +100,7 @@ function CollaborativeEditor({
     () => ({
       openEmojiPicker: () => setEmojiOpen(true),
       openLinkDialog: () => setLinkOpen(true),
+      openEmbedDialog: () => setEmbedOpen(true),
       openFind: () => setFindOpen(true),
       focusToolbar: () => toolbar.current?.focus(),
       ...(uploads ? { pickFiles: () => fileInput.current?.click() } : {}),
@@ -176,6 +182,10 @@ function CollaborativeEditor({
   }, [editor]);
 
   useEffect(() => (editor ? registerEditorActions(editor, actions) : undefined), [editor, actions]);
+
+  useEffect(() => {
+    if (editor) setHeadingNumbers(editor, numberHeadings);
+  }, [editor, numberHeadings]);
 
   useEffect(() => {
     onSaveStateChange?.(snapshot.saveState);
@@ -318,6 +328,7 @@ function CollaborativeEditor({
               </>
             ) : null}
             <LinkDialog editor={editor} open={linkOpen} onOpenChange={setLinkOpen} />
+            <EmbedDialog editor={editor} open={embedOpen} onOpenChange={setEmbedOpen} />
             <EmojiPicker
               open={emojiOpen}
               onOpenChange={setEmojiOpen}

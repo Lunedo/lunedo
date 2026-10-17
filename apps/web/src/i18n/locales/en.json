@@ -4337,7 +4337,13 @@
       "includeExcerpt": "Include excerpt",
       "includeExcerptDescription": "Show the excerpt of another page",
       "includePage": "Include page",
-      "includePageDescription": "Show the content of another page"
+      "includePageDescription": "Show the content of another page",
+      "embed": "External embed",
+      "embedDescription": "Video, design, presentation or document from the allowlist",
+      "whiteboard": "Link to whiteboard",
+      "whiteboardDescription": "Preview of a whiteboard that opens it",
+      "tabs": "Tabs",
+      "tabsDescription": "Named tabs, each with its own content"
     },
     "mention": {
       "unknown": "Unknown person"
@@ -4884,6 +4890,64 @@
       "title": "Roadmap",
       "readOnly": "Imported roadmap. Roadmaps can be edited once planning is available.",
       "asList": "Show as list"
+    },
+    "embed": {
+      "label": "External embed",
+      "notAllowed": "Not on the embed allowlist, shown as a link. Organization administrators manage the list.",
+      "from": "Embedded from {service}",
+      "loadsWhenVisible": "The content loads from the service when you scroll to it.",
+      "address": "Address",
+      "addressHint": "Paste the share link of the video, design, presentation or document.",
+      "addressInvalid": "Enter an address that starts with https:// or http://.",
+      "title": "Title",
+      "titleHint": "Shown with the link in print, Word and when the service cannot be reached.",
+      "height": "Height in pixels",
+      "heightHint": "From {min} to {max}. Leave empty for the default height.",
+      "heightInvalid": "Enter a height from {min} to {max} pixels, or leave the field empty.",
+      "allowed": "{service} is on the embed allowlist. Readers see the content from the service.",
+      "blocked": "This address is not on the embed allowlist. Readers see it as a link.",
+      "unknownAllowlist": "The embed allowlist could not be loaded. Readers see the content if the address is on it.",
+      "open": "Open at the source",
+      "cancel": "Cancel",
+      "insert": "Insert embed",
+      "addressPlaceholder": "https://www.youtube.com/watch?v=…"
+    },
+    "filePreview": {
+      "label": "File preview",
+      "show": "Show a preview in the page",
+      "height": "Height in pixels",
+      "heightHint": "From {min} to {max}. Leave empty for the default height.",
+      "heightInvalid": "Enter a height from {min} to {max} pixels, or leave the field empty.",
+      "zoom": "Page size",
+      "zoomFit": "Fit to width",
+      "zoomPercent": "{percent} %",
+      "restricted": "Restricted content. Readers who cannot open this file see nothing here.",
+      "none": "This file type has no preview. Readers see the link to download it.",
+      "loadFailed": "The preview of the file could not be loaded."
+    },
+    "whiteboard": {
+      "label": "Whiteboard",
+      "choose": "Choose a whiteboard for this block.",
+      "picker": "Whiteboard",
+      "pickerHint": "Readers see the whiteboard only if they can open it.",
+      "noMatch": "No whiteboard matches.",
+      "open": "Open the whiteboard",
+      "loadFailed": "The whiteboard could not be loaded."
+    },
+    "tabs": {
+      "label": "Tabs",
+      "tabName": "Name of the tab",
+      "newTab": "Tab {number}",
+      "add": "Add tab",
+      "rename": "Rename tab",
+      "remove": "Remove tab {name}",
+      "moveLeft": "Move tab {name} to the left",
+      "moveRight": "Move tab {name} to the right",
+      "nameRequired": "Enter a name for the tab.",
+      "maximum": "A tabs block holds at most {count} tabs.",
+      "lastTab": "The last tab cannot be removed. Delete the whole block instead.",
+      "removed": "Tab {name} removed.",
+      "undo": "Undo"
     }
   },
   "spaces": {
@@ -5308,7 +5372,9 @@
     "widthFull": "Full",
     "backlinks": "{count, plural, one {Linked from # page} other {Linked from # pages}}",
     "useFixedWidth": "Use fixed width",
-    "useFullWidth": "Use full width"
+    "useFullWidth": "Use full width",
+    "numberHeadings": "Number headings",
+    "stopNumberingHeadings": "Stop numbering headings"
   },
   "pageTitle": {
     "edit": "Rename {title}",
@@ -7297,6 +7363,31 @@
           "title": "{count, plural, one {# document has} other {# documents have}} images that could not be read",
           "hint": "Linked or damaged images are left out.",
           "entry": "{file}: some images could not be read."
+        },
+        "embedNotAllowed": {
+          "title": "{count, plural, one {# embed is} other {# embeds are}} shown as a link",
+          "hint": "Their address is not on the embed allowlist of this organization. Add the service to the allowlist to show them embedded.",
+          "entry": "Macro {macro}: {url} is not on the embed allowlist and is shown as a link."
+        },
+        "previewOnly": {
+          "title": "{count, plural, one {# diagram} other {# diagrams}} of other apps kept as an image",
+          "hint": "Pagehall cannot edit them. The pages show the preview stored with the page and a link or the source file.",
+          "entry": "Macro {macro}: “{name}” is shown as its stored preview image."
+        },
+        "previewMissing": {
+          "title": "{count, plural, one {# diagram} other {# diagrams}} of other apps without a preview",
+          "hint": "The export contains no preview image. The pages show a link to the source where one is known.",
+          "entry": "Macro {macro}: “{name}” has no preview image in the export."
+        },
+        "chartNotImported": {
+          "title": "{count, plural, one {# chart or pivot table} other {# charts and pivot tables}} not imported",
+          "hint": "The pages show a note and the source table.",
+          "entry": "Macro {macro} is replaced by its source table."
+        },
+        "jiraNotImported": {
+          "title": "{count, plural, one {# Jira macro} other {# Jira macros}} imported as text",
+          "hint": "The pages show the issue key or query with the note that Jira content was not imported.",
+          "entry": "Macro {macro}: {issues}"
         }
       },
       "people": "People",
@@ -8828,6 +8919,45 @@
       "drawio": "draw.io editor",
       "drawioDescription": "Version {version}, shipped with Pagehall. It never connects to diagrams.net.",
       "servedLocally": "Served locally"
+    }
+  },
+  "embeds": {
+    "allowlist": {
+      "title": "External embeds allowlist",
+      "instanceDescription": "Pages can embed content only from these services. Other addresses appear as a link. The reader's browser loads the content directly from the service. Organizations can narrow this list, not extend it.",
+      "organizationDescription": "Pages of this organization can embed content from the services you allow here. You can choose only from the list of the instance.",
+      "empty": "No service is allowed. Embeds appear as links.",
+      "instanceEmpty": "The instance allows no service, so embeds appear as links in every organization.",
+      "loadFailed": "The embed allowlist could not be loaded.",
+      "name": "Name of the service",
+      "nameRequired": "Enter a name for the service.",
+      "tooMany": "The list holds at most {count} services. Remove one first.",
+      "pattern": "Address pattern",
+      "patternHint": "An https address with placeholders: '{name}' stands for one part of the address, '{*}' for any number of path parts.",
+      "patternInvalid": "Enter an https address that ends with a fixed domain, with placeholders that fill whole parts of the address, such as https://videos.example.org/watch?v='{video}'.",
+      "embed": "Embed address",
+      "embedHint": "Built from the placeholders of the pattern. '{url}' stands for the whole link. Leave empty to embed the link as it is.",
+      "add": "Add service",
+      "remove": "Remove",
+      "removeNamed": "Remove {name}",
+      "removed": "{name} removed. Its embeds now appear as links.",
+      "restore": "Add a default service back",
+      "restorePlaceholder": "Choose a service",
+      "restoreAction": "Add back",
+      "inherited": "All services of the instance are allowed. Clear a service to narrow the list.",
+      "narrowed": "This organization allows only the services checked here.",
+      "reset": "Allow all services of the instance",
+      "isAllowed": "Allowed",
+      "isBlocked": "Not allowed",
+      "patternPlaceholder": "https://videos.example.org/watch?v='{video}'",
+      "embedPlaceholder": "https://videos.example.org/embed/'{video}'",
+      "referrer": "Address sent to the service",
+      "referrerHint": "Some video services refuse to play without knowing the site that embeds them. Only the address of this instance is sent, never the page.",
+      "referrerPolicy": {
+        "no-referrer": "Nothing (recommended)",
+        "strict-origin": "Address of this instance"
+      },
+      "sendsOrigin": "Receives the address of this instance, not the page."
     }
   }
 }

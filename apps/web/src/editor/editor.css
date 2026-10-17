@@ -1042,3 +1042,146 @@ details.ph-expand > summary {
 .ph-content .ph-roadmap-marker text {
   fill: var(--ph-content-red-text);
 }
+
+.ph-content .ph-embed {
+  @apply my-4 flex flex-col gap-2;
+}
+
+.ph-content .ph-embed figcaption {
+  @apply flex flex-wrap items-baseline gap-x-2 text-sm wrap-anywhere;
+}
+
+.ph-content .ph-embed-service {
+  @apply text-text-muted;
+}
+
+.ph-content .ph-embed-box {
+  height: var(--embed-height);
+  max-height: 80vh;
+}
+
+.ph-content .ph-embed-blocked {
+  @apply my-4 rounded-md border border-dashed border-border px-3 py-2 text-sm;
+}
+
+.ph-content .ph-embed-hint {
+  @apply text-text-muted;
+}
+
+.ph-content .ph-file[data-preview] {
+  @apply flex flex-col gap-2 border-solid;
+}
+
+.ph-content .ph-file[data-preview] > a {
+  @apply wrap-anywhere;
+}
+
+.ph-content .ph-file-preview-box {
+  height: var(--preview-height);
+  max-height: 85vh;
+  @apply overflow-auto;
+}
+
+.ph-content .ph-file-preview-box > img {
+  @apply mx-auto max-h-full max-w-full;
+}
+
+.ph-content .ph-whiteboard {
+  @apply my-4;
+}
+
+.ph-content .ph-tabs {
+  @apply my-4 rounded-md border border-border;
+}
+
+.ph-content .ph-tabs-list {
+  @apply flex gap-1 overflow-x-auto border-b border-border px-2;
+}
+
+.ph-content .ph-tab-button {
+  @apply -mb-px min-h-hit max-w-full shrink-0 truncate border-b-2 border-transparent px-3 font-medium text-text-muted hover:text-text focus-visible:focus-ring;
+}
+
+.ph-content .ph-tab-button[aria-selected="true"] {
+  @apply border-accent text-text;
+}
+
+.ph-content .ph-tab-toggle {
+  @apply hidden;
+}
+
+.ph-content .ph-tab-panel {
+  @apply p-4 focus-visible:focus-ring;
+}
+
+.ph-content .ph-tab-panel > :first-child {
+  @apply mt-0;
+}
+
+.ph-content .ph-tabs[data-mode="accordion"] > .ph-tabs-list {
+  @apply hidden;
+}
+
+.ph-content .ph-tabs[data-mode="accordion"] > .ph-tab + .ph-tab {
+  @apply border-t border-border;
+}
+
+.ph-content .ph-tabs[data-mode="accordion"] .ph-tab-toggle {
+  @apply flex min-h-hit w-full items-center justify-between gap-2 px-4 text-left font-medium wrap-anywhere focus-visible:focus-ring;
+}
+
+.ph-content .ph-tabs[data-mode="accordion"] .ph-tab-toggle::after {
+  content: "+";
+  @apply text-text-muted;
+}
+
+.ph-content .ph-tabs[data-mode="accordion"] .ph-tab-toggle[aria-expanded="true"]::after {
+  content: "−";
+}
+
+.ph-content .ph-heading-number {
+  @apply text-text-muted;
+}
+
+.ph-tabs-editor {
+  @apply my-4 rounded-md border border-border;
+}
+
+.ph-tabs-editor-header {
+  @apply border-b border-border p-2;
+}
+
+.ph-tabs-editor .ph-tab-button {
+  @apply min-h-hit max-w-full truncate border-b-2 border-transparent px-3 font-medium text-text-muted hover:text-text focus-visible:focus-ring;
+}
+
+.ph-tabs-editor .ph-tab-button[aria-pressed="true"] {
+  @apply border-accent text-text;
+}
+
+.ph-tabs-editor-content {
+  @apply p-4;
+}
+
+.ph-tabs-editor[data-active="0"] > .ph-tabs-editor-content [data-type="tab"]:not(:nth-child(1)),
+.ph-tabs-editor[data-active="1"] > .ph-tabs-editor-content [data-type="tab"]:not(:nth-child(2)),
+.ph-tabs-editor[data-active="2"] > .ph-tabs-editor-content [data-type="tab"]:not(:nth-child(3)),
+.ph-tabs-editor[data-active="3"] > .ph-tabs-editor-content [data-type="tab"]:not(:nth-child(4)),
+.ph-tabs-editor[data-active="4"] > .ph-tabs-editor-content [data-type="tab"]:not(:nth-child(5)),
+.ph-tabs-editor[data-active="5"] > .ph-tabs-editor-content [data-type="tab"]:not(:nth-child(6)),
+.ph-tabs-editor[data-active="6"] > .ph-tabs-editor-content [data-type="tab"]:not(:nth-child(7)),
+.ph-tabs-editor[data-active="7"] > .ph-tabs-editor-content [data-type="tab"]:not(:nth-child(8)),
+.ph-tabs-editor[data-active="8"] > .ph-tabs-editor-content [data-type="tab"]:not(:nth-child(9)),
+.ph-tabs-editor[data-active="9"] > .ph-tabs-editor-content [data-type="tab"]:not(:nth-child(10)),
+.ph-tabs-editor[data-active="10"] > .ph-tabs-editor-content [data-type="tab"]:not(:nth-child(11)),
+.ph-tabs-editor[data-active="11"] > .ph-tabs-editor-content [data-type="tab"]:not(:nth-child(12)),
+.ph-tabs-editor[data-active="12"] > .ph-tabs-editor-content [data-type="tab"]:not(:nth-child(13)),
+.ph-tabs-editor[data-active="13"] > .ph-tabs-editor-content [data-type="tab"]:not(:nth-child(14)),
+.ph-tabs-editor[data-active="14"] > .ph-tabs-editor-content [data-type="tab"]:not(:nth-child(15)),
+.ph-tabs-editor[data-active="15"] > .ph-tabs-editor-content [data-type="tab"]:not(:nth-child(16)),
+.ph-tabs-editor[data-active="16"] > .ph-tabs-editor-content [data-type="tab"]:not(:nth-child(17)),
+.ph-tabs-editor[data-active="17"] > .ph-tabs-editor-content [data-type="tab"]:not(:nth-child(18)),
+.ph-tabs-editor[data-active="18"] > .ph-tabs-editor-content [data-type="tab"]:not(:nth-child(19)),
+.ph-tabs-editor[data-active="19"] > .ph-tabs-editor-content [data-type="tab"]:not(:nth-child(20)) {
+  display: none;
+}

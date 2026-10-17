@@ -1,5 +1,7 @@
 import {
   type DocumentJson,
+  defaultImportTexts,
+  type ImportText,
   isAllowedHref,
   isIsoDate,
   MAX_DOCUMENT_BYTES,
@@ -59,6 +61,9 @@ export interface StorageLookup {
   readonly spaceKey?: string;
   newId(): string;
   diagramId?(name: string, pageSourceId: string | null): string;
+  embeddable?(url: string): boolean;
+  text?(key: ImportText): string;
+  jiraIssueUrl?(key: string): string | null;
 }
 
 export type ConversionNote =
@@ -84,6 +89,7 @@ export interface ConvertedPage {
   readonly converted: ReadonlyMap<string, number>;
   readonly notes: readonly ConversionNote[];
   readonly tasks: readonly ConvertedTask[];
+  readonly numberHeadings: boolean;
 }
 
 export const CONTENT_FALLBACK_MACRO = "confluence-content";
@@ -325,6 +331,7 @@ class Converter {
   converted = new Map<string, number>();
   notes: ConversionNote[] = [];
   tasks: ConvertedTask[] = [];
+  numberHeadings = false;
   readonly context: MacroImportContext;
   readonly #diagrams = new Set<string>();
 
@@ -372,6 +379,12 @@ class Converter {
       },
       space: (key) => this.lookup.spaceId?.(key) ?? null,
       template: (sourceId) => this.lookup.template?.(sourceId) ?? null,
+      embeddable: (url) => this.lookup.embeddable?.(url) ?? false,
+      numberHeadings: () => {
+        this.numberHeadings = true;
+      },
+      text: (key) => this.lookup.text?.(key) ?? defaultImportTexts[key],
+      jiraIssueUrl: (key) => this.lookup.jiraIssueUrl?.(key) ?? null,
     };
   }
 
@@ -846,6 +859,7 @@ class Converter {
       converted: new Map(this.converted),
       notes: [...this.notes],
       tasks: [...this.tasks],
+      numberHeadings: this.numberHeadings,
     };
     let result: NodeJson[] | null = null;
     try {
@@ -864,6 +878,7 @@ class Converter {
     this.converted = saved.converted;
     this.notes = saved.notes;
     this.tasks = saved.tasks;
+    this.numberHeadings = saved.numberHeadings;
     return null;
   }
 
@@ -1071,6 +1086,7 @@ export function convertStorage(root: XmlNode, lookup: StorageLookup): ConvertedP
       converted: converter.converted,
       notes: converter.notes,
       tasks: [],
+      numberHeadings: converter.numberHeadings,
     };
   }
   const kept = new Set(collectTaskIds(validated.document));
@@ -1080,6 +1096,7 @@ export function convertStorage(root: XmlNode, lookup: StorageLookup): ConvertedP
     converted: converter.converted,
     notes: converter.notes,
     tasks: tasks.filter((task) => kept.has(task.id)),
+    numberHeadings: converter.numberHeadings,
   };
 }
 

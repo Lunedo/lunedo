@@ -102,6 +102,10 @@ const contentRules = [
   `.ph-label-list{display:flex;flex-wrap:wrap;gap:${space[2]};list-style:none;padding-left:0}`,
   `section.ph-include{border:1px solid var(--border);border-radius:${radius.md};padding:${space[3]} ${space[4]}}.ph-include-title{font-weight:600}`,
   ".ph-include-note{color:var(--text-muted);font-style:italic}",
+  `.ph-embed figcaption,.ph-file-preview figcaption,.ph-whiteboard figcaption{margin-top:${space[1]};overflow-wrap:anywhere}`,
+  ".ph-file-preview{text-align:center}",
+  `.ph-tabs>.ph-tab+.ph-tab{margin-top:${space[4]}}.ph-tab>*+*{margin-top:${space[3]}}`,
+  ".ph-heading-number{color:var(--text-muted)}",
   `.ph-roadmap svg{max-width:100%;height:auto}.ph-roadmap figcaption{color:var(--text-muted);font-size:${font.size.sm}}`,
   ".ph-roadmap-grid{stroke:var(--border)}.ph-roadmap-month{fill:var(--text-muted)}.ph-roadmap-marker line{stroke:var(--red-text)}.ph-roadmap-marker text{fill:var(--red-text)}",
   contentNames

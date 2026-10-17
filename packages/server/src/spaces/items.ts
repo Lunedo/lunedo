@@ -42,6 +42,8 @@ export interface ItemLink {
   target: { spaceId: string; spaceKey: string; kind: TreeItemKind; title: string } | null;
 }
 
+const LINK_TARGET_KINDS: ReadonlySet<string> = new Set<TreeItemKind>(["page", "folder", "whiteboard"]);
+
 export interface TreeItem {
   id: string;
   spaceId: string;
@@ -50,6 +52,7 @@ export interface TreeItem {
   title: string;
   description: string;
   width: PageWidth;
+  numberHeadings: boolean;
   mode: PageMode;
   published: boolean;
   archived: boolean;
@@ -104,6 +107,7 @@ type ItemRow = {
   kind: TreeItemKind;
   title: string;
   description: string;
+  number_headings: boolean;
   width: PageWidth;
   mode: PageMode;
   published: boolean;
@@ -181,6 +185,7 @@ function toItem(row: ItemRow): TreeItem {
     title: isLink && !accessible ? "" : row.title,
     description: row.description,
     width: row.width,
+    numberHeadings: row.number_headings,
     mode: row.mode,
     published: row.published,
     archived: row.archived,
@@ -377,7 +382,7 @@ export class TreeService {
   }
 
   #select(viewer: Principal) {
-    return sql`select t.id, t.space_id, t.parent_id, t.kind, t.title, t.description, t.width, t.mode,
+    return sql`select t.id, t.space_id, t.parent_id, t.kind, t.title, t.description, t.width, t.number_headings, t.mode,
         (t.kind not in ('page', 'blogPost') or t.mode = 'live' or t.published_version_id is not null) as published,
         (t.archived_root_id is not null) as archived, t.position,
         exists (select 1 from tree_items c where c.parent_id = t.id and c.kind <> 'meetingTopic'
@@ -617,10 +622,15 @@ export class TreeService {
         const kind = await this.#database.execute<{ kind: TreeItemKind }>(
           sql`select kind from tree_items where id = ${linkItemId}`,
         );
-        if (kind.rows[0]?.kind !== "page" && kind.rows[0]?.kind !== "folder") {
-          throw new SpaceError("invalidLinkTarget", "Links can point to pages and folders only");
+        if (!LINK_TARGET_KINDS.has(kind.rows[0]?.kind ?? "")) {
+          throw new SpaceError("invalidLinkTarget", "Links can point to pages, folders and whiteboards only");
         }
-      } else throw new SpaceError("invalidLinkTarget", "A link needs a page, a folder or an address");
+      } else {
+        throw new SpaceError(
+          "invalidLinkTarget",
+          "A link needs a page, a folder, a whiteboard or an address",
+        );
+      }
     }
     const actorId = actorIdOf(actor);
     const mode = input.kind === "page" ? await this.#modeFor(spaceId, input.mode) : "live";
@@ -651,7 +661,12 @@ export class TreeService {
   async update(
     actor: Principal,
     itemId: string,
-    changes: { title?: string | undefined; description?: string | undefined; width?: PageWidth | undefined },
+    changes: {
+      title?: string | undefined;
+      description?: string | undefined;
+      width?: PageWidth | undefined;
+      numberHeadings?: boolean | undefined;
+    },
   ): Promise<TreeItem> {
     await this.#database.transaction(async (tx) => {
       const current = await tx.execute<{ space_id: string; kind: TreeItemKind }>(
@@ -671,6 +686,7 @@ export class TreeService {
           title = coalesce(${title ?? null}, title),
           description = coalesce(${description ?? null}, description),
           width = coalesce(${changes.width ?? null}::page_width, width),
+          number_headings = coalesce(${changes.numberHeadings ?? null}::boolean, number_headings),
           updated_at = now()
         where id = ${itemId}`);
       await signalSpaceChange(tx, { spaceId: row.space_id, kind: "tree", itemId });

@@ -4,6 +4,7 @@ import { Braces, MessageSquareText } from "lucide-react";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { type EditorActions, registerEditorActions } from "./actions.js";
+import { EmbedDialog } from "./embed-dialog.js";
 import { EmojiPicker } from "./emoji-picker.js";
 import { createEditorExtensions } from "./extensions/index.js";
 import { LinkDialog } from "./link-dialog.js";
@@ -30,11 +31,13 @@ export function TemplateContentEditor({
 }) {
   const { t } = useTranslation();
   const [linkOpen, setLinkOpen] = useState(false);
+  const [embedOpen, setEmbedOpen] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const actions = useMemo<EditorActions>(
     () => ({
       openEmojiPicker: () => setEmojiOpen(true),
       openLinkDialog: () => setLinkOpen(true),
+      openEmbedDialog: () => setEmbedOpen(true),
       openFind: () => undefined,
       focusToolbar: () => undefined,
     }),
@@ -101,6 +104,7 @@ export function TemplateContentEditor({
       </div>
       <SelectionMenu editor={editor} actions={actions} />
       <LinkDialog editor={editor} open={linkOpen} onOpenChange={setLinkOpen} />
+      <EmbedDialog editor={editor} open={embedOpen} onOpenChange={setEmbedOpen} />
       <EmojiPicker
         open={emojiOpen}
         onOpenChange={setEmojiOpen}

@@ -212,14 +212,18 @@ interface IncludeTarget {
   reference: SourceElement;
 }
 
-function targetOf(macro: SourceElement): IncludeTarget | null {
-  const reference = macroReference(macro, "", "ri:page") ?? macroReference(macro, "page", "ri:page");
+const INCLUDE_PAGE_PARAMETERS = ["", "page"];
+
+function targetOf(macro: SourceElement, parameters = INCLUDE_PAGE_PARAMETERS): IncludeTarget | null {
+  const reference = parameters
+    .map((name) => macroReference(macro, name, "ri:page"))
+    .find((found) => found !== null);
   if (reference) {
     const title = singleLine(reference.attributes["ri:content-title"] ?? "");
     if (title.length === 0) return null;
     return { title, spaceKey: reference.attributes["ri:space-key"] ?? null, reference };
   }
-  const parameter = macroParameter(macro, "") ?? macroParameter(macro, "page");
+  const parameter = parameters.map((name) => macroParameter(macro, name)).find((found) => found !== null);
   if (!parameter || sourceElements(parameter).length > 0) return null;
   const text = singleLine(sourceText(parameter)).replace(/^\[(.*)\]$/, "$1");
   const colon = text.indexOf(":");
@@ -234,8 +238,9 @@ function targetOf(macro: SourceElement): IncludeTarget | null {
 function includeSource(
   macro: SourceElement,
   context: MacroImportContext,
+  parameters = INCLUDE_PAGE_PARAMETERS,
 ): Record<string, string | null> | null {
-  const target = targetOf(macro);
+  const target = targetOf(macro, parameters);
   if (!target || target.title.length > MAX_SOURCE_TITLE) return null;
   const pageId = context.page(target.reference);
   if (pageId) return { pageId, sourceSpace: null, sourceTitle: null };
@@ -249,8 +254,8 @@ function includeSource(
   return { pageId: null, sourceSpace: spaceKey, sourceTitle: target.title };
 }
 
-function sameSpaceTitle(macro: SourceElement): string[] {
-  const target = targetOf(macro);
+function sameSpaceTitle(macro: SourceElement, parameters = INCLUDE_PAGE_PARAMETERS): string[] {
+  const target = targetOf(macro, parameters);
   return target && target.spaceKey === null ? [target.title] : [];
 }
 
@@ -307,6 +312,40 @@ const includeImporter: MacroConverter = {
   },
 };
 
+function multiExcerptName(macro: SourceElement): string | null {
+  const name = singleLine(macroText(macro, "MultiExcerptName") ?? macroText(macro, "name"));
+  return name.length > 0 && name.length <= MAX_EXCERPT_NAME_LENGTH ? name : null;
+}
+
+const multiExcerptImporter: MacroConverter = {
+  source: "confluence",
+  macros: ["multiexcerpt", "multiexcerpt-macro", "multiexcerpt-fast-block-macro"],
+  convert: (macro, context) => {
+    const name = multiExcerptName(macro);
+    if (name === null) return null;
+    const content = bodyBlocks(macro, context);
+    if (containsExcerpt(content)) return null;
+    return [{ type: "excerpt", attrs: { name, hidden: isTrue(macroText(macro, "hidden")) }, content }];
+  },
+};
+
+const MULTI_EXCERPT_PAGE = ["PageWithExcerpt", "page"];
+
+const multiExcerptIncludeImporter: MacroConverter = {
+  source: "confluence",
+  macros: ["multiexcerpt-include", "multiexcerpt-include-macro", "multiexcerpt-fast-include-block-macro"],
+  references: (macro) => ({ pageTitles: sameSpaceTitle(macro, MULTI_EXCERPT_PAGE) }),
+  convert: (macro, context) => {
+    const name = multiExcerptName(macro);
+    if (name === null) return null;
+    const source = includeSource(macro, context, MULTI_EXCERPT_PAGE);
+    if (!source) return null;
+    const panel =
+      isTrue(macroText(macro, "addpanel")) || macroText(macro, "nopanel")?.toLowerCase() === "false";
+    return [{ type: "includeExcerpt", attrs: { ...source, name, panel } }];
+  },
+};
+
 export const excerptModule = defineModule({
   name: "excerpt",
   nodes: [
@@ -338,7 +377,7 @@ export const excerptModule = defineModule({
         attrOf<boolean>(node, "hidden") && !renderer.context.showPlaceholders ? "" : renderer.blocks(node),
     },
   ],
-  importers: [excerptImporter],
+  importers: [excerptImporter, multiExcerptImporter],
 });
 
 export const includeModule = defineModule({
@@ -369,5 +408,5 @@ export const includeModule = defineModule({
       text: () => "",
     },
   ],
-  importers: [excerptIncludeImporter, includeImporter],
+  importers: [excerptIncludeImporter, includeImporter, multiExcerptIncludeImporter],
 });

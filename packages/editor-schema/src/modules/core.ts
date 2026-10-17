@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { attrOf, defineModule, optional } from "../module.js";
-import { element, escapeLineStart, prefixLines } from "../text.js";
+import { element, escapeLineStart, headingNumberHtml, prefixLines } from "../text.js";
 import { alignmentValue, indentValue, type TextAlignment } from "../values.js";
 import { wordText } from "../word.js";
 
@@ -73,24 +73,31 @@ export const coreModule = defineModule({
         level: optional(z.number().int().min(1).max(6), 1),
         ...blockFormatting,
       },
-      html: (node, renderer) =>
-        element(
+      html: (node, renderer) => {
+        const id = renderer.nextHeadingId();
+        return element(
           `h${attrOf<number>(node, "level")}`,
-          { id: renderer.nextHeadingId(), ...formattingAttributes(node) },
-          renderer.children(node),
-        ),
-      word: (node, renderer) => [
-        {
-          type: "heading",
-          level: attrOf<number>(node, "level"),
-          anchor: renderer.nextHeadingId(),
-          content: renderer.inline(node),
-        },
-      ],
+          { id, ...formattingAttributes(node) },
+          `${headingNumberHtml(renderer.headingNumber())}${renderer.children(node)}`,
+        );
+      },
+      word: (node, renderer) => {
+        const anchor = renderer.nextHeadingId();
+        const number = renderer.headingNumber();
+        return [
+          {
+            type: "heading",
+            level: attrOf<number>(node, "level"),
+            anchor,
+            content: [...(number ? [wordText(`${number} `)] : []), ...renderer.inline(node)],
+          },
+        ];
+      },
       markdown: (node, renderer) => {
         renderer.nextHeadingId();
+        const number = renderer.headingNumber();
         const content = renderer.inline(node).replace(/\n/g, " ");
-        return `${"#".repeat(attrOf<number>(node, "level"))} ${content}`.trimEnd();
+        return `${"#".repeat(attrOf<number>(node, "level"))} ${number ? `${number} ` : ""}${content}`.trimEnd();
       },
       heading: (node, text) => ({ level: attrOf<number>(node, "level"), text }),
     },

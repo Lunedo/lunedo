@@ -1,5 +1,5 @@
 {
-  "id": "1887408b-ded3-48ed-b769-ac162514572f",
+  "id": "8a669bed-29e6-4c7c-8fbf-875646977208",
   "prevId": "e0aa1694-1686-4d62-88b6-f12211e512fc",
   "version": "7",
   "dialect": "postgresql",
@@ -7812,13 +7812,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
-        },
-        "staged_bytes": {
-          "name": "staged_bytes",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
         },
         "phase": {
           "name": "phase",
@@ -18896,6 +18889,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'fixed'"
+        },
+        "number_headings": {
+          "name": "number_headings",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "link_item_id": {
           "name": "link_item_id",

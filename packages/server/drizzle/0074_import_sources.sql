@@ -14,6 +14,7 @@ ALTER TABLE "import_credentials" ADD COLUMN "base_path" text DEFAULT '' NOT NULL
 ALTER TABLE "import_credentials" ADD COLUMN "ca_certificates" text;--> statement-breakpoint
 ALTER TABLE "import_credentials" ADD COLUMN "account_name" text;--> statement-breakpoint
 ALTER TABLE "imports" ADD COLUMN "options" jsonb DEFAULT '{}'::jsonb NOT NULL;--> statement-breakpoint
+ALTER TABLE "imports" ADD COLUMN "staged_bytes" bigint DEFAULT 0 NOT NULL;--> statement-breakpoint
 ALTER TABLE "imports" ADD COLUMN "throttled_until" timestamp with time zone;--> statement-breakpoint
 ALTER TABLE "import_files" ADD CONSTRAINT "import_files_import_id_imports_id_fk" FOREIGN KEY ("import_id") REFERENCES "public"."imports"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "import_files" ADD CONSTRAINT "import_files_upload_id_import_uploads_id_fk" FOREIGN KEY ("upload_id") REFERENCES "public"."import_uploads"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

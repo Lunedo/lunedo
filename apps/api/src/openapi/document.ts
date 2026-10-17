@@ -69,6 +69,8 @@ const TAG_DESCRIPTIONS: Record<string, string> = {
   Watching: "Watching and muting pages, blog posts, meeting series and spaces.",
   Storage: "Usage of the file store, warning levels and operations contacts of the instance.",
   Diagrams: "Files and images of draw.io, Mermaid and PlantUML diagrams in pages.",
+  Embeds:
+    "External services whose content pages can embed, from the allowlist of the instance and organization.",
 };
 
 const ROOT = "root";

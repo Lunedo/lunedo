@@ -1,5 +1,6 @@
 import type { MarkSpec, NodeSpec } from "prosemirror-model";
 import type { z } from "zod";
+import type { ResolvedEmbed } from "./embeds.js";
 import type { ImportSource, MacroConverter } from "./importing.js";
 import type { DocumentJson, NodeJson, ValidMark, ValidNode } from "./json.js";
 import type { ContentColor } from "./values.js";
@@ -258,6 +259,12 @@ export interface RenderLabels {
   roadmap: string;
   roadmapReadOnly: string;
   roadmapAsList: string;
+  embed: string;
+  embedNotAllowed: string;
+  embedFrom: string;
+  whiteboard: string;
+  chooseWhiteboard: string;
+  filePreview: string;
   callout: Record<"info" | "tip" | "note" | "warning" | "error", string>;
 }
 
@@ -271,12 +278,23 @@ export interface ReferencedDiagram {
   readonly previewVersion: number | null;
 }
 
+export interface ReferencedWhiteboard {
+  readonly title: string;
+  readonly href: string;
+  readonly previewHref: string | null;
+}
+
+export interface ResolvedAttachment {
+  readonly href: string;
+  readonly image?: boolean;
+}
+
 export interface RenderContext {
   target?: RenderTarget;
   nodeTitle?: (type: string) => string | null;
   mention?: (id: string) => { name: string } | null;
   pageLink?: (link: PageLinkTarget) => ResolvedPageLink | null;
-  attachment?: (id: string, version?: number) => { href: string } | null;
+  attachment?: (id: string, version?: number) => ResolvedAttachment | null;
   diagramReference?: (pageId: string, diagramId: string) => ReferencedDiagram | null;
   formatDate?: (iso: string) => string;
   labels?: Partial<RenderLabels>;
@@ -296,6 +314,9 @@ export interface RenderContext {
   formatMonth?: (iso: string) => string;
   svgPalette?: (color: ContentColor, role: "background" | "text") => string;
   href?: (href: string) => string;
+  embed?: (url: string) => ResolvedEmbed | null;
+  whiteboard?: (id: string) => ReferencedWhiteboard | null;
+  numberHeadings?: boolean;
 }
 
 interface BaseRenderer {
@@ -304,6 +325,7 @@ interface BaseRenderer {
   label(key: Exclude<keyof RenderLabels, "callout">, values?: Record<string, string>): string;
   calloutLabel(variant: string): string;
   nextHeadingId(): string;
+  headingNumber(): string | null;
   formatDate(iso: string): string;
   formatSize(bytes: number): string;
   mentionName(id: string): string;

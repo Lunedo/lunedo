@@ -1,5 +1,12 @@
 import { createHash } from "node:crypto";
-import { type DocumentJson, editorSchemaVersion, extractMentions, slugify } from "@pagehall/editor-schema";
+import {
+  type DocumentJson,
+  editorSchemaVersion,
+  extractMentions,
+  narrowEmbedServices,
+  resolveEmbed,
+  slugify,
+} from "@pagehall/editor-schema";
 import { yDocFromDocument } from "@pagehall/editor-schema/yjs";
 import { uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
@@ -10,6 +17,7 @@ import type { AuditLog } from "../audit/audit-log.js";
 import { claimTaskIds, publishTasks, syncDecisions } from "../collaboration/content.js";
 import { writeTaskStatus } from "../collaboration/tasks.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
+import { allowedEmbedServicesSetting, embedServicesSetting } from "../embeds/settings.js";
 import { type FileService, FileTooLargeError } from "../files/files.js";
 import { cleanFileName, fileNameKey } from "../files/names.js";
 import { MEGABYTE, maxFileSizeSetting } from "../files/settings.js";
@@ -57,6 +65,7 @@ import {
 } from "./confluence/storage.js";
 import { ImportFormatError } from "./errors.js";
 import type { ByteSource } from "./formats/bytes.js";
+import { importText, jiraIssueUrl } from "./import-texts.js";
 import { heldBy, Narrowing, pendingNarrowing } from "./narrowing.js";
 import { type Directory, ensurePeople, personOf } from "./people.js";
 import { ensureGroups, groupKey, roleFor } from "./permissions.js";
@@ -230,6 +239,15 @@ function noteProblem(note: ConversionNote, itemId: string, sourceId: string): Pr
         code: note.code,
         details: { macro: note.macro, title: note.title.slice(0, 255), spaceKey: note.spaceKey },
       };
+    case "embedNotAllowed":
+      return { ...base, code: note.code, details: { macro: note.macro, url: note.url.slice(0, 255) } };
+    case "previewOnly":
+    case "previewMissing":
+      return { ...base, code: note.code, details: { macro: note.macro, name: note.name.slice(0, 255) } };
+    case "chartNotImported":
+      return { ...base, code: note.code, details: { macro: note.macro } };
+    case "jiraNotImported":
+      return { ...base, code: note.code, details: { macro: note.macro, issues: note.issues.slice(0, 255) } };
     default:
       return { ...base, code: note.code };
   }
@@ -829,6 +847,18 @@ export class ImportPipeline {
       ...sourceIds,
     ]);
     const space = await this.#requireSpace(run.importId);
+    const embedServices = narrowEmbedServices(
+      await this.#settings.get(embedServicesSetting, {}),
+      await this.#settings.get(allowedEmbedServicesSetting, { organization: run.organizationId }),
+    );
+    const organizationLanguage = await this.#settings.get(languageSetting, {
+      organization: run.organizationId,
+    });
+    const textLanguage: TemplateLanguage = (templateLanguages as readonly string[]).includes(
+      organizationLanguage,
+    )
+      ? (organizationLanguage as TemplateLanguage)
+      : "en";
     const templates = await this.#lookup(run, "template", null);
     const pageInfo = await this.#pageInfo([...pageTargets.values()]);
     const attachmentKeys = references.flatMap((list, index) => {
@@ -930,6 +960,9 @@ export class ImportPipeline {
             const page = pageSourceId ?? owner;
             return page ? stableId(`drawio\u0000${page}\u0000${name}`) : uuidv7();
           },
+          embeddable: (url) => resolveEmbed(url, embedServices) !== null,
+          text: (key) => importText(textLanguage, key),
+          jiraIssueUrl: (key) => jiraIssueUrl(run.sourceUrl, key),
           ...(inlineComment ? { inlineComment } : {}),
           ...(variables.has(key) ? { templateVariables: variables.get(key) } : {}),
         };
@@ -1567,6 +1600,9 @@ export class ImportPipeline {
           modifiedAt: page.modifiedAt,
           number: previous + 1,
         });
+        if (converted.numberHeadings) {
+          await tx.execute(sql`update tree_items set number_headings = true where id = ${itemId}`);
+        }
         await addButtonFields(tx, document, language);
         if (page.type === "blogPost") {
           await tx.execute(sql`

@@ -1,6 +1,6 @@
 {
-  "id": "31a3545d-bd18-4ecf-a895-a9ce354b87fa",
-  "prevId": "1887408b-ded3-48ed-b769-ac162514572f",
+  "id": "f96dcff9-1989-4a38-8215-1bef69bcadd4",
+  "prevId": "8a669bed-29e6-4c7c-8fbf-875646977208",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -19054,6 +19054,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'fixed'"
+        },
+        "number_headings": {
+          "name": "number_headings",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "link_item_id": {
           "name": "link_item_id",

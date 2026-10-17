@@ -53,6 +53,15 @@ const sceneSchema = z
     "The scene: `elements` (Excalidraw elements of the types rectangle, diamond, ellipse, arrow, line, freedraw, text, image and frame, ordered by their `index`), `files` (images by file ID, each the `attachmentId` of an attachment of the item and its `mimeType`) and `settings` (`viewBackgroundColor`).",
   );
 
+const referenceSchema = z
+  .object({
+    itemId: uuid("ID of the whiteboard."),
+    title: z.string().describe("Title of the whiteboard."),
+    href: z.string().describe("Address of the whiteboard in Pagehall."),
+    preview: z.boolean().describe("Whether an image of the whiteboard exists."),
+  })
+  .describe("A whiteboard as a whiteboard block in a page shows it.");
+
 const personSchema = z
   .object({
     id: uuid("ID of the account."),
@@ -161,6 +170,35 @@ export class WhiteboardsController {
     const found = await this.#services.whiteboards.scene(itemId);
     if (!found) throw notFound();
     return found;
+  }
+
+  @Get("whiteboards/:itemId/reference")
+  @Permission("item.view", board)
+  @ApiRoute({
+    summary: "Get a whiteboard for a whiteboard block",
+    description:
+      "Returns the title, the address and whether an image exists, for showing the whiteboard in a page. Answers 404 for whiteboards the caller cannot see, so a block shows nothing to them.",
+    tags: [TAG],
+    params: boardParams,
+    response: {
+      description: "The whiteboard as a block shows it.",
+      schema: referenceSchema,
+      example: {
+        itemId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a21",
+        title: "Network 2027",
+        href: "/spaces/IT/whiteboards/01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a21/network-2027",
+        preview: true,
+      },
+    },
+  })
+  async reference(@Param("itemId") itemId: string, @Req() request: FastifyRequest) {
+    const found = await this.#services.documents.referencedWhiteboards(actorOf(request), {
+      type: "doc",
+      content: [{ type: "whiteboard", attrs: { whiteboardId: itemId } }],
+    });
+    const board = found.get(itemId);
+    if (!board) throw notFound();
+    return { itemId, title: board.title, href: board.href, preview: board.preview !== null };
   }
 
   @Get("whiteboards/:itemId/preview")

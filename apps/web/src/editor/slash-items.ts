@@ -15,6 +15,7 @@ import {
   FileStack,
   Files,
   FileText,
+  Film,
   Flag,
   FlagTriangleRight,
   FolderTree,
@@ -35,10 +36,12 @@ import {
   Paperclip,
   PenLine,
   Pilcrow,
+  Presentation,
   Quote,
   Sigma,
   Smile,
   SquareFunction,
+  SquareStack,
   Table,
   Table2,
   TableProperties,
@@ -539,6 +542,63 @@ export const slashCommands: SlashCommandDefinition[] = [
       editor.chain().focus().deleteRange(range).run();
       editorActions(editor)?.pickFiles?.();
     },
+  },
+  {
+    id: "embed",
+    group: "blocks",
+    icon: Film,
+    labelKey: "editor.blocks.embed",
+    descriptionKey: "editor.blocks.embedDescription",
+    keywords: [
+      "embed",
+      "video",
+      "youtube",
+      "vimeo",
+      "loom",
+      "figma",
+      "miro",
+      "google",
+      "sharepoint",
+      "stream",
+      "einbetten",
+      "einbettung",
+    ],
+    run: (editor, range) => {
+      editor.chain().focus().deleteRange(range).run();
+      editorActions(editor)?.openEmbedDialog?.();
+    },
+  },
+  {
+    id: "whiteboard",
+    group: "blocks",
+    icon: Presentation,
+    labelKey: "editor.blocks.whiteboard",
+    descriptionKey: "editor.blocks.whiteboardDescription",
+    keywords: ["whiteboard", "board", "link", "verknüpfen", "tafel"],
+    run: (editor, range) =>
+      editor.chain().focus().deleteRange(range).insertContent({ type: "whiteboard" }).run(),
+  },
+  {
+    id: "tabs",
+    group: "blocks",
+    icon: SquareStack,
+    labelKey: "editor.blocks.tabs",
+    descriptionKey: "editor.blocks.tabsDescription",
+    keywords: ["tabs", "tab", "panel", "reiter", "registerkarten"],
+    run: (editor, range, t) =>
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({
+          type: "tabs",
+          content: [1, 2].map((number) => ({
+            type: "tab",
+            attrs: { title: t("editor.tabs.newTab", { number }) },
+            content: [{ type: "paragraph" }],
+          })),
+        })
+        .run(),
   },
   {
     id: "drawing",

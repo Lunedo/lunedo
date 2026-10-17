@@ -358,7 +358,7 @@ describe.skipIf(!baseUrl)("print, PDF and Word exports", () => {
         maxEmbeddedBytes: PNG.length,
       });
       const imageNode = (id: string) => ({ type: "image", attrs: { attachmentId: id, alt: "" } });
-      const page = (document: unknown) => ({ document }) as unknown as PreparedPage;
+      const page = (document: unknown) => ({ document, images: new Set() }) as unknown as PreparedPage;
       const assets = await paged.assets([
         page(doc(imageNode(image), imageNode(image))),
         page(doc(imageNode(second.id), imageNode(image))),
@@ -500,6 +500,83 @@ describe.skipIf(!baseUrl)("print, PDF and Word exports", () => {
       expect(names.some((name) => name.endsWith("Network map.svg"))).toBe(true);
       expect(names.some((name) => name.endsWith("Blank board.md"))).toBe(true);
       expect(names.some((name) => name.includes("Secret"))).toBe(false);
+    });
+
+    describe("blocks in pages", () => {
+      let page: string;
+
+      beforeAll(async () => {
+        const { admin, space } = context;
+        const created = await test.services.tree.create(admin, space.id, {
+          kind: "page",
+          title: "Board links",
+          mode: "live",
+          placement: { parentId: null },
+        });
+        await test.services.tree.update(admin, created.id, { numberHeadings: true });
+        await test.services.documents.replace(
+          admin,
+          created.id,
+          doc(
+            { type: "heading", attrs: { level: 1 }, content: [text("Overview")] },
+            { type: "heading", attrs: { level: 2 }, content: [text("Boards")] },
+            { type: "whiteboard", attrs: { whiteboardId: boards.map } },
+            { type: "whiteboard", attrs: { whiteboardId: boards.secret } },
+            { type: "file", attrs: { attachmentId: image, name: "rack.png", preview: true } },
+            { type: "file", attrs: { attachmentId: hiddenImage, name: "salary-chart.png", preview: true } },
+            { type: "embed", attrs: { url: "https://youtu.be/dQw4w9WgXcQ", title: "Login video" } },
+            {
+              type: "tabs",
+              content: [
+                { type: "tab", attrs: { title: "Windows" }, content: [paragraph(text("Windows steps"))] },
+                { type: "tab", attrs: { title: "macOS" }, content: [paragraph(text("macOS steps"))] },
+              ],
+            },
+          ),
+        );
+        page = created.id;
+      });
+
+      it("prints whiteboards, previews and embeds with the exporter's permissions", async () => {
+        const printed = (
+          await bytesOf(await test.services.exports.page(context.steward, page, "print"))
+        ).toString("utf8");
+        expect(printed).toContain(`<img src="/api/v1/whiteboards/${boards.map}/preview" alt="">`);
+        expect(printed).toContain("<figcaption>Network map</figcaption>");
+        expect(printed).not.toContain("Secret board");
+        expect(printed).not.toContain(boards.secret);
+        expect(printed).toContain(`<img src="/api/v1/attachments/${image}/content" alt="rack.png">`);
+        expect(printed).not.toContain(`<img src="/api/v1/attachments/${hiddenImage}`);
+        expect(printed).toContain("<strong>Login video</strong>");
+        expect(printed).not.toContain("<iframe");
+        expect(printed).toContain('<h4 class="ph-tab-title">Windows</h4>');
+        expect(printed).toContain("macOS steps");
+        expect(printed).toContain('<span class="ph-heading-number">1.1 </span>Boards');
+      });
+
+      it("sends the images of whiteboard blocks and previews to the render container", async () => {
+        calls.length = 0;
+        await job(context.steward, { pageId: page }, { format: "pdf", options: defaultExportOptions });
+        const paths = (calls[0]?.assets ?? []).map((asset) => asset.path);
+        expect(paths).toContain(`/api/v1/whiteboards/${boards.map}/preview`);
+        expect(paths).toContain(`/api/v1/attachments/${image}/content`);
+        expect(paths).not.toContain(`/api/v1/whiteboards/${boards.secret}/preview`);
+        expect(paths).not.toContain(`/api/v1/attachments/${hiddenImage}/content`);
+      });
+
+      it("writes whiteboards, previews, embeds, tabs and numbered headings to Word", async () => {
+        const output = await html(
+          await bytesOf(await test.services.exports.page(context.steward, page, "docx")),
+        );
+        expect(output).toContain("1 Overview");
+        expect(output).toContain("1.1 Boards");
+        expect(output).toContain("Network map");
+        expect(output).not.toContain("Secret board");
+        expect(output).toContain('<img alt="rack.png"');
+        expect(output).toContain("Login video");
+        expect(output).toContain("https://youtu.be/dQw4w9WgXcQ");
+        expect(output.indexOf("Windows steps")).toBeLessThan(output.indexOf("macOS steps"));
+      });
     });
   });
 

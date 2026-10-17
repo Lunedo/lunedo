@@ -1,1 +1,0 @@
-ALTER TABLE "imports" ADD COLUMN "staged_bytes" bigint DEFAULT 0 NOT NULL;

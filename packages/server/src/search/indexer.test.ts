@@ -262,6 +262,35 @@ describe.skipIf(!baseUrl)("search indexer", () => {
     expect(await found(context, "Own words")).toEqual([including.id]);
   });
 
+  it("indexes a whiteboard only on the whiteboard, not on pages that show it in a block", async () => {
+    const context = await setup(0);
+    const board = await test.services.tree.create(context.member, context.space.id, {
+      kind: "whiteboard",
+      title: `${context.word} board`,
+      mode: "live",
+      placement: { parentId: null },
+    });
+    const page = await test.services.tree.create(context.member, context.space.id, {
+      kind: "page",
+      title: "Page with a board",
+      mode: "live",
+      placement: { parentId: null },
+      document: {
+        type: "doc",
+        content: [
+          { type: "paragraph", content: [{ type: "text", text: "Own words" }] },
+          { type: "whiteboard", attrs: { whiteboardId: board.id } },
+        ],
+      },
+    });
+    await test.pool.query("update search_pending_items set due_at = now() where item_id = any($1)", [
+      [board.id, page.id],
+    ]);
+    expect((await test.services.search.indexer.drain()).failed).toBe(0);
+    expect(await found(context)).toEqual([board.id]);
+    expect(await found(context, "Own words")).toEqual([page.id]);
+  });
+
   it("removes an item the index refuses, with its older chunks, and indexes it again when it changes", async () => {
     const context = await setup(2);
     const [refusedId, healthyId] = context.ids;

@@ -161,6 +161,7 @@ async function renderExcel(message: RenderMessage): Promise<void> {
 
 async function render(message: RenderMessage): Promise<void> {
   document.documentElement.dataset.theme = message.theme;
+  if (message.zoom !== undefined) document.body.style.zoom = String(message.zoom / 100);
   root().replaceChildren();
   switch (message.kind) {
     case "text":

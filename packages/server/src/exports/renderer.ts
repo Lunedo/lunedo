@@ -49,6 +49,7 @@ import {
   type PageDocumentService,
   type PageReferences,
   pagePath,
+  type ReferencedBoard,
   relatedLabelsKey,
   reportKey,
 } from "../spaces/documents.js";
@@ -68,6 +69,7 @@ const PAGE_ADDRESS = new RegExp(
   "i",
 );
 const ATTACHMENT_ADDRESS = new RegExp(`^/api/v1/attachments/(${UUID})/content$`, "i");
+const WHITEBOARD_PREVIEW_ADDRESS = new RegExp(`^/api/v1/whiteboards/(${UUID})/preview$`, "i");
 const MAX_REPORTED_TASKS = 200;
 const MAX_INCLUDES = 50;
 const MAX_INCLUDED_PAGES = 100;
@@ -136,6 +138,9 @@ export interface PreparedPage {
   included: ReadonlyMap<string, PreparedInclusion> | null;
   taskStatus: ReadonlyMap<string, boolean> | null;
   diagrams: ReadonlyMap<string, ReferencedDiagram> | null;
+  whiteboards: ReadonlyMap<string, ReferencedBoard> | null;
+  images: ReadonlySet<string>;
+  numberHeadings: boolean;
   meeting: { startsAt: Date | null; attendees: string[] } | null;
   unavailable: ReadonlySet<Module>;
   failed: boolean;
@@ -371,6 +376,8 @@ export class PageExportRenderer {
         return new Map(statuses.map((status) => [status.id, status.done]));
       });
       const diagrams = await this.#documents.referencedDiagrams(this.#viewer, document);
+      const whiteboards = await this.#whiteboards(document);
+      const images = await this.#previewImages(document);
       const meeting = await this.#meeting(pageId);
       const merged: PageReferences = {
         people: { ...reports?.references.people, ...references.people },
@@ -467,6 +474,9 @@ export class PageExportRenderer {
         included,
         taskStatus,
         diagrams,
+        whiteboards,
+        images,
+        numberHeadings: await this.#numberHeadings(pageId),
         meeting,
         unavailable,
         failed: false,
@@ -491,12 +501,50 @@ export class PageExportRenderer {
         ...emptyModules,
         taskStatus: null,
         diagrams: null,
+        whiteboards: null,
+        images: new Set(),
+        numberHeadings: false,
         meeting: null,
         unavailable,
         failed: true,
         board: null,
       };
     }
+  }
+
+  async #whiteboards(document: DocumentJson): Promise<Map<string, ReferencedBoard>> {
+    const found = await this.#documents.referencedWhiteboards(this.#viewer, document);
+    const visible = await this.#readerVisible(found.keys());
+    const result = new Map<string, ReferencedBoard>();
+    for (const [id, board] of found) {
+      if (!visible.has(id)) continue;
+      if (!(await this.#authorization.authorize(this.#viewer, "item.export", { type: "item", id }))) continue;
+      result.set(id, board);
+    }
+    return result;
+  }
+
+  async #previewImages(document: DocumentJson): Promise<Set<string>> {
+    const ids = new Set<string>();
+    for (const block of blocksOfType(document, "file")) {
+      const id = block.attrs?.attachmentId;
+      if (block.attrs?.preview !== true || typeof id !== "string" || ids.has(id)) continue;
+      const allowed = await this.#authorization.authorize(this.#viewer, "attachment.view", {
+        type: "attachment",
+        id,
+      });
+      if (!allowed) continue;
+      const content = await this.#attachments.content(id, "published");
+      if (content?.contentType.startsWith("image/")) ids.add(id);
+    }
+    return ids;
+  }
+
+  async #numberHeadings(pageId: string): Promise<boolean> {
+    const result = await this.#database.execute<{ number_headings: boolean }>(
+      sql`select number_headings from tree_items where id = ${pageId}`,
+    );
+    return result.rows[0]?.number_headings === true;
   }
 
   async prepareBoard(itemId: string): Promise<PreparedPage | null> {
@@ -531,6 +579,9 @@ export class PageExportRenderer {
       ...emptyModules,
       taskStatus: null,
       diagrams: null,
+      whiteboards: null,
+      images: new Set(),
+      numberHeadings: false,
       meeting: null,
       unavailable: new Set(),
       failed: false,
@@ -643,6 +694,11 @@ export class PageExportRenderer {
         const local = locator.attachment(attachmentId);
         if (local) return local;
       }
+      const boardId = WHITEBOARD_PREVIEW_ADDRESS.exec(address)?.[1]?.toLowerCase();
+      if (boardId) {
+        const local = locator.preview(boardId);
+        if (local) return local;
+      }
       return address.startsWith("/") ? `${this.#origin}${address}` : address;
     };
   }
@@ -679,7 +735,17 @@ export class PageExportRenderer {
             }
           : { href: "", title: "", accessible: false };
       },
-      attachment: (id) => ({ href: `/api/v1/attachments/${id}/content` }),
+      attachment: (id) => ({ href: `/api/v1/attachments/${id}/content`, image: page.images.has(id) }),
+      whiteboard: (id) => {
+        const board = page.whiteboards?.get(id);
+        if (!board) return null;
+        return {
+          title: board.title,
+          href: board.href,
+          previewHref: board.preview ? whiteboardPreviewPath(id) : null,
+        };
+      },
+      numberHeadings: page.numberHeadings,
       diagramReference: (pageId, diagramId) => page.diagrams?.get(diagramKey(pageId, diagramId)) ?? null,
       attachmentList: () => page.attachments,
       childPages: (request: ChildPagesRequest) =>

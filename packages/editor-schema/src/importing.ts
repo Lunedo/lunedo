@@ -35,7 +35,21 @@ export type MacroNote =
       readonly title: string;
       readonly spaceKey: string | null;
     }
-  | { readonly code: "externalPageLink"; readonly title: string; readonly spaceKey: string | null };
+  | { readonly code: "externalPageLink"; readonly title: string; readonly spaceKey: string | null }
+  | { readonly code: "embedNotAllowed"; readonly macro: string; readonly url: string }
+  | { readonly code: "previewOnly"; readonly macro: string; readonly name: string }
+  | { readonly code: "previewMissing"; readonly macro: string; readonly name: string }
+  | { readonly code: "chartNotImported"; readonly macro: string }
+  | { readonly code: "jiraNotImported"; readonly macro: string; readonly issues: string };
+
+export const importTexts = ["jiraNotImported", "chartNotImported", "pivotNotImported"] as const;
+export type ImportText = (typeof importTexts)[number];
+
+export const defaultImportTexts: Readonly<Record<ImportText, string>> = {
+  jiraNotImported: "Jira content not imported.",
+  chartNotImported: "Chart not imported. Its source table follows.",
+  pivotNotImported: "Pivot table not imported. Its source table follows.",
+};
 
 export interface MacroImportContext {
   readonly spaceKey: string | null;
@@ -50,6 +64,10 @@ export interface MacroImportContext {
   note(note: MacroNote): void;
   newId(): string;
   diagramId(name: string, pageSourceId: string | null): string;
+  embeddable(url: string): boolean;
+  numberHeadings(): void;
+  text(key: ImportText): string;
+  jiraIssueUrl(key: string): string | null;
 }
 
 export interface MacroReferences {
