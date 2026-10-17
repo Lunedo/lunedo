@@ -298,6 +298,7 @@ jobs:
       PAGEHALL_E2E_REDIS_URL: redis://valkey:6379
       PAGEHALL_E2E_SMTP_HOST: mailpit
       PAGEHALL_E2E_STATE_DIR: /pagehall-e2e/state
+      PAGEHALL_E2E_WORKERS: ${{ vars.E2E_WORKERS }}
       HOME: /root
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

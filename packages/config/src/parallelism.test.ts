@@ -65,6 +65,12 @@ describe("endToEndWorkers", () => {
     expect(endToEndWorkers({ CI: "true" })).toBe(3);
   });
 
+  it("prefers PAGEHALL_E2E_WORKERS over CI_PARALLELISM in CI", () => {
+    expect(endToEndWorkers({ CI: "true", CI_PARALLELISM: "2", PAGEHALL_E2E_WORKERS: "4" })).toBe(4);
+    expect(endToEndWorkers({ CI: "true", CI_PARALLELISM: "2", PAGEHALL_E2E_WORKERS: "" })).toBe(2);
+    expect(endToEndWorkers({ CI: "true", CI_PARALLELISM: "2", PAGEHALL_E2E_WORKERS: "0" })).toBe(2);
+  });
+
   it("uses 3 locally unless PAGEHALL_E2E_WORKERS says otherwise", () => {
     expect(endToEndWorkers({})).toBe(3);
     expect(endToEndWorkers({ PAGEHALL_E2E_WORKERS: "6" })).toBe(6);
