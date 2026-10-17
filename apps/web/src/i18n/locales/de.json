@@ -6998,7 +6998,7 @@
         "fileRequired": "Wähle die Exportdatei und warte, bis der Upload fertig ist.",
         "spaceTitle": "Space im Site-Backup",
         "spaceLabel": "Space",
-        "spacePlaceholder": "Space wählen",
+        "spacePlaceholder": "Nach Name oder Schlüssel suchen",
         "spaceHint": "{count, plural, one {Das Site-Backup enthält # Space.} other {Das Site-Backup enthält # Spaces.}} Jeder Import übernimmt einen Space in einen neuen Space in Pagehall; importiere die anderen nacheinander.",
         "spaceRequired": "Wähle den Space, der aus dem Site-Backup importiert wird.",
         "folderFile": "Datei im Import-Ordner",

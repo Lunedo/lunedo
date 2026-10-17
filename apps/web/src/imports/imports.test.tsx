@@ -262,7 +262,7 @@ describe("import wizard", () => {
     expect(select.getAttribute("aria-invalid")).toBe("true");
     await waitFor(() => expect(document.activeElement).toBe(select));
     await userEvent.click(select);
-    await userEvent.click(await screen.findByRole("option", { name: "IT-Team (PHIT)" }));
+    await userEvent.click(await screen.findByRole("option", { name: /IT-Team/ }));
     await waitFor(() =>
       expect(api.requests.find((request) => request.method === "PATCH")?.body).toEqual({
         options: { spaceKey: "PHIT" },

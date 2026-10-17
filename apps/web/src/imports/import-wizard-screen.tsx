@@ -1,5 +1,6 @@
 import {
   Button,
+  Combobox,
   ConfirmDialog,
   classNames,
   DangerAction,
@@ -669,16 +670,22 @@ function SiteSpaceField({
           hint={t("imports.wizard.source.spaceHint", { count: spaces.length })}
           error={error}
         >
-          <Select
-            value={entry.options.spaceKey ?? ""}
+          <Combobox
+            value={entry.options.spaceKey ?? null}
             placeholder={t("imports.wizard.source.spacePlaceholder")}
             invalid={Boolean(error)}
-            onValueChange={(spaceKey) =>
+            onValueChange={(spaceKey) => {
+              if (!spaceKey) return;
               void patch({ options: { spaceKey } }).catch((cause: unknown) =>
                 failed(t("imports.wizard.saveFailed"), cause),
-              )
-            }
-            options={spaces.map((space) => ({ value: space.key, label: `${space.name} (${space.key})` }))}
+              );
+            }}
+            items={spaces.map((space) => ({
+              value: space.key,
+              label: space.name,
+              description: space.key,
+              keywords: [space.key],
+            }))}
           />
         </Field>
       </div>
