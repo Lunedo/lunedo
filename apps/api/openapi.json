@@ -38168,6 +38168,8 @@
                             "description": "Kind of problem. New values can be added in later versions; handle unknown values.",
                             "x-extensible-enum": [
                               "unsupportedMacro",
+                              "unmappedQuery",
+                              "macroOptionDropped",
                               "missingAttachment",
                               "attachmentFileMissing",
                               "attachmentTooLarge",
@@ -38176,6 +38178,7 @@
                               "unsupportedLink",
                               "invalidLink",
                               "externalImage",
+                              "unresolvedInclude",
                               "invalidContent",
                               "contentTruncated",
                               "macroDataTruncated",
@@ -165397,6 +165400,409 @@
         }
       }
     },
+    "/api/v1/pages/{pageId}/inclusion": {
+      "get": {
+        "operationId": "reports.inclusion",
+        "summary": "Get content included in a page",
+        "description": "Returns the published content of another page, or its excerpt, as an include block of the page shows it, with the caller's permissions. A page that was not part of a Confluence import is found by its space key and title once it is imported into the organization. A page the caller cannot read answers like a page that does not exist.\n\nRequires the permission `item.view` on the item in `pageId`.",
+        "tags": [
+          "Reports"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.view",
+          "resource": "item",
+          "parameter": "pageId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "pageId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the page that shows the block.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "targetId",
+            "in": "query",
+            "required": false,
+            "description": "The page to include.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "sourceSpace",
+            "in": "query",
+            "required": false,
+            "description": "Confluence space key of an included page that was not part of the import.",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "sourceTitle",
+            "in": "query",
+            "required": false,
+            "description": "Confluence title of an included page that was not part of the import.",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "excerpt",
+            "in": "query",
+            "required": false,
+            "description": "`true` gives only the excerpt of the page.",
+            "schema": {
+              "default": "false",
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "description": "Name of the excerpt. Leave it out for the first excerpt.",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The included content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "string",
+                      "description": "`visible` with the content, or `noExcerpt` when the page has no excerpt of that name. New values can be added in later versions; handle unknown values.",
+                      "x-extensible-enum": [
+                        "visible",
+                        "noExcerpt"
+                      ]
+                    },
+                    "page": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "ID of the included page."
+                        },
+                        "title": {
+                          "type": "string",
+                          "description": "Title of the included page."
+                        },
+                        "path": {
+                          "type": "string",
+                          "description": "Path of the included page in the web interface."
+                        },
+                        "spaceId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "Space of the included page."
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "title",
+                        "path",
+                        "spaceId"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The included page."
+                    },
+                    "document": {
+                      "anyOf": [
+                        {
+                          "description": "Page content as ProseMirror JSON, as defined by the editor schema: an object with `type: \"doc\"` and `content`.",
+                          "$ref": "#/components/schemas/Schema113ae44d8375"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The published content, or only its excerpt. Null without excerpt."
+                    },
+                    "references": {
+                      "type": "object",
+                      "properties": {
+                        "people": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": "string",
+                            "description": "Name of the person."
+                          },
+                          "description": "Names of mentioned people the caller may see, by account ID."
+                        },
+                        "pages": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                              "title": {
+                                "type": "string",
+                                "description": "Title, or empty without access."
+                              },
+                              "spaceKey": {
+                                "type": "string",
+                                "description": "Key of the page's space, or empty without access."
+                              },
+                              "kind": {
+                                "type": "string",
+                                "description": "Kind of the item."
+                              },
+                              "accessible": {
+                                "type": "boolean",
+                                "description": "Whether the caller can open the page."
+                              },
+                              "inTrash": {
+                                "type": "boolean",
+                                "description": "Whether the page is in the trash. Then only the title is given, as `In trash`."
+                              }
+                            },
+                            "required": [
+                              "title",
+                              "spaceKey",
+                              "kind",
+                              "accessible",
+                              "inTrash"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A linked page."
+                          },
+                          "description": "Linked pages by ID."
+                        },
+                        "topics": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                              "title": {
+                                "type": "string",
+                                "description": "Title of the running topic."
+                              },
+                              "status": {
+                                "type": "string",
+                                "description": "Whether the topic is still open. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "open",
+                                  "closed"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "title",
+                              "status"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A running topic."
+                          },
+                          "description": "Running topics that topic updates and decisions in the document refer to, by ID, as far as the caller may see them."
+                        }
+                      },
+                      "required": [
+                        "people",
+                        "pages",
+                        "topics"
+                      ],
+                      "additionalProperties": false,
+                      "description": "What mentions and page links in the document point to, as far as the caller may see it."
+                    }
+                  },
+                  "required": [
+                    "state",
+                    "page",
+                    "document",
+                    "references"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Content included from another page."
+                },
+                "example": {
+                  "state": "visible",
+                  "page": {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5c11",
+                    "title": "VPN access for remote staff",
+                    "path": "/spaces/ITOPS/pages/01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5c11/vpn-access-for-remote-staff",
+                    "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10"
+                  },
+                  "document": {
+                    "type": "doc",
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "content": [
+                          {
+                            "type": "text",
+                            "text": "Connect through WireGuard."
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "references": {
+                    "people": {},
+                    "pages": {},
+                    "topics": {}
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/pages/{pageId}/labels": {
       "get": {
         "operationId": "items.labels",
@@ -167684,6 +168090,205 @@
                       "title": "Too many reactions from one person",
                       "status": 409,
                       "code": "tooManyReactions"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pages/{pageId}/related-labels": {
+      "get": {
+        "operationId": "reports.relatedLabels",
+        "summary": "List labels related to a page",
+        "description": "Lists labels that are used on pages the caller can read together with the labels of the page, or with the given labels, most used first, as the related labels block shows them.\n\nRequires the permission `item.view` on the item in `pageId`.",
+        "tags": [
+          "Reports"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.view",
+          "resource": "item",
+          "parameter": "pageId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "pageId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the page that shows the block.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "labels",
+            "in": "query",
+            "required": false,
+            "description": "Labels to start from. Leave it out for the labels of the page. Up to 20 labels, separated by commas.",
+            "schema": {
+              "type": "string",
+              "maxLength": 2100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The labels.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "label": {
+                        "type": "string",
+                        "description": "A label."
+                      },
+                      "href": {
+                        "type": "string",
+                        "description": "Path of the label in the space of the page."
+                      }
+                    },
+                    "required": [
+                      "label",
+                      "href"
+                    ],
+                    "additionalProperties": false,
+                    "description": "A label used together with the given labels."
+                  },
+                  "description": "Labels, most used first."
+                },
+                "example": [
+                  {
+                    "label": "network",
+                    "href": "/spaces/ITOPS/labels/network"
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
                     }
                   }
                 }
@@ -171416,6 +172021,327 @@
         }
       }
     },
+    "/api/v1/reports/content-by-label": {
+      "get": {
+        "operationId": "reports.contentByLabel",
+        "summary": "List pages and blog posts with labels",
+        "description": "Lists pages and blog posts the caller can read that have the given labels, as the content by label block shows them. Archived content is left out unless the list is limited to archived spaces.\n\nRequires the permission `instance.content.view` on the instance.",
+        "tags": [
+          "Reports"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.content.view",
+          "resource": "instance"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "labels",
+            "in": "query",
+            "required": false,
+            "description": "Pages with these labels. Without labels the list is empty. Up to 20 labels, separated by commas.",
+            "schema": {
+              "type": "string",
+              "maxLength": 2100
+            }
+          },
+          {
+            "name": "matchAll",
+            "in": "query",
+            "required": false,
+            "description": "`true` lists only pages with all of the labels, `false` (default) pages with any of them.",
+            "schema": {
+              "default": "false",
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          },
+          {
+            "name": "spaceIds",
+            "in": "query",
+            "required": false,
+            "description": "Only pages in these spaces. Leave it out for every space the caller can read. Up to 20 space IDs, separated by commas.",
+            "schema": {
+              "type": "string",
+              "maxLength": 800
+            }
+          },
+          {
+            "name": "kinds",
+            "in": "query",
+            "required": false,
+            "description": "`page`, `blogPost` or both, separated by commas (default).",
+            "schema": {
+              "type": "string",
+              "maxLength": 40
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "description": "`modified` (default) or `created`, newest first, or `title` from A to Z.",
+            "schema": {
+              "default": "modified",
+              "type": "string",
+              "enum": [
+                "modified",
+                "created",
+                "title"
+              ]
+            }
+          },
+          {
+            "name": "reverse",
+            "in": "query",
+            "required": false,
+            "description": "`true` reverses the order.",
+            "schema": {
+              "default": "false",
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of pages, 1 to 100.",
+            "schema": {
+              "default": 5,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "excerpts",
+            "in": "query",
+            "required": false,
+            "description": "`true` adds the excerpt of each page.",
+            "schema": {
+              "default": "false",
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The pages and blog posts.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID of the page or blog post."
+                      },
+                      "title": {
+                        "type": "string",
+                        "description": "Title."
+                      },
+                      "kind": {
+                        "type": "string",
+                        "description": "`page` or `blogPost`. New values can be added in later versions; handle unknown values.",
+                        "x-extensible-enum": [
+                          "page",
+                          "blogPost"
+                        ]
+                      },
+                      "path": {
+                        "type": "string",
+                        "description": "Path in the web interface."
+                      },
+                      "space": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the space."
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Name of the space, or empty when the caller has no access to the space itself."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name"
+                        ],
+                        "additionalProperties": false,
+                        "description": "The space."
+                      },
+                      "labels": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "description": "A label."
+                        },
+                        "description": "Labels, sorted."
+                      },
+                      "excerpt": {
+                        "description": "Plain text of the excerpt when asked for, or the excerpt of a blog post; null otherwise.",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "title",
+                      "kind",
+                      "path",
+                      "space",
+                      "labels",
+                      "excerpt"
+                    ],
+                    "additionalProperties": false,
+                    "description": "A page or blog post with a label."
+                  },
+                  "description": "Pages and blog posts in the requested order."
+                },
+                "example": [
+                  {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5c11",
+                    "title": "VPN access for remote staff",
+                    "kind": "page",
+                    "path": "/spaces/ITOPS/pages/01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5c11/vpn-access-for-remote-staff",
+                    "space": {
+                      "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
+                      "name": "IT operations"
+                    },
+                    "labels": [
+                      "how-to",
+                      "vpn"
+                    ],
+                    "excerpt": "Remote staff connect through WireGuard."
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/reports/decisions": {
       "get": {
         "operationId": "reports.decisions",
@@ -171877,6 +172803,522 @@
                     "updatedAt": "2026-10-06T07:00:00.000Z"
                   }
                 ]
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reports/properties": {
+      "get": {
+        "operationId": "reports.properties",
+        "summary": "List pages for a page properties report",
+        "description": "Lists pages the caller can read that have page properties, filtered by spaces, labels and the ID of the property set, with the values of the chosen properties, as the page properties report block shows them. Only the published version of a page counts; drafts are left out. Pages the caller cannot read are never counted, named or used for sorting.\n\nRequires the permission `instance.content.view` on the instance.",
+        "tags": [
+          "Reports"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.content.view",
+          "resource": "instance"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceIds",
+            "in": "query",
+            "required": false,
+            "description": "Only pages in these spaces. Leave it out for every space the caller can read. Up to 20 space IDs, separated by commas.",
+            "schema": {
+              "type": "string",
+              "maxLength": 800
+            }
+          },
+          {
+            "name": "labels",
+            "in": "query",
+            "required": false,
+            "description": "Only pages with at least one of these labels. Up to 20 labels, separated by commas.",
+            "schema": {
+              "type": "string",
+              "maxLength": 2100
+            }
+          },
+          {
+            "name": "setId",
+            "in": "query",
+            "required": false,
+            "description": "Only the page properties with this ID. Leave it out for all page properties of a page.",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "columns",
+            "in": "query",
+            "required": false,
+            "description": "Property names to show as columns, separated by commas, up to 30. Leave it out for the names used on the listed pages. Names are compared without case.",
+            "schema": {
+              "type": "string",
+              "maxLength": 6030
+            }
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "required": false,
+            "description": "Sort by the value of this property. Leave it out to sort by title. Pages without the property come last.",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "reverse",
+            "in": "query",
+            "required": false,
+            "description": "`true` sorts from Z to A.",
+            "schema": {
+              "default": "false",
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "description": "Number of pages per page of results, 1 to 100.",
+            "schema": {
+              "default": 30,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "description": "Number of pages to skip, for the next pages of results.",
+            "schema": {
+              "default": 0,
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of the report.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "columns": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "description": "Property name."
+                      },
+                      "description": "Columns in the order of the cells."
+                    },
+                    "keys": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "description": "Property name."
+                      },
+                      "description": "Property names used on the pages that match, as choices for the columns."
+                    },
+                    "total": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of matching pages the caller can read."
+                    },
+                    "rows": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "page": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "ID of the page."
+                              },
+                              "title": {
+                                "type": "string",
+                                "description": "Title of the page."
+                              },
+                              "path": {
+                                "type": "string",
+                                "description": "Path of the page in the web interface."
+                              },
+                              "spaceId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "Space of the page."
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "title",
+                              "path",
+                              "spaceId"
+                            ],
+                            "additionalProperties": false,
+                            "description": "The page."
+                          },
+                          "creator": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "Account ID."
+                                  },
+                                  "name": {
+                                    "description": "Name, or null when the caller may not see the person.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Who created the page, or null when the caller may not see that person."
+                          },
+                          "labels": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "description": "A label."
+                            },
+                            "description": "Labels of the page."
+                          },
+                          "cells": {
+                            "type": "array",
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "description": "A paragraph or list as ProseMirror JSON.",
+                                    "$ref": "#/components/schemas/Schema113ae44d8375"
+                                  }
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Value of the property as ProseMirror blocks: paragraphs and lists with links, mentions, dates and status."
+                            },
+                            "description": "One value per column, or null when the page does not have the property."
+                          }
+                        },
+                        "required": [
+                          "page",
+                          "creator",
+                          "labels",
+                          "cells"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A page with its properties."
+                      },
+                      "description": "Pages in the requested order."
+                    },
+                    "references": {
+                      "type": "object",
+                      "properties": {
+                        "people": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": "string",
+                            "description": "Name of the person."
+                          },
+                          "description": "Names of mentioned people the caller may see, by account ID."
+                        },
+                        "pages": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                              "title": {
+                                "type": "string",
+                                "description": "Title, or empty without access."
+                              },
+                              "spaceKey": {
+                                "type": "string",
+                                "description": "Key of the page's space, or empty without access."
+                              },
+                              "kind": {
+                                "type": "string",
+                                "description": "Kind of the item."
+                              },
+                              "accessible": {
+                                "type": "boolean",
+                                "description": "Whether the caller can open the page."
+                              },
+                              "inTrash": {
+                                "type": "boolean",
+                                "description": "Whether the page is in the trash. Then only the title is given, as `In trash`."
+                              }
+                            },
+                            "required": [
+                              "title",
+                              "spaceKey",
+                              "kind",
+                              "accessible",
+                              "inTrash"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A linked page."
+                          },
+                          "description": "Linked pages by ID."
+                        },
+                        "topics": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                              "title": {
+                                "type": "string",
+                                "description": "Title of the running topic."
+                              },
+                              "status": {
+                                "type": "string",
+                                "description": "Whether the topic is still open. New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "open",
+                                  "closed"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "title",
+                              "status"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A running topic."
+                          },
+                          "description": "Running topics that topic updates and decisions in the document refer to, by ID, as far as the caller may see them."
+                        }
+                      },
+                      "required": [
+                        "people",
+                        "pages",
+                        "topics"
+                      ],
+                      "additionalProperties": false,
+                      "description": "What mentions and page links in the document point to, as far as the caller may see it."
+                    }
+                  },
+                  "required": [
+                    "columns",
+                    "keys",
+                    "total",
+                    "rows",
+                    "references"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A page of a page properties report."
+                },
+                "example": {
+                  "columns": [
+                    "Owner",
+                    "Uplink"
+                  ],
+                  "keys": [
+                    "Owner",
+                    "Uplink",
+                    "Switches"
+                  ],
+                  "total": 1,
+                  "rows": [
+                    {
+                      "page": {
+                        "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5c11",
+                        "title": "Site Graz",
+                        "path": "/spaces/ITOPS/pages/01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5c11/site-graz",
+                        "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10"
+                      },
+                      "creator": {
+                        "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                        "name": "Anna Berger"
+                      },
+                      "labels": [
+                        "site"
+                      ],
+                      "cells": [
+                        [
+                          {
+                            "type": "paragraph",
+                            "content": [
+                              {
+                                "type": "mention",
+                                "attrs": {
+                                  "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20"
+                                }
+                              }
+                            ]
+                          }
+                        ],
+                        [
+                          {
+                            "type": "paragraph",
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "1 Gbit/s fibre"
+                              }
+                            ]
+                          }
+                        ]
+                      ]
+                    }
+                  ],
+                  "references": {
+                    "people": {
+                      "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20": "Anna Berger"
+                    },
+                    "pages": {},
+                    "topics": {}
+                  }
+                }
               }
             }
           },

@@ -1,14 +1,25 @@
 import {
   ANCHOR_CONTEXT_LENGTH,
   cleanLabel,
+  contentLabelSorts,
+  DEFAULT_CONTENT_BY_LABEL_LIMIT,
   DEFAULT_PAGE_REPORT_LIMIT,
+  DEFAULT_PROPERTIES_REPORT_PAGE_SIZE,
   decisionReportOrders,
   EXCERPT_MAX_LENGTH,
   ITEM_TITLE_MAX_LENGTH,
+  labeledContentKinds,
+  MAX_CONTENT_BY_LABEL_LIMIT,
   MAX_DECISION_REPORT_PAGE,
+  MAX_EXCERPT_NAME_LENGTH,
   MAX_FILTER_LABELS,
   MAX_FILTER_PAGES,
+  MAX_FILTER_SPACES,
   MAX_PAGE_REPORT_LIMIT,
+  MAX_PROPERTIES_REPORT_COLUMNS,
+  MAX_PROPERTIES_REPORT_PAGE_SIZE,
+  MAX_PROPERTY_KEY_LENGTH,
+  MAX_PROPERTY_SET_ID_LENGTH,
   MAX_QUOTE_LENGTH,
   pageReportSorts,
   taskReportDueWindows,
@@ -17,7 +28,7 @@ import {
 } from "@pagehall/server";
 import { z } from "zod";
 import { extensibleEnum, inputTimestamp, timestamp, uuid } from "../http/schemas.js";
-import { exampleItem, exampleSpace } from "../spaces/schemas.js";
+import { documentSchema, exampleItem, exampleSpace, pageReferencesSchema } from "../spaces/schemas.js";
 
 const person = (description: string) =>
   z
@@ -604,3 +615,257 @@ export const decisionReportSchema = z
     nextCursor: z.string().nullable().describe("Cursor for the next page, or null on the last page."),
   })
   .describe("Decisions.");
+
+const booleanFlag = (description: string) =>
+  z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true")
+    .describe(description);
+
+export function spaceIdList(description: string) {
+  return z
+    .string()
+    .max(800)
+    .transform((value) => value.split(",").filter(Boolean))
+    .pipe(z.array(uuid("Space ID.")).max(MAX_FILTER_SPACES))
+    .optional()
+    .describe(`${description} Up to ${MAX_FILTER_SPACES} space IDs, separated by commas.`);
+}
+
+const propertyName = z
+  .string()
+  .trim()
+  .min(1)
+  .max(MAX_PROPERTY_KEY_LENGTH)
+  .describe(`Name of a page property, up to ${MAX_PROPERTY_KEY_LENGTH} characters.`);
+
+export const propertiesReportQuerySchema = z
+  .object({
+    spaceIds: spaceIdList("Only pages in these spaces. Leave it out for every space the caller can read."),
+    labels: labelList("Only pages with at least one of these labels."),
+    setId: z
+      .string()
+      .trim()
+      .min(1)
+      .max(MAX_PROPERTY_SET_ID_LENGTH)
+      .optional()
+      .describe("Only the page properties with this ID. Leave it out for all page properties of a page."),
+    columns: z
+      .string()
+      .max(MAX_PROPERTIES_REPORT_COLUMNS * (MAX_PROPERTY_KEY_LENGTH + 1))
+      .transform((value) =>
+        value
+          .split(",")
+          .map((part) => part.trim())
+          .filter(Boolean),
+      )
+      .pipe(z.array(propertyName).max(MAX_PROPERTIES_REPORT_COLUMNS))
+      .optional()
+      .describe(
+        `Property names to show as columns, separated by commas, up to ${MAX_PROPERTIES_REPORT_COLUMNS}. Leave it out for the names used on the listed pages. Names are compared without case.`,
+      ),
+    sortBy: propertyName
+      .optional()
+      .describe(
+        "Sort by the value of this property. Leave it out to sort by title. Pages without the property come last.",
+      ),
+    reverse: booleanFlag("`true` sorts from Z to A."),
+    pageSize: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(MAX_PROPERTIES_REPORT_PAGE_SIZE)
+      .default(DEFAULT_PROPERTIES_REPORT_PAGE_SIZE)
+      .describe(`Number of pages per page of results, 1 to ${MAX_PROPERTIES_REPORT_PAGE_SIZE}.`),
+    offset: z.coerce
+      .number()
+      .int()
+      .min(0)
+      .max(1_000_000)
+      .default(0)
+      .describe("Number of pages to skip, for the next pages of results."),
+  })
+  .strict();
+
+const valueSchema = z
+  .array(z.json().describe("A paragraph or list as ProseMirror JSON."))
+  .describe(
+    "Value of the property as ProseMirror blocks: paragraphs and lists with links, mentions, dates and status.",
+  );
+
+export const propertiesReportSchema = z
+  .object({
+    columns: z.array(z.string().describe("Property name.")).describe("Columns in the order of the cells."),
+    keys: z
+      .array(z.string().describe("Property name."))
+      .describe("Property names used on the pages that match, as choices for the columns."),
+    total: z.number().int().describe("Number of matching pages the caller can read."),
+    rows: z
+      .array(
+        z
+          .object({
+            page: z
+              .object({
+                id: uuid("ID of the page."),
+                title: z.string().describe("Title of the page."),
+                path: z.string().describe("Path of the page in the web interface."),
+                spaceId: uuid("Space of the page."),
+              })
+              .describe("The page."),
+            creator: person(
+              "Who created the page, or null when the caller may not see that person.",
+            ).nullable(),
+            labels: z.array(z.string().describe("A label.")).describe("Labels of the page."),
+            cells: z
+              .array(valueSchema.nullable())
+              .describe("One value per column, or null when the page does not have the property."),
+          })
+          .describe("A page with its properties."),
+      )
+      .describe("Pages in the requested order."),
+    references: pageReferencesSchema,
+  })
+  .describe("A page of a page properties report.");
+
+export const examplePropertiesReport = {
+  columns: ["Owner", "Uplink"],
+  keys: ["Owner", "Uplink", "Switches"],
+  total: 1,
+  rows: [
+    {
+      page: {
+        id: exampleReportPage.id,
+        title: "Site Graz",
+        path: `/spaces/ITOPS/pages/${exampleReportPage.id}/site-graz`,
+        spaceId: exampleSpace.id,
+      },
+      creator: exampleReportPage.author,
+      labels: ["site"],
+      cells: [
+        [{ type: "paragraph", content: [{ type: "mention", attrs: { id: exampleReportPage.author.id } }] }],
+        [{ type: "paragraph", content: [{ type: "text", text: "1 Gbit/s fibre" }] }],
+      ],
+    },
+  ],
+  references: { people: { [exampleReportPage.author.id]: "Anna Berger" }, pages: {}, topics: {} },
+};
+
+export const contentByLabelQuerySchema = z
+  .object({
+    labels: labelList("Pages with these labels. Without labels the list is empty."),
+    matchAll: booleanFlag(
+      "`true` lists only pages with all of the labels, `false` (default) pages with any of them.",
+    ),
+    spaceIds: spaceIdList("Only pages in these spaces. Leave it out for every space the caller can read."),
+    kinds: z
+      .string()
+      .max(40)
+      .transform((value) => value.split(",").filter(Boolean))
+      .pipe(z.array(z.enum(labeledContentKinds)).min(1))
+      .default(["page", "blogPost"])
+      .describe("`page`, `blogPost` or both, separated by commas (default)."),
+    sort: z
+      .enum(contentLabelSorts)
+      .default("modified")
+      .describe("`modified` (default) or `created`, newest first, or `title` from A to Z."),
+    reverse: booleanFlag("`true` reverses the order."),
+    limit: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(MAX_CONTENT_BY_LABEL_LIMIT)
+      .default(DEFAULT_CONTENT_BY_LABEL_LIMIT)
+      .describe(`Maximum number of pages, 1 to ${MAX_CONTENT_BY_LABEL_LIMIT}.`),
+    excerpts: booleanFlag("`true` adds the excerpt of each page."),
+  })
+  .strict();
+
+export const labeledContentSchema = z
+  .object({
+    id: uuid("ID of the page or blog post."),
+    title: z.string().describe("Title."),
+    kind: extensibleEnum(labeledContentKinds, "`page` or `blogPost`."),
+    path: z.string().describe("Path in the web interface."),
+    space: z
+      .object({
+        id: uuid("ID of the space."),
+        name: z
+          .string()
+          .describe("Name of the space, or empty when the caller has no access to the space itself."),
+      })
+      .describe("The space."),
+    labels: z.array(z.string().describe("A label.")).describe("Labels, sorted."),
+    excerpt: z
+      .string()
+      .nullable()
+      .describe("Plain text of the excerpt when asked for, or the excerpt of a blog post; null otherwise."),
+  })
+  .describe("A page or blog post with a label.");
+
+export const relatedLabelsQuerySchema = z
+  .object({
+    labels: labelList("Labels to start from. Leave it out for the labels of the page."),
+  })
+  .strict();
+
+export const relatedLabelSchema = z
+  .object({
+    label: z.string().describe("A label."),
+    href: z.string().describe("Path of the label in the space of the page."),
+  })
+  .describe("A label used together with the given labels.");
+
+export const inclusionQuerySchema = z
+  .object({
+    targetId: uuid("The page to include.").optional(),
+    sourceSpace: z
+      .string()
+      .min(1)
+      .max(255)
+      .optional()
+      .describe("Confluence space key of an included page that was not part of the import."),
+    sourceTitle: z
+      .string()
+      .min(1)
+      .max(255)
+      .optional()
+      .describe("Confluence title of an included page that was not part of the import."),
+    excerpt: booleanFlag("`true` gives only the excerpt of the page."),
+    name: z
+      .string()
+      .min(1)
+      .max(MAX_EXCERPT_NAME_LENGTH)
+      .optional()
+      .describe("Name of the excerpt. Leave it out for the first excerpt."),
+  })
+  .strict()
+  .refine(
+    (query) => (query.targetId === undefined) !== (query.sourceTitle === undefined),
+    "Give either targetId or sourceTitle",
+  )
+  .refine(
+    (query) => (query.sourceSpace === undefined) === (query.sourceTitle === undefined),
+    "sourceSpace and sourceTitle go together",
+  );
+
+export const inclusionSchema = z
+  .object({
+    state: extensibleEnum(
+      ["visible", "noExcerpt"],
+      "`visible` with the content, or `noExcerpt` when the page has no excerpt of that name.",
+    ),
+    page: z
+      .object({
+        id: uuid("ID of the included page."),
+        title: z.string().describe("Title of the included page."),
+        path: z.string().describe("Path of the included page in the web interface."),
+        spaceId: uuid("Space of the included page."),
+      })
+      .describe("The included page."),
+    document: documentSchema
+      .nullable()
+      .describe("The published content, or only its excerpt. Null without excerpt."),
+    references: pageReferencesSchema,
+  })
+  .describe("Content included from another page.");

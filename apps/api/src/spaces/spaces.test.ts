@@ -221,6 +221,100 @@ describe.skipIf(!databaseBaseUrl)("spaces and pages through the API", () => {
     ]);
   });
 
+  it("serves page properties reports, labeled content, related labels and includes with the reader's permissions", async () => {
+    const creator = await person();
+    const reader = await person();
+    const space = await createSpace(creator.client, [
+      { principalKind: "account", principalId: reader.id, role: "reader" },
+    ]);
+    const properties = (owner: string) => ({
+      type: "pageProperties",
+      content: [
+        {
+          type: "pageProperty",
+          content: [
+            { type: "pagePropertyKey", content: [{ type: "text", text: "Owner" }] },
+            { type: "pagePropertyValue", content: [paragraph(owner)] },
+          ],
+        },
+      ],
+    });
+    const open = await createPage(creator.client, space.id, "Open site");
+    const secret = await createPage(creator.client, space.id, "Secret site");
+    for (const [page, owner] of [
+      [open, "Anna"],
+      [secret, "Board"],
+    ] as const) {
+      const stored = await creator.client.put(`/api/v1/pages/${page.id}/content`, {
+        document: {
+          type: "doc",
+          content: [properties(owner), { type: "excerpt", content: [paragraph(`${owner} in short`)] }],
+        },
+      });
+      expect(stored.statusCode, stored.body).toBe(200);
+      for (const label of ["site", owner.toLowerCase()]) {
+        expect((await creator.client.post(`/api/v1/pages/${page.id}/labels`, { label })).statusCode).toBe(
+          200,
+        );
+      }
+    }
+    expect(
+      (
+        await creator.client.post(`/api/v1/pages/${secret.id}/access`, {
+          changes: [{ action: "restrict", kind: "view" }],
+        })
+      ).statusCode,
+    ).toBe(200);
+    const report = await reader.client.get(
+      `/api/v1/reports/properties?spaceIds=${space.id}&labels=site&columns=Owner&sortBy=Owner`,
+    );
+    expect(report.statusCode, report.body).toBe(200);
+    expect(report.json()).toMatchObject({
+      columns: ["Owner"],
+      keys: ["Owner"],
+      total: 1,
+      rows: [{ page: { id: open.id, title: "Open site" }, cells: [[{ type: "paragraph" }]] }],
+    });
+    expect(report.body).not.toMatch(/Board|Secret/);
+    expect((await creator.client.get(`/api/v1/reports/properties?labels=site`)).json().total).toBe(2);
+    const labeled = await reader.client.get("/api/v1/reports/content-by-label?labels=site&excerpts=true");
+    expect(labeled.json()).toEqual([
+      expect.objectContaining({
+        id: open.id,
+        kind: "page",
+        excerpt: "Anna in short",
+        labels: ["anna", "site"],
+      }),
+    ]);
+    const related = await reader.client.get(`/api/v1/pages/${open.id}/related-labels?labels=site`);
+    expect(related.json()).toEqual([{ label: "anna", href: `/spaces/${space.key}/labels/anna` }]);
+    const included = await reader.client.get(
+      `/api/v1/pages/${open.id}/inclusion?targetId=${open.id}&excerpt=true`,
+    );
+    expect(included.statusCode, included.body).toBe(200);
+    expect(included.json()).toMatchObject({
+      state: "visible",
+      page: { id: open.id },
+      document: { type: "doc", content: [{ type: "paragraph" }] },
+    });
+    const hidden = await reader.client.get(`/api/v1/pages/${open.id}/inclusion?targetId=${secret.id}`);
+    const unknown = await reader.client.get(`/api/v1/pages/${open.id}/inclusion?targetId=${randomUUID()}`);
+    expect(hidden.statusCode).toBe(404);
+    expect(unknown.statusCode).toBe(404);
+    expect(hidden.json().detail).toBe(unknown.json().detail);
+    expect((await reader.client.get(`/api/v1/pages/${secret.id}/related-labels`)).statusCode).toBe(404);
+    for (const invalid of [
+      "/api/v1/reports/properties?pageSize=101",
+      "/api/v1/reports/properties?spaceIds=IT",
+      "/api/v1/reports/content-by-label?kinds=attachment",
+      `/api/v1/pages/${open.id}/inclusion`,
+      `/api/v1/pages/${open.id}/inclusion?targetId=${open.id}&sourceTitle=Runbook&sourceSpace=OPS`,
+      `/api/v1/pages/${open.id}/inclusion?sourceTitle=Runbook`,
+    ]) {
+      expect((await reader.client.get(invalid)).statusCode, invalid).toBe(400);
+    }
+  });
+
   it("reports pages, decisions and tasks through the API with only what the reader may see", async () => {
     const creator = await person();
     const reader = await person();
