@@ -303,6 +303,52 @@ describe.skipIf(!baseUrl)("attachments", () => {
     expect(await versionNumbers(context, String(attrs.sceneId))).toEqual([8, 7, 4, 3, 2, 1]);
   });
 
+  it("keeps the diagram file and image versions that page versions still show", async () => {
+    const context = await setup();
+    await test.settings.set(
+      keepVersionsSetting,
+      { organization: context.org.id, space: context.space.id },
+      "space",
+      1,
+    );
+    const page = await test.services.tree.create(context.editor, context.space.id, {
+      kind: "page",
+      title: "Network",
+      mode: "publish",
+      placement: { parentId: null },
+    });
+    const blockId = randomUUID();
+    const save = async (label: string) => {
+      const source = await test.services.diagrams.saveDrawio(context.editor, page.id, {
+        blockId,
+        body: Readable.from([
+          Buffer.from(`<mxGraphModel><root><mxCell id="0" value="${label}"/></root></mxGraphModel>`),
+        ]),
+      });
+      const image = await test.services.diagrams.savePreview(context.editor, page.id, {
+        type: "drawio",
+        blockId,
+        body: Readable.from([
+          Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg"><text>${label}</text></svg>`),
+        ]),
+      });
+      return { ...source, ...image };
+    };
+    for (const label of ["One", "Two", "Three"]) {
+      const saved = await save(label);
+      await test.services.documents.replace(context.editor, page.id, {
+        type: "doc",
+        content: [{ type: "drawio", attrs: { id: blockId, ...saved } }],
+      });
+      await test.services.versions.publish(context.editor, page.id);
+    }
+    const unreferenced = await save("Four");
+    await save("Five");
+    expect(await versionNumbers(context, unreferenced.sourceId)).toEqual([5, 3, 2, 1]);
+    expect(await versionNumbers(context, unreferenced.previewId)).toEqual([5, 3, 2, 1]);
+    expect(await read(unreferenced.sourceId, 1)).toContain('value="One"');
+  });
+
   it("stores identical content of one space once, encrypted, and keeps it while any version uses it", async () => {
     const context = await setup();
     const content = randomBytes(5000).toString("base64");

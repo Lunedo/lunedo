@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_PREVIEW_BYTES, SvgRejectedError, sanitizeSvg } from "./svg.js";
+import { MAX_PREVIEW_BYTES, SvgRejectedError, sanitizeDiagramSvg, sanitizeSvg } from "./svg.js";
 
 const NS = 'xmlns="http://www.w3.org/2000/svg"';
 const PNG = "data:image/png;base64,iVBORw0KGgo=";
@@ -66,5 +66,47 @@ describe("sanitizeSvg", () => {
     expect(() => sanitizeSvg(`<svg ${NS}>${" ".repeat(MAX_PREVIEW_BYTES)}</svg>`)).toThrow(SvgRejectedError);
     const deep = `${"<g>".repeat(100)}${"</g>".repeat(100)}`;
     expect(() => sanitizeSvg(`<svg ${NS}>${deep}</svg>`)).toThrow(SvgRejectedError);
+  });
+});
+
+describe("sanitizeDiagramSvg", () => {
+  it("keeps arrowheads, styles and shadows of Mermaid and PlantUML diagrams and collects their text", () => {
+    const result = sanitizeDiagramSvg(
+      `<svg ${NS} width="300" height="120" viewBox="0 0 300 120"><style>#m .node rect{fill:#ececff;stroke:#9370db}</style>
+        <defs><marker id="m_arrow" refX="5" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z"/></marker>
+        <filter id="f1" filterUnits="userSpaceOnUse"><feGaussianBlur stdDeviation="2" result="b"/><feOffset dx="2" dy="2" in="b"/></filter></defs>
+        <g class="node" filter="url(#f1)"><rect width="80" height="40"/><text x="5" y="20" textLength="60" lengthAdjust="spacing"><tspan>Incident</tspan> <tspan>reported</tspan></text></g>
+        <path d="M80 20L200 20" marker-end="url(#m_arrow)"/><text>Ticket</text></svg>`,
+      MAX_PREVIEW_BYTES,
+    );
+    expect(result.svg).toContain('marker-end="url(#m_arrow)"');
+    expect(result.svg).toContain("<feGaussianBlur");
+    expect(result.svg).toContain('filter="url(#f1)"');
+    expect(result.svg).toContain('textLength="60"');
+    expect(result.svg).toContain("#m .node rect");
+    expect(result).toMatchObject({ text: "Incident reported\nTicket", width: 300, height: 120 });
+  });
+
+  it("keeps simple formatted labels of draw.io and drops everything active in them", () => {
+    const result = sanitizeDiagramSvg(
+      `<svg ${NS} viewBox="0 0 50 40"><switch><foreignObject requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" width="100%" height="100%">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; color: rgb(0, 0, 0);"><div><b>Core</b><br/>switch<iframe src="https://evil.example"/></div></div>
+        </foreignObject><text>Core switch</text></switch><a href="https://example.com"><rect width="1" height="1"/></a>
+        <image href="data:image/svg+xml;base64,PHN2Zy8+"/></svg>`,
+      MAX_PREVIEW_BYTES,
+    );
+    expect(result.svg).toContain(
+      '<div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; color: rgb(0, 0, 0);">',
+    );
+    expect(result.svg).toContain("<b>Core</b><br/>switch");
+    expect(result.svg).toContain('<rect width="1" height="1">');
+    expect(result.svg).toContain('href="data:image/svg+xml;base64,PHN2Zy8+"');
+    expect(result.svg).not.toMatch(/iframe|evil|example\.com|<a /);
+    expect(result).toMatchObject({ width: 50, height: 40 });
+    expect(result.text.split("\n")).toEqual(["Core", "switch", "Core switch"]);
+  });
+
+  it("applies the given size limit", () => {
+    expect(() => sanitizeDiagramSvg(`<svg ${NS}>${" ".repeat(100)}</svg>`, 50)).toThrow(SvgRejectedError);
   });
 });

@@ -10,6 +10,7 @@ import { CommentsController } from "../collaboration/comments.controller.js";
 import { HomeController } from "../collaboration/home.controller.js";
 import { ReportsController } from "../collaboration/reports.controller.js";
 import { TasksController } from "../collaboration/tasks.controller.js";
+import { DiagramsController } from "../diagrams/diagrams.controller.js";
 import { DocsController } from "../docs/docs.controller.js";
 import { ExportsController } from "../exports/exports.controller.js";
 import { RenderingController } from "../exports/rendering.controller.js";
@@ -80,6 +81,7 @@ export const apiControllers = (): Type[] => [
   PersonalSpacesController,
   VersionsController,
   WhiteboardsController,
+  DiagramsController,
   TrashController,
   TemplatesController,
   MeetingsController,

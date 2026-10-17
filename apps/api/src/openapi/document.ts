@@ -68,6 +68,7 @@ const TAG_DESCRIPTIONS: Record<string, string> = {
   Search: "Searching pages, blog posts and comments the caller can read.",
   Watching: "Watching and muting pages, blog posts, meeting series and spaces.",
   Storage: "Usage of the file store, warning levels and operations contacts of the instance.",
+  Diagrams: "Files and images of draw.io, Mermaid and PlantUML diagrams in pages.",
 };
 
 const ROOT = "root";

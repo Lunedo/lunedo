@@ -1,4 +1,10 @@
-import { commentKit, type DocumentJson, formatBytes, type RenderContext } from "@pagehall/editor-schema";
+import {
+  commentKit,
+  type DocumentJson,
+  diagramTypes,
+  formatBytes,
+  type RenderContext,
+} from "@pagehall/editor-schema";
 import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";
@@ -316,9 +322,11 @@ export class PagedExport {
         const id = image.attrs?.attachmentId;
         if (typeof id === "string") ids.add(id);
       }
-      for (const drawing of blocksOfType(page.document, "drawing")) {
-        const id = drawing.attrs?.previewId;
-        if (typeof id === "string") ids.add(id);
+      for (const type of ["drawing", ...diagramTypes]) {
+        for (const block of blocksOfType(page.document, type)) {
+          const id = block.attrs?.previewId;
+          if (typeof id === "string") ids.add(id);
+        }
       }
     }
     for (const id of ids) {

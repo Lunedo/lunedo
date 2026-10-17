@@ -47,6 +47,7 @@ import type { KeyRing } from "./crypto/key-ring.js";
 import type { KeyRingHolder } from "./crypto/key-ring-holder.js";
 import type { Database } from "./database/database.js";
 import type { DatabasePool } from "./database/pool.js";
+import { DiagramService } from "./diagrams/diagrams.js";
 import { ExportService } from "./exports/exports.js";
 import {
   EXPORT_CLEANUP_SCHEDULE,
@@ -260,6 +261,7 @@ export interface AccountServices {
   versions: VersionService;
   whiteboards: WhiteboardService;
   drawings: DrawingService;
+  diagrams: DiagramService;
   trash: TrashService;
   archive: ArchiveService;
   templates: TemplateService;
@@ -695,6 +697,7 @@ export function createAccountServices(options: {
     origin: documents.origin,
   });
   const drawings = new DrawingService({ database, attachments });
+  const diagrams = new DiagramService({ database, attachments });
   const searchAdapter = new PostgresSearchAdapter();
   const search = new SearchService({
     database,
@@ -922,6 +925,7 @@ export function createAccountServices(options: {
     attachments,
     whiteboards,
     drawings,
+    diagrams,
     guestShares,
     confidentialSpaces,
     meetings,
