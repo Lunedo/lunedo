@@ -26,6 +26,12 @@ function viewport(): HTMLElement {
   return element;
 }
 
+function showAllSheets(): void {
+  const box = document.querySelector<HTMLElement>("[data-vivliostyle-outer-zoom-box]");
+  const sheets = document.querySelector<HTMLElement>("[data-vivliostyle-spread-container]");
+  if (box && sheets) box.style.height = `${sheets.getBoundingClientRect().height}px`;
+}
+
 function render(html: string, options: PrintOptions): Promise<PrintResult> {
   const parsed = new DOMParser().parseFromString(html, "text/html");
   document.title = parsed.title || document.title;
@@ -37,6 +43,7 @@ function render(html: string, options: PrintOptions): Promise<PrintResult> {
   return new Promise((resolve, reject) => {
     viewer.addListener("readystatechange", () => {
       if (viewer.readyState !== ReadyState.COMPLETE) return;
+      showAllSheets();
       resolve({ pages: document.querySelectorAll("[data-vivliostyle-page-container]").length });
     });
     viewer.addListener("error", (payload) => {

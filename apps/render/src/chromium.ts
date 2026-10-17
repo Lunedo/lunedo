@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { type Browser, chromium } from "playwright-core";
+import { type Browser, type BrowserContext, chromium } from "playwright-core";
 import type { Renderer, RenderJob } from "./server.js";
 
 export const RENDER_ORIGIN = "https://render.invalid";
@@ -105,7 +105,9 @@ export class ChromiumRenderer implements Renderer {
   }
 
   async pdf(job: RenderJob, signal: AbortSignal): Promise<Buffer> {
+    signal.throwIfAborted();
     const browser = await this.#launch();
+    signal.throwIfAborted();
     const context = await browser.newContext({
       acceptDownloads: false,
       serviceWorkers: "block",
@@ -113,57 +115,65 @@ export class ChromiumRenderer implements Renderer {
       bypassCSP: false,
       viewport: { width: 1200, height: 1600 },
     });
-    const abort = () => {
-      void context.close();
-    };
+    let abort = () => {};
+    const stopped = new Promise<never>((_, reject) => {
+      abort = () => {
+        void context.close();
+        reject(signal.reason);
+      };
+    });
+    if (signal.aborted) abort();
     signal.addEventListener("abort", abort, { once: true });
     try {
-      await context.routeWebSocket(/.*/, (socket) => socket.close());
-      await context.route("**/*", async (route) => {
-        const url = new URL(route.request().url());
-        const asset =
-          url.origin === (job.baseUrl ?? RENDER_ORIGIN) ? job.assets.get(url.pathname) : undefined;
-        if (asset) {
-          await route.fulfill({ status: 200, contentType: asset.contentType, body: asset.data });
-          return;
-        }
-        if (url.origin === RENDER_ORIGIN) {
-          const file = await this.#viewerFile(url.pathname);
-          if (file) {
-            await route.fulfill({
-              status: 200,
-              contentType: file.contentType,
-              body: file.body,
-              headers:
-                url.pathname === "/print.html"
-                  ? { "content-security-policy": viewerContentSecurityPolicy(job.baseUrl) }
-                  : {},
-            });
-            return;
-          }
-        }
-        if (url.protocol === "data:" || url.protocol === "blob:") {
-          await route.continue();
-          return;
-        }
-        this.#options.onBlocked?.(`${url.origin}${url.pathname}`);
-        await route.abort("blockedbyclient");
-      });
-      const page = await context.newPage();
-      await page.goto(`${RENDER_ORIGIN}/print.html`, { waitUntil: "load" });
-      await page.waitForFunction(() => (globalThis as PrintWindow).pagehallPrint !== undefined);
-      await page.evaluate(
-        async ({ html, baseUrl }) => {
-          const viewer = (globalThis as PrintWindow).pagehallPrint;
-          if (!viewer) throw new Error("The print viewer did not start");
-          await viewer.render(html, baseUrl ? { baseUrl } : {});
-        },
-        { html: job.html, baseUrl: job.baseUrl },
-      );
-      return await page.pdf({ preferCSSPageSize: true, printBackground: true });
+      return await Promise.race([this.#print(context, job), stopped]);
     } finally {
       signal.removeEventListener("abort", abort);
       await context.close().catch(() => {});
     }
+  }
+
+  async #print(context: BrowserContext, job: RenderJob): Promise<Buffer> {
+    await context.routeWebSocket(/.*/, (socket) => socket.close());
+    await context.route("**/*", async (route) => {
+      const url = new URL(route.request().url());
+      const asset = url.origin === (job.baseUrl ?? RENDER_ORIGIN) ? job.assets.get(url.pathname) : undefined;
+      if (asset) {
+        await route.fulfill({ status: 200, contentType: asset.contentType, body: asset.data });
+        return;
+      }
+      if (url.origin === RENDER_ORIGIN) {
+        const file = await this.#viewerFile(url.pathname);
+        if (file) {
+          await route.fulfill({
+            status: 200,
+            contentType: file.contentType,
+            body: file.body,
+            headers:
+              url.pathname === "/print.html"
+                ? { "content-security-policy": viewerContentSecurityPolicy(job.baseUrl) }
+                : {},
+          });
+          return;
+        }
+      }
+      if (url.protocol === "data:" || url.protocol === "blob:") {
+        await route.continue();
+        return;
+      }
+      this.#options.onBlocked?.(`${url.origin}${url.pathname}`);
+      await route.abort("blockedbyclient");
+    });
+    const page = await context.newPage();
+    await page.goto(`${RENDER_ORIGIN}/print.html`, { waitUntil: "load" });
+    await page.waitForFunction(() => (globalThis as PrintWindow).pagehallPrint !== undefined);
+    await page.evaluate(
+      async ({ html, baseUrl }) => {
+        const viewer = (globalThis as PrintWindow).pagehallPrint;
+        if (!viewer) throw new Error("The print viewer did not start");
+        await viewer.render(html, baseUrl ? { baseUrl } : {});
+      },
+      { html: job.html, baseUrl: job.baseUrl },
+    );
+    return await page.pdf({ preferCSSPageSize: true, printBackground: true });
   }
 }

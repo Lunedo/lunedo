@@ -126,6 +126,26 @@ describe("render service", () => {
     expect(aborted).toBe(true);
   });
 
+  it("answers at the time limit even when the renderer does not stop, and keeps its slot until it does", async () => {
+    let finish = () => {};
+    let calls = 0;
+    const renderer = fakeRenderer(() => {
+      calls += 1;
+      return calls === 1 ? new Promise((resolve) => (finish = () => resolve(PDF))) : Promise.resolve(PDF);
+    });
+    const url = await start(renderer, { timeoutSeconds: 0.2, concurrency: 1, maxWaiting: 1 });
+    const started = Date.now();
+    const response = await post(url, job);
+    expect(response.status).toBe(504);
+    expect(Date.now() - started).toBeLessThan(3_000);
+    const next = post(url, job);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(calls).toBe(1);
+    finish();
+    expect((await next).status).toBe(200);
+    expect(calls).toBe(2);
+  });
+
   it("runs only the configured number of documents at once and refuses more than may wait", async () => {
     const releases: (() => void)[] = [];
     let running = 0;

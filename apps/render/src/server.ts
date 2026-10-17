@@ -23,6 +23,8 @@ export interface RenderServerOptions {
   log?: (message: string, fields?: Record<string, unknown>) => void;
 }
 
+const TOOK_TOO_LONG = "The document took longer than allowed";
+
 class HttpError extends Error {
   constructor(
     readonly status: number,
@@ -130,11 +132,18 @@ export function createRenderServer(options: RenderServerOptions): Server {
     const job = parseJob(await readBody(request, options.maxBytes));
     const release = await slot();
     const controller = new AbortController();
+    const timedOut = new Promise<never>((_, reject) => {
+      controller.signal.addEventListener("abort", () => reject(new HttpError(504, TOOK_TOO_LONG)), {
+        once: true,
+      });
+    });
     const timer = setTimeout(() => controller.abort(), options.timeoutSeconds * 1000);
     const started = Date.now();
+    const rendering = options.renderer.pdf(job, controller.signal);
+    rendering.then(release, release);
     try {
-      const pdf = await options.renderer.pdf(job, controller.signal);
-      if (controller.signal.aborted) throw new HttpError(504, "The document took longer than allowed");
+      const pdf = await Promise.race([rendering, timedOut]);
+      if (controller.signal.aborted) throw new HttpError(504, TOOK_TOO_LONG);
       response.writeHead(200, {
         "content-type": "application/pdf",
         "content-length": pdf.length,
@@ -143,11 +152,10 @@ export function createRenderServer(options: RenderServerOptions): Server {
       response.end(pdf);
       log("Rendered a PDF", { milliseconds: Date.now() - started, bytes: pdf.length });
     } catch (error) {
-      if (controller.signal.aborted) throw new HttpError(504, "The document took longer than allowed");
+      if (controller.signal.aborted) throw new HttpError(504, TOOK_TOO_LONG);
       throw error;
     } finally {
       clearTimeout(timer);
-      release();
     }
   };
 
