@@ -178924,13 +178924,24 @@
                                 "description": "The source, or null when the caller cannot read it or it was deleted permanently."
                               },
                               "title": {
-                                "type": "string",
-                                "description": "Title of the source when it was copied."
+                                "description": "Title of the source when it was copied, or null when the caller cannot read the source.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "path": {
+                                "description": "Path of the source in the web interface, or null when the caller cannot read the source.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
                               }
                             },
                             "required": [
                               "itemId",
-                              "title"
+                              "title",
+                              "path"
                             ],
                             "additionalProperties": false
                           },
@@ -179273,13 +179284,24 @@
                               "description": "The source, or null when the caller cannot read it or it was deleted permanently."
                             },
                             "title": {
-                              "type": "string",
-                              "description": "Title of the source when it was copied."
+                              "description": "Title of the source when it was copied, or null when the caller cannot read the source.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "path": {
+                              "description": "Path of the source in the web interface, or null when the caller cannot read the source.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
                             }
                           },
                           "required": [
                             "itemId",
-                            "title"
+                            "title",
+                            "path"
                           ],
                           "additionalProperties": false
                         },
@@ -215057,13 +215079,24 @@
                                 "description": "The source, or null when the caller cannot read it or it was deleted permanently."
                               },
                               "title": {
-                                "type": "string",
-                                "description": "Title of the source when it was copied."
+                                "description": "Title of the source when it was copied, or null when the caller cannot read the source.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "path": {
+                                "description": "Path of the source in the web interface, or null when the caller cannot read the source.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
                               }
                             },
                             "required": [
                               "itemId",
-                              "title"
+                              "title",
+                              "path"
                             ],
                             "additionalProperties": false
                           },
@@ -215403,13 +215436,24 @@
                               "description": "The source, or null when the caller cannot read it or it was deleted permanently."
                             },
                             "title": {
-                              "type": "string",
-                              "description": "Title of the source when it was copied."
+                              "description": "Title of the source when it was copied, or null when the caller cannot read the source.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "path": {
+                              "description": "Path of the source in the web interface, or null when the caller cannot read the source.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
                             }
                           },
                           "required": [
                             "itemId",
-                            "title"
+                            "title",
+                            "path"
                           ],
                           "additionalProperties": false
                         },

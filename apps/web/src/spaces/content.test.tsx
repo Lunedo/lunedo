@@ -290,6 +290,62 @@ describe("publish mode", () => {
 });
 
 describe("version history", () => {
+  const copiedVersion = (copiedFrom: {
+    itemId: string | null;
+    title: string | null;
+    path: string | null;
+  }) => ({
+    number: 1,
+    title: "VPN access",
+    note: "",
+    reason: "copied",
+    restoredFrom: null,
+    copiedFrom,
+    createdAt: "2026-10-17T09:00:00.000Z",
+    createdBy: { id: OLIVIA.id, name: "Anna Berger" },
+    contributors: [],
+  });
+
+  it("names and links the source of a copy only for people who can read it", async () => {
+    const source = "01929b1e-0000-7000-8000-0000000000f9";
+    mockApi(
+      routes("editor", {
+        [`GET /api/v1/pages/${VPN}/versions`]: () => ({
+          body: [
+            copiedVersion({
+              itemId: source,
+              title: "Remote access",
+              path: `/spaces/HR/pages/${source}/remote-access`,
+            }),
+          ],
+        }),
+        [`GET /api/v1/pages/${VPN}/discarded-drafts`]: () => ({ body: [] }),
+      }),
+    );
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/history`);
+    expect(await screen.findByText("Copied from Remote access")).toBeTruthy();
+    const link = await screen.findByRole(
+      "link",
+      { name: "Open the original Remote access" },
+      { timeout: 8000 },
+    );
+    expect(link.getAttribute("href")).toContain(`/spaces/HR/pages/${source}/`);
+  });
+
+  it("shows neither title nor link of a source the person cannot read", async () => {
+    mockApi(
+      routes("editor", {
+        [`GET /api/v1/pages/${VPN}/versions`]: () => ({
+          body: [copiedVersion({ itemId: null, title: null, path: null })],
+        }),
+        [`GET /api/v1/pages/${VPN}/discarded-drafts`]: () => ({ body: [] }),
+      }),
+    );
+    await renderAt(`/spaces/ITOPS/pages/${VPN}/history`);
+    expect(await screen.findByText("Copied from another page")).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /Open the original/ })).toBeNull();
+  });
+
   it("compares versions inline and side by side and restores into the draft", async () => {
     const diff = diffDocuments(
       { title: "VPN access", document: doc("Install the client from the intranet.") },

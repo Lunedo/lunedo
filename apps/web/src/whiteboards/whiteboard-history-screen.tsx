@@ -52,7 +52,9 @@ function reasonOf(t: TFunction, version: WhiteboardVersion): string {
   if (version.reason === "restored")
     return t("versions.reasons.restored", { number: version.restoredFrom ?? 0 });
   if (version.reason === "copied")
-    return t("versions.reasons.copied", { title: version.copiedFrom?.title ?? "" });
+    return version.copiedFrom?.title
+      ? t("versions.reasons.copied", { title: version.copiedFrom.title })
+      : t("versions.reasons.copiedHidden");
   return translateKey(t, `versions.reasons.${version.reason}`);
 }
 

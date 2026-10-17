@@ -302,7 +302,9 @@ function VersionList({
     version.reason === "restored"
       ? t("versions.reasons.restored", { number: version.restoredFrom ?? 0 })
       : version.reason === "copied"
-        ? t("versions.reasons.copied", { title: version.copiedFrom?.title ?? "" })
+        ? version.copiedFrom?.title
+          ? t("versions.reasons.copied", { title: version.copiedFrom.title })
+          : t("versions.reasons.copiedHidden")
         : translateKey(t, `versions.reasons.${version.reason}`);
   return (
     <aside

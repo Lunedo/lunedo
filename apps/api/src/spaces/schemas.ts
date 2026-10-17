@@ -207,7 +207,14 @@ export const copiedFromSchema = z
     itemId: uuid(
       "The source, or null when the caller cannot read it or it was deleted permanently.",
     ).nullable(),
-    title: z.string().describe("Title of the source when it was copied."),
+    title: z
+      .string()
+      .nullable()
+      .describe("Title of the source when it was copied, or null when the caller cannot read the source."),
+    path: z
+      .string()
+      .nullable()
+      .describe("Path of the source in the web interface, or null when the caller cannot read the source."),
   })
   .nullable()
   .describe("Where a copy came from, for the first version of a copy; null otherwise.");

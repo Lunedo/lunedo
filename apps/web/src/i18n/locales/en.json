@@ -5634,7 +5634,8 @@
       "modeChanged": "Editing mode changed",
       "imported": "From Confluence",
       "importedNotApplied": "From Confluence, not applied",
-      "copied": "Copied from {title}"
+      "copied": "Copied from {title}",
+      "copiedHidden": "Copied from another page"
     },
     "draftChanges": "{count, plural, one {# change, not published} other {# changes, not published}}",
     "compare": "Compare",

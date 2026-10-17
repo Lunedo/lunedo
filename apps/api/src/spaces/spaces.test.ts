@@ -577,7 +577,7 @@ describe.skipIf(!databaseBaseUrl)("spaces and pages through the API", () => {
     expect((await reader.client.get(`/api/v1/items/${item}`)).statusCode).toBe(200);
 
     const history = await outsider.client.get(`/api/v1/pages/${item}/versions`);
-    expect(history.json()).toMatchObject([{ reason: "copied", copiedFrom: { itemId: null, title: "HR" } }]);
+    expect(history.json()).toMatchObject([{ reason: "copied", copiedFrom: { itemId: null, title: null, path: null } }]);
     const own = await creator.client.get(`/api/v1/pages/${item}/versions`);
     expect(own.json()).toMatchObject([{ copiedFrom: { itemId: hr.id, title: "HR" } }]);
 
