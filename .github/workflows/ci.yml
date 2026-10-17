@@ -275,6 +275,8 @@ jobs:
     timeout-minutes: 40
     container:
       image: mcr.microsoft.com/playwright@sha256:06a9939e57531807f8d5fd76ce44b53165ffb7d7501d87ab10e285c20b1e971f # v1.64.0-noble
+      env:
+        HOME: /root
       options: >-
         --tmpfs /pagehall-e2e
         ${{ contains(vars.RUNNER_LABELS, 'self-hosted') && format('--volume {0}:/ci-cache', vars.CI_CACHE_DIR || '/srv/ci-cache') || '' }}
@@ -310,7 +312,6 @@ jobs:
       PAGEHALL_E2E_SMTP_HOST: mailpit
       PAGEHALL_E2E_STATE_DIR: /pagehall-e2e/state
       PAGEHALL_E2E_WORKERS: ${{ vars.E2E_WORKERS }}
-      HOME: /root
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
