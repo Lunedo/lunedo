@@ -6,6 +6,7 @@ import type { AccessReduction } from "../authorization/access-reductions.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Encryption } from "../crypto/envelope.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
+import { parseCaCertificates } from "../identity/providers.js";
 import type { JobQueue } from "../jobs/job-queue.js";
 import type { GroupService } from "../organizations/groups.js";
 import type { SettingsService } from "../settings/service.js";
@@ -18,8 +19,20 @@ import { cleanKey, type HolderValidation, insertGrants, SPACE_NAME_MAX_LENGTH } 
 import type { VersionService } from "../spaces/versions.js";
 import { visibleItem } from "../spaces/visibility.js";
 import type { StorageService } from "../storage/storage.js";
-import { type AtlassianDirectory, atlassianHostsSetting, atlassianSite } from "./atlassian.js";
-import { deleteCredentials, tokenContext } from "./credentials.js";
+import {
+  type AtlassianDirectory,
+  atlassianHostsSetting,
+  atlassianSite,
+  dataCenterBase,
+} from "./atlassian.js";
+import type { ConfluenceConnection, ConfluenceKind } from "./confluence/api-client.js";
+import {
+  ConfluenceApiReader,
+  type ConfluenceSpaceSummary,
+  type ConfluenceTree,
+  isSpaceKey,
+} from "./confluence/api-reader.js";
+import { deleteCredentials, readConnection, tokenContext } from "./credentials.js";
 import { ImportError } from "./errors.js";
 import { type FolderFile, ImportFolder, isSafeFolderName } from "./folder.js";
 import { spreadsheetCell } from "./formats/csv.js";
@@ -36,8 +49,15 @@ export { FILE_RETENTION_DAYS };
 
 import type { ImportPipeline } from "./pipeline.js";
 import { signalImportChange } from "./signals.js";
-import { type ImportReaderRegistry, type ImportSource, importSources } from "./source.js";
-import type { UploadService } from "./uploads.js";
+import {
+  type ImportOptions,
+  type ImportReaderRegistry,
+  type ImportSource,
+  importSources,
+  inputOf,
+  type SourceInput,
+} from "./source.js";
+import { releaseUploads, type UploadService } from "./uploads.js";
 import { parseUserList } from "./user-list.js";
 
 export const MAX_REVIEWERS = 50;
@@ -91,6 +111,10 @@ export interface ImportView {
   readonly archived: boolean;
   readonly history: boolean;
   readonly peopleSource: PeopleSourceView | null;
+  readonly connection: ConnectionView | null;
+  readonly files: readonly ImportFileView[];
+  readonly options: ImportOptions;
+  readonly throttledUntil: Date | null;
   readonly tokenDeletedAt: Date | null;
   readonly sourceUrl: string | null;
   readonly reviewers: readonly ImportPerson[];
@@ -113,8 +137,27 @@ export interface ImportView {
   readonly updatedAt: Date;
 }
 
+export interface ConnectionView {
+  readonly kind: ConfluenceKind;
+  readonly site: string;
+  readonly basePath: string;
+  readonly email: string | null;
+  readonly account: string | null;
+}
+
+export type ConnectionInput =
+  | { kind: "cloud"; site: string; email: string; token: string }
+  | { kind: "dataCenter"; baseUrl: string; token: string; caCertificates?: string | null | undefined };
+
+export interface OptionsInput {
+  readonly spaceKey?: string | null | undefined;
+  readonly pageIds?: readonly string[] | undefined;
+  readonly blogPosts?: boolean | undefined;
+  readonly split?: "file" | "heading" | undefined;
+}
+
 export interface PeopleSourceView {
-  readonly kind: "token" | "list" | "skip";
+  readonly kind: "token" | "list" | "skip" | "source";
   readonly site: string | null;
   readonly email: string | null;
   readonly people: number | null;
@@ -130,6 +173,8 @@ export interface ImportUpdate {
   readonly source?: ImportSource | undefined;
   readonly draftStep?: number | undefined;
   readonly file?: { kind: "upload"; uploadId: string } | { kind: "folder"; name: string } | null | undefined;
+  readonly files?: readonly string[] | undefined;
+  readonly options?: OptionsInput | undefined;
   readonly spaceName?: string | undefined;
   readonly spaceKey?: string | undefined;
   readonly archived?: boolean | undefined;
@@ -173,7 +218,7 @@ type ImportRow = Record<string, unknown> & {
   source: string;
   state: ImportState;
   draft_step: number;
-  file_kind: "upload" | "folder" | null;
+  file_kind: "upload" | "folder" | "uploads" | "connection" | null;
   upload_id: string | null;
   upload_name: string | null;
   upload_size: string | number | null;
@@ -184,7 +229,12 @@ type ImportRow = Record<string, unknown> & {
   space_key: string | null;
   archived: boolean;
   history: boolean;
-  people_source: "token" | "list" | "skip" | null;
+  people_source: "token" | "list" | "skip" | "source" | null;
+  options: ImportOptions | null;
+  throttled_until: Date | string | null;
+  credential_kind: ConfluenceKind | null;
+  credential_base_path: string | null;
+  credential_account: string | null;
   token_deleted_at: Date | string | null;
   credential_site: string | null;
   credential_email: string | null;
@@ -220,7 +270,8 @@ const SELECT = sql`
       where x.space_id = coalesce(i.target_space_id, i.quarantine_space_id) and not xs.quarantined
         and i.state in ('accepted', 'review', 'superseded')
         and not exists (select 1 from trash_entries e where e.space_id = xs.id and e.kind = 'space')) as reimport_space_id,
-    c.site as credential_site, c.email as credential_email,
+    c.site as credential_site, c.email as credential_email, c.kind as credential_kind,
+    c.base_path as credential_base_path, c.account_name as credential_account,
     c.people as credential_people, c.with_email as credential_with_email,
     (select count(*)::int from import_directory d where d.import_id = i.id) as directory_people,
     (select count(d.email)::int from import_directory d where d.import_id = i.id) as directory_with_email
@@ -232,6 +283,69 @@ const SELECT = sql`
 
 function date(value: Date | string | null): Date | null {
   return value === null ? null : new Date(value);
+}
+
+export const MAX_DOCUMENTS = 50;
+const MAX_SELECTED_TREES = 500;
+
+export function checkFileName(source: ImportSource, name: string): void {
+  const lower = name.trim().toLowerCase();
+  if (source === "word") {
+    if (lower.endsWith(".docm") || lower.endsWith(".dotm")) {
+      throw new ImportError(
+        "macroDocument",
+        "Word documents with macros (.docm) are not imported. Save the document as .docx without macros first.",
+      );
+    }
+    if (!lower.endsWith(".docx")) {
+      throw new ImportError(
+        "wrongFileType",
+        "Choose Word documents in the .docx format. Save older .doc files as .docx first.",
+      );
+    }
+  }
+  if (source === "markdown" && !lower.endsWith(".zip")) {
+    throw new ImportError("wrongFileType", "Upload the Markdown folder as one ZIP file.");
+  }
+}
+
+export function cleanOptions(
+  kind: SourceInput | null,
+  current: ImportOptions,
+  input: OptionsInput,
+): ImportOptions {
+  const invalid = () =>
+    new ImportError("invalidOptions", "These options do not apply to this kind of import.");
+  let next: ImportOptions = { ...current };
+  if (input.spaceKey !== undefined || input.pageIds !== undefined || input.blogPosts !== undefined) {
+    if (kind !== "connection") throw invalid();
+    if (input.spaceKey !== undefined) {
+      if (input.spaceKey !== null && !isSpaceKey(input.spaceKey)) {
+        throw new ImportError("invalidSelection", "Choose a space from the list.");
+      }
+      const { spaceKey: _spaceKey, pageIds: _pageIds, ...rest } = next;
+      next =
+        input.spaceKey === null
+          ? rest
+          : input.spaceKey === current.spaceKey
+            ? { ...next, spaceKey: input.spaceKey }
+            : { ...rest, spaceKey: input.spaceKey };
+    }
+    if (input.pageIds !== undefined) {
+      const ids = [...new Set(input.pageIds)].sort();
+      if (ids.length > MAX_SELECTED_TREES || ids.some((id) => !/^\d{1,19}$/.test(id))) {
+        throw new ImportError("invalidSelection", "Choose page trees from the list.");
+      }
+      const { pageIds: _pageIds, ...rest } = next;
+      next = ids.length === 0 ? rest : { ...rest, pageIds: ids };
+    }
+    if (input.blogPosts !== undefined) next = { ...next, blogPosts: input.blogPosts };
+  }
+  if (input.split !== undefined) {
+    if (kind !== "documents") throw invalid();
+    next = { ...next, split: input.split };
+  }
+  return next;
 }
 
 export function cleanSpaceName(name: string): string {
@@ -278,6 +392,7 @@ export class ImportService {
   readonly #holders: HolderValidation;
   readonly #encryption: Encryption;
   readonly #atlassian: AtlassianDirectory;
+  readonly #readers: ImportReaderRegistry;
   readonly resolution: ImportResolutionService;
   readonly reimports: ReimportService;
   readonly links: ConfluenceLinkService;
@@ -312,6 +427,7 @@ export class ImportService {
     this.#holders = options.holders;
     this.#encryption = options.encryption;
     this.#atlassian = options.atlassian;
+    this.#readers = options.readers;
     this.resolution = new ImportResolutionService({
       database: options.database,
       authorization: options.authorization,
@@ -370,7 +486,39 @@ export class ImportService {
     return result;
   }
 
-  async #view(viewer: Principal, row: ImportRow, reviewers: readonly ImportPerson[]): Promise<ImportView> {
+  async #files(executor: Executor, importIds: readonly string[]): Promise<Map<string, ImportFileView[]>> {
+    const result = new Map<string, ImportFileView[]>();
+    if (importIds.length === 0) return result;
+    const rows = await executor.execute<{
+      import_id: string;
+      id: string;
+      name: string;
+      size: string | number;
+      complete: boolean;
+    }>(sql`
+      select f.import_id, u.id, u.name, u.size, u.complete from import_files f
+      join import_uploads u on u.id = f.upload_id
+      where f.import_id = any(${sql.param([...importIds])}::uuid[]) order by f.import_id, f.position`);
+    for (const row of rows.rows) {
+      const list = result.get(row.import_id) ?? [];
+      list.push({
+        kind: "upload",
+        name: row.name,
+        size: Number(row.size),
+        uploadId: row.id,
+        complete: row.complete,
+      });
+      result.set(row.import_id, list);
+    }
+    return result;
+  }
+
+  async #view(
+    viewer: Principal,
+    row: ImportRow,
+    reviewers: readonly ImportPerson[],
+    files: readonly ImportFileView[],
+  ): Promise<ImportView> {
     const resource = { type: "import", id: row.id };
     const canManage = (await this.#authorization.explain(viewer, "import.manage", resource)).allowed;
     const canResolve = (await this.#authorization.explain(viewer, "import.resolve", resource)).allowed;
@@ -399,6 +547,19 @@ export class ImportService {
       spaceKey: row.space_key,
       archived: row.archived,
       history: row.history,
+      connection:
+        row.file_kind === "connection" && row.credential_kind && row.credential_site
+          ? {
+              kind: row.credential_kind,
+              site: row.credential_site,
+              basePath: row.credential_base_path ?? "",
+              email: row.credential_email,
+              account: row.credential_account,
+            }
+          : null,
+      files,
+      options: row.options ?? {},
+      throttledUntil: date(row.throttled_until),
       peopleSource: row.people_source
         ? {
             kind: row.people_source,
@@ -468,13 +629,19 @@ export class ImportService {
       this.#database,
       result.rows.map((row) => row.id),
     );
+    const files = await this.#files(
+      this.#database,
+      result.rows.map((row) => row.id),
+    );
     const views: ImportView[] = [];
     for (const row of result.rows) {
       const resource = { type: "import", id: row.id };
       const view = (await this.#authorization.explain(viewer, "import.view", resource)).allowed;
       const takeOver =
         !view && (await this.#authorization.explain(viewer, "import.takeOver", resource)).allowed;
-      if (view || takeOver) views.push(await this.#view(viewer, row, reviewers.get(row.id) ?? []));
+      if (view || takeOver) {
+        views.push(await this.#view(viewer, row, reviewers.get(row.id) ?? [], files.get(row.id) ?? []));
+      }
     }
     return views;
   }
@@ -486,7 +653,8 @@ export class ImportService {
       throw new ImportError("importNotFound", "The import does not exist.");
     }
     const reviewers = await this.#reviewers(this.#database, [importId]);
-    return this.#view(viewer, row, reviewers.get(importId) ?? []);
+    const files = await this.#files(this.#database, [importId]);
+    return this.#view(viewer, row, reviewers.get(importId) ?? [], files.get(importId) ?? []);
   }
 
   async create(
@@ -523,7 +691,7 @@ export class ImportService {
         throw new ImportError("importStarted", "The import has started; its settings cannot change anymore.");
       }
       const changes: ReturnType<typeof sql>[] = [];
-      let fileChanged = false;
+      let restart = false;
       if (
         row.target_space_id &&
         (input.spaceName !== undefined ||
@@ -533,15 +701,35 @@ export class ImportService {
       ) {
         throw new ImportError("reimportSpaceFixed", REIMPORT_FIXED);
       }
+      let source = row.source as ImportSource;
       if (input.source !== undefined && input.source !== row.source) {
         if (!importSources.includes(input.source))
           throw new ImportError("invalidSource", "Choose an export format.");
+        if (row.target_space_id && inputOf(row.source) !== inputOf(input.source)) {
+          throw new ImportError("reimportSpaceFixed", REIMPORT_FIXED);
+        }
         changes.push(sql`source = ${input.source}`);
-        fileChanged = true;
+        restart = true;
+        if (inputOf(row.source) !== inputOf(input.source)) {
+          changes.push(sql`file_kind = null, upload_id = null, folder_file = null, folder_key = null,
+            options = '{}'::jsonb, people_source = null`);
+          await tx.execute(sql`delete from import_files where import_id = ${importId}`);
+          await deleteCredentials(tx, this.#audit, {
+            importId,
+            organizationId: row.organization_id,
+            reason: "replaced",
+            actor,
+          });
+        }
+        source = input.source;
       }
+      const kind = inputOf(source);
       if (input.draftStep !== undefined)
         changes.push(sql`draft_step = ${Math.max(0, Math.min(10, input.draftStep))}`);
       if (input.file !== undefined) {
+        if (input.file !== null && kind !== "export" && kind !== "archive") {
+          throw new ImportError("wrongInput", "This kind of import does not read a single file.");
+        }
         if (input.file === null) {
           changes.push(sql`file_kind = null, upload_id = null, folder_file = null, folder_key = null`);
         } else if (input.file.kind === "upload") {
@@ -549,16 +737,50 @@ export class ImportService {
           if (upload.organizationId !== row.organization_id) {
             throw new ImportError("uploadNotFound", "The upload does not exist.");
           }
+          checkFileName(source, upload.name);
           changes.push(
             sql`file_kind = 'upload', upload_id = ${upload.id}, folder_file = null, folder_key = null`,
           );
         } else {
           const file = await this.#requireFolderFile(tx, row.organization_id, input.file.name);
+          checkFileName(source, file.name);
           changes.push(
             sql`file_kind = 'folder', upload_id = null, folder_file = ${file.name}, folder_key = ${file.key}`,
           );
         }
-        fileChanged = true;
+        restart = true;
+      }
+      if (input.files !== undefined) {
+        if (kind !== "documents") {
+          throw new ImportError("wrongInput", "This kind of import does not read several files.");
+        }
+        const ids = [...new Set(input.files)];
+        if (ids.length > MAX_DOCUMENTS) {
+          throw new ImportError("tooManyFiles", `An import reads up to ${MAX_DOCUMENTS} documents at once.`);
+        }
+        for (const uploadId of ids) {
+          const upload = await this.#uploads.get(actor, uploadId);
+          if (upload.organizationId !== row.organization_id) {
+            throw new ImportError("uploadNotFound", "The upload does not exist.");
+          }
+          checkFileName(source, upload.name);
+        }
+        await tx.execute(sql`delete from import_files where import_id = ${importId}`);
+        for (const [position, uploadId] of ids.entries()) {
+          await tx.execute(sql`
+            insert into import_files (import_id, upload_id, position) values (${importId}, ${uploadId}, ${position})`);
+        }
+        changes.push(
+          sql`file_kind = ${ids.length > 0 ? "uploads" : null}, upload_id = null, folder_file = null, folder_key = null`,
+        );
+        restart = true;
+      }
+      if (input.options !== undefined) {
+        const next = cleanOptions(kind, row.options ?? {}, input.options);
+        if (JSON.stringify(next) !== JSON.stringify(row.options ?? {})) {
+          changes.push(sql`options = ${JSON.stringify(next)}::jsonb`);
+          restart = true;
+        }
       }
       if (input.spaceName !== undefined) changes.push(sql`space_name = ${cleanSpaceName(input.spaceName)}`);
       if (input.spaceKey !== undefined) {
@@ -571,12 +793,15 @@ export class ImportService {
         changes.push(sql`space_key = ${key}`);
       }
       if (input.archived !== undefined) changes.push(sql`archived = ${input.archived}`);
-      if (input.history !== undefined) changes.push(sql`history = ${input.history}`);
+      if (input.history !== undefined) {
+        changes.push(sql`history = ${input.history}`);
+        if (kind === "connection" && input.history !== row.history) restart = true;
+      }
       if (input.sourceUrl !== undefined) changes.push(sql`source_url = ${cleanSourceUrl(input.sourceUrl)}`);
-      if (fileChanged) {
+      if (restart) {
         changes.push(
           sql`found = null, error_code = null, checkpoint = '{}'::jsonb, progress_done = 0, progress_total = 0,
-            staged_bytes = 0`,
+            staged_bytes = 0, throttled_until = null`,
         );
         await tx.execute(sql`delete from import_records where import_id = ${importId}`);
         await tx.execute(sql`delete from import_problems where import_id = ${importId}`);
@@ -585,11 +810,8 @@ export class ImportService {
       await tx.execute(
         sql`update imports set ${sql.join(changes, sql`, `)}, updated_at = now() where id = ${importId}`,
       );
-      if (fileChanged) {
-        const updated = await this.#row(tx, importId);
-        analyze =
-          updated.file_kind === "folder" ||
-          (updated.file_kind === "upload" && updated.upload_complete === true);
+      if (restart) {
+        analyze = await this.#readyToRead(tx, await this.#row(tx, importId));
         await tx.execute(
           sql`update imports set state = ${analyze ? "analyzing" : "draft"}, phase = ${analyze ? "read" : null}
               where id = ${importId}`,
@@ -599,6 +821,28 @@ export class ImportService {
     });
     if (analyze) await this.#enqueue(importId);
     return this.get(actor, importId);
+  }
+
+  async #readyToRead(executor: Executor, row: ImportRow): Promise<boolean> {
+    switch (inputOf(row.source)) {
+      case "export":
+      case "archive":
+        return row.file_kind === "folder" || (row.file_kind === "upload" && row.upload_complete === true);
+      case "documents": {
+        if (row.file_kind !== "uploads") return false;
+        const files = await executor.execute<{ total: number; complete: number }>(sql`
+          select count(*)::int as total, count(*) filter (where u.complete)::int as complete
+          from import_files f join import_uploads u on u.id = f.upload_id where f.import_id = ${row.id}`);
+        const counts = files.rows[0];
+        return (counts?.total ?? 0) > 0 && counts?.total === counts?.complete;
+      }
+      case "connection":
+        return (
+          row.file_kind === "connection" && row.credential_site !== null && Boolean(row.options?.spaceKey)
+        );
+      default:
+        return false;
+    }
   }
 
   async #folderKey(executor: Executor, organizationId: string): Promise<string> {
@@ -630,6 +874,133 @@ export class ImportService {
     return { ...file, key };
   }
 
+  #apiReader(source: string): ConfluenceApiReader {
+    const reader = inputOf(source) === "connection" ? this.#readers.get(source as ImportSource) : null;
+    if (!(reader instanceof ConfluenceApiReader)) {
+      throw new ImportError("wrongInput", "This kind of import does not connect to Confluence.");
+    }
+    return reader;
+  }
+
+  async #liveConnection(actor: Principal, importId: string) {
+    await this.#authorization.require(actor, "import.manage", { type: "import", id: importId });
+    const row = await this.#row(this.#database, importId);
+    if (!EDITABLE.includes(row.state)) {
+      throw new ImportError("importStarted", "The import has started; its settings cannot change anymore.");
+    }
+    const reader = this.#apiReader(row.source);
+    const connection = await readConnection(this.#database, this.#encryption, importId);
+    if (!connection) {
+      throw new ImportError(
+        "connectionMissing",
+        "Connect to Confluence first. Enter the address and the token.",
+      );
+    }
+    return { reader, connection };
+  }
+
+  async connectionSpaces(actor: Principal, importId: string): Promise<ConfluenceSpaceSummary[]> {
+    const { reader, connection } = await this.#liveConnection(actor, importId);
+    return reader.spaces(connection);
+  }
+
+  async connectionTree(actor: Principal, importId: string, spaceKey: string): Promise<ConfluenceTree> {
+    const { reader, connection } = await this.#liveConnection(actor, importId);
+    return reader.tree(connection, spaceKey);
+  }
+
+  async setConnection(actor: Principal, importId: string, input: ConnectionInput): Promise<ImportView> {
+    await this.#authorization.require(actor, "import.manage", { type: "import", id: importId });
+    const current = await this.#row(this.#database, importId);
+    if (!EDITABLE.includes(current.state)) {
+      throw new ImportError("importStarted", "The import has started; its settings cannot change anymore.");
+    }
+    const reader = this.#apiReader(current.source);
+    const expected: ConfluenceKind = current.source === "confluence-cloud" ? "cloud" : "dataCenter";
+    if (input.kind !== expected) {
+      throw new ImportError(
+        "wrongInput",
+        expected === "cloud"
+          ? "Connect with the site address, e-mail address and API token of Confluence Cloud."
+          : "Connect with the base address and a personal access token of Confluence Data Center.",
+      );
+    }
+    const hosts = await this.#settings.get(atlassianHostsSetting, {});
+    const token = input.token.trim();
+    if (token.length === 0 || token.length > 1000 || /\s/.test(token)) {
+      throw new ImportError(
+        input.kind === "cloud" ? "invalidAtlassianToken" : "invalidAccessToken",
+        input.kind === "cloud"
+          ? "Paste the API token exactly as Atlassian showed it."
+          : "Paste the personal access token exactly as Confluence showed it.",
+      );
+    }
+    let connection: ConfluenceConnection;
+    if (input.kind === "cloud") {
+      const email = input.email.trim();
+      if (!/^[^\s@]+@[^\s@]+$/.test(email) || email.length > 320) {
+        throw new ImportError("invalidAtlassianEmail", "Enter the e-mail address of your Atlassian account.");
+      }
+      const site = atlassianSite(input.site, hosts);
+      connection = { kind: "cloud", site, basePath: "", email, token, caCertificates: null };
+    } else {
+      const base = dataCenterBase(input.baseUrl, hosts);
+      let caCertificates: string | null = null;
+      if (input.caCertificates?.trim()) {
+        try {
+          caCertificates = parseCaCertificates(input.caCertificates).pem;
+        } catch (error) {
+          throw new ImportError(
+            "invalidCertificate",
+            error instanceof Error ? error.message : "The certificate cannot be read.",
+          );
+        }
+      }
+      connection = { kind: "dataCenter", ...base, email: null, token, caCertificates };
+    }
+    const account = await reader.check(connection);
+    let analyze = false;
+    await this.#database.transaction(async (tx) => {
+      const row = await this.#locked(tx, importId);
+      if (!EDITABLE.includes(row.state)) {
+        throw new ImportError("importStarted", "The import has started; its settings cannot change anymore.");
+      }
+      const sameSite = row.credential_site === connection.site && row.credential_kind === connection.kind;
+      await tx.execute(sql`delete from import_directory where import_id = ${importId}`);
+      await tx.execute(sql`
+        insert into import_credentials (import_id, kind, site, base_path, email, token, ca_certificates, account_name)
+        values (${importId}, ${connection.kind}, ${connection.site}, ${connection.basePath}, ${connection.email},
+          ${this.#encryption.encrypt(token, tokenContext(importId))}, ${connection.caCertificates}, ${account.name})
+        on conflict (import_id) do update set kind = excluded.kind, site = excluded.site,
+          base_path = excluded.base_path, email = excluded.email, token = excluded.token,
+          ca_certificates = excluded.ca_certificates, account_name = excluded.account_name,
+          people = null, with_email = null, created_at = now()`);
+      await tx.execute(sql`delete from import_records where import_id = ${importId}`);
+      await tx.execute(sql`delete from import_problems where import_id = ${importId}`);
+      await tx.execute(sql`
+        update imports set file_kind = 'connection', upload_id = null, folder_file = null, folder_key = null,
+          people_source = ${connection.kind === "cloud" ? "token" : "source"}, token_deleted_at = null,
+          options = ${sameSite ? sql`options` : sql`'{}'::jsonb`}, found = null, error_code = null,
+          checkpoint = '{}'::jsonb, progress_done = 0, progress_total = 0, staged_bytes = 0, throttled_until = null,
+          updated_at = now()
+        where id = ${importId}`);
+      analyze = await this.#readyToRead(tx, await this.#row(tx, importId));
+      await tx.execute(sql`
+        update imports set state = ${analyze ? "analyzing" : "draft"}, phase = ${analyze ? "read" : null}
+        where id = ${importId}`);
+      await this.#audit.record(tx, {
+        name: "import.tokenUsed",
+        actor,
+        targetId: importId,
+        fields: { site: connection.site, purpose: "check" },
+        scope: { type: "organization", id: row.organization_id },
+      });
+      await signalImportChange(tx, { importId, organizationId: row.organization_id });
+    });
+    if (analyze) await this.#enqueue(importId);
+    return this.get(actor, importId);
+  }
+
   async listFolder(
     actor: Principal,
     organizationId: string,
@@ -651,6 +1022,9 @@ export class ImportService {
     const current = await this.#row(this.#database, importId);
     if (!EDITABLE.includes(current.state)) {
       throw new ImportError("importStarted", "The import has started; its settings cannot change anymore.");
+    }
+    if (inputOf(current.source) !== "export") {
+      throw new ImportError("wrongInput", "This kind of import recognizes people without a separate source.");
     }
     if (input.kind === "token") {
       const site = atlassianSite(input.site, await this.#settings.get(atlassianHostsSetting, {}));
@@ -809,12 +1183,13 @@ export class ImportService {
         reason: "removed",
         actor,
       });
+      await releaseUploads(tx, {
+        importId,
+        uploadId: row.upload_id,
+        days: FILE_RETENTION_DAYS,
+        keepEarlier: true,
+      });
       await tx.execute(sql`delete from imports where id = ${importId}`);
-      if (row.upload_id) {
-        await tx.execute(sql`
-          update import_uploads set expires_at = least(expires_at, now() + make_interval(days => ${FILE_RETENTION_DAYS}))
-          where id = ${row.upload_id}`);
-      }
       await signalImportChange(tx, { importId, organizationId: row.organization_id });
     });
   }
@@ -892,7 +1267,7 @@ export class ImportService {
             : "The import cannot be started in its current state.",
         );
       }
-      if (!row.people_source) {
+      if (!row.people_source && inputOf(row.source) === "export") {
         throw new ImportError(
           "peopleSourceMissing",
           "Choose how Pagehall recognizes people: an API token, a user list, or skip with confirmation.",
@@ -1140,9 +1515,7 @@ export class ImportService {
   }
 
   async #releaseFile(tx: Transaction, row: ImportRow): Promise<void> {
-    if (!row.upload_id) return;
-    await tx.execute(sql`
-      update import_uploads set expires_at = now() + make_interval(days => ${FILE_RETENTION_DAYS}) where id = ${row.upload_id}`);
+    await releaseUploads(tx, { importId: row.id, uploadId: row.upload_id, days: FILE_RETENTION_DAYS });
   }
 
   async takeOver(actor: Principal, importId: string): Promise<ImportView> {

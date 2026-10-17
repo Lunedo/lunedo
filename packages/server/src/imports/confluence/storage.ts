@@ -263,7 +263,7 @@ export function storageReferences(root: XmlNode): {
         pages.push({
           title: node.attributes["ri:content-title"] ?? null,
           spaceKey: node.attributes["ri:space-key"] ?? null,
-          sourceId: null,
+          sourceId: node.attributes["ri:content-id"] ?? null,
         });
       }
       if (node.name === "a" && node.attributes.href) {
@@ -361,7 +361,7 @@ class Converter {
         const resolved = this.lookup.page({
           title: reference.attributes["ri:content-title"] ?? "",
           spaceKey: reference.attributes["ri:space-key"] ?? null,
-          sourceId: null,
+          sourceId: reference.attributes["ri:content-id"] ?? null,
           ...(options?.formerTitles ? { formerTitles: true } : {}),
         });
         return resolved.kind === "page" ? resolved.pageId : null;
@@ -540,7 +540,11 @@ class Converter {
     if (page) {
       const title = page.attributes["ri:content-title"] ?? "";
       const spaceKey = page.attributes["ri:space-key"] ?? null;
-      const resolved = this.lookup.page({ title, spaceKey, sourceId: null });
+      const resolved = this.lookup.page({
+        title,
+        spaceKey,
+        sourceId: page.attributes["ri:content-id"] ?? null,
+      });
       if (resolved.kind === "page") {
         if (!body || bodyText.length === 0 || bodyText === title) {
           return [{ inline: { type: "pageLink", attrs: { pageId: resolved.pageId } } }];

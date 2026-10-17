@@ -2,8 +2,37 @@ import type { Readable } from "node:stream";
 import type { ByteSource } from "./formats/bytes.js";
 import type { StagingStore } from "./staging.js";
 
-export const importSources = ["confluence-xml", "confluence-csv"] as const;
+export const importSources = [
+  "confluence-xml",
+  "confluence-csv",
+  "confluence-cloud",
+  "confluence-dc",
+  "markdown",
+  "word",
+] as const;
 export type ImportSource = (typeof importSources)[number];
+
+export type SourceInput = "export" | "connection" | "archive" | "documents";
+
+export const sourceInputs: Readonly<Record<ImportSource, SourceInput>> = {
+  "confluence-xml": "export",
+  "confluence-csv": "export",
+  "confluence-cloud": "connection",
+  "confluence-dc": "connection",
+  markdown: "archive",
+  word: "documents",
+};
+
+export function inputOf(source: string): SourceInput | null {
+  return (sourceInputs as Readonly<Record<string, SourceInput>>)[source] ?? null;
+}
+
+export interface ImportOptions {
+  readonly spaceKey?: string | undefined;
+  readonly pageIds?: readonly string[] | undefined;
+  readonly blogPosts?: boolean | undefined;
+  readonly split?: "file" | "heading" | undefined;
+}
 
 export interface SourceSpace {
   readonly sourceId: string;
@@ -127,6 +156,8 @@ export interface ScanProgress {
 
 export interface ScanContext {
   readonly staging: StagingStore;
+  readonly options: ImportOptions;
+  readonly history: boolean;
   readonly checkpoint: Readonly<Record<string, unknown>>;
   saveCheckpoint(checkpoint: Record<string, unknown>): Promise<void>;
   progress(progress: ScanProgress): Promise<void>;

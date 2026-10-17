@@ -88,6 +88,8 @@ import {
   providerSyncScheduleJob,
 } from "./identity/sync.js";
 import { AtlassianDirectory } from "./imports/atlassian.js";
+import { type ConfluenceTransport, guardedTransport } from "./imports/confluence/api-client.js";
+import { ConfluenceApiReader } from "./imports/confluence/api-reader.js";
 import { ConfluenceCsvReader } from "./imports/confluence/csv-reader.js";
 import { ConfluenceXmlReader } from "./imports/confluence/xml-reader.js";
 import { ImportService } from "./imports/imports.js";
@@ -98,10 +100,12 @@ import {
   importWatchdogJob,
   importWorkJob,
 } from "./imports/jobs.js";
+import { MarkdownReader } from "./imports/markdown/reader.js";
 import { importNotificationTypes } from "./imports/notifications.js";
 import { ImportPipeline } from "./imports/pipeline.js";
 import { ImportReaderRegistry } from "./imports/source.js";
 import { UploadService } from "./imports/uploads.js";
+import { WordReader } from "./imports/word/reader.js";
 import { ImportWorker } from "./imports/worker.js";
 import type { JobQueue } from "./jobs/job-queue.js";
 import type { Logger } from "./logging/logger.js";
@@ -320,6 +324,7 @@ export function createAccountServices(options: {
   mailTransport?: (options: SmtpOptions) => MailTransport;
   mailFetch?: typeof fetch;
   atlassianFetch?: typeof fetch;
+  confluenceTransport?: ConfluenceTransport;
   outboundAllowedNetworks?: readonly string[];
   render?: RenderConnection;
   renderFetch?: typeof fetch;
@@ -766,9 +771,15 @@ export function createAccountServices(options: {
   });
   const importUploads = new UploadService({ database, files, settings, authorization, storage });
   const atlassian = new AtlassianDirectory(options.atlassianFetch ? { fetch: options.atlassianFetch } : {});
+  const confluenceTransport =
+    options.confluenceTransport ?? guardedTransport(outboundPolicy(options.outboundAllowedNetworks ?? []));
   const importReaders = new ImportReaderRegistry().register(
     new ConfluenceXmlReader(),
     new ConfluenceCsvReader(),
+    new ConfluenceApiReader("confluence-cloud", { database, encryption, transport: confluenceTransport }),
+    new ConfluenceApiReader("confluence-dc", { database, encryption, transport: confluenceTransport }),
+    new MarkdownReader(),
+    new WordReader(),
   );
   const importPipeline = new ImportPipeline({ database, files, settings, audit, versions, trash });
   const imports = new ImportService({

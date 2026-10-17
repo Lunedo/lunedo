@@ -12,6 +12,7 @@ import type { NotificationService } from "../notifications/service.js";
 import { isValidSpaceKey, normalizeSpaceKey, spaceKeyCandidates, suggestSpaceKey } from "../spaces/keys.js";
 import { isStorageFull } from "../storage/errors.js";
 import type { AtlassianDirectory } from "./atlassian.js";
+import { ConfluenceUnavailableError } from "./confluence/api-client.js";
 import { deleteCredentials, directoryFor } from "./credentials.js";
 import {
   ImportError,
@@ -21,7 +22,7 @@ import {
   ImportYieldError,
 } from "./errors.js";
 import type { ImportFolder } from "./folder.js";
-import type { ByteSource } from "./formats/bytes.js";
+import { type ByteSource, EMPTY_SOURCE } from "./formats/bytes.js";
 import { FILE_RETENTION_DAYS } from "./imports.js";
 import { importWorkJob } from "./jobs.js";
 import { heldCondition } from "./narrowing.js";
@@ -31,9 +32,14 @@ import { ReimportComparer } from "./reimport-compare.js";
 import { type ProblemCode, problemCodes, recordProblems } from "./report.js";
 import type { ImportState } from "./schema.js";
 import { signalImportChange } from "./signals.js";
-import type { ImportReaderRegistry, ImportSource } from "./source.js";
+import type { ImportOptions, ImportReaderRegistry, ImportSource } from "./source.js";
 import { StagingStore } from "./staging.js";
-import { importStorageUsed, OrganizationImportLimitError, type UploadService } from "./uploads.js";
+import {
+  importStorageUsed,
+  OrganizationImportLimitError,
+  releaseUploads,
+  type UploadService,
+} from "./uploads.js";
 
 const SEGMENT_MS = 25 * 60 * 1000;
 
@@ -64,7 +70,7 @@ interface WorkRow {
   source: string;
   state: ImportState;
   phase: string | null;
-  file_kind: "upload" | "folder" | null;
+  file_kind: "upload" | "folder" | "uploads" | "connection" | null;
   upload_id: string | null;
   folder_file: string | null;
   folder_key: string | null;
@@ -73,6 +79,7 @@ interface WorkRow {
   source_url: string | null;
   history: boolean;
   people_source: string | null;
+  options: ImportOptions;
   checkpoint: Record<string, unknown>;
   found: Record<string, unknown> | null;
   quarantine_space_id: string | null;
@@ -174,7 +181,10 @@ export class ImportWorker {
       }
       if (job.retryCount >= importWorkJob.retryLimit) {
         this.#options.logger.error({ err: error, importId }, "An import failed after all retries");
-        await this.#fail(importId, "internalError");
+        await this.#fail(
+          importId,
+          error instanceof ConfluenceUnavailableError ? error.code : "internalError",
+        );
         return;
       }
       this.#options.logger.warn({ err: error, importId }, "An import step failed and is retried");
@@ -193,6 +203,8 @@ export class ImportWorker {
   }
 
   async #source(row: WorkRow): Promise<ByteSource> {
+    if (row.file_kind === "connection") return EMPTY_SOURCE;
+    if (row.file_kind === "uploads") return this.#options.uploads.bundle(row.id);
     if (row.file_kind === "upload" && row.upload_id) return this.#options.uploads.source(row.upload_id);
     if (row.file_kind === "folder" && row.folder_file) {
       if (row.folder_key !== row.organization_id) {
@@ -253,6 +265,8 @@ export class ImportWorker {
       await reader.scan(file, {
         staging,
         checkpoint: scanCheckpoint ?? {},
+        options: row.options ?? {},
+        history: row.history,
         signal,
         saveCheckpoint: async (checkpoint) => {
           const updated = await this.#database.execute(sql`
@@ -571,11 +585,7 @@ export class ImportWorker {
       });
       if (waiting === 0) {
         await tx.execute(sql`delete from import_records where import_id = ${row.id}`);
-        if (row.upload_id) {
-          await tx.execute(sql`
-            update import_uploads set expires_at = now() + make_interval(days => ${FILE_RETENTION_DAYS})
-            where id = ${row.upload_id}`);
-        }
+        await releaseUploads(tx, { importId: row.id, uploadId: row.upload_id, days: FILE_RETENTION_DAYS });
       }
       await this.#options.audit.record(tx, {
         name: "import.reimportApplied",
@@ -663,11 +673,7 @@ export class ImportWorker {
           decided_at = coalesce(decided_at, now()),
           file_expires_at = now() + make_interval(days => ${FILE_RETENTION_DAYS}), updated_at = now()
         where id = ${row.id} and state = ${row.state}`);
-      if (row.upload_id) {
-        await tx.execute(sql`
-          update import_uploads set expires_at = now() + make_interval(days => ${FILE_RETENTION_DAYS})
-          where id = ${row.upload_id}`);
-      }
+      await releaseUploads(tx, { importId: row.id, uploadId: row.upload_id, days: FILE_RETENTION_DAYS });
       await signalImportChange(tx, { importId: row.id, organizationId: row.organization_id });
     });
   }

@@ -20,6 +20,40 @@ export function bufferSource(buffer: Buffer): ByteSource {
   };
 }
 
+export interface BundledFile {
+  readonly name: string;
+  readonly source: ByteSource;
+}
+
+export interface ByteBundle extends ByteSource {
+  readonly files: readonly BundledFile[];
+}
+
+export function isBundle(source: ByteSource): source is ByteBundle {
+  return Array.isArray((source as Partial<ByteBundle>).files);
+}
+
+export function bundleOf(files: readonly BundledFile[]): ByteBundle {
+  return {
+    files,
+    size: files.reduce((sum, file) => sum + file.source.size, 0),
+    async read() {
+      throw new ImportFormatError("wrongFormat", "Several files cannot be read as one.");
+    },
+    async close() {
+      await Promise.all(files.map((file) => file.source.close()));
+    },
+  };
+}
+
+export const EMPTY_SOURCE: ByteSource = {
+  size: 0,
+  async read() {
+    return Readable.from([]);
+  },
+  async close() {},
+};
+
 export class ByteLimit extends Transform {
   #seen = 0;
 

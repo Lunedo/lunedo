@@ -12,7 +12,7 @@ import type { SettingsService } from "../settings/service.js";
 import { actorIdOf } from "../spaces/common.js";
 import type { StorageService } from "../storage/storage.js";
 import { ImportError } from "./errors.js";
-import type { ByteSource } from "./formats/bytes.js";
+import { type BundledFile, type ByteBundle, type ByteSource, bundleOf } from "./formats/bytes.js";
 import { maxOrganizationSetting, maxUploadSetting } from "./settings.js";
 
 export const UPLOAD_PART_BYTES = 16 * MEGABYTE;
@@ -76,6 +76,17 @@ export async function lockImportStorage(executor: Executor, organizationId: stri
   await executor.execute(
     sql`select pg_advisory_xact_lock(hashtextextended(${`pagehall.importStorage:${organizationId}`}, 0))`,
   );
+}
+
+export async function releaseUploads(
+  executor: Executor,
+  input: { importId: string; uploadId: string | null; days: number; keepEarlier?: boolean },
+): Promise<void> {
+  const expiry = sql`now() + make_interval(days => ${input.days})`;
+  await executor.execute(sql`
+    update import_uploads set expires_at = ${input.keepEarlier ? sql`least(expires_at, ${expiry})` : expiry}
+    where id = ${input.uploadId}
+      or id in (select upload_id from import_files where import_id = ${input.importId})`);
 }
 
 export function cleanUploadName(name: string): string {
@@ -271,7 +282,9 @@ export class UploadService {
     await this.#owned(actor, uploadId);
     await this.#database.execute(sql`
       delete from import_uploads u where u.id = ${uploadId}
-        and not exists (select 1 from imports i where i.upload_id = u.id and i.state not in ('draft', 'ready'))`);
+        and not exists (select 1 from imports i where i.state not in ('draft', 'ready')
+          and (i.upload_id = u.id
+            or exists (select 1 from import_files f where f.import_id = i.id and f.upload_id = u.id)))`);
   }
 
   async source(uploadId: string): Promise<ByteSource> {
@@ -309,6 +322,19 @@ export class UploadService {
     };
   }
 
+  async bundle(importId: string): Promise<ByteBundle> {
+    const result = await this.#database.execute<{ id: string; name: string; complete: boolean }>(sql`
+      select u.id, u.name, u.complete from import_files f join import_uploads u on u.id = f.upload_id
+      where f.import_id = ${importId} order by f.position`);
+    if (result.rows.length === 0) throw new ImportError("fileMissing", "Choose the files first.");
+    if (result.rows.some((row) => !row.complete)) {
+      throw new ImportError("uploadIncomplete", "The upload is not complete.");
+    }
+    const files: BundledFile[] = [];
+    for (const row of result.rows) files.push({ name: row.name, source: await this.source(row.id) });
+    return bundleOf(files);
+  }
+
   async removeExpired(limit = 50): Promise<number> {
     const result = await this.#database.execute<{ id: string }>(sql`
       delete from import_uploads u
@@ -316,7 +342,8 @@ export class UploadService {
         select u2.id from import_uploads u2
         where u2.expires_at < now()
           and not exists (
-            select 1 from imports i where i.upload_id = u2.id
+            select 1 from imports i where (i.upload_id = u2.id
+                or exists (select 1 from import_files f where f.import_id = i.id and f.upload_id = u2.id))
               and (i.state in ('analyzing', 'ready', 'running', 'held', 'stopping', 'review', 'accepting', 'discarding')
                 or (i.file_expires_at is not null and i.file_expires_at > now())))
         limit ${limit})

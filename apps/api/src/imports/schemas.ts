@@ -5,6 +5,7 @@ import {
   changeTypes,
   importSources,
   importStates,
+  MAX_DOCUMENTS,
   MAX_MAPPINGS,
   MAX_REVIEWERS,
   pipelinePhases,
@@ -27,7 +28,7 @@ const ID = (n: number) => `01929b1e-7c3a-7d2e-9f4b-3c2d1e0f${String(n).padStart(
 
 export const sourceSchema = extensibleEnum(
   importSources,
-  "Format of the export: `confluence-xml` for the XML space export of Confluence Cloud or Data Center, `confluence-csv` for the CSV space export of Confluence Cloud.",
+  "What is imported: `confluence-xml` for the XML space export of Confluence Cloud or Data Center, `confluence-csv` for the CSV space export of Confluence Cloud, `confluence-cloud` and `confluence-dc` to read a space through the Confluence API, `markdown` for a ZIP file of Markdown files, `word` for Word documents (`.docx`).",
 );
 
 const stateSchema = extensibleEnum(
@@ -73,8 +74,8 @@ export const importSchema = z
     peopleSource: z
       .object({
         kind: extensibleEnum(
-          ["token", "list", "skip"],
-          "How people are recognized: `token` reads names and e-mail addresses with a read-only Atlassian API token, `list` uses a user list exported from the Atlassian administration, `skip` keeps every author as a placeholder.",
+          ["token", "list", "skip", "source"],
+          "How people are recognized: `token` reads names and e-mail addresses with a read-only Atlassian API token, `list` uses a user list exported from the Atlassian administration, `skip` keeps every author as a placeholder, `source` takes the names Confluence Data Center returns through its API.",
         ),
         site: z.string().nullable().describe("Confluence site the token is used with, or null."),
         email: z.string().nullable().describe("Atlassian e-mail address the token belongs to, or null."),
@@ -89,8 +90,50 @@ export const importSchema = z
       })
       .nullable()
       .describe("How people are recognized. The token itself is never returned."),
+    connection: z
+      .object({
+        kind: extensibleEnum(["cloud", "dataCenter"], "Kind of Confluence the import reads through its API."),
+        site: z.string().describe("Host name of the Confluence site, with the port when it is not 443."),
+        basePath: z
+          .string()
+          .describe("Context path of Confluence Data Center, such as `/confluence`, or empty."),
+        email: z.string().nullable().describe("Atlassian e-mail address the API token belongs to, or null."),
+        account: z.string().nullable().describe("Name of the Confluence account the token belongs to."),
+      })
+      .nullable()
+      .describe(
+        "The connection of an import through the Confluence API, or null. The token is never returned.",
+      ),
+    files: z
+      .array(
+        z.object({
+          kind: extensibleEnum(["upload"], "Where the document comes from."),
+          name: z.string().describe("Name of the file."),
+          size: z.number().int().nullable().describe("Size in bytes."),
+          uploadId: uuid("ID of the upload.").nullable(),
+          complete: z.boolean().describe("Whether the upload is complete and can be read."),
+        }),
+      )
+      .describe("The Word documents of a `word` import, in their order. Empty for other imports."),
+    options: z
+      .object({
+        spaceKey: z.string().optional().describe("Key of the Confluence space read through the API."),
+        pageIds: z
+          .array(z.string())
+          .optional()
+          .describe("IDs of the top-level pages whose trees are imported; all pages when left out."),
+        blogPosts: z.boolean().optional().describe("Whether blog posts are imported; true when left out."),
+        split: extensibleEnum(
+          ["file", "heading"],
+          "`file` makes each Word document one page, `heading` adds a subpage per top-level heading.",
+        ).optional(),
+      })
+      .describe("Options of the source."),
+    throttledUntil: timestamp(
+      "Until when Confluence asked Pagehall to slow down, or null. The import continues by itself.",
+    ).nullable(),
     tokenDeletedAt: timestamp(
-      "When the API token was deleted: when the import was accepted, discarded, stopped or failed.",
+      "When the API token was deleted: when the import was accepted, discarded, stopped or failed, when the importer lost the permission to import, or when the draft was left alone for a week.",
     ).nullable(),
     sourceUrl: z
       .string()
@@ -205,6 +248,10 @@ export const exampleImport = {
     people: 12,
     withEmail: 10,
   },
+  connection: null,
+  files: [],
+  options: {},
+  throttledUntil: null,
   tokenDeletedAt: null,
   counts: {
     pages: 120,
@@ -268,6 +315,37 @@ export const updateImportSchema = z
       .nullable()
       .optional()
       .describe("The export file. Choosing a file starts reading it."),
+    files: z
+      .array(uuid("ID of an upload of the caller."))
+      .max(MAX_DOCUMENTS)
+      .optional()
+      .describe(
+        "For a `word` import: all Word documents, in this order. Reading starts once every upload is complete.",
+      ),
+    options: z
+      .object({
+        spaceKey: z
+          .string()
+          .max(255)
+          .nullable()
+          .optional()
+          .describe("For an API import: key of the Confluence space to read. Choosing it starts reading."),
+        pageIds: z
+          .array(z.string().max(19))
+          .max(500)
+          .optional()
+          .describe(
+            "For an API import: IDs of the top-level pages to import with their trees. Empty for all.",
+          ),
+        blogPosts: z.boolean().optional().describe("For an API import: whether blog posts are imported."),
+        split: z
+          .enum(["file", "heading"])
+          .optional()
+          .describe("For a `word` import: one page per document, or a subpage per top-level heading."),
+      })
+      .strict()
+      .optional()
+      .describe("Options of the source. Changing them reads the source again."),
     spaceName: z.string().max(200).optional().describe("Name of the new space, 1 to 100 characters."),
     spaceKey: z.string().max(20).optional().describe("Key of the new space, 2 to 10 letters or digits."),
     archived: z.boolean().optional().describe("Whether the space becomes archived when accepted."),
@@ -472,6 +550,75 @@ export const exampleUpload = {
 };
 
 export const candidatesSchema = z.array(personSchema).describe("Members who can review imports.");
+
+export const connectionSchema = z
+  .discriminatedUnion("kind", [
+    z
+      .object({
+        kind: z.literal("cloud").describe("Confluence Cloud."),
+        site: z.string().max(300).describe("Address of the site, such as `example.atlassian.net`."),
+        email: z.string().max(320).describe("E-mail address of the Atlassian account the token belongs to."),
+        token: z.string().max(1000).describe("API token of that account. It is stored encrypted."),
+      })
+      .strict(),
+    z
+      .object({
+        kind: z.literal("dataCenter").describe("Confluence Data Center or Server 7.9 or newer."),
+        baseUrl: z
+          .string()
+          .max(500)
+          .describe(
+            "Address Confluence is opened with, including a context path, such as `https://wiki.example.com/confluence`.",
+          ),
+        token: z.string().max(1000).describe("Personal access token. It is stored encrypted."),
+        caCertificates: z
+          .string()
+          .max(100_000)
+          .nullable()
+          .optional()
+          .describe(
+            "Certificates of the authority that issued the server certificate, in PEM format, when it is not publicly trusted.",
+          ),
+      })
+      .strict(),
+  ])
+  .describe("How Pagehall reads Confluence through its API.");
+
+export const confluenceSpacesSchema = z
+  .array(
+    z.object({
+      id: z.string().describe("ID of the space in Confluence."),
+      key: z.string().describe("Key of the space."),
+      name: z.string().describe("Name of the space."),
+      personal: z.boolean().describe("Whether it is a personal space."),
+    }),
+  )
+  .describe("Spaces the token can read, by name.");
+
+export const confluenceTreeSchema = z
+  .object({
+    spaceKey: z.string().describe("Key of the space."),
+    spaceName: z.string().describe("Name of the space."),
+    pages: z.number().int().describe("Pages the token can read."),
+    blogPosts: z.number().int().describe("Blog posts the token can read."),
+    attachmentBytes: z.number().int().describe("Size of the current attachment versions in bytes."),
+    complete: z
+      .boolean()
+      .describe(
+        "False when the space is so large that only part of it was counted; the numbers are then lower bounds.",
+      ),
+    trees: z
+      .array(
+        z.object({
+          id: z.string().describe("ID of the top-level page."),
+          title: z.string().describe("Title of the page."),
+          pages: z.number().int().describe("Pages in this tree, the page itself included."),
+          attachmentBytes: z.number().int().describe("Size of the attachments in this tree in bytes."),
+        }),
+      )
+      .describe("Top-level pages below the home page with their trees, by title."),
+  })
+  .describe("What a space contains, for choosing what to import.");
 
 export const peopleSourceSchema = z
   .discriminatedUnion("kind", [

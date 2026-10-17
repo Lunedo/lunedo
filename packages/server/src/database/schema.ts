@@ -93,6 +93,7 @@ export {
   importCredentials,
   importDirectory,
   importedSpaces,
+  importFiles,
   importGrants,
   importGroups,
   importItems,

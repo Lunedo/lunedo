@@ -4,6 +4,7 @@ import type { AuditLog } from "../audit/audit-log.js";
 import type { Encryption } from "../crypto/envelope.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import type { AtlassianCredentials, AtlassianDirectory } from "./atlassian.js";
+import type { ConfluenceConnection, ConfluenceKind } from "./confluence/api-client.js";
 import { ImportError, ImportFormatError } from "./errors.js";
 import { type Directory, type DirectoryEntry, NO_DIRECTORY } from "./people.js";
 
@@ -44,15 +45,35 @@ export async function readCredentials(
   encryption: Encryption,
   importId: string,
 ): Promise<AtlassianCredentials | null> {
-  const result = await executor.execute<{ site: string; email: string; token: Buffer }>(
-    sql`select site, email, token from import_credentials where import_id = ${importId}`,
-  );
+  const connection = await readConnection(executor, encryption, importId);
+  if (connection?.kind !== "cloud" || !connection.email) return null;
+  return { site: connection.site, email: connection.email, token: connection.token };
+}
+
+export async function readConnection(
+  executor: Executor,
+  encryption: Encryption,
+  importId: string,
+): Promise<ConfluenceConnection | null> {
+  const result = await executor.execute<{
+    kind: ConfluenceKind;
+    site: string;
+    base_path: string;
+    email: string | null;
+    token: Buffer;
+    ca_certificates: string | null;
+  }>(sql`
+    select kind, site, base_path, email, token, ca_certificates from import_credentials
+    where import_id = ${importId}`);
   const row = result.rows[0];
   if (!row) return null;
   return {
+    kind: row.kind,
     site: row.site,
+    basePath: row.base_path,
     email: row.email,
     token: encryption.decryptString(row.token, tokenContext(importId)),
+    caCertificates: row.ca_certificates,
   };
 }
 
@@ -82,6 +103,32 @@ export function directoryFor(options: {
       for (const person of people) {
         const row = person.accountId ? byId.get(person.accountId) : undefined;
         if (row) result.set(person.sourceId, { name: row.name, email: row.email });
+      }
+      return result;
+    };
+  }
+  if (options.peopleSource === "source") {
+    return async (people) => {
+      const keys = people.flatMap((person) => (person.userKey ? [person.userKey] : []));
+      const result = new Map<string, DirectoryEntry>();
+      if (keys.length === 0) return result;
+      const rows = await options.database.execute<{
+        source_id: string;
+        name: string | null;
+        email: string | null;
+      }>(
+        sql`select source_id, data ->> 'name' as name, data ->> 'email' as email from import_records
+          where import_id = ${options.importId} and kind = 'user' and source_id = any(${sql.param(keys)}::text[])`,
+      );
+      const byKey = new Map(rows.rows.map((row) => [row.source_id, row]));
+      for (const person of people) {
+        const row = person.userKey ? byKey.get(person.userKey) : undefined;
+        if (row && (row.name || row.email)) {
+          result.set(person.sourceId, {
+            name: row.name?.trim().slice(0, 200) || null,
+            email: row.email?.includes("@") ? row.email.trim() : null,
+          });
+        }
       }
       return result;
     };

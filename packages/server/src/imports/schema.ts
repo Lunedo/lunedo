@@ -110,7 +110,9 @@ export const imports = pgTable(
     peopleSource: text(),
     tokenDeletedAt: timestampColumn(),
     sourceUrl: text(),
+    options: jsonb().notNull().default({}),
     stagedBytes: bigint({ mode: "number" }).notNull().default(0),
+    throttledUntil: timestampColumn(),
     phase: text(),
     progressDone: integer().notNull().default(0),
     progressTotal: integer().notNull().default(0),
@@ -139,26 +141,59 @@ export const imports = pgTable(
     uniqueIndex("imports_active_reimport_unique")
       .on(table.targetSpaceId)
       .where(sql`${table.state} in ('running', 'held', 'review')`),
-    check("imports_file_kind", sql`${table.fileKind} is null or ${table.fileKind} in ('upload', 'folder')`),
+    check(
+      "imports_file_kind",
+      sql`${table.fileKind} is null or ${table.fileKind} in ('upload', 'folder', 'uploads', 'connection')`,
+    ),
     check("imports_draft_step", sql`${table.draftStep} between 0 and 10`),
     check(
       "imports_people_source",
-      sql`${table.peopleSource} is null or ${table.peopleSource} in ('token', 'list', 'skip')`,
+      sql`${table.peopleSource} is null or ${table.peopleSource} in ('token', 'list', 'skip', 'source')`,
     ),
   ],
 );
 
-export const importCredentials = pgTable("import_credentials", {
-  importId: uuid()
-    .primaryKey()
-    .references(() => imports.id, { onDelete: "cascade" }),
-  site: text().notNull(),
-  email: text().notNull(),
-  token: encrypted().notNull(),
-  people: integer(),
-  withEmail: integer(),
-  createdAt: timestampColumn().notNull().defaultNow(),
-});
+export const importCredentials = pgTable(
+  "import_credentials",
+  {
+    importId: uuid()
+      .primaryKey()
+      .references(() => imports.id, { onDelete: "cascade" }),
+    kind: text().notNull().default("cloud"),
+    site: text().notNull(),
+    basePath: text().notNull().default(""),
+    email: text(),
+    token: encrypted().notNull(),
+    caCertificates: text(),
+    accountName: text(),
+    people: integer(),
+    withEmail: integer(),
+    createdAt: timestampColumn().notNull().defaultNow(),
+  },
+  (table) => [
+    check("import_credentials_kind", sql`${table.kind} in ('cloud', 'dataCenter')`),
+    check("import_credentials_email", sql`${table.kind} = 'dataCenter' or ${table.email} is not null`),
+  ],
+);
+
+export const importFiles = pgTable(
+  "import_files",
+  {
+    importId: uuid()
+      .notNull()
+      .references(() => imports.id, { onDelete: "cascade" }),
+    uploadId: uuid()
+      .notNull()
+      .references(() => importUploads.id, { onDelete: "cascade" }),
+    position: integer().notNull(),
+    createdAt: timestampColumn().notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.importId, table.uploadId] }),
+    uniqueIndex("import_files_position_unique").on(table.importId, table.position),
+    index().on(table.uploadId),
+  ],
+);
 
 export const importDirectory = pgTable(
   "import_directory",
