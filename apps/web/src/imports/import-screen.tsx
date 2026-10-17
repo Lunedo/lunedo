@@ -59,6 +59,7 @@ import {
 import { createReimport } from "./reimport-api.js";
 import { ReimportChanges } from "./reimport-changes.js";
 import { PeopleTab, PermissionsTab } from "./resolution-tabs.js";
+import { ThrottleNotice, WaitingNotice } from "./source-steps.js";
 
 const route = getRouteApi("/app/settings/organizations/$organizationId/imports/$importId");
 const PHASES = [
@@ -444,6 +445,8 @@ function Progress({ entry }: { entry: ImportView }) {
           />
         </div>
       )}
+      {deleting ? null : <ThrottleNotice until={entry.throttledUntil} />}
+      {deleting ? null : <WaitingNotice spaceKey={entry.waitingFor} />}
       {deleting ? null : (
         <Section title={t("imports.detail.steps")}>
           <ol className="flex flex-col divide-y divide-border">

@@ -63,6 +63,8 @@ describe.skipIf(!baseUrl)("Confluence export readers", () => {
         problems.push(code);
       },
       signal: new AbortController().signal,
+      options: {},
+      history: false,
     });
     const context: ReadContext = { staging };
     const pages = [];
@@ -237,6 +239,8 @@ describe.skipIf(!baseUrl)("Confluence export readers", () => {
       },
       async problem() {},
       signal: controller.signal,
+      options: {},
+      history: false,
     });
     await reader.scan(bufferSource(archive), context());
     const first = [];
@@ -260,6 +264,8 @@ describe.skipIf(!baseUrl)("Confluence export readers", () => {
         async progress() {},
         async problem() {},
         signal: new AbortController().signal,
+        options: {},
+        history: false,
       });
       const context: ReadContext = { staging };
       const pages = [];

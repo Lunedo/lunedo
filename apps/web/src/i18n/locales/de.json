@@ -1451,6 +1451,8 @@
     "methodNotAllowed": "Diese Adresse nimmt diese Art von Anfrage nicht an. Lade die Seite neu und versuche es erneut.",
     "unknownSetupAction": "Der Einrichtungsschritt hat sich vielleicht durch ein Update geändert. Lade die Seite neu und setze die Einrichtung fort.",
     "peopleSourceMissing": "Wähle, wie Pagehall Personen erkennt: mit einem API-Token, einer Benutzerliste oder ohne, mit Bestätigung. Starte dann den Import.",
+    "organizationImportLimit": "Die Importe dieser Organisation haben ihr Speicherlimit erreicht. Lösche nicht mehr benötigte Entwürfe, übernimm oder verwirf fertige Importe oder bitte die Instanz-Administration, das Limit zu erhöhen.",
+    "tokenMissing": "Pagehall hat das API-Token dieses Entwurfs gelöscht. Gib das Token im Schritt „Personen“ erneut ein und starte dann den Import.",
     "importNotResolvable": "Warte, bis der Import abgeschlossen ist, und ordne dann Personen und Gruppen in seinem Bericht zu.",
     "groupAlreadyMapped": "Jemand hat diese Gruppe inzwischen zugeordnet. Lade die Liste neu.",
     "userListTooLarge": "Die Benutzerliste darf bis zu 10 MB groß sein. Exportiere nur die Personen dieser Site und lade die kleinere Datei hoch.",
@@ -1507,7 +1509,24 @@
     "tooManyPagesToPrint": "Browser drucken bis zu 300 Seiten auf einmal. Exportieren Sie stattdessen als Word oder HTML, oder als PDF auf dem Server, falls Ihre Administration den Render-Container eingerichtet hat.",
     "renderUnavailable": "PDF auf dem Server braucht den Render-Container, der nicht eingerichtet oder nicht erreichbar ist. Drucken Sie das PDF stattdessen über Ihren Browser oder fragen Sie Ihre Instanz-Administration.",
     "renderFailed": "Der Render-Container konnte das PDF nicht erstellen. Versuchen Sie es erneut; schlägt es wieder fehl, informieren Sie Ihre Instanz-Administration.",
-    "invalidDiagram": "Das draw.io-Diagramm konnte nicht gespeichert werden, weil es etwas enthält, das draw.io nicht schreibt, oder weil es beschädigt ist. Mache die letzte Änderung in draw.io rückgängig und speichere noch einmal."
+    "invalidDiagram": "Das draw.io-Diagramm konnte nicht gespeichert werden, weil es etwas enthält, das draw.io nicht schreibt, oder weil es beschädigt ist. Mache die letzte Änderung in draw.io rückgängig und speichere noch einmal.",
+    "connectionMissing": "Verbinde den Import zuerst mit Confluence: Gib Adresse und Token ein und teste die Verbindung.",
+    "wrongInput": "Diese Art von Import nimmt diese Eingabe nicht an. Lade die Seite neu und fahre im Assistenten fort.",
+    "wrongFileType": "Diese Datei hat den falschen Typ für diesen Import. Markdown-Ordner werden als eine ZIP-Datei hochgeladen, Word-Dokumente als .docx-Dateien.",
+    "macroDocument": "Word-Dokumente mit Makros (.docm) werden nicht importiert. Speichere das Dokument als .docx ohne Makros und wähle es dann erneut.",
+    "tooManyFiles": "Ein Import liest bis zu 50 Dokumente auf einmal. Verteile sie auf mehrere Importe.",
+    "invalidOptions": "Diese Optionen gelten nicht für diese Art von Import. Lade die Seite neu und versuche es erneut.",
+    "invalidSelection": "Wähle Bereich und Seitenbäume aus der Liste.",
+    "invalidDataCenterAddress": "Gib die https-Adresse deines Confluence Data Center ein, etwa https://wiki.example.com/confluence. Eine Instanz-Administration muss den Host vorher freigeben.",
+    "invalidAccessToken": "Füge das persönliche Zugriffstoken genau so ein, wie Confluence es angezeigt hat, ohne Leerzeichen.",
+    "confluenceUnauthorized": "Confluence hat das Token abgelehnt. Prüfe E-Mail-Adresse und Token oder erstelle ein neues Token.",
+    "confluenceCertificate": "Pagehall vertraut dem Zertifikat dieses Confluence nicht. Füge das Zertifikat seiner Stelle unter „Erweitert“ hinzu.",
+    "confluenceBlocked": "Pagehall darf sich nicht mit dieser Adresse verbinden. Bitte die Instanz-Administration, ihr Netz freizugeben.",
+    "confluenceRedirect": "Confluence hat an eine andere Adresse weitergeleitet. Gib die Adresse ein, die Confluence tatsächlich nutzt.",
+    "confluenceInvalidResponse": "Confluence schickte eine Antwort, die Pagehall nicht lesen kann. Prüfe die Adresse und versuche es erneut.",
+    "confluenceUnreachable": "Pagehall hat Confluence nicht erreicht. Prüfe die Adresse und ob Confluence läuft, und versuche es erneut.",
+    "confluenceRateLimited": "Confluence hat um Verlangsamung gebeten. Warte eine Minute und versuche es erneut.",
+    "confluenceSpaceMissing": "Den Bereich gibt es nicht, oder das Token kann ihn nicht lesen. Wähle einen anderen Bereich."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -2241,6 +2260,10 @@
       "imports_maxUploadMegabytes": {
         "label": "Größter hochladbarer Export",
         "description": "Exporte über dieser Größe werden vor dem Upload abgelehnt, mit dem Hinweis, dieses Limit zu erhöhen oder den Import-Ordner der Organisation auf dem Server zu verwenden."
+      },
+      "imports_maxOrganizationMegabytes": {
+        "label": "Import-Speicher je Organisation",
+        "description": "Hochgeladene Exporte und die daraus gelesenen Daten zählen für jede Organisation zusammen. Erreicht eine Organisation dieses Limit, werden neue Uploads und das Lesen abgelehnt, bis frühere Importe abgeschlossen, verworfen oder gelöscht sind."
       },
       "imports_folderEnabled": {
         "label": "Import-Ordner",
@@ -6867,6 +6890,22 @@
       "confluence-csv": {
         "label": "CSV-Space-Export",
         "description": "Confluence Cloud. Gleicher Inhalt wie der XML-Export, anders verpackt."
+      },
+      "confluence-cloud": {
+        "label": "Confluence Cloud",
+        "description": "Über die API mit einem API-Token gelesen."
+      },
+      "confluence-dc": {
+        "label": "Confluence Data Center",
+        "description": "Über die REST-API mit einem persönlichen Zugriffstoken gelesen."
+      },
+      "markdown": {
+        "label": "Markdown-Ordner",
+        "description": "Eine ZIP-Datei mit Markdown-Dateien."
+      },
+      "word": {
+        "label": "Word-Dokumente",
+        "description": "Eine oder mehrere .docx-Dateien."
       }
     },
     "phases": {
@@ -6926,7 +6965,10 @@
         "source": "Quelle",
         "space": "Space",
         "check": "Prüfen und starten",
-        "people": "Personen"
+        "people": "Personen",
+        "connection": "Verbindung",
+        "selection": "Auswahl",
+        "upload": "Hochladen"
       },
       "progress": "Neuer Import · Schritt {step} von {total}",
       "close": "Schließen",
@@ -7018,15 +7060,47 @@
         "peopleBy": {
           "token": "Namen und E-Mail-Adressen kommen über das API-Token. Personen werden per E-Mail-Adresse Konten zugeordnet; alle anderen werden Platzhalter, die du im Bericht zuordnen kannst.",
           "list": "Namen und E-Mail-Adressen kommen aus der Benutzerliste. Personen werden per E-Mail-Adresse Konten zugeordnet; alle anderen werden Platzhalter, die du im Bericht zuordnen kannst.",
-          "skip": "Sie werden Platzhalter mit ihrer Atlassian-ID als Namen. Du kannst sie später mit einer Benutzerliste auflösen oder im Bericht zuordnen."
+          "skip": "Sie werden Platzhalter mit ihrer Atlassian-ID als Namen. Du kannst sie später mit einer Benutzerliste auflösen oder im Bericht zuordnen.",
+          "source": "Die Namen kommen aus Confluence Data Center, das keine E-Mail-Adressen herausgibt. Personen werden Platzhalter, die du im Bericht zuordnen oder mit einer Benutzerliste auflösen kannst."
         },
         "historyFull": "{count, plural, one {# frühere Version} other {# frühere Versionen}} mit Autor und Datum importiert",
         "historyCurrent": "Nur der aktuelle Stand · {count, plural, one {# frühere Version} other {# frühere Versionen}} ausgelassen",
         "extras": "{likes, plural, one {# Like wird eine 👍-Reaktion} other {# Likes werden 👍-Reaktionen}}. {watchers, plural, one {# Beobachter wird} other {# Beobachter werden}} nur gezählt.",
         "permissionsTitle": "Berechtigungen",
         "permissionsDescription": "Übernommen, soweit sie zu Pagehall-Rollen passen, und im Bericht zur Prüfung markiert. Anonymer Zugriff wird nicht übernommen.",
-        "peopleCount": "{count, plural, one {Person} other {Personen}}"
-      }
+        "peopleCount": "{count, plural, one {Person} other {Personen}}",
+        "introFiles": "Pagehall hat die Dateien gelesen. Noch ist nichts importiert.",
+        "introConnection": "Pagehall hat die gewählten Inhalte aus Confluence gelesen. Noch ist nichts importiert.",
+        "markdownTitle": "Ordner, Links und Bilder",
+        "markdownDescription": "Ordner werden zum Seitenbaum, index.md oder README.md zur Seite ihres Ordners. Links zwischen Dateien werden Seitenlinks, Bilder und andere Dateien Anhänge. Elemente, die Pagehall nicht umwandeln kann, bleiben als Text erhalten und stehen im Bericht.",
+        "wordTitle": "Überschriften, Tabellen und Bilder",
+        "wordDescription": "Überschriften, Listen, Tabellen, Links und Bilder werden übernommen; Fußnoten werden Anmerkungen am Ende der Seite. Eingebettete Objekte werden Anhänge, Kommentare entfallen. Der Bericht nennt beides."
+      },
+      "kinds": {
+        "fromConfluence": "Aus Confluence",
+        "fromFiles": "Aus Dateien",
+        "confluence-xml": {
+          "label": "Confluence-Exportdatei",
+          "description": "XML- oder CSV-Bereichsexport als ZIP-Datei, aus Confluence Cloud oder Data Center."
+        },
+        "confluence-cloud": {
+          "label": "Confluence Cloud",
+          "description": "Liest einen Bereich direkt über die API mit deiner E-Mail-Adresse und einem API-Token. Kein Export nötig; Personen kommen mit Namen und E-Mail-Adressen."
+        },
+        "confluence-dc": {
+          "label": "Confluence Data Center",
+          "description": "Liest einen Bereich über die REST-API mit einem persönlichen Zugriffstoken. Für Server und Data Center ab 7.9."
+        },
+        "markdown": {
+          "label": "Markdown-Ordner",
+          "description": "Eine ZIP-Datei mit Markdown-Dateien, zum Beispiel aus Obsidian, GitHub-Wikis oder MkDocs. Ordner werden zum Seitenbaum."
+        },
+        "word": {
+          "label": "Word-Dokumente",
+          "description": "Eine oder mehrere .docx-Dateien. Jede Datei wird eine Seite mit Überschriften, Listen, Tabellen, Bildern und Fußnoten."
+        }
+      },
+      "readingConnection": "Pagehall liest die gewählten Inhalte aus Confluence. In Confluence ändert sich nichts. Du kannst diese Seite verlassen; das Lesen läuft weiter."
     },
     "upload": {
       "drop": "Export hier ablegen",
@@ -7255,6 +7329,41 @@
           "hint": "Sie zeigen die Seite, sobald sie in diese Organisation importiert ist.",
           "entry": "Makro {macro} bindet „{title}“ aus dem Bereich {spaceKey} ein, die nicht Teil des Exports war."
         },
+        "contentSkipped": {
+          "title": "{count, plural, one {# Teil konnte} other {# Teile konnten}} mit dem Token nicht gelesen werden",
+          "hint": "Confluence hat sie verweigert. Importiere mit dem Token eines Kontos, das sie lesen kann, oder ergänze sie später.",
+          "entry": "{title}: {part, select, comments {Die Kommentare konnten} attachments {Die Anhänge konnten} restrictions {Die Einschränkungen konnten} other {Der Inhalt konnte}} nicht gelesen werden."
+        },
+        "permissionsUnavailable": {
+          "title": "Bereichsberechtigungen nicht lesbar",
+          "hint": "Nur Bereichs-Administratoren können sie über die API lesen. Lege die Rollen nach der Übernahme in Pagehall fest.",
+          "entry": "Die Bereichsberechtigungen konnten mit diesem Token nicht gelesen werden."
+        },
+        "unsupportedMarkdown": {
+          "title": "{count, plural, one {# Element blieb} other {# Elemente blieben}} als Text erhalten",
+          "hint": "Pagehall konnte sie nicht umwandeln; der ursprüngliche Text steht auf der Seite.",
+          "entry": "{file}: {construct, select, html {HTML blieb als Text erhalten} frontMatter {das Front Matter konnte nicht gelesen werden} frontMatterValue {der Front-Matter-Wert „{name}“ ist kein einfacher Text und entfiel} noteEmbed {eine eingebettete Notiz wurde zum Link} tooLarge {die Datei ist größer als 5 MB und wurde nicht importiert} other {ein Element blieb als Text erhalten}}."
+        },
+        "unresolvedFileLink": {
+          "title": "{count, plural, one {# Link zeigt} other {# Links zeigen}} auf fehlende Dateien",
+          "hint": "Die Dateien sind nicht in der ZIP-Datei. Der Linktext bleibt erhalten.",
+          "entry": "{file}: „{target}“ ist nicht in der ZIP-Datei."
+        },
+        "embeddedObject": {
+          "title": "{count, plural, one {# eingebettetes Objekt wurde} other {# eingebettete Objekte wurden}} zu Anhängen",
+          "hint": "Pagehall kann sie nicht in der Seite zeigen; sie hängen an der Seite.",
+          "entry": "{file}: {name} wurde angehängt."
+        },
+        "wordCommentsDropped": {
+          "title": "Word-Kommentare entfallen",
+          "hint": "Kommentare in Word-Dokumenten werden nicht importiert.",
+          "entry": "{file}: {count, plural, one {# Kommentar entfiel} other {# Kommentare entfielen}}."
+        },
+        "unreadableImage": {
+          "title": "{count, plural, one {# Dokument enthält} other {# Dokumente enthalten}} Bilder, die nicht lesbar sind",
+          "hint": "Verknüpfte oder beschädigte Bilder entfallen.",
+          "entry": "{file}: einige Bilder konnten nicht gelesen werden."
+        },
         "embedNotAllowed": {
           "title": "{count, plural, one {# Einbettung wird} other {# Einbettungen werden}} als Link angezeigt",
           "hint": "Ihre Adresse steht nicht auf der Liste erlaubter Einbettungen dieser Organisation. Nimm den Dienst in die Liste auf, um sie eingebettet anzuzeigen.",
@@ -7431,6 +7540,11 @@
         "cause": "Dem Speicher ging der Platz aus, während der Import Dateien schrieb. Pagehall hat ihn deshalb angehalten.",
         "action": "Bitte die Person, die Pagehall betreibt, Speicher freizugeben oder zu erweitern. Verwirf dann diesen Import und starte ihn neu."
       },
+      "organizationImportLimit": {
+        "what": "Import-Speicher der Organisation voll",
+        "cause": "Hochgeladene Exporte und die daraus gelesenen Daten haben das Limit dieser Organisation erreicht, während dieser Export gelesen wurde.",
+        "action": "Lösche nicht mehr benötigte Entwürfe, übernimm oder verwirf fertige Importe oder bitte die Instanz-Administration, das Limit zu erhöhen. Wähle die Datei danach erneut."
+      },
       "internalError": {
         "what": "Der Import hat nach mehreren Versuchen aufgehört",
         "cause": "Ein unerwartetes Problem ist wiederholt aufgetreten.",
@@ -7440,6 +7554,81 @@
         "what": "Dieser Export stammt aus einem anderen Confluence-Bereich",
         "cause": "Ein erneuter Import nimmt nur einen Export des Confluence-Bereichs an, aus dem dieser Bereich importiert wurde.",
         "action": "Wähle einen Export desselben Confluence-Bereichs oder starte einen neuen Import in einen neuen Bereich."
+      },
+      "noMarkdown": {
+        "what": "Keine Markdown-Dateien gefunden",
+        "cause": "Die ZIP-Datei enthält außerhalb versteckter Ordner keine .md- oder .markdown-Dateien.",
+        "action": "Packe den Ordner mit den Markdown-Dateien in eine ZIP-Datei und lade sie erneut hoch."
+      },
+      "macroDocument": {
+        "what": "Dokument mit Makros",
+        "cause": "Ein Dokument enthält Makros. Pagehall führt Makros nie aus und importiert sie nicht.",
+        "action": "Öffne das Dokument in Word, speichere es als .docx ohne Makros und lade es erneut hoch."
+      },
+      "documentTooLarge": {
+        "what": "Dokument zu groß",
+        "cause": "Ein Dokument ist größer als 100 MB.",
+        "action": "Entferne große Bilder oder teile das Dokument und lade es dann erneut hoch."
+      },
+      "unreadableDocument": {
+        "what": "Dokument nicht lesbar",
+        "cause": "Eine Datei ist beschädigt, verschlüsselt, im alten .doc-Format oder kein Word-Dokument.",
+        "action": "Öffne das Dokument in Word, speichere es ohne Kennwort als .docx und lade es erneut hoch."
+      },
+      "selectionMissing": {
+        "what": "Kein Bereich gewählt",
+        "cause": "Der Import weiß nicht, welchen Bereich er lesen soll.",
+        "action": "Wähle den Bereich im Schritt „Auswahl“."
+      },
+      "connectionMissing": {
+        "what": "Token fehlt",
+        "cause": "Pagehall hat das Token dieses Imports gelöscht, oder es wurde nie eingegeben.",
+        "action": "Teste die Verbindung im Schritt „Verbindung“ erneut."
+      },
+      "confluenceUnauthorized": {
+        "what": "Confluence hat das Token abgelehnt",
+        "cause": "Das Token ist falsch, abgelaufen oder widerrufen.",
+        "action": "Erstelle ein neues Token und teste die Verbindung erneut."
+      },
+      "confluenceSpaceMissing": {
+        "what": "Bereich nicht gefunden",
+        "cause": "Der Bereich wurde gelöscht, oder das Token kann ihn nicht mehr lesen.",
+        "action": "Wähle einen anderen Bereich oder nutze das Token eines Kontos, das den Bereich lesen kann."
+      },
+      "confluenceCertificate": {
+        "what": "Zertifikat nicht vertrauenswürdig",
+        "cause": "Confluence nutzt ein Zertifikat, dem Pagehall nicht vertraut.",
+        "action": "Füge das Zertifikat der Stelle im Schritt „Verbindung“ unter „Erweitert“ hinzu."
+      },
+      "confluenceBlocked": {
+        "what": "Adresse nicht erlaubt",
+        "cause": "Die Adresse von Confluence liegt in einem privaten Netz, das Pagehall nicht kontaktieren darf.",
+        "action": "Bitte die Instanz-Administration, dieses Netz für ausgehende Verbindungen freizugeben."
+      },
+      "confluenceRedirect": {
+        "what": "Confluence leitet woanders hin",
+        "cause": "Confluence antwortete mit einer Weiterleitung an eine andere Adresse. Pagehall folgt keinen Weiterleitungen.",
+        "action": "Gib die Adresse ein, die Confluence tatsächlich nutzt, und teste die Verbindung erneut."
+      },
+      "confluenceInvalidResponse": {
+        "what": "Unerwartete Antwort von Confluence",
+        "cause": "Confluence schickte eine Antwort, die Pagehall nicht lesen kann, womöglich von einem Proxy dazwischen.",
+        "action": "Prüfe die Adresse und versuche es erneut. Scheitert es weiter, nutze den XML-Export des Bereichs."
+      },
+      "confluenceResponseTooLarge": {
+        "what": "Antwort von Confluence zu groß",
+        "cause": "Eine Seite oder Liste aus Confluence ist größer, als Pagehall auf einmal liest.",
+        "action": "Importiere den Bereich stattdessen über seinen XML-Export."
+      },
+      "confluenceUnreachable": {
+        "what": "Confluence nicht erreichbar",
+        "cause": "Confluence hat auch nach mehreren Versuchen nicht geantwortet.",
+        "action": "Prüfe, ob Confluence läuft und erreichbar ist, und starte das Lesen dann erneut."
+      },
+      "confluenceRateLimited": {
+        "what": "Confluence bremst weiter",
+        "cause": "Confluence hat die Anfragen länger begrenzt, als Pagehall wartet.",
+        "action": "Versuche es später erneut, etwa außerhalb der Bürozeiten."
       }
     },
     "quarantine": {
@@ -7474,7 +7663,9 @@
         "connected": "Verbunden mit {site}",
         "connectedPlain": "Das Token funktioniert. Pagehall liest die Personen, wenn der Import läuft.",
         "found": "{people, plural, one {# Person} other {# Personen}} des Exports gefunden, {withEmail} mit sichtbarer E-Mail-Adresse.",
-        "replace": "Token ersetzen"
+        "replace": "Token ersetzen",
+        "deletedTitle": "API-Token erneut eingeben",
+        "deleted": "Pagehall hat das Token dieses Entwurfs am {when} gelöscht, weil der Entwurf eine Woche lang unbearbeitet blieb oder weil die importierende Person das Recht zum Importieren verloren hat. Gib es erneut ein, um fortzufahren."
       },
       "list": {
         "label": "Benutzerliste aus der Atlassian-Administration",
@@ -7774,6 +7965,109 @@
       "restrictedBy": "Wartet auf die Einschränkung von „{title}“ aus Confluence. Bis sie übernommen ist, ist nur „Pagehall-Version behalten“ möglich, und es werden keine Inhalte aus Confluence gespeichert.",
       "showDifference": "Abweichung der Berechtigungen anzeigen",
       "selectionLimited": "Einige ausgewählte Seiten warten auf eine Einschränkung aus Confluence, daher wird nur „Pagehall-Version behalten“ angeboten."
+    },
+    "throttled": {
+      "title": "Confluence hat um Verlangsamung gebeten",
+      "description": "Pagehall wartet wie von Confluence verlangt und macht in {seconds, plural, one {# Sekunde} other {# Sekunden}} weiter. Du musst nichts tun."
+    },
+    "waiting": {
+      "title": "Wartet auf den Import eines anderen Bereichs",
+      "description": "Dieser Import teilt seine Confluence-Verbindung mit dem Import des Bereichs {key}, der zuerst läuft. Importe über eine Verbindung laufen nacheinander; dieser macht von selbst weiter."
+    },
+    "connection": {
+      "cloudTitle": "Mit Confluence Cloud verbinden",
+      "dataCenterTitle": "Mit Confluence Data Center verbinden",
+      "site": "Adresse der Site",
+      "siteHint": "Die Adresse deiner Confluence-Cloud-Site, etwa example.atlassian.net.",
+      "siteRequired": "Gib die Adresse deiner Confluence-Cloud-Site ein.",
+      "email": "Deine Atlassian-E-Mail-Adresse",
+      "emailInvalid": "Gib die E-Mail-Adresse des Atlassian-Kontos ein, das das API-Token erstellt hat.",
+      "baseUrl": "Basisadresse",
+      "baseUrlHint": "Die Adresse, unter der du Confluence öffnest, samt Kontextpfad wie /confluence. Eine Instanz-Administration muss den Host vorher freigeben.",
+      "baseUrlInvalid": "Gib die https-Adresse deines Confluence ein, etwa https://wiki.example.com/confluence.",
+      "apiToken": "API-Token",
+      "apiTokenHint": "Erstelle es unter id.atlassian.com › Sicherheit › API-Token.",
+      "accessToken": "Persönliches Zugriffstoken",
+      "accessTokenHint": "In Confluence: Profil › Persönliche Zugriffstoken › Token erstellen. Nutze ein Konto, das jeden zu importierenden Bereich lesen kann.",
+      "tokenRequired": "Füge das Token genau so ein, wie Confluence es angezeigt hat.",
+      "advanced": "Erweitert",
+      "certificates": "Zertifizierungsstelle (PEM)",
+      "certificatesHint": "Nur nötig, wenn der Server ein Zertifikat deiner eigenen Zertifizierungsstelle nutzt. Füge das Zertifikat der Stelle ein, nicht das des Servers.",
+      "readOnly": "Pagehall liest nur. Das Token wird verschlüsselt gespeichert, nur für diesen Import genutzt und gelöscht, wenn der Import übernommen, verworfen, angehalten wird oder fehlschlägt.",
+      "test": "Verbindung testen",
+      "change": "Verbindung ändern",
+      "connected": "Verbunden mit {site}",
+      "asCloud": "Verbunden als {name}. Personen werden über die E-Mail-Adresse zugeordnet; Pagehall sieht nur, was dieses Konto lesen kann.",
+      "asDataCenter": "Verbunden als {name}. Pagehall sieht nur, was dieses Konto lesen kann.",
+      "connectedPlain": "Pagehall sieht nur, was dieses Konto lesen kann.",
+      "checkFailed": "Die Verbindung konnte nicht getestet werden",
+      "checkFailedAction": "Prüfe Adresse und Token und teste die Verbindung dann erneut.",
+      "required": "Teste zuerst die Verbindung und fahre dann fort.",
+      "deletedTitle": "Token erneut eingeben",
+      "deleted": "Pagehall hat das Token dieses Entwurfs am {when} gelöscht, weil der Entwurf eine Woche lang unbearbeitet blieb oder weil die importierende Person das Recht zum Importieren verloren hat. Teste die Verbindung erneut, um fortzufahren.",
+      "sitePlaceholder": "example.atlassian.net",
+      "baseUrlPlaceholder": "https://wiki.example.com/confluence",
+      "certificatesPlaceholder": "-----BEGIN CERTIFICATE-----"
+    },
+    "selection": {
+      "intro": "Wähle einen oder mehrere Bereiche und, wenn du willst, nur einige Seitenbäume des Bereichs dieses Imports. Pagehall liest sie im nächsten Schritt; in Confluence ändert sich nichts.",
+      "notConnected": "Verbinde dich zuerst mit Confluence. Geh einen Schritt zurück und teste die Verbindung.",
+      "spaceTitle": "Bereich",
+      "space": "Confluence-Bereich",
+      "noSpaces": "Kein Bereich passt.",
+      "personalSpace": "Persönlicher Bereich · {key}",
+      "spacesFailed": "Die Bereiche konnten nicht gelesen werden",
+      "spaceRequired": "Wähle mindestens einen Bereich zum Importieren.",
+      "treesTitle": "Seitenbäume",
+      "treeFailed": "Die Seitenbäume konnten nicht gelesen werden",
+      "totals": "{pages, plural, one {# Seite} other {# Seiten}} · {blogPosts, plural, one {# Blogbeitrag} other {# Blogbeiträge}} · {size} Anhänge",
+      "totalsAtLeast": "Mindestens {pages, plural, one {# Seite} other {# Seiten}} · {blogPosts, plural, one {# Blogbeitrag} other {# Blogbeiträge}} · {size} Anhänge. Der Bereich ist zu groß, um ihn vollständig zu zählen.",
+      "noTrees": "Der Bereich hat keine Seiten unter seiner Startseite.",
+      "untitled": "Seite ohne Titel",
+      "treeSize": "{pages, plural, one {# Seite} other {# Seiten}} · {size}",
+      "treeRequired": "Wähle mindestens einen Seitenbaum oder alle.",
+      "blogPosts": "Blogbeiträge ({count})",
+      "blogPostsHint": "Werden mit dem ganzen Bereich importiert.",
+      "blogPostsWithTrees": "Nur mit dem ganzen Bereich importierbar. Wähle alle Seitenbäume, um sie einzuschließen.",
+      "restricted": "Seiten, die das Token nicht lesen kann, listet Confluence nicht auf. Inhalte, die sich später nicht lesen lassen, werden übersprungen und im Bericht genannt.",
+      "optionsTitle": "Optionen",
+      "history": "Seitenverlauf",
+      "historyHint": "Jede Version wird eine Pagehall-Version. Dauert deutlich länger.",
+      "spacesHint": "{count, plural, one {# Bereich} other {# Bereiche}}, die dieses Konto lesen kann. Jeder gewählte Bereich wird ein eigener Import in einen neuen Bereich.",
+      "spaceHintReimport": "{count, plural, one {# Bereich} other {# Bereiche}}, die dieses Konto lesen kann. Ein erneuter Import liest nur den Bereich, aus dem er stammt.",
+      "filter": "Bereiche suchen",
+      "filterPlaceholder": "Name oder Schlüssel",
+      "noSpacesReadable": "Dieses Konto kann keinen Bereich lesen. Verbinde dich mit einem Konto, das die zu importierenden Bereiche lesen kann.",
+      "severalTitle": "{count} Importe, einer je Bereich",
+      "severalDescription": "Pagehall legt für jeden weiteren Bereich einen eigenen Import an. Sie teilen diese Verbindung und lesen nacheinander, jeder mit eigener Prüfung, eigenem Probelauf und eigenem Bericht. Setze sie in der Importliste fort; das Token wird gelöscht, wenn der letzte von ihnen beendet ist.",
+      "treesOfTitle": "Seitenbäume von {name}",
+      "treesOfHint": "Die anderen Bereiche werden vollständig importiert. Ihre Seitenbäume wählst du in ihren eigenen Importen."
+    },
+    "markdown": {
+      "title": "Markdown-Ordner als ZIP",
+      "description": "Ordner werden zum Seitenbaum; index.md oder README.md wird die Seite ihres Ordners. Front Matter liefert Titel, Labels und Daten, weitere Schlüssel werden Seiteneigenschaften. Links zwischen Dateien werden Seitenlinks, [[Wiki-Links]] eingeschlossen, Bilder und andere Dateien werden Anhänge. Mermaid-Codeblöcke werden Diagramme."
+    },
+    "documents": {
+      "title": "Word-Dokumente",
+      "drop": ".docx-Dateien hier ablegen",
+      "choose": "Dateien wählen",
+      "hint": "Mehrere auf einmal, je bis {size}. Speichere ältere .doc-Dateien vorher als .docx. Dokumente mit Makros (.docm) werden nicht importiert.",
+      "refused": "{count, plural, one {{names} wurde nicht hinzugefügt} other {{names} wurden nicht hinzugefügt}}",
+      "refusedCause": "Nur .docx-Dateien bis {size} lassen sich importieren.",
+      "refusedAction": "Speichere das Dokument als .docx ohne Makros oder teile es in kleinere Dokumente und wähle es dann erneut.",
+      "incomplete": "Hochladen nicht abgeschlossen. Wähle die Datei erneut, um fortzufahren.",
+      "remove": "{name} entfernen",
+      "removeFailed": "Das Dokument konnte nicht entfernt werden",
+      "required": "Füge mindestens ein Word-Dokument hinzu und warte, bis alle Uploads abgeschlossen sind.",
+      "split": "Seiten",
+      "splitHint": "Eine Änderung liest die Dokumente erneut.",
+      "splitOptions": {
+        "file": "Eine Seite je Dokument",
+        "heading": "Eine Unterseite je Überschrift der obersten Ebene"
+      },
+      "notes": "Eingebettete Objekte wie Tabellenblätter werden Anhänge; Word-Kommentare entfallen. Der Bericht nennt beides.",
+      "readTitle": "Dokumente gelesen",
+      "read": "{pages, plural, one {# Seite} other {# Seiten}} mit {attachments, plural, one {# Anhang} other {# Anhängen}} gefunden."
     }
   },
   "contentLanguage": {

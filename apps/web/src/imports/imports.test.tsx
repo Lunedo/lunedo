@@ -45,6 +45,11 @@ function importView(overrides: Record<string, unknown> = {}) {
     archived: false,
     history: false,
     peopleSource: null,
+    connection: null,
+    files: [],
+    options: {},
+    throttledUntil: null,
+    waitingFor: null,
     tokenDeletedAt: null,
     sourceUrl: null,
     reviewers: [{ id: "01929b1e-0000-7000-8000-0000000000c4", name: "Lukas Hofer" }],
@@ -80,7 +85,9 @@ function importView(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function setup(routes: Record<string, () => { status?: number; body?: unknown }>, permissions: string[]) {
+type Reply = { status?: number; body?: unknown };
+
+function setup(routes: Record<string, () => Reply | Promise<Reply>>, permissions: string[]) {
   return mockApi({
     "GET /api/v1/instance/info": () => ({
       body: {
@@ -714,5 +721,248 @@ describe("people and permissions in the report", () => {
       expect(body.visibility).toBe("private");
       expect(body.grants).toContainEqual({ principalKind: "group", principalId: GROUP, role: "editor" });
     });
+  });
+});
+
+describe("new import sources in the wizard", () => {
+  const draft = (overrides: Record<string, unknown> = {}) =>
+    importView({
+      state: "draft",
+      draftStep: 1,
+      quarantineSpace: null,
+      found: null,
+      file: null,
+      ...overrides,
+    });
+
+  it("tests the Confluence Cloud connection only when asked and never shows the token again", async () => {
+    let current = draft({ source: "confluence-cloud" });
+    const api = setup(
+      {
+        [`GET /api/v1/imports/${IMPORT_ID}`]: () => ({ body: current }),
+        [`PATCH /api/v1/imports/${IMPORT_ID}`]: () => ({ body: current }),
+        [`PUT /api/v1/imports/${IMPORT_ID}/connection`]: () => {
+          current = draft({
+            source: "confluence-cloud",
+            connection: {
+              kind: "cloud",
+              site: "example.atlassian.net",
+              basePath: "",
+              email: "olivia@example.org",
+              account: "Olivia Owner",
+              selection: [],
+            },
+            peopleSource: {
+              kind: "token",
+              site: "example.atlassian.net",
+              email: null,
+              people: null,
+              withEmail: null,
+            },
+          });
+          return { body: current };
+        },
+      },
+      ["organization.imports.manage"],
+    );
+    await open(`/settings/organizations/${ORGANIZATION.id}/imports/${IMPORT_ID}/setup?step=1`);
+    await userEvent.click(await screen.findByRole("button", { name: "Continue" }));
+    expect(await screen.findByText("Test the connection first, then continue.")).toBeTruthy();
+    const site = screen.getByLabelText("Site address");
+    await waitFor(() => expect(site.getAttribute("aria-invalid")).toBe("true"));
+    await userEvent.type(site, "example.atlassian.net");
+    await userEvent.type(screen.getByLabelText("Your Atlassian e-mail address"), "olivia@example.org");
+    await userEvent.click(screen.getByRole("button", { name: "Test connection" }));
+    expect(await screen.findByText("Paste the token exactly as Confluence showed it.")).toBeTruthy();
+    expect(api.requests.some((request) => request.path.endsWith("/connection"))).toBe(false);
+    await userEvent.type(screen.getByLabelText("API token"), "secret-token");
+    await userEvent.click(screen.getByRole("button", { name: "Test connection" }));
+    expect(await screen.findByText("Connected to example.atlassian.net")).toBeTruthy();
+    expect(api.requests.find((request) => request.path.endsWith("/connection"))?.body).toEqual({
+      kind: "cloud",
+      site: "example.atlassian.net",
+      email: "olivia@example.org",
+      token: "secret-token",
+    });
+    expect(screen.queryByDisplayValue("secret-token")).toBeNull();
+  });
+
+  it("lets people choose spaces and page trees and saves the selection when continuing", async () => {
+    const connection = {
+      kind: "cloud",
+      site: "example.atlassian.net",
+      basePath: "",
+      email: "olivia@example.org",
+      account: "Olivia Owner",
+      selection: [] as { importId: string; spaceKey: string }[],
+    };
+    let current: Record<string, unknown> = draft({ source: "confluence-cloud", draftStep: 2, connection });
+    const api = setup(
+      {
+        [`GET /api/v1/imports/${IMPORT_ID}`]: () => ({ body: current }),
+        [`PUT /api/v1/imports/${IMPORT_ID}/connection/selection`]: () => {
+          const body = api.requests.at(-1)?.body as { spaceKeys: string[] };
+          current = {
+            ...current,
+            options: { spaceKey: body.spaceKeys[0] },
+            connection: {
+              ...connection,
+              selection: body.spaceKeys.map((spaceKey, index) => ({
+                importId: index === 0 ? IMPORT_ID : `0190a7c0-0000-7000-8000-00000000000${index}`,
+                spaceKey,
+              })),
+            },
+          };
+          return { body: current };
+        },
+        [`PATCH /api/v1/imports/${IMPORT_ID}`]: () => {
+          const body = (api.requests.at(-1)?.body ?? {}) as { options?: Record<string, unknown> };
+          if (body.options) current = { ...current, options: body.options, state: "analyzing" };
+          return { body: current };
+        },
+        [`GET /api/v1/imports/${IMPORT_ID}/connection/spaces`]: () => ({
+          body: [
+            { id: "1", key: "ITOPS", name: "IT Operations", personal: false },
+            { id: "2", key: "SALES", name: "Sales", personal: false },
+          ],
+        }),
+        [`GET /api/v1/imports/${IMPORT_ID}/connection/spaces/ITOPS`]: () => ({
+          body: {
+            spaceKey: "ITOPS",
+            spaceName: "IT Operations",
+            pages: 130,
+            blogPosts: 4,
+            attachmentBytes: 2048,
+            complete: true,
+            trees: [
+              { id: "11", title: "Network", pages: 86, attachmentBytes: 1024 },
+              { id: "12", title: "Onboarding", pages: 41, attachmentBytes: 1024 },
+            ],
+          },
+        }),
+      },
+      ["organization.imports.manage"],
+    );
+    await open(`/settings/organizations/${ORGANIZATION.id}/imports/${IMPORT_ID}/setup?step=2`);
+    await userEvent.click(await screen.findByRole("button", { name: "Continue" }));
+    const required = await screen.findByText("Choose at least one space to import.");
+    await waitFor(() => expect(document.activeElement).toBe(required.closest("[data-field-error]")));
+    await userEvent.click(screen.getByRole("checkbox", { name: /IT Operations/ }));
+    const onboarding = await screen.findByRole("checkbox", { name: "Onboarding" });
+    await userEvent.click(onboarding);
+    await userEvent.click(screen.getByRole("checkbox", { name: /Sales/ }));
+    expect(screen.getByText("2 imports, one per space")).toBeTruthy();
+    expect(screen.getByText("Page trees of IT Operations")).toBeTruthy();
+    expect(screen.getByRole("checkbox", { name: "Onboarding" })).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    await waitFor(() =>
+      expect(
+        api.requests.some(
+          (request) =>
+            request.method === "PATCH" &&
+            JSON.stringify(request.body).includes('"pageIds":["11"]') &&
+            JSON.stringify(request.body).includes('"spaceKey":"ITOPS"'),
+        ),
+      ).toBe(true),
+    );
+    const selections = api.requests.filter((request) => request.path.endsWith("/connection/selection"));
+    expect(selections.map((request) => request.body)).toEqual([{ spaceKeys: ["ITOPS", "SALES"] }]);
+    const order = api.requests.map((request) => request.method);
+    expect(order.indexOf("PUT")).toBeLessThan(order.lastIndexOf("PATCH"));
+  });
+
+  it("shows the chosen source at once and continues with its steps once it is saved", async () => {
+    let current = draft({ source: "confluence-xml", draftStep: 0 });
+    let release: () => void = () => {};
+    const saved = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const api = setup(
+      {
+        [`GET /api/v1/imports/${IMPORT_ID}`]: () => ({ body: current }),
+        [`PATCH /api/v1/imports/${IMPORT_ID}`]: async () => {
+          const body = (api.requests.at(-1)?.body ?? {}) as { source?: string; draftStep?: number };
+          if (body.source) {
+            await saved;
+            current = { ...current, source: body.source as typeof current.source };
+          }
+          if (body.draftStep !== undefined) current = { ...current, draftStep: body.draftStep };
+          return { body: current };
+        },
+      },
+      ["organization.imports.manage"],
+    );
+    await open(`/settings/organizations/${ORGANIZATION.id}/imports/${IMPORT_ID}/setup?step=0`);
+    const markdown = await screen.findByRole("radio", { name: /Markdown folder/ });
+    await userEvent.click(markdown);
+    expect(markdown.getAttribute("aria-checked")).toBe("true");
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    release();
+    expect(await screen.findByRole("heading", { name: "Upload", level: 1 })).toBeTruthy();
+  });
+
+  it("refuses Word documents with macros before uploading anything", async () => {
+    const current = draft({ source: "word", draftStep: 1 });
+    const api = setup(
+      {
+        [`GET /api/v1/imports/${IMPORT_ID}`]: () => ({ body: current }),
+        [`PATCH /api/v1/imports/${IMPORT_ID}`]: () => ({ body: current }),
+      },
+      ["organization.imports.manage"],
+    );
+    await open(`/settings/organizations/${ORGANIZATION.id}/imports/${IMPORT_ID}/setup?step=1`);
+    const input = await screen.findByLabelText(/Drop .docx files here/);
+    await userEvent.upload(input, new File(["macro"], "macros.docm"), { applyAccept: false });
+    expect(await screen.findByText("macros.docm was not added")).toBeTruthy();
+    expect(api.requests.some((request) => request.path.endsWith("/import-uploads"))).toBe(false);
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    expect(
+      await screen.findByText("Add at least one Word document and wait until every upload is finished."),
+    ).toBeTruthy();
+  });
+
+  it("shows when Confluence asked to slow down while reading", async () => {
+    const current = draft({
+      source: "confluence-cloud",
+      draftStep: 4,
+      state: "analyzing",
+      throttledUntil: new Date(Date.now() + 30_000).toISOString(),
+      connection: {
+        kind: "cloud",
+        site: "example.atlassian.net",
+        basePath: "",
+        email: "olivia@example.org",
+        account: null,
+        selection: [],
+      },
+    });
+    setup({ [`GET /api/v1/imports/${IMPORT_ID}`]: () => ({ body: current }) }, [
+      "organization.imports.manage",
+    ]);
+    await open(`/settings/organizations/${ORGANIZATION.id}/imports/${IMPORT_ID}/setup?step=4`);
+    expect(await screen.findByText("Confluence asked to slow down")).toBeTruthy();
+  });
+
+  it("says which import goes first when imports share a connection", async () => {
+    const current = draft({
+      source: "confluence-cloud",
+      draftStep: 4,
+      state: "analyzing",
+      waitingFor: "ITOPS",
+      connection: {
+        kind: "cloud",
+        site: "example.atlassian.net",
+        basePath: "",
+        email: "olivia@example.org",
+        account: null,
+        selection: [],
+      },
+    });
+    setup({ [`GET /api/v1/imports/${IMPORT_ID}`]: () => ({ body: current }) }, [
+      "organization.imports.manage",
+    ]);
+    await open(`/settings/organizations/${ORGANIZATION.id}/imports/${IMPORT_ID}/setup?step=4`);
+    expect(await screen.findByText("Waiting for the import of another space")).toBeTruthy();
+    expect(screen.getByText(/with the import of space ITOPS, which goes first/)).toBeTruthy();
   });
 });

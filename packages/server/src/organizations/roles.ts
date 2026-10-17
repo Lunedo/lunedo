@@ -3,6 +3,7 @@ import { and, eq, isNull, or, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";
 import type { AuditEvents, AuditLog } from "../audit/audit-log.js";
+import type { AccessReductions } from "../authorization/access-reductions.js";
 import {
   type AccessLevel,
   type Areas,
@@ -83,11 +84,18 @@ export class RoleService {
   readonly #database: Database;
   readonly #audit: AuditLog;
   readonly #authorization: AuthorizationService;
+  readonly #reductions: AccessReductions | undefined;
 
-  constructor(options: { database: Database; audit: AuditLog; authorization: AuthorizationService }) {
+  constructor(options: {
+    database: Database;
+    audit: AuditLog;
+    authorization: AuthorizationService;
+    reductions?: AccessReductions;
+  }) {
     this.#database = options.database;
     this.#audit = options.audit;
     this.#authorization = options.authorization;
+    this.#reductions = options.reductions;
   }
 
   async listCustom(scope: RoleScope, organizationId: string | null): Promise<CustomRole[]> {
@@ -204,6 +212,7 @@ export class RoleService {
         },
         ...(scopeOf(scope, organizationId) ? { scope: scopeOf(scope, organizationId) } : {}),
       });
+      await this.#reductions?.reduced(tx, { organizationId, accountId: null });
       return { ...current, name, areas };
     });
   }
@@ -230,6 +239,7 @@ export class RoleService {
         fields: { name: current.name },
         ...(scopeOf(scope, organizationId) ? { scope: scopeOf(scope, organizationId) } : {}),
       });
+      await this.#reductions?.reduced(tx, { organizationId, accountId: null });
     });
   }
 
@@ -538,6 +548,10 @@ export class RoleService {
           reason: options.reason ?? "removed",
         },
         ...(scopeOf(scope, organizationId) ? { scope: scopeOf(scope, organizationId) } : {}),
+      });
+      await this.#reductions?.reduced(tx, {
+        organizationId,
+        accountId: row.principalKind === "account" ? row.principalId : null,
       });
       return true;
     };

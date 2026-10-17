@@ -18,6 +18,15 @@ export const reportCategories = {
   content: ["invalidContent", "contentTruncated", "macroDataTruncated", "unresolvedPerson", "invalidLabel"],
   comments: ["inlineCommentMoved", "tooManyComments"],
   archive: ["duplicateEntry", "skippedEntry"],
+  source: [
+    "contentSkipped",
+    "permissionsUnavailable",
+    "unsupportedMarkdown",
+    "unresolvedFileLink",
+    "embeddedObject",
+    "wordCommentsDropped",
+    "unreadableImage",
+  ],
 } as const;
 
 export type ReportCategory = keyof typeof reportCategories;

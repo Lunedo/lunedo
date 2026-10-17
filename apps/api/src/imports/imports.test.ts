@@ -240,6 +240,50 @@ describe.skipIf(!databaseBaseUrl)("imports through the API", () => {
     expect((await owner.get(`/api/v1/spaces/${spaceId}`)).statusCode).toBe(404);
   });
 
+  it("connects only to allowed Confluence hosts and keeps the connection to the importer", async () => {
+    const created = await owner.post(`/api/v1/organizations/${organizationId}/imports`, {
+      source: "confluence-dc",
+    });
+    expect(created.statusCode, created.body).toBe(201);
+    const id = (created.json() as { id: string }).id;
+    const refused = await owner.put(`/api/v1/imports/${id}/connection`, {
+      kind: "dataCenter",
+      baseUrl: "https://intranet.example.com/confluence",
+      token: "personal-access-token",
+    });
+    expect(refused.statusCode).toBe(400);
+    expect(refused.json()).toMatchObject({ code: "invalidDataCenterAddress" });
+    expect(refused.body).not.toContain("personal-access-token");
+    const wrongKind = await owner.put(`/api/v1/imports/${id}/connection`, {
+      kind: "cloud",
+      site: "example.atlassian.net",
+      email: "a@example.org",
+      token: "x",
+    });
+    expect(wrongKind.json()).toMatchObject({ code: "wrongInput" });
+    const spaces = await owner.get(`/api/v1/imports/${id}/connection/spaces`);
+    expect(spaces.statusCode).toBe(409);
+    expect(spaces.json()).toMatchObject({ code: "connectionMissing" });
+    const selection = await owner.put(`/api/v1/imports/${id}/connection/selection`, {
+      spaceKeys: ["ITOPS", "HR"],
+    });
+    expect(selection.statusCode).toBe(409);
+    expect(selection.json()).toMatchObject({ code: "connectionMissing" });
+    const empty = await owner.put(`/api/v1/imports/${id}/connection/selection`, { spaceKeys: [] });
+    expect(empty.statusCode).toBe(400);
+    const other = await member();
+    const foreignSelection = await other.client.put(`/api/v1/imports/${id}/connection/selection`, {
+      spaceKeys: ["ITOPS"],
+    });
+    expect([403, 404]).toContain(foreignSelection.statusCode);
+    const foreign = await other.client.put(`/api/v1/imports/${id}/connection`, {
+      kind: "dataCenter",
+      baseUrl: "https://intranet.example.com",
+      token: "x",
+    });
+    expect([403, 404]).toContain(foreign.statusCode);
+  });
+
   it("refuses uploads above the instance limit and points to the import folder", async () => {
     await test.runtime.settings.set(maxUploadSetting, {}, "instance", 1);
     try {

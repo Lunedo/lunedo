@@ -45,7 +45,8 @@ export type OutboundFailure =
   | "unresolvable"
   | "timeout"
   | "network"
-  | "tooManyRedirects";
+  | "tooManyRedirects"
+  | "untrustedCertificate";
 
 export class OutboundError extends Error {
   override name = "OutboundError";
@@ -251,6 +252,75 @@ function once(
       );
     });
     outgoing.end(body);
+  });
+}
+
+const CERTIFICATE_ERRORS = new Set([
+  "CERT_HAS_EXPIRED",
+  "CERT_NOT_YET_VALID",
+  "CERT_UNTRUSTED",
+  "DEPTH_ZERO_SELF_SIGNED_CERT",
+  "ERR_TLS_CERT_ALTNAME_INVALID",
+  "SELF_SIGNED_CERT_IN_CHAIN",
+  "UNABLE_TO_GET_ISSUER_CERT",
+  "UNABLE_TO_GET_ISSUER_CERT_LOCALLY",
+  "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+]);
+
+export interface StreamRequest {
+  url: string;
+  headers: Record<string, string>;
+  timeoutMs?: number;
+  idleTimeoutMs?: number;
+  ca?: string | undefined;
+  signal?: AbortSignal | undefined;
+}
+
+export interface StreamResponse {
+  status: number;
+  headers: IncomingHttpHeaders;
+  body: IncomingMessage;
+}
+
+export function openOutbound(policy: OutboundPolicy, request: StreamRequest): Promise<StreamResponse> {
+  const url = parseOutboundUrl(request.url);
+  const secure = url.protocol === "https:";
+  const host = url.hostname.replace(/^\[|\]$/g, "");
+  if (isIP(host) !== 0) checkAddress(policy, host, secure);
+  const timeoutMs = request.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const idleTimeoutMs = request.idleTimeoutMs ?? timeoutMs;
+  return new Promise((resolve, reject) => {
+    const send = secure ? httpsRequest : httpRequest;
+    const outgoing = send(
+      url,
+      {
+        method: "GET",
+        headers: request.headers,
+        lookup: guardedLookup(policy, secure),
+        agent: false,
+        ...(secure && request.ca ? { ca: request.ca } : {}),
+        ...(request.signal ? { signal: request.signal } : {}),
+      },
+      (response) => {
+        clearTimeout(timer);
+        response.setTimeout(idleTimeoutMs, () =>
+          response.destroy(new OutboundError("timeout", "The answer stopped arriving")),
+        );
+        resolve({ status: response.statusCode ?? 0, headers: response.headers, body: response });
+      },
+    );
+    const timer = setTimeout(() => {
+      outgoing.destroy(new OutboundError("timeout", "The request timed out"));
+    }, timeoutMs);
+    outgoing.on("close", () => clearTimeout(timer));
+    outgoing.on("error", (error: NodeJS.ErrnoException) => {
+      if (error instanceof OutboundError) reject(error);
+      else if (error.name === "AbortError") reject(error);
+      else if (CERTIFICATE_ERRORS.has(error.code ?? "")) {
+        reject(new OutboundError("untrustedCertificate", "The certificate of the service is not trusted"));
+      } else reject(new OutboundError("network", "The service could not be reached"));
+    });
+    outgoing.end();
   });
 }
 

@@ -13,7 +13,12 @@ import {
   Req,
   Res,
 } from "@nestjs/common";
-import { CONFLUENCE_LINK_MAX_LENGTH, MAX_USER_LIST_BYTES } from "@pagehall/server";
+import {
+  CONFLUENCE_LINK_MAX_LENGTH,
+  type ConfluenceSpaceSummary,
+  type ConfluenceTree,
+  MAX_USER_LIST_BYTES,
+} from "@pagehall/server";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { InternalRoute, Permission } from "../access/route-access.js";
@@ -33,6 +38,9 @@ import {
   completeUploadSchema,
   confirmationSchema,
   confluenceLinkSchema,
+  confluenceSpacesSchema,
+  confluenceTreeSchema,
+  connectionSchema,
   createImportSchema,
   createUploadSchema,
   decidedSchema,
@@ -55,6 +63,7 @@ import {
   reportEntriesSchema,
   reportSchema,
   reviewersSchema,
+  spaceSelectionSchema,
   updateImportSchema,
   uploadSchema,
   userListResultSchema,
@@ -64,6 +73,9 @@ const TAG = "Imports";
 const organization = { type: "organization", param: "organizationId" } as const;
 const importResource = { type: "import", param: "importId" } as const;
 const importParams = z.object({ importId: uuid("ID of the import.") }).strict();
+const spaceKeyParams = importParams
+  .extend({ spaceKey: z.string().min(1).max(255).describe("Key of the Confluence space.") })
+  .strict();
 const uploadParams = organizationIdParams.extend({ uploadId: uuid("ID of the upload.") }).strict();
 const partParams = uploadParams
   .extend({
@@ -272,7 +284,7 @@ export class ImportsController {
     bodyExample: { name: "export.zip", size: 20971520 },
     status: 201,
     response: { description: "The upload.", schema: uploadSchema, example: { ...exampleUpload, parts: [] } },
-    errors: ["uploadTooLarge", "invalidFileName", "invalidUpload", "storageFull"],
+    errors: ["uploadTooLarge", "organizationImportLimit", "invalidFileName", "invalidUpload", "storageFull"],
   })
   async createUpload(
     @Param("organizationId") organizationId: string,
@@ -433,6 +445,12 @@ export class ImportsController {
       "uploadIncomplete",
       "importFolderDisabled",
       "importFileUnavailable",
+      "wrongInput",
+      "wrongFileType",
+      "macroDocument",
+      "tooManyFiles",
+      "invalidOptions",
+      "invalidSelection",
     ],
   })
   async update(
@@ -496,6 +514,8 @@ export class ImportsController {
       "keyTaken",
       "invalidSpaceName",
       "invalidSpaceKey",
+      "peopleSourceMissing",
+      "tokenMissing",
       "storageFull",
     ],
   })
@@ -674,6 +694,135 @@ export class ImportsController {
       })),
       nextCursor: page.next ? encodeCursor({ id: page.next }) : null,
     };
+  }
+
+  @Put("imports/:importId/connection")
+  @Permission("import.manage", importResource)
+  @ApiRoute({
+    summary: "Connect an import to Confluence",
+    description:
+      "Sets how an import of the source `confluence-cloud` or `confluence-dc` reads Confluence through its API. Pagehall tests the connection at once, stores the token encrypted, uses it only for this import and the imports of further spaces chosen with it, and deletes it when the last of them is accepted, discarded, stopped or fails, when the importer loses the permission to import, or when the draft is left alone for a week. Only `https` sites under `atlassian.net` or hosts the instance administrator allowed are contacted, never addresses in private networks unless the instance allows them, and redirects are not followed.",
+    tags: [TAG],
+    params: importParams,
+    body: connectionSchema,
+    bodyExample: {
+      kind: "cloud",
+      site: "example.atlassian.net",
+      email: "alex@example.com",
+      token: "ATATT3x…",
+    },
+    response: { description: "The import.", schema: importSchema, example: exampleImport },
+    errors: [
+      "importStarted",
+      "wrongInput",
+      "invalidAtlassianSite",
+      "invalidAtlassianEmail",
+      "invalidAtlassianToken",
+      "invalidAccessToken",
+      "invalidDataCenterAddress",
+      "invalidCertificate",
+      "confluenceUnauthorized",
+      "confluenceCertificate",
+      "confluenceBlocked",
+      "confluenceRedirect",
+      "confluenceInvalidResponse",
+      "confluenceUnreachable",
+      "confluenceRateLimited",
+    ],
+  })
+  async connection(
+    @Param("importId") importId: string,
+    @Body() body: z.output<typeof connectionSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.#services.imports.setConnection(actorOf(request), importId, body);
+  }
+
+  @Put("imports/:importId/connection/selection")
+  @Permission("import.manage", importResource)
+  @ApiRoute({
+    summary: "Choose the Confluence spaces to import",
+    description:
+      "Chooses one or more spaces of the connection of an import draft. Each space is imported on its own, into its own new space, with its own check, dry run, report and re-import. The import keeps its space when it is chosen; Pagehall creates a draft for every other space that shares the connection and its token, and removes the drafts of spaces no longer chosen. Imports sharing a connection read and run one after another. The shared token is deleted when the last of them has ended or been removed. A re-import reads only the space it came from.",
+    tags: [TAG],
+    params: importParams,
+    body: spaceSelectionSchema,
+    bodyExample: { spaceKeys: ["ITOPS", "HR"] },
+    response: { description: "The import.", schema: importSchema, example: exampleImport },
+    errors: ["importStarted", "wrongInput", "connectionMissing", "invalidSelection", "reimportSpaceFixed"],
+  })
+  async selection(
+    @Param("importId") importId: string,
+    @Body() body: z.output<typeof spaceSelectionSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.#services.imports.selectSpaces(actorOf(request), importId, body.spaceKeys);
+  }
+
+  @Get("imports/:importId/connection/spaces")
+  @Permission("import.manage", importResource)
+  @ApiRoute({
+    summary: "List the Confluence spaces of a connection",
+    description:
+      "Lists the spaces the token of an import draft can read, by name. Spaces and pages the token cannot read are not listed by Confluence.",
+    tags: [TAG],
+    params: importParams,
+    response: {
+      description: "The spaces.",
+      schema: confluenceSpacesSchema,
+      example: [{ id: "98306", key: "ITOPS", name: "IT Operations", personal: false }],
+    },
+    errors: [
+      "importStarted",
+      "wrongInput",
+      "connectionMissing",
+      "confluenceUnauthorized",
+      "confluenceUnreachable",
+    ],
+  })
+  async connectionSpaces(
+    @Param("importId") importId: string,
+    @Req() request: FastifyRequest,
+  ): Promise<ConfluenceSpaceSummary[]> {
+    return this.#services.imports.connectionSpaces(actorOf(request), importId);
+  }
+
+  @Get("imports/:importId/connection/spaces/:spaceKey")
+  @Permission("import.manage", importResource)
+  @ApiRoute({
+    summary: "Show what a Confluence space contains",
+    description:
+      "Counts the pages, blog posts and attachments of a space the token can read, with the top-level page trees to choose from.",
+    tags: [TAG],
+    params: spaceKeyParams,
+    response: {
+      description: "The space.",
+      schema: confluenceTreeSchema,
+      example: {
+        spaceKey: "ITOPS",
+        spaceName: "IT Operations",
+        pages: 128,
+        blogPosts: 6,
+        attachmentBytes: 104857600,
+        complete: true,
+        trees: [{ id: "98310", title: "Network", pages: 86, attachmentBytes: 52428800 }],
+      },
+    },
+    errors: [
+      "importStarted",
+      "wrongInput",
+      "connectionMissing",
+      "confluenceSpaceMissing",
+      "confluenceUnauthorized",
+      "confluenceUnreachable",
+    ],
+  })
+  async connectionTree(
+    @Param("importId") importId: string,
+    @Param("spaceKey") spaceKey: string,
+    @Req() request: FastifyRequest,
+  ): Promise<ConfluenceTree> {
+    return this.#services.imports.connectionTree(actorOf(request), importId, spaceKey);
   }
 
   @Put("imports/:importId/people-source")

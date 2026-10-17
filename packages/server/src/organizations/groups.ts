@@ -3,6 +3,7 @@ import { and, asc, eq, isNull, or, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";
 import type { AuditLog } from "../audit/audit-log.js";
+import type { AccessReductions } from "../authorization/access-reductions.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database, Transaction } from "../database/database.js";
 import {
@@ -78,11 +79,18 @@ export class GroupService {
   readonly #database: Database;
   readonly #audit: AuditLog;
   readonly #authorization: AuthorizationService;
+  readonly #reductions: AccessReductions | undefined;
 
-  constructor(options: { database: Database; audit: AuditLog; authorization: AuthorizationService }) {
+  constructor(options: {
+    database: Database;
+    audit: AuditLog;
+    authorization: AuthorizationService;
+    reductions?: AccessReductions;
+  }) {
     this.#database = options.database;
     this.#audit = options.audit;
     this.#authorization = options.authorization;
+    this.#reductions = options.reductions;
   }
 
   async list(organizationId: string, page: PageRequest = FIRST_PAGE): Promise<Page<Group>> {
@@ -302,6 +310,7 @@ export class GroupService {
         fields: { name: group.name },
         scope: scopeOf(group.organizationId),
       });
+      await this.#reductions?.reduced(tx, { organizationId: group.organizationId, accountId: null });
     });
   }
 
@@ -392,6 +401,7 @@ export class GroupService {
         fields: { accountId, reason: "removed" },
         scope: scopeOf(group.organizationId),
       });
+      await this.#reductions?.reduced(tx, { organizationId: group.organizationId, accountId });
       return true;
     });
   }

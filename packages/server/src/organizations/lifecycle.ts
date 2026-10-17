@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { z } from "zod";
 import { SYSTEM } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
+import type { AccessReductions } from "../authorization/access-reductions.js";
 import type { Database, Transaction } from "../database/database.js";
 import { defineJob } from "../jobs/job-queue.js";
 import type { NotificationService, NotifyResult } from "../notifications/service.js";
@@ -38,6 +39,7 @@ export class OrganizationLifecycle {
   readonly #breakGlass: BreakGlassService;
   readonly #notifications: NotificationService;
   readonly #settings: SettingsService;
+  readonly #reductions: AccessReductions | undefined;
 
   constructor(options: {
     database: Database;
@@ -46,6 +48,7 @@ export class OrganizationLifecycle {
     breakGlass: BreakGlassService;
     notifications: NotificationService;
     settings: SettingsService;
+    reductions?: AccessReductions;
   }) {
     this.#database = options.database;
     this.#audit = options.audit;
@@ -53,6 +56,7 @@ export class OrganizationLifecycle {
     this.#breakGlass = options.breakGlass;
     this.#notifications = options.notifications;
     this.#settings = options.settings;
+    this.#reductions = options.reductions;
   }
 
   async processExpiry(): Promise<number> {
@@ -94,6 +98,10 @@ export class OrganizationLifecycle {
             ? { scope: { type: "organization" as const, id: assignment.organization_id } }
             : {}),
         });
+        await this.#reductions?.reduced(tx, {
+          organizationId: assignment.organization_id,
+          accountId: assignment.principal_kind === "account" ? assignment.principal_id : null,
+        });
         processed += 1;
       });
     }
@@ -117,6 +125,10 @@ export class OrganizationLifecycle {
           targetId: membership.group_id,
           fields: { accountId: membership.account_id, reason: "expired" },
           scope: { type: "organization", id: membership.organization_id },
+        });
+        await this.#reductions?.reduced(tx, {
+          organizationId: membership.organization_id,
+          accountId: membership.account_id,
         });
         processed += 1;
       });

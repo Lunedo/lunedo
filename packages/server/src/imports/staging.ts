@@ -39,14 +39,22 @@ function toStored<T>(row: RecordRow): StoredRecord<T> {
   };
 }
 
+export type StagingCheck = (executor: Executor) => Promise<void>;
+
 export class StagingStore {
   readonly #database: Database;
   readonly #importId: string;
+  readonly #check: StagingCheck | undefined;
   #pending: StagedRecord[] = [];
 
-  constructor(database: Database, importId: string) {
+  constructor(database: Database, importId: string, check?: StagingCheck) {
     this.#database = database;
     this.#importId = importId;
+    this.#check = check;
+  }
+
+  get importId(): string {
+    return this.#importId;
   }
 
   async put(record: StagedRecord): Promise<void> {
@@ -74,6 +82,10 @@ export class StagingStore {
         as r(kind text, source_id text, ref text, parent_id text, sort text, data jsonb)
       on conflict (import_id, kind, source_id) do update
         set ref = excluded.ref, parent_id = excluded.parent_id, sort = excluded.sort, data = excluded.data`);
+    await executor.execute(sql`
+      update imports set staged_bytes = staged_bytes + ${Buffer.byteLength(JSON.stringify(rows), "utf8")}
+      where id = ${this.#importId}`);
+    await this.#check?.(executor);
   }
 
   async count(kind: string, where?: { field: string; value: string }): Promise<number> {
@@ -229,5 +241,6 @@ export class StagingStore {
   async clear(): Promise<void> {
     this.#pending = [];
     await this.#database.execute(sql`delete from import_records where import_id = ${this.#importId}`);
+    await this.#database.execute(sql`update imports set staged_bytes = 0 where id = ${this.#importId}`);
   }
 }

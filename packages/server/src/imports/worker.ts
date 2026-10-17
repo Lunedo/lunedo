@@ -12,6 +12,7 @@ import type { NotificationService } from "../notifications/service.js";
 import { isValidSpaceKey, normalizeSpaceKey, spaceKeyCandidates, suggestSpaceKey } from "../spaces/keys.js";
 import { isStorageFull } from "../storage/errors.js";
 import type { AtlassianDirectory } from "./atlassian.js";
+import { ConfluenceUnavailableError } from "./confluence/api-client.js";
 import { deleteCredentials, directoryFor } from "./credentials.js";
 import {
   ImportError,
@@ -21,7 +22,7 @@ import {
   ImportYieldError,
 } from "./errors.js";
 import type { ImportFolder } from "./folder.js";
-import type { ByteSource } from "./formats/bytes.js";
+import { type ByteSource, EMPTY_SOURCE } from "./formats/bytes.js";
 import { FILE_RETENTION_DAYS } from "./imports.js";
 import { importWorkJob } from "./jobs.js";
 import { heldCondition } from "./narrowing.js";
@@ -31,9 +32,14 @@ import { ReimportComparer } from "./reimport-compare.js";
 import { type ProblemCode, problemCodes, recordProblems } from "./report.js";
 import type { ImportState } from "./schema.js";
 import { signalImportChange } from "./signals.js";
-import type { ImportReaderRegistry, ImportSource } from "./source.js";
+import type { ImportOptions, ImportReaderRegistry, ImportSource } from "./source.js";
 import { StagingStore } from "./staging.js";
-import type { UploadService } from "./uploads.js";
+import {
+  importStorageUsed,
+  OrganizationImportLimitError,
+  releaseUploads,
+  type UploadService,
+} from "./uploads.js";
 
 const SEGMENT_MS = 25 * 60 * 1000;
 
@@ -64,7 +70,7 @@ interface WorkRow {
   source: string;
   state: ImportState;
   phase: string | null;
-  file_kind: "upload" | "folder" | null;
+  file_kind: "upload" | "folder" | "uploads" | "connection" | null;
   upload_id: string | null;
   folder_file: string | null;
   folder_key: string | null;
@@ -73,6 +79,8 @@ interface WorkRow {
   source_url: string | null;
   history: boolean;
   people_source: string | null;
+  connection_id: string | null;
+  options: ImportOptions;
   checkpoint: Record<string, unknown>;
   found: Record<string, unknown> | null;
   quarantine_space_id: string | null;
@@ -151,10 +159,13 @@ export class ImportWorker {
     const unlock = await this.#lock(importId);
     if (!unlock) return;
     const deadline = Date.now() + (this.#options.segmentMs ?? SEGMENT_MS);
+    let connectionId: string | null = null;
     try {
       for (let pass = 0; pass < 20; pass++) {
         const row = await this.#load(importId);
         if (!row) return;
+        connectionId = row.connection_id ?? connectionId;
+        if (await this.#waiting(row)) return;
         if (row.state === "analyzing") await this.#analyze(row, job.signal, deadline);
         else if (row.state === "running") await this.#run(row, job.signal, deadline);
         else if (row.state === "stopping" || row.state === "discarding") await this.#purge(row, job.signal);
@@ -174,15 +185,39 @@ export class ImportWorker {
       }
       if (job.retryCount >= importWorkJob.retryLimit) {
         this.#options.logger.error({ err: error, importId }, "An import failed after all retries");
-        await this.#fail(importId, "internalError");
+        await this.#fail(
+          importId,
+          error instanceof ConfluenceUnavailableError ? error.code : "internalError",
+        );
         return;
       }
       this.#options.logger.warn({ err: error, importId }, "An import step failed and is retried");
       throw error;
     } finally {
       await unlock();
+      if (connectionId) await this.#wake(importId, connectionId);
     }
   };
+
+  async #waiting(row: WorkRow): Promise<boolean> {
+    if (!row.connection_id || (row.state !== "analyzing" && row.state !== "running")) return false;
+    const first = await this.#database.execute<{ id: string }>(sql`
+      select id from imports where connection_id = ${row.connection_id} and state in ('analyzing', 'running')
+      order by created_at, id limit 1`);
+    return (first.rows[0]?.id ?? row.id) !== row.id;
+  }
+
+  async #wake(importId: string, connectionId: string): Promise<void> {
+    const current = await this.#database.execute<{ state: ImportState }>(sql`
+      select state from imports where id = ${importId}`);
+    const state = current.rows[0]?.state;
+    if (state === "analyzing" || state === "running") return;
+    const next = await this.#database.execute<{ id: string }>(sql`
+      select id from imports where connection_id = ${connectionId} and state in ('analyzing', 'running')
+      order by created_at, id limit 1`);
+    const id = next.rows[0]?.id;
+    if (id) await this.#continue(id);
+  }
 
   async #continue(importId: string): Promise<void> {
     await this.#options.jobs?.enqueue(
@@ -193,6 +228,8 @@ export class ImportWorker {
   }
 
   async #source(row: WorkRow): Promise<ByteSource> {
+    if (row.file_kind === "connection") return EMPTY_SOURCE;
+    if (row.file_kind === "uploads") return this.#options.uploads.bundle(row.id);
     if (row.file_kind === "upload" && row.upload_id) return this.#options.uploads.source(row.upload_id);
     if (row.file_kind === "folder" && row.folder_file) {
       if (row.folder_key !== row.organization_id) {
@@ -226,7 +263,16 @@ export class ImportWorker {
         update imports set checkpoint = ${JSON.stringify({ run: runId })}::jsonb where id = ${row.id} and state = 'analyzing'`);
     }
     const scanCheckpoint = (row.checkpoint.scan as Record<string, unknown> | undefined) ?? null;
-    const staging = new StagingStore(this.#database, row.id);
+    const maxBytes = await this.#options.uploads.organizationMaxBytes();
+    const staging = new StagingStore(this.#database, row.id, async (executor) => {
+      const used = await importStorageUsed(executor, row.organization_id);
+      if (used > maxBytes) {
+        throw new ImportFormatError(
+          "organizationImportLimit",
+          new OrganizationImportLimitError(used, maxBytes).message,
+        );
+      }
+    });
     if (!scanCheckpoint) {
       await staging.clear();
       await this.#database.execute(sql`delete from import_problems where import_id = ${row.id}`);
@@ -244,6 +290,8 @@ export class ImportWorker {
       await reader.scan(file, {
         staging,
         checkpoint: scanCheckpoint ?? {},
+        options: row.options ?? {},
+        history: row.history,
         signal,
         saveCheckpoint: async (checkpoint) => {
           const updated = await this.#database.execute(sql`
@@ -562,11 +610,7 @@ export class ImportWorker {
       });
       if (waiting === 0) {
         await tx.execute(sql`delete from import_records where import_id = ${row.id}`);
-        if (row.upload_id) {
-          await tx.execute(sql`
-            update import_uploads set expires_at = now() + make_interval(days => ${FILE_RETENTION_DAYS})
-            where id = ${row.upload_id}`);
-        }
+        await releaseUploads(tx, { importId: row.id, uploadId: row.upload_id, days: FILE_RETENTION_DAYS });
       }
       await this.#options.audit.record(tx, {
         name: "import.reimportApplied",
@@ -654,11 +698,7 @@ export class ImportWorker {
           decided_at = coalesce(decided_at, now()),
           file_expires_at = now() + make_interval(days => ${FILE_RETENTION_DAYS}), updated_at = now()
         where id = ${row.id} and state = ${row.state}`);
-      if (row.upload_id) {
-        await tx.execute(sql`
-          update import_uploads set expires_at = now() + make_interval(days => ${FILE_RETENTION_DAYS})
-          where id = ${row.upload_id}`);
-      }
+      await releaseUploads(tx, { importId: row.id, uploadId: row.upload_id, days: FILE_RETENTION_DAYS });
       await signalImportChange(tx, { importId: row.id, organizationId: row.organization_id });
     });
   }
