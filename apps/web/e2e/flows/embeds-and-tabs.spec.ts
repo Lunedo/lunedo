@@ -40,7 +40,7 @@ test("inserts an allowed and a disallowed embed and loads the allowed one only w
       return route.fulfill({
         status: 200,
         contentType: "text/html",
-        body: "<!doctype html><title>Video</title>",
+        body: "<!doctype html><title>Video</title><p>Video player</p>",
       });
     });
   }
@@ -84,11 +84,11 @@ test("inserts an allowed and a disallowed embed and loads the allowed one only w
   expect(frames).toEqual([]);
   await page.getByText("Embedded from YouTube").scrollIntoViewIfNeeded();
   const frame = page.frameLocator('iframe[title="WLAN login"]');
-  await expect(frame.locator("title")).toHaveText("Video");
+  await expect(frame.getByText("Video player")).toBeVisible();
   expect(frames[0]).toContain("https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ");
   await expect(page.locator('iframe[title="WLAN login"]')).toHaveAttribute("referrerpolicy", "strict-origin");
   await page.getByText("Embedded from Vimeo").scrollIntoViewIfNeeded();
-  await expect(page.frameLocator('iframe[title="Vimeo video"]').locator("title")).toHaveText("Video");
+  await expect(page.frameLocator('iframe[title="Vimeo video"]').getByText("Video player")).toBeVisible();
   await expect(page.locator('iframe[title="Vimeo video"]')).toHaveAttribute("referrerpolicy", "no-referrer");
   const origin = new URL(page.url()).origin;
   expect(referrers.get("www.youtube-nocookie.com")).toBe(`${origin}/`);
@@ -136,6 +136,6 @@ test("switches tabs with the mouse and the keyboard and opens a whiteboard from 
   await expect(tabs.getByRole("tab", { name: "Linux" })).toBeFocused();
   await expect(page.getByRole("tabpanel", { name: "Linux" })).toContainText("Linux steps");
 
-  await page.getByRole("link", { name: /Netzwerk-Umbau 2027/ }).click();
+  await page.locator(".ph-whiteboard-card").getByText("Netzwerk-Umbau 2027").click();
   await expect(page).toHaveURL(new RegExp(`/whiteboards/${board.id}/`));
 });
