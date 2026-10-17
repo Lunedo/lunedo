@@ -76,7 +76,7 @@ export class DiagramService {
     await this.#requirePage(itemId);
     const limit = MAX_DIAGRAM_IMAGE_BYTES[input.type];
     const sanitized = sanitizeDiagramSvg(await readText(input.body, limit), limit);
-    if ((sanitized.width ?? 0) > MAX_DIAGRAM_IMAGE_SIZE || (sanitized.height ?? 0) > MAX_DIAGRAM_IMAGE_SIZE) {
+    if (sanitized.width > MAX_DIAGRAM_IMAGE_SIZE || sanitized.height > MAX_DIAGRAM_IMAGE_SIZE) {
       throw new SvgRejectedError(
         `The diagram is larger than ${MAX_DIAGRAM_IMAGE_SIZE} by ${MAX_DIAGRAM_IMAGE_SIZE} pixels`,
       );

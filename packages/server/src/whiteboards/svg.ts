@@ -365,14 +365,60 @@ class Sanitizer {
 export interface SanitizedSvg {
   svg: string;
   text: string;
-  width: number | null;
-  height: number | null;
+  width: number;
+  height: number;
 }
 
-function length(value: string | null): number | null {
-  if (!value) return null;
-  const match = /^\s*([0-9]+(?:\.[0-9]+)?)\s*(px)?\s*$/.exec(value);
-  return match ? Number(match[1]) : null;
+const UNIT_PIXELS: Readonly<Record<string, number>> = {
+  "": 1,
+  px: 1,
+  pt: 4 / 3,
+  pc: 16,
+  mm: 96 / 25.4,
+  cm: 96 / 2.54,
+  in: 96,
+  q: 96 / 101.6,
+  em: 16,
+  rem: 16,
+  ex: 8,
+  ch: 8,
+};
+
+function pixels(value: string | null): number | null {
+  if (value === null || value.trim() === "") return null;
+  const match = /^\s*([+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?)\s*([a-z]*|%)\s*$/i.exec(value);
+  if (!match) throw new SvgRejectedError("The size of the drawing cannot be read");
+  const unit = (match[2] ?? "").toLowerCase();
+  if (unit === "%") return null;
+  const number = Number(match[1]) * (UNIT_PIXELS[unit] ?? Number.NaN);
+  if (!Number.isFinite(number) || number < 0)
+    throw new SvgRejectedError("The size of the drawing cannot be read");
+  return number;
+}
+
+function sizeOf(root: Element): { width: number; height: number } {
+  const viewBox = root.getAttribute("viewBox");
+  let box: number[] = [];
+  if (viewBox !== null && viewBox.trim() !== "") {
+    box = viewBox
+      .trim()
+      .split(/[\s,]+/)
+      .map(Number);
+    if (
+      box.length !== 4 ||
+      box.some((value) => !Number.isFinite(value)) ||
+      (box[2] ?? 0) < 0 ||
+      (box[3] ?? 0) < 0
+    ) {
+      throw new SvgRejectedError("The size of the drawing cannot be read");
+    }
+  }
+  const width = pixels(root.getAttribute("width"));
+  const height = pixels(root.getAttribute("height"));
+  return {
+    width: Math.max(width ?? 0, box[2] ?? 0, width === null && box.length === 0 ? 300 : 0),
+    height: Math.max(height ?? 0, box[3] ?? 0, height === null && box.length === 0 ? 150 : 0),
+  };
 }
 
 function parse(input: string, maxBytes: number): Element {
@@ -405,11 +451,5 @@ export function sanitizeDiagramSvg(input: string, maxBytes: number): SanitizedSv
   const sanitizer = new Sanitizer(true);
   const svg = sanitizer.svg(root, 0, false);
   sanitizer.finish();
-  const box = (root.getAttribute("viewBox") ?? "")
-    .trim()
-    .split(/[\s,]+/)
-    .map(Number);
-  const width = length(root.getAttribute("width")) ?? (box.length === 4 && box[2] ? box[2] : null);
-  const height = length(root.getAttribute("height")) ?? (box.length === 4 && box[3] ? box[3] : null);
-  return { svg, text: sanitizer.texts.join("\n"), width, height };
+  return { svg, text: sanitizer.texts.join("\n"), ...sizeOf(root) };
 }

@@ -58,3 +58,24 @@ describe("labelText", () => {
     expect(labelText("<div>One</div><div>Two&nbsp;&#x41;&#66;</div>")).toBe("One\nTwo AB");
   });
 });
+
+describe("compressed draw.io pages", () => {
+  it("share one size budget across all pages and refuse pages inside pages", () => {
+    const page = (size: number) =>
+      `<diagram>${compress(`<mxGraphModel><root><mxCell id="0" value="${"x".repeat(size)}"/></root></mxGraphModel>`)}</diagram>`;
+    const pages = Array.from({ length: 6 }, () => page(2 * 1024 * 1024)).join("");
+    expect(() => sanitizeDrawio(`<mxfile>${pages}</mxfile>`)).toThrow(DiagramRejectedError);
+    expect(sanitizeDrawio(`<mxfile>${page(10)}${page(10)}</mxfile>`).text).toBe("x".repeat(10));
+    const tiny = compress("<mxGraphModel/>");
+    const inner = compress(`<mxfile><diagram name="x">${tiny}</diagram></mxfile>`);
+    expect(() => sanitizeDrawio(`<mxfile><diagram>${inner}</diagram></mxfile>`)).toThrow(
+      DiagramRejectedError,
+    );
+    expect(sanitizeDrawio(`<mxfile>${`<diagram>${tiny}</diagram>`.repeat(1000)}</mxfile>`).xml).toContain(
+      "<mxGraphModel>",
+    );
+    expect(() => sanitizeDrawio(`<mxfile>${`<diagram>${tiny}</diagram>`.repeat(1001)}</mxfile>`)).toThrow(
+      DiagramRejectedError,
+    );
+  });
+});

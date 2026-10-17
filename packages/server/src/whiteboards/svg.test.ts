@@ -110,3 +110,20 @@ describe("sanitizeDiagramSvg", () => {
     expect(() => sanitizeDiagramSvg(`<svg ${NS}>${" ".repeat(100)}</svg>`, 50)).toThrow(SvgRejectedError);
   });
 });
+
+describe("size of diagram images", () => {
+  it("reads every length unit, scientific notation and the view box", () => {
+    const size = (attributes: string) => {
+      const { width, height } = sanitizeDiagramSvg(`<svg ${NS} ${attributes}/>`, MAX_PREVIEW_BYTES);
+      return [Math.round(width), Math.round(height)];
+    };
+    expect(size('width="10in" height="1e3"')).toEqual([960, 1000]);
+    expect(size('width="100%" viewBox="0 0 357.5 65"')).toEqual([358, 65]);
+    expect(size('width="10" height="10" viewBox="0 0 50000 10"')).toEqual([50000, 10]);
+    expect(size('width="2.5e4pt" height="1cm"')).toEqual([33333, 38]);
+    expect(size("")).toEqual([300, 150]);
+    for (const attributes of ['width="huge"', 'height="10furlongs"', 'viewBox="0 0 a b"', 'width="-1"']) {
+      expect(() => size(attributes), attributes).toThrow(SvgRejectedError);
+    }
+  });
+});

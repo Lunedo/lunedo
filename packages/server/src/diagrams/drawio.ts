@@ -89,20 +89,34 @@ function parseXml(input: string): Element {
   return root;
 }
 
-function inflate(compressed: string): string {
-  try {
-    const data = inflateRawSync(Buffer.from(compressed.trim(), "base64"), {
-      maxOutputLength: MAX_DRAWIO_BYTES,
-    });
-    return decodeURIComponent(data.toString("latin1"));
-  } catch {
-    throw new DiagramRejectedError("A page of the diagram cannot be decompressed");
-  }
-}
+const MAX_PAGES = 1000;
 
 class DrawioSanitizer {
   readonly texts: string[] = [];
   #elements = 0;
+  #pages = 0;
+  #inflated = 0;
+
+  #inflate(compressed: string): string {
+    this.#pages += 1;
+    if (this.#pages > MAX_PAGES) throw new DiagramRejectedError("The diagram has too many pages");
+    const budget = MAX_DRAWIO_BYTES - this.#inflated;
+    let data: Buffer;
+    try {
+      data = inflateRawSync(Buffer.from(compressed.trim(), "base64"), {
+        maxOutputLength: Math.max(1, budget),
+      });
+    } catch {
+      throw new DiagramRejectedError("A page of the diagram cannot be decompressed or is too large");
+    }
+    this.#inflated += data.length;
+    if (this.#inflated > MAX_DRAWIO_BYTES) throw new DiagramRejectedError("The diagram is too large");
+    try {
+      return decodeURIComponent(data.toString("latin1"));
+    } catch {
+      throw new DiagramRejectedError("A page of the diagram cannot be decompressed");
+    }
+  }
 
   attributes(element: Element): string {
     const parts: string[] = [];
@@ -127,7 +141,7 @@ class DrawioSanitizer {
     return parts.join("");
   }
 
-  element(element: Element, depth: number): string {
+  element(element: Element, depth: number, inflated = false): string {
     if (depth > MAX_DEPTH) throw new DiagramRejectedError("The diagram is nested too deeply");
     this.#elements += 1;
     if (this.#elements > MAX_ELEMENTS) throw new DiagramRejectedError("The diagram has too many elements");
@@ -138,13 +152,17 @@ class DrawioSanitizer {
     let content = "";
     let text = "";
     for (let node: Node | null = element.firstChild; node; node = node.nextSibling) {
-      if (node.nodeType === node.ELEMENT_NODE) content += this.element(node as Element, depth + 1);
+      if (node.nodeType === node.ELEMENT_NODE) content += this.element(node as Element, depth + 1, inflated);
       else if (node.nodeType === node.TEXT_NODE || node.nodeType === node.CDATA_SECTION_NODE) {
         text += node.nodeValue ?? "";
       }
     }
     if (name === "diagram" && content.length === 0 && text.trim().length > 0) {
-      content = this.element(parseXml(inflate(text)), depth + 1);
+      if (inflated) throw new DiagramRejectedError("A compressed page contains another compressed page");
+      const page = parseXml(this.#inflate(text));
+      if (page.localName !== "mxGraphModel")
+        throw new DiagramRejectedError("A page of the diagram is not a graph");
+      content = this.element(page, depth + 1, true);
     }
     return `<${name}${this.attributes(element)}>${content}</${name}>`;
   }
