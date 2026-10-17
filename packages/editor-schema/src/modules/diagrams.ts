@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { type AttachmentAttributes, copyAttachmentAttributes } from "../copying.js";
 import {
   type FileReference,
   type ImportedFile,
@@ -136,6 +137,7 @@ function diagramNode(
   type: DiagramType,
   attrs: NodeDefinition["attrs"],
   validate: (node: ValidNode) => string | null,
+  attachments: AttachmentAttributes = [],
 ): NodeDefinition {
   return {
     name: type,
@@ -147,6 +149,7 @@ function diagramNode(
       previewVersion: optional(version, null),
       text: optional(z.string().max(MAX_DRAWING_TEXT), ""),
     },
+    copy: copyAttachmentAttributes([...attachments, ["previewId", "previewVersion"]]),
     validate: (node) => pair(node, "previewId", "previewVersion") ?? validate(node),
     html: (node, renderer) => diagramHtml(type, node, renderer, true),
     print: (node, renderer) => diagramHtml(type, node, renderer, false),
@@ -436,6 +439,7 @@ export const diagramsModule = defineModule({
         sourceVersion: optional(version, null),
       },
       (node) => pair(node, "sourceId", "sourceVersion"),
+      [["sourceId", "sourceVersion"]],
     ),
     drawioReference,
     textDiagram("mermaid"),

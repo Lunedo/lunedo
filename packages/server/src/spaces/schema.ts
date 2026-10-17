@@ -61,6 +61,7 @@ export const versionReasons = [
   "modeChanged",
   "imported",
   "importedNotApplied",
+  "copied",
 ] as const;
 export type VersionReason = (typeof versionReasons)[number];
 export const versionReason = pgEnum("version_reason", versionReasons);
@@ -327,6 +328,8 @@ export const pageVersions = pgTable(
     note: text().notNull().default(""),
     reason: versionReason().notNull(),
     restoredFrom: integer(),
+    copiedFromId: uuid().references((): AnyPgColumn => treeItems.id, { onDelete: "set null" }),
+    copiedFromTitle: text(),
     revision: bigint({ mode: "number" }).notNull(),
     stateVector: bytes().notNull(),
     contributors: uuid().array().notNull().default(sql`'{}'::uuid[]`),
@@ -336,6 +339,7 @@ export const pageVersions = pgTable(
   (table) => [
     uniqueIndex("page_versions_number_unique").on(table.itemId, table.number),
     index().on(table.createdBy),
+    index().on(table.copiedFromId),
     check("page_versions_note_length", sql`length(${table.note}) <= 500`),
   ],
 );

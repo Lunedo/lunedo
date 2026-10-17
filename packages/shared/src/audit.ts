@@ -167,6 +167,7 @@ export const auditEventNames = [
   "whiteboard.updateRejected",
   "page.modeChanged",
   "page.archived",
+  "page.copied",
   "page.unarchived",
   "trash.itemsDeleted",
   "trash.itemsRestored",

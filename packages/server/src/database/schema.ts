@@ -47,6 +47,7 @@ export {
   taskStatusChanges,
   tasks,
 } from "../collaboration/schema.js";
+export { copyState, itemCopies } from "../copies/schema.js";
 export { keyRotationStatus, keyRotations } from "../crypto/schema.js";
 export { exportFormat, exportScope, exportState, exports } from "../exports/schema.js";
 export {

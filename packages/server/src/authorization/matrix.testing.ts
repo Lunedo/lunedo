@@ -134,6 +134,7 @@ type Rule =
   | "ownerOrOrganizationAdministrator"
   | "exportOwner"
   | "readyExportOwner"
+  | "copyOwner"
   | "self";
 
 interface Expectation {
@@ -265,6 +266,7 @@ const EXPECTED: Record<string, Expectation> = {
   "export.view": { scope: "instance", rule: "exportOwner" },
   "export.delete": { scope: "instance", rule: "exportOwner" },
   "export.download": { scope: "instance", rule: "readyExportOwner" },
+  "copy.view": { scope: "instance", rule: "copyOwner" },
 };
 
 function expectedAllowed(held: Held, actionName: string): boolean {
@@ -294,6 +296,7 @@ function expectedAllowed(held: Held, actionName: string): boolean {
     ownerOrOrganizationAdministrator: () => false,
     exportOwner: () => false,
     readyExportOwner: () => false,
+    copyOwner: () => false,
   };
   if (expectation.rule && rules[expectation.rule]()) return true;
   if (expectation.scope === "space") return false;
@@ -322,6 +325,7 @@ interface Fixture {
   deletedSpaceEntryId: string;
   importId: string;
   exportId: string;
+  copyId: string;
 }
 
 export function permissionMatrix(only: readonly Subject[], extras: boolean): void {
@@ -423,10 +427,15 @@ export function permissionMatrix(only: readonly Subject[], extras: boolean): voi
         "insert into exports (id, account_id, scope, space_id, name, state, expires_at) values ($1, $2, 'space', $3, 'Matrix space', 'ready', now() + interval '1 day') returning id",
         [randomUUID(), owner, space.id],
       );
+      const copyRow = await test.pool.query<{ id: string }>(
+        "insert into item_copies (id, account_id, source_item_id, target_space_id, descendants, title, state) values ($1, $2, $3, $4, false, 'Matrix copy', 'done') returning id",
+        [randomUUID(), owner, itemId, space.id],
+      );
       return {
         organizationId: created.id,
         importId: importRow.rows[0]?.id ?? "",
         exportId: exportRow.rows[0]?.id ?? "",
+        copyId: copyRow.rows[0]?.id ?? "",
         groupId: group.rows[0]?.id ?? "",
         targetId,
         spaceId: space.id,
@@ -492,6 +501,8 @@ export function permissionMatrix(only: readonly Subject[], extras: boolean): voi
           return { type: "import", id: target.importId };
         case "export":
           return { type: "export", id: target.exportId };
+        case "copy":
+          return { type: "copy", id: target.copyId };
         default:
           throw new Error(`The matrix has no resource for ${action.resourceType.type}`);
       }

@@ -1,7 +1,8 @@
 import { addInlineCommentMark, hasAnchor, type TextAnchor } from "./anchors.js";
+import { copiedAttachments, copyDocument } from "./copying.js";
 import type { DocumentJson } from "./json.js";
 import { createEditorKit, type Section } from "./kit.js";
-import type { Heading, RenderContext } from "./module.js";
+import type { CopiedAttachment, CopyMapping, Heading, RenderContext } from "./module.js";
 import { createDefaultRegistry } from "./modules/index.js";
 import type { ValidationResult } from "./validate.js";
 import type { WordBlock } from "./word.js";
@@ -75,6 +76,7 @@ export {
   migrateDocument,
   migrations,
 } from "./migrations.js";
+export type { CopiedAttachment, CopyMapping } from "./module.js";
 export {
   type AttributeSpec,
   attrOf,
@@ -293,6 +295,14 @@ export function withInlineComment(
 
 export function containsAnchor(doc: DocumentJson, anchor: TextAnchor): boolean {
   return hasAnchor(schema, doc, anchor);
+}
+
+export function copyPageDocument(doc: DocumentJson, mapping: CopyMapping): DocumentJson {
+  return copyDocument(modules, doc, mapping);
+}
+
+export function documentAttachments(doc: DocumentJson): CopiedAttachment[] {
+  return copiedAttachments(modules, doc);
 }
 
 export function plainText(doc: DocumentJson): string {

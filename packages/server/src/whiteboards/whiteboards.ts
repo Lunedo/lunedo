@@ -15,6 +15,7 @@ import * as Y from "yjs";
 import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { ContentActivity } from "../collaboration/content.js";
+import { type CopiedFrom, copiedFrom } from "../copies/sources.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import type { FileService } from "../files/files.js";
 import type { SettingsService } from "../settings/service.js";
@@ -56,6 +57,7 @@ export interface WhiteboardVersion {
   createdBy: VersionPerson | null;
   contributors: VersionPerson[];
   preview: boolean;
+  copiedFrom: CopiedFrom | null;
 }
 
 export interface WhiteboardVersionContent extends WhiteboardVersion {
@@ -349,8 +351,11 @@ export class WhiteboardService {
       created_by: string | null;
       contributors: string[];
       preview_id: string | null;
+      copied_from_id: string | null;
+      copied_from_title: string | null;
     }>(sql`
-      select number, title, reason, restored_from, created_at, created_by, contributors, preview_id
+      select number, title, reason, restored_from, created_at, created_by, contributors, preview_id, copied_from_id,
+        copied_from_title
       from whiteboard_versions where item_id = ${itemId} order by number desc limit 1000`);
     const names = await this.#people.names(
       result.rows.flatMap((row) => [...row.contributors, ...(row.created_by ? [row.created_by] : [])]),
@@ -368,6 +373,8 @@ export class WhiteboardService {
       created_by: string | null;
       contributors: string[];
       preview_id: string | null;
+      copied_from_id: string | null;
+      copied_from_title: string | null;
     },
     names: Map<string, string>,
   ): WhiteboardVersion {
@@ -380,6 +387,7 @@ export class WhiteboardService {
       createdBy: row.created_by ? { id: row.created_by, name: names.get(row.created_by) ?? null } : null,
       contributors: row.contributors.map((id) => ({ id, name: names.get(id) ?? null })),
       preview: row.preview_id !== null,
+      copiedFrom: copiedFrom(row),
     };
   }
 
@@ -393,9 +401,12 @@ export class WhiteboardService {
       created_by: string | null;
       contributors: string[];
       preview_id: string | null;
+      copied_from_id: string | null;
+      copied_from_title: string | null;
       scene: unknown;
     }>(sql`
-      select number, title, reason, restored_from, created_at, created_by, contributors, preview_id, scene
+      select number, title, reason, restored_from, created_at, created_by, contributors, preview_id, copied_from_id,
+        copied_from_title, scene
       from whiteboard_versions where item_id = ${itemId} and number = ${number}`);
     const row = result.rows[0];
     if (!row) return null;

@@ -61,7 +61,13 @@ const status = {
 const hidden = { id: HIDDEN, label: "Pay bands", url: null, item: null, hidden: true, position: 2 };
 
 function inRouter(ui: ReactNode) {
-  const context: SpaceContextValue = { space, canEdit: true, openMove: () => {}, openCreate: () => {} };
+  const context: SpaceContextValue = {
+    space,
+    canEdit: true,
+    openMove: () => {},
+    openCopy: () => {},
+    openCreate: () => {},
+  };
   const root = createRootRoute({
     component: () => (
       <PreferencesProvider>

@@ -291,6 +291,84 @@ async function broadlySharedPages(
   return Number(result.rows[0]?.pages ?? 0);
 }
 
+export async function placementPosition(
+  tx: Transaction,
+  spaceId: string,
+  placement: Placement,
+  movingId: string | null,
+): Promise<string> {
+  const parentId = placement.parentId;
+  const sibling = async (id: string) => {
+    const result = await tx.execute<{ position: string; parent_id: string | null; space_id: string }>(
+      sql`select position, parent_id, space_id from tree_items where id = ${id}`,
+    );
+    const row = result.rows[0];
+    if (!row || row.space_id !== spaceId || row.parent_id !== parentId || id === movingId) {
+      throw new SpaceError("invalidPlacement", "The neighbor is not a sibling at the target place");
+    }
+    return row.position;
+  };
+  const neighbor = async (position: string, direction: "before" | "after") => {
+    const result = await tx.execute<{ position: string }>(sql`
+      select position from tree_items
+      where space_id = ${spaceId} and parent_id is not distinct from ${parentId}
+        and id is distinct from ${movingId}
+        and position ${direction === "after" ? sql`>` : sql`<`} ${position}
+      order by position ${direction === "after" ? sql`asc` : sql`desc`} limit 1`);
+    return result.rows[0]?.position ?? null;
+  };
+  if (placement.afterId) {
+    const lower = await sibling(placement.afterId);
+    return positionBetween(lower, await neighbor(lower, "after"));
+  }
+  if (placement.beforeId) {
+    const upper = await sibling(placement.beforeId);
+    return positionBetween(await neighbor(upper, "before"), upper);
+  }
+  const last = await tx.execute<{ position: string | null }>(sql`
+    select max(position) as position from tree_items
+    where space_id = ${spaceId} and parent_id is not distinct from ${parentId}
+      and id is distinct from ${movingId}`);
+  return positionBetween(last.rows[0]?.position ?? null, null);
+}
+
+export async function checkParent(
+  tx: Transaction,
+  authorization: AuthorizationService,
+  actor: Principal,
+  spaceId: string,
+  parentId: string | null,
+): Promise<void> {
+  if (parentId === null) return;
+  const visible = await authorization.explain(
+    actor,
+    "item.view",
+    { type: "item", id: parentId },
+    {
+      executor: tx,
+      fresh: true,
+    },
+  );
+  if (!visible.allowed) throw new SpaceError("invalidPlacement", "The parent is not in the target space");
+  const parent = await tx.execute<{ space_id: string; kind: TreeItemKind; in_tree: boolean }>(
+    sql`select space_id, kind, (trash_entry_id is null and archived_root_id is null) as in_tree
+      from tree_items where id = ${parentId}`,
+  );
+  const row = parent.rows[0];
+  if (!row || row.space_id !== spaceId || !row.in_tree) {
+    throw new SpaceError("invalidPlacement", "The parent is not in the target space");
+  }
+  if (row.kind !== "page" && row.kind !== "folder") {
+    throw new SpaceError("invalidPlacement", "Only pages and folders can contain items");
+  }
+  const meeting = await tx.execute<{ item_id: string }>(
+    sql`select item_id from meetings where item_id = ${parentId}`,
+  );
+  if (meeting.rows[0]) {
+    throw new SpaceError("invalidPlacement", "Meetings keep their notes on one page and contain no items");
+  }
+}
+
 export class TreeService {
   readonly #database: Database;
   readonly #authorization: AuthorizationService;
@@ -507,83 +585,6 @@ export class TreeService {
     }));
   }
 
-  async #placementPosition(
-    tx: Transaction,
-    spaceId: string,
-    placement: Placement,
-    movingId: string | null,
-  ): Promise<string> {
-    const parentId = placement.parentId;
-    const sibling = async (id: string) => {
-      const result = await tx.execute<{ position: string; parent_id: string | null; space_id: string }>(
-        sql`select position, parent_id, space_id from tree_items where id = ${id}`,
-      );
-      const row = result.rows[0];
-      if (!row || row.space_id !== spaceId || row.parent_id !== parentId || id === movingId) {
-        throw new SpaceError("invalidPlacement", "The neighbor is not a sibling at the target place");
-      }
-      return row.position;
-    };
-    const neighbor = async (position: string, direction: "before" | "after") => {
-      const result = await tx.execute<{ position: string }>(sql`
-        select position from tree_items
-        where space_id = ${spaceId} and parent_id is not distinct from ${parentId}
-          and id is distinct from ${movingId}
-          and position ${direction === "after" ? sql`>` : sql`<`} ${position}
-        order by position ${direction === "after" ? sql`asc` : sql`desc`} limit 1`);
-      return result.rows[0]?.position ?? null;
-    };
-    if (placement.afterId) {
-      const lower = await sibling(placement.afterId);
-      return positionBetween(lower, await neighbor(lower, "after"));
-    }
-    if (placement.beforeId) {
-      const upper = await sibling(placement.beforeId);
-      return positionBetween(await neighbor(upper, "before"), upper);
-    }
-    const last = await tx.execute<{ position: string | null }>(sql`
-      select max(position) as position from tree_items
-      where space_id = ${spaceId} and parent_id is not distinct from ${parentId}
-        and id is distinct from ${movingId}`);
-    return positionBetween(last.rows[0]?.position ?? null, null);
-  }
-
-  async #checkParent(
-    tx: Transaction,
-    actor: Principal,
-    spaceId: string,
-    parentId: string | null,
-  ): Promise<void> {
-    if (parentId === null) return;
-    const visible = await this.#authorization.explain(
-      actor,
-      "item.view",
-      { type: "item", id: parentId },
-      {
-        executor: tx,
-        fresh: true,
-      },
-    );
-    if (!visible.allowed) throw new SpaceError("invalidPlacement", "The parent is not in the target space");
-    const parent = await tx.execute<{ space_id: string; kind: TreeItemKind; in_tree: boolean }>(
-      sql`select space_id, kind, (trash_entry_id is null and archived_root_id is null) as in_tree
-        from tree_items where id = ${parentId}`,
-    );
-    const row = parent.rows[0];
-    if (!row || row.space_id !== spaceId || !row.in_tree) {
-      throw new SpaceError("invalidPlacement", "The parent is not in the target space");
-    }
-    if (row.kind !== "page" && row.kind !== "folder") {
-      throw new SpaceError("invalidPlacement", "Only pages and folders can contain items");
-    }
-    const meeting = await tx.execute<{ item_id: string }>(
-      sql`select item_id from meetings where item_id = ${parentId}`,
-    );
-    if (meeting.rows[0]) {
-      throw new SpaceError("invalidPlacement", "Meetings keep their notes on one page and contain no items");
-    }
-  }
-
   async create(
     actor: Principal,
     spaceId: string,
@@ -636,8 +637,8 @@ export class TreeService {
     const mode = input.kind === "page" ? await this.#modeFor(spaceId, input.mode) : "live";
     const id = await this.#database.transaction(async (tx) => {
       await lockSpaces(tx, [spaceId]);
-      await this.#checkParent(tx, actor, spaceId, input.placement.parentId);
-      const position = await this.#placementPosition(tx, spaceId, input.placement, null);
+      await checkParent(tx, this.#authorization, actor, spaceId, input.placement.parentId);
+      const position = await placementPosition(tx, spaceId, input.placement, null);
       const itemId = uuidv7();
       await tx.execute(sql`
         insert into tree_items (id, space_id, parent_id, kind, position, title, description, link_item_id, link_url,
@@ -835,7 +836,7 @@ export class TreeService {
     if (target.parentId === itemId) {
       throw new SpaceError("moveIntoDescendant", "An item cannot be moved below itself");
     }
-    await this.#checkParent(tx, actor, targetSpaceId, target.parentId);
+    await checkParent(tx, this.#authorization, actor, targetSpaceId, target.parentId);
     if (target.parentId !== null) {
       const cycle = await tx.execute<{ found: boolean }>(sql`
         with recursive up as (
@@ -865,7 +866,7 @@ export class TreeService {
         );
       }
     }
-    const position = await this.#placementPosition(tx, targetSpaceId, target, itemId);
+    const position = await placementPosition(tx, targetSpaceId, target, itemId);
     await tx.execute(sql`
       update tree_items set space_id = ${targetSpaceId}, parent_id = ${target.parentId}, position = ${position},
         updated_at = now()

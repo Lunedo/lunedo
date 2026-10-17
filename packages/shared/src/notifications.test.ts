@@ -40,6 +40,7 @@ describe("notification events", () => {
       accessRequests: { inApp: true, email: "immediately", push: true },
       comments: { inApp: true, email: "digest", push: false },
       changes: { inApp: true, email: "off", push: false },
+      copies: { inApp: true, email: "off", push: false },
       blogPosts: { inApp: true, email: "digest", push: false },
       meetings: { inApp: true, email: "off", push: false },
       ownershipAndStatus: { inApp: true, email: "off", push: false },
@@ -52,12 +53,13 @@ describe("notification events", () => {
     ).toEqual([]);
   });
 
-  it("keep mentions, tasks, shares and access requests from muted content", () => {
+  it("keep mentions, tasks, shares, access requests and the person's own copies from muted content", () => {
     expect(notificationEvents.filter((event) => event.keptWhenMuted).map((event) => event.id)).toEqual([
       "mentions",
       "tasks",
       "shares",
       "accessRequests",
+      "copies",
     ]);
   });
 

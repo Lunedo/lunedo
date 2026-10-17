@@ -15,6 +15,7 @@ import {
   ArchiveRestore,
   ArrowRightLeft,
   Check,
+  Copy,
   FileCheck,
   FileDown,
   FilePen,
@@ -164,7 +165,7 @@ function PageArticle({
   lostEdit: boolean;
 }) {
   const { t } = useTranslation();
-  const { space, canEdit, openMove, openCreate } = useSpace();
+  const { space, canEdit, openMove, openCopy, openCreate } = useSpace();
   const search = route.useSearch();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -287,6 +288,9 @@ function PageArticle({
         onSelect: () => setSavingTemplate(true),
       },
     );
+  }
+  if (!meeting && page.kind === "page") {
+    menuItems.push({ label: t("tree.copy"), icon: Copy, onSelect: () => openCopy(page) });
   }
   menuItems.push(
     { label: t("versions.history"), icon: History, onSelect: openHistory },

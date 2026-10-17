@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { copyAttachmentAttributes } from "../copying.js";
 import { boundedInteger, type MacroConverter, macroReference, macroText } from "../importing.js";
 import type { ValidNode } from "../json.js";
 import {
@@ -94,6 +95,7 @@ export const imageModule = defineModule({
         width: optional(z.number().int().min(1).max(10_000).nullable(), null),
         align: optional(z.enum(imageAlignments), "center"),
       },
+      copy: copyAttachmentAttributes([["attachmentId", null]]),
       html: (node, renderer) => imageHtml(node, renderer, true),
       print: (node, renderer) => imageHtml(node, renderer, false),
       word: (node, renderer) => {
@@ -231,6 +233,7 @@ export const fileModule = defineModule({
         height: optional(z.number().int().min(MIN_PREVIEW_HEIGHT).max(MAX_PREVIEW_HEIGHT).nullable(), null),
         zoom: optional(z.number().int().min(MIN_PREVIEW_ZOOM).max(MAX_PREVIEW_ZOOM).nullable(), null),
       },
+      copy: copyAttachmentAttributes([["attachmentId", null]]),
       html: fileHtml,
       print: filePrint,
       word: fileWord,

@@ -1165,6 +1165,21 @@ export const auditCatalog = {
     }),
     visibility: "organization",
   }),
+  "page.copied": event({
+    actor: ["account"],
+    target: "page",
+    fields: pageFields.extend({
+      itemKind: z.enum(itemKindNames),
+      itemId: z.uuid(),
+      sourceSpaceId: z.uuid(),
+      descendants: z.boolean(),
+      copied: z.number().int().nonnegative(),
+      hidden: z.number().int().nonnegative(),
+      skipped: z.number().int().nonnegative(),
+      widerAccess: z.boolean(),
+    }),
+    visibility: "organization",
+  }),
   "page.unarchived": event({
     actor: ["account"],
     target: "page",

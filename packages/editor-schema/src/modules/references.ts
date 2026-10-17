@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { copyPageAttribute } from "../copying.js";
 import type { ValidNode } from "../json.js";
 import { attrOf, defineModule, optional, type PageLinkTarget, required } from "../module.js";
 import { element, markdownUrl } from "../text.js";
@@ -48,6 +49,7 @@ export const pageLinkModule = defineModule({
         spaceId: optional(uuidValue.nullable(), null),
         title: optional(z.string().max(255).nullable(), null),
       },
+      copy: copyPageAttribute("pageId", "spaceId"),
       validate: (node) => {
         if (attrOf<string | null>(node, "pageId") !== null) return null;
         const title = attrOf<string | null>(node, "title");

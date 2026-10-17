@@ -5,6 +5,7 @@ import {
   Archive,
   ArchiveRestore,
   ArrowRightLeft,
+  Copy,
   FilePlus,
   FileText,
   Folder,
@@ -97,6 +98,9 @@ export function useItemActions(
             },
       );
     }
+  }
+  if (item.kind === "page" || item.kind === "folder" || item.kind === "whiteboard") {
+    items.push({ label: t("tree.copy"), icon: Copy, onSelect: () => context.openCopy(item) });
   }
   if (href) {
     items.push({

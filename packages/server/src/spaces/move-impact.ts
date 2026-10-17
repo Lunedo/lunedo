@@ -14,7 +14,11 @@ export interface LevelChange {
 
 type Levels = Map<string, Map<string, number>>;
 
-export async function representativeItems(executor: Executor, itemId: string): Promise<string[]> {
+export async function representativeItems(
+  executor: Executor,
+  itemId: string,
+  among?: readonly string[],
+): Promise<string[]> {
   const below = sql`t.path[array_position(t.path, ${itemId}::uuid):]`;
   const result = await executor.execute<{ id: string }>(sql`
     with recursive down as (
@@ -36,6 +40,7 @@ export async function representativeItems(executor: Executor, itemId: string): P
             or exists (select 1 from page_restrictions r where r.item_id = t.id and r.kind = 'edit')
             then t.id::text else '' end) as signature
         from down d join tree_items t on t.id = d.id
+        ${among ? sql`where t.id = any(${sql.param([...among])}::uuid[])` : sql``}
       ) signed
       order by signature, depth, id
     ) representatives

@@ -519,6 +519,13 @@
       "when": 1792254387577,
       "tag": "0073_page_number_headings",
       "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1792266551973,
+      "tag": "0074_item_copies",
+      "breakpoints": true
     }
   ]
 }

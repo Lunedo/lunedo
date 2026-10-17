@@ -42,6 +42,9 @@ import {
 import { collaborationNotificationTypes } from "./collaboration/notifications.js";
 import { ReactionService } from "./collaboration/reactions.js";
 import { TaskService } from "./collaboration/tasks.js";
+import { CopyService } from "./copies/copies.js";
+import { COPY_WATCHDOG_SCHEDULE, copyItemsJob, copyWatchdogJob } from "./copies/jobs.js";
+import { copyNotificationTypes } from "./copies/notifications.js";
 import type { Encryption } from "./crypto/envelope.js";
 import type { KeyRing } from "./crypto/key-ring.js";
 import type { KeyRingHolder } from "./crypto/key-ring-holder.js";
@@ -298,6 +301,7 @@ export interface AccountServices {
   imports: ImportService;
   importWorker: ImportWorker;
   exports: ExportService;
+  copies: CopyService;
   rendering: RenderService;
 }
 
@@ -383,6 +387,7 @@ export function createAccountServices(options: {
       ...importNotificationTypes,
       ...spaceNotificationTypes,
       ...exportNotificationTypes,
+      ...copyNotificationTypes,
       ...chatNotificationTypes,
       ...storageNotificationTypes,
     ),
@@ -831,6 +836,18 @@ export function createAccountServices(options: {
     jobs,
     logger,
   });
+  const copies = new CopyService({
+    database,
+    authorization,
+    people,
+    activity,
+    signer,
+    storage,
+    audit,
+    notifications,
+    language: (accountId) => mail.languageOf(accountId),
+    jobs,
+  });
   memberships.onDeactivated((tx, accountId) => exports.afterDeactivation(tx, accountId));
   memberships.onMembershipEnded((tx, organizationId, accountId) =>
     exports.afterMembershipEnded(tx, organizationId, accountId),
@@ -948,6 +965,7 @@ export function createAccountServices(options: {
     imports,
     importWorker,
     exports,
+    copies,
     rendering: render,
   };
 }
@@ -1043,6 +1061,10 @@ export async function workAccountJobs(
     while ((await services.importUploads.removeExpired()) > 0) job.signal.throwIfAborted();
   });
   await jobs.work(exportBuildJob, services.exports.work, { concurrency: 2 });
+  await jobs.work(copyItemsJob, services.copies.work, { concurrency: 2 });
+  await jobs.work(copyWatchdogJob, async () => {
+    await services.copies.watchdog();
+  });
   await jobs.work(exportWatchdogJob, async () => {
     await services.exports.watchdog();
   });
@@ -1114,6 +1136,7 @@ export async function workAccountJobs(
   await jobs.schedule(importWatchdogJob, IMPORT_WATCHDOG_SCHEDULE, {}, { key: "regular" });
   await jobs.schedule(importCleanupJob, IMPORT_CLEANUP_SCHEDULE, {}, { key: "hourly" });
   await jobs.schedule(exportWatchdogJob, EXPORT_WATCHDOG_SCHEDULE, {}, { key: "regular" });
+  await jobs.schedule(copyWatchdogJob, COPY_WATCHDOG_SCHEDULE, {}, { key: "regular" });
   await jobs.schedule(exportCleanupJob, EXPORT_CLEANUP_SCHEDULE, {}, { key: "hourly" });
   await jobs.schedule(liveVersionsJob, LIVE_VERSIONS_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(authCleanupJob, AUTH_CLEANUP_SCHEDULE, {}, { key: "regular" });

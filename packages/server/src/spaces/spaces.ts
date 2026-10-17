@@ -247,6 +247,7 @@ export class SpaceService {
       page?: PageRequest;
       archived?: boolean | undefined;
       oneOnOne?: boolean | undefined;
+      minimum?: SpaceRole | undefined;
     } = {},
   ): Promise<Page<Space>> {
     const page = options.page ?? FIRST_PAGE;
@@ -255,7 +256,7 @@ export class SpaceService {
     const sortName = sql`lower(s.name)`;
     const result = await this.#database.execute<SpaceRow & { sort_name: string }>(sql`
       select ${SPACE_COLUMNS}, ${sortName} as sort_name from ${SPACE_FROM}
-      where ${this.#authorization.spaceFilter(viewer, sql`s`)}
+      where ${this.#authorization.spaceFilter(viewer, sql`s`, options.minimum)}
         ${options.organizationId ? sql`and s.organization_id = ${options.organizationId}` : sql``}
         and (s.archived_at is not null) = ${options.archived ?? false}
         and s.one_on_one = ${options.oneOnOne ?? false}

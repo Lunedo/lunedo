@@ -202,6 +202,58 @@ export const exampleMoveImpact = {
   confirmation: "mbx2k1c0.Hq3l2bS8yq1m0e7pW9cJx4rT6uV5aZ2nD0gF1hK8sLw",
 };
 
+export const copiedFromSchema = z
+  .object({
+    itemId: uuid(
+      "The source, or null when the caller cannot read it or it was deleted permanently.",
+    ).nullable(),
+    title: z.string().describe("Title of the source when it was copied."),
+  })
+  .nullable()
+  .describe("Where a copy came from, for the first version of a copy; null otherwise.");
+
+export const copyImpactSchema = impactSchema
+  .extend({
+    leavesConfidential: z
+      .boolean()
+      .describe("True when the copy leaves a confidential space and is not protected by it."),
+    widerAccess: z
+      .boolean()
+      .describe(
+        "True when people can read the copy who cannot read the source; the copy then needs the confirmation.",
+      ),
+    confirmation: z
+      .string()
+      .nullable()
+      .describe(
+        "Send this with the copy to confirm exactly this access, or null when nobody gains access. Valid for one hour.",
+      ),
+    items: z.number().int().describe("Number of items the copy creates."),
+    hidden: z
+      .number()
+      .int()
+      .describe("Number of items below that are left out because the caller cannot read them."),
+    skipped: z
+      .number()
+      .int()
+      .describe("Number of items below that are left out because they cannot be copied."),
+    background: z.boolean().describe("True when the copy is large and runs in the background."),
+  })
+  .describe(
+    "Who can read the source and the copy: `gaining` counts people who can read the copy but not the source, `losing` people who can read the source but not the copy.",
+  );
+
+export const exampleCopyImpact = {
+  ...exampleImpact,
+  leavesConfidential: false,
+  widerAccess: true,
+  confirmation: "mbx2k1c0.Hq3l2bS8yq1m0e7pW9cJx4rT6uV5aZ2nD0gF1hK8sLw",
+  items: 4,
+  hidden: 1,
+  skipped: 0,
+  background: false,
+};
+
 export const permissionSchema = z
   .object({
     id: uuid("ID of the permission."),

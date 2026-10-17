@@ -229,6 +229,15 @@ export { configSettings, isAddressOrRange } from "./config/definitions.js";
 export type { ConfiguredSetup } from "./config/load.js";
 export { ConfigError, type Env, loadConfig, type ServerConfig } from "./config/load.js";
 export { Secret } from "./config/secret.js";
+export {
+  COPY_IN_REQUEST_LIMIT,
+  type CopyImpact,
+  type CopyRequest,
+  CopyService,
+  type CopySummary,
+} from "./copies/copies.js";
+export { type CopyState, copyStates } from "./copies/schema.js";
+export type { CopiedFrom } from "./copies/sources.js";
 export { secretsEqual } from "./crypto/constant-time.js";
 export { type EncryptedColumn, encrypted, encryptedColumns } from "./crypto/encrypted-column.js";
 export type {
