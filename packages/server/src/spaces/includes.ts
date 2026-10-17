@@ -5,6 +5,7 @@ import type { AuthorizationService } from "../authorization/service.js";
 import type { Database } from "../database/database.js";
 import { importedTitleCandidates } from "../imports/links.js";
 import type { PageDocumentService } from "./documents.js";
+import { readersWithoutAccess } from "./move-impact.js";
 import { itemPath } from "./reports.js";
 import { visibleItem } from "./visibility.js";
 
@@ -15,9 +16,10 @@ export interface IncludedPage {
   spaceId: string;
 }
 
-export type Inclusion =
+export type Inclusion = (
   | { state: "visible"; page: IncludedPage; document: DocumentJson }
-  | { state: "noExcerpt"; page: IncludedPage };
+  | { state: "noExcerpt"; page: IncludedPage }
+) & { hiddenFromSomeReaders: boolean };
 
 export function includeKey(request: IncludeRequest): string {
   return JSON.stringify([
@@ -93,10 +95,25 @@ export class IncludeService {
     const readable = await this.#documents.readable(page.id);
     if (!readable) return null;
     const included = { ...page, title: readable.title };
-    if (!request.excerpt) return { state: "visible", page: included, document: readable.document };
+    const hiddenFromSomeReaders = await this.#hiddenFromSomeReaders(viewer, includingId, page.id);
+    if (!request.excerpt) {
+      return { state: "visible", page: included, document: readable.document, hiddenFromSomeReaders };
+    }
     const excerpt = excerptContent(readable.document, request.name);
     return excerpt
-      ? { state: "visible", page: included, document: { type: "doc", content: excerpt } }
-      : { state: "noExcerpt", page: included };
+      ? {
+          state: "visible",
+          page: included,
+          document: { type: "doc", content: excerpt },
+          hiddenFromSomeReaders,
+        }
+      : { state: "noExcerpt", page: included, hiddenFromSomeReaders };
+  }
+
+  async #hiddenFromSomeReaders(viewer: Principal, includingId: string, targetId: string): Promise<boolean> {
+    if (includingId === targetId) return false;
+    const editor = await this.#authorization.explain(viewer, "item.edit", { type: "item", id: includingId });
+    if (!editor.allowed) return false;
+    return readersWithoutAccess(this.#database, includingId, targetId);
   }
 }

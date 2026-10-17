@@ -90,6 +90,25 @@ export async function accessLevels(executor: Executor, items: string[], accounts
   return levels;
 }
 
+export async function readersWithoutAccess(
+  executor: Executor,
+  readable: string,
+  target: string,
+): Promise<boolean> {
+  const located = await executor.execute<{ space_id: string }>(
+    sql`select distinct space_id from tree_items where id in (${readable}, ${target})`,
+  );
+  const accounts = await candidateAccounts(
+    executor,
+    { itemId: readable, parentId: null, spaceIds: located.rows.map((row) => row.space_id) },
+    [readable, target],
+  );
+  const levels = await accessLevels(executor, [readable, target], accounts);
+  return [...levels.values()].some(
+    (entry) => (entry.get(readable) ?? 0) > 0 && (entry.get(target) ?? 0) === 0,
+  );
+}
+
 export function levelChanges(items: string[], before: Levels, after: Levels): LevelChange[] {
   const changes: LevelChange[] = [];
   const accounts = [...new Set([...before.keys(), ...after.keys()])].sort();

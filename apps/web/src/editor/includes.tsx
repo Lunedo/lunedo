@@ -111,19 +111,29 @@ export function IncludedContent({
       <LoadError what={t("editor.include.loadFailed")} error={content.error} onRetry={content.refetch} />
     );
   }
-  const { page, document, references, state } = content.data;
+  const { page, document, references, state, hiddenFromSomeReaders } = content.data;
   if (state === "noExcerpt" || !document) return <Note>{t("editor.include.noExcerpt")}</Note>;
+  const hint =
+    placeholders && hiddenFromSomeReaders ? <Note>{t("editor.include.hiddenFromSomeReaders")}</Note> : null;
   const body = (
     <IncludeChain.Provider value={ancestors}>
       <PageReadView document={document} references={references as References} pageId={page.id} />
     </IncludeChain.Provider>
   );
-  if (!panel) return body;
+  if (!panel) {
+    return (
+      <>
+        {hint}
+        {body}
+      </>
+    );
+  }
   return (
     <section
       className="ph-include-panel flex flex-col gap-2"
       aria-label={page.title || t("editor.readView.untitledPage")}
     >
+      {hint}
       <TitleLink href={page.path}>{page.title || t("editor.readView.untitledPage")}</TitleLink>
       {body}
     </section>

@@ -4862,7 +4862,8 @@
       "loadFailed": "The included content could not be loaded.",
       "excerptName": "Excerpt name",
       "excerptNameHint": "Leave empty for the first excerpt of the page.",
-      "panel": "Show the title of the page above the excerpt"
+      "panel": "Show the title of the page above the excerpt",
+      "hiddenFromSomeReaders": "Not everyone who can read this page can read the included page. They see nothing here."
     },
     "excerpt": {
       "title": "Excerpt",

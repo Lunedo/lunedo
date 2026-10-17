@@ -168056,7 +168056,7 @@
       "get": {
         "operationId": "reports.inclusion",
         "summary": "Get content included in a page",
-        "description": "Returns the published content of another page, or its excerpt, as an include block of the page shows it, with the caller's permissions. A page that was not part of a Confluence import is found by its space key and title once it is imported into the organization. A page the caller cannot read answers like a page that does not exist.\n\nRequires the permission `item.view` on the item in `pageId`.",
+        "description": "Returns the published content of another page, or its excerpt, as an include block of the page shows it, with the caller's permissions. For people who can edit the page, it also says whether some of its readers cannot read the included page. A page that was not part of a Confluence import is found by its space key and title once it is imported into the organization. A page the caller cannot read answers like a page that does not exist.\n\nRequires the permission `item.view` on the item in `pageId`.",
         "tags": [
           "Reports"
         ],
@@ -168294,13 +168294,18 @@
                       ],
                       "additionalProperties": false,
                       "description": "What mentions and page links in the document point to, as far as the caller may see it."
+                    },
+                    "hiddenFromSomeReaders": {
+                      "type": "boolean",
+                      "description": "True when some people who can read the including page cannot read the included page and see nothing in its place. Only checked for people who can edit the including page; false for everyone else."
                     }
                   },
                   "required": [
                     "state",
                     "page",
                     "document",
-                    "references"
+                    "references",
+                    "hiddenFromSomeReaders"
                   ],
                   "additionalProperties": false,
                   "description": "Content included from another page."
@@ -168331,7 +168336,8 @@
                     "people": {},
                     "pages": {},
                     "topics": {}
-                  }
+                  },
+                  "hiddenFromSomeReaders": false
                 }
               }
             }

@@ -867,5 +867,10 @@ export const inclusionSchema = z
       .nullable()
       .describe("The published content, or only its excerpt. Null without excerpt."),
     references: pageReferencesSchema,
+    hiddenFromSomeReaders: z
+      .boolean()
+      .describe(
+        "True when some people who can read the including page cannot read the included page and see nothing in its place. Only checked for people who can edit the including page; false for everyone else.",
+      ),
   })
   .describe("Content included from another page.");

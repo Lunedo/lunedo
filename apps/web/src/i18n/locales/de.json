@@ -4862,7 +4862,8 @@
       "loadFailed": "Der eingebundene Inhalt konnte nicht geladen werden.",
       "excerptName": "Name des Auszugs",
       "excerptNameHint": "Leer lassen für den ersten Auszug der Seite.",
-      "panel": "Titel der Seite über dem Auszug anzeigen"
+      "panel": "Titel der Seite über dem Auszug anzeigen",
+      "hiddenFromSomeReaders": "Nicht alle, die diese Seite lesen können, können die eingebundene Seite lesen. Sie sehen hier nichts."
     },
     "excerpt": {
       "title": "Auszug",
