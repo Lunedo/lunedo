@@ -42,13 +42,23 @@ export type MacroNote =
   | { readonly code: "chartNotImported"; readonly macro: string }
   | { readonly code: "jiraNotImported"; readonly macro: string; readonly issues: string };
 
-export const importTexts = ["jiraNotImported", "chartNotImported", "pivotNotImported"] as const;
+export const importTexts = [
+  "jiraNotImported",
+  "chartNotImported",
+  "pivotNotImported",
+  "whiteboardNotImported",
+  "databaseNotImported",
+  "contentNotImported",
+] as const;
 export type ImportText = (typeof importTexts)[number];
 
 export const defaultImportTexts: Readonly<Record<ImportText, string>> = {
   jiraNotImported: "Jira content not imported.",
   chartNotImported: "Chart not imported. Its source table follows.",
   pivotNotImported: "Pivot table not imported. Its source table follows.",
+  whiteboardNotImported: "Confluence whiteboard not imported.",
+  databaseNotImported: "Confluence database not imported.",
+  contentNotImported: "Confluence content of this type not imported.",
 };
 
 export interface MacroImportContext {

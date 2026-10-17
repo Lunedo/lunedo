@@ -6996,6 +6996,11 @@
         "folder": "Server import folder",
         "folderDescription": "For larger exports. The file must already be in this organization's import folder on the server.",
         "fileRequired": "Choose the export file, and wait until the upload is finished.",
+        "spaceTitle": "Space in the site backup",
+        "spaceLabel": "Space",
+        "spacePlaceholder": "Choose a space",
+        "spaceHint": "{count, plural, one {The site backup contains # space.} other {The site backup contains # spaces.}} Each import takes one space into a new space in Pagehall; import the others one after another.",
+        "spaceRequired": "Choose the space to import from the site backup.",
         "folderFile": "File in the import folder",
         "folderHint": "Pagehall reads only regular files directly inside this organization's import folder.",
         "folderPlaceholder": "Choose a file",
@@ -7334,6 +7339,21 @@
           "hint": "Confluence refused them. Import with a token of an account that can read them, or add them later.",
           "entry": "{title}: the {part, select, comments {comments} attachments {attachments} restrictions {restrictions} other {content}} could not be read."
         },
+        "trashedContent": {
+          "title": "{count, plural, one {# page} other {# pages}} in the Confluence trash not imported",
+          "hint": "They were deleted in Confluence. Restore them there and import again if you need them.",
+          "entry": "“{title}” is in the trash of Confluence."
+        },
+        "contentTypeNotImported": {
+          "title": "{count, plural, one {# whiteboard or database} other {# whiteboards and databases}} not imported",
+          "hint": "Exports and the API do not contain their content. The pages keep their place in the tree with a note.",
+          "entry": "{type, select, whiteboard {Whiteboard} database {Database} other {Content}} “{title}” became a page with a note."
+        },
+        "likesAndWatchersSkipped": {
+          "title": "Likes and watchers not imported",
+          "hint": "The Confluence API does not give them to Pagehall. People can like and watch pages again in Pagehall.",
+          "entry": "Likes and watchers are not read through the API."
+        },
         "permissionsUnavailable": {
           "title": "Space permissions could not be read",
           "hint": "Only space administrators can read them through the API. Set the roles in Pagehall after accepting.",
@@ -7436,9 +7456,14 @@
         "action": "In Confluence open the space, then Space settings › Export space, and upload that file."
       },
       "notSpaceExport": {
-        "what": "The file is an export of a whole site",
-        "cause": "Pagehall imports one space at a time.",
-        "action": "Export a single space in Confluence and upload that file."
+        "what": "The file is neither a space export nor a site backup",
+        "cause": "Pagehall reads XML and CSV space exports and XML site backups of Confluence.",
+        "action": "Export a single space or create a site backup in Confluence and upload that file."
+      },
+      "spaceChoiceRequired": {
+        "what": "The site backup contains several spaces",
+        "cause": "A site backup holds every space of the Confluence site, and an import takes one of them.",
+        "action": "Choose the space in the step Source."
       },
       "archiveTooLarge": {
         "what": "The archive expands to more than allowed",
@@ -7766,7 +7791,8 @@
         "anonymous": "Public access is not available for this space.",
         "groupMissing": "No group with this name. Map an existing group or create one.",
         "placeholder": "Map the person to an account in the People tab.",
-        "withoutSpaceRole": "Named in a restriction, but without access to the space, as in Confluence. Restrictions only narrow access; give a role in the space if the page should open."
+        "withoutSpaceRole": "Named in a restriction, but without access to the space, as in Confluence. Restrictions only narrow access; give a role in the space if the page should open.",
+        "app": "An app account of Confluence, not a person. It gets no role."
       },
       "groupMapped": "“{name}” is mapped",
       "groupFailed": "“{name}” could not be mapped",

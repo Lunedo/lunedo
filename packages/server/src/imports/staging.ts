@@ -179,6 +179,14 @@ export class StagingStore {
     return result.rows.map((row) => toStored<T>(row));
   }
 
+  async parents(kind: string, sourceIds: readonly string[]): Promise<Set<string>> {
+    if (sourceIds.length === 0) return new Set();
+    const result = await this.#database.execute<{ parent_id: string }>(sql`
+      select distinct parent_id from import_records
+      where import_id = ${this.#importId} and kind = ${kind} and parent_id = any(${sql.param([...sourceIds])}::text[])`);
+    return new Set(result.rows.map((row) => row.parent_id));
+  }
+
   async orderTree(kind: string, roots: readonly string[] = []): Promise<void> {
     await this.#database.transaction(async (tx) => {
       await tx.execute(sql`
@@ -222,6 +230,14 @@ export class StagingStore {
     await this.#database.execute(
       sql`delete from import_records where import_id = ${this.#importId} and kind = ${kind}`,
     );
+  }
+
+  async removeIds(kind: string, sourceIds: readonly string[]): Promise<void> {
+    if (sourceIds.length === 0) return;
+    await this.flush();
+    await this.#database.execute(sql`
+      delete from import_records
+      where import_id = ${this.#importId} and kind = ${kind} and source_id = any(${sql.param([...sourceIds])}::text[])`);
   }
 
   async removeWhere(kind: string, field: string, value: string): Promise<void> {

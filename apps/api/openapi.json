@@ -26872,7 +26872,7 @@
                       "type": "object",
                       "properties": {
                         "spaceKey": {
-                          "description": "Key of the Confluence space read through the API.",
+                          "description": "Key of the Confluence space read through the API or from a site backup.",
                           "type": "string"
                         },
                         "pageIds": {
@@ -27110,6 +27110,35 @@
                       ],
                       "description": "What the export contains, once it was read."
                     },
+                    "sourceSpaces": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "key": {
+                                "type": "string",
+                                "description": "Key of the space in Confluence."
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "Name of the space in Confluence."
+                              }
+                            },
+                            "required": [
+                              "key",
+                              "name"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The spaces of a site backup, once it was read; choose one with `options.spaceKey`. Null for exports and backups of one space."
+                    },
                     "counts": {
                       "type": "object",
                       "propertyNames": {
@@ -27123,7 +27152,7 @@
                       "description": "What was imported, by kind: `pages`, `blogPosts`, `versions`, `attachments`, `attachmentVersions`, `comments`, `inlineAnchored`, `inlineMoved`, `likes`, `watchers`, `people`, `peopleMatched`, `restrictions`, `groupsMissing` and `problems`."
                     },
                     "errorCode": {
-                      "description": "Why the export could not be read or the import failed, such as `notAnArchive`, `wrongFormat`, `archiveTooLarge`, `unsafeEntryName`, `xmlDeclaration` or `internalError`.",
+                      "description": "Why the export could not be read or the import failed, such as `notAnArchive`, `wrongFormat`, `archiveTooLarge`, `unsafeEntryName`, `xmlDeclaration`, `spaceChoiceRequired` (a site backup with several spaces; see `sourceSpaces`) or `internalError`.",
                       "type": [
                         "string",
                         "null"
@@ -27295,6 +27324,7 @@
                     "phase",
                     "progress",
                     "found",
+                    "sourceSpaces",
                     "counts",
                     "errorCode",
                     "quarantineSpace",
@@ -27359,6 +27389,7 @@
                     "spaceKey": "ITOPS",
                     "spaceName": "IT Operations"
                   },
+                  "sourceSpaces": null,
                   "history": false,
                   "peopleSource": {
                     "kind": "token",
@@ -27645,7 +27676,7 @@
                     "type": "object",
                     "properties": {
                       "spaceKey": {
-                        "description": "For an API import: key of the Confluence space to read. Choosing it starts reading.",
+                        "description": "For an API import or a site backup: key of the Confluence space to read. Choosing it starts reading.",
                         "anyOf": [
                           {
                             "type": "string",
@@ -28089,7 +28120,7 @@
                       "type": "object",
                       "properties": {
                         "spaceKey": {
-                          "description": "Key of the Confluence space read through the API.",
+                          "description": "Key of the Confluence space read through the API or from a site backup.",
                           "type": "string"
                         },
                         "pageIds": {
@@ -28327,6 +28358,35 @@
                       ],
                       "description": "What the export contains, once it was read."
                     },
+                    "sourceSpaces": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "key": {
+                                "type": "string",
+                                "description": "Key of the space in Confluence."
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "Name of the space in Confluence."
+                              }
+                            },
+                            "required": [
+                              "key",
+                              "name"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The spaces of a site backup, once it was read; choose one with `options.spaceKey`. Null for exports and backups of one space."
+                    },
                     "counts": {
                       "type": "object",
                       "propertyNames": {
@@ -28340,7 +28400,7 @@
                       "description": "What was imported, by kind: `pages`, `blogPosts`, `versions`, `attachments`, `attachmentVersions`, `comments`, `inlineAnchored`, `inlineMoved`, `likes`, `watchers`, `people`, `peopleMatched`, `restrictions`, `groupsMissing` and `problems`."
                     },
                     "errorCode": {
-                      "description": "Why the export could not be read or the import failed, such as `notAnArchive`, `wrongFormat`, `archiveTooLarge`, `unsafeEntryName`, `xmlDeclaration` or `internalError`.",
+                      "description": "Why the export could not be read or the import failed, such as `notAnArchive`, `wrongFormat`, `archiveTooLarge`, `unsafeEntryName`, `xmlDeclaration`, `spaceChoiceRequired` (a site backup with several spaces; see `sourceSpaces`) or `internalError`.",
                       "type": [
                         "string",
                         "null"
@@ -28512,6 +28572,7 @@
                     "phase",
                     "progress",
                     "found",
+                    "sourceSpaces",
                     "counts",
                     "errorCode",
                     "quarantineSpace",
@@ -28576,6 +28637,7 @@
                     "spaceKey": "ITOPS",
                     "spaceName": "IT Operations"
                   },
+                  "sourceSpaces": null,
                   "history": false,
                   "peopleSource": {
                     "kind": "token",
@@ -29348,7 +29410,7 @@
                       "type": "object",
                       "properties": {
                         "spaceKey": {
-                          "description": "Key of the Confluence space read through the API.",
+                          "description": "Key of the Confluence space read through the API or from a site backup.",
                           "type": "string"
                         },
                         "pageIds": {
@@ -29586,6 +29648,35 @@
                       ],
                       "description": "What the export contains, once it was read."
                     },
+                    "sourceSpaces": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "key": {
+                                "type": "string",
+                                "description": "Key of the space in Confluence."
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "Name of the space in Confluence."
+                              }
+                            },
+                            "required": [
+                              "key",
+                              "name"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The spaces of a site backup, once it was read; choose one with `options.spaceKey`. Null for exports and backups of one space."
+                    },
                     "counts": {
                       "type": "object",
                       "propertyNames": {
@@ -29599,7 +29690,7 @@
                       "description": "What was imported, by kind: `pages`, `blogPosts`, `versions`, `attachments`, `attachmentVersions`, `comments`, `inlineAnchored`, `inlineMoved`, `likes`, `watchers`, `people`, `peopleMatched`, `restrictions`, `groupsMissing` and `problems`."
                     },
                     "errorCode": {
-                      "description": "Why the export could not be read or the import failed, such as `notAnArchive`, `wrongFormat`, `archiveTooLarge`, `unsafeEntryName`, `xmlDeclaration` or `internalError`.",
+                      "description": "Why the export could not be read or the import failed, such as `notAnArchive`, `wrongFormat`, `archiveTooLarge`, `unsafeEntryName`, `xmlDeclaration`, `spaceChoiceRequired` (a site backup with several spaces; see `sourceSpaces`) or `internalError`.",
                       "type": [
                         "string",
                         "null"
@@ -29771,6 +29862,7 @@
                     "phase",
                     "progress",
                     "found",
+                    "sourceSpaces",
                     "counts",
                     "errorCode",
                     "quarantineSpace",
@@ -29835,6 +29927,7 @@
                     "spaceKey": "ITOPS",
                     "spaceName": "IT Operations"
                   },
+                  "sourceSpaces": null,
                   "history": false,
                   "peopleSource": {
                     "kind": "token",
@@ -30433,7 +30526,7 @@
                       "type": "object",
                       "properties": {
                         "spaceKey": {
-                          "description": "Key of the Confluence space read through the API.",
+                          "description": "Key of the Confluence space read through the API or from a site backup.",
                           "type": "string"
                         },
                         "pageIds": {
@@ -30671,6 +30764,35 @@
                       ],
                       "description": "What the export contains, once it was read."
                     },
+                    "sourceSpaces": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "key": {
+                                "type": "string",
+                                "description": "Key of the space in Confluence."
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "Name of the space in Confluence."
+                              }
+                            },
+                            "required": [
+                              "key",
+                              "name"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The spaces of a site backup, once it was read; choose one with `options.spaceKey`. Null for exports and backups of one space."
+                    },
                     "counts": {
                       "type": "object",
                       "propertyNames": {
@@ -30684,7 +30806,7 @@
                       "description": "What was imported, by kind: `pages`, `blogPosts`, `versions`, `attachments`, `attachmentVersions`, `comments`, `inlineAnchored`, `inlineMoved`, `likes`, `watchers`, `people`, `peopleMatched`, `restrictions`, `groupsMissing` and `problems`."
                     },
                     "errorCode": {
-                      "description": "Why the export could not be read or the import failed, such as `notAnArchive`, `wrongFormat`, `archiveTooLarge`, `unsafeEntryName`, `xmlDeclaration` or `internalError`.",
+                      "description": "Why the export could not be read or the import failed, such as `notAnArchive`, `wrongFormat`, `archiveTooLarge`, `unsafeEntryName`, `xmlDeclaration`, `spaceChoiceRequired` (a site backup with several spaces; see `sourceSpaces`) or `internalError`.",
                       "type": [
                         "string",
                         "null"
@@ -30856,6 +30978,7 @@
                     "phase",
                     "progress",
                     "found",
+                    "sourceSpaces",
                     "counts",
                     "errorCode",
                     "quarantineSpace",
@@ -30920,6 +31043,7 @@
                     "spaceKey": "ITOPS",
                     "spaceName": "IT Operations"
                   },
+                  "sourceSpaces": null,
                   "history": false,
                   "peopleSource": {
                     "kind": "token",
@@ -34319,7 +34443,7 @@
                       "type": "object",
                       "properties": {
                         "spaceKey": {
-                          "description": "Key of the Confluence space read through the API.",
+                          "description": "Key of the Confluence space read through the API or from a site backup.",
                           "type": "string"
                         },
                         "pageIds": {
@@ -34557,6 +34681,35 @@
                       ],
                       "description": "What the export contains, once it was read."
                     },
+                    "sourceSpaces": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "key": {
+                                "type": "string",
+                                "description": "Key of the space in Confluence."
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "Name of the space in Confluence."
+                              }
+                            },
+                            "required": [
+                              "key",
+                              "name"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The spaces of a site backup, once it was read; choose one with `options.spaceKey`. Null for exports and backups of one space."
+                    },
                     "counts": {
                       "type": "object",
                       "propertyNames": {
@@ -34570,7 +34723,7 @@
                       "description": "What was imported, by kind: `pages`, `blogPosts`, `versions`, `attachments`, `attachmentVersions`, `comments`, `inlineAnchored`, `inlineMoved`, `likes`, `watchers`, `people`, `peopleMatched`, `restrictions`, `groupsMissing` and `problems`."
                     },
                     "errorCode": {
-                      "description": "Why the export could not be read or the import failed, such as `notAnArchive`, `wrongFormat`, `archiveTooLarge`, `unsafeEntryName`, `xmlDeclaration` or `internalError`.",
+                      "description": "Why the export could not be read or the import failed, such as `notAnArchive`, `wrongFormat`, `archiveTooLarge`, `unsafeEntryName`, `xmlDeclaration`, `spaceChoiceRequired` (a site backup with several spaces; see `sourceSpaces`) or `internalError`.",
                       "type": [
                         "string",
                         "null"
@@ -34742,6 +34895,7 @@
                     "phase",
                     "progress",
                     "found",
+                    "sourceSpaces",
                     "counts",
                     "errorCode",
                     "quarantineSpace",
@@ -34806,6 +34960,7 @@
                     "spaceKey": "ITOPS",
                     "spaceName": "IT Operations"
                   },
+                  "sourceSpaces": null,
                   "history": false,
                   "peopleSource": {
                     "kind": "token",
@@ -35565,7 +35720,7 @@
                       "type": "object",
                       "properties": {
                         "spaceKey": {
-                          "description": "Key of the Confluence space read through the API.",
+                          "description": "Key of the Confluence space read through the API or from a site backup.",
                           "type": "string"
                         },
                         "pageIds": {
@@ -35803,6 +35958,35 @@
                       ],
                       "description": "What the export contains, once it was read."
                     },
+                    "sourceSpaces": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "key": {
+                                "type": "string",
+                                "description": "Key of the space in Confluence."
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "Name of the space in Confluence."
+                              }
+                            },
+                            "required": [
+                              "key",
+                              "name"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The spaces of a site backup, once it was read; choose one with `options.spaceKey`. Null for exports and backups of one space."
+                    },
                     "counts": {
                       "type": "object",
                       "propertyNames": {
@@ -35816,7 +36000,7 @@
                       "description": "What was imported, by kind: `pages`, `blogPosts`, `versions`, `attachments`, `attachmentVersions`, `comments`, `inlineAnchored`, `inlineMoved`, `likes`, `watchers`, `people`, `peopleMatched`, `restrictions`, `groupsMissing` and `problems`."
                     },
                     "errorCode": {
-                      "description": "Why the export could not be read or the import failed, such as `notAnArchive`, `wrongFormat`, `archiveTooLarge`, `unsafeEntryName`, `xmlDeclaration` or `internalError`.",
+                      "description": "Why the export could not be read or the import failed, such as `notAnArchive`, `wrongFormat`, `archiveTooLarge`, `unsafeEntryName`, `xmlDeclaration`, `spaceChoiceRequired` (a site backup with several spaces; see `sourceSpaces`) or `internalError`.",
                       "type": [
                         "string",
                         "null"
@@ -35988,6 +36172,7 @@
                     "phase",
                     "progress",
                     "found",
+                    "sourceSpaces",
                     "counts",
                     "errorCode",
                     "quarantineSpace",
@@ -36052,6 +36237,7 @@
                     "spaceKey": "ITOPS",
                     "spaceName": "IT Operations"
                   },
+                  "sourceSpaces": null,
                   "history": false,
                   "peopleSource": {
                     "kind": "token",
@@ -37304,7 +37490,7 @@
                       "type": "object",
                       "properties": {
                         "spaceKey": {
-                          "description": "Key of the Confluence space read through the API.",
+                          "description": "Key of the Confluence space read through the API or from a site backup.",
                           "type": "string"
                         },
                         "pageIds": {
@@ -37542,6 +37728,35 @@
                       ],
                       "description": "What the export contains, once it was read."
                     },
+                    "sourceSpaces": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "key": {
+                                "type": "string",
+                                "description": "Key of the space in Confluence."
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "Name of the space in Confluence."
+                              }
+                            },
+                            "required": [
+                              "key",
+                              "name"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The spaces of a site backup, once it was read; choose one with `options.spaceKey`. Null for exports and backups of one space."
+                    },
                     "counts": {
                       "type": "object",
                       "propertyNames": {
@@ -37555,7 +37770,7 @@
                       "description": "What was imported, by kind: `pages`, `blogPosts`, `versions`, `attachments`, `attachmentVersions`, `comments`, `inlineAnchored`, `inlineMoved`, `likes`, `watchers`, `people`, `peopleMatched`, `restrictions`, `groupsMissing` and `problems`."
                     },
                     "errorCode": {
-                      "description": "Why the export could not be read or the import failed, such as `notAnArchive`, `wrongFormat`, `archiveTooLarge`, `unsafeEntryName`, `xmlDeclaration` or `internalError`.",
+                      "description": "Why the export could not be read or the import failed, such as `notAnArchive`, `wrongFormat`, `archiveTooLarge`, `unsafeEntryName`, `xmlDeclaration`, `spaceChoiceRequired` (a site backup with several spaces; see `sourceSpaces`) or `internalError`.",
                       "type": [
                         "string",
                         "null"
@@ -37727,6 +37942,7 @@
                     "phase",
                     "progress",
                     "found",
+                    "sourceSpaces",
                     "counts",
                     "errorCode",
                     "quarantineSpace",
@@ -37791,6 +38007,7 @@
                     "spaceKey": "ITOPS",
                     "spaceName": "IT Operations"
                   },
+                  "sourceSpaces": null,
                   "history": false,
                   "peopleSource": {
                     "kind": "token",
@@ -39478,7 +39695,7 @@
                       "type": "object",
                       "properties": {
                         "spaceKey": {
-                          "description": "Key of the Confluence space read through the API.",
+                          "description": "Key of the Confluence space read through the API or from a site backup.",
                           "type": "string"
                         },
                         "pageIds": {
@@ -39716,6 +39933,35 @@
                       ],
                       "description": "What the export contains, once it was read."
                     },
+                    "sourceSpaces": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "key": {
+                                "type": "string",
+                                "description": "Key of the space in Confluence."
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "Name of the space in Confluence."
+                              }
+                            },
+                            "required": [
+                              "key",
+                              "name"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The spaces of a site backup, once it was read; choose one with `options.spaceKey`. Null for exports and backups of one space."
+                    },
                     "counts": {
                       "type": "object",
                       "propertyNames": {
@@ -39729,7 +39975,7 @@
                       "description": "What was imported, by kind: `pages`, `blogPosts`, `versions`, `attachments`, `attachmentVersions`, `comments`, `inlineAnchored`, `inlineMoved`, `likes`, `watchers`, `people`, `peopleMatched`, `restrictions`, `groupsMissing` and `problems`."
                     },
                     "errorCode": {
-                      "description": "Why the export could not be read or the import failed, such as `notAnArchive`, `wrongFormat`, `archiveTooLarge`, `unsafeEntryName`, `xmlDeclaration` or `internalError`.",
+                      "description": "Why the export could not be read or the import failed, such as `notAnArchive`, `wrongFormat`, `archiveTooLarge`, `unsafeEntryName`, `xmlDeclaration`, `spaceChoiceRequired` (a site backup with several spaces; see `sourceSpaces`) or `internalError`.",
                       "type": [
                         "string",
                         "null"
@@ -39901,6 +40147,7 @@
                     "phase",
                     "progress",
                     "found",
+                    "sourceSpaces",
                     "counts",
                     "errorCode",
                     "quarantineSpace",
@@ -39965,6 +40212,7 @@
                     "spaceKey": "ITOPS",
                     "spaceName": "IT Operations"
                   },
+                  "sourceSpaces": null,
                   "history": false,
                   "peopleSource": {
                     "kind": "token",
@@ -40647,7 +40895,7 @@
                       "type": "object",
                       "properties": {
                         "spaceKey": {
-                          "description": "Key of the Confluence space read through the API.",
+                          "description": "Key of the Confluence space read through the API or from a site backup.",
                           "type": "string"
                         },
                         "pageIds": {
@@ -40885,6 +41133,35 @@
                       ],
                       "description": "What the export contains, once it was read."
                     },
+                    "sourceSpaces": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "key": {
+                                "type": "string",
+                                "description": "Key of the space in Confluence."
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "Name of the space in Confluence."
+                              }
+                            },
+                            "required": [
+                              "key",
+                              "name"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The spaces of a site backup, once it was read; choose one with `options.spaceKey`. Null for exports and backups of one space."
+                    },
                     "counts": {
                       "type": "object",
                       "propertyNames": {
@@ -40898,7 +41175,7 @@
                       "description": "What was imported, by kind: `pages`, `blogPosts`, `versions`, `attachments`, `attachmentVersions`, `comments`, `inlineAnchored`, `inlineMoved`, `likes`, `watchers`, `people`, `peopleMatched`, `restrictions`, `groupsMissing` and `problems`."
                     },
                     "errorCode": {
-                      "description": "Why the export could not be read or the import failed, such as `notAnArchive`, `wrongFormat`, `archiveTooLarge`, `unsafeEntryName`, `xmlDeclaration` or `internalError`.",
+                      "description": "Why the export could not be read or the import failed, such as `notAnArchive`, `wrongFormat`, `archiveTooLarge`, `unsafeEntryName`, `xmlDeclaration`, `spaceChoiceRequired` (a site backup with several spaces; see `sourceSpaces`) or `internalError`.",
                       "type": [
                         "string",
                         "null"
@@ -41070,6 +41347,7 @@
                     "phase",
                     "progress",
                     "found",
+                    "sourceSpaces",
                     "counts",
                     "errorCode",
                     "quarantineSpace",
@@ -41134,6 +41412,7 @@
                     "spaceKey": "ITOPS",
                     "spaceName": "IT Operations"
                   },
+                  "sourceSpaces": null,
                   "history": false,
                   "peopleSource": {
                     "kind": "token",
@@ -42157,7 +42436,7 @@
                             ]
                           },
                           "code": {
-                            "description": "Why the entry needs attention: `widened`, `narrowed`, `withoutView`, `anonymous`, `groupMissing`, `placeholder` or `withoutSpaceRole` (named in a restriction without a role in the space).",
+                            "description": "Why the entry needs attention: `widened`, `narrowed`, `withoutView`, `anonymous`, `app` (an app account, not a person), `groupMissing`, `placeholder` or `withoutSpaceRole` (named in a restriction without a role in the space).",
                             "type": [
                               "string",
                               "null"
@@ -42729,6 +43008,9 @@
                               "duplicateEntry",
                               "skippedEntry",
                               "contentSkipped",
+                              "trashedContent",
+                              "contentTypeNotImported",
+                              "likesAndWatchersSkipped",
                               "permissionsUnavailable",
                               "unsupportedMarkdown",
                               "unresolvedFileLink",
@@ -44155,7 +44437,7 @@
                       "type": "object",
                       "properties": {
                         "spaceKey": {
-                          "description": "Key of the Confluence space read through the API.",
+                          "description": "Key of the Confluence space read through the API or from a site backup.",
                           "type": "string"
                         },
                         "pageIds": {
@@ -44393,6 +44675,35 @@
                       ],
                       "description": "What the export contains, once it was read."
                     },
+                    "sourceSpaces": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "key": {
+                                "type": "string",
+                                "description": "Key of the space in Confluence."
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "Name of the space in Confluence."
+                              }
+                            },
+                            "required": [
+                              "key",
+                              "name"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The spaces of a site backup, once it was read; choose one with `options.spaceKey`. Null for exports and backups of one space."
+                    },
                     "counts": {
                       "type": "object",
                       "propertyNames": {
@@ -44406,7 +44717,7 @@
                       "description": "What was imported, by kind: `pages`, `blogPosts`, `versions`, `attachments`, `attachmentVersions`, `comments`, `inlineAnchored`, `inlineMoved`, `likes`, `watchers`, `people`, `peopleMatched`, `restrictions`, `groupsMissing` and `problems`."
                     },
                     "errorCode": {
-                      "description": "Why the export could not be read or the import failed, such as `notAnArchive`, `wrongFormat`, `archiveTooLarge`, `unsafeEntryName`, `xmlDeclaration` or `internalError`.",
+                      "description": "Why the export could not be read or the import failed, such as `notAnArchive`, `wrongFormat`, `archiveTooLarge`, `unsafeEntryName`, `xmlDeclaration`, `spaceChoiceRequired` (a site backup with several spaces; see `sourceSpaces`) or `internalError`.",
                       "type": [
                         "string",
                         "null"
@@ -44578,6 +44889,7 @@
                     "phase",
                     "progress",
                     "found",
+                    "sourceSpaces",
                     "counts",
                     "errorCode",
                     "quarantineSpace",
@@ -44642,6 +44954,7 @@
                     "spaceKey": "ITOPS",
                     "spaceName": "IT Operations"
                   },
+                  "sourceSpaces": null,
                   "history": false,
                   "peopleSource": {
                     "kind": "token",
@@ -45248,7 +45561,7 @@
                       "type": "object",
                       "properties": {
                         "spaceKey": {
-                          "description": "Key of the Confluence space read through the API.",
+                          "description": "Key of the Confluence space read through the API or from a site backup.",
                           "type": "string"
                         },
                         "pageIds": {
@@ -45486,6 +45799,35 @@
                       ],
                       "description": "What the export contains, once it was read."
                     },
+                    "sourceSpaces": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "key": {
+                                "type": "string",
+                                "description": "Key of the space in Confluence."
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "Name of the space in Confluence."
+                              }
+                            },
+                            "required": [
+                              "key",
+                              "name"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The spaces of a site backup, once it was read; choose one with `options.spaceKey`. Null for exports and backups of one space."
+                    },
                     "counts": {
                       "type": "object",
                       "propertyNames": {
@@ -45499,7 +45841,7 @@
                       "description": "What was imported, by kind: `pages`, `blogPosts`, `versions`, `attachments`, `attachmentVersions`, `comments`, `inlineAnchored`, `inlineMoved`, `likes`, `watchers`, `people`, `peopleMatched`, `restrictions`, `groupsMissing` and `problems`."
                     },
                     "errorCode": {
-                      "description": "Why the export could not be read or the import failed, such as `notAnArchive`, `wrongFormat`, `archiveTooLarge`, `unsafeEntryName`, `xmlDeclaration` or `internalError`.",
+                      "description": "Why the export could not be read or the import failed, such as `notAnArchive`, `wrongFormat`, `archiveTooLarge`, `unsafeEntryName`, `xmlDeclaration`, `spaceChoiceRequired` (a site backup with several spaces; see `sourceSpaces`) or `internalError`.",
                       "type": [
                         "string",
                         "null"
@@ -45671,6 +46013,7 @@
                     "phase",
                     "progress",
                     "found",
+                    "sourceSpaces",
                     "counts",
                     "errorCode",
                     "quarantineSpace",
@@ -45735,6 +46078,7 @@
                     "spaceKey": "ITOPS",
                     "spaceName": "IT Operations"
                   },
+                  "sourceSpaces": null,
                   "history": false,
                   "peopleSource": {
                     "kind": "token",
@@ -46418,7 +46762,7 @@
                       "type": "object",
                       "properties": {
                         "spaceKey": {
-                          "description": "Key of the Confluence space read through the API.",
+                          "description": "Key of the Confluence space read through the API or from a site backup.",
                           "type": "string"
                         },
                         "pageIds": {
@@ -46656,6 +47000,35 @@
                       ],
                       "description": "What the export contains, once it was read."
                     },
+                    "sourceSpaces": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "key": {
+                                "type": "string",
+                                "description": "Key of the space in Confluence."
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "Name of the space in Confluence."
+                              }
+                            },
+                            "required": [
+                              "key",
+                              "name"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The spaces of a site backup, once it was read; choose one with `options.spaceKey`. Null for exports and backups of one space."
+                    },
                     "counts": {
                       "type": "object",
                       "propertyNames": {
@@ -46669,7 +47042,7 @@
                       "description": "What was imported, by kind: `pages`, `blogPosts`, `versions`, `attachments`, `attachmentVersions`, `comments`, `inlineAnchored`, `inlineMoved`, `likes`, `watchers`, `people`, `peopleMatched`, `restrictions`, `groupsMissing` and `problems`."
                     },
                     "errorCode": {
-                      "description": "Why the export could not be read or the import failed, such as `notAnArchive`, `wrongFormat`, `archiveTooLarge`, `unsafeEntryName`, `xmlDeclaration` or `internalError`.",
+                      "description": "Why the export could not be read or the import failed, such as `notAnArchive`, `wrongFormat`, `archiveTooLarge`, `unsafeEntryName`, `xmlDeclaration`, `spaceChoiceRequired` (a site backup with several spaces; see `sourceSpaces`) or `internalError`.",
                       "type": [
                         "string",
                         "null"
@@ -46841,6 +47214,7 @@
                     "phase",
                     "progress",
                     "found",
+                    "sourceSpaces",
                     "counts",
                     "errorCode",
                     "quarantineSpace",
@@ -46905,6 +47279,7 @@
                     "spaceKey": "ITOPS",
                     "spaceName": "IT Operations"
                   },
+                  "sourceSpaces": null,
                   "history": false,
                   "peopleSource": {
                     "kind": "token",
@@ -47503,7 +47878,7 @@
                       "type": "object",
                       "properties": {
                         "spaceKey": {
-                          "description": "Key of the Confluence space read through the API.",
+                          "description": "Key of the Confluence space read through the API or from a site backup.",
                           "type": "string"
                         },
                         "pageIds": {
@@ -47741,6 +48116,35 @@
                       ],
                       "description": "What the export contains, once it was read."
                     },
+                    "sourceSpaces": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "key": {
+                                "type": "string",
+                                "description": "Key of the space in Confluence."
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "Name of the space in Confluence."
+                              }
+                            },
+                            "required": [
+                              "key",
+                              "name"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The spaces of a site backup, once it was read; choose one with `options.spaceKey`. Null for exports and backups of one space."
+                    },
                     "counts": {
                       "type": "object",
                       "propertyNames": {
@@ -47754,7 +48158,7 @@
                       "description": "What was imported, by kind: `pages`, `blogPosts`, `versions`, `attachments`, `attachmentVersions`, `comments`, `inlineAnchored`, `inlineMoved`, `likes`, `watchers`, `people`, `peopleMatched`, `restrictions`, `groupsMissing` and `problems`."
                     },
                     "errorCode": {
-                      "description": "Why the export could not be read or the import failed, such as `notAnArchive`, `wrongFormat`, `archiveTooLarge`, `unsafeEntryName`, `xmlDeclaration` or `internalError`.",
+                      "description": "Why the export could not be read or the import failed, such as `notAnArchive`, `wrongFormat`, `archiveTooLarge`, `unsafeEntryName`, `xmlDeclaration`, `spaceChoiceRequired` (a site backup with several spaces; see `sourceSpaces`) or `internalError`.",
                       "type": [
                         "string",
                         "null"
@@ -47926,6 +48330,7 @@
                     "phase",
                     "progress",
                     "found",
+                    "sourceSpaces",
                     "counts",
                     "errorCode",
                     "quarantineSpace",
@@ -47990,6 +48395,7 @@
                     "spaceKey": "ITOPS",
                     "spaceName": "IT Operations"
                   },
+                  "sourceSpaces": null,
                   "history": false,
                   "peopleSource": {
                     "kind": "token",
@@ -142432,7 +142838,7 @@
                         "type": "object",
                         "properties": {
                           "spaceKey": {
-                            "description": "Key of the Confluence space read through the API.",
+                            "description": "Key of the Confluence space read through the API or from a site backup.",
                             "type": "string"
                           },
                           "pageIds": {
@@ -142670,6 +143076,35 @@
                         ],
                         "description": "What the export contains, once it was read."
                       },
+                      "sourceSpaces": {
+                        "anyOf": [
+                          {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "key": {
+                                  "type": "string",
+                                  "description": "Key of the space in Confluence."
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "description": "Name of the space in Confluence."
+                                }
+                              },
+                              "required": [
+                                "key",
+                                "name"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The spaces of a site backup, once it was read; choose one with `options.spaceKey`. Null for exports and backups of one space."
+                      },
                       "counts": {
                         "type": "object",
                         "propertyNames": {
@@ -142683,7 +143118,7 @@
                         "description": "What was imported, by kind: `pages`, `blogPosts`, `versions`, `attachments`, `attachmentVersions`, `comments`, `inlineAnchored`, `inlineMoved`, `likes`, `watchers`, `people`, `peopleMatched`, `restrictions`, `groupsMissing` and `problems`."
                       },
                       "errorCode": {
-                        "description": "Why the export could not be read or the import failed, such as `notAnArchive`, `wrongFormat`, `archiveTooLarge`, `unsafeEntryName`, `xmlDeclaration` or `internalError`.",
+                        "description": "Why the export could not be read or the import failed, such as `notAnArchive`, `wrongFormat`, `archiveTooLarge`, `unsafeEntryName`, `xmlDeclaration`, `spaceChoiceRequired` (a site backup with several spaces; see `sourceSpaces`) or `internalError`.",
                         "type": [
                           "string",
                           "null"
@@ -142855,6 +143290,7 @@
                       "phase",
                       "progress",
                       "found",
+                      "sourceSpaces",
                       "counts",
                       "errorCode",
                       "quarantineSpace",
@@ -142922,6 +143358,7 @@
                       "spaceKey": "ITOPS",
                       "spaceName": "IT Operations"
                     },
+                    "sourceSpaces": null,
                     "history": false,
                     "peopleSource": {
                       "kind": "token",
@@ -143520,7 +143957,7 @@
                       "type": "object",
                       "properties": {
                         "spaceKey": {
-                          "description": "Key of the Confluence space read through the API.",
+                          "description": "Key of the Confluence space read through the API or from a site backup.",
                           "type": "string"
                         },
                         "pageIds": {
@@ -143758,6 +144195,35 @@
                       ],
                       "description": "What the export contains, once it was read."
                     },
+                    "sourceSpaces": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "key": {
+                                "type": "string",
+                                "description": "Key of the space in Confluence."
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "Name of the space in Confluence."
+                              }
+                            },
+                            "required": [
+                              "key",
+                              "name"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The spaces of a site backup, once it was read; choose one with `options.spaceKey`. Null for exports and backups of one space."
+                    },
                     "counts": {
                       "type": "object",
                       "propertyNames": {
@@ -143771,7 +144237,7 @@
                       "description": "What was imported, by kind: `pages`, `blogPosts`, `versions`, `attachments`, `attachmentVersions`, `comments`, `inlineAnchored`, `inlineMoved`, `likes`, `watchers`, `people`, `peopleMatched`, `restrictions`, `groupsMissing` and `problems`."
                     },
                     "errorCode": {
-                      "description": "Why the export could not be read or the import failed, such as `notAnArchive`, `wrongFormat`, `archiveTooLarge`, `unsafeEntryName`, `xmlDeclaration` or `internalError`.",
+                      "description": "Why the export could not be read or the import failed, such as `notAnArchive`, `wrongFormat`, `archiveTooLarge`, `unsafeEntryName`, `xmlDeclaration`, `spaceChoiceRequired` (a site backup with several spaces; see `sourceSpaces`) or `internalError`.",
                       "type": [
                         "string",
                         "null"
@@ -143943,6 +144409,7 @@
                     "phase",
                     "progress",
                     "found",
+                    "sourceSpaces",
                     "counts",
                     "errorCode",
                     "quarantineSpace",
@@ -144007,6 +144474,7 @@
                     "spaceKey": "ITOPS",
                     "spaceName": "IT Operations"
                   },
+                  "sourceSpaces": null,
                   "history": false,
                   "peopleSource": {
                     "kind": "token",

@@ -6996,6 +6996,11 @@
         "folder": "Import-Ordner des Servers",
         "folderDescription": "Für größere Exporte. Die Datei muss schon im Import-Ordner dieser Organisation auf dem Server liegen.",
         "fileRequired": "Wähle die Exportdatei und warte, bis der Upload fertig ist.",
+        "spaceTitle": "Space im Site-Backup",
+        "spaceLabel": "Space",
+        "spacePlaceholder": "Space wählen",
+        "spaceHint": "{count, plural, one {Das Site-Backup enthält # Space.} other {Das Site-Backup enthält # Spaces.}} Jeder Import übernimmt einen Space in einen neuen Space in Pagehall; importiere die anderen nacheinander.",
+        "spaceRequired": "Wähle den Space, der aus dem Site-Backup importiert wird.",
         "folderFile": "Datei im Import-Ordner",
         "folderHint": "Pagehall liest nur normale Dateien, die direkt im Import-Ordner dieser Organisation liegen.",
         "folderPlaceholder": "Datei auswählen",
@@ -7334,6 +7339,21 @@
           "hint": "Confluence hat sie verweigert. Importiere mit dem Token eines Kontos, das sie lesen kann, oder ergänze sie später.",
           "entry": "{title}: {part, select, comments {Die Kommentare konnten} attachments {Die Anhänge konnten} restrictions {Die Einschränkungen konnten} other {Der Inhalt konnte}} nicht gelesen werden."
         },
+        "trashedContent": {
+          "title": "{count, plural, one {# Seite} other {# Seiten}} im Papierkorb von Confluence nicht importiert",
+          "hint": "Sie wurden in Confluence gelöscht. Stelle sie dort wieder her und importiere erneut, wenn du sie brauchst.",
+          "entry": "„{title}“ liegt im Papierkorb von Confluence."
+        },
+        "contentTypeNotImported": {
+          "title": "{count, plural, one {# Whiteboard oder Datenbank} other {# Whiteboards und Datenbanken}} nicht importiert",
+          "hint": "Exporte und die API enthalten ihren Inhalt nicht. Die Seiten behalten ihren Platz im Baum mit einem Hinweis.",
+          "entry": "{type, select, whiteboard {Whiteboard} database {Datenbank} other {Inhalt}} „{title}“ wurde eine Seite mit Hinweis."
+        },
+        "likesAndWatchersSkipped": {
+          "title": "Likes und Beobachter nicht importiert",
+          "hint": "Die Confluence-API gibt sie Pagehall nicht. In Pagehall können Seiten wieder geliked und beobachtet werden.",
+          "entry": "Likes und Beobachter werden über die API nicht gelesen."
+        },
         "permissionsUnavailable": {
           "title": "Bereichsberechtigungen nicht lesbar",
           "hint": "Nur Bereichs-Administratoren können sie über die API lesen. Lege die Rollen nach der Übernahme in Pagehall fest.",
@@ -7436,9 +7456,14 @@
         "action": "Öffne in Confluence den Space, dann Space-Einstellungen › Space exportieren, und lade diese Datei hoch."
       },
       "notSpaceExport": {
-        "what": "Die Datei ist ein Export einer ganzen Site",
-        "cause": "Pagehall importiert jeweils einen Space.",
-        "action": "Exportiere in Confluence einen einzelnen Space und lade diese Datei hoch."
+        "what": "Die Datei ist weder ein Space-Export noch ein Site-Backup",
+        "cause": "Pagehall liest XML- und CSV-Exporte einzelner Spaces und XML-Site-Backups von Confluence.",
+        "action": "Exportiere in Confluence einen einzelnen Space oder erstelle ein Site-Backup und lade diese Datei hoch."
+      },
+      "spaceChoiceRequired": {
+        "what": "Das Site-Backup enthält mehrere Spaces",
+        "cause": "Ein Site-Backup enthält alle Spaces der Confluence-Site, ein Import übernimmt einen davon.",
+        "action": "Wähle den Space im Schritt Quelle."
       },
       "archiveTooLarge": {
         "what": "Das Archiv wird größer als erlaubt",
@@ -7766,7 +7791,8 @@
         "anonymous": "Öffentlicher Zugriff ist für diesen Space nicht verfügbar.",
         "groupMissing": "Keine Gruppe mit diesem Namen. Ordne eine bestehende Gruppe zu oder lege eine an.",
         "placeholder": "Ordne die Person im Tab Personen einem Konto zu.",
-        "withoutSpaceRole": "In einer Einschränkung genannt, aber ohne Zugriff auf den Space, wie in Confluence. Einschränkungen begrenzen nur; vergib eine Rolle im Space, wenn sich die Seite öffnen soll."
+        "withoutSpaceRole": "In einer Einschränkung genannt, aber ohne Zugriff auf den Space, wie in Confluence. Einschränkungen begrenzen nur; vergib eine Rolle im Space, wenn sich die Seite öffnen soll.",
+        "app": "Ein App-Konto von Confluence, keine Person. Es bekommt keine Rolle."
       },
       "groupMapped": "„{name}“ ist zugeordnet",
       "groupFailed": "„{name}“ konnte nicht zugeordnet werden",

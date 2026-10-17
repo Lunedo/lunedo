@@ -55,6 +55,7 @@ describe("AtlassianDirectory", () => {
               accountId: id,
               displayName: `Name ${id}`,
               email: id === "a" ? "a@example.org" : "",
+              accountType: id === "id-1" ? "app" : "atlassian",
             })),
           }),
     );
@@ -63,8 +64,8 @@ describe("AtlassianDirectory", () => {
     const ids = Array.from({ length: 150 }, (_, index) => (index === 0 ? "a" : `id-${index}`));
     const people = await directory.people(CREDENTIALS, ids);
     expect(people).toHaveLength(150);
-    expect(people[0]).toEqual({ accountId: "a", name: "Name a", email: "a@example.org" });
-    expect(people[1]?.email).toBeNull();
+    expect(people[0]).toEqual({ accountId: "a", name: "Name a", email: "a@example.org", app: false });
+    expect(people[1]).toMatchObject({ email: null, app: true });
     expect(calls).toHaveLength(3);
     for (const call of calls) {
       expect(call.url.origin).toBe("https://example.atlassian.net");

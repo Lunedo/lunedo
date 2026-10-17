@@ -23,6 +23,12 @@ const BEYOND_COMMENT = [
 ];
 const EDITOR_RIGHTS = ["REMOVEPAGE", "SETPAGEPERMISSIONS"];
 
+const OUTSIDE_SPACE_ROLES = new Set(["ACCESSANALYTICS"]);
+
+export function grantsAccess(permissions: ReadonlySet<string>): boolean {
+  return [...permissions].some((permission) => !OUTSIDE_SPACE_ROLES.has(permission));
+}
+
 export function roleFor(permissions: ReadonlySet<string>): RoleDecision {
   if (!permissions.has("VIEWSPACE")) return { role: null, status: "notTaken", code: "withoutView" };
   if (permissions.has("SETSPACEPERMISSIONS")) {

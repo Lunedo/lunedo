@@ -3,6 +3,7 @@ import {
   type DocumentJson,
   editorSchemaVersion,
   extractMentions,
+  type ImportText,
   narrowEmbedServices,
   resolveEmbed,
   slugify,
@@ -24,7 +25,7 @@ import { MEGABYTE, maxFileSizeSetting } from "../files/settings.js";
 import { languageSetting } from "../settings/builtin.js";
 import type { SettingsService } from "../settings/service.js";
 import { encodeState, MAX_LABELS_PER_PAGE, normalizeLabel, recomputeLinks } from "../spaces/documents.js";
-import { endPosition, ITEM_TITLE_MAX_LENGTH, lockSpaces } from "../spaces/items.js";
+import { cleanLinkUrl, endPosition, ITEM_TITLE_MAX_LENGTH, lockSpaces } from "../spaces/items.js";
 import { syncReusableContent } from "../spaces/properties.js";
 import { signalSpaceChange } from "../spaces/signals.js";
 import { applyImportedStatus } from "../spaces/status.js";
@@ -68,7 +69,7 @@ import type { ByteSource } from "./formats/bytes.js";
 import { importText, jiraIssueUrl } from "./import-texts.js";
 import { heldBy, Narrowing, pendingNarrowing } from "./narrowing.js";
 import { type Directory, ensurePeople, personOf } from "./people.js";
-import { ensureGroups, groupKey, roleFor } from "./permissions.js";
+import { ensureGroups, grantsAccess, groupKey, roleFor } from "./permissions.js";
 import { createQuarantineSpace } from "./quarantine.js";
 import {
   type ChangeDecision,
@@ -564,6 +565,7 @@ export class ImportPipeline {
         run.organizationId,
         restrictions.flatMap((restriction) => (restriction.group ? [restriction.group] : [])),
       );
+      const links = await this.#linkTargets(run, open);
       await this.#database.transaction(async (tx) => {
         const parents = await this.#mappedIn(
           tx,
@@ -580,7 +582,7 @@ export class ImportPipeline {
               await tx.execute(sql`update tree_items set owner_id = ${ownerId} where id = ${id}`);
             }
           } else {
-            const nested = page.type === "page" && page.parentId !== null && page.parentId !== home;
+            const nested = page.type !== "blogPost" && page.parentId !== null && page.parentId !== home;
             const parentId =
               nested && page.parentId
                 ? (parents.get(page.parentId) ??
@@ -599,23 +601,31 @@ export class ImportPipeline {
             const creatorId = (page.creatorId ? people.get(page.creatorId) : undefined) ?? run.importerId;
             id = uuidv7();
             const position = await endPosition(tx, space.spaceId, parentId);
+            const linkUrl = links.get(page.sourceId) ?? null;
+            const kind = treeKindOf(page, linkUrl);
             await tx.execute(sql`
-              insert into tree_items (id, space_id, parent_id, kind, position, title, mode, creator_id, owner_id,
-                created_at, content_updated_at)
-              values (${id}, ${space.spaceId}, ${parentId}, ${page.type}, ${position}, ${pageTitle(page)}, 'publish',
-                ${creatorId}, ${ownerId}, coalesce(${page.createdAt}::timestamptz, now()),
-                coalesce(${page.modifiedAt}::timestamptz, now()))`);
-            await tx.execute(sql`
-              insert into page_documents (item_id, state, snapshot, schema_version, updated_by)
-              values (${id}, ${encodeState(yDocFromDocument({ type: "doc", content: [{ type: "paragraph" }] }))},
-                ${JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] })}::jsonb, ${editorSchemaVersion},
-                ${creatorId})`);
+              insert into tree_items (id, space_id, parent_id, kind, position, title, link_url, mode, creator_id,
+                owner_id, created_at, content_updated_at)
+              values (${id}, ${space.spaceId}, ${parentId}, ${kind}, ${position}, ${pageTitle(page)}, ${linkUrl},
+                ${kind === "page" || kind === "blogPost" ? "publish" : "live"}, ${creatorId}, ${ownerId},
+                coalesce(${page.createdAt}::timestamptz, now()), coalesce(${page.modifiedAt}::timestamptz, now()))`);
+            if (kind === "page" || kind === "blogPost") {
+              await tx.execute(sql`
+                insert into page_documents (item_id, state, snapshot, schema_version, updated_by)
+                values (${id}, ${encodeState(yDocFromDocument({ type: "doc", content: [{ type: "paragraph" }] }))},
+                  ${JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] })}::jsonb, ${editorSchemaVersion},
+                  ${creatorId})`);
+            }
             if (page.type === "blogPost") {
               await tx.execute(sql`
                 insert into blog_posts (item_id, created_at) values (${id}, coalesce(${page.createdAt}::timestamptz, now()))`);
             }
           }
-          if (page.status && page.type === "page" && !(run.reimport && page.sourceId === home)) {
+          if (
+            page.status &&
+            (page.type === "page" || page.type === "other") &&
+            !(run.reimport && page.sourceId === home)
+          ) {
             await applyImportedStatus(tx, space.spaceId, id, page.status);
           }
           await this.#restrict(
@@ -636,11 +646,69 @@ export class ImportPipeline {
       await run.progress(done, total);
       await run.beat();
     };
+    const archived: SourcePage[] = [];
     for await (const page of run.reader.pages(context)) {
       batch.push(page);
+      if (page.archived && page.sourceId !== home) archived.push(page);
       if (batch.length >= PAGE_BATCH) await flush();
     }
     await flush();
+    if (!run.reimport) await this.#archive(run, archived);
+  }
+
+  async #linkTargets(run: PipelineRun, pages: readonly SourcePage[]): Promise<Map<string, string>> {
+    const embeds = pages.filter((page) => page.type === "embed").map((page) => page.sourceId);
+    const result = new Map<string, string>();
+    if (embeds.length === 0) return result;
+    const parents = await run.staging.parents("page", embeds);
+    const bodies = await run.reader.bodies({ staging: run.staging }, embeds);
+    for (const id of embeds) {
+      if (parents.has(id)) continue;
+      const url = await embedUrl(bodies.get(id)?.content ?? "");
+      if (url) result.set(id, url);
+    }
+    return result;
+  }
+
+  async #archive(run: PipelineRun, pages: readonly SourcePage[]): Promise<void> {
+    if (pages.length === 0) return;
+    const archivedIds = new Set(pages.map((page) => page.sourceId));
+    const roots = pages.filter((page) => !page.parentId || !archivedIds.has(page.parentId));
+    const items = await this.#mapped(
+      run.importId,
+      "page",
+      roots.map((page) => page.sourceId),
+    );
+    const people = await this.#persons(
+      run,
+      roots.map((page) => page.modifierId),
+    );
+    const space = await this.#requireSpace(run.importId);
+    await this.#database.transaction(async (tx) => {
+      for (const page of roots) {
+        const itemId = items.get(page.sourceId);
+        if (!itemId) continue;
+        const subtree = await tx.execute<{ id: string }>(sql`
+          with recursive down as (
+            select id from tree_items where id = ${itemId} and archived_root_id is null and trash_entry_id is null
+            union all
+            select t.id from tree_items t join down on t.parent_id = down.id where t.trash_entry_id is null
+          )
+          select id from down`);
+        const ids = subtree.rows.map((row) => row.id);
+        if (ids.length === 0) continue;
+        await tx.execute(sql`
+          update tree_items set archived_root_id = ${itemId}, updated_at = now() where id = any(${sql.param(ids)}::uuid[])`);
+        await tx.execute(sql`
+          update tree_items set restore_parent_id = parent_id, restore_position = position, parent_id = null,
+            archived_at = coalesce(${page.modifiedAt}::timestamptz, now()),
+            archived_by = ${(page.modifierId ? people.get(page.modifierId) : undefined) ?? run.importerId}
+          where id = ${itemId}`);
+        await refreshReaderVisibility(tx, [itemId]);
+      }
+      await signalSpaceChange(tx, { spaceId: space.spaceId, kind: "tree", itemId: null });
+      await signalSpaceChange(tx, { spaceId: space.spaceId, kind: "access", itemId: null });
+    });
   }
 
   async #restrict(
@@ -1424,10 +1492,11 @@ export class ImportPipeline {
           threads.delete(commentId);
         }
       }
-      const document = withoutThreads(converted.document, unanchored);
       const problems: ProblemInput[] = converted.notes.map((note) =>
         noteProblem(note, itemId, page.sourceId),
       );
+      const document = noteNotImported(page, withoutThreads(converted.document, unanchored), language);
+      if (page.type === "other") problems.push(notImportedProblem(page, itemId));
       for (const [name, count] of converted.macros) {
         problems.push({
           code: "unsupportedMacro",
@@ -1521,6 +1590,7 @@ export class ImportPipeline {
     if (open.length === 0) return false;
     const ids = open.map((page) => page.sourceId);
     const items = await this.#mapped(run.importId, "page", ids);
+    const documents = await this.#documentItems([...items.values()]);
     const bodies = await run.reader.bodies(context, ids);
     const labels = await run.reader.labels(context, ids);
     const comments = await run.reader.comments(context, ids);
@@ -1550,6 +1620,13 @@ export class ImportPipeline {
     for (const page of open) {
       const itemId = items.get(page.sourceId);
       if (!itemId) continue;
+      if (!documents.has(itemId)) {
+        await this.#database.transaction(async (tx) => {
+          if (await this.#mappedOne(tx, run.importId, "content", page.sourceId)) return;
+          await this.#map(tx, run.importId, "content", page.sourceId, itemId);
+        });
+        continue;
+      }
       const threads = new Map<string, string>();
       const converted = converter.convert(page.sourceId, (ref) => {
         const commentId = markers.get(page.sourceId)?.get(ref);
@@ -1565,10 +1642,11 @@ export class ImportPipeline {
           threads.delete(commentId);
         }
       }
-      const document = withoutThreads(converted.document, unanchored);
       const problems: ProblemInput[] = converted.notes.map((note) =>
         noteProblem(note, itemId, page.sourceId),
       );
+      const document = noteNotImported(page, withoutThreads(converted.document, unanchored), language);
+      if (page.type === "other") problems.push(notImportedProblem(page, itemId));
       if (converter.failed.has(page.sourceId)) {
         problems.push({
           code: "invalidContent",
@@ -1708,6 +1786,13 @@ export class ImportPipeline {
     }
     await flush();
     return number;
+  }
+
+  async #documentItems(itemIds: readonly string[]): Promise<Set<string>> {
+    if (itemIds.length === 0) return new Set();
+    const result = await this.#database.execute<{ item_id: string }>(sql`
+      select item_id from page_documents where item_id = any(${sql.param([...itemIds])}::uuid[])`);
+    return new Set(result.rows.map((row) => row.item_id));
   }
 
   async #pageInfo(itemIds: readonly string[]): Promise<Map<string, string>> {
@@ -2078,6 +2163,9 @@ export class ImportPipeline {
       run,
       all.map(([, holder]) => holder.personId),
     );
+    const known = await run.directory(
+      all.flatMap(([, holder]) => (holder.personId ? [personOf(holder.personId)] : [])),
+    );
     await ensureGroups(
       this.#database,
       run.importId,
@@ -2086,10 +2174,13 @@ export class ImportPipeline {
     );
     await this.#database.transaction(async (tx) => {
       for (const [key, holder] of all) {
+        if (!grantsAccess(holder.permissions)) continue;
         const decision =
           holder.kind === "anonymous"
             ? { role: null, status: "notTaken" as const, code: "anonymous" }
-            : roleFor(holder.permissions);
+            : holder.personId && known.get(holder.personId)?.app
+              ? { role: null, status: "notTaken" as const, code: "app" }
+              : roleFor(holder.permissions);
         const accountId = holder.personId ? (people.get(holder.personId) ?? null) : null;
         if (holder.kind === "account" && !accountId) continue;
         await tx.execute(sql`
@@ -2450,6 +2541,61 @@ export class ImportPipeline {
         })}::jsonb
         where id = ${run.importId}`);
     });
+  }
+}
+
+function notImportedText(sourceType: string | null): ImportText {
+  if (sourceType === "whiteboard") return "whiteboardNotImported";
+  if (sourceType === "database") return "databaseNotImported";
+  return "contentNotImported";
+}
+
+function noteNotImported(page: SourcePage, document: DocumentJson, language: TemplateLanguage): DocumentJson {
+  if (page.type !== "other") return document;
+  const content = (document.content ?? []).filter(
+    (node) => !(node.type === "paragraph" && (node.content ?? []).length === 0),
+  );
+  const note = importText(language, notImportedText(page.sourceType));
+  return {
+    ...document,
+    content: [{ type: "paragraph", content: [{ type: "text", text: note }] }, ...content],
+  };
+}
+
+function notImportedProblem(page: SourcePage, itemId: string): ProblemInput {
+  return {
+    code: "contentTypeNotImported",
+    sourceKind: "page",
+    sourceId: page.sourceId,
+    itemId,
+    details: { type: page.sourceType ?? "", title: page.title.slice(0, 255) },
+  };
+}
+
+function treeKindOf(page: SourcePage, linkUrl: string | null): "page" | "blogPost" | "folder" | "link" {
+  if (page.type === "blogPost" || page.type === "folder") return page.type;
+  if (page.type === "embed" && linkUrl) return "link";
+  return "page";
+}
+
+async function embedUrl(body: string): Promise<string | null> {
+  const root = await parseStorage(body).catch(() => null);
+  if (!root) return null;
+  const find = (node: typeof root): string | null => {
+    for (const child of node.children) {
+      if (typeof child === "string") continue;
+      if (child.name === "a" && child.attributes.href) return child.attributes.href;
+      const nested = find(child);
+      if (nested) return nested;
+    }
+    return null;
+  };
+  const href = find(root);
+  if (!href) return null;
+  try {
+    return cleanLinkUrl(href);
+  } catch {
+    return null;
   }
 }
 

@@ -91,7 +91,7 @@ export function sourceParent(
   page: { readonly type: SourceContentType; readonly parentId: string | null },
   homePageId: string | null,
 ): string | null {
-  return page.type === "page" && page.parentId && page.parentId !== homePageId ? page.parentId : null;
+  return page.type !== "blogPost" && page.parentId && page.parentId !== homePageId ? page.parentId : null;
 }
 
 export async function pageStatesOf(

@@ -227,6 +227,49 @@ describe("import wizard", () => {
     await waitFor(() => expect(document.activeElement).toBe(input));
   });
 
+  it("asks for the space of a site backup at the field and saves the choice", async () => {
+    const spaces = [
+      { key: "PHIT", name: "IT-Team" },
+      { key: "PHKB", name: "Wissensdatenbank" },
+    ];
+    const api = setup(
+      {
+        [`GET /api/v1/imports/${IMPORT_ID}`]: () => ({
+          body: importView({
+            state: "draft",
+            found: null,
+            errorCode: "spaceChoiceRequired",
+            sourceSpaces: spaces,
+          }),
+        }),
+        [`PATCH /api/v1/imports/${IMPORT_ID}`]: () => ({
+          body: importView({
+            state: "analyzing",
+            found: null,
+            options: { spaceKey: "PHIT" },
+            sourceSpaces: spaces,
+          }),
+        }),
+      },
+      ["organization.imports.manage"],
+    );
+    await open(`/settings/organizations/${ORGANIZATION.id}/imports/${IMPORT_ID}/setup?step=0`);
+    expect(await screen.findByText("Space in the site backup")).toBeTruthy();
+    expect(screen.queryByText("The site backup contains several spaces")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    expect(await screen.findByText("Choose the space to import from the site backup.")).toBeTruthy();
+    const select = screen.getByRole("combobox", { name: "Space" });
+    expect(select.getAttribute("aria-invalid")).toBe("true");
+    await waitFor(() => expect(document.activeElement).toBe(select));
+    await userEvent.click(select);
+    await userEvent.click(await screen.findByRole("option", { name: "IT-Team (PHIT)" }));
+    await waitFor(() =>
+      expect(api.requests.find((request) => request.method === "PATCH")?.body).toEqual({
+        options: { spaceKey: "PHIT" },
+      }),
+    );
+  });
+
   it("refuses a file above the upload limit before anything is sent", async () => {
     const api = setup(
       {

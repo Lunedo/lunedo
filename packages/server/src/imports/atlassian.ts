@@ -105,6 +105,7 @@ export interface AtlassianPerson {
   readonly accountId: string;
   readonly name: string | null;
   readonly email: string | null;
+  readonly app: boolean;
 }
 
 const currentUserSchema = z.object({ accountId: z.string().min(1).max(255), type: z.string().optional() });
@@ -116,6 +117,7 @@ const bulkSchema = z.object({
         displayName: z.string().max(500).nullish(),
         publicName: z.string().max(500).nullish(),
         email: z.string().max(320).nullish(),
+        accountType: z.string().max(50).nullish(),
       }),
     )
     .max(1000),
@@ -156,6 +158,7 @@ export class AtlassianDirectory {
           accountId: person.accountId,
           name: name.length > 0 ? name.slice(0, 200) : null,
           email: email.includes("@") ? email : null,
+          app: person.accountType === "app",
         });
       }
     }

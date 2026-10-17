@@ -23,7 +23,8 @@ export interface SyntheticPage {
   readonly body: string;
   readonly creatorKey: string;
   readonly labels?: readonly string[];
-  readonly status?: "current" | "deleted" | "draft";
+  readonly status?: "current" | "archived" | "deleted" | "draft";
+  readonly kind?: SyntheticNodeKind;
   readonly history?: readonly SyntheticVersion[];
   readonly spaceId?: string;
   readonly created?: string;
@@ -31,6 +32,19 @@ export interface SyntheticPage {
   readonly modifierKey?: string;
   readonly version?: number;
   readonly pageStatus?: string;
+}
+
+export type SyntheticNodeKind = "folder" | "embed" | "whiteboard" | "database";
+
+const KIND_FLAGS: Readonly<Record<SyntheticNodeKind, string>> = {
+  folder: "isFolder",
+  embed: "isEmbed",
+  whiteboard: "isWhiteboard",
+  database: "isDatabase",
+};
+
+export function hasBody(page: SyntheticPage): boolean {
+  return page.kind === undefined || page.kind === "embed";
 }
 
 export interface SyntheticAttachmentVersion {
@@ -69,7 +83,12 @@ export interface SyntheticSpacePermission {
   readonly type: string;
   readonly group?: string;
   readonly userKey?: string;
-  readonly allUsers?: boolean;
+  readonly allUsers?: boolean | "productAdmins";
+}
+
+export function allUsersSubject(permission: SyntheticSpacePermission): string | null {
+  if (permission.allUsers === "productAdmins") return "all-product-admins";
+  return permission.allUsers ? "all-licensed-users" : null;
 }
 
 export interface SyntheticRestriction {
@@ -108,6 +127,7 @@ export interface SyntheticExport {
   readonly restrictions?: readonly SyntheticRestriction[];
   readonly templates?: readonly SyntheticTemplate[];
   readonly extraFiles?: readonly ZipFileSpec[];
+  readonly siteSpaces?: readonly { readonly id: string; readonly key: string; readonly name: string }[];
 }
 
 const DATE = "2024-03-01 10:20:30.123";
@@ -158,6 +178,7 @@ function contentObject(
       property("position", className === "Page" ? page.position : null),
       className === "Page" ? reference("parent", "Page", page.parentId) : "",
       reference("originalVersion", className, original ? page.id : null),
+      page.kind && !original ? property(KIND_FLAGS[page.kind], "true") : "",
     ].join(""),
   );
 }
@@ -223,7 +244,7 @@ export function createXmlExport(model: SyntheticExport): Buffer {
     parts.push(
       contentObject(className, page, model, page.id, null, page.version ?? (page.history?.length ?? 0) + 1),
     );
-    body(page.id, className, page.body);
+    if (hasBody(page)) body(page.id, className, page.body);
     if (page.pageStatus !== undefined) {
       propertyId += 1;
       parts.push(
@@ -356,7 +377,7 @@ export function createXmlExport(model: SyntheticExport): Buffer {
           property("type", permission.type),
           property("group", permission.group ?? null),
           reference("userSubject", "ConfluenceUserImpl", permission.userKey ?? null, "key"),
-          property("allUsersSubject", permission.allUsers ? "all-licensed-users" : null),
+          property("allUsersSubject", allUsersSubject(permission)),
           property("active", "true"),
         ].join(""),
       ),
@@ -427,8 +448,28 @@ export function createXmlExport(model: SyntheticExport): Buffer {
       ].join(""),
     ),
   );
+  for (const space of model.siteSpaces ?? []) {
+    parts.push(
+      object("Space", space.id, [property("name", space.name), property("key", space.key)].join("")),
+    );
+  }
+  if (model.siteSpaces) {
+    parts.push(
+      object(
+        "SpacePermission",
+        "390000",
+        [
+          property("type", "USECONFLUENCE"),
+          property("group", "confluence-users"),
+          property("active", "true"),
+        ].join(""),
+      ),
+    );
+  }
   parts.push("</hibernate-generic>\n");
-  const descriptor = `exportType=space\nspaceKey=${model.space.key}\nsource=cloud\nbackupAttachments=true\n`;
+  const descriptor = model.siteSpaces
+    ? "exportType=all\nsource=cloud\nbackupAttachments=true\n"
+    : `exportType=space\nspaceKey=${model.space.key}\nsource=cloud\nbackupAttachments=true\n`;
   return createZip([
     { name: "exportDescriptor.properties", data: descriptor },
     { name: "entities.xml", data: parts.join(""), deflate: true },
@@ -485,7 +526,7 @@ export function createCsvExport(
     const version = page.version ?? (page.history?.length ?? 0) + 1;
     content.push([
       page.id,
-      type,
+      page.kind ? page.kind.toUpperCase() : type,
       page.title,
       version,
       page.creatorKey,
@@ -501,7 +542,7 @@ export function createCsvExport(
       null,
     ]);
     bodyId += 1;
-    bodies.push([bodyId, page.body, page.id, 2]);
+    if (hasBody(page)) bodies.push([bodyId, page.body, page.id, 2]);
     for (const [index, old] of (page.history ?? []).entries()) {
       content.push([
         old.id,
@@ -676,7 +717,7 @@ export function createCsvExport(
         permission.type,
         permission.group ?? null,
         permission.userKey ?? null,
-        permission.allUsers ? "all-licensed-users" : null,
+        allUsersSubject(permission),
         "true",
       ]),
     ),
