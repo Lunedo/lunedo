@@ -3,6 +3,7 @@ export {
   cleanLabel,
   DEFAULT_PAGE_REPORT_LIMIT,
   decisionReportOrders,
+  diagramTypes,
   MAX_FILTER_LABELS,
   MAX_FILTER_PAGES,
   MAX_PAGE_REPORT_LIMIT,
@@ -258,6 +259,15 @@ export {
 } from "./database/migrate.js";
 export { NotificationListener, notify } from "./database/notifications.js";
 export { createDatabasePool, type DatabasePool, pingDatabase } from "./database/pool.js";
+export {
+  DiagramService,
+  diagramFileNames,
+  MAX_DIAGRAM_IMAGE_BYTES,
+  MAX_DIAGRAM_IMAGE_SIZE,
+  type SavedDiagramPreview,
+  type SavedDiagramSource,
+} from "./diagrams/diagrams.js";
+export { DiagramRejectedError, MAX_DRAWIO_BYTES, sanitizeDrawio } from "./diagrams/drawio.js";
 export {
   EXPORT_RETENTION_DAYS,
   ExportError,
@@ -858,7 +868,7 @@ export {
   type SavedDrawingPreview,
   type SavedDrawingScene,
 } from "./whiteboards/drawings.js";
-export { MAX_PREVIEW_BYTES, SvgRejectedError, sanitizeSvg } from "./whiteboards/svg.js";
+export { MAX_PREVIEW_BYTES, SvgRejectedError, sanitizeDiagramSvg, sanitizeSvg } from "./whiteboards/svg.js";
 export {
   type StoredPreview,
   type WhiteboardScene,

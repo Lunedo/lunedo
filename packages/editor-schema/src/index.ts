@@ -37,10 +37,13 @@ export {
   normalizeTaskIds,
 } from "./extract.js";
 export type {
+  FileReference,
   ImportedAttachment,
+  ImportedFile,
   ImportSource,
   MacroConverter,
   MacroImportContext,
+  MacroNote,
   MacroReferences,
   SourceContent,
   SourceElement,
@@ -78,6 +81,7 @@ export {
   type PageReportRequest,
   type PageReportSort,
   pageReportSorts,
+  type ReferencedDiagram,
   type RenderContext,
   type RenderLabels,
   type RenderTarget,
@@ -90,6 +94,14 @@ export {
   type Unsupported,
   type WordRenderer,
 } from "./module.js";
+export {
+  type DiagramType,
+  diagramTypes,
+  drawioSourceFormats,
+  MAX_DIAGRAM_SOURCE,
+  type TextDiagramType,
+  textDiagramTypes,
+} from "./modules/diagrams.js";
 export { MAX_DRAWING_TEXT } from "./modules/drawings.js";
 export { createDefaultRegistry, defaultModules } from "./modules/index.js";
 export {

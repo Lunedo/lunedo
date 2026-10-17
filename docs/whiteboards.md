@@ -1,6 +1,6 @@
 # Whiteboards and drawings
 
-Pagehall uses [Excalidraw](https://excalidraw.com) (MIT) for hand-drawn sketches. A **whiteboard** is an item in the page tree with an infinite canvas that several people edit at the same time. A **drawing** is a block inside a page.
+Pagehall uses [Excalidraw](https://excalidraw.com) (MIT) for hand-drawn sketches. draw.io, Mermaid and PlantUML diagrams are described in [diagrams.md](diagrams.md). A **whiteboard** is an item in the page tree with an infinite canvas that several people edit at the same time. A **drawing** is a block inside a page.
 
 Everything Excalidraw needs, including its fonts, is served by the instance. Whiteboards and drawings work without internet access and never contact excalidraw.com: the library browser, collaboration links, embedded web content and AI features are switched off.
 

@@ -1,6 +1,7 @@
 import { ModuleRegistry } from "../module.js";
 import { codeBlockModule } from "./code.js";
 import { coreModule } from "./core.js";
+import { diagramsModule } from "./diagrams.js";
 import { drawingModule } from "./drawings.js";
 import { attachmentListModule, childPagesModule } from "./listings.js";
 import { listsModule, tasksModule } from "./lists.js";
@@ -32,6 +33,7 @@ export {
   dateModule,
   decisionModule,
   decisionReportModule,
+  diagramsModule,
   drawingModule,
   emojiModule,
   expandModule,
@@ -78,6 +80,7 @@ export const defaultModules = [
   imageModule,
   fileModule,
   drawingModule,
+  diagramsModule,
   attachmentListModule,
   childPagesModule,
   calloutModule,

@@ -5,6 +5,7 @@ import type { Executor } from "../database/database.js";
 
 export const reportCategories = {
   macros: ["unsupportedMacro"],
+  diagrams: ["diagramFileMissing", "gliffyDiagram", "diagramPageMissing"],
   attachments: ["missingAttachment", "attachmentFileMissing", "attachmentTooLarge", "attachmentUnreadable"],
   links: ["externalPageLink", "unsupportedLink", "invalidLink", "externalImage"],
   content: ["invalidContent", "contentTruncated", "macroDataTruncated", "unresolvedPerson", "invalidLabel"],

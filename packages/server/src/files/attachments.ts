@@ -341,11 +341,16 @@ export class AttachmentService {
         union all select document from discarded_drafts where item_id = (select item_id from item)
       ),
       drawings as (
-        select jsonb_path_query(document, 'lax $.** ? (@.type == "drawing").attrs') as attrs from documents
+        select jsonb_path_query(document,
+          'lax $.** ? (@.type == "drawing" || @.type == "drawio" || @.type == "mermaid" || @.type == "plantuml").attrs')
+          as attrs from documents
       ),
       referenced as (
         select (attrs->>'sceneVersion')::int as number from drawings
         where attrs->>'sceneId' = ${attachmentId}::text and jsonb_typeof(attrs->'sceneVersion') = 'number'
+        union
+        select (attrs->>'sourceVersion')::int from drawings
+        where attrs->>'sourceId' = ${attachmentId}::text and jsonb_typeof(attrs->'sourceVersion') = 'number'
         union
         select (attrs->>'previewVersion')::int from drawings
         where attrs->>'previewId' = ${attachmentId}::text and jsonb_typeof(attrs->'previewVersion') = 'number'

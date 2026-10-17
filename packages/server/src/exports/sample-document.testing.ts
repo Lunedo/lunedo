@@ -138,6 +138,24 @@ export function sampleDocument(): DocumentJson {
           text: "Rack sketch",
         },
       },
+      {
+        type: "drawio",
+        attrs: { id: SAMPLE_TASK, previewId: SAMPLE_IMAGE, previewVersion: 1, text: "Core switch" },
+      },
+      {
+        type: "drawioReference",
+        attrs: { id: SAMPLE_TASK, pageId: SAMPLE_PAGE, diagramId: SAMPLE_TASK, name: "Network" },
+      },
+      { type: "mermaid", attrs: { id: SAMPLE_TASK, source: "flowchart LR\n  A[Router] --> B[Switch]" } },
+      {
+        type: "plantuml",
+        attrs: {
+          id: SAMPLE_TASK,
+          previewId: SAMPLE_IMAGE,
+          previewVersion: 1,
+          source: "@startuml\nA -> B\n@enduml",
+        },
+      },
     ],
   };
 }

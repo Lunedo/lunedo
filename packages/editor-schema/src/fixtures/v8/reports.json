@@ -1,0 +1,59 @@
+{
+  "type": "doc",
+  "content": [
+    {
+      "type": "pageReport",
+      "attrs": {
+        "spaceId": null,
+        "labels": [],
+        "sort": "modified",
+        "reverse": false,
+        "limit": 20
+      }
+    },
+    {
+      "type": "pageReport",
+      "attrs": {
+        "spaceId": "01929b1e-0000-7000-8000-000000000003",
+        "labels": ["project-alpha", "meeting-notes"],
+        "sort": "title",
+        "reverse": true,
+        "limit": 100
+      }
+    },
+    {
+      "type": "decisionReport",
+      "attrs": {
+        "spaceId": null,
+        "labels": [],
+        "parentId": null,
+        "order": "newest"
+      }
+    },
+    {
+      "type": "decisionReport",
+      "attrs": {
+        "spaceId": "01929b1e-0000-7000-8000-000000000003",
+        "labels": ["project-alpha"],
+        "parentId": "01929b1e-0000-7000-8000-000000000004",
+        "order": "oldest"
+      }
+    },
+    {
+      "type": "templateButton",
+      "attrs": {
+        "templateId": "builtin:meeting-notes",
+        "label": "",
+        "title": ""
+      }
+    },
+    {
+      "type": "templateButton",
+      "attrs": {
+        "templateId": "01929b1e-0000-7000-8000-000000000030",
+        "label": "New project",
+        "title": "{currentDate} Project {name}"
+      }
+    }
+  ]
+}

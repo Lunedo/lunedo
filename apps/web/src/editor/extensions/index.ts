@@ -22,6 +22,7 @@ import {
   TableOfContentsView,
   UnsupportedMacroView,
 } from "../nodes/block-views.js";
+import { DrawioReferenceView, DrawioView, TextDiagramView } from "../nodes/diagram-views.js";
 import { DrawingView } from "../nodes/drawing-view.js";
 import {
   DateView,
@@ -77,6 +78,10 @@ const BLOCK_VIEWS: Record<string, ComponentType<ReactNodeViewProps>> = {
   image: AttachmentView,
   file: AttachmentView,
   drawing: DrawingView,
+  drawio: DrawioView,
+  drawioReference: DrawioReferenceView,
+  mermaid: TextDiagramView,
+  plantuml: TextDiagramView,
   taskReport: TaskReportView,
   childPages: ChildPagesView,
   attachmentList: AttachmentListView,

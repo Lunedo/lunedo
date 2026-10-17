@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Printer, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { type RenderingStatus, renderingQuery } from "../../api/instance-queries.js";
+import { DRAWIO_VERSION } from "../../diagrams/drawio-version.js";
 import { docsUrl } from "../../docs/docs-url.js";
 import { LoadError } from "../../errors/failure.js";
 import { translateKey } from "../../i18n/translate.js";
@@ -151,6 +152,16 @@ export function InstanceRenderingScreen() {
               label={t("rendering.other.word")}
               description={t("rendering.other.wordDescription")}
               control={<Badge variant="success">{t("rendering.other.available")}</Badge>}
+            />
+            <SettingRow
+              label={t("rendering.other.diagrams")}
+              description={t("rendering.other.diagramsDescription")}
+              control={<Badge variant="success">{t("rendering.other.available")}</Badge>}
+            />
+            <SettingRow
+              label={t("rendering.other.drawio")}
+              description={t("rendering.other.drawioDescription", { version: DRAWIO_VERSION })}
+              control={<Badge variant="success">{t("rendering.other.servedLocally")}</Badge>}
             />
           </Section>
         </>

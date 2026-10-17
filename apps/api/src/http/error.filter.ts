@@ -4,6 +4,7 @@ import {
   BusyError,
   ChatChannelError,
   CommentInvalidError,
+  DiagramRejectedError,
   DocumentInvalidError,
   EmailInUseError,
   ExportError,
@@ -237,6 +238,7 @@ function map(error: unknown): Mapped | null {
     };
   }
   if (error instanceof SvgRejectedError) return { code: "invalidDrawingImage", detail: error.message };
+  if (error instanceof DiagramRejectedError) return { code: "invalidDiagram", detail: error.message };
   if (error instanceof DocumentInvalidError) {
     return {
       code: "invalidDocument",

@@ -49,6 +49,10 @@
       "description": ""
     },
     {
+      "name": "Diagrams",
+      "description": "Files and images of draw.io, Mermaid and PlantUML diagrams in pages."
+    },
+    {
       "name": "Exports",
       "description": ""
     },
@@ -38156,6 +38160,7 @@
                             "description": "Area of the problem: `macros`, `attachments`, `links`, `content`, `comments` or `archive`. New values can be added in later versions; handle unknown values.",
                             "x-extensible-enum": [
                               "macros",
+                              "diagrams",
                               "attachments",
                               "links",
                               "content",
@@ -38168,6 +38173,9 @@
                             "description": "Kind of problem. New values can be added in later versions; handle unknown values.",
                             "x-extensible-enum": [
                               "unsupportedMacro",
+                              "diagramFileMissing",
+                              "gliffyDiagram",
+                              "diagramPageMissing",
                               "missingAttachment",
                               "attachmentFileMissing",
                               "attachmentTooLarge",
@@ -161609,6 +161617,836 @@
                       "title": "Too many requests",
                       "status": 429,
                       "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pages/{pageId}/diagrams/{blockId}": {
+      "get": {
+        "operationId": "diagrams.referenced",
+        "summary": "Get the current image of a draw.io diagram",
+        "description": "Returns what readers of the page currently see of one of its draw.io diagrams: the title and address of the page and the attachment that holds the image. Other pages show a diagram of this page through it, so they always show its current version. Pages the caller may not see are not found.\n\nRequires the permission `item.view` on the item in `pageId`.",
+        "tags": [
+          "Diagrams"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.view",
+          "resource": "item",
+          "parameter": "pageId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "pageId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the page or blog post.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "blockId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the diagram block in the page.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The page and the image of the diagram.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "pageId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the page or blog post that holds the diagram."
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "Title of the page as readers see it."
+                    },
+                    "path": {
+                      "type": "string",
+                      "description": "Address of the page in the web interface."
+                    },
+                    "found": {
+                      "type": "boolean",
+                      "description": "Whether the page still holds the diagram."
+                    },
+                    "previewId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "ID of the attachment that holds the image."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "ID of the attachment that holds the image, or null while the diagram has none."
+                    },
+                    "previewVersion": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Version of the attachment that readers see, or null while the diagram has no image."
+                    }
+                  },
+                  "required": [
+                    "pageId",
+                    "title",
+                    "path",
+                    "found",
+                    "previewId",
+                    "previewVersion"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The diagram."
+                },
+                "example": {
+                  "pageId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                  "title": "Network",
+                  "path": "/spaces/NET/pages/01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20/network",
+                  "found": true,
+                  "previewId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a23",
+                  "previewVersion": 3
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pages/{pageId}/diagrams/{blockId}/drawio": {
+      "put": {
+        "operationId": "diagrams.drawio",
+        "summary": "Store the file of a draw.io diagram",
+        "description": "Checks the draw.io file of a diagram block and stores it as a new version of the attachment `drawio-<block ID>.drawio` of the page. Compressed pages are stored uncompressed; scripts, event handlers and links other than web, mail and page links are removed. Point the block to the returned attachment and version; older versions of the page keep showing the diagram they had.\n\nRequires the permission `item.edit` on the item in `pageId`.",
+        "tags": [
+          "Diagrams"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.edit",
+          "resource": "item",
+          "parameter": "pageId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "pageId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the page or blog post.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "blockId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the diagram block in the page.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "The draw.io file (`mxfile` or `mxGraphModel` XML), up to 10 MB.",
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Where the file is stored and the text of the diagram.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sourceId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the attachment that holds the file."
+                    },
+                    "sourceVersion": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Version of the attachment."
+                    },
+                    "text": {
+                      "type": "string",
+                      "description": "Text of the shapes and connectors, for the block and for search."
+                    }
+                  },
+                  "required": [
+                    "sourceId",
+                    "sourceVersion",
+                    "text"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The stored file."
+                },
+                "example": {
+                  "sourceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a22",
+                  "sourceVersion": 2,
+                  "text": "Core switch"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidDiagram`: The file is not a draw.io diagram Pagehall can store. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidDiagram": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidDiagram",
+                      "title": "The file is not a draw.io diagram Pagehall can store",
+                      "status": 400,
+                      "code": "invalidDiagram"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "`fileTooLarge`: The file is larger than allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "fileTooLarge": {
+                    "value": {
+                      "type": "urn:pagehall:problem:fileTooLarge",
+                      "title": "The file is larger than allowed",
+                      "status": 413,
+                      "code": "fileTooLarge"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "`unsupportedMediaType`: The request body has an unsupported type.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "unsupportedMediaType": {
+                    "value": {
+                      "type": "urn:pagehall:problem:unsupportedMediaType",
+                      "title": "The request body has an unsupported type",
+                      "status": 415,
+                      "code": "unsupportedMediaType"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "507": {
+            "description": "`storageFull`: Storage is almost full.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "storageFull": {
+                    "value": {
+                      "type": "urn:pagehall:problem:storageFull",
+                      "title": "Storage is almost full",
+                      "status": 507,
+                      "code": "storageFull"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pages/{pageId}/diagrams/{blockId}/image": {
+      "put": {
+        "operationId": "diagrams.image",
+        "summary": "Store the image of a diagram",
+        "description": "Sanitizes the SVG image of a draw.io, Mermaid or PlantUML block and stores it as a new version of the attachment `<type>-<block ID>.svg` of the page. Readers, search results, exports and the print view show this image. Scripts, links, external resources and unknown elements are removed; labels in draw.io diagrams keep simple formatting. Images may be at most 20,000 pixels wide and high, and 10 MB for draw.io or 2 MB for Mermaid and PlantUML.\n\nRequires the permission `item.edit` on the item in `pageId`.",
+        "tags": [
+          "Diagrams"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.edit",
+          "resource": "item",
+          "parameter": "pageId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "pageId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the page or blog post.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "blockId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the diagram block in the page.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": true,
+            "description": "Kind of diagram block: `drawio`, `mermaid` or `plantuml`. It names the attachment and sets the size limit. New values can be added in later versions; handle unknown values.",
+            "schema": {
+              "type": "string",
+              "x-extensible-enum": [
+                "drawio",
+                "mermaid",
+                "plantuml"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "The SVG image.",
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Where the image is stored and the text it shows.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "previewId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the attachment that holds the image."
+                    },
+                    "previewVersion": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Version of the attachment."
+                    },
+                    "text": {
+                      "type": "string",
+                      "description": "Text shown in the image, for the block and for search."
+                    }
+                  },
+                  "required": [
+                    "previewId",
+                    "previewVersion",
+                    "text"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The stored image."
+                },
+                "example": {
+                  "previewId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a23",
+                  "previewVersion": 2,
+                  "text": "Router\nSwitch"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidDrawingImage`: The image of the drawing is not a valid SVG image. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidDrawingImage": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidDrawingImage",
+                      "title": "The image of the drawing is not a valid SVG image",
+                      "status": 400,
+                      "code": "invalidDrawingImage"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "`fileTooLarge`: The file is larger than allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "fileTooLarge": {
+                    "value": {
+                      "type": "urn:pagehall:problem:fileTooLarge",
+                      "title": "The file is larger than allowed",
+                      "status": 413,
+                      "code": "fileTooLarge"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "`unsupportedMediaType`: The request body has an unsupported type.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "unsupportedMediaType": {
+                    "value": {
+                      "type": "urn:pagehall:problem:unsupportedMediaType",
+                      "title": "The request body has an unsupported type",
+                      "status": 415,
+                      "code": "unsupportedMediaType"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "507": {
+            "description": "`storageFull`: Storage is almost full.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "storageFull": {
+                    "value": {
+                      "type": "urn:pagehall:problem:storageFull",
+                      "title": "Storage is almost full",
+                      "status": 507,
+                      "code": "storageFull"
                     }
                   }
                 }

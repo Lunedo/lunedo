@@ -1506,7 +1506,8 @@
     "invalidStorageSettings": "Die Speichereinstellungen sind ungültig. Prüfe die markierten Felder und versuche es erneut.",
     "tooManyPagesToPrint": "Browser drucken bis zu 300 Seiten auf einmal. Exportieren Sie stattdessen als Word oder HTML, oder als PDF auf dem Server, falls Ihre Administration den Render-Container eingerichtet hat.",
     "renderUnavailable": "PDF auf dem Server braucht den Render-Container, der nicht eingerichtet oder nicht erreichbar ist. Drucken Sie das PDF stattdessen über Ihren Browser oder fragen Sie Ihre Instanz-Administration.",
-    "renderFailed": "Der Render-Container konnte das PDF nicht erstellen. Versuchen Sie es erneut; schlägt es wieder fehl, informieren Sie Ihre Instanz-Administration."
+    "renderFailed": "Der Render-Container konnte das PDF nicht erstellen. Versuchen Sie es erneut; schlägt es wieder fehl, informieren Sie Ihre Instanz-Administration.",
+    "invalidDiagram": "Das draw.io-Diagramm konnte nicht gespeichert werden, weil es etwas enthält, das draw.io nicht schreibt, oder weil es beschädigt ist. Mache die letzte Änderung in draw.io rückgängig und speichere noch einmal."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -4293,7 +4294,13 @@
       "templateButton": "Vorlagen-Schaltfläche",
       "templateButtonDescription": "Schaltfläche, die eine Seite aus einer Vorlage anlegt",
       "drawing": "Zeichnung",
-      "drawingDescription": "Von Hand skizzieren mit Formen, Pfeilen und Haftnotizen"
+      "drawingDescription": "Von Hand skizzieren mit Formen, Pfeilen und Haftnotizen",
+      "drawio": "draw.io-Diagramm",
+      "drawioDescription": "Netzwerk-, Ablauf- und UML-Diagramme, bearbeitet in draw.io",
+      "mermaid": "Mermaid-Diagramm",
+      "mermaidDescription": "Diagramm aus Text in Mermaid-Syntax",
+      "plantuml": "PlantUML-Diagramm",
+      "plantumlDescription": "Sequenz-, Klassen- und andere UML-Diagramme aus Text"
     },
     "mention": {
       "unknown": "Unbekannte Person"
@@ -4676,6 +4683,70 @@
       "discardDescription": "Deine Änderungen seit dem Öffnen gehen verloren. Die Zeichnung auf der Seite bleibt, wie sie war.",
       "discard": "Änderungen verwerfen",
       "keepEditing": "Weiter bearbeiten"
+    },
+    "drawio": {
+      "label": "draw.io-Diagramm",
+      "edit": "In draw.io bearbeiten",
+      "editTitle": "draw.io-Diagramm bearbeiten",
+      "editDescription": "Andere können die Seite weiter bearbeiten. Sie sehen, dass du dieses Diagramm bearbeitest.",
+      "version": "Version {version}",
+      "empty": "Leeres Diagramm. Wähle „In draw.io bearbeiten“, um zu beginnen.",
+      "emptyReadOnly": "Dieses Diagramm ist leer.",
+      "gliffyNote": "Aus Gliffy importiert. draw.io wandelt es beim ersten Bearbeiten um; bis zum Speichern zeigt die Seite weiter das Gliffy-Bild.",
+      "fileMissing": "Die Diagrammdatei fehlte im Import, deshalb wurde nur ihr Bild übernommen. Beim Bearbeiten beginnt ein leeres Diagramm.",
+      "save": "Speichern und schließen",
+      "saveFailed": "Das Diagramm konnte nicht gespeichert werden",
+      "exportFailed": "draw.io hat das Diagramm nicht rechtzeitig übergeben. Warte kurz und wähle noch einmal „Speichern und schließen“.",
+      "loadFailed": "Das Diagramm konnte nicht geladen werden",
+      "startFailed": "draw.io ist nicht gestartet",
+      "startFailedHint": "Der Editor wird von dieser Pagehall-Instanz ausgeliefert. Prüfe deine Verbindung zu Pagehall und versuche es noch einmal. Wenn es weiter fehlschlägt, bitte deine Administration, die draw.io-Dateien der Instanz zu prüfen.",
+      "gliffyFailed": "Das Gliffy-Diagramm konnte nicht umgewandelt werden",
+      "gliffyFailedHint": "draw.io konnte diese Gliffy-Datei nicht lesen. Die Seite zeigt weiter ihr Bild. Lade die Gliffy-Datei aus den Anhängen der Seite herunter, um sie zu behalten, oder schließe und zeichne das Diagramm neu.",
+      "discardDescription": "Deine Änderungen seit dem Öffnen des Diagramms gehen verloren. Das Diagramm auf der Seite bleibt, wie es war.",
+      "discard": "Änderungen verwerfen",
+      "keepEditing": "Weiter bearbeiten",
+      "servedLocally": "draw.io {version} wird von dieser Pagehall-Instanz ausgeliefert und funktioniert ohne Internetzugang. Diagramme verlassen den Server nie.",
+      "frameTitle": "draw.io-Editor",
+      "starting": "draw.io {version} startet von dieser Pagehall-Instanz. Speichern ist möglich, sobald der Editor geöffnet ist."
+    },
+    "drawioReference": {
+      "label": "draw.io-Diagramm von einer anderen Seite",
+      "edit": "Auf seiner Seite bearbeiten",
+      "from": "Aus {title}",
+      "restricted": "Eingeschränkter Inhalt",
+      "restrictedHint": "Dieses Diagramm liegt auf einer Seite, die du nicht öffnen kannst.",
+      "removed": "Das draw.io-Diagramm wurde von seiner Seite entfernt.",
+      "notImported": "Das draw.io-Diagramm {name} liegt auf einer Seite, die nicht importiert wurde.",
+      "loadFailed": "Das Diagramm von einer anderen Seite konnte nicht geladen werden"
+    },
+    "mermaid": {
+      "label": "Mermaid-Diagramm"
+    },
+    "plantuml": {
+      "label": "PlantUML-Diagramm"
+    },
+    "diagram": {
+      "editedBy": "{count, plural, one {{name} bearbeitet dieses Diagramm} other {{name} bearbeiten dieses Diagramm}}",
+      "show": "Anzeigen",
+      "preview": "Vorschau",
+      "source": "Quelltext",
+      "edit": "Bearbeiten",
+      "sourceLabel": "Quelltext von {name}",
+      "problemTitle": "Das Diagramm kann noch nicht angezeigt werden",
+      "saveFailed": "Das Diagramm konnte nicht gespeichert werden",
+      "rendering": "Die Vorschau erscheint hier, während du tippst.",
+      "save": "Diagramm speichern",
+      "notRendered": "{name} hat noch kein Bild. Stattdessen wird der Quelltext gezeigt.",
+      "empty": "Leeres Diagramm. Wähle „Bearbeiten“, um den Quelltext zu schreiben.",
+      "emptyReadOnly": "Dieses Diagramm ist leer.",
+      "failures": {
+        "syntax": "Der Quelltext enthält einen Fehler, deshalb bleibt die letzte funktionierende Vorschau stehen. Korrigiere die genannte Zeile: {detail}",
+        "include": "Das Einbinden von Dateien oder Adressen ist aus Sicherheitsgründen abgeschaltet ({detail}). Kopiere den Inhalt stattdessen in das Diagramm.",
+        "htmlLabels": "HTML-Beschriftungen sind aus Sicherheitsgründen abgeschaltet. Entferne die Einstellung htmlLabels aus dem Diagramm.",
+        "tooLarge": "Das Diagramm ist zu groß zum Speichern. Teile es in kleinere Diagramme auf.",
+        "timeout": "Das Zeichnen des Diagramms hat länger als 10 Sekunden gedauert und wurde abgebrochen. Vereinfache das Diagramm oder teile es auf.",
+        "unavailable": "Die Diagrammdarstellung ist nicht gestartet. Lade die Seite neu und versuche es noch einmal."
+      }
     }
   },
   "spaces": {
@@ -6973,6 +7044,21 @@
           "title": "{count, plural, one {# Kommentar über dem Limit} other {# Kommentare über dem Limit}}",
           "hint": "Eine Seite behält bis zu 2.000 Kommentare; der Rest wurde ausgelassen.",
           "entry": "Kommentar ausgelassen: Die Seite hat bereits 2.000 Kommentare."
+        },
+        "diagramFileMissing": {
+          "title": "{count, plural, one {# Diagrammdatei fehlt} other {# Diagrammdateien fehlen}}",
+          "hint": "Die Seiten zeigen das letzte Bild des Diagramms. Beim Bearbeiten beginnt ein leeres draw.io-Diagramm.",
+          "entry": "Die Datei des Diagramms „{name}“ ({macro}) ist nicht im Export; nur ihr Bild wurde übernommen."
+        },
+        "gliffyDiagram": {
+          "title": "{count, plural, one {# Gliffy-Diagramm wird} other {# Gliffy-Diagramme werden}} beim ersten Bearbeiten umgewandelt",
+          "hint": "Sie zeigen ihr Gliffy-Bild und behalten die Gliffy-Datei. draw.io wandelt sie im Browser um, wenn sie zum ersten Mal bearbeitet werden.",
+          "entry": "Das Gliffy-Diagramm „{name}“ wird beim ersten Bearbeiten in draw.io umgewandelt."
+        },
+        "diagramPageMissing": {
+          "title": "{count, plural, one {# eingebundenes Diagramm liegt} other {# eingebundene Diagramme liegen}} auf Seiten, die nicht importiert wurden",
+          "hint": "Die Blöcke zeigen einen Hinweis mit dem Diagrammnamen. Um ein solches Diagramm zu behalten, füge es der Seite als eigenes draw.io-Diagramm hinzu.",
+          "entry": "Das Diagramm „{name}“ wird von einer Seite eingebunden, die nicht im Import enthalten ist."
         }
       },
       "people": "Personen",
@@ -8324,7 +8410,12 @@
       "title": "Weitere Formate",
       "word": "Word (.docx)",
       "wordDescription": "Wird von Pagehall selbst erstellt. Immer verfügbar.",
-      "available": "Verfügbar"
+      "available": "Verfügbar",
+      "diagrams": "Diagrammbilder",
+      "diagramsDescription": "Bilder von Excalidraw, draw.io, Mermaid und PlantUML entstehen im Browser der Person, die das Diagramm speichert, und werden mit der Seite gespeichert. Auch PlantUML läuft im Browser; Java oder ein Render-Dienst sind nicht nötig.",
+      "drawio": "draw.io-Editor",
+      "drawioDescription": "Version {version}, mit Pagehall ausgeliefert. Er verbindet sich nie mit diagrams.net.",
+      "servedLocally": "Lokal ausgeliefert"
     }
   }
 }
