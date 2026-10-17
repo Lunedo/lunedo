@@ -31,14 +31,19 @@ test("inserts an allowed and a disallowed embed and loads the allowed one only w
   organization,
 }) => {
   const frames: string[] = [];
-  await page.route("https://www.youtube-nocookie.com/**", (route) => {
-    frames.push(route.request().url());
-    return route.fulfill({
-      status: 200,
-      contentType: "text/html",
-      body: "<!doctype html><title>Video</title>",
+  const referrers = new Map<string, string | null>();
+  for (const host of ["https://www.youtube-nocookie.com/**", "https://player.vimeo.com/**"]) {
+    await page.route(host, async (route) => {
+      const url = route.request().url();
+      frames.push(url);
+      referrers.set(new URL(url).hostname, await route.request().headerValue("referer"));
+      return route.fulfill({
+        status: 200,
+        contentType: "text/html",
+        body: "<!doctype html><title>Video</title>",
+      });
     });
-  });
+  }
   const { spaceId, spaceKey } = await space(page, organization);
   const created = await createPage(page, spaceId, spaceKey, `Training ${unique()}`);
   await page.goto(`${created.path}?edit=true`);
@@ -68,6 +73,7 @@ test("inserts an allowed and a disallowed embed and loads the allowed one only w
         ...Array.from({ length: 60 }, (_, index) => paragraph(`Line ${index + 1}`)),
         { type: "embed", attrs: { url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", title: "WLAN login" } },
         { type: "embed", attrs: { url: "https://videos.example.net/w/8812", title: "Other video" } },
+        { type: "embed", attrs: { url: "https://vimeo.com/76979871", title: "Vimeo video" } },
       ],
     },
   });
@@ -80,7 +86,13 @@ test("inserts an allowed and a disallowed embed and loads the allowed one only w
   const frame = page.frameLocator('iframe[title="WLAN login"]');
   await expect(frame.locator("title")).toHaveText("Video");
   expect(frames[0]).toContain("https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ");
-  await expect(page.locator('iframe[title="WLAN login"]')).toHaveAttribute("referrerpolicy", "no-referrer");
+  await expect(page.locator('iframe[title="WLAN login"]')).toHaveAttribute("referrerpolicy", "strict-origin");
+  await page.getByText("Embedded from Vimeo").scrollIntoViewIfNeeded();
+  await expect(page.frameLocator('iframe[title="Vimeo video"]').locator("title")).toHaveText("Video");
+  await expect(page.locator('iframe[title="Vimeo video"]')).toHaveAttribute("referrerpolicy", "no-referrer");
+  const origin = new URL(page.url()).origin;
+  expect(referrers.get("www.youtube-nocookie.com")).toBe(`${origin}/`);
+  expect(referrers.get("player.vimeo.com") ?? null).toBeNull();
   await expect(page.getByRole("link", { name: "https://videos.example.net/w/8812" })).toBeVisible();
   await expect(page.getByText(/Not on the embed allowlist/)).toBeVisible();
   await expect(page.locator('iframe[title="Other video"]')).toHaveCount(0);

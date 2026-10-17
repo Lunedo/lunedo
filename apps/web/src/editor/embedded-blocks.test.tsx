@@ -134,11 +134,40 @@ describe("embeds in the read view", () => {
     expect(frame.getAttribute("sandbox")).toBe(
       "allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation",
     );
-    expect(frame.getAttribute("referrerpolicy")).toBe("no-referrer");
     expect(frame.getAttribute("allow")).toContain("fullscreen");
     expect(screen.getByRole("link", { name: "Login video" }).getAttribute("href")).toBe(
       "https://youtu.be/dQw4w9WgXcQ",
     );
+  });
+
+  it("sends only the instance address to YouTube and no referrer to other services", async () => {
+    await read([
+      youtube,
+      { type: "embed", attrs: { url: "https://vimeo.com/76979871", title: "Vimeo video" } },
+      {
+        type: "embed",
+        attrs: { url: "https://www.loom.com/share/0281766fa2d04bb788eaf19e65135184", title: "Loom video" },
+      },
+    ]);
+    await screen.findByText("Embedded from Vimeo");
+    scrollIntoView();
+    expect((await screen.findByTitle("Login video")).getAttribute("referrerpolicy")).toBe("strict-origin");
+    expect(screen.getByTitle("Vimeo video").getAttribute("referrerpolicy")).toBe("no-referrer");
+    expect(screen.getByTitle("Loom video").getAttribute("referrerpolicy")).toBe("no-referrer");
+  });
+
+  it("sends no referrer when an instance rule leaves the policy out", async () => {
+    routes([
+      {
+        id: "videos",
+        name: "Videos",
+        rules: [{ pattern: "https://videos.example.org/w/{id}", embed: "https://videos.example.org/e/{id}" }],
+      },
+    ]);
+    await read([{ type: "embed", attrs: { url: "https://videos.example.org/w/8", title: "Own video" } }]);
+    await screen.findByText("Embedded from Videos");
+    scrollIntoView();
+    expect((await screen.findByTitle("Own video")).getAttribute("referrerpolicy")).toBe("no-referrer");
   });
 
   it("shows an address that is not on the allowlist as a link with a hint", async () => {

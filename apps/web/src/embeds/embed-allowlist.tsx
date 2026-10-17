@@ -1,6 +1,9 @@
 import {
+  DEFAULT_EMBED_REFERRER_POLICY,
   defaultEmbedServices,
   EMBED_ID_PATTERN,
+  EMBED_REFERRER_POLICIES,
+  type EmbedReferrerPolicy,
   type EmbedService,
   embedRuleProblem,
   MAX_EMBED_SERVICES,
@@ -30,6 +33,12 @@ export function hostsOf(service: EmbedService): string {
   return [...hosts].join(", ");
 }
 
+export function sendsOrigin(service: EmbedService): boolean {
+  return service.rules.some(
+    (rule) => (rule.referrerPolicy ?? DEFAULT_EMBED_REFERRER_POLICY) !== "no-referrer",
+  );
+}
+
 function serviceId(name: string, taken: readonly EmbedService[]): string {
   const base =
     name
@@ -57,11 +66,12 @@ function AddServiceForm({
   const [name, setName] = useState("");
   const [pattern, setPattern] = useState("");
   const [embed, setEmbed] = useState("");
+  const [referrerPolicy, setReferrerPolicy] = useState<EmbedReferrerPolicy>(DEFAULT_EMBED_REFERRER_POLICY);
   const [errors, setErrors] = useState<{ name?: string; pattern?: string }>({});
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    const rule = { pattern: pattern.trim(), embed: embed.trim() || pattern.trim() };
+    const rule = { pattern: pattern.trim(), embed: embed.trim() || pattern.trim(), referrerPolicy };
     const next: { name?: string; pattern?: string } = {};
     if (name.trim().length === 0) next.name = t("embeds.allowlist.nameRequired");
     const problem = rule.pattern.length === 0 ? "missing" : embedRuleProblem(rule);
@@ -82,6 +92,7 @@ function AddServiceForm({
       setName("");
       setPattern("");
       setEmbed("");
+      setReferrerPolicy(DEFAULT_EMBED_REFERRER_POLICY);
     }
   };
 
@@ -122,6 +133,18 @@ function AddServiceForm({
             className="font-mono"
             placeholder={t("embeds.allowlist.embedPlaceholder")}
             onChange={(event) => setEmbed(event.target.value)}
+          />
+        </Field>
+      </div>
+      <div className="sm:col-span-2">
+        <Field label={t("embeds.allowlist.referrer")} hint={t("embeds.allowlist.referrerHint")}>
+          <Select
+            value={referrerPolicy}
+            onValueChange={(value) => setReferrerPolicy(value as EmbedReferrerPolicy)}
+            options={EMBED_REFERRER_POLICIES.map((policy) => ({
+              value: policy,
+              label: t(`embeds.allowlist.referrerPolicy.${policy}`),
+            }))}
           />
         </Field>
       </div>
@@ -178,7 +201,12 @@ export function InstanceEmbedAllowlist({
               key={service.id}
               icon={Globe}
               title={service.name}
-              description={<span className="font-mono wrap-anywhere">{hostsOf(service)}</span>}
+              description={
+                <span className="flex flex-col">
+                  <span className="font-mono wrap-anywhere">{hostsOf(service)}</span>
+                  {sendsOrigin(service) ? <span>{t("embeds.allowlist.sendsOrigin")}</span> : null}
+                </span>
+              }
               actions={
                 canManage ? (
                   <Button

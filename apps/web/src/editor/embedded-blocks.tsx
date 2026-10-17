@@ -1,4 +1,11 @@
-import { EMBED_ALLOW, EMBED_SANDBOX, type EmbedService } from "@pagehall/editor-schema";
+import {
+  DEFAULT_EMBED_REFERRER_POLICY,
+  EMBED_ALLOW,
+  EMBED_REFERRER_POLICIES,
+  EMBED_SANDBOX,
+  type EmbedReferrerPolicy,
+  type EmbedService,
+} from "@pagehall/editor-schema";
 import { Skeleton } from "@pagehall/ui";
 import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, Presentation } from "lucide-react";
@@ -15,6 +22,10 @@ import { notFound } from "./includes.js";
 
 export const DEFAULT_EMBED_HEIGHT = 420;
 export const DEFAULT_PREVIEW_HEIGHT = 480;
+
+export function embedReferrerPolicy(value: string | undefined): EmbedReferrerPolicy {
+  return EMBED_REFERRER_POLICIES.find((policy) => policy === value) ?? DEFAULT_EMBED_REFERRER_POLICY;
+}
 
 export interface EmbedOverview {
   services: EmbedService[];
@@ -71,7 +82,17 @@ function heightStyle(name: string, height: number | null, fallback: number): CSS
   return { [name]: `${height ?? fallback}px` } as CSSProperties;
 }
 
-export function EmbedFrame({ src, title, height }: { src: string; title: string; height: number | null }) {
+export function EmbedFrame({
+  src,
+  title,
+  height,
+  referrerPolicy,
+}: {
+  src: string;
+  title: string;
+  height: number | null;
+  referrerPolicy: EmbedReferrerPolicy;
+}) {
   const { t } = useTranslation();
   const [target, visible] = useVisible<HTMLDivElement>();
   return (
@@ -87,7 +108,7 @@ export function EmbedFrame({ src, title, height }: { src: string; title: string;
           title={title}
           sandbox={EMBED_SANDBOX}
           allow={EMBED_ALLOW}
-          referrerPolicy="no-referrer"
+          referrerPolicy={referrerPolicy}
           loading="lazy"
           allowFullScreen
           className="size-full rounded-md border border-border bg-surface-sunken"

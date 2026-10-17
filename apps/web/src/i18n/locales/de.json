@@ -8667,7 +8667,14 @@
       "isAllowed": "Erlaubt",
       "isBlocked": "Nicht erlaubt",
       "patternPlaceholder": "https://videos.example.org/watch?v='{video}'",
-      "embedPlaceholder": "https://videos.example.org/embed/'{video}'"
+      "embedPlaceholder": "https://videos.example.org/embed/'{video}'",
+      "referrer": "An den Dienst gesendete Adresse",
+      "referrerHint": "Manche Videodienste spielen nur ab, wenn sie die einbettende Website kennen. Gesendet wird nur die Adresse dieser Instanz, nie die Seite.",
+      "referrerPolicy": {
+        "no-referrer": "Nichts (empfohlen)",
+        "strict-origin": "Adresse dieser Instanz"
+      },
+      "sendsOrigin": "Erhält die Adresse dieser Instanz, nicht die der Seite."
     }
   }
 }

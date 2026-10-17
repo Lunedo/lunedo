@@ -8667,7 +8667,14 @@
       "isAllowed": "Allowed",
       "isBlocked": "Not allowed",
       "patternPlaceholder": "https://videos.example.org/watch?v='{video}'",
-      "embedPlaceholder": "https://videos.example.org/embed/'{video}'"
+      "embedPlaceholder": "https://videos.example.org/embed/'{video}'",
+      "referrer": "Address sent to the service",
+      "referrerHint": "Some video services refuse to play without knowing the site that embeds them. Only the address of this instance is sent, never the page.",
+      "referrerPolicy": {
+        "no-referrer": "Nothing (recommended)",
+        "strict-origin": "Address of this instance"
+      },
+      "sendsOrigin": "Receives the address of this instance, not the page."
     }
   }
 }

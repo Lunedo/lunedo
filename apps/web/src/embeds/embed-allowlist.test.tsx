@@ -21,9 +21,39 @@ describe("the allowlist of the instance", () => {
       {
         id: "company-videos",
         name: "Company videos",
-        rules: [{ pattern: "https://videos.example.org/{*}", embed: "https://videos.example.org/{*}" }],
+        rules: [
+          {
+            pattern: "https://videos.example.org/{*}",
+            embed: "https://videos.example.org/{*}",
+            referrerPolicy: "no-referrer",
+          },
+        ],
       },
     ]);
+  });
+
+  it("adds a service that receives the address of the instance", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn(async () => undefined);
+    await renderWithProviders(<InstanceEmbedAllowlist services={[]} canManage onSave={onSave} />);
+    await user.type(screen.getByLabelText("Name of the service"), "Company videos");
+    await user.type(screen.getByLabelText("Address pattern"), "https://videos.example.org/{{*}");
+    await user.click(screen.getByRole("combobox", { name: "Address sent to the service" }));
+    await user.click(await screen.findByRole("option", { name: "Address of this instance" }));
+    await user.click(screen.getByRole("button", { name: "Add service" }));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(onSave).toHaveBeenCalledWith([
+      expect.objectContaining({
+        rules: [expect.objectContaining({ referrerPolicy: "strict-origin" })],
+      }),
+    ]);
+  });
+
+  it("says which services receive the address of the instance", async () => {
+    await renderWithProviders(
+      <InstanceEmbedAllowlist services={[youtube, vimeo]} canManage={false} onSave={vi.fn()} />,
+    );
+    expect(screen.getAllByText("Receives the address of this instance, not the page.")).toHaveLength(1);
   });
 
   it("refuses an invalid pattern on click and moves the focus to it", async () => {

@@ -163,6 +163,7 @@ export function EmbedView({ node, editor, updateAttributes, selected }: NodeView
         {resolved ? (
           <EmbedFrame
             src={resolved.src}
+            referrerPolicy={resolved.referrerPolicy}
             title={title}
             height={typeof node.attrs.height === "number" ? node.attrs.height : null}
           />

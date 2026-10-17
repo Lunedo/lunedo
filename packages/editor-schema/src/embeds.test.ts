@@ -119,6 +119,59 @@ describe("the default embed services", () => {
   });
 });
 
+describe("referrer policies", () => {
+  it("sends the origin to YouTube only and no referrer to every other default service", () => {
+    const policies = new Map(
+      [
+        "https://youtu.be/dQw4w9WgXcQ",
+        "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        "https://vimeo.com/76979871",
+        "https://www.loom.com/share/0281766fa2d04bb788eaf19e65135184",
+        "https://www.figma.com/design/abc123/Board",
+        "https://miro.com/app/board/uXjVO123=/",
+        "https://docs.google.com/document/d/1AbC/edit",
+      ].map((link) => [link, embed(link)?.referrerPolicy]),
+    );
+    expect([...policies.values()]).toEqual([
+      "strict-origin",
+      "strict-origin",
+      "no-referrer",
+      "no-referrer",
+      "no-referrer",
+      "no-referrer",
+      "no-referrer",
+    ]);
+    for (const service of defaultEmbedServices) {
+      for (const rule of service.rules) {
+        expect(rule.referrerPolicy ?? "no-referrer").toBe(
+          service.id === "youtube" ? "strict-origin" : "no-referrer",
+        );
+      }
+    }
+  });
+
+  it("uses no referrer for a rule without a policy", () => {
+    const service: EmbedService = {
+      id: "videos",
+      name: "Videos",
+      rules: [{ pattern: "https://videos.example.org/w/{id}", embed: "https://videos.example.org/e/{id}" }],
+    };
+    expect(resolveEmbed("https://videos.example.org/w/8", [service])?.referrerPolicy).toBe("no-referrer");
+  });
+
+  it("accepts only the policies that send at most the origin", () => {
+    const rule = { pattern: "https://videos.example.org/w/{id}", embed: "https://videos.example.org/e/{id}" };
+    const of = (referrerPolicy: string) =>
+      embedServicesValue.safeParse([{ id: "videos", name: "Videos", rules: [{ ...rule, referrerPolicy }] }])
+        .success;
+    expect(of("strict-origin")).toBe(true);
+    expect(of("no-referrer")).toBe(true);
+    expect(of("unsafe-url")).toBe(false);
+    expect(of("origin")).toBe(false);
+    expect(of("strict-origin-when-cross-origin")).toBe(false);
+  });
+});
+
 describe("embed rules", () => {
   it("embeds a link as it is when the embed address repeats the pattern", () => {
     expect(
@@ -196,6 +249,7 @@ describe("the embed block", () => {
     );
     expect(html).toContain('data-src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"');
     expect(html).toContain('data-height="360"');
+    expect(html).toContain('data-referrer-policy="strict-origin"');
     expect(html).toContain("Embedded from YouTube");
     expect(html).not.toContain("<iframe");
     expect(html).not.toContain(" src=");

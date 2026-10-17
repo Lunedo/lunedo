@@ -98,6 +98,7 @@ function embedHtml(node: ValidNode, renderer: HtmlRenderer): string {
     ? element("div", {
         class: "ph-embed-frame",
         "data-src": resolved.src,
+        "data-referrer-policy": resolved.referrerPolicy,
         "data-title": title,
         "data-height": attrOf<number | null>(node, "height"),
       })

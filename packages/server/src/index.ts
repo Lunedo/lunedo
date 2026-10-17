@@ -8,6 +8,7 @@ export {
   decisionReportOrders,
   defaultEmbedServices,
   diagramTypes,
+  EMBED_REFERRER_POLICIES,
   type EmbedService,
   embedFrameSources,
   labeledContentKinds,

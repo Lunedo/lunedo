@@ -29,7 +29,13 @@ import type { Formatter } from "../format/format.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { useOpenPath } from "./context.js";
 import { anchorFromSelection } from "./dom-anchor.js";
-import { EmbedFrame, InlineFilePreview, useEmbedServices, WhiteboardBlock } from "./embedded-blocks.js";
+import {
+  EmbedFrame,
+  embedReferrerPolicy,
+  InlineFilePreview,
+  useEmbedServices,
+  WhiteboardBlock,
+} from "./embedded-blocks.js";
 import { IncludedContent, includeFromAttrs } from "./includes.js";
 import {
   ContentByLabelList,
@@ -522,6 +528,7 @@ export function PageReadView({
         createPortal(
           <EmbedFrame
             src={element.dataset.src ?? ""}
+            referrerPolicy={embedReferrerPolicy(element.dataset.referrerPolicy)}
             title={element.dataset.title ?? ""}
             height={element.dataset.height ? Number(element.dataset.height) : null}
           />,

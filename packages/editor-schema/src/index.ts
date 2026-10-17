@@ -22,8 +22,11 @@ export {
   validateComment,
 } from "./comments.js";
 export {
+  DEFAULT_EMBED_REFERRER_POLICY,
   defaultEmbedServices,
   EMBED_ID_PATTERN,
+  EMBED_REFERRER_POLICIES,
+  type EmbedReferrerPolicy,
   type EmbedRule,
   type EmbedService,
   embedFrameSources,

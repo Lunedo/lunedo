@@ -1,5 +1,5 @@
 import { Controller, Get, Inject, Param } from "@nestjs/common";
-import { defaultEmbedServices } from "@pagehall/server";
+import { defaultEmbedServices, EMBED_REFERRER_POLICIES } from "@pagehall/server";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";
 import { servicesOf } from "../auth/auth.controller.js";
@@ -22,6 +22,12 @@ export const embedRuleSchema = z
       .string()
       .describe(
         "Embed address built from the placeholders of the pattern; `{url}` stands for the whole link, encoded.",
+      ),
+    referrerPolicy: z
+      .enum(EMBED_REFERRER_POLICIES)
+      .optional()
+      .describe(
+        "What the frame tells the service about the embedding page: `no-referrer` (default) sends nothing, `strict-origin` sends only the address of the instance.",
       ),
   })
   .describe("How share links of a service become embed addresses.");

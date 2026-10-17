@@ -133335,6 +133335,14 @@
                                 "embed": {
                                   "type": "string",
                                   "description": "Embed address built from the placeholders of the pattern; `{url}` stands for the whole link, encoded."
+                                },
+                                "referrerPolicy": {
+                                  "description": "What the frame tells the service about the embedding page: `no-referrer` (default) sends nothing, `strict-origin` sends only the address of the instance.",
+                                  "type": "string",
+                                  "enum": [
+                                    "no-referrer",
+                                    "strict-origin"
+                                  ]
                                 }
                               },
                               "required": [
@@ -133382,6 +133390,14 @@
                                 "embed": {
                                   "type": "string",
                                   "description": "Embed address built from the placeholders of the pattern; `{url}` stands for the whole link, encoded."
+                                },
+                                "referrerPolicy": {
+                                  "description": "What the frame tells the service about the embedding page: `no-referrer` (default) sends nothing, `strict-origin` sends only the address of the instance.",
+                                  "type": "string",
+                                  "enum": [
+                                    "no-referrer",
+                                    "strict-origin"
+                                  ]
                                 }
                               },
                               "required": [
@@ -133425,47 +133441,58 @@
                       "rules": [
                         {
                           "pattern": "https://www.youtube.com/watch?v={video}",
-                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}",
+                          "referrerPolicy": "strict-origin"
                         },
                         {
                           "pattern": "https://www.youtube.com/embed/{video}",
-                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}",
+                          "referrerPolicy": "strict-origin"
                         },
                         {
                           "pattern": "https://www.youtube.com/shorts/{video}",
-                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}",
+                          "referrerPolicy": "strict-origin"
                         },
                         {
                           "pattern": "https://youtube.com/watch?v={video}",
-                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}",
+                          "referrerPolicy": "strict-origin"
                         },
                         {
                           "pattern": "https://youtube.com/embed/{video}",
-                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}",
+                          "referrerPolicy": "strict-origin"
                         },
                         {
                           "pattern": "https://youtube.com/shorts/{video}",
-                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}",
+                          "referrerPolicy": "strict-origin"
                         },
                         {
                           "pattern": "https://m.youtube.com/watch?v={video}",
-                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}",
+                          "referrerPolicy": "strict-origin"
                         },
                         {
                           "pattern": "https://m.youtube.com/embed/{video}",
-                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}",
+                          "referrerPolicy": "strict-origin"
                         },
                         {
                           "pattern": "https://m.youtube.com/shorts/{video}",
-                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}",
+                          "referrerPolicy": "strict-origin"
                         },
                         {
                           "pattern": "https://youtu.be/{video}",
-                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}",
+                          "referrerPolicy": "strict-origin"
                         },
                         {
                           "pattern": "https://www.youtube-nocookie.com/embed/{video}",
-                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}",
+                          "referrerPolicy": "strict-origin"
                         }
                       ]
                     }
@@ -133477,47 +133504,58 @@
                       "rules": [
                         {
                           "pattern": "https://www.youtube.com/watch?v={video}",
-                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}",
+                          "referrerPolicy": "strict-origin"
                         },
                         {
                           "pattern": "https://www.youtube.com/embed/{video}",
-                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}",
+                          "referrerPolicy": "strict-origin"
                         },
                         {
                           "pattern": "https://www.youtube.com/shorts/{video}",
-                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}",
+                          "referrerPolicy": "strict-origin"
                         },
                         {
                           "pattern": "https://youtube.com/watch?v={video}",
-                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}",
+                          "referrerPolicy": "strict-origin"
                         },
                         {
                           "pattern": "https://youtube.com/embed/{video}",
-                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}",
+                          "referrerPolicy": "strict-origin"
                         },
                         {
                           "pattern": "https://youtube.com/shorts/{video}",
-                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}",
+                          "referrerPolicy": "strict-origin"
                         },
                         {
                           "pattern": "https://m.youtube.com/watch?v={video}",
-                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}",
+                          "referrerPolicy": "strict-origin"
                         },
                         {
                           "pattern": "https://m.youtube.com/embed/{video}",
-                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}",
+                          "referrerPolicy": "strict-origin"
                         },
                         {
                           "pattern": "https://m.youtube.com/shorts/{video}",
-                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}",
+                          "referrerPolicy": "strict-origin"
                         },
                         {
                           "pattern": "https://youtu.be/{video}",
-                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}",
+                          "referrerPolicy": "strict-origin"
                         },
                         {
                           "pattern": "https://www.youtube-nocookie.com/embed/{video}",
-                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}",
+                          "referrerPolicy": "strict-origin"
                         }
                       ]
                     },

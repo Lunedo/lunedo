@@ -13,9 +13,16 @@ const QUERY_VALUE_LENGTH = 500;
 const URL_PLACEHOLDER = "url";
 const REST = "*";
 
+export const EMBED_REFERRER_POLICIES = ["no-referrer", "strict-origin"] as const;
+
+export type EmbedReferrerPolicy = (typeof EMBED_REFERRER_POLICIES)[number];
+
+export const DEFAULT_EMBED_REFERRER_POLICY: EmbedReferrerPolicy = "no-referrer";
+
 export interface EmbedRule {
   readonly pattern: string;
   readonly embed: string;
+  readonly referrerPolicy?: EmbedReferrerPolicy;
 }
 
 export interface EmbedService {
@@ -27,6 +34,7 @@ export interface EmbedService {
 export interface ResolvedEmbed {
   readonly service: { readonly id: string; readonly name: string };
   readonly src: string;
+  readonly referrerPolicy: EmbedReferrerPolicy;
 }
 
 interface ParsedPattern {
@@ -253,7 +261,12 @@ export function resolveEmbed(link: string, services: readonly EmbedService[]): R
   for (const service of services) {
     for (const rule of service.rules) {
       const src = matchEmbedRule(rule, link);
-      if (src) return { service: { id: service.id, name: service.name }, src };
+      if (src)
+        return {
+          service: { id: service.id, name: service.name },
+          src,
+          referrerPolicy: rule.referrerPolicy ?? DEFAULT_EMBED_REFERRER_POLICY,
+        };
     }
   }
   return null;
@@ -278,6 +291,7 @@ export const embedRuleValue = z
   .object({
     pattern: z.string().min(1).max(MAX_EMBED_PATTERN_LENGTH),
     embed: z.string().min(1).max(MAX_EMBED_PATTERN_LENGTH),
+    referrerPolicy: z.enum(EMBED_REFERRER_POLICIES).optional(),
   })
   .strict()
   .superRefine((rule, context) => {
@@ -301,27 +315,24 @@ export const embedServicesValue = z
     "Each service may appear only once",
   );
 
+const youtube = (pattern: string): EmbedRule => ({
+  pattern,
+  embed: "https://www.youtube-nocookie.com/embed/{video}",
+  referrerPolicy: "strict-origin",
+});
+
 export const defaultEmbedServices: readonly EmbedService[] = [
   {
     id: "youtube",
     name: "YouTube",
     rules: [
       ...["www.youtube.com", "youtube.com", "m.youtube.com"].flatMap((host) => [
-        {
-          pattern: `https://${host}/watch?v={video}`,
-          embed: "https://www.youtube-nocookie.com/embed/{video}",
-        },
-        { pattern: `https://${host}/embed/{video}`, embed: "https://www.youtube-nocookie.com/embed/{video}" },
-        {
-          pattern: `https://${host}/shorts/{video}`,
-          embed: "https://www.youtube-nocookie.com/embed/{video}",
-        },
+        youtube(`https://${host}/watch?v={video}`),
+        youtube(`https://${host}/embed/{video}`),
+        youtube(`https://${host}/shorts/{video}`),
       ]),
-      { pattern: "https://youtu.be/{video}", embed: "https://www.youtube-nocookie.com/embed/{video}" },
-      {
-        pattern: "https://www.youtube-nocookie.com/embed/{video}",
-        embed: "https://www.youtube-nocookie.com/embed/{video}",
-      },
+      youtube("https://youtu.be/{video}"),
+      youtube("https://www.youtube-nocookie.com/embed/{video}"),
     ],
   },
   {

@@ -12,13 +12,13 @@ An embed shows a video, design, presentation or document of an external service 
 - The height can be set from 100 to 2,000 pixels.
 - Print and Word show the title and the link. An imported embed that came with a preview image also shows that image; Pagehall never fetches images from the service during an export.
 
-Frames run with `sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation"`, `allow="fullscreen; picture-in-picture; encrypted-media"` and `referrerpolicy="no-referrer"`. The service runs in its own origin and cannot reach the page, the session or other frames.
+Frames run with `sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation"`, `allow="fullscreen; picture-in-picture; encrypted-media"` and the referrer policy of the matching rule, `no-referrer` unless the rule says otherwise. The service runs in its own origin and cannot reach the page, the session or other frames.
 
 ### The allowlist
 
 Instance administrators manage the list under **Settings › Instance › Rendering › External embeds allowlist**. Organization administrators can only narrow it, under **Settings › Organization › Pages and trash › External embeds allowlist**: they clear the services their organization should not embed. A narrowed list keeps its own value; **Allow all services of the instance** returns to the instance list. A service the instance adds later is not added to a narrowed list.
 
-The default list allows YouTube (through the privacy-enhanced domain `youtube-nocookie.com`), Vimeo (with `dnt=1`), Loom, Figma, Miro, Google Docs, Slides and Sheets, and Microsoft Stream and SharePoint.
+The default list allows YouTube (through the privacy-enhanced domain `youtube-nocookie.com`, see below), Vimeo (with `dnt=1`), Loom, Figma, Miro, Google Docs, Slides and Sheets, and Microsoft Stream and SharePoint.
 
 Each service has one or more rules. A rule has an **address pattern** for share links and an **embed address** built from it. Patterns are `https` addresses that end with a fixed domain; placeholders fill whole parts of the address:
 
@@ -35,6 +35,11 @@ Examples:
 | `https://www.youtube.com/watch?v={video}` | `https://www.youtube-nocookie.com/embed/{video}` |
 | `https://www.figma.com/design/{file}/{*}` | `https://www.figma.com/embed?embed_host=pagehall&url={url}` |
 | `https://{tenant}.sharepoint.com/{*}/_layouts/15/embed.aspx?UniqueId={file}` | the same address |
+
+Each rule can also set the **address sent to the service**:
+
+- **Nothing** (`no-referrer`, the default): the service learns nothing about the page that embeds it.
+- **Address of this instance** (`strict-origin`): the frame sends only the origin of the instance, such as `https://wiki.example.org/`, never the path of the page, and nothing at all to a service without `https`. Some video services refuse to play without it. The default YouTube rules use it, because YouTube rejects many embeds that send no referrer.
 
 Leaving the embed address empty embeds the link as it is. For SharePoint and Stream, paste the address from the embed code that SharePoint offers, not the share link. Captured values are decoded and encoded again for the embed address; values that are dot segments or contain slashes are refused, so a link cannot point the frame to another path of the service. Frame markup is never stored.
 
