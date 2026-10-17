@@ -64,3 +64,7 @@ Word documents need no container. They contain headings, paragraphs, lists and t
 ## Diagrams
 
 Images of drawings, whiteboards and draw.io, Mermaid and PlantUML diagrams are created in the browser of the person who saves them and stored with the page; print, PDF and Word use these stored images. PlantUML therefore needs neither Java nor this container. See [diagrams.md](diagrams.md).
+
+## External embeds
+
+The same page also holds the embed allowlist: the external services whose content pages may show in a frame. See [embeds-and-blocks.md](embeds-and-blocks.md#the-allowlist) for the rules, the defaults and how organizations narrow the list.
