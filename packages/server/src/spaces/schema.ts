@@ -450,6 +450,35 @@ export const pageLinks = pgTable(
   ],
 );
 
+export const pageProperties = pgTable(
+  "page_properties",
+  {
+    itemId: uuid()
+      .notNull()
+      .references(() => treeItems.id, { onDelete: "cascade" }),
+    block: integer().notNull(),
+    position: integer().notNull(),
+    setId: text(),
+    key: text().notNull(),
+    keyNormalized: text().notNull(),
+    value: jsonb().notNull(),
+    text: text().notNull(),
+    sortKey: binaryOrderedText().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.itemId, table.block, table.position] }),
+    index().on(table.keyNormalized, table.itemId),
+    check("page_properties_key", sql`length(${table.key}) between 1 and 200`),
+  ],
+);
+
+export const pageExcerpts = pgTable("page_excerpts", {
+  itemId: uuid()
+    .primaryKey()
+    .references(() => treeItems.id, { onDelete: "cascade" }),
+  text: text().notNull(),
+});
+
 export const collaborationClients = pgTable(
   "collaboration_clients",
   {
