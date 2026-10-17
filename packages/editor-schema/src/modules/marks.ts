@@ -9,6 +9,7 @@ export const linkModule = defineModule({
       name: "link",
       spec: { inclusive: false },
       attrs: { href: required(hrefValue) },
+      copy: (attrs, mapping) => ({ ...attrs, href: mapping.href(String(attrs.href)) }),
       html: (mark, content, renderer) => {
         const href = renderer.safeHref(attrOf<string>(mark, "href"));
         if (!href) return content;
@@ -115,6 +116,7 @@ export const inlineCommentModule = defineModule({
       name: "inlineComment",
       spec: { inclusive: false, excludes: "" },
       attrs: { threadId: required(uuidValue) },
+      copy: () => null,
       html: (mark, content) =>
         element("span", { class: "ph-comment", "data-thread-id": attrOf<string>(mark, "threadId") }, content),
       word: (_mark, style) => style,

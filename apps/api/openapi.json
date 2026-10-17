@@ -21758,6 +21758,378 @@
         }
       }
     },
+    "/api/v1/copies/{copyId}": {
+      "get": {
+        "operationId": "copies.get",
+        "summary": "Get a copy",
+        "description": "Returns the state and progress of a copy the caller started.\n\nRequires the permission `copy.view` on the copy in `copyId`.",
+        "tags": [
+          "Pages"
+        ],
+        "x-pagehall-permission": {
+          "action": "copy.view",
+          "resource": "copy",
+          "parameter": "copyId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "copyId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the copy.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The copy.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the copy."
+                    },
+                    "state": {
+                      "type": "string",
+                      "description": "`queued` and `running` while a large copy runs in the background, `done` when the copy exists, `failed` when nothing was created. New values can be added in later versions; handle unknown values.",
+                      "x-extensible-enum": [
+                        "queued",
+                        "running",
+                        "done",
+                        "failed"
+                      ]
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "Title of the copied item when the copy started."
+                    },
+                    "descendants": {
+                      "type": "boolean",
+                      "description": "Whether the items below were copied as well."
+                    },
+                    "sourceItemId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The copied item, or null when it was deleted permanently since."
+                    },
+                    "targetSpaceId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The target space, or null when it was deleted permanently since."
+                    },
+                    "progress": {
+                      "type": "object",
+                      "properties": {
+                        "done": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Number of items copied so far."
+                        },
+                        "total": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Number of items the copy creates."
+                        }
+                      },
+                      "required": [
+                        "done",
+                        "total"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Progress of a copy that runs in the background."
+                    },
+                    "copied": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of items created, once the copy is done."
+                    },
+                    "hidden": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of items below that were left out because the person copying cannot read them."
+                    },
+                    "skipped": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of items below that were left out because they cannot be copied: pages never published, meetings and their series."
+                    },
+                    "item": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the new item."
+                            },
+                            "spaceId": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of its space."
+                            },
+                            "spaceKey": {
+                              "type": "string",
+                              "description": "Key of its space."
+                            },
+                            "kind": {
+                              "type": "string",
+                              "description": "Kind of the new item. New values can be added in later versions; handle unknown values.",
+                              "x-extensible-enum": [
+                                "page",
+                                "folder",
+                                "link",
+                                "blogPost",
+                                "meetingSeries",
+                                "meetingTopic",
+                                "whiteboard"
+                              ]
+                            },
+                            "title": {
+                              "type": "string",
+                              "description": "Title of the new item."
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "spaceId",
+                            "spaceKey",
+                            "kind",
+                            "title"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The new item at the top of the copy, or null until the copy is done."
+                    },
+                    "errorCode": {
+                      "description": "Why a copy failed, for example `copyChangesAccess` (access changed after the confirmation), `storageFull`, `copyInterrupted` or `copyFailed`; null otherwise.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the copy started. ISO 8601 timestamp in UTC."
+                    },
+                    "finishedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the copy finished or failed, or null. ISO 8601 timestamp in UTC."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "state",
+                    "title",
+                    "descendants",
+                    "sourceItemId",
+                    "targetSpaceId",
+                    "progress",
+                    "copied",
+                    "hidden",
+                    "skipped",
+                    "item",
+                    "errorCode",
+                    "createdAt",
+                    "finishedAt"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A copy of a page, folder or whiteboard."
+                },
+                "example": {
+                  "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a70",
+                  "state": "done",
+                  "title": "VPN access",
+                  "descendants": true,
+                  "sourceItemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                  "targetSpaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
+                  "progress": {
+                    "done": 4,
+                    "total": 4
+                  },
+                  "copied": 4,
+                  "hidden": 1,
+                  "skipped": 0,
+                  "item": {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a71",
+                    "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
+                    "spaceKey": "OPS",
+                    "kind": "page",
+                    "title": "VPN access"
+                  },
+                  "errorCode": null,
+                  "createdAt": "2026-10-17T09:30:00.000Z",
+                  "finishedAt": "2026-10-17T09:30:01.000Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/deleted-spaces": {
       "get": {
         "operationId": "trash.deletedSpaces",
@@ -118535,6 +118907,966 @@
         }
       }
     },
+    "/api/v1/items/{itemId}/copy": {
+      "post": {
+        "operationId": "copies.copy",
+        "summary": "Copy an item",
+        "description": "Copies a page, a folder or a whiteboard, optionally with everything below it, within its space or into another space of the same organization. Each copy starts from the published version with one version in its history, gets the current version of every attachment, the labels, page properties, options and status, and belongs to the caller. Comments, reactions, watchers, shares and links stay behind. Links between copied pages point to the copies. When people could read the copy who cannot read the source, the copy is refused with `copyChangesAccess` unless the request carries the confirmation of a preview of exactly that change. Copies of up to 20 items finish within the request; larger ones answer with state `queued`, run in the background and notify the caller at the end; a failed copy leaves nothing behind.\n\nRequires the permission `item.view` on the item in `itemId`.",
+        "tags": [
+          "Pages"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.view",
+          "resource": "item",
+          "parameter": "itemId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the page, folder or whiteboard.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "spaceId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Target space. Leave it out to copy within the space."
+                  },
+                  "parentId": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Parent item at the target, or null for the root of the tree."
+                  },
+                  "beforeId": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Place the copy directly before this sibling."
+                  },
+                  "afterId": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Place the copy directly after this sibling."
+                  },
+                  "descendants": {
+                    "default": false,
+                    "description": "Copy the items below as well. Default false: only the item itself.",
+                    "type": "boolean"
+                  },
+                  "confirmation": {
+                    "description": "The `confirmation` of a preview. Needed when the copy can be read by people who cannot read the source.",
+                    "type": "string",
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "parentId"
+                ],
+                "additionalProperties": false,
+                "description": "Where the copy goes and what it contains."
+              },
+              "example": {
+                "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
+                "parentId": null,
+                "descendants": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The copy.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the copy."
+                    },
+                    "state": {
+                      "type": "string",
+                      "description": "`queued` and `running` while a large copy runs in the background, `done` when the copy exists, `failed` when nothing was created. New values can be added in later versions; handle unknown values.",
+                      "x-extensible-enum": [
+                        "queued",
+                        "running",
+                        "done",
+                        "failed"
+                      ]
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "Title of the copied item when the copy started."
+                    },
+                    "descendants": {
+                      "type": "boolean",
+                      "description": "Whether the items below were copied as well."
+                    },
+                    "sourceItemId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The copied item, or null when it was deleted permanently since."
+                    },
+                    "targetSpaceId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The target space, or null when it was deleted permanently since."
+                    },
+                    "progress": {
+                      "type": "object",
+                      "properties": {
+                        "done": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Number of items copied so far."
+                        },
+                        "total": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Number of items the copy creates."
+                        }
+                      },
+                      "required": [
+                        "done",
+                        "total"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Progress of a copy that runs in the background."
+                    },
+                    "copied": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of items created, once the copy is done."
+                    },
+                    "hidden": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of items below that were left out because the person copying cannot read them."
+                    },
+                    "skipped": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of items below that were left out because they cannot be copied: pages never published, meetings and their series."
+                    },
+                    "item": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the new item."
+                            },
+                            "spaceId": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of its space."
+                            },
+                            "spaceKey": {
+                              "type": "string",
+                              "description": "Key of its space."
+                            },
+                            "kind": {
+                              "type": "string",
+                              "description": "Kind of the new item. New values can be added in later versions; handle unknown values.",
+                              "x-extensible-enum": [
+                                "page",
+                                "folder",
+                                "link",
+                                "blogPost",
+                                "meetingSeries",
+                                "meetingTopic",
+                                "whiteboard"
+                              ]
+                            },
+                            "title": {
+                              "type": "string",
+                              "description": "Title of the new item."
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "spaceId",
+                            "spaceKey",
+                            "kind",
+                            "title"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The new item at the top of the copy, or null until the copy is done."
+                    },
+                    "errorCode": {
+                      "description": "Why a copy failed, for example `copyChangesAccess` (access changed after the confirmation), `storageFull`, `copyInterrupted` or `copyFailed`; null otherwise.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the copy started. ISO 8601 timestamp in UTC."
+                    },
+                    "finishedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the copy finished or failed, or null. ISO 8601 timestamp in UTC."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "state",
+                    "title",
+                    "descendants",
+                    "sourceItemId",
+                    "targetSpaceId",
+                    "progress",
+                    "copied",
+                    "hidden",
+                    "skipped",
+                    "item",
+                    "errorCode",
+                    "createdAt",
+                    "finishedAt"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A copy of a page, folder or whiteboard."
+                },
+                "example": {
+                  "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a70",
+                  "state": "done",
+                  "title": "VPN access",
+                  "descendants": true,
+                  "sourceItemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40",
+                  "targetSpaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
+                  "progress": {
+                    "done": 4,
+                    "total": 4
+                  },
+                  "copied": 4,
+                  "hidden": 1,
+                  "skipped": 0,
+                  "item": {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a71",
+                    "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
+                    "spaceKey": "OPS",
+                    "kind": "page",
+                    "title": "VPN access"
+                  },
+                  "errorCode": null,
+                  "createdAt": "2026-10-17T09:30:00.000Z",
+                  "finishedAt": "2026-10-17T09:30:01.000Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidPlacement`: The place in the page tree is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidPlacement": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidPlacement",
+                      "title": "The place in the page tree is not valid",
+                      "status": 400,
+                      "code": "invalidPlacement"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`copyChangesAccess`: The copy can be read by people who cannot read the source. `neverPublished`: The page has never been published. `notCopyable`: Only pages, folders and whiteboards can be copied. `otherOrganization`: Content stays within its organization.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "copyChangesAccess": {
+                    "value": {
+                      "type": "urn:pagehall:problem:copyChangesAccess",
+                      "title": "The copy can be read by people who cannot read the source",
+                      "status": 409,
+                      "code": "copyChangesAccess"
+                    }
+                  },
+                  "neverPublished": {
+                    "value": {
+                      "type": "urn:pagehall:problem:neverPublished",
+                      "title": "The page has never been published",
+                      "status": 409,
+                      "code": "neverPublished"
+                    }
+                  },
+                  "notCopyable": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notCopyable",
+                      "title": "Only pages, folders and whiteboards can be copied",
+                      "status": 409,
+                      "code": "notCopyable"
+                    }
+                  },
+                  "otherOrganization": {
+                    "value": {
+                      "type": "urn:pagehall:problem:otherOrganization",
+                      "title": "Content stays within its organization",
+                      "status": 409,
+                      "code": "otherOrganization"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "507": {
+            "description": "`storageFull`: Storage is almost full.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "storageFull": {
+                    "value": {
+                      "type": "urn:pagehall:problem:storageFull",
+                      "title": "Storage is almost full",
+                      "status": 507,
+                      "code": "storageFull"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/items/{itemId}/copy/preview": {
+      "post": {
+        "operationId": "copies.preview",
+        "summary": "Preview a copy",
+        "description": "Shows what a copy to the place would contain and who could read it. The copy inherits the view restrictions of its new place and carries no restrictions, shares or links of its own. When people could read the copy who cannot read the source, the answer carries a confirmation to send with the copy. Items below that the caller cannot read are counted in `hidden`, never named. Copies of more than 20 items run in the background. Needs read access to the item and edit permission in the target space; copying out of a confidential space also needs edit permission there. Nothing is changed.\n\nRequires the permission `item.view` on the item in `itemId`.",
+        "tags": [
+          "Pages"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.view",
+          "resource": "item",
+          "parameter": "itemId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the page, folder or whiteboard.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "spaceId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Target space. Leave it out to copy within the space."
+                  },
+                  "parentId": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Parent item at the target, or null for the root of the tree."
+                  },
+                  "descendants": {
+                    "default": false,
+                    "description": "Copy the items below as well. Default false: only the item itself.",
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "parentId"
+                ],
+                "additionalProperties": false,
+                "description": "The place the copy would go to."
+              },
+              "example": {
+                "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
+                "parentId": null,
+                "descendants": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "What the copy contains and who could read it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "gaining": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of people who get access."
+                    },
+                    "losing": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of people who lose access."
+                    },
+                    "raised": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of people whose role rises."
+                    },
+                    "lowered": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of people whose role drops."
+                    },
+                    "unlisted": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of affected people the caller may not see; they are counted but not listed."
+                    },
+                    "truncated": {
+                      "type": "boolean",
+                      "description": "Whether `changes` lists only the first 100 people."
+                    },
+                    "changes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "accountId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the account."
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Name of the person."
+                          },
+                          "before": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "reader",
+                                  "commenter",
+                                  "editor",
+                                  "admin"
+                                ],
+                                "description": "Space role: `reader` reads, `commenter` also comments, `editor` also creates, edits and moves content, `admin` also manages the space and its permissions."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Role before the change, or null for no access."
+                          },
+                          "after": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "reader",
+                                  "commenter",
+                                  "editor",
+                                  "admin"
+                                ],
+                                "description": "Space role: `reader` reads, `commenter` also comments, `editor` also creates, edits and moves content, `admin` also manages the space and its permissions."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Role after the change, or null for no access."
+                          }
+                        },
+                        "required": [
+                          "accountId",
+                          "name",
+                          "before",
+                          "after"
+                        ],
+                        "additionalProperties": false,
+                        "description": "How the access of one person changes."
+                      },
+                      "description": "People whose access changes, ordered by name."
+                    },
+                    "leavesConfidential": {
+                      "type": "boolean",
+                      "description": "True when the copy leaves a confidential space and is not protected by it."
+                    },
+                    "widerAccess": {
+                      "type": "boolean",
+                      "description": "True when people can read the copy who cannot read the source; the copy then needs the confirmation."
+                    },
+                    "confirmation": {
+                      "description": "Send this with the copy to confirm exactly this access, or null when nobody gains access. Valid for one hour.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "items": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of items the copy creates."
+                    },
+                    "hidden": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of items below that are left out because the caller cannot read them."
+                    },
+                    "skipped": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of items below that are left out because they cannot be copied."
+                    },
+                    "background": {
+                      "type": "boolean",
+                      "description": "True when the copy is large and runs in the background."
+                    }
+                  },
+                  "required": [
+                    "gaining",
+                    "losing",
+                    "raised",
+                    "lowered",
+                    "unlisted",
+                    "truncated",
+                    "changes",
+                    "leavesConfidential",
+                    "widerAccess",
+                    "confirmation",
+                    "items",
+                    "hidden",
+                    "skipped",
+                    "background"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Who can read the source and the copy: `gaining` counts people who can read the copy but not the source, `losing` people who can read the source but not the copy."
+                },
+                "example": {
+                  "gaining": 1,
+                  "losing": 0,
+                  "raised": 0,
+                  "lowered": 0,
+                  "unlisted": 0,
+                  "truncated": false,
+                  "changes": [
+                    {
+                      "accountId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                      "name": "Anna Berger",
+                      "before": null,
+                      "after": "reader"
+                    }
+                  ],
+                  "leavesConfidential": false,
+                  "widerAccess": true,
+                  "confirmation": "mbx2k1c0.Hq3l2bS8yq1m0e7pW9cJx4rT6uV5aZ2nD0gF1hK8sLw",
+                  "items": 4,
+                  "hidden": 1,
+                  "skipped": 0,
+                  "background": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidPlacement`: The place in the page tree is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidPlacement": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidPlacement",
+                      "title": "The place in the page tree is not valid",
+                      "status": 400,
+                      "code": "invalidPlacement"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`neverPublished`: The page has never been published. `notCopyable`: Only pages, folders and whiteboards can be copied. `otherOrganization`: Content stays within its organization.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "neverPublished": {
+                    "value": {
+                      "type": "urn:pagehall:problem:neverPublished",
+                      "title": "The page has never been published",
+                      "status": 409,
+                      "code": "neverPublished"
+                    }
+                  },
+                  "notCopyable": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notCopyable",
+                      "title": "Only pages, folders and whiteboards can be copied",
+                      "status": 409,
+                      "code": "notCopyable"
+                    }
+                  },
+                  "otherOrganization": {
+                    "value": {
+                      "type": "urn:pagehall:problem:otherOrganization",
+                      "title": "Content stays within its organization",
+                      "status": 409,
+                      "code": "otherOrganization"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/items/{itemId}/move": {
       "post": {
         "operationId": "items.move",
@@ -172939,7 +174271,7 @@
       "get": {
         "operationId": "reports.inclusion",
         "summary": "Get content included in a page",
-        "description": "Returns the published content of another page, or its excerpt, as an include block of the page shows it, with the caller's permissions. A page that was not part of a Confluence import is found by its space key and title once it is imported into the organization. A page the caller cannot read answers like a page that does not exist.\n\nRequires the permission `item.view` on the item in `pageId`.",
+        "description": "Returns the published content of another page, or its excerpt, as an include block of the page shows it, with the caller's permissions. For people who can edit the page, it also says whether some of its readers cannot read the included page. A page that was not part of a Confluence import is found by its space key and title once it is imported into the organization. A page the caller cannot read answers like a page that does not exist.\n\nRequires the permission `item.view` on the item in `pageId`.",
         "tags": [
           "Reports"
         ],
@@ -173177,13 +174509,18 @@
                       ],
                       "additionalProperties": false,
                       "description": "What mentions and page links in the document point to, as far as the caller may see it."
+                    },
+                    "hiddenFromSomeReaders": {
+                      "type": "boolean",
+                      "description": "True when some people who can read the including page cannot read the included page and see nothing in its place. Only checked for people who can edit the including page; false for everyone else."
                     }
                   },
                   "required": [
                     "state",
                     "page",
                     "document",
-                    "references"
+                    "references",
+                    "hiddenFromSomeReaders"
                   ],
                   "additionalProperties": false,
                   "description": "Content included from another page."
@@ -173214,7 +174551,8 @@
                     "people": {},
                     "pages": {},
                     "topics": {}
-                  }
+                  },
+                  "hiddenFromSomeReaders": false
                 }
               }
             }
@@ -178013,14 +179351,15 @@
                       },
                       "reason": {
                         "type": "string",
-                        "description": "Why the version exists: `published` (someone published), `session` (an editing session in live mode ended), `restored` (an older version was restored in live mode), `modeChanged` (the page switched modes), `imported` (a re-import applied the source version) or `importedNotApplied` (a re-import added the source version to the history without applying it). New values can be added in later versions; handle unknown values.",
+                        "description": "Why the version exists: `published` (someone published), `session` (an editing session in live mode ended), `restored` (an older version was restored in live mode), `modeChanged` (the page switched modes), `imported` (a re-import applied the source version), `importedNotApplied` (a re-import added the source version to the history without applying it) or `copied` (the page was created as a copy of `copiedFrom`). New values can be added in later versions; handle unknown values.",
                         "x-extensible-enum": [
                           "published",
                           "session",
                           "restored",
                           "modeChanged",
                           "imported",
-                          "importedNotApplied"
+                          "importedNotApplied",
+                          "copied"
                         ]
                       },
                       "restoredFrom": {
@@ -178035,6 +179374,51 @@
                           }
                         ],
                         "description": "The restored version, or null."
+                      },
+                      "copiedFrom": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "itemId": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "The source, or null when the caller cannot read it or it was deleted permanently."
+                              },
+                              "title": {
+                                "description": "Title of the source when it was copied, or null when the caller cannot read the source.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "path": {
+                                "description": "Path of the source in the web interface, or null when the caller cannot read the source.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "itemId",
+                              "title",
+                              "path"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Where a copy came from, for the first version of a copy; null otherwise."
                       },
                       "createdAt": {
                         "type": "string",
@@ -178106,6 +179490,7 @@
                       "note",
                       "reason",
                       "restoredFrom",
+                      "copiedFrom",
                       "createdAt",
                       "createdBy",
                       "contributors"
@@ -178122,6 +179507,7 @@
                     "note": "Added the section on lost devices",
                     "reason": "published",
                     "restoredFrom": null,
+                    "copiedFrom": null,
                     "createdAt": "2026-10-03T14:20:00.000Z",
                     "createdBy": {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
@@ -178325,14 +179711,15 @@
                     },
                     "reason": {
                       "type": "string",
-                      "description": "Why the version exists: `published` (someone published), `session` (an editing session in live mode ended), `restored` (an older version was restored in live mode), `modeChanged` (the page switched modes), `imported` (a re-import applied the source version) or `importedNotApplied` (a re-import added the source version to the history without applying it). New values can be added in later versions; handle unknown values.",
+                      "description": "Why the version exists: `published` (someone published), `session` (an editing session in live mode ended), `restored` (an older version was restored in live mode), `modeChanged` (the page switched modes), `imported` (a re-import applied the source version), `importedNotApplied` (a re-import added the source version to the history without applying it) or `copied` (the page was created as a copy of `copiedFrom`). New values can be added in later versions; handle unknown values.",
                       "x-extensible-enum": [
                         "published",
                         "session",
                         "restored",
                         "modeChanged",
                         "imported",
-                        "importedNotApplied"
+                        "importedNotApplied",
+                        "copied"
                       ]
                     },
                     "restoredFrom": {
@@ -178347,6 +179734,51 @@
                         }
                       ],
                       "description": "The restored version, or null."
+                    },
+                    "copiedFrom": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "itemId": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The source, or null when the caller cannot read it or it was deleted permanently."
+                            },
+                            "title": {
+                              "description": "Title of the source when it was copied, or null when the caller cannot read the source.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "path": {
+                              "description": "Path of the source in the web interface, or null when the caller cannot read the source.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "itemId",
+                            "title",
+                            "path"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Where a copy came from, for the first version of a copy; null otherwise."
                     },
                     "createdAt": {
                       "type": "string",
@@ -178516,6 +179948,7 @@
                     "note",
                     "reason",
                     "restoredFrom",
+                    "copiedFrom",
                     "createdAt",
                     "createdBy",
                     "contributors",
@@ -178531,6 +179964,7 @@
                   "note": "Added the section on lost devices",
                   "reason": "published",
                   "restoredFrom": null,
+                  "copiedFrom": null,
                   "createdAt": "2026-10-03T14:20:00.000Z",
                   "createdBy": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
@@ -185541,6 +186975,21 @@
               "enum": [
                 "true",
                 "false"
+              ]
+            }
+          },
+          {
+            "name": "role",
+            "in": "query",
+            "required": false,
+            "description": "Only spaces where the caller holds at least this role, for example `editor` for the spaces the caller can create content in.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "reader",
+                "commenter",
+                "editor",
+                "admin"
               ]
             }
           }
@@ -214057,14 +215506,15 @@
                       },
                       "reason": {
                         "type": "string",
-                        "description": "Why the version exists: `session` (an editing session ended or the board was idle) or `restored` (an older version was restored). New values can be added in later versions; handle unknown values.",
+                        "description": "Why the version exists: `session` (an editing session ended or the board was idle), `restored` (an older version was restored) or `copied` (the board was created as a copy of `copiedFrom`). New values can be added in later versions; handle unknown values.",
                         "x-extensible-enum": [
                           "published",
                           "session",
                           "restored",
                           "modeChanged",
                           "imported",
-                          "importedNotApplied"
+                          "importedNotApplied",
+                          "copied"
                         ]
                       },
                       "restoredFrom": {
@@ -214079,6 +215529,51 @@
                           }
                         ],
                         "description": "The restored version, or null."
+                      },
+                      "copiedFrom": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "itemId": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "The source, or null when the caller cannot read it or it was deleted permanently."
+                              },
+                              "title": {
+                                "description": "Title of the source when it was copied, or null when the caller cannot read the source.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "path": {
+                                "description": "Path of the source in the web interface, or null when the caller cannot read the source.",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "itemId",
+                              "title",
+                              "path"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Where a copy came from, for the first version of a copy; null otherwise."
                       },
                       "createdAt": {
                         "type": "string",
@@ -214114,7 +215609,7 @@
                             "type": "null"
                           }
                         ],
-                        "description": "Who restored, or null for versions of editing sessions."
+                        "description": "Who restored or copied, or null for versions of editing sessions."
                       },
                       "contributors": {
                         "type": "array",
@@ -214153,6 +215648,7 @@
                       "title",
                       "reason",
                       "restoredFrom",
+                      "copiedFrom",
                       "createdAt",
                       "createdBy",
                       "contributors",
@@ -214169,6 +215665,7 @@
                     "title": "Network redesign 2027",
                     "reason": "session",
                     "restoredFrom": null,
+                    "copiedFrom": null,
                     "createdAt": "2026-10-16T09:12:00.000Z",
                     "createdBy": null,
                     "contributors": [
@@ -214366,14 +215863,15 @@
                     },
                     "reason": {
                       "type": "string",
-                      "description": "Why the version exists: `session` (an editing session ended or the board was idle) or `restored` (an older version was restored). New values can be added in later versions; handle unknown values.",
+                      "description": "Why the version exists: `session` (an editing session ended or the board was idle), `restored` (an older version was restored) or `copied` (the board was created as a copy of `copiedFrom`). New values can be added in later versions; handle unknown values.",
                       "x-extensible-enum": [
                         "published",
                         "session",
                         "restored",
                         "modeChanged",
                         "imported",
-                        "importedNotApplied"
+                        "importedNotApplied",
+                        "copied"
                       ]
                     },
                     "restoredFrom": {
@@ -214388,6 +215886,51 @@
                         }
                       ],
                       "description": "The restored version, or null."
+                    },
+                    "copiedFrom": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "itemId": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The source, or null when the caller cannot read it or it was deleted permanently."
+                            },
+                            "title": {
+                              "description": "Title of the source when it was copied, or null when the caller cannot read the source.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "path": {
+                              "description": "Path of the source in the web interface, or null when the caller cannot read the source.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "itemId",
+                            "title",
+                            "path"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Where a copy came from, for the first version of a copy; null otherwise."
                     },
                     "createdAt": {
                       "type": "string",
@@ -214423,7 +215966,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Who restored, or null for versions of editing sessions."
+                      "description": "Who restored or copied, or null for versions of editing sessions."
                     },
                     "contributors": {
                       "type": "array",
@@ -214466,6 +216009,7 @@
                     "title",
                     "reason",
                     "restoredFrom",
+                    "copiedFrom",
                     "createdAt",
                     "createdBy",
                     "contributors",
@@ -214480,6 +216024,7 @@
                   "title": "Network redesign 2027",
                   "reason": "session",
                   "restoredFrom": null,
+                  "copiedFrom": null,
                   "createdAt": "2026-10-16T09:12:00.000Z",
                   "createdBy": null,
                   "contributors": [
@@ -215089,6 +216634,162 @@
               "changes",
               "leavesConfidential",
               "confirmation"
+            ],
+            "additionalProperties": false
+          },
+          "copyImpact": {
+            "description": "Who could read the copy but not the source, with the confirmation to send, for `copyChangesAccess`.",
+            "type": "object",
+            "properties": {
+              "gaining": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Number of people who get access."
+              },
+              "losing": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Number of people who lose access."
+              },
+              "raised": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Number of people whose role rises."
+              },
+              "lowered": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Number of people whose role drops."
+              },
+              "unlisted": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Number of affected people the caller may not see; they are counted but not listed."
+              },
+              "truncated": {
+                "type": "boolean",
+                "description": "Whether `changes` lists only the first 100 people."
+              },
+              "changes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "accountId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the account."
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Name of the person."
+                    },
+                    "before": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "reader",
+                            "commenter",
+                            "editor",
+                            "admin"
+                          ],
+                          "description": "Space role: `reader` reads, `commenter` also comments, `editor` also creates, edits and moves content, `admin` also manages the space and its permissions."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Role before the change, or null for no access."
+                    },
+                    "after": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "reader",
+                            "commenter",
+                            "editor",
+                            "admin"
+                          ],
+                          "description": "Space role: `reader` reads, `commenter` also comments, `editor` also creates, edits and moves content, `admin` also manages the space and its permissions."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Role after the change, or null for no access."
+                    }
+                  },
+                  "required": [
+                    "accountId",
+                    "name",
+                    "before",
+                    "after"
+                  ],
+                  "additionalProperties": false,
+                  "description": "How the access of one person changes."
+                },
+                "description": "People whose access changes, ordered by name."
+              },
+              "leavesConfidential": {
+                "type": "boolean",
+                "description": "True when the copy leaves a confidential space and is not protected by it."
+              },
+              "widerAccess": {
+                "type": "boolean",
+                "description": "True when people can read the copy who cannot read the source; the copy then needs the confirmation."
+              },
+              "confirmation": {
+                "description": "Send this with the copy to confirm exactly this access, or null when nobody gains access. Valid for one hour.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "items": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Number of items the copy creates."
+              },
+              "hidden": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Number of items below that are left out because the caller cannot read them."
+              },
+              "skipped": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Number of items below that are left out because they cannot be copied."
+              },
+              "background": {
+                "type": "boolean",
+                "description": "True when the copy is large and runs in the background."
+              }
+            },
+            "required": [
+              "gaining",
+              "losing",
+              "raised",
+              "lowered",
+              "unlisted",
+              "truncated",
+              "changes",
+              "leavesConfidential",
+              "widerAccess",
+              "confirmation",
+              "items",
+              "hidden",
+              "skipped",
+              "background"
             ],
             "additionalProperties": false
           },

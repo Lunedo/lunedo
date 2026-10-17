@@ -5,8 +5,11 @@ export interface SpaceContextValue {
   space: SpaceWithRole;
   canEdit: boolean;
   openMove: (item: Pick<TreeItem, "id" | "title" | "kind" | "spaceId" | "parentId">) => void;
+  openCopy: (item: CopiedItem) => void;
   openCreate: (kind: "page" | "folder" | "link" | "whiteboard", parentId: string | null) => void;
 }
+
+export type CopiedItem = Pick<TreeItem, "id" | "title" | "kind" | "spaceId" | "parentId" | "hasChildren">;
 
 export const SpaceContext = createContext<SpaceContextValue | null>(null);
 

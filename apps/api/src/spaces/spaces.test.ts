@@ -521,6 +521,79 @@ describe.skipIf(!databaseBaseUrl)("spaces and pages through the API", () => {
     expect(found.json().map((item: { id: string }) => item.id)).toEqual([child.id]);
   });
 
+  it("copies a restricted page only after the wider access is confirmed, and lists the source in the history", async () => {
+    const creator = await person();
+    const reader = await person();
+    const outsider = await person();
+    const space = await createSpace(creator.client, [
+      { principalKind: "account", principalId: reader.id, role: "reader" },
+    ]);
+    const target = await createSpace(creator.client, [
+      { principalKind: "account", principalId: reader.id, role: "reader" },
+      { principalKind: "account", principalId: outsider.id, role: "editor" },
+    ]);
+    const hr = await createPage(creator.client, space.id, "HR");
+    await createPage(creator.client, space.id, "Salaries", hr.id);
+    await creator.client.post(`/api/v1/pages/${hr.id}/access`, {
+      changes: [{ action: "restrict", kind: "view" }],
+    });
+
+    const preview = await creator.client.post(`/api/v1/items/${hr.id}/copy/preview`, {
+      spaceId: target.id,
+      parentId: null,
+      descendants: true,
+    });
+    expect(preview.statusCode, preview.body).toBe(200);
+    expect(preview.json()).toMatchObject({
+      widerAccess: true,
+      gaining: 2,
+      items: 2,
+      hidden: 0,
+      background: false,
+    });
+
+    const refused = await creator.client.post(`/api/v1/items/${hr.id}/copy`, {
+      spaceId: target.id,
+      parentId: null,
+      descendants: true,
+    });
+    expect(refused.statusCode, refused.body).toBe(409);
+    expect(refused.json()).toMatchObject({ code: "copyChangesAccess", copyImpact: { gaining: 2 } });
+
+    const copied = await creator.client.post(`/api/v1/items/${hr.id}/copy`, {
+      spaceId: target.id,
+      parentId: null,
+      descendants: true,
+      confirmation: preview.json().confirmation,
+    });
+    expect(copied.statusCode, copied.body).toBe(200);
+    expect(copied.json()).toMatchObject({
+      state: "done",
+      copied: 2,
+      item: { spaceId: target.id, title: "HR" },
+    });
+    const copyId = copied.json().id as string;
+    const item = copied.json().item.id as string;
+    expect((await reader.client.get(`/api/v1/items/${item}`)).statusCode).toBe(200);
+
+    const history = await outsider.client.get(`/api/v1/pages/${item}/versions`);
+    expect(history.json()).toMatchObject([
+      { reason: "copied", copiedFrom: { itemId: null, title: null, path: null } },
+    ]);
+    const own = await creator.client.get(`/api/v1/pages/${item}/versions`);
+    expect(own.json()).toMatchObject([{ copiedFrom: { itemId: hr.id, title: "HR" } }]);
+
+    expect((await creator.client.get(`/api/v1/copies/${copyId}`)).json()).toMatchObject({ state: "done" });
+    expect((await outsider.client.get(`/api/v1/copies/${copyId}`)).statusCode).toBe(404);
+    const byReader = await reader.client.post(`/api/v1/items/${item}/copy`, { parentId: null });
+    expect(byReader.statusCode).toBe(403);
+    const hidden = await outsider.client.post(`/api/v1/items/${hr.id}/copy/preview`, {
+      spaceId: target.id,
+      parentId: null,
+    });
+    expect(hidden.statusCode).toBe(404);
+  });
+
   it("refuses a drag and drop out of a restricted page until the change in access is confirmed", async () => {
     const creator = await person();
     const reader = await person();

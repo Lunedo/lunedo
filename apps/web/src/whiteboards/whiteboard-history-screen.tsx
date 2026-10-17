@@ -14,6 +14,7 @@ import { itemSlug } from "../spaces/item-paths.js";
 import { spaceDisplayName } from "../spaces/space-badge.js";
 import { useSpace } from "../spaces/space-context.js";
 import { type ItemDetails, itemQuery, whiteboardPath } from "../spaces/space-queries.js";
+import { CopiedFrom } from "../spaces/versions/copied-from.js";
 import type { FileStore } from "./scene-sync.js";
 import {
   loadImage,
@@ -48,9 +49,13 @@ export function WhiteboardHistoryScreen() {
 }
 
 function reasonOf(t: TFunction, version: WhiteboardVersion): string {
-  return version.reason === "restored"
-    ? t("versions.reasons.restored", { number: version.restoredFrom ?? 0 })
-    : translateKey(t, `versions.reasons.${version.reason}`);
+  if (version.reason === "restored")
+    return t("versions.reasons.restored", { number: version.restoredFrom ?? 0 });
+  if (version.reason === "copied")
+    return version.copiedFrom?.title
+      ? t("versions.reasons.copied", { title: version.copiedFrom.title })
+      : t("versions.reasons.copiedHidden");
+  return translateKey(t, `versions.reasons.${version.reason}`);
 }
 
 function BoardHistory({ board }: { board: ItemDetails }) {
@@ -175,6 +180,7 @@ function BoardHistory({ board }: { board: ItemDetails }) {
                         </span>
                       ) : null}
                     </button>
+                    <CopiedFrom source={version.copiedFrom} />
                   </li>
                 );
               })}

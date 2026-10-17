@@ -14,7 +14,11 @@ export interface LevelChange {
 
 type Levels = Map<string, Map<string, number>>;
 
-export async function representativeItems(executor: Executor, itemId: string): Promise<string[]> {
+export async function representativeItems(
+  executor: Executor,
+  itemId: string,
+  among?: readonly string[],
+): Promise<string[]> {
   const below = sql`t.path[array_position(t.path, ${itemId}::uuid):]`;
   const result = await executor.execute<{ id: string }>(sql`
     with recursive down as (
@@ -36,6 +40,7 @@ export async function representativeItems(executor: Executor, itemId: string): P
             or exists (select 1 from page_restrictions r where r.item_id = t.id and r.kind = 'edit')
             then t.id::text else '' end) as signature
         from down d join tree_items t on t.id = d.id
+        ${among ? sql`where t.id = any(${sql.param([...among])}::uuid[])` : sql``}
       ) signed
       order by signature, depth, id
     ) representatives
@@ -83,6 +88,25 @@ export async function accessLevels(executor: Executor, items: string[], accounts
     levels.set(row.account_id, entry);
   }
   return levels;
+}
+
+export async function readersWithoutAccess(
+  executor: Executor,
+  readable: string,
+  target: string,
+): Promise<boolean> {
+  const located = await executor.execute<{ space_id: string }>(
+    sql`select distinct space_id from tree_items where id in (${readable}, ${target})`,
+  );
+  const accounts = await candidateAccounts(
+    executor,
+    { itemId: readable, parentId: null, spaceIds: located.rows.map((row) => row.space_id) },
+    [readable, target],
+  );
+  const levels = await accessLevels(executor, [readable, target], accounts);
+  return [...levels.values()].some(
+    (entry) => (entry.get(readable) ?? 0) > 0 && (entry.get(target) ?? 0) === 0,
+  );
 }
 
 export function levelChanges(items: string[], before: Levels, after: Levels): LevelChange[] {

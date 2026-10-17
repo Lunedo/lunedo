@@ -60,9 +60,9 @@ type KindName = "confluence-xml" | "confluence-cloud" | "confluence-dc" | "markd
 const CONFLUENCE: readonly KindName[] = ["confluence-xml", "confluence-cloud", "confluence-dc"];
 const FILES: readonly KindName[] = ["markdown", "word"];
 
-export function SourceChoice({ entry, onChoose }: { entry: ImportView; onChoose: (source: Source) => void }) {
+export function SourceChoice({ source, onChoose }: { source: Source; onChoose: (source: Source) => void }) {
   const { t } = useTranslation();
-  const chosen: Source = entry.source === "confluence-csv" ? "confluence-xml" : entry.source;
+  const chosen: Source = source === "confluence-csv" ? "confluence-xml" : source;
   const group = (title: string, sources: readonly KindName[]) => (
     <Section title={title}>
       <div className="p-4">

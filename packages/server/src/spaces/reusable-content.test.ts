@@ -335,6 +335,22 @@ describe.skipIf(!baseUrl)("page properties, label reports and includes", () => {
       ).toBeNull();
     });
 
+    it("tell editors of the including page when some of its readers cannot read the included page", async () => {
+      const w = await world();
+      const hidden = await test.services.includes.content(w.editor, w.graz, include({ pageId: w.secret }));
+      expect(hidden).toMatchObject({ state: "visible", hiddenFromSomeReaders: true });
+      const excerpt = await test.services.includes.content(
+        w.editor,
+        w.graz,
+        include({ pageId: w.secret, excerpt: true }),
+      );
+      expect(excerpt?.hiddenFromSomeReaders).toBe(true);
+      const shared = await test.services.includes.content(w.editor, w.graz, include({ pageId: w.wien }));
+      expect(shared?.hiddenFromSomeReaders).toBe(false);
+      const forReader = await test.services.includes.content(w.reader, w.graz, include({ pageId: w.wien }));
+      expect(forReader?.hiddenFromSomeReaders).toBe(false);
+    });
+
     it("give an excerpt by name, or say the page has none", async () => {
       const w = await world();
       const source = await w.page(

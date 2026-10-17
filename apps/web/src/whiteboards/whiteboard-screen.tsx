@@ -51,7 +51,7 @@ export function WhiteboardScreen() {
 
 function SpaceWhiteboard({ board }: { board: ItemDetails }) {
   const { t } = useTranslation();
-  const { space, canEdit, openMove } = useSpace();
+  const { space, canEdit, openMove, openCopy } = useSpace();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const deleteItem = useDeleteItem(space);
@@ -115,6 +115,7 @@ function SpaceWhiteboard({ board }: { board: ItemDetails }) {
         canEdit: canEdit && !space.archived,
         archived: board.archived,
         onMove: () => openMove(board),
+        onCopy: () => openCopy(board),
         onArchive: () => void archive(board),
         onUnarchive: () => void unarchive(board),
         onDelete: () => void deleteItem(board, { leave: true }),

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { copyAttachmentAttributes } from "../copying.js";
 import type { ResolvedEmbed } from "../embeds.js";
 import {
   type FileReference,
@@ -368,6 +369,7 @@ export const embedModule = defineModule({
         height: optional(z.number().int().min(MIN_EMBED_HEIGHT).max(MAX_EMBED_HEIGHT).nullable(), null),
         thumbnailId: optional(uuidValue.nullable(), null),
       },
+      copy: copyAttachmentAttributes([["thumbnailId", null]]),
       validate: (node) =>
         isEmbeddableUrl(attrOf<string>(node, "url")) ? null : "An embed needs an http or https address",
       html: embedHtml,

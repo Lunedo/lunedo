@@ -101,7 +101,7 @@ In Yjs, a scene is a map `elements` (element ID to element), a map `files` (file
 
 ## Reports and includes
 
-Report blocks and include blocks hold only their settings. The renderers ask the render context for their data (`propertiesReport`, `contentByLabel`, `relatedLabels`, `include`), so every caller supplies what the viewer may see. Without that data, the HTML renderer writes a placeholder with the settings as `data-` attributes, which the web client fills. Included content is rendered with `nested`, in the context of the included page, and contributes no text to the search index of the including page.
+Report blocks and include blocks hold only their settings. The renderers ask the render context for their data (`propertiesReport`, `contentByLabel`, `relatedLabels`, `include`), so every caller supplies what the viewer may see. Without that data, the HTML renderer writes a placeholder with the settings as `data-` attributes, which the web client fills. Included content is rendered with `nested`, in the context of the included page, and contributes no text to the search index of the including page. People who can edit the including page see a note when some of its readers cannot read the included page; those readers see nothing in its place.
 
 ## Collaboration
 
@@ -131,4 +131,6 @@ export const pollModule = defineModule({
 });
 ```
 
-Register it in `src/modules/index.ts`. The schema, validation and renderers are built from the registry, so nothing else in the package changes. Add fixtures that use every new node, mark and attribute, and increase the schema version when stored documents need a migration.
+Register it in `src/modules/index.ts`. The schema, validation and renderers are built from the registry, so nothing else in the package changes.
+
+A node or mark that holds the ID of an attachment or a page declares `copy`, which returns its attributes for a copy of the page: `copyAttachmentAttributes` maps attachment IDs (with their pinned version) to the copied attachments, `copyPageAttribute` maps links to pages that were copied along. A mark's `copy` can return `null` to drop the mark, as inline comments do. Nodes without `copy` keep their attributes, so references such as includes keep pointing to their original targets. Add fixtures that use every new node, mark and attribute, and increase the schema version when stored documents need a migration.

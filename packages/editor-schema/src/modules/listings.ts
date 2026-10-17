@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { copyPageAttribute } from "../copying.js";
 import {
   boundedInteger,
   isTrue,
@@ -203,6 +204,7 @@ export const childPagesModule = defineModule({
         sort: optional(z.enum(childPageSorts), "tree"),
         reverse: optional(z.boolean(), false),
       },
+      copy: copyPageAttribute("pageId"),
       html: (node, renderer) => {
         const request = childPagesRequest(node);
         const pages = renderer.context.childPages?.(request) ?? null;

@@ -1526,7 +1526,11 @@
     "confluenceInvalidResponse": "Confluence sent an answer Pagehall cannot read. Check the address and try again.",
     "confluenceUnreachable": "Pagehall could not reach Confluence. Check the address and that Confluence is running, then try again.",
     "confluenceRateLimited": "Confluence asked to slow down. Wait a minute and try again.",
-    "confluenceSpaceMissing": "The space does not exist or the token cannot read it. Choose another space."
+    "confluenceSpaceMissing": "The space does not exist or the token cannot read it. Choose another space.",
+    "copyChangesAccess": "The copy can be opened by people who cannot open the original. Check who gains access, then confirm the copy.",
+    "notCopyable": "Only pages, folders and whiteboards can be copied. Copy a page or folder instead.",
+    "neverPublished": "The page has never been published, so it has no content to copy. Publish it first, then copy it.",
+    "otherOrganization": "Content can only be copied within its organization. Choose a space of the same organization."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -2493,7 +2497,8 @@
       "spaceAdministration": "Space administration",
       "importsAndExports": "Imports and exports",
       "storageLevelReached": "File store fills up",
-      "storageLevelCleared": "File store usage falls"
+      "storageLevelCleared": "File store usage falls",
+      "copies": "Copies I made"
     },
     "types": {
       "identityProvider": {
@@ -2583,6 +2588,10 @@
       "storage": {
         "levelReached": "{level, select, 1 {The file store is {percent, number, ::.0} % full. Nothing is blocked yet.} 2 {The file store is {percent, number, ::.0} % full. New exports and imports are refused.} other {The file store is {percent, number, ::.0} % full. Uploads are refused too.}}",
         "levelCleared": "{level, select, 0 {The file store usage is back to normal ({percent, number, ::.0} %).} 1 {The file store usage fell to {percent, number, ::.0} %. Exports, imports and uploads work again.} other {The file store usage fell to {percent, number, ::.0} %. Uploads work again; new exports and imports are still refused.}}"
+      },
+      "copy": {
+        "finished": "Your copy {itemTitle} is ready in the space {spaceKey}.",
+        "failed": "Copying {itemTitle} failed and nothing was created. Copy again."
       }
     },
     "channelFor": "{event}: {channel}",
@@ -3703,7 +3712,8 @@
         "guestInvited": "Guest invited to a page",
         "restrictionHolderAdded": "Person or group added to a page restriction",
         "restrictionHolderRemoved": "Person or group removed from a page restriction",
-        "subtreeExported": "Page exported with its subpages"
+        "subtreeExported": "Page exported with its subpages",
+        "copied": "Page copied"
       },
       "whiteboard": {
         "updateRejected": "Whiteboard change rejected",
@@ -4875,7 +4885,8 @@
       "loadFailed": "The included content could not be loaded.",
       "excerptName": "Excerpt name",
       "excerptNameHint": "Leave empty for the first excerpt of the page.",
-      "panel": "Show the title of the page above the excerpt"
+      "panel": "Show the title of the page above the excerpt",
+      "hiddenFromSomeReaders": "Not everyone who can read this page can read the included page. They see nothing here."
     },
     "excerpt": {
       "title": "Excerpt",
@@ -5272,7 +5283,8 @@
     "viewRestricted": "Restricted: only the access list can view it",
     "editRestricted": "Restricted: only the access list can edit it",
     "newWhiteboard": "New whiteboard",
-    "newWhiteboardInside": "New whiteboard inside"
+    "newWhiteboardInside": "New whiteboard inside",
+    "copy": "Copy…"
   },
   "move": {
     "title": "Move {title}",
@@ -5621,7 +5633,9 @@
       "restored": "Restored from version {number}",
       "modeChanged": "Editing mode changed",
       "imported": "From Confluence",
-      "importedNotApplied": "From Confluence, not applied"
+      "importedNotApplied": "From Confluence, not applied",
+      "copied": "Copied from {title}",
+      "copiedHidden": "Copied from another page"
     },
     "draftChanges": "{count, plural, one {# change, not published} other {# changes, not published}}",
     "compare": "Compare",
@@ -5703,7 +5717,8 @@
     "keepPublishMode": "Keep publish mode",
     "notPublishedTitle": "Not published yet",
     "notPublishedDescription": "Only editors see this page until someone publishes it.",
-    "publishedMeta": "Published {date} · version {version}"
+    "publishedMeta": "Published {date} · version {version}",
+    "openOriginal": "Open the original {title}"
   },
   "gallery": {
     "title": "Create in {space}",
@@ -6860,7 +6875,9 @@
       "deleteConfirm": "Delete space permanently",
       "deleted": "{key} was deleted.",
       "deleteFailed": "The space could not be deleted"
-    }
+    },
+    "copyOutTitle": "The copy leaves the confidential space",
+    "copyOut": "The copy is not protected from administrators, and the people above can open it."
   },
   "imports": {
     "title": "Import",
@@ -9001,5 +9018,59 @@
       },
       "sendsOrigin": "Receives the address of this instance, not the page."
     }
+  },
+  "copy": {
+    "title": "Copy {title}",
+    "description": "The copy starts from the published version, with its attachments and labels. Comments, shares and restrictions stay with the original.",
+    "space": "Space",
+    "parent": "Place below",
+    "parentHint": "Search pages and folders by title, or keep the top level.",
+    "topLevel": "Top level of the space",
+    "folder": "Folder",
+    "page": "Page",
+    "noMatch": "No page or folder matches the title.",
+    "noSpace": "You cannot create content in any space, so you cannot copy. Ask a space admin for the editor role.",
+    "position": "Position",
+    "first": "At the beginning",
+    "last": "At the end",
+    "descendants": "Copy the pages below as well",
+    "contents": "What is copied",
+    "items": "{count, plural, one {# item is created.} other {# items are created.}}",
+    "hidden": "{count, plural, one {# item below is left out because you cannot open it.} other {# items below are left out because you cannot open them.}}",
+    "skipped": "{count, plural, one {# item below cannot be copied: pages that were never published, meetings and meeting series stay behind.} other {# items below cannot be copied: pages that were never published, meetings and meeting series stay behind.}}",
+    "background": "This copy is large. It runs in the background, and you get a notification when it is done.",
+    "access": "Who can open the copy",
+    "impactFailed": "Who can open the copy could not be calculated",
+    "impact": {
+      "noChangeTitle": "The same people can open the copy",
+      "noChange": "Everyone who can open the original can open the copy, and nobody else.",
+      "gaining": "{count, plural, one {# person can open the copy but not the original} other {# people can open the copy but not the original}}",
+      "losing": "{count, plural, one {# person can open the original but not the copy} other {# people can open the original but not the copy}}",
+      "changing": "{count, plural, one {# person has another role on the copy} other {# people have another role on the copy}}"
+    },
+    "widerTitle": "More people can read the copy than the original",
+    "wider": "Restrictions of the original are not copied. At the new place, the people listed above can open content they cannot open today.",
+    "widerConfirm": "I want these people to be able to open the copy",
+    "widerRequired": "Confirm that these people may open the copy, or choose another place.",
+    "submit": "Copy",
+    "submitToSpace": "Copy to {space}",
+    "copied": "{title} copied",
+    "copiedToSpace": "{title} copied to {space}",
+    "left": "{count, plural, one {# item was not copied.} other {# items were not copied.}}",
+    "running": "Copying {title}",
+    "progress": "{done} of {total} items copied",
+    "closeHint": "You can close this dialog. You get a notification when the copy is done.",
+    "close": "Close",
+    "open": "Open the copy",
+    "statusFailed": "The progress of the copy could not be loaded",
+    "jobFailed": "The copy failed and nothing was created",
+    "errors": {
+      "copyChangesAccess": "Who can open the content changed after you confirmed the copy. Copy again and check the access.",
+      "storageFull": "Storage is almost full, so the copy was stopped. Your instance administrator has been informed.",
+      "copyInterrupted": "The copy was interrupted, for example by a restart. Copy again.",
+      "other": "Something went wrong while copying. Copy again; if it fails again, ask your administrator."
+    },
+    "failed": "The item could not be copied",
+    "accessChanged": "Who can open the copy changed in the meantime. Check the list below and copy again."
   }
 }

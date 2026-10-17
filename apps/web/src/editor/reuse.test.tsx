@@ -15,6 +15,7 @@ const GRAZ = "01929b1e-0000-7000-8000-000000000003";
 const LINZ = "01929b1e-0000-7000-8000-000000000004";
 const PERSON = "01929b1e-0000-7000-8000-000000000005";
 const SECRET = "01929b1e-0000-7000-8000-000000000006";
+const NARROW = "01929b1e-0000-7000-8000-000000009999";
 
 const paragraph = (text: string) => ({ type: "paragraph", content: [{ type: "text", text }] });
 
@@ -76,6 +77,7 @@ function routes(extra: Record<string, Parameters<typeof mockApi>[0][string]> = {
           document:
             query.get("excerpt") === "true" ? null : { type: "doc", content: [paragraph("Included words")] },
           references: { people: {}, pages: {}, topics: {} },
+          hiddenFromSomeReaders: query.get("targetId") === NARROW,
         },
       };
     },
@@ -285,6 +287,29 @@ describe("includes in the read view", () => {
     );
     expect(await screen.findByText(/^Restricted content/)).toBeTruthy();
     expect(await screen.findByText(/The included page Runbook was not part of the import/)).toBeTruthy();
+  });
+
+  it("tell editors when some readers of the page cannot read the included page", async () => {
+    const include = { sourceSpace: null, sourceTitle: null, excerpt: false, name: null };
+    await renderWithProviders(
+      <PreferencesProvider>
+        <IncludedContent include={{ ...include, pageId: NARROW }} hostId={PAGE} panel={false} placeholders />
+      </PreferencesProvider>,
+    );
+    expect(await screen.findByText("Included words")).toBeTruthy();
+    expect(screen.getByText(/^Not everyone who can read this page can read the included page/)).toBeTruthy();
+  });
+
+  it("show no hint to readers and none when everyone can read the included page", async () => {
+    const include = { sourceSpace: null, sourceTitle: null, excerpt: false, name: null };
+    await renderWithProviders(
+      <PreferencesProvider>
+        <IncludedContent include={{ ...include, pageId: NARROW }} hostId={PAGE} panel={false} />
+        <IncludedContent include={{ ...include, pageId: GRAZ }} hostId={PAGE} panel placeholders />
+      </PreferencesProvider>,
+    );
+    await waitFor(() => expect(screen.getAllByText("Included words")).toHaveLength(2));
+    expect(screen.queryByText(/^Not everyone who can read this page/)).toBeNull();
   });
 
   it("read the target from the block attributes", () => {

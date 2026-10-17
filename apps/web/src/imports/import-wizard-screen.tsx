@@ -148,6 +148,8 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
   );
   const [starting, setStarting] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [pendingSource, setPendingSource] = useState<ImportView["source"] | null>(null);
+  const sourceSave = useRef<Promise<unknown> | null>(null);
   const failed = useFailureToast();
   const saved = useRef(JSON.stringify(formOf(entry)));
   const suggested = useRef({ name: entry.spaceName, key: entry.spaceKey });
@@ -290,9 +292,26 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
     return true;
   };
 
+  const chooseSource = (source: ImportView["source"]) => {
+    const current = pendingSource ?? entry.source;
+    if (source === current || (source === "confluence-xml" && current === "confluence-csv")) return;
+    setPendingSource(source);
+    const save = patch({ source })
+      .catch((error: unknown) => failed(t("imports.wizard.saveFailed"), error))
+      .finally(() => {
+        if (sourceSave.current === save) {
+          sourceSave.current = null;
+          setPendingSource(null);
+        }
+      });
+    sourceSave.current = save;
+  };
+
   const next = async () => {
     if (step === "source") {
-      if (input === "export" && !entry.file?.complete) {
+      if (sourceSave.current) await sourceSave.current;
+      const fresh = queryClient.getQueryData<ImportView>(importKeys.detail(entry.id)) ?? entry;
+      if (inputOf(fresh.source) === "export" && !fresh.file?.complete) {
         fail("file", t("imports.wizard.source.fileRequired"));
         return;
       }
@@ -493,6 +512,8 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
         <SourceStep
           organizationId={organizationId}
           entry={entry}
+          source={pendingSource ?? entry.source}
+          onChoose={chooseSource}
           patch={patch}
           fileError={errors.file}
           spaceError={errors.siteSpace}
@@ -600,25 +621,24 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
 function SourceStep({
   organizationId,
   entry,
+  source,
+  onChoose,
   patch,
   fileError,
   spaceError,
 }: {
   organizationId: string;
   entry: ImportView;
+  source: ImportView["source"];
+  onChoose: (source: ImportView["source"]) => void;
   patch: (body: ImportUpdate) => Promise<ImportView>;
   fileError: string | undefined;
   spaceError: string | undefined;
 }) {
   const { t } = useTranslation();
-  const failed = useFailureToast();
-  const choose = (source: ImportView["source"]) => {
-    if (source === entry.source || (source === "confluence-xml" && entry.source === "confluence-csv")) return;
-    void patch({ source }).catch((error: unknown) => failed(t("imports.wizard.saveFailed"), error));
-  };
   return (
     <>
-      <SourceChoice entry={entry} onChoose={choose} />
+      <SourceChoice source={source} onChoose={onChoose} />
       {inputOf(entry.source) === "export" ? (
         <>
           <Section title={t("imports.wizard.source.formatTitle")}>
@@ -626,8 +646,8 @@ function SourceStep({
               <RadioGroup
                 label={t("imports.wizard.source.formatTitle")}
                 variant="card"
-                value={entry.source}
-                onValueChange={(value) => choose(value as ImportView["source"])}
+                value={source}
+                onValueChange={(value) => onChoose(value as ImportView["source"])}
                 options={(["confluence-xml", "confluence-csv"] as const).map((value) => ({
                   value,
                   label: t(`imports.sources.${value}.label`),

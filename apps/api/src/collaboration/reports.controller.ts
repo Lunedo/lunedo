@@ -213,7 +213,7 @@ export class ReportsController {
   @ApiRoute({
     summary: "Get content included in a page",
     description:
-      "Returns the published content of another page, or its excerpt, as an include block of the page shows it, with the caller's permissions. A page that was not part of a Confluence import is found by its space key and title once it is imported into the organization. A page the caller cannot read answers like a page that does not exist.",
+      "Returns the published content of another page, or its excerpt, as an include block of the page shows it, with the caller's permissions. For people who can edit the page, it also says whether some of its readers cannot read the included page. A page that was not part of a Confluence import is found by its space key and title once it is imported into the organization. A page the caller cannot read answers like a page that does not exist.",
     tags: [TAG],
     params: pageParams,
     query: inclusionQuerySchema,
@@ -230,6 +230,7 @@ export class ReportsController {
         },
         document: exampleDocument,
         references: { people: {}, pages: {}, topics: {} },
+        hiddenFromSomeReaders: false,
       },
     },
   })
@@ -253,6 +254,7 @@ export class ReportsController {
         page: included.page,
         document: null,
         references: { people: {}, pages: {}, topics: {} },
+        hiddenFromSomeReaders: included.hiddenFromSomeReaders,
       };
     }
     return {
@@ -260,6 +262,7 @@ export class ReportsController {
       page: included.page,
       document: included.document,
       references: await this.#services.documents.references(actor, included.document),
+      hiddenFromSomeReaders: included.hiddenFromSomeReaders,
     };
   }
 }

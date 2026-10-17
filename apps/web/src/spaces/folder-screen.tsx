@@ -1,7 +1,16 @@
 import { Button, EmptyState, IconButton, Menu, PageHeader, SegmentedControl, Skeleton } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, Link } from "@tanstack/react-router";
-import { ArrowRightLeft, FilePlus, Folder, FolderOpen, Link2, MoreHorizontal, Move } from "lucide-react";
+import {
+  ArrowRightLeft,
+  Copy,
+  FilePlus,
+  Folder,
+  FolderOpen,
+  Link2,
+  MoreHorizontal,
+  Move,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
@@ -28,7 +37,7 @@ const route = getRouteApi("/app/spaces/$spaceKey/folders/$itemId/{-$slug}");
 export function FolderScreen() {
   const { t } = useTranslation();
   const { itemId, slug } = route.useParams();
-  const { space, canEdit, openCreate, openMove } = useSpace();
+  const { space, canEdit, openCreate, openMove, openCopy } = useSpace();
   const queryClient = useQueryClient();
   const item = useQuery(itemQuery(itemId));
   const convert = useConvert();
@@ -109,6 +118,7 @@ export function FolderScreen() {
                     },
                     { type: "separator" },
                     { label: t("tree.move"), icon: Move, onSelect: () => openMove(folder) },
+                    { label: t("tree.copy"), icon: Copy, onSelect: () => openCopy(folder) },
                     {
                       label: t("tree.convertToPage"),
                       icon: ArrowRightLeft,

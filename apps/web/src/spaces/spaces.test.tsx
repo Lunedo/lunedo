@@ -92,6 +92,49 @@ afterEach(() => {
   window.history.replaceState(null, "", "/");
 });
 
+function copyImpact(wider: boolean) {
+  return {
+    gaining: wider ? 1 : 0,
+    losing: 0,
+    raised: 0,
+    lowered: 0,
+    unlisted: 0,
+    truncated: false,
+    changes: wider ? [{ accountId: ANNA, name: "Anna Berger", before: null, after: "reader" }] : [],
+    leavesConfidential: false,
+    widerAccess: wider,
+    confirmation: wider ? "confirmed-copy" : null,
+    items: 3,
+    hidden: 2,
+    skipped: 0,
+    background: false,
+  };
+}
+
+const COPY = "01929b1e-0000-7000-8000-0000000000e1";
+
+function itemCopy(state: "queued" | "running" | "done", done = 0) {
+  return {
+    id: "01929b1e-0000-7000-8000-0000000000e2",
+    state,
+    title: "Network",
+    descendants: true,
+    sourceItemId: NETWORK,
+    targetSpaceId: SPACE_ID,
+    progress: { done, total: 30 },
+    copied: state === "done" ? 30 : 0,
+    hidden: 0,
+    skipped: 0,
+    item:
+      state === "done"
+        ? { id: COPY, spaceId: SPACE_ID, spaceKey: "ITOPS", kind: "page", title: "Copy of Network" }
+        : null,
+    errorCode: null,
+    createdAt: "2026-10-17T09:00:00.000Z",
+    finishedAt: state === "done" ? "2026-10-17T09:00:05.000Z" : null,
+  };
+}
+
 function moveImpact(change: { losing?: number; after?: "reader" | null }) {
   const changed = change.losing !== undefined;
   return {
@@ -554,6 +597,127 @@ describe("page tree", () => {
         },
       ),
     );
+  });
+
+  it("copies an item only after the person confirms that more people can read the copy", async () => {
+    const { tree, requests } = await renderTree({
+      "GET /api/v1/spaces": () => ({ body: { items: [space()], nextCursor: null } }),
+      [`POST /api/v1/items/${NETWORK}/copy/preview`]: () => ({ body: copyImpact(true) }),
+      [`POST /api/v1/items/${NETWORK}/copy`]: () => ({ body: itemCopy("done") }),
+    });
+    const network = within(tree).getByRole("treeitem", { name: "Network" });
+    await userEvent.click(within(network).getByRole("button", { name: "Actions for Network" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Copy…" }));
+    const dialog = await screen.findByRole("dialog", { name: "Copy Network" });
+    const section = await within(dialog).findByRole("region", { name: "Who can open the copy" });
+    expect(await within(section).findByText("Anna Berger · Reader")).toBeTruthy();
+    expect(within(section).getByText("1 person can open the copy but not the original")).toBeTruthy();
+    expect(
+      within(section).getByText("2 items below are left out because you cannot open them."),
+    ).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole("button", { name: /^Copy$/ }));
+    expect(
+      await within(dialog).findByText(
+        "Confirm that these people may open the copy, or choose another place.",
+      ),
+    ).toBeTruthy();
+    const confirm = within(dialog).getByRole("checkbox", {
+      name: "I want these people to be able to open the copy",
+    });
+    expect(document.activeElement).toBe(confirm);
+    expect(requests.some((request) => request.path.endsWith(`/items/${NETWORK}/copy`))).toBe(false);
+    await userEvent.click(confirm);
+    await userEvent.click(within(dialog).getByRole("button", { name: /^Copy$/ }));
+    await waitFor(() =>
+      expect(requests.find((request) => request.path.endsWith(`/items/${NETWORK}/copy`))?.body).toEqual({
+        spaceId: SPACE_ID,
+        parentId: null,
+        descendants: false,
+        confirmation: "confirmed-copy",
+      }),
+    );
+    expect(await screen.findByText("Network copied")).toBeTruthy();
+    expect(requests.find((request) => request.path.includes("/api/v1/spaces?"))?.path).toContain(
+      "role=editor",
+    );
+  });
+
+  it("asks again for the confirmation when another place changes who can read the copy", async () => {
+    let previews = 0;
+    const other = {
+      ...space(),
+      id: "01929b1e-0000-7000-8000-0000000000f1",
+      key: "HR",
+      name: "Human Resources",
+    };
+    await renderTree({
+      "GET /api/v1/spaces": () => ({ body: { items: [space(), other], nextCursor: null } }),
+      [`POST /api/v1/items/${NETWORK}/copy/preview`]: () => {
+        previews += 1;
+        return { body: { ...copyImpact(true), confirmation: `confirmed-${previews}` } };
+      },
+    });
+    const tree = screen.getByRole("tree", { name: "Page tree" });
+    const network = within(tree).getByRole("treeitem", { name: "Network" });
+    await userEvent.click(within(network).getByRole("button", { name: "Actions for Network" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Copy…" }));
+    const dialog = await screen.findByRole("dialog", { name: "Copy Network" });
+    const confirm = await within(dialog).findByRole("checkbox", {
+      name: "I want these people to be able to open the copy",
+    });
+    await userEvent.click(confirm);
+    expect(confirm.getAttribute("aria-checked")).toBe("true");
+    await userEvent.click(within(dialog).getByRole("combobox", { name: "Space" }));
+    await userEvent.click(await screen.findByRole("option", { name: /Human Resources/ }));
+    await waitFor(() =>
+      expect(
+        within(dialog)
+          .getByRole("checkbox", { name: "I want these people to be able to open the copy" })
+          .getAttribute("aria-checked"),
+      ).toBe("false"),
+    );
+  });
+
+  it("shows the progress of a large copy until it is done", async () => {
+    let polls = 0;
+    await renderTree({
+      "GET /api/v1/spaces": () => ({ body: { items: [space()], nextCursor: null } }),
+      [`POST /api/v1/items/${NETWORK}/copy/preview`]: () => ({
+        body: { ...copyImpact(false), items: 30, hidden: 0, background: true },
+      }),
+      [`POST /api/v1/items/${NETWORK}/copy`]: () => ({ body: itemCopy("queued") }),
+      "GET /api/v1/copies/01929b1e-0000-7000-8000-0000000000e2": () => {
+        polls += 1;
+        return { body: polls > 1 ? itemCopy("done") : itemCopy("running", 15) };
+      },
+    });
+    const tree = screen.getByRole("tree", { name: "Page tree" });
+    const network = within(tree).getByRole("treeitem", { name: "Network" });
+    await userEvent.click(within(network).getByRole("button", { name: "Actions for Network" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Copy…" }));
+    const dialog = await screen.findByRole("dialog", { name: "Copy Network" });
+    expect(await within(dialog).findByText(/It runs in the background/)).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole("button", { name: /^Copy$/ }));
+    const running = await screen.findByRole("dialog", { name: "Copying Network" });
+    expect(await within(running).findByText("15 of 30 items copied")).toBeTruthy();
+    expect(within(running).getByRole("progressbar").getAttribute("aria-valuenow")).toBe("50");
+    expect(await screen.findByText("Network copied", {}, { timeout: 5000 })).toBeTruthy();
+  });
+
+  it("offers Copy to readers, who can copy into spaces where they create content", async () => {
+    mockApi({
+      ...baseRoutes(),
+      ...spaceRoutes("reader"),
+      "GET /api/v1/spaces": () => ({ body: { items: [], nextCursor: null } }),
+    });
+    await renderAt(`/spaces/ITOPS/folders/${RUNBOOKS}/runbooks`);
+    const tree = await screen.findByRole("tree", { name: "Page tree" });
+    const network = await within(tree).findByRole("treeitem", { name: "Network" });
+    await userEvent.click(within(network).getByRole("button", { name: "Actions for Network" }));
+    expect(screen.queryByRole("menuitem", { name: "Move…" })).toBeNull();
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Copy…" }));
+    const dialog = await screen.findByRole("dialog", { name: "Copy Network" });
+    expect(await within(dialog).findByText(/You cannot create content in any space/)).toBeTruthy();
   });
 
   it("offers the export of the space only to people who may export it", async () => {

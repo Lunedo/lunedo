@@ -12,6 +12,7 @@ import { type Principal, SYSTEM } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import { queueBlogAnnouncement } from "../collaboration/blog-subscriptions.js";
 import { type ContentActivity, syncCommentAnchors } from "../collaboration/content.js";
+import { type CopiedFrom, copiedFrom } from "../copies/sources.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import {
   attachmentDraftChanges,
@@ -55,6 +56,7 @@ export interface PageVersion {
   createdAt: Date;
   createdBy: VersionPerson | null;
   contributors: VersionPerson[];
+  copiedFrom: CopiedFrom | null;
 }
 
 export interface VersionContent extends PageVersion {
@@ -655,8 +657,11 @@ export class VersionService {
       created_at: Date | string;
       created_by: string | null;
       contributors: string[];
+      copied_from_id: string | null;
+      copied_from_title: string | null;
     }>(sql`
-      select number, title, note, reason, restored_from, created_at, created_by, contributors
+      select number, title, note, reason, restored_from, created_at, created_by, contributors, copied_from_id,
+        copied_from_title
       from page_versions where item_id = ${itemId} order by number desc limit 1000`);
     const names = await this.#people.names(
       result.rows.flatMap((row) => [...row.contributors, ...(row.created_by ? [row.created_by] : [])]),
@@ -670,6 +675,7 @@ export class VersionService {
       createdAt: new Date(row.created_at),
       createdBy: this.#person(names, row.created_by),
       contributors: row.contributors.map((id) => ({ id, name: names.get(id) ?? null })),
+      copiedFrom: copiedFrom(row),
     }));
   }
 
@@ -683,10 +689,13 @@ export class VersionService {
       created_at: Date | string;
       created_by: string | null;
       contributors: string[];
+      copied_from_id: string | null;
+      copied_from_title: string | null;
       document: unknown;
       schema_version: number;
     }>(sql`
-      select number, title, note, reason, restored_from, created_at, created_by, contributors, document, schema_version
+      select number, title, note, reason, restored_from, created_at, created_by, contributors, copied_from_id,
+        copied_from_title, document, schema_version
       from page_versions where item_id = ${itemId} and number = ${number}`);
     const row = versions.rows[0];
     if (!row) return null;
@@ -703,6 +712,7 @@ export class VersionService {
       createdAt: new Date(row.created_at),
       createdBy: this.#person(names, row.created_by),
       contributors: row.contributors.map((id) => ({ id, name: names.get(id) ?? null })),
+      copiedFrom: copiedFrom(row),
       document: migrated(row.document, row.schema_version),
     };
   }
@@ -900,6 +910,7 @@ export async function insertFirstVersion(
   tx: Transaction,
   itemId: string,
   actorId: string | null,
+  copiedFrom?: { itemId: string; title: string },
 ): Promise<void> {
   const result = await tx.execute<{ title: string; state: Buffer; snapshot: unknown; revision: number }>(sql`
     select t.title, d.state, d.snapshot, d.revision from tree_items t join page_documents d on d.item_id = t.id
@@ -912,10 +923,11 @@ export async function insertFirstVersion(
   doc.destroy();
   const id = uuidv7();
   await tx.execute(sql`
-    insert into page_versions (id, item_id, number, title, document, schema_version, reason, revision, state_vector,
-      contributors, created_by)
+    insert into page_versions (id, item_id, number, title, document, schema_version, reason, copied_from_id,
+      copied_from_title, revision, state_vector, contributors, created_by)
     values (${id}, ${itemId}, 1, ${row.title}, ${JSON.stringify(row.snapshot)}::jsonb, ${editorSchemaVersion},
-      'published', ${row.revision}, ${stateVector}, ${sql.param(actorId ? [actorId] : [])}::uuid[], ${actorId})`);
+      ${copiedFrom ? "copied" : "published"}, ${copiedFrom?.itemId ?? null}, ${copiedFrom?.title ?? null},
+      ${row.revision}, ${stateVector}, ${sql.param(actorId ? [actorId] : [])}::uuid[], ${actorId})`);
   await tx.execute(sql`update page_documents set versioned_revision = revision where item_id = ${itemId}`);
   await tx.execute(sql`update tree_items set published_version_id = ${id} where id = ${itemId}`);
 }

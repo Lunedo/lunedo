@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { copyAttachmentAttributes } from "../copying.js";
 import type { ValidNode } from "../json.js";
 import { attrOf, defineModule, type HtmlRenderer, optional, required } from "../module.js";
 import { element, htmlAttributes, markdownUrl } from "../text.js";
@@ -36,6 +37,10 @@ export const drawingModule = defineModule({
         previewVersion: optional(version, null),
         text: optional(z.string().max(MAX_DRAWING_TEXT), ""),
       },
+      copy: copyAttachmentAttributes([
+        ["sceneId", "sceneVersion"],
+        ["previewId", "previewVersion"],
+      ]),
       validate: (node) => {
         const scene = attrOf<string | null>(node, "sceneId");
         const preview = attrOf<string | null>(node, "previewId");

@@ -81,6 +81,7 @@ function inSpace(ui: ReactNode, canEdit: boolean) {
     space: { id: SPACE, key: "OPS", name: "Operations" },
     canEdit,
     openMove: () => {},
+    openCopy: () => {},
     openCreate: () => {},
   } as unknown as SpaceContextValue;
   return <SpaceContext value={value}>{ui}</SpaceContext>;
