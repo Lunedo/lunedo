@@ -354,8 +354,8 @@ jobs:
 
   identity-providers:
     name: Sign-in through identity providers
-    needs: [scope, e2e]
-    if: ${{ !cancelled() && needs.scope.result == 'success' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository || !contains(vars.RUNNER_LABELS, 'self-hosted')) && needs.scope.outputs.identity-providers == 'true' }}
+    needs: [scope, browsers-first]
+    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository || !contains(vars.RUNNER_LABELS, 'self-hosted')) && needs.scope.outputs.identity-providers == 'true'
     runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 30
     env:
