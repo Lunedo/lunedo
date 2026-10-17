@@ -1095,11 +1095,11 @@ details.ph-expand > summary {
 }
 
 .ph-content .ph-tabs-list {
-  @apply flex flex-wrap gap-1 border-b border-border px-2;
+  @apply flex gap-1 overflow-x-auto border-b border-border px-2;
 }
 
 .ph-content .ph-tab-button {
-  @apply -mb-px min-h-hit max-w-full truncate border-b-2 border-transparent px-3 font-medium text-text-muted hover:text-text focus-visible:focus-ring;
+  @apply -mb-px min-h-hit max-w-full shrink-0 truncate border-b-2 border-transparent px-3 font-medium text-text-muted hover:text-text focus-visible:focus-ring;
 }
 
 .ph-content .ph-tab-button[aria-selected="true"] {

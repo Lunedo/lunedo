@@ -66,6 +66,7 @@ export function enhanceTabs(root: HTMLElement, narrow: boolean): HTMLElement[] {
         const panel = panels[index];
         const toggle = toggles[index];
         button.id = `${id}-tab-${index}`;
+        button.title = button.textContent ?? "";
         if (toggle) toggle.id = `${id}-toggle-${index}`;
         if (panel) {
           panel.id = `${id}-panel-${index}`;

@@ -4886,7 +4886,8 @@
       "unknownAllowlist": "The embed allowlist could not be loaded. Readers see the content if the address is on it.",
       "open": "Open at the source",
       "cancel": "Cancel",
-      "insert": "Insert embed"
+      "insert": "Insert embed",
+      "addressPlaceholder": "https://www.youtube.com/watch?v=…"
     },
     "filePreview": {
       "label": "File preview",
@@ -8664,7 +8665,9 @@
       "narrowed": "This organization allows only the services checked here.",
       "reset": "Allow all services of the instance",
       "isAllowed": "Allowed",
-      "isBlocked": "Not allowed"
+      "isBlocked": "Not allowed",
+      "patternPlaceholder": "https://videos.example.org/watch?v='{video}'",
+      "embedPlaceholder": "https://videos.example.org/embed/'{video}'"
     }
   }
 }

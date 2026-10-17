@@ -109,7 +109,7 @@ function AddServiceForm({
           value={pattern}
           inputMode="url"
           className="font-mono"
-          placeholder="https://videos.example.org/watch?v={video}"
+          placeholder={t("embeds.allowlist.patternPlaceholder")}
           invalid={!!errors.pattern}
           onChange={(event) => setPattern(event.target.value)}
         />
@@ -120,7 +120,7 @@ function AddServiceForm({
             value={embed}
             inputMode="url"
             className="font-mono"
-            placeholder="https://videos.example.org/embed/{video}"
+            placeholder={t("embeds.allowlist.embedPlaceholder")}
             onChange={(event) => setEmbed(event.target.value)}
           />
         </Field>
@@ -159,7 +159,7 @@ export function InstanceEmbedAllowlist({
     toast({
       variant: "success",
       title: t("embeds.allowlist.removed", { name: service.name }),
-      undo: { onUndo: () => void save(before), seconds: 8 },
+      undo: { onUndo: () => void save(before), seconds: 10 },
     });
   };
 

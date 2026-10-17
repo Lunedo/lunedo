@@ -75,7 +75,7 @@ export function EmbedDialog({
             value={address}
             invalid={invalid}
             inputMode="url"
-            placeholder="https://"
+            placeholder={t("editor.embed.addressPlaceholder")}
             onChange={(event) => {
               setAddress(event.target.value);
               if (invalid) setInvalid(embedAddress(event.target.value) === null);

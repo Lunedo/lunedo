@@ -4886,7 +4886,8 @@
       "unknownAllowlist": "Die Liste erlaubter Einbettungen konnte nicht geladen werden. Lesende sehen den Inhalt, wenn die Adresse darauf steht.",
       "open": "Beim Dienst öffnen",
       "cancel": "Abbrechen",
-      "insert": "Einbettung einfügen"
+      "insert": "Einbettung einfügen",
+      "addressPlaceholder": "https://www.youtube.com/watch?v=…"
     },
     "filePreview": {
       "label": "Dateivorschau",
@@ -8664,7 +8665,9 @@
       "narrowed": "Diese Organisation erlaubt nur die hier angehakten Dienste.",
       "reset": "Alle Dienste der Instanz erlauben",
       "isAllowed": "Erlaubt",
-      "isBlocked": "Nicht erlaubt"
+      "isBlocked": "Nicht erlaubt",
+      "patternPlaceholder": "https://videos.example.org/watch?v='{video}'",
+      "embedPlaceholder": "https://videos.example.org/embed/'{video}'"
     }
   }
 }

@@ -369,7 +369,7 @@ export function TabsView({ node, editor, getPos, selected }: NodeViewProps) {
     toast({
       variant: "success",
       title: t("editor.tabs.removed", { name: title }),
-      undo: { onUndo: () => editor.chain().focus().undo().run(), seconds: 5 },
+      undo: { onUndo: () => editor.chain().focus().undo().run(), seconds: 10 },
     });
   };
 
@@ -394,7 +394,11 @@ export function TabsView({ node, editor, getPos, selected }: NodeViewProps) {
       data-type="tabs"
     >
       <div contentEditable={false} className="ph-tabs-editor-header flex flex-col gap-2">
-        <div className="flex flex-wrap items-center gap-1" role="toolbar" aria-label={t("editor.tabs.label")}>
+        <div
+          className="flex items-center gap-1 overflow-x-auto"
+          role="toolbar"
+          aria-label={t("editor.tabs.label")}
+        >
           {titles.map((title, index) => (
             <button
               // biome-ignore lint/suspicious/noArrayIndexKey: tabs are identified by their position in the block
