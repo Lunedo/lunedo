@@ -85,7 +85,9 @@ function importView(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function setup(routes: Record<string, () => { status?: number; body?: unknown }>, permissions: string[]) {
+type Reply = { status?: number; body?: unknown };
+
+function setup(routes: Record<string, () => Reply | Promise<Reply>>, permissions: string[]) {
   return mockApi({
     "GET /api/v1/instance/info": () => ({
       body: {
@@ -867,6 +869,36 @@ describe("new import sources in the wizard", () => {
     expect(selections.map((request) => request.body)).toEqual([{ spaceKeys: ["ITOPS", "SALES"] }]);
     const order = api.requests.map((request) => request.method);
     expect(order.indexOf("PUT")).toBeLessThan(order.lastIndexOf("PATCH"));
+  });
+
+  it("shows the chosen source at once and continues with its steps once it is saved", async () => {
+    let current = draft({ source: "confluence-xml", draftStep: 0 });
+    let release: () => void = () => {};
+    const saved = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const api = setup(
+      {
+        [`GET /api/v1/imports/${IMPORT_ID}`]: () => ({ body: current }),
+        [`PATCH /api/v1/imports/${IMPORT_ID}`]: async () => {
+          const body = (api.requests.at(-1)?.body ?? {}) as { source?: string; draftStep?: number };
+          if (body.source) {
+            await saved;
+            current = { ...current, source: body.source as typeof current.source };
+          }
+          if (body.draftStep !== undefined) current = { ...current, draftStep: body.draftStep };
+          return { body: current };
+        },
+      },
+      ["organization.imports.manage"],
+    );
+    await open(`/settings/organizations/${ORGANIZATION.id}/imports/${IMPORT_ID}/setup?step=0`);
+    const markdown = await screen.findByRole("radio", { name: /Markdown folder/ });
+    await userEvent.click(markdown);
+    expect(markdown.getAttribute("aria-checked")).toBe("true");
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    release();
+    expect(await screen.findByRole("heading", { name: "Upload", level: 1 })).toBeTruthy();
   });
 
   it("refuses Word documents with macros before uploading anything", async () => {

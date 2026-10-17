@@ -85,7 +85,8 @@ export interface RecordedRequest {
   headers: Headers;
 }
 
-type Handler = (request: RecordedRequest) => { status?: number; body?: unknown };
+type Reply = { status?: number; body?: unknown };
+type Handler = (request: RecordedRequest) => Reply | Promise<Reply>;
 
 function parseBody(text: string): unknown {
   try {
@@ -121,7 +122,7 @@ export function mockApi(routes: Record<string, Handler>) {
         { status: 404, headers: { "content-type": "application/problem+json" } },
       );
     }
-    const { status = 200, body } = handler(recorded);
+    const { status = 200, body } = await handler(recorded);
     if (status === 204) return new Response(null, { status });
     const problem = status >= 400;
     return new Response(JSON.stringify(body ?? {}), {
