@@ -120,6 +120,7 @@ describe.skipIf(!baseUrl)("Confluence export readers", () => {
       key: "SYN",
       name: "Synthetic space",
       homePageId: PAGE.home,
+      description: null,
     });
     expect(result.pages.map((page) => [page.sourceId, page.parentId])).toEqual([
       [PAGE.orphan, null],
