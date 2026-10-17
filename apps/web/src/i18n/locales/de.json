@@ -7253,6 +7253,31 @@
           "title": "{count, plural, one {# Einbindung verweist} other {# Einbindungen verweisen}} auf Seiten außerhalb des Exports",
           "hint": "Sie zeigen die Seite, sobald sie in diese Organisation importiert ist.",
           "entry": "Makro {macro} bindet „{title}“ aus dem Bereich {spaceKey} ein, die nicht Teil des Exports war."
+        },
+        "embedNotAllowed": {
+          "title": "{count, plural, one {# Einbettung wird} other {# Einbettungen werden}} als Link angezeigt",
+          "hint": "Ihre Adresse steht nicht auf der Liste erlaubter Einbettungen dieser Organisation. Nimm den Dienst in die Liste auf, um sie eingebettet anzuzeigen.",
+          "entry": "Makro {macro}: {url} steht nicht auf der Liste erlaubter Einbettungen und wird als Link angezeigt."
+        },
+        "previewOnly": {
+          "title": "{count, plural, one {# Diagramm} other {# Diagramme}} anderer Apps als Bild übernommen",
+          "hint": "Pagehall kann sie nicht bearbeiten. Die Seiten zeigen die gespeicherte Vorschau und einen Link oder die Quelldatei.",
+          "entry": "Makro {macro}: „{name}“ wird als gespeichertes Vorschaubild angezeigt."
+        },
+        "previewMissing": {
+          "title": "{count, plural, one {# Diagramm} other {# Diagramme}} anderer Apps ohne Vorschau",
+          "hint": "Der Export enthält kein Vorschaubild. Die Seiten zeigen einen Link zur Quelle, wenn eine bekannt ist.",
+          "entry": "Makro {macro}: „{name}“ hat im Export kein Vorschaubild."
+        },
+        "chartNotImported": {
+          "title": "{count, plural, one {# Diagramm oder Pivot-Tabelle} other {# Diagramme und Pivot-Tabellen}} nicht importiert",
+          "hint": "Die Seiten zeigen einen Hinweis und die Quelltabelle.",
+          "entry": "Makro {macro} wird durch seine Quelltabelle ersetzt."
+        },
+        "jiraNotImported": {
+          "title": "{count, plural, one {# Jira-Makro} other {# Jira-Makros}} als Text importiert",
+          "hint": "Die Seiten zeigen den Vorgangsschlüssel oder die Abfrage mit dem Hinweis, dass Jira-Inhalte nicht importiert wurden.",
+          "entry": "Makro {macro}: {issues}"
         }
       },
       "people": "Personen",

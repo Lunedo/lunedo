@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { FileReference, MacroImportContext, MacroNote, SourceElement } from "./importing.js";
+import {
+  defaultImportTexts,
+  type FileReference,
+  type MacroImportContext,
+  type MacroNote,
+  type SourceElement,
+} from "./importing.js";
 import {
   type DocumentJson,
   modules,
@@ -211,6 +217,10 @@ function importContext(files: Record<string, number>, pages: Record<string, stri
     note: (note) => notes.push(note),
     newId: () => `01929b1e-0000-7000-8000-00000000010${(next++).toString(16)}`,
     diagramId: (name, pageSourceId) => `diagram:${pageSourceId ?? "own"}/${name}`,
+    embeddable: () => false,
+    numberHeadings: () => undefined,
+    text: (key) => defaultImportTexts[key],
+    jiraIssueUrl: () => null,
   };
   return { context, notes, requested };
 }

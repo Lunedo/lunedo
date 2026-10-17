@@ -7253,6 +7253,31 @@
           "title": "{count, plural, one {# include points} other {# includes point}} to pages outside the export",
           "hint": "They show the page once it is imported into this organization.",
           "entry": "Macro {macro} includes “{title}” from space {spaceKey}, which was not part of the export."
+        },
+        "embedNotAllowed": {
+          "title": "{count, plural, one {# embed is} other {# embeds are}} shown as a link",
+          "hint": "Their address is not on the embed allowlist of this organization. Add the service to the allowlist to show them embedded.",
+          "entry": "Macro {macro}: {url} is not on the embed allowlist and is shown as a link."
+        },
+        "previewOnly": {
+          "title": "{count, plural, one {# diagram} other {# diagrams}} of other apps kept as an image",
+          "hint": "Pagehall cannot edit them. The pages show the preview stored with the page and a link or the source file.",
+          "entry": "Macro {macro}: “{name}” is shown as its stored preview image."
+        },
+        "previewMissing": {
+          "title": "{count, plural, one {# diagram} other {# diagrams}} of other apps without a preview",
+          "hint": "The export contains no preview image. The pages show a link to the source where one is known.",
+          "entry": "Macro {macro}: “{name}” has no preview image in the export."
+        },
+        "chartNotImported": {
+          "title": "{count, plural, one {# chart or pivot table} other {# charts and pivot tables}} not imported",
+          "hint": "The pages show a note and the source table.",
+          "entry": "Macro {macro} is replaced by its source table."
+        },
+        "jiraNotImported": {
+          "title": "{count, plural, one {# Jira macro} other {# Jira macros}} imported as text",
+          "hint": "The pages show the issue key or query with the note that Jira content was not imported.",
+          "entry": "Macro {macro}: {issues}"
         }
       },
       "people": "People",

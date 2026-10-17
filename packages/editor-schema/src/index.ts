@@ -62,6 +62,7 @@ export type {
   SourceContent,
   SourceElement,
 } from "./importing.js";
+export { defaultImportTexts, type ImportText, importTexts } from "./importing.js";
 export type { DocumentJson, MarkJson, NodeJson, ValidMark, ValidNode } from "./json.js";
 export { buildSchema, createEditorKit, type EditorKit, type Section } from "./kit.js";
 export {

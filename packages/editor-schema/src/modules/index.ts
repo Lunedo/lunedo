@@ -27,6 +27,7 @@ import { fileModule, imageModule, sectionModule } from "./structure.js";
 import { tableModule } from "./table.js";
 import { tabsModule } from "./tabs.js";
 import { templateButtonModule, templatesModule } from "./templates.js";
+import { thirdPartyMacrosModule } from "./thirdparty.js";
 import { whiteboardModule } from "./whiteboards.js";
 
 export {
@@ -71,6 +72,7 @@ export {
   tasksModule,
   templateButtonModule,
   templatesModule,
+  thirdPartyMacrosModule,
   topicUpdateModule,
   unsupportedMacroModule,
   whiteboardModule,
@@ -120,6 +122,7 @@ export const defaultModules = [
   templateButtonModule,
   topicUpdateModule,
   decisionModule,
+  thirdPartyMacrosModule,
   unsupportedMacroModule,
 ] as const;
 
