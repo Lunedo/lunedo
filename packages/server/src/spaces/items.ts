@@ -626,7 +626,10 @@ export class TreeService {
           throw new SpaceError("invalidLinkTarget", "Links can point to pages, folders and whiteboards only");
         }
       } else {
-        throw new SpaceError("invalidLinkTarget", "A link needs a page, a folder, a whiteboard or an address");
+        throw new SpaceError(
+          "invalidLinkTarget",
+          "A link needs a page, a folder, a whiteboard or an address",
+        );
       }
     }
     const actorId = actorIdOf(actor);

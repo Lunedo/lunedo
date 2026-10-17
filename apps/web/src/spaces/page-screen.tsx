@@ -23,6 +23,7 @@ import {
   History,
   Languages,
   LayoutTemplate,
+  ListOrdered,
   Maximize2,
   Minimize2,
   MoreHorizontal,
@@ -208,7 +209,7 @@ function PageArticle({
     return () => globalThis.removeEventListener(EDIT_PAGE_EVENT, onEdit);
   });
 
-  const save = async (changes: { title?: string; width?: "fixed" | "full" }) => {
+  const save = async (changes: { title?: string; width?: "fixed" | "full"; numberHeadings?: boolean }) => {
     await request(() =>
       api.PATCH("/api/v1/items/{itemId}", { params: { path: { itemId: page.id } }, body: changes }),
     );
@@ -254,6 +255,11 @@ function PageArticle({
         label: width === "full" ? t("page.useFixedWidth") : t("page.useFullWidth"),
         icon: width === "full" ? Minimize2 : Maximize2,
         onSelect: () => void save({ width: width === "full" ? "fixed" : "full" }),
+      },
+      {
+        label: page.numberHeadings ? t("page.stopNumberingHeadings") : t("page.numberHeadings"),
+        icon: ListOrdered,
+        onSelect: () => void save({ numberHeadings: !page.numberHeadings }),
       },
       { type: "separator" },
       {
@@ -422,6 +428,7 @@ function PageArticle({
               spaceId={space.id}
               spaceKey={space.key}
               draft={publishMode}
+              numberHeadings={page.numberHeadings}
               onSaveStateChange={(state) => {
                 saveState.current = state;
               }}
@@ -436,6 +443,7 @@ function PageArticle({
           <PageContent
             pageId={page.id}
             publishMode={publishMode}
+            numberHeadings={page.numberHeadings}
             collaboration={collaboration.readView}
             {...(writable ? { onEdit: () => setEditing(true) } : {})}
           />
@@ -541,9 +549,11 @@ export function PageContent({
   publishMode,
   collaboration,
   onEdit,
+  numberHeadings = false,
 }: {
   pageId: string;
   publishMode: boolean;
+  numberHeadings?: boolean;
   collaboration: ReadViewCollaboration;
   onEdit?: () => void;
 }) {
@@ -572,6 +582,7 @@ export function PageContent({
         document={content.data.document}
         references={content.data.references}
         collaboration={collaboration}
+        numberHeadings={numberHeadings}
       />
     </>
   );

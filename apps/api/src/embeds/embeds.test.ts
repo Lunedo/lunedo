@@ -102,6 +102,10 @@ describe.skipIf(!databaseBaseUrl)("embeds, whiteboard blocks and page options th
     );
     expect(narrowed.statusCode, narrowed.body).toBe(204);
     expect(await services(member.client)).toEqual([]);
+    const overview = (
+      await member.client.get(`/api/v1/organizations/${organizationId}/embed-services`)
+    ).json();
+    expect(overview).toMatchObject({ available: [custom], narrowed: true });
 
     await owner.put(`/api/v1/organizations/${organizationId}/settings/embeds.allowedServices`, {
       clear: true,

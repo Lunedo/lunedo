@@ -133350,11 +133350,64 @@
                         "additionalProperties": false,
                         "description": "A service whose content pages can embed."
                       },
-                      "description": "Services in the order they are tried."
+                      "description": "Services pages of the organization can embed, in the order they are tried."
+                    },
+                    "available": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "ID of the service, such as `youtube`."
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Name of the service."
+                          },
+                          "rules": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "pattern": {
+                                  "type": "string",
+                                  "description": "Address pattern of a share link, an `https` address with placeholders such as `{video}` for one part of the address and `{*}` for any number of path segments."
+                                },
+                                "embed": {
+                                  "type": "string",
+                                  "description": "Embed address built from the placeholders of the pattern; `{url}` stands for the whole link, encoded."
+                                }
+                              },
+                              "required": [
+                                "pattern",
+                                "embed"
+                              ],
+                              "additionalProperties": false,
+                              "description": "How share links of a service become embed addresses."
+                            },
+                            "description": "Rules, tried in order."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "rules"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A service whose content pages can embed."
+                      },
+                      "description": "All services of the instance allowlist. The organization can narrow its list to some of them."
+                    },
+                    "narrowed": {
+                      "type": "boolean",
+                      "description": "Whether the organization narrowed the instance allowlist."
                     }
                   },
                   "required": [
-                    "services"
+                    "services",
+                    "available",
+                    "narrowed"
                   ],
                   "additionalProperties": false,
                   "description": "Services whose content pages of the organization can embed."
@@ -133411,7 +133464,78 @@
                         }
                       ]
                     }
-                  ]
+                  ],
+                  "available": [
+                    {
+                      "id": "youtube",
+                      "name": "YouTube",
+                      "rules": [
+                        {
+                          "pattern": "https://www.youtube.com/watch?v={video}",
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                        },
+                        {
+                          "pattern": "https://www.youtube.com/embed/{video}",
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                        },
+                        {
+                          "pattern": "https://www.youtube.com/shorts/{video}",
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                        },
+                        {
+                          "pattern": "https://youtube.com/watch?v={video}",
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                        },
+                        {
+                          "pattern": "https://youtube.com/embed/{video}",
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                        },
+                        {
+                          "pattern": "https://youtube.com/shorts/{video}",
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                        },
+                        {
+                          "pattern": "https://m.youtube.com/watch?v={video}",
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                        },
+                        {
+                          "pattern": "https://m.youtube.com/embed/{video}",
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                        },
+                        {
+                          "pattern": "https://m.youtube.com/shorts/{video}",
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                        },
+                        {
+                          "pattern": "https://youtu.be/{video}",
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                        },
+                        {
+                          "pattern": "https://www.youtube-nocookie.com/embed/{video}",
+                          "embed": "https://www.youtube-nocookie.com/embed/{video}"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "vimeo",
+                      "name": "Vimeo",
+                      "rules": [
+                        {
+                          "pattern": "https://vimeo.com/{video}",
+                          "embed": "https://player.vimeo.com/video/{video}?dnt=1"
+                        },
+                        {
+                          "pattern": "https://vimeo.com/{video}/{hash}",
+                          "embed": "https://player.vimeo.com/video/{video}?h={hash}&dnt=1"
+                        },
+                        {
+                          "pattern": "https://player.vimeo.com/video/{video}",
+                          "embed": "https://player.vimeo.com/video/{video}?dnt=1"
+                        }
+                      ]
+                    }
+                  ],
+                  "narrowed": true
                 }
               }
             }

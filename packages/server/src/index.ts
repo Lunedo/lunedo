@@ -282,6 +282,8 @@ export {
   type SavedDiagramSource,
 } from "./diagrams/diagrams.js";
 export { DiagramRejectedError, MAX_DRAWIO_BYTES, sanitizeDrawio } from "./diagrams/drawio.js";
+export { EmbedServices } from "./embeds/embeds.js";
+export { allowedEmbedServicesSetting, embedServicesSetting, embedSettings } from "./embeds/settings.js";
 export {
   EXPORT_RETENTION_DAYS,
   ExportError,
@@ -724,8 +726,6 @@ export {
   renderPageMarkdown,
 } from "./spaces/documents.js";
 export { type IncludedPage, IncludeService, type Inclusion } from "./spaces/includes.js";
-export { EmbedServices } from "./embeds/embeds.js";
-export { allowedEmbedServicesSetting, embedServicesSetting, embedSettings } from "./embeds/settings.js";
 export {
   cleanLinkUrl,
   ITEM_DESCRIPTION_MAX_LENGTH,

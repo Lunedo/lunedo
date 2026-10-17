@@ -35,7 +35,17 @@ export const embedServiceSchema = z
   .describe("A service whose content pages can embed.");
 
 const servicesSchema = z
-  .object({ services: z.array(embedServiceSchema).describe("Services in the order they are tried.") })
+  .object({
+    services: z
+      .array(embedServiceSchema)
+      .describe("Services pages of the organization can embed, in the order they are tried."),
+    available: z
+      .array(embedServiceSchema)
+      .describe(
+        "All services of the instance allowlist. The organization can narrow its list to some of them.",
+      ),
+    narrowed: z.boolean().describe("Whether the organization narrowed the instance allowlist."),
+  })
   .describe("Services whose content pages of the organization can embed.");
 
 @Controller("api/v1")
@@ -57,10 +67,14 @@ export class EmbedsController {
     response: {
       description: "The allowed services.",
       schema: servicesSchema,
-      example: { services: defaultEmbedServices.slice(0, 1) },
+      example: {
+        services: defaultEmbedServices.slice(0, 1),
+        available: defaultEmbedServices.slice(0, 2),
+        narrowed: true,
+      },
     },
   })
   async list(@Param("organizationId") organizationId: string) {
-    return { services: await this.#services.embeds.organization(organizationId) };
+    return this.#services.embeds.overview(organizationId);
   }
 }

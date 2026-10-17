@@ -29,6 +29,7 @@ export interface RenderMessage {
   bytes: ArrayBuffer;
   theme: "light" | "dark";
   labels: PreviewLabels;
+  zoom?: number;
 }
 
 export type FrameMessage =
@@ -50,11 +51,15 @@ export function isRenderMessage(value: unknown): value is RenderMessage {
     typeof message.kind === "string" &&
     (PREVIEW_KINDS as readonly string[]).includes(message.kind) &&
     message.bytes instanceof ArrayBuffer &&
-    typeof message.name === "string"
+    typeof message.name === "string" &&
+    (message.zoom === undefined ||
+      (Number.isInteger(message.zoom) && message.zoom >= MIN_ZOOM && message.zoom <= MAX_ZOOM))
   );
 }
 
 export const MAX_ROWS = 2000;
+export const MIN_ZOOM = 25;
+export const MAX_ZOOM = 400;
 
 export function parseCsv(text: string, delimiter = ","): { rows: string[][]; truncated: boolean } {
   const rows: string[][] = [];

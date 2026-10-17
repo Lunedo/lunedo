@@ -687,7 +687,10 @@ export class PageDocumentService {
     return result;
   }
 
-  async referencedWhiteboards(viewer: Principal, document: DocumentJson): Promise<Map<string, ReferencedBoard>> {
+  async referencedWhiteboards(
+    viewer: Principal,
+    document: DocumentJson,
+  ): Promise<Map<string, ReferencedBoard>> {
     const ids = whiteboardReferences(document);
     const result = new Map<string, ReferencedBoard>();
     if (ids.length === 0) return result;

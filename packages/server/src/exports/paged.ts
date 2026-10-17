@@ -324,7 +324,8 @@ export class PagedExport {
       for (const [id, board] of page.whiteboards ?? []) {
         if (!board.preview) continue;
         const read = await this.#boardImage(id, board.preview);
-        if (read) assets.push({ path: whiteboardPreviewPath(id), contentType: read.contentType, data: read.data });
+        if (read)
+          assets.push({ path: whiteboardPreviewPath(id), contentType: read.contentType, data: read.data });
       }
       for (const image of blocksOfType(page.document, "image")) {
         const id = image.attrs?.attachmentId;

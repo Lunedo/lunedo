@@ -1,4 +1,9 @@
-import { defaultEmbedServices, EMBED_ID_PATTERN, type EmbedService, embedServicesValue } from "@pagehall/editor-schema";
+import {
+  defaultEmbedServices,
+  EMBED_ID_PATTERN,
+  type EmbedService,
+  embedServicesValue,
+} from "@pagehall/editor-schema";
 import { z } from "zod";
 import { defineSetting } from "../settings/definition.js";
 

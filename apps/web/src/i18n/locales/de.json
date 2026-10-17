@@ -4314,7 +4314,13 @@
       "includeExcerpt": "Auszug einbinden",
       "includeExcerptDescription": "Den Auszug einer anderen Seite anzeigen",
       "includePage": "Seite einbinden",
-      "includePageDescription": "Den Inhalt einer anderen Seite anzeigen"
+      "includePageDescription": "Den Inhalt einer anderen Seite anzeigen",
+      "embed": "Externe Einbettung",
+      "embedDescription": "Video, Design, Präsentation oder Dokument von der Allowlist",
+      "whiteboard": "Link zu Whiteboard",
+      "whiteboardDescription": "Vorschau eines Whiteboards, die es öffnet",
+      "tabs": "Tabs",
+      "tabsDescription": "Benannte Tabs mit jeweils eigenem Inhalt"
     },
     "mention": {
       "unknown": "Unbekannte Person"
@@ -4861,6 +4867,63 @@
       "title": "Roadmap",
       "readOnly": "Importierte Roadmap. Roadmaps lassen sich bearbeiten, sobald die Planung verfügbar ist.",
       "asList": "Als Liste anzeigen"
+    },
+    "embed": {
+      "label": "Externe Einbettung",
+      "notAllowed": "Nicht auf der Liste erlaubter Einbettungen, daher als Link angezeigt. Organisationsadministratoren verwalten die Liste.",
+      "from": "Eingebettet von {service}",
+      "loadsWhenVisible": "Der Inhalt wird vom Dienst geladen, sobald du dorthin scrollst.",
+      "address": "Adresse",
+      "addressHint": "Füge den Freigabelink des Videos, Designs, der Präsentation oder des Dokuments ein.",
+      "addressInvalid": "Gib eine Adresse ein, die mit https:// oder http:// beginnt.",
+      "title": "Titel",
+      "titleHint": "Wird mit dem Link im Druck, in Word und dann angezeigt, wenn der Dienst nicht erreichbar ist.",
+      "height": "Höhe in Pixeln",
+      "heightHint": "Von {min} bis {max}. Leer lassen für die Standardhöhe.",
+      "heightInvalid": "Gib eine Höhe von {min} bis {max} Pixeln ein oder lass das Feld leer.",
+      "allowed": "{service} steht auf der Liste erlaubter Einbettungen. Lesende sehen den Inhalt des Dienstes.",
+      "blocked": "Diese Adresse steht nicht auf der Liste erlaubter Einbettungen. Lesende sehen sie als Link.",
+      "unknownAllowlist": "Die Liste erlaubter Einbettungen konnte nicht geladen werden. Lesende sehen den Inhalt, wenn die Adresse darauf steht.",
+      "open": "Beim Dienst öffnen",
+      "cancel": "Abbrechen",
+      "insert": "Einbettung einfügen"
+    },
+    "filePreview": {
+      "label": "Dateivorschau",
+      "show": "Vorschau in der Seite anzeigen",
+      "height": "Höhe in Pixeln",
+      "heightHint": "Von {min} bis {max}. Leer lassen für die Standardhöhe.",
+      "heightInvalid": "Gib eine Höhe von {min} bis {max} Pixeln ein oder lass das Feld leer.",
+      "zoom": "Seitengröße",
+      "zoomFit": "An Breite anpassen",
+      "zoomPercent": "{percent} %",
+      "restricted": "Eingeschränkter Inhalt. Wer diese Datei nicht öffnen darf, sieht hier nichts.",
+      "none": "Für diesen Dateityp gibt es keine Vorschau. Lesende sehen den Link zum Herunterladen.",
+      "loadFailed": "Die Vorschau der Datei konnte nicht geladen werden."
+    },
+    "whiteboard": {
+      "label": "Whiteboard",
+      "choose": "Wähle ein Whiteboard für diesen Block.",
+      "picker": "Whiteboard",
+      "pickerHint": "Lesende sehen das Whiteboard nur, wenn sie es öffnen dürfen.",
+      "noMatch": "Kein Whiteboard passt.",
+      "open": "Whiteboard öffnen",
+      "loadFailed": "Das Whiteboard konnte nicht geladen werden."
+    },
+    "tabs": {
+      "label": "Tabs",
+      "tabName": "Name des Tabs",
+      "newTab": "Tab {number}",
+      "add": "Tab hinzufügen",
+      "rename": "Tab umbenennen",
+      "remove": "Tab {name} entfernen",
+      "moveLeft": "Tab {name} nach links verschieben",
+      "moveRight": "Tab {name} nach rechts verschieben",
+      "nameRequired": "Gib einen Namen für den Tab ein.",
+      "maximum": "Ein Tabs-Block enthält höchstens {count} Tabs.",
+      "lastTab": "Der letzte Tab kann nicht entfernt werden. Lösche stattdessen den ganzen Block.",
+      "removed": "Tab {name} entfernt.",
+      "undo": "Rückgängig"
     }
   },
   "spaces": {
@@ -5285,7 +5348,9 @@
     "widthFull": "Voll",
     "backlinks": "{count, plural, one {Verlinkt von # Seite} other {Verlinkt von # Seiten}}",
     "useFixedWidth": "Feste Breite verwenden",
-    "useFullWidth": "Volle Breite verwenden"
+    "useFullWidth": "Volle Breite verwenden",
+    "numberHeadings": "Überschriften nummerieren",
+    "stopNumberingHeadings": "Überschriften nicht mehr nummerieren"
   },
   "pageTitle": {
     "edit": "{title} umbenennen",
@@ -8545,6 +8610,36 @@
       "drawio": "draw.io-Editor",
       "drawioDescription": "Version {version}, mit Pagehall ausgeliefert. Er verbindet sich nie mit diagrams.net.",
       "servedLocally": "Lokal ausgeliefert"
+    }
+  },
+  "embeds": {
+    "allowlist": {
+      "title": "Liste erlaubter Einbettungen",
+      "instanceDescription": "Seiten können nur Inhalte dieser Dienste einbetten. Andere Adressen erscheinen als Link. Der Browser der Lesenden lädt den Inhalt direkt vom Dienst. Organisationen können diese Liste einschränken, nicht erweitern.",
+      "organizationDescription": "Seiten dieser Organisation können Inhalte der Dienste einbetten, die du hier erlaubst. Du kannst nur aus der Liste der Instanz wählen.",
+      "empty": "Kein Dienst ist erlaubt. Einbettungen erscheinen als Links.",
+      "instanceEmpty": "Die Instanz erlaubt keinen Dienst, deshalb erscheinen Einbettungen in jeder Organisation als Links.",
+      "loadFailed": "Die Liste erlaubter Einbettungen konnte nicht geladen werden.",
+      "name": "Name des Dienstes",
+      "nameRequired": "Gib einen Namen für den Dienst ein.",
+      "tooMany": "Die Liste enthält höchstens {count} Dienste. Entferne zuerst einen.",
+      "pattern": "Adressmuster",
+      "patternHint": "Eine https-Adresse mit Platzhaltern: '{name}' steht für einen Teil der Adresse, '{*}' für beliebig viele Pfadteile.",
+      "patternInvalid": "Gib eine https-Adresse ein, die mit einer festen Domain endet und deren Platzhalter ganze Teile der Adresse füllen, etwa https://videos.example.org/watch?v='{video}'.",
+      "embed": "Einbettungsadresse",
+      "embedHint": "Wird aus den Platzhaltern des Musters gebildet. '{url}' steht für den ganzen Link. Leer lassen, um den Link unverändert einzubetten.",
+      "add": "Dienst hinzufügen",
+      "remove": "Entfernen",
+      "removeNamed": "{name} entfernen",
+      "removed": "{name} entfernt. Seine Einbettungen erscheinen jetzt als Links.",
+      "restore": "Standarddienst wieder hinzufügen",
+      "restorePlaceholder": "Dienst wählen",
+      "restoreAction": "Wieder hinzufügen",
+      "inherited": "Alle Dienste der Instanz sind erlaubt. Entferne das Häkchen bei einem Dienst, um die Liste einzuschränken.",
+      "narrowed": "Diese Organisation erlaubt nur die hier angehakten Dienste.",
+      "reset": "Alle Dienste der Instanz erlauben",
+      "isAllowed": "Erlaubt",
+      "isBlocked": "Nicht erlaubt"
     }
   }
 }

@@ -1,13 +1,17 @@
+import type { EmbedService } from "@pagehall/editor-schema";
 import { Badge, type BadgeVariant, Button, Notice, Section, SettingRow, Skeleton } from "@pagehall/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Printer, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { type RenderingStatus, renderingQuery } from "../../api/instance-queries.js";
+import { instanceSettingsQuery, type RenderingStatus, renderingQuery } from "../../api/instance-queries.js";
 import { DRAWIO_VERSION } from "../../diagrams/drawio-version.js";
 import { docsUrl } from "../../docs/docs-url.js";
+import { InstanceEmbedAllowlist } from "../../embeds/embed-allowlist.js";
 import { LoadError } from "../../errors/failure.js";
 import { translateKey } from "../../i18n/translate.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
+import { useInstanceSettingMutation } from "../../settings/setting-mutations.js";
+import { useOrganizationState } from "../../shell/shell-context.js";
 import { SettingsPage } from "../settings/settings-page.js";
 
 const STATE_BADGES: Record<string, BadgeVariant> = {
@@ -127,6 +131,37 @@ function PdfSection({
   );
 }
 
+function EmbedSection() {
+  const { t } = useTranslation();
+  const state = useOrganizationState();
+  const settings = useQuery({ ...instanceSettingsQuery, throwOnError: false });
+  const mutation = useInstanceSettingMutation();
+  const value = settings.data?.find((setting) => setting.key === "embeds.services")?.value;
+  return (
+    <Section title={t("embeds.allowlist.title")}>
+      <div className="p-4">
+        {settings.isPending ? <Skeleton className="h-32 w-full" /> : null}
+        {settings.isError ? (
+          <LoadError
+            what={t("embeds.allowlist.loadFailed")}
+            error={settings.error}
+            onRetry={() => void settings.refetch()}
+          />
+        ) : null}
+        {settings.data ? (
+          <InstanceEmbedAllowlist
+            services={Array.isArray(value) ? (value as EmbedService[]) : []}
+            canManage={state.can("instance.settings.manage")}
+            onSave={(services) =>
+              mutation.mutateAsync({ key: "embeds.services", change: { value: services } })
+            }
+          />
+        ) : null}
+      </div>
+    </Section>
+  );
+}
+
 export function InstanceRenderingScreen() {
   const { t } = useTranslation();
   const status = useQuery({ ...renderingQuery, throwOnError: false });
@@ -166,6 +201,7 @@ export function InstanceRenderingScreen() {
           </Section>
         </>
       ) : null}
+      <EmbedSection />
     </SettingsPage>
   );
 }

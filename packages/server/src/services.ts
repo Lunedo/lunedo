@@ -48,6 +48,7 @@ import type { KeyRingHolder } from "./crypto/key-ring-holder.js";
 import type { Database } from "./database/database.js";
 import type { DatabasePool } from "./database/pool.js";
 import { DiagramService } from "./diagrams/diagrams.js";
+import { EmbedServices } from "./embeds/embeds.js";
 import { ExportService } from "./exports/exports.js";
 import {
   EXPORT_CLEANUP_SCHEDULE,
@@ -167,7 +168,6 @@ import { ArchiveService } from "./spaces/archive.js";
 import { ConfidentialSpaceService } from "./spaces/confidential.js";
 import { PageDocumentService } from "./spaces/documents.js";
 import { IncludeService } from "./spaces/includes.js";
-import { EmbedServices } from "./embeds/embeds.js";
 import { TreeService } from "./spaces/items.js";
 import {
   applyTrashRetention,

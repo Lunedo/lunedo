@@ -1,8 +1,23 @@
-import { isIsoDate, type RenderContext, renderHtml, type TextAnchor } from "@pagehall/editor-schema";
+import {
+  type EmbedService,
+  isIsoDate,
+  type RenderContext,
+  renderHtml,
+  resolveEmbed,
+  type TextAnchor,
+} from "@pagehall/editor-schema";
 import { Button, useToast } from "@pagehall/ui";
 import type { TFunction } from "i18next";
 import { MessageSquarePlus } from "lucide-react";
-import { type MouseEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  type KeyboardEvent,
+  type MouseEvent,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { CommentHighlights } from "../collaboration/comment-highlights.js";
@@ -14,6 +29,7 @@ import type { Formatter } from "../format/format.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { useOpenPath } from "./context.js";
 import { anchorFromSelection } from "./dom-anchor.js";
+import { EmbedFrame, InlineFilePreview, useEmbedServices, WhiteboardBlock } from "./embedded-blocks.js";
 import { IncludedContent, includeFromAttrs } from "./includes.js";
 import {
   ContentByLabelList,
@@ -35,6 +51,13 @@ import {
   PageReportTable,
   pageReportFromAttrs,
 } from "./reports.js";
+import {
+  ACCORDION_QUERY,
+  enhanceTabs,
+  handleTabsClick,
+  handleTabsKey,
+  setTabsMode,
+} from "./tabs-behavior.js";
 import { TemplateButton, templateButtonFromAttrs } from "./template-button.js";
 import "./editor.css";
 
@@ -46,8 +69,12 @@ export function readViewContext(
   format: Formatter,
   attachmentUrl: (id: string, version?: number) => string = (id, version) =>
     contentUrl(id, version === undefined ? {} : { version }),
+  options: { embedServices?: readonly EmbedService[] | null; numberHeadings?: boolean } = {},
 ): RenderContext {
+  const services = options.embedServices;
   return {
+    ...(services ? { embed: (url: string) => resolveEmbed(url, services) } : {}),
+    ...(options.numberHeadings ? { numberHeadings: true } : {}),
     attachment: (id, version) => ({ href: attachmentUrl(id, version) }),
     mention: (id) => {
       const name = references.people[id];
@@ -121,6 +148,12 @@ export function readViewContext(
       roadmap: t("editor.roadmap.title"),
       roadmapReadOnly: t("editor.roadmap.readOnly"),
       roadmapAsList: t("editor.roadmap.asList"),
+      embed: t("editor.embed.label"),
+      embedNotAllowed: t("editor.embed.notAllowed"),
+      embedFrom: t("editor.embed.from", { service: "{service}" }),
+      whiteboard: t("editor.whiteboard.label"),
+      chooseWhiteboard: t("editor.whiteboard.choose"),
+      filePreview: t("editor.filePreview.label"),
       callout: {
         info: t("editor.callout.info"),
         tip: t("editor.callout.tip"),
@@ -182,12 +215,14 @@ export function PageReadView({
   pageId,
   collaboration = NO_COLLABORATION,
   attachments,
+  numberHeadings = false,
 }: {
   document: unknown;
   references: References;
   pageId: string;
   collaboration?: ReadViewCollaboration;
   attachments?: ReadViewAttachments;
+  numberHeadings?: boolean;
 }) {
   const preview = useAttachmentPreview();
   const openAttachment = attachments?.onOpen ?? preview?.open;
@@ -208,15 +243,22 @@ export function PageReadView({
   const [relatedLabels, setRelatedLabels] = useState<HTMLElement[]>([]);
   const [includes, setIncludes] = useState<HTMLElement[]>([]);
   const [diagramReferences, setDiagramReferences] = useState<HTMLElement[]>([]);
+  const [embeds, setEmbeds] = useState<HTMLElement[]>([]);
+  const [whiteboards, setWhiteboards] = useState<HTMLElement[]>([]);
+  const [filePreviews, setFilePreviews] = useState<HTMLElement[]>([]);
+  const embedServices = useEmbedServices();
   const [selection, setSelection] = useState<{ anchor: TextAnchor; top: number; left: number } | null>(null);
   const { taskStatuses, canToggleTask, onToggleTask, openThreads = [], activeThread = null } = collaboration;
   const html = useMemo(() => {
     try {
-      return renderHtml(content, readViewContext(references, t, format, attachmentUrl));
+      return renderHtml(
+        content,
+        readViewContext(references, t, format, attachmentUrl, { embedServices, numberHeadings }),
+      );
     } catch {
       return null;
     }
-  }, [content, references, t, format, attachmentUrl]);
+  }, [content, references, t, format, attachmentUrl, embedServices, numberHeadings]);
 
   useLayoutEffect(() => {
     rememberReferences(references);
@@ -242,6 +284,24 @@ export function PageReadView({
     setRelatedLabels(placeholders(".ph-related-labels"));
     setIncludes(placeholders(".ph-include"));
     setDiagramReferences(placeholders(".ph-diagram-reference"));
+    setEmbeds(placeholders(".ph-embed-frame[data-src]"));
+    setWhiteboards(placeholders(".ph-whiteboard[data-whiteboard-id]"));
+    setFilePreviews(
+      Array.from(root.querySelectorAll<HTMLElement>(".ph-file[data-preview]")).map((file) => {
+        const slot = document.createElement("div");
+        slot.className = "ph-file-preview-slot";
+        file.append(slot);
+        return slot;
+      }),
+    );
+    const narrow = globalThis.matchMedia?.(ACCORDION_QUERY);
+    const tabs = enhanceTabs(root, narrow?.matches ?? false);
+    if (!narrow || tabs.length === 0) return;
+    const change = () => {
+      for (const element of tabs) setTabsMode(element, narrow.matches);
+    };
+    narrow.addEventListener("change", change);
+    return () => narrow.removeEventListener("change", change);
   }, [html]);
 
   useLayoutEffect(() => {
@@ -276,6 +336,8 @@ export function PageReadView({
       if (id) onToggleTask?.(id, target.checked);
       return;
     }
+    if (handleTabsClick(target)) return;
+    if (target.closest(".ph-file-preview-slot")) return;
     const file = target.closest<HTMLElement>(".ph-file[data-attachment-id]");
     if (file && openAttachment && !event.metaKey && !event.ctrlKey && !event.shiftKey) {
       event.preventDefault();
@@ -355,6 +417,7 @@ export function PageReadView({
         className="ph-content ph-read-view"
         data-comment-scope={scope}
         onClick={(event) => void onClick(event)}
+        onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => handleTabsKey(event)}
         // biome-ignore lint/security/noDangerouslySetInnerHtml: the shared renderer escapes all content of the validated document
         dangerouslySetInnerHTML={{ __html: html }}
       />
@@ -455,6 +518,33 @@ export function PageReadView({
           element,
         ),
       )}
+      {embeds.map((element) =>
+        createPortal(
+          <EmbedFrame
+            src={element.dataset.src ?? ""}
+            title={element.dataset.title ?? ""}
+            height={element.dataset.height ? Number(element.dataset.height) : null}
+          />,
+          element,
+        ),
+      )}
+      {whiteboards.map((element) =>
+        createPortal(<WhiteboardBlock whiteboardId={element.dataset.whiteboardId ?? null} />, element),
+      )}
+      {filePreviews.map((element) => {
+        const file = element.parentElement as HTMLElement;
+        return createPortal(
+          <InlineFilePreview
+            attachmentId={file.dataset.attachmentId ?? ""}
+            height={file.dataset.height ? Number(file.dataset.height) : null}
+            zoom={file.dataset.zoom ? Number(file.dataset.zoom) : null}
+            onHidden={() => {
+              file.hidden = true;
+            }}
+          />,
+          element,
+        );
+      })}
       {templateButtons.map((element) =>
         createPortal(
           <TemplateButton button={templateButtonFromAttrs(element.dataset)} parentId={pageId} />,

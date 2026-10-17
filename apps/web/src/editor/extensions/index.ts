@@ -26,6 +26,7 @@ import {
 } from "../nodes/block-views.js";
 import { DrawioReferenceView, DrawioView, TextDiagramView } from "../nodes/diagram-views.js";
 import { DrawingView } from "../nodes/drawing-view.js";
+import { EmbedView, FileView, TabsView, WhiteboardView } from "../nodes/embed-views.js";
 import {
   DateView,
   EmojiView,
@@ -52,6 +53,7 @@ import { DocumentEdges } from "./document-edges.js";
 import { FileDrop } from "./file-drop.js";
 import { FindReplace } from "./find-replace.js";
 import { SchemaGuard } from "./guard.js";
+import { HeadingNumbers } from "./heading-numbers.js";
 import { PageScope } from "./page-scope.js";
 import { CleanPaste } from "./paste.js";
 import { TemplatePlaceholders } from "./placeholders.js";
@@ -81,7 +83,10 @@ const BLOCK_VIEWS: Record<string, ComponentType<ReactNodeViewProps>> = {
   section: SectionView,
   unsupportedMacro: UnsupportedMacroView,
   image: AttachmentView,
-  file: AttachmentView,
+  file: FileView,
+  embed: EmbedView,
+  whiteboard: WhiteboardView,
+  tabs: TabsView,
   drawing: DrawingView,
   drawio: DrawioView,
   drawioReference: DrawioReferenceView,
@@ -211,6 +216,7 @@ export function createEditorExtensions(options: EditorExtensionOptions): AnyExte
     FileDrop.configure({ onFiles: options.onFiles ?? null }),
     CleanPaste,
     TaskIds,
+    HeadingNumbers,
     PropertyNavigation,
     PageScope.configure({ spaceId: options.spaceId }),
     SchemaGuard,

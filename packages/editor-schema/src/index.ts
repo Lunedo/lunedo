@@ -200,7 +200,7 @@ export {
   templateTitlePattern,
   titlePatternFields,
 } from "./modules/templates.js";
-export { defaultLabels, formatBytes, MAX_EXPENSIVE_RENDER_COST } from "./render.js";
+export { defaultLabels, formatBytes, headingNumbers, MAX_EXPENSIVE_RENDER_COST } from "./render.js";
 export { escapeHtml, markdownUrl, slugify } from "./text.js";
 export {
   InvalidDocumentError,

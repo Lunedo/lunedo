@@ -58,9 +58,11 @@ export function typeLabel(t: TFunction, attachment: Pick<Attachment, "name" | "p
 function FramedPreview({
   attachment,
   source,
+  frame,
 }: {
   attachment: Pick<Attachment, "name" | "preview" | "size" | "version">;
   source: PreviewSource;
+  frame?: FrameOptions | undefined;
 }) {
   const { t } = useTranslation();
   const [failed, setFailed] = useState(false);
@@ -92,15 +94,31 @@ function FramedPreview({
       </Notice>
     );
   }
-  return <PreviewFrame kind={kind} name={attachment.name} bytes={bytes.data} onFailed={onFailed} />;
+  return (
+    <PreviewFrame
+      kind={kind}
+      name={attachment.name}
+      bytes={bytes.data}
+      onFailed={onFailed}
+      zoom={frame?.zoom}
+      {...(frame?.className ? { className: frame.className } : {})}
+    />
+  );
+}
+
+export interface FrameOptions {
+  zoom?: number | undefined;
+  className?: string;
 }
 
 export function PreviewBody({
   attachment,
   source,
+  frame,
 }: {
   attachment: Pick<Attachment, "name" | "preview" | "size" | "inline" | "version">;
   source: PreviewSource;
+  frame?: FrameOptions;
 }) {
   const { t } = useTranslation();
   switch (attachment.preview) {
@@ -128,7 +146,9 @@ export function PreviewBody({
         <audio src={source.url(attachment.version)} controls preload="metadata" className="w-full" />
       );
     default:
-      if (isFrameKind(attachment.preview)) return <FramedPreview attachment={attachment} source={source} />;
+      if (isFrameKind(attachment.preview)) {
+        return <FramedPreview attachment={attachment} source={source} frame={frame} />;
+      }
       return (
         <EmptyState
           icon={FileQuestion}

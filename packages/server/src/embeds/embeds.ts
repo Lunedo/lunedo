@@ -21,6 +21,16 @@ export class EmbedServices {
     return narrowEmbedServices(services, allowed);
   }
 
+  async overview(
+    organizationId: string,
+  ): Promise<{ services: EmbedService[]; available: EmbedService[]; narrowed: boolean }> {
+    const [available, allowed] = await Promise.all([
+      this.instance(),
+      this.#settings.get(allowedEmbedServicesSetting, { organization: organizationId }),
+    ]);
+    return { services: narrowEmbedServices(available, allowed), available, narrowed: allowed !== null };
+  }
+
   async frameSources(): Promise<string[]> {
     return embedFrameSources(await this.instance());
   }

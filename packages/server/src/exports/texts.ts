@@ -100,7 +100,8 @@ const english: ExportTexts = {
     roadmapReadOnly: "Imported roadmap. Roadmaps can be edited once planning is available.",
     roadmapAsList: "Show as list",
     embed: "External embed",
-    embedNotAllowed: "Not on the embed allowlist, shown as a link. Organization administrators manage the list.",
+    embedNotAllowed:
+      "Not on the embed allowlist, shown as a link. Organization administrators manage the list.",
     embedFrom: "Embedded from {service}",
     whiteboard: "Whiteboard",
     chooseWhiteboard: "Choose a whiteboard for this block.",
