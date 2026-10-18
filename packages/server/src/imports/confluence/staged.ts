@@ -35,10 +35,26 @@ export interface StagedSpace {
   key: string;
   name: string;
   homePageId: string | null;
+  description?: string | null;
+}
+
+export const PLAIN_BODY_TYPE = "0";
+
+export async function spaceDescription(
+  staging: StagingStore,
+  descriptionId: string | null,
+): Promise<string | null> {
+  if (!descriptionId) return null;
+  await staging.flush();
+  const [record] = await staging.byRef<{ body: string }>(kinds.plainBody, [descriptionId]);
+  const text = (record?.data.body ?? "").replace(/\s+/g, " ").trim();
+  return text ? text.slice(0, 1000) : null;
 }
 
 export interface StagedPage {
   type?: SourceContentType;
+  sourceType?: string;
+  archived?: boolean;
   title: string;
   version: number;
   creatorKey: string | null;
@@ -143,6 +159,7 @@ export interface StagedContentPermission {
 export interface StagedRestriction {
   kind: "view" | "edit";
   origin: "table" | "legacy";
+  removed?: boolean;
   userKey: string | null;
   accountId: string | null;
   group: string | null;
@@ -183,7 +200,28 @@ export const kinds = {
   restriction: "restriction",
   template: "template",
   formerTitle: "formerTitle",
+  trashed: "trashed",
+  siteSpace: "siteSpace",
+  visited: "visited",
+  mention: "mention",
+  plainBody: "plainBody",
 } as const;
+
+export interface SiteSpace {
+  readonly key: string;
+  readonly name: string;
+}
+
+export async function stageSiteSpaces(staging: StagingStore, spaces: readonly SiteSpace[]): Promise<void> {
+  if (spaces.length < 2) return;
+  for (const space of spaces) {
+    await staging.put({
+      kind: kinds.siteSpace,
+      sourceId: space.key,
+      data: { name: space.name.slice(0, 1000) },
+    });
+  }
+}
 
 export function versionSort(version: number): string {
   return String(Math.max(0, Math.trunc(version))).padStart(10, "0");
@@ -254,6 +292,44 @@ export function isCurrentStatus(status: string): boolean {
   return status.trim().toLowerCase() === "current";
 }
 
+export type ContentState = "current" | "archived" | "trashed" | "other";
+
+export function contentState(status: string | undefined): ContentState {
+  const value = (status ?? "current").trim().toLowerCase();
+  if (value === "current") return "current";
+  if (value === "archived") return "archived";
+  if (value === "deleted" || value === "trashed") return "trashed";
+  return "other";
+}
+
+export function isProductAdmins(subject: string | null | undefined): boolean {
+  return (subject ?? "").trim().toLowerCase() === "all-product-admins";
+}
+
+export function isTombstone(group: string | null | undefined, userKey: string | null | undefined): boolean {
+  return !userKey && (group ?? "").trim().toLowerCase() === "tombstone";
+}
+
+export interface ContentKind {
+  readonly type?: SourceContentType;
+  readonly sourceType?: string;
+}
+
+export function contentKind(name: string): ContentKind {
+  switch (name.trim().toLowerCase()) {
+    case "page":
+      return {};
+    case "blogpost":
+      return { type: "blogPost" };
+    case "folder":
+      return { type: "folder" };
+    case "embed":
+      return { type: "embed" };
+    default:
+      return { type: "other", sourceType: name.trim().toLowerCase().slice(0, 50) };
+  }
+}
+
 export function toNumber(value: string | undefined): number | null {
   if (value === undefined || value.trim() === "") return null;
   const number = Number(value);
@@ -312,6 +388,7 @@ export abstract class StagedConfluenceReader implements ImportReader {
         key: record.data.key,
         name: record.data.name,
         homePageId: record.data.homePageId,
+        description: record.data.description ?? null,
       };
     }
     throw new Error("The export has no space");
@@ -331,7 +408,12 @@ export abstract class StagedConfluenceReader implements ImportReader {
     }
     const people = await this.#everyone(context);
     const blogPosts = await context.staging.count(kinds.page, { field: "type", value: "blogPost" });
+    const spaces: SiteSpace[] = [];
+    for await (const record of context.staging.iterate<{ name: string }>(kinds.siteSpace)) {
+      spaces.push({ key: record.sourceId, name: record.data.name });
+    }
     return {
+      ...(spaces.length > 0 ? { spaces } : {}),
       pages: (await context.staging.count(kinds.page)) - blogPosts,
       blogPosts,
       versions: await context.staging.count(kinds.version),
@@ -425,6 +507,8 @@ export abstract class StagedConfluenceReader implements ImportReader {
           modifiedAt: page.data.modified,
           version: page.data.version,
           status: pageStatus(statuses.get(page.sourceId)?.get(PAGE_STATUS_PROPERTY)),
+          sourceType: page.data.sourceType ?? null,
+          archived: page.data.archived === true,
         } satisfies SourcePage;
       }
       batch = [];
@@ -792,6 +876,40 @@ export abstract class StagedConfluenceReader implements ImportReader {
   }
 }
 
+export async function stageTrashed(
+  staging: StagingStore,
+  sourceId: string,
+  title: string,
+  spaceId: string | null,
+): Promise<void> {
+  await staging.put({ kind: kinds.trashed, sourceId, data: { title: title.slice(0, 255), spaceId } });
+}
+
+export async function reportTrashed(context: ScanContext, spaceId: string): Promise<void> {
+  await context.staging.flush();
+  await context.staging.removeOtherThan(kinds.trashed, "spaceId", spaceId);
+  for await (const record of context.staging.iterate<{ title: string }>(kinds.trashed)) {
+    await context.problem("trashedContent", { title: record.data.title });
+  }
+}
+
+export async function reportRemovedRestrictions(context: ScanContext): Promise<void> {
+  await context.staging.flush();
+  const pageIds = new Set<string>();
+  for await (const record of context.staging.iterate<StagedRestriction>(kinds.restriction)) {
+    if (record.data.removed && record.ref) pageIds.add(record.ref);
+  }
+  const pages = await context.staging.get<StagedPage>(kinds.page, [...pageIds]);
+  const titles = [...pages.values()]
+    .map((page) => page.data.title)
+    .sort((left, right) => left.localeCompare(right));
+  if (titles.length === 0) return;
+  await context.problem("removedRestrictionKept", {
+    count: titles.length,
+    pages: titles.join(", ").slice(0, 2000),
+  });
+}
+
 export async function stageRestrictions(staging: StagingStore): Promise<void> {
   await staging.flush();
   if ((await staging.count(kinds.restriction, { field: "origin", value: "table" })) > 0) {
@@ -811,17 +929,30 @@ export async function stageRestrictions(staging: StagingStore): Promise<void> {
       const kind = restrictionKind(set?.data.type ?? permission.data.type);
       if (!set || !kind || (!permission.data.userKey && !permission.data.accountId && !permission.data.group))
         continue;
+      const removed = isTombstone(
+        permission.data.group,
+        permission.data.userKey ?? permission.data.accountId,
+      );
       await staging.put({
         kind: kinds.restriction,
         sourceId: permission.sourceId,
         ref: set.data.contentId,
-        data: {
-          kind,
-          origin: "legacy",
-          userKey: permission.data.userKey,
-          accountId: permission.data.accountId,
-          group: permission.data.group,
-        } satisfies StagedRestriction,
+        data: removed
+          ? ({
+              kind,
+              origin: "legacy",
+              removed,
+              userKey: null,
+              accountId: null,
+              group: null,
+            } satisfies StagedRestriction)
+          : ({
+              kind,
+              origin: "legacy",
+              userKey: permission.data.userKey,
+              accountId: permission.data.accountId,
+              group: permission.data.group,
+            } satisfies StagedRestriction),
       });
     }
     batch = [];
@@ -907,8 +1038,8 @@ export async function scanArchive(file: ByteSource, context: ScanContext): Promi
     descriptor = parseProperties(Buffer.concat(chunks).toString("utf8"));
   }
   const exportType = descriptor.exportType?.toLowerCase();
-  if (exportType && exportType !== "space") {
-    throw new ImportFormatError("notSpaceExport", "The archive is a site export, not a space export.");
+  if (exportType && exportType !== "space" && exportType !== "all") {
+    throw new ImportFormatError("notSpaceExport", "The archive is neither a space export nor a site backup.");
   }
   const csv =
     descriptor.exportFormat?.toLowerCase() === "csv" ||

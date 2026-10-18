@@ -13,6 +13,7 @@ const NAME_MAX_LENGTH = 200;
 export interface DirectoryEntry {
   readonly name: string | null;
   readonly email: string | null;
+  readonly app?: boolean;
 }
 
 export type Directory = (

@@ -44,10 +44,23 @@ describe("ZIP archives", () => {
     ["c:relative.txt"],
     ["attachments\\..\\..\\outside.txt"],
     ["attachments//double"],
-    ["./entities.xml"],
+    ["attachments/./entities.xml"],
+    ["./../outside.txt"],
     ["name\u0000.xml"],
   ])("refuses the entry name %j", async (name) => {
     expect(await failure([{ name, data: "x" }])).toBe("unsafeEntryName");
+  });
+
+  it("reads names that start with ./ as site backups of Confluence Cloud write them", async () => {
+    const { entries, problems } = await read([
+      { name: "./entities.xml", data: "<root/>" },
+      { name: "././plugin-data/data.pdata", data: "x" },
+    ]);
+    expect(entries).toEqual([
+      { name: "entities.xml", content: "<root/>" },
+      { name: "plugin-data/data.pdata", content: "x" },
+    ]);
+    expect(problems).toEqual([]);
   });
 
   it("refuses symbolic links", async () => {

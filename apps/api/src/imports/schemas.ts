@@ -127,7 +127,10 @@ export const importSchema = z
       .describe("The Word documents of a `word` import, in their order. Empty for other imports."),
     options: z
       .object({
-        spaceKey: z.string().optional().describe("Key of the Confluence space read through the API."),
+        spaceKey: z
+          .string()
+          .optional()
+          .describe("Key of the Confluence space read through the API or from a site backup."),
         pageIds: z
           .array(z.string())
           .optional()
@@ -183,6 +186,17 @@ export const importSchema = z
       })
       .nullable()
       .describe("What the export contains, once it was read."),
+    sourceSpaces: z
+      .array(
+        z.object({
+          key: z.string().describe("Key of the space in Confluence."),
+          name: z.string().describe("Name of the space in Confluence."),
+        }),
+      )
+      .nullable()
+      .describe(
+        "The spaces of a site backup, once it was read; choose one with `options.spaceKey`. Null for exports and backups of one space.",
+      ),
     counts: z
       .record(z.string(), z.number().int())
       .describe(
@@ -192,7 +206,7 @@ export const importSchema = z
       .string()
       .nullable()
       .describe(
-        "Why the export could not be read or the import failed, such as `notAnArchive`, `wrongFormat`, `archiveTooLarge`, `unsafeEntryName`, `xmlDeclaration` or `internalError`.",
+        "Why the export could not be read or the import failed, such as `notAnArchive`, `wrongFormat`, `archiveTooLarge`, `unsafeEntryName`, `xmlDeclaration`, `spaceChoiceRequired` (a site backup with several spaces; see `sourceSpaces`) or `internalError`.",
       ),
     quarantineSpace: z
       .object({ id: uuid("ID of the space."), key: z.string().describe("Key of the space.") })
@@ -256,6 +270,7 @@ export const exampleImport = {
     spaceKey: "ITOPS",
     spaceName: "IT Operations",
   },
+  sourceSpaces: null,
   history: false,
   peopleSource: {
     kind: "token",
@@ -346,7 +361,9 @@ export const updateImportSchema = z
           .max(255)
           .nullable()
           .optional()
-          .describe("For an API import: key of the Confluence space to read. Choosing it starts reading."),
+          .describe(
+            "For an API import or a site backup: key of the Confluence space to read. Choosing it starts reading.",
+          ),
         pageIds: z
           .array(z.string().max(19))
           .max(500)
@@ -816,7 +833,7 @@ export const permissionEntriesSchema = z
               .string()
               .nullable()
               .describe(
-                "Why the entry needs attention: `widened`, `narrowed`, `withoutView`, `anonymous`, `groupMissing`, `placeholder` or `withoutSpaceRole` (named in a restriction without a role in the space).",
+                "Why the entry needs attention: `widened`, `narrowed`, `withoutView`, `anonymous`, `app` (an app account, not a person), `groupMissing`, `placeholder` or `withoutSpaceRole` (named in a restriction without a role in the space).",
               ),
           })
           .describe("A permission taken from Confluence."),

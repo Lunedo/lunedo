@@ -356,7 +356,10 @@ export class ImportWorker {
       if (updated.rowCount === 0) return;
       await this.#signal(row);
     } catch (error) {
-      if (error instanceof ImportFormatError) return this.#analysisFailed(row, runId, error.code);
+      if (error instanceof ImportFormatError) {
+        const spaces = error.code === "spaceChoiceRequired" ? error.details.spaces : undefined;
+        return this.#analysisFailed(row, runId, error.code, Array.isArray(spaces) ? { spaces } : null);
+      }
       throw error;
     } finally {
       await file.close();
@@ -386,9 +389,15 @@ export class ImportWorker {
     return null;
   }
 
-  async #analysisFailed(row: WorkRow, runId: string, code: string): Promise<void> {
+  async #analysisFailed(
+    row: WorkRow,
+    runId: string,
+    code: string,
+    found: Record<string, unknown> | null = null,
+  ): Promise<void> {
     await this.#database.execute(sql`
-      update imports set state = 'draft', phase = null, error_code = ${code}, updated_at = now()
+      update imports set state = 'draft', phase = null, error_code = ${code},
+        found = ${found ? JSON.stringify(found) : null}::jsonb, updated_at = now()
       where id = ${row.id} and state = 'analyzing' and checkpoint ->> 'run' = ${runId}`);
     await this.#signal(row);
   }

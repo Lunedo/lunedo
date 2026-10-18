@@ -4,15 +4,25 @@ import { DEFAULT_XML_LIMITS, parseXml } from "../formats/xml.js";
 import type { ScanContext } from "../source.js";
 import {
   confluenceDate,
+  contentKind,
+  contentState,
   formerTitleRecord,
   isCurrentStatus,
+  isProductAdmins,
   KEPT_PROPERTIES,
   kinds,
+  PLAIN_BODY_TYPE,
   pageSort,
+  reportRemovedRestrictions,
+  reportTrashed,
+  type SiteSpace,
   STORAGE_BODY_TYPE,
   StagedConfluenceReader,
   scanArchive,
+  spaceDescription,
   stageRestrictions,
+  stageSiteSpaces,
+  stageTrashed,
   titleKey,
   toNumber,
   versionSort,
@@ -28,10 +38,10 @@ interface XmlObject {
 
 const LINKED_COLLECTION = "contentProperties";
 
-const NESTED_CDATA_END = /\]\] (\]*>)/g;
+const NESTED_CDATA_END = /(?:\]\] )+\]*>/g;
 
 export function unescapeNestedCdata(body: string): string {
-  return body.includes("]] ") ? body.replace(NESTED_CDATA_END, "]]$1") : body;
+  return body.includes("]] ") ? body.replace(NESTED_CDATA_END, (end) => end.replaceAll("]] ", "]]")) : body;
 }
 
 interface Kept {
@@ -43,11 +53,28 @@ function kept(properties: string[], references: string[]): Kept {
   return { properties: new Set(properties), references: new Set(references) };
 }
 
-const CONTENT = ["contentStatus", "title", "version", "position", "creationDate", "lastModificationDate"];
+const CONTENT = [
+  "contentStatus",
+  "title",
+  "version",
+  "position",
+  "creationDate",
+  "lastModificationDate",
+  "isFolder",
+  "isWhiteboard",
+  "isDatabase",
+  "isEmbed",
+];
+const KIND_FLAGS = [
+  ["isFolder", "folder"],
+  ["isEmbed", "embed"],
+  ["isWhiteboard", "whiteboard"],
+  ["isDatabase", "database"],
+] as const;
 const CONTENT_REFERENCES = ["originalVersion", "creator", "lastModifier", "parent", "space"];
 
 const WANTED = new Map<string, Kept>([
-  ["Space", kept(["key", "name"], ["homePage"])],
+  ["Space", kept(["key", "name"], ["homePage", "description"])],
   ["Page", kept(CONTENT, CONTENT_REFERENCES)],
   ["BlogPost", kept(CONTENT, CONTENT_REFERENCES)],
   [
@@ -86,6 +113,7 @@ const WANTED = new Map<string, Kept>([
   ["ConfluenceUserImpl", kept(["atlassianAccountId"], [])],
 ]);
 const PROGRESS_STEP = 500;
+const MAX_LISTED_SPACES = 1000;
 
 export interface XmlObjectLimits {
   readonly maxObjectBytes: number;
@@ -223,7 +251,7 @@ export class ConfluenceXmlReader extends StagedConfluenceReader {
     }
     const location = scanned.files.get("entities.xml");
     if (!location) throw new ImportFormatError("notConfluenceExport", "The export has no entities.xml.");
-    const spaceKey = scanned.descriptor.spaceKey ?? null;
+    const spaceKey = context.options.spaceKey ?? scanned.descriptor.spaceKey ?? null;
     const skip = typeof context.checkpoint.objects === "number" ? context.checkpoint.objects : 0;
     let objects = 0;
     let pending: XmlObject[] = [];
@@ -231,6 +259,7 @@ export class ConfluenceXmlReader extends StagedConfluenceReader {
     let spaces = 0;
     let firstSpace: XmlObject | undefined;
     let namedSpace: XmlObject | undefined;
+    const siteSpaces: SiteSpace[] = [];
     const handle = async (object: XmlObject) => {
       if (object.className === "Space") {
         spaces += 1;
@@ -241,7 +270,9 @@ export class ConfluenceXmlReader extends StagedConfluenceReader {
           );
         }
         firstSpace ??= object;
-        if (object.properties.get("key")?.trim() === spaceKey) namedSpace ??= object;
+        const key = (object.properties.get("key") ?? "").trim();
+        siteSpaces.push({ key, name: (object.properties.get("name") ?? "").trim() || key });
+        if (key === spaceKey) namedSpace ??= object;
         return;
       }
       await this.#stage(object, context);
@@ -284,7 +315,15 @@ export class ConfluenceXmlReader extends StagedConfluenceReader {
       },
     );
     await flushObjects();
+    await stageSiteSpaces(context.staging, siteSpaces);
     const space = namedSpace ?? (spaces === 1 ? firstSpace : undefined);
+    if (!space && spaces > 1) {
+      throw new ImportFormatError(
+        "spaceChoiceRequired",
+        "The archive contains several spaces. Choose the space to import.",
+        { spaces: siteSpaces.slice(0, MAX_LISTED_SPACES) },
+      );
+    }
     if (!space) throw new ImportFormatError("notConfluenceExport", "The export contains no space.");
     await context.staging.put({
       kind: kinds.space,
@@ -293,6 +332,7 @@ export class ConfluenceXmlReader extends StagedConfluenceReader {
         key: (space.properties.get("key") ?? "").trim(),
         name: (space.properties.get("name") ?? "").trim(),
         homePageId: space.references.get("homePage") ?? null,
+        description: await spaceDescription(context.staging, space.references.get("description") ?? null),
       },
     });
     await context.staging.flush();
@@ -300,6 +340,8 @@ export class ConfluenceXmlReader extends StagedConfluenceReader {
     await context.staging.removeOtherThan(kinds.template, "spaceId", space.id);
     await context.staging.orderTree(kinds.page);
     await stageRestrictions(context.staging);
+    await reportRemovedRestrictions(context);
+    await reportTrashed(context, space.id);
     await context.saveCheckpoint({ objects });
   }
 
@@ -310,10 +352,15 @@ export class ConfluenceXmlReader extends StagedConfluenceReader {
     switch (object.className) {
       case "Page":
       case "BlogPost": {
-        if (!isCurrentStatus(status)) return;
+        const state = contentState(status);
+        if (state === "other") return;
         const title = (property("title") ?? "").trim();
         const original = reference("originalVersion");
         const version = toNumber(property("version")) ?? 1;
+        if (state === "trashed") {
+          if (!original) await stageTrashed(context.staging, object.id, title, reference("space"));
+          return;
+        }
         if (original) {
           await context.staging.put({
             kind: kinds.version,
@@ -332,6 +379,8 @@ export class ConfluenceXmlReader extends StagedConfluenceReader {
           return;
         }
         const blog = object.className === "BlogPost";
+        const flag = KIND_FLAGS.find(([name]) => (property(name) ?? "").trim().toLowerCase() === "true");
+        const kind = blog ? contentKind("blogpost") : contentKind(flag?.[1] ?? "page");
         await context.staging.put({
           kind: kinds.page,
           sourceId: object.id,
@@ -341,7 +390,8 @@ export class ConfluenceXmlReader extends StagedConfluenceReader {
             ? `2${confluenceDate(property("creationDate")) ?? ""}`
             : pageSort(toNumber(property("position")), title),
           data: {
-            ...(blog ? { type: "blogPost" } : {}),
+            ...kind,
+            ...(state === "archived" ? { archived: true } : {}),
             title,
             version,
             creatorKey: reference("creator"),
@@ -409,16 +459,19 @@ export class ConfluenceXmlReader extends StagedConfluenceReader {
         return;
       case "SpacePermission": {
         if ((property("active") ?? "true").trim().toLowerCase() === "false") return;
+        const spaceId = (property("spaceId") ?? "").trim() || reference("space");
+        const subject = (property("allUsersSubject") ?? "").trim();
+        if (!spaceId || isProductAdmins(subject)) return;
         const group = (property("group") ?? "").trim();
         await context.staging.put({
           kind: kinds.spacePermission,
           sourceId: object.id,
           data: {
-            spaceId: (property("spaceId") ?? "").trim() || reference("space"),
+            spaceId,
             type: (property("type") ?? "").trim().toUpperCase(),
             group: group.length > 0 ? group : null,
             userKey: reference("userSubject"),
-            allUsers: (property("allUsersSubject") ?? "").trim().length > 0,
+            allUsers: subject.length > 0,
           },
         });
         return;
@@ -451,9 +504,19 @@ export class ConfluenceXmlReader extends StagedConfluenceReader {
         return;
       }
       case "BodyContent": {
-        if ((property("bodyType") ?? "").trim() !== STORAGE_BODY_TYPE) return;
+        const bodyType = (property("bodyType") ?? "").trim();
         const content = reference("content");
         if (!content) return;
+        if (bodyType === PLAIN_BODY_TYPE) {
+          await context.staging.put({
+            kind: kinds.plainBody,
+            sourceId: object.id,
+            ref: content,
+            data: { body: (property("body") ?? "").slice(0, 10_000) },
+          });
+          return;
+        }
+        if (bodyType !== STORAGE_BODY_TYPE) return;
         await context.staging.put({
           kind: kinds.body,
           sourceId: object.id,

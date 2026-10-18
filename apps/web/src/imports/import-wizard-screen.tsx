@@ -1,5 +1,6 @@
 import {
   Button,
+  Combobox,
   ConfirmDialog,
   classNames,
   DangerAction,
@@ -135,7 +136,9 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
   const [saveError, setSaveError] = useState<unknown>(null);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<
-    Partial<Record<keyof Form | "file" | "people" | "connection" | "selection" | "start", string>>
+    Partial<
+      Record<keyof Form | "file" | "siteSpace" | "people" | "connection" | "selection" | "start", string>
+    >
   >({});
   const [peopleAttempt, setPeopleAttempt] = useState(0);
   const [connectionAttempt, setConnectionAttempt] = useState(0);
@@ -310,6 +313,10 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
       const fresh = queryClient.getQueryData<ImportView>(importKeys.detail(entry.id)) ?? entry;
       if (inputOf(fresh.source) === "export" && !fresh.file?.complete) {
         fail("file", t("imports.wizard.source.fileRequired"));
+        return;
+      }
+      if (input === "export" && entry.sourceSpaces && !entry.options.spaceKey) {
+        fail("siteSpace", t("imports.wizard.source.spaceRequired"));
         return;
       }
       setErrors({});
@@ -509,6 +516,7 @@ function Wizard({ organizationId, entry }: { organizationId: string; entry: Impo
           onChoose={chooseSource}
           patch={patch}
           fileError={errors.file}
+          spaceError={errors.siteSpace}
         />
       ) : null}
       {step === "people" ? (
@@ -617,6 +625,7 @@ function SourceStep({
   onChoose,
   patch,
   fileError,
+  spaceError,
 }: {
   organizationId: string;
   entry: ImportView;
@@ -624,6 +633,7 @@ function SourceStep({
   onChoose: (source: ImportView["source"]) => void;
   patch: (body: ImportUpdate) => Promise<ImportView>;
   fileError: string | undefined;
+  spaceError: string | undefined;
 }) {
   const { t } = useTranslation();
   return (
@@ -647,10 +657,59 @@ function SourceStep({
               <p className="text-sm text-text-muted">{t("imports.wizard.source.whereToFind")}</p>
             </div>
           </Section>
-          <FileSection organizationId={organizationId} entry={entry} patch={patch} fileError={fileError} />
+          <FileSection
+            organizationId={organizationId}
+            entry={entry}
+            patch={patch}
+            fileError={fileError}
+            spaceError={spaceError}
+          />
         </>
       ) : null}
     </>
+  );
+}
+
+function SiteSpaceField({
+  entry,
+  patch,
+  error,
+}: {
+  entry: ImportView;
+  patch: (body: ImportUpdate) => Promise<ImportView>;
+  error: string | undefined;
+}) {
+  const { t } = useTranslation();
+  const failed = useFailureToast();
+  const spaces = entry.sourceSpaces ?? [];
+  return (
+    <Section title={t("imports.wizard.source.spaceTitle")}>
+      <div className="flex flex-col gap-3 p-4">
+        <Field
+          label={t("imports.wizard.source.spaceLabel")}
+          hint={t("imports.wizard.source.spaceHint", { count: spaces.length })}
+          error={error}
+        >
+          <Combobox
+            value={entry.options.spaceKey ?? null}
+            placeholder={t("imports.wizard.source.spacePlaceholder")}
+            invalid={Boolean(error)}
+            onValueChange={(spaceKey) => {
+              if (!spaceKey) return;
+              void patch({ options: { spaceKey } }).catch((cause: unknown) =>
+                failed(t("imports.wizard.saveFailed"), cause),
+              );
+            }}
+            items={spaces.map((space) => ({
+              value: space.key,
+              label: space.name,
+              description: space.key,
+              keywords: [space.key],
+            }))}
+          />
+        </Field>
+      </div>
+    </Section>
   );
 }
 
@@ -710,11 +769,13 @@ function FileSection({
   entry,
   patch,
   fileError,
+  spaceError,
 }: {
   organizationId: string;
   entry: ImportView;
   patch: (body: ImportUpdate) => Promise<ImportView>;
   fileError: string | undefined;
+  spaceError?: string | undefined;
 }) {
   const { t } = useTranslation();
   const format = useFormat();
@@ -723,7 +784,8 @@ function FileSection({
     entry.file?.kind === "folder" ? "folder" : "upload",
   );
   const failed = useFailureToast();
-  const analysis = entry.errorCode ? errorText(t, entry.errorCode) : null;
+  const analysis =
+    entry.errorCode && entry.errorCode !== "spaceChoiceRequired" ? errorText(t, entry.errorCode) : null;
   return (
     <>
       <Section title={t("imports.wizard.source.fileTitle")}>
@@ -784,6 +846,7 @@ function FileSection({
           )}
         </div>
       </Section>
+      {entry.sourceSpaces ? <SiteSpaceField entry={entry} patch={patch} error={spaceError} /> : null}
       {entry.state === "analyzing" ? <Reading entry={entry} /> : null}
       {analysis ? <ErrorState title={analysis.what} cause={analysis.cause} action={analysis.action} /> : null}
       {entry.state === "ready" && entry.found ? (

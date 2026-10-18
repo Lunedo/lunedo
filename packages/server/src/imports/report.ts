@@ -20,6 +20,10 @@ export const reportCategories = {
   archive: ["duplicateEntry", "skippedEntry"],
   source: [
     "contentSkipped",
+    "trashedContent",
+    "removedRestrictionKept",
+    "contentTypeNotImported",
+    "likesAndWatchersSkipped",
     "permissionsUnavailable",
     "unsupportedMarkdown",
     "unresolvedFileLink",

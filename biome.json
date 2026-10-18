@@ -14,7 +14,8 @@
       "!**/pnpm-lock.yaml",
       "!**/*.svg",
       "!**/drizzle/meta",
-      "!apps/api/openapi.json"
+      "!apps/api/openapi.json",
+      "!packages/server/src/imports/testing/confluence-cloud/fixtures"
     ]
   },
   "formatter": {

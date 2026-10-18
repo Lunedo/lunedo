@@ -42,13 +42,23 @@ export type MacroNote =
   | { readonly code: "chartNotImported"; readonly macro: string }
   | { readonly code: "jiraNotImported"; readonly macro: string; readonly issues: string };
 
-export const importTexts = ["jiraNotImported", "chartNotImported", "pivotNotImported"] as const;
+export const importTexts = [
+  "jiraNotImported",
+  "chartNotImported",
+  "pivotNotImported",
+  "whiteboardNotImported",
+  "databaseNotImported",
+  "contentNotImported",
+] as const;
 export type ImportText = (typeof importTexts)[number];
 
 export const defaultImportTexts: Readonly<Record<ImportText, string>> = {
   jiraNotImported: "Jira content not imported.",
   chartNotImported: "Chart not imported. Its source table follows.",
   pivotNotImported: "Pivot table not imported. Its source table follows.",
+  whiteboardNotImported: "Confluence whiteboard not imported.",
+  databaseNotImported: "Confluence database not imported.",
+  contentNotImported: "Confluence content of this type not imported.",
 };
 
 export interface MacroImportContext {
@@ -110,6 +120,31 @@ export function macroParameter(macro: SourceElement, name: string): SourceElemen
 export function macroText(macro: SourceElement, name: string): string | null {
   const parameter = macroParameter(macro, name);
   return parameter ? sourceText(parameter).trim() : null;
+}
+
+export function adfParameter(macro: SourceElement, name: string): string | null {
+  const node = macro.name === "ac:adf-node" ? macro : firstSourceElement(macro, "ac:adf-node");
+  if (!node) return null;
+  const search = (parent: SourceElement): string | null => {
+    for (const child of sourceElements(parent)) {
+      if (
+        child.name === "ac:adf-parameter" &&
+        child.attributes.key === name &&
+        sourceElements(child).length === 0
+      ) {
+        return sourceText(child).trim();
+      }
+      const nested = search(child);
+      if (nested !== null) return nested;
+    }
+    return null;
+  };
+  for (const attribute of sourceElements(node, "ac:adf-attribute")) {
+    if (attribute.attributes.key !== "parameters") continue;
+    const found = search(attribute);
+    if (found !== null) return found;
+  }
+  return null;
 }
 
 export function macroParameterNames(macro: SourceElement): string[] {

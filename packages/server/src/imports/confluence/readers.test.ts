@@ -120,6 +120,7 @@ describe.skipIf(!baseUrl)("Confluence export readers", () => {
       key: "SYN",
       name: "Synthetic space",
       homePageId: PAGE.home,
+      description: null,
     });
     expect(result.pages.map((page) => [page.sourceId, page.parentId])).toEqual([
       [PAGE.orphan, null],
@@ -367,5 +368,8 @@ describe("nested CDATA in the XML export", () => {
     expect(unescapeNestedCdata("<![CDATA[list[0]] ]></x>")).toBe("<![CDATA[list[0]]]></x>");
     expect(unescapeNestedCdata("<![CDATA[x]] ]]></x>")).toBe("<![CDATA[x]]]]></x>");
     expect(unescapeNestedCdata("plain ]] text")).toBe("plain ]] text");
+    expect(unescapeNestedCdata("<![CDATA[a<![CDATA[b]] ]] ><![CDATA[c]] ></x>")).toBe(
+      "<![CDATA[a<![CDATA[b]]]]><![CDATA[c]]></x>",
+    );
   });
 });

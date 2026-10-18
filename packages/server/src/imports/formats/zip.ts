@@ -79,7 +79,7 @@ export function normalizeEntryName(raw: string, limits: Pick<ZipLimits, "maxName
   if ([...raw].some((character) => (character.codePointAt(0) ?? 0) < 0x20)) {
     throw invalid("unsafeEntryName", "A file name in the archive contains control characters.");
   }
-  const name = raw.replaceAll("\\", "/");
+  const name = raw.replaceAll("\\", "/").replace(/^(?:\.\/)+/, "");
   if (name.startsWith("/")) throw invalid("unsafeEntryName", "A file in the archive has an absolute path.");
   if (/^[A-Za-z]:/.test(name)) throw invalid("unsafeEntryName", "A file in the archive has a drive letter.");
   const segments = name.split("/");

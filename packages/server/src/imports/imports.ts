@@ -86,6 +86,11 @@ export interface ImportFileView {
   readonly complete: boolean;
 }
 
+export interface SourceSpaceChoice {
+  readonly key: string;
+  readonly name: string;
+}
+
 export interface ImportFound {
   readonly pages: number;
   readonly blogPosts: number;
@@ -125,6 +130,7 @@ export interface ImportView {
   readonly phase: string | null;
   readonly progress: { readonly done: number; readonly total: number };
   readonly found: ImportFound | null;
+  readonly sourceSpaces: readonly SourceSpaceChoice[] | null;
   readonly counts: Readonly<Record<string, number>>;
   readonly errorCode: string | null;
   readonly quarantineSpace: { readonly id: string; readonly key: string } | null;
@@ -261,7 +267,7 @@ type ImportRow = Record<string, unknown> & {
   phase: string | null;
   progress_done: number;
   progress_total: number;
-  found: ImportFound | null;
+  found: (Partial<ImportFound> & { spaces?: SourceSpaceChoice[] }) | null;
   counts: Record<string, number>;
   error_code: string | null;
   quarantine_space_id: string | null;
@@ -346,7 +352,8 @@ export function cleanOptions(
     new ImportError("invalidOptions", "These options do not apply to this kind of import.");
   let next: ImportOptions = { ...current };
   if (input.spaceKey !== undefined || input.pageIds !== undefined || input.blogPosts !== undefined) {
-    if (kind !== "connection") throw invalid();
+    const selection = input.pageIds !== undefined || input.blogPosts !== undefined;
+    if (kind !== "connection" && (kind !== "export" || selection)) throw invalid();
     if (input.spaceKey !== undefined) {
       if (input.spaceKey !== null && !isSpaceKey(input.spaceKey)) {
         throw new ImportError("invalidSelection", "Choose a space from the list.");
@@ -614,7 +621,8 @@ export class ImportService {
       reviewers,
       phase: row.phase,
       progress: { done: row.progress_done, total: row.progress_total },
-      found: row.found,
+      found: row.found && typeof row.found.pages === "number" ? (row.found as ImportFound) : null,
+      sourceSpaces: row.found?.spaces ?? null,
       counts: row.counts ?? {},
       errorCode: row.error_code,
       quarantineSpace:

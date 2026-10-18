@@ -1,6 +1,6 @@
 # Imports
 
-Organization administrators import into a new space: a Confluence space from its XML or CSV export or directly through the API of Confluence Cloud and Data Center, a folder of Markdown files, or Word documents.
+Organization administrators import into a new space: a Confluence space from its XML or CSV export, from an XML site backup or directly through the API of Confluence Cloud and Data Center, a folder of Markdown files, or Word documents. [What Pagehall takes over from Confluence](#what-pagehall-takes-over-from-confluence) lists every item and its fallback.
 
 ## Flow
 
@@ -19,11 +19,15 @@ The first step of the assistant chooses where the content comes from. All source
 
 | Source | Input | People | Steps |
 | --- | --- | --- | --- |
-| Confluence export file | XML or CSV space export as ZIP | API token, user list or skip | Source, People, Space, Check |
+| Confluence export file | XML or CSV space export, or XML site backup, as ZIP | API token, user list or skip | Source, People, Space, Check |
 | Confluence Cloud | Site, e-mail address, API token | From the same token | Source, Connection, Selection, Space, Check |
 | Confluence Data Center | Base address, personal access token | Names from the API, no e-mail addresses | Source, Connection, Selection, Space, Check |
 | Markdown folder | ZIP file | None | Source, Upload, Space, Check |
 | Word documents | One or more `.docx` files | None | Source, Upload, Space, Check |
+
+### Site backups
+
+A site backup of Confluence (Confluence administration › Backup and restore) contains every space of the site, including personal spaces. Upload it like a space export. After reading it, the step Source lists its spaces; choose the one to import, and Pagehall reads the backup again for that space. Each import takes one space into a new space; import further spaces of the same backup one after another. Permissions of the whole site, such as who may use Confluence, are not taken over.
 
 ### Confluence Cloud and Data Center through the API
 
@@ -36,7 +40,7 @@ Outgoing requests go only to the configured host, through the same protection as
 
 The selection step lists the spaces the token can read; choose one or more. Each space becomes an import of its own, into its own new space, with its own check, dry run, report and later re-import. Further spaces appear as drafts in the import list, sharing the connection and its token; taking a space out of the selection removes its draft. Imports over one connection read and run one after another, and the waiting ones say which space goes first. For the space of the current import, the step shows the page trees below the home page with their page counts and attachment sizes: import the whole space, or only chosen page trees. The page trees of the other spaces are chosen in their own imports. Blog posts come with the whole space. A re-import reads only the space it came from. Page history is optional and takes noticeably longer.
 
-Pagehall reads the same content as an XML export of the space contains, into the same records, so the converters, the report and the result are the same: pages and blog posts with their tree, bodies in the storage format, attachments, page and inline comments with their resolution, labels, likes (Cloud), page restrictions, space permissions (only for tokens of space administrators; otherwise the report says so), templates and, when chosen, the earlier versions. Confluence lists only what the token can read; content that refuses to be read later is skipped and listed in the report. Page states and watchers are not read through the API.
+Pagehall reads the same content as an XML export of the space contains, into the same records, so the converters, the report and the result are the same: pages, blog posts, folders, smart links, whiteboards and databases with their tree, archived pages, bodies in the storage format, attachments with all their versions, page and inline comments with their resolution, labels, page states, page restrictions, space permissions and roles (only for tokens of space administrators; otherwise the report says so), templates and, when chosen, the earlier versions. Confluence Cloud is read through its REST API v2; only page restrictions and templates come from the REST API v1, which has no v2 counterpart for them. Data Center is read through its REST API. Confluence lists only what the token can read; content that refuses to be read later is skipped and listed in the report. Likes and watchers are not read through the API; the report says so once per import.
 
 Reading is resumable: after a restart Pagehall continues with the next page of results or the next page, never from the start. When Confluence asks to slow down, Pagehall waits as long as `Retry-After` or Atlassian's rate limit headers ask, up to 5 minutes per wait, and shows "Confluence asked to slow down" while waiting. Longer pauses hand the work back to the job queue. Attachments are streamed into the file storage; no space is held in memory as a whole.
 
@@ -59,6 +63,38 @@ Add one or more `.docx` files, up to 50 per import and 100 MB each. Each documen
 
 Pagehall converts documents with [mammoth](https://github.com/mwilliamson/mammoth.js) on the server, without a browser or office suite. Embedded objects such as spreadsheets become attachments with a report entry; Word comments are left out with a report entry. Documents with macros are never run or imported: `.docm` files are refused when they are added, and documents with macro parts are refused while reading. Encrypted, damaged and old `.doc` files fail with a message that names the file. Before mammoth reads a document, Pagehall checks the archive with the same limits as exports and rebuilds it without embedded objects and macro parts.
 
+## What Pagehall takes over from Confluence
+
+The table covers the XML and CSV exports of Confluence Cloud, the XML exports of Data Center and Server, the site backup and the API. "Exports" means all export formats.
+
+| Confluence | Becomes in Pagehall | Fallback |
+|---|---|---|
+| Pages and their tree, home page | Pages in the same tree; the home page becomes the overview page of the space | |
+| Live docs | Pages | |
+| Blog posts | Blog posts with their date | |
+| Folders (Cloud) | Folders | |
+| Smart links in the page tree (Cloud) | Links to their address | A page with the link when the smart link has subpages or an address Pagehall does not accept |
+| Whiteboards and databases (Cloud) | A page in their place with the note "Confluence whiteboard not imported" or "Confluence database not imported" | Listed in the report; exports and the API do not contain their content |
+| Archived pages | Archived pages, with their subpages | |
+| Pages in the trash | Not imported | Listed in the report |
+| Drafts | Not imported; an unpublished draft is never a version | |
+| Earlier versions | Versions with author and date, when the full page history is chosen | |
+| Page comments and replies | Comments with their authors and times | |
+| Inline comments | Comments anchored to their text, resolved ones resolved | A page comment with the quoted text when the text no longer exists, listed in the report |
+| Attachments | Attachments with all their versions | Missing files are listed in the report |
+| Images and files of other spaces | | A placeholder with the file name, listed in the report |
+| Labels | Labels | Personal labels (`my:`) are left out |
+| Page restrictions | View and edit restrictions with the same people and groups | Exports of Confluence Cloud mark a removed restriction with the group "tombstone". Pagehall keeps such a page restricted and lists all of them in one report entry; the API reports only the restrictions that apply. |
+| Space permissions and space roles | Space roles; see [Permissions](#permissions) | App accounts, site administrators (`all-product-admins`) and permissions without access to the space get no role |
+| Page states | Page statuses | |
+| Templates of the space | Templates | |
+| Likes | 👍 reactions (exports) | Not read through the API, listed in the report once |
+| Watchers | Counted in the report | Not imported |
+| Macros | See [Macros](#macros) and [diagrams](diagrams.md#importing-from-confluence) | Unsupported-macro blocks, listed in the report |
+| Content properties of apps | | Not imported |
+| Space description | The description of the space, as plain text up to 1,000 characters | Data Center through the API: not imported |
+| Space logo | | Not imported |
+
 ## Quarantine
 
 Imported content lands in a quarantined space. Only the importer and the chosen reviewers can see it, and it is read-only. The importer then:
@@ -73,7 +109,8 @@ Discarding and stopping require typing the space key. Reviewers can read the spa
 
 The report lists problems by category: macros, diagrams, attachments, links, content and archive. Each entry is typed and can be exported as CSV.
 
-- draw.io, Gliffy, Mermaid and PlantUML macros become diagram blocks; see [diagrams.md](diagrams.md#importing-from-confluence).
+- draw.io, Gliffy, Mermaid and PlantUML macros become diagram blocks, also the draw.io and Gliffy apps of Confluence Cloud; see [diagrams.md](diagrams.md#importing-from-confluence).
+- Macros of other Confluence Cloud apps are kept as unsupported-macro blocks named after the app (`app:<name>`).
 - Macros without a converter, and macros whose parameters a converter cannot take over, are kept as unsupported-macro blocks with their original data. Readers see a neutral notice; editors see the macro name. The report counts each macro by name.
 - Links to pages inside the export are rewritten. Links to other pages keep their original address and are reported.
 - Only the current version of each page is imported, unless the full page history was chosen. Attachments keep all versions.
@@ -156,6 +193,8 @@ Before accepting, only the person who started the import maps people and groups.
 ## Permissions
 
 - Each person or group gets the highest space role that fits its Confluence permissions: administer the space becomes space admin, add or edit pages becomes editor, comment becomes commenter, view becomes reader. Combinations that do not fit are marked for review. Anonymous access is never taken over. "All licensed users" becomes all members of the organization.
+- Spaces that use roles in Confluence Cloud (Admin, Manager, Collaborator, Viewer, View only and custom roles) are taken over through the permissions of their roles, so the same rule applies: a Collaborator becomes editor, a Viewer commenter.
+- App accounts of Confluence, such as the accounts of the draw.io or Teams apps, get no role; the permissions list them as not taken over. Pagehall recognizes them when the people come from an API token or from the API. Site administrators of Confluence (`all-product-admins`) get no role either.
 - Groups are matched by name to groups of the organization, including synchronized groups. Unmatched groups are listed in the report, where an existing group is mapped or a local group is created. Nothing is created automatically. Administrators cannot map a group that is named in page restrictions to a group they belong to.
 - Page restrictions become view and edit restrictions as soon as the page exists in the quarantine space, also when they name only placeholders or unmatched groups. Such pages stay closed until the people and groups are mapped.
 - As in Confluence, restrictions only narrow access. People and groups named in a restriction are listed on it, but they get no access from it: they still need a role in the space. The import never shares a page. The report marks everyone named in a restriction without a role in the space.
@@ -254,7 +293,7 @@ Uploaded files are deleted 7 days after an import was accepted, discarded or sto
 
 Exports are treated as untrusted input:
 
-- ZIP archives are limited in total size, entry count, entry size and compression ratio. Entries with unsafe names and symbolic links are refused; duplicate names keep the first entry and are reported.
+- ZIP archives are limited in total size, entry count, entry size and compression ratio. Entries with unsafe names and symbolic links are refused; duplicate names keep the first entry and are reported. A leading `./`, as site backups of Confluence Cloud write it, is removed.
 - XML is read as a stream without DTDs or entities, with limits on depth, element size, the size of each object with all its fields, and the number of spaces. Only the fields Pagehall imports are kept in memory.
 - CSV is read as a stream with limits on field size, row size and field count. Cells that start like a spreadsheet formula are escaped in the CSV report.
 - Converted content is validated against the editor schema. Content that does not fit becomes an unsupported-macro block.

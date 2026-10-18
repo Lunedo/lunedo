@@ -43,6 +43,7 @@ export interface SourceSpace {
   readonly key: string;
   readonly name: string;
   readonly homePageId: string | null;
+  readonly description: string | null;
 }
 
 export interface SourcePerson {
@@ -56,7 +57,7 @@ export interface SourceBody {
   readonly content: string;
 }
 
-export type SourceContentType = "page" | "blogPost";
+export type SourceContentType = "page" | "blogPost" | "folder" | "embed" | "other";
 
 export interface SourcePageStatus {
   readonly name: string;
@@ -74,6 +75,8 @@ export interface SourcePage {
   readonly modifiedAt: string | null;
   readonly version: number;
   readonly status: SourcePageStatus | null;
+  readonly sourceType: string | null;
+  readonly archived: boolean;
 }
 
 export interface SourceAttachmentVersion {
@@ -170,6 +173,7 @@ export interface ScanContext {
 }
 
 export interface ExportSummary {
+  readonly spaces?: readonly { readonly key: string; readonly name: string }[];
   readonly pages: number;
   readonly blogPosts: number;
   readonly versions: number;

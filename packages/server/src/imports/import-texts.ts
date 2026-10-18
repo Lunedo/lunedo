@@ -7,6 +7,9 @@ const importTexts: Readonly<Record<TemplateLanguage, Readonly<Record<ImportText,
     jiraNotImported: "Jira-Inhalt nicht importiert.",
     chartNotImported: "Diagramm nicht importiert. Die Quelltabelle folgt.",
     pivotNotImported: "Pivot-Tabelle nicht importiert. Die Quelltabelle folgt.",
+    whiteboardNotImported: "Confluence-Whiteboard nicht importiert.",
+    databaseNotImported: "Confluence-Datenbank nicht importiert.",
+    contentNotImported: "Confluence-Inhalt dieser Art nicht importiert.",
   },
 };
 

@@ -44,6 +44,9 @@ function lookup(options: { services?: typeof defaultEmbedServices; siteUrl?: str
         jiraNotImported: "Jira-Inhalt nicht importiert.",
         chartNotImported: "Diagramm nicht importiert.",
         pivotNotImported: "Pivot nicht importiert.",
+        whiteboardNotImported: "Whiteboard nicht importiert.",
+        databaseNotImported: "Datenbank nicht importiert.",
+        contentNotImported: "Inhalt nicht importiert.",
       })[key],
     jiraIssueUrl: (key) => (options.siteUrl ? `${options.siteUrl}/browse/${key}` : null),
   };

@@ -1,13 +1,17 @@
 import { z } from "zod";
 import { type AttachmentAttributes, copyAttachmentAttributes } from "../copying.js";
 import {
+  adfParameter,
   type FileReference,
+  firstSourceElement,
   type ImportedFile,
   type MacroConverter,
   type MacroImportContext,
   macroText,
   plainBody,
   type SourceElement,
+  sourceElements,
+  sourceText,
 } from "../importing.js";
 import type { NodeJson, ValidNode } from "../json.js";
 import {
@@ -198,18 +202,37 @@ function fileReferences(macro: DiagramMacro | null): FileReference[] {
   return [...sources, ...previews].map((fileName) => ({ fileName }));
 }
 
+function isForge(macro: SourceElement): boolean {
+  return macro.name === "ac:adf-extension";
+}
+
 function drawioMacro(macro: SourceElement): DiagramMacro | null {
-  const name = macroText(macro, "diagramName") ?? "";
+  const forge = isForge(macro);
+  const name = (forge ? adfParameter(macro, "diagram-name") : macroText(macro, "diagramName")) ?? "";
   if (name.length === 0 || name.length > 255) return null;
-  const page = macroText(macro, "pageId");
-  const pageSourceId =
-    macro.attributes["ac:name"] === "inc-drawio" && page && /^\d{1,19}$/.test(page) ? page : null;
+  const reference = forge ? forgeApp(macro) === "inc-drawio" : macro.attributes["ac:name"] === "inc-drawio";
+  const page = forge ? adfParameter(macro, "page-id") : macroText(macro, "pageId");
+  const pageSourceId = reference && page && /^\d{1,19}$/.test(page) ? page : null;
   return { name, extension: ".drawio", pageSourceId };
 }
 
 function gliffyMacro(macro: SourceElement): DiagramMacro | null {
-  const name = macroText(macro, "name") ?? "";
+  const name = (isForge(macro) ? adfParameter(macro, "name") : macroText(macro, "name")) ?? "";
   return name.length === 0 || name.length > 255 ? null : { name, extension: ".gliffy", pageSourceId: null };
+}
+
+function forgeApp(macro: SourceElement): string | null {
+  const node = firstSourceElement(macro, "ac:adf-node");
+  const key = node
+    ? sourceElements(node, "ac:adf-attribute").find(
+        (attribute) => attribute.attributes.key === "extension-key",
+      )
+    : undefined;
+  return key ? (sourceText(key).trim().split("/").at(-1) ?? null) : null;
+}
+
+function diagramKey(name: string): string {
+  return name.toLowerCase().endsWith(".drawio") ? name.slice(0, -".drawio".length) : name;
 }
 
 function convertDiagram(
@@ -228,7 +251,7 @@ function convertDiagram(
     {
       type: "drawio",
       attrs: {
-        id: context.diagramId(macro.name, null),
+        id: context.diagramId(diagramKey(macro.name), null),
         sourceFormat: source ? format : "drawio",
         sourceId: source?.attachmentId ?? null,
         sourceVersion: source?.version ?? null,
@@ -249,7 +272,7 @@ function convertReference(macro: DiagramMacro & { pageSourceId: string }, contex
       attrs: {
         id: context.newId(),
         pageId,
-        diagramId: pageId ? context.diagramId(macro.name, macro.pageSourceId) : null,
+        diagramId: pageId ? context.diagramId(diagramKey(macro.name), macro.pageSourceId) : null,
         name: macro.name,
       },
     },
@@ -262,24 +285,28 @@ function isReference(macro: DiagramMacro | null): macro is DiagramMacro & { page
 
 const drawioImporter: MacroConverter = {
   source: "confluence",
-  macros: ["drawio", "inc-drawio"],
+  macros: ["drawio", "inc-drawio", "app:drawio", "app:drawio-sketch", "app:inc-drawio"],
   references: (macro) => {
     const diagram = drawioMacro(macro);
     return isReference(diagram) ? { pageIds: [diagram.pageSourceId] } : { files: fileReferences(diagram) };
   },
   convert: (macro, context) => {
     const diagram = drawioMacro(macro);
+    const name = isForge(macro)
+      ? `app:${forgeApp(macro) ?? "drawio"}`
+      : (macro.attributes["ac:name"] ?? "drawio");
     return isReference(diagram)
       ? convertReference(diagram, context)
-      : convertDiagram(diagram, macro.attributes["ac:name"] ?? "drawio", "drawio", context);
+      : convertDiagram(diagram, name, "drawio", context);
   },
 };
 
 const gliffyImporter: MacroConverter = {
   source: "confluence",
-  macros: ["gliffy"],
+  macros: ["gliffy", "app:gliffy"],
   references: (macro) => ({ files: fileReferences(gliffyMacro(macro)) }),
-  convert: (macro, context) => convertDiagram(gliffyMacro(macro), "gliffy", "gliffy", context),
+  convert: (macro, context) =>
+    convertDiagram(gliffyMacro(macro), isForge(macro) ? "app:gliffy" : "gliffy", "gliffy", context),
 };
 
 function textDiagramImporter(type: TextDiagramType, macros: readonly string[]): MacroConverter {

@@ -195,7 +195,7 @@ export function directoryFor(options: {
     const byId = new Map(found.map((person) => [person.accountId, person]));
     for (const person of people) {
       const entry = person.accountId ? byId.get(person.accountId) : undefined;
-      if (entry) result.set(person.sourceId, { name: entry.name, email: entry.email });
+      if (entry) result.set(person.sourceId, { name: entry.name, email: entry.email, app: entry.app });
     }
     return result;
   };

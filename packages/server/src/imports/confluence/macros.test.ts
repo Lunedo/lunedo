@@ -22,6 +22,10 @@ const DIAGRAM_FILES: Readonly<Record<string, number>> = {
   "/Lost.png": 22,
   "/Floor plan": 23,
   "/Floor plan.png": 24,
+  "/Board": 25,
+  "/Board.png": 26,
+  "/Plan.drawio": 27,
+  "/Plan.drawio.png": 28,
 };
 
 function lookup(): StorageLookup {
@@ -74,6 +78,24 @@ function macro(name: string, parameters: Record<string, string> = {}, body = "")
     .map(([key, value]) => `<ac:parameter ac:name="${key}">${value}</ac:parameter>`)
     .join("");
   return `<ac:structured-macro ac:name="${name}" ac:schema-version="1" ac:macro-id="m1">${params}${body}</ac:structured-macro>`;
+}
+
+function forge(app: string, parameters: readonly [string, string][], fallbackName?: string): string {
+  const key = `1afdce52/92d899e8/static/${app}`;
+  const guest = (entries: readonly [string, string][]) =>
+    entries.map(([name, value]) => `<ac:adf-parameter key="${name}">${value}</ac:adf-parameter>`).join("");
+  const node = (entries: readonly [string, string][]) =>
+    `<ac:adf-node type="extension"><ac:adf-attribute key="extension-key">${key}</ac:adf-attribute>` +
+    '<ac:adf-attribute key="extension-type">com.atlassian.ecosystem</ac:adf-attribute>' +
+    `<ac:adf-attribute key="parameters"><ac:adf-parameter key="layout">extension</ac:adf-parameter><ac:adf-parameter key="guest-params">${guest(entries)}</ac:adf-parameter></ac:adf-attribute>` +
+    `<ac:adf-attribute key="text">${app}</ac:adf-attribute></ac:adf-node>`;
+  const fallback = fallbackName
+    ? parameters.map(([name, value]): [string, string] => [
+        name,
+        name.endsWith("name") ? fallbackName : value,
+      ])
+    : parameters;
+  return `<ac:adf-extension>${node(parameters)}<ac:adf-fallback>${node(fallback)}</ac:adf-fallback></ac:adf-extension>`;
 }
 
 function rich(xhtml: string): string {
@@ -1523,6 +1545,71 @@ describe("diagram macros", () => {
       previewId: ID(24),
     });
     expect(page.notes).toEqual([{ code: "gliffyDiagram", name: "Floor plan" }]);
+  });
+
+  it("turn diagrams and boards of the draw.io Forge app into draw.io blocks in any parameter order", async () => {
+    const page = await convert(
+      forge("drawio-sketch", [
+        ["zoom", "100"],
+        ["diagram-name", "Board"],
+        ["page-id", "4711"],
+      ]) +
+        forge("drawio", [
+          ["diagram-display-name", "Plan.drawio"],
+          ["page-id", "4711"],
+          ["diagram-name", "Plan.drawio"],
+        ]),
+    );
+    expect(page.document.content?.map((block) => block.attrs)).toEqual([
+      expect.objectContaining({ id: ID(61), sourceFormat: "drawio", sourceId: ID(25), previewId: ID(26) }),
+      expect.objectContaining({ sourceFormat: "drawio", sourceId: ID(27), previewId: ID(28) }),
+    ]);
+    expect(Object.fromEntries(page.converted)).toEqual({ "app:drawio-sketch": 1, "app:drawio": 1 });
+    expect(page.notes).toEqual([]);
+  });
+
+  it("read the diagram from the Forge extension, not from its fallback copy", async () => {
+    const page = await convert(forge("drawio-sketch", [["diagram-name", "Board"]], "Lost"));
+    expect(page.document.content?.[0]?.attrs).toMatchObject({ sourceId: ID(25) });
+  });
+
+  it("keep Gliffy diagrams of the Forge app with their file and preview", async () => {
+    const page = await convert(
+      forge("gliffy", [
+        ["image-attachment-id", "att1"],
+        ["name", "Floor plan"],
+        ["diagram-attachment-id", "att2"],
+      ]),
+    );
+    expect(page.document.content?.[0]?.attrs).toMatchObject({
+      sourceFormat: "gliffy",
+      sourceId: ID(23),
+      previewId: ID(24),
+    });
+    expect(page.notes).toEqual([{ code: "gliffyDiagram", name: "Floor plan" }]);
+  });
+
+  it("turn embedded Forge diagrams into references, with or without .drawio in the name", async () => {
+    const included = forge("inc-drawio", [
+      ["page-id", "98765"],
+      ["diagram-name", "Shared.drawio"],
+    ]);
+    const page = await convert(included);
+    expect(page.document.content?.[0]).toEqual({
+      type: "drawioReference",
+      attrs: { id: expect.any(String), pageId: RUNBOOK, diagramId: ID(60), name: "Shared.drawio" },
+    });
+    const references = storageReferences(await parseStorage(included));
+    expect(references.pages).toContainEqual({ title: null, spaceKey: null, sourceId: "98765" });
+  });
+
+  it("keep other Forge apps as unsupported macros named after the app", async () => {
+    const page = await convert(forge("roadmap-planner", [["view", "quarter"]]));
+    expect(page.document.content?.[0]).toMatchObject({
+      type: "unsupportedMacro",
+      attrs: { name: "app:roadmap-planner" },
+    });
+    expect(Object.fromEntries(page.macros)).toEqual({ "app:roadmap-planner": 1 });
   });
 
   it("turn Mermaid and PlantUML macros into blocks with their source", async () => {

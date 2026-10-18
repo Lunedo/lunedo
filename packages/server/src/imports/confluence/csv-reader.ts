@@ -5,16 +5,25 @@ import type { ZipEntryLocation } from "../formats/zip.js";
 import type { ScanContext } from "../source.js";
 import {
   confluenceDate,
+  contentKind,
+  contentState,
   formerTitleRecord,
   isCurrentStatus,
+  isProductAdmins,
+  isTombstone,
   KEPT_PROPERTIES,
   kinds,
+  PLAIN_BODY_TYPE,
   pageSort,
+  reportRemovedRestrictions,
+  reportTrashed,
   type ScannedArchive,
   STORAGE_BODY_TYPE,
   StagedConfluenceReader,
   scanArchive,
+  spaceDescription,
   stageRestrictions,
+  stageTrashed,
   titleKey,
   toNumber,
   versionSort,
@@ -23,6 +32,7 @@ import {
 type Row = Record<string, string>;
 
 const MAX_EXPANDED_BYTES = 64 * 1024 ** 3;
+const TREE_TYPES = new Set(["PAGE", "BLOGPOST", "FOLDER", "EMBED", "WHITEBOARD", "DATABASE"]);
 const PROGRESS_STEP = 1000;
 const TABLES = [
   "user_mapping",
@@ -105,6 +115,7 @@ export class ConfluenceCsvReader extends StagedConfluenceReader {
         key: value(spaceRow, "spacekey"),
         name: value(spaceRow, "spacename"),
         homePageId: optional(spaceRow, "homepage"),
+        description: await spaceDescription(context.staging, optional(spaceRow, "spacedescid")),
       },
     });
     await context.staging.flush();
@@ -112,6 +123,8 @@ export class ConfluenceCsvReader extends StagedConfluenceReader {
     await context.staging.removeOtherThan(kinds.template, "spaceId", spaceId);
     await context.staging.orderTree(kinds.page);
     await stageRestrictions(context.staging);
+    await reportRemovedRestrictions(context);
+    await reportTrashed(context, spaceId);
   }
 
   #location(scanned: ScannedArchive, table: Table): ZipEntryLocation | undefined {
@@ -134,9 +147,18 @@ export class ConfluenceCsvReader extends StagedConfluenceReader {
         await this.#content(row, context);
         return;
       case "bodycontent": {
-        if (value(row, "bodytypeid") !== STORAGE_BODY_TYPE) return;
         const content = optional(row, "contentid");
         if (!content) return;
+        if (value(row, "bodytypeid") === PLAIN_BODY_TYPE) {
+          await context.staging.put({
+            kind: kinds.plainBody,
+            sourceId: value(row, "bodycontentid"),
+            ref: content,
+            data: { body: (row.body ?? "").slice(0, 10_000) },
+          });
+          return;
+        }
+        if (value(row, "bodytypeid") !== STORAGE_BODY_TYPE) return;
         await context.staging.put({
           kind: kinds.body,
           sourceId: value(row, "bodycontentid"),
@@ -182,7 +204,11 @@ export class ConfluenceCsvReader extends StagedConfluenceReader {
         return;
       }
       case "spacepermissions": {
-        if (value(row, "active").toLowerCase() === "false") return;
+        if (
+          value(row, "active").toLowerCase() === "false" ||
+          isProductAdmins(value(row, "permalluserssubject"))
+        )
+          return;
         await context.staging.put({
           kind: kinds.spacePermission,
           sourceId: value(row, "permid"),
@@ -204,17 +230,20 @@ export class ConfluenceCsvReader extends StagedConfluenceReader {
         const principal = optional(row, "principal_id");
         const groupName = optional(row, "groupname");
         if (group ? !groupName : !principal) return;
+        const removed = isTombstone(groupName, group ? null : principal);
         await context.staging.put({
           kind: kinds.restriction,
           sourceId: `${content}:${kind}:${group ? `group:${groupName}` : `user:${principal}`}`,
           ref: content,
-          data: {
-            kind,
-            origin: "table",
-            userKey: null,
-            accountId: group ? null : principal,
-            group: group ? groupName : null,
-          },
+          data: removed
+            ? { kind, origin: "table", removed, userKey: null, accountId: null, group: null }
+            : {
+                kind,
+                origin: "table",
+                userKey: null,
+                accountId: group ? null : principal,
+                group: group ? groupName : null,
+              },
         });
         return;
       }
@@ -282,13 +311,18 @@ export class ConfluenceCsvReader extends StagedConfluenceReader {
 
   async #content(row: Row, context: ScanContext): Promise<void> {
     const type = value(row, "contenttype").toUpperCase();
-    if (!isCurrentStatus(value(row, "content_status"))) return;
     const id = value(row, "contentid");
     if (!id) return;
-    if (type === "PAGE" || type === "BLOGPOST") {
+    if (TREE_TYPES.has(type)) {
+      const state = contentState(value(row, "content_status"));
+      if (state === "other") return;
       const title = value(row, "title");
       const version = toNumber(row.version) ?? 1;
       const original = optional(row, "prevver");
+      if (state === "trashed") {
+        if (!original) await stageTrashed(context.staging, id, title, optional(row, "spaceid"));
+        return;
+      }
       if (original) {
         await context.staging.put({
           kind: kinds.version,
@@ -314,7 +348,8 @@ export class ConfluenceCsvReader extends StagedConfluenceReader {
         parentId: blog ? null : optional(row, "parentid"),
         sort: blog ? `2${created ?? ""}` : pageSort(toNumber(row.child_position), title),
         data: {
-          ...(blog ? { type: "blogPost" } : {}),
+          ...contentKind(type),
+          ...(state === "archived" ? { archived: true } : {}),
           title,
           version,
           creatorKey: optional(row, "creator"),
@@ -326,6 +361,7 @@ export class ConfluenceCsvReader extends StagedConfluenceReader {
       });
       return;
     }
+    if (!isCurrentStatus(value(row, "content_status"))) return;
     if (type === "COMMENT") {
       if (optional(row, "prevver")) return;
       const container = optional(row, "pageid");
