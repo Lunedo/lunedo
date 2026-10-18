@@ -65,6 +65,7 @@ test("copies a page with its children into another space after confirming wider 
   await confirm.click();
   await dialog.getByRole("button", { name: "Copy to Team Handbook" }).click();
 
+  await expect(page.getByText("Budget copied to Team Handbook").first()).toBeVisible();
   await expect(page).toHaveURL(new RegExp(`/spaces/${handbookKey}/pages/`));
   await expect(page.getByRole("heading", { name: "Budget", level: 1 })).toBeVisible();
   await expect(page.getByText("Plan for 2027")).toBeVisible();
