@@ -1,5 +1,6 @@
 import type { Readable } from "node:stream";
 import type { Principal } from "../accounts/principal.js";
+import { OwnerSlots } from "../auth/concurrency.js";
 import { FileTooLargeError } from "../files/files.js";
 
 export interface MarkupBudget {
@@ -36,43 +37,20 @@ export class SanitizerBusyError extends Error {
 export const MAX_PARALLEL_SANITIZATIONS = 4;
 export const MAX_PARALLEL_SANITIZATIONS_PER_ACCOUNT = 1;
 
-export class SanitizerSlots {
-  readonly #limit: number;
-  readonly #perOwner: number;
-  readonly #owners = new Map<string, number>();
-  #running = 0;
-
-  constructor(limit: number, perOwner: number) {
-    this.#limit = limit;
-    this.#perOwner = perOwner;
-  }
-
-  async run<T>(owner: Principal, work: () => Promise<T> | T): Promise<T> {
-    const key = owner.type === "account" ? owner.id : owner.type;
-    const held = this.#owners.get(key) ?? 0;
-    if (this.#running >= this.#limit || held >= this.#perOwner) throw new SanitizerBusyError();
-    this.#running += 1;
-    this.#owners.set(key, held + 1);
-    try {
-      return await work();
-    } finally {
-      this.#running -= 1;
-      const left = (this.#owners.get(key) ?? 1) - 1;
-      if (left > 0) this.#owners.set(key, left);
-      else this.#owners.delete(key);
-    }
-  }
-}
-
-export const sanitizerSlots = new SanitizerSlots(
+export const sanitizerSlots = new OwnerSlots(
   MAX_PARALLEL_SANITIZATIONS,
   MAX_PARALLEL_SANITIZATIONS_PER_ACCOUNT,
+  () => new SanitizerBusyError(),
 );
 
 export const MAX_PARALLEL_UPLOADS = 32;
 export const MAX_PARALLEL_UPLOADS_PER_ACCOUNT = 2;
 
-export const uploadSlots = new SanitizerSlots(MAX_PARALLEL_UPLOADS, MAX_PARALLEL_UPLOADS_PER_ACCOUNT);
+export const uploadSlots = new OwnerSlots(
+  MAX_PARALLEL_UPLOADS,
+  MAX_PARALLEL_UPLOADS_PER_ACCOUNT,
+  () => new SanitizerBusyError(),
+);
 
 export function attributeWarning(level: string, message: string): boolean {
   return level === "warning" && /attribute/i.test(message);

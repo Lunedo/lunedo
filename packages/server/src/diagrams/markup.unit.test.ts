@@ -1,6 +1,7 @@
 import { PassThrough } from "node:stream";
 import { describe, expect, it } from "vitest";
 import { accountPrincipal } from "../accounts/principal.js";
+import { OwnerSlots } from "../auth/concurrency.js";
 import { FileTooLargeError } from "../files/files.js";
 import { DiagramRejectedError, sanitizeDrawio } from "./drawio.js";
 import {
@@ -8,7 +9,6 @@ import {
   readDrawingUpload,
   readUpload,
   SanitizerBusyError,
-  SanitizerSlots,
   takeMarkup,
   UploadTimeoutError,
 } from "./markup.js";
@@ -41,14 +41,14 @@ describe("takeMarkup", () => {
 });
 
 describe("sanitizer slots", () => {
-  function held(slots: SanitizerSlots, owner = ALICE) {
+  function held(slots: OwnerSlots, owner = ALICE) {
     let release: () => void = () => {};
     const done = slots.run(owner, () => new Promise<string>((resolve) => (release = () => resolve("held"))));
     return { done, release: () => release() };
   }
 
   it("refuses work beyond the limit of the node and frees the slot afterwards", async () => {
-    const slots = new SanitizerSlots(2, 1);
+    const slots = new OwnerSlots(2, 1, () => new SanitizerBusyError());
     const first = held(slots, ALICE);
     const second = held(slots, BOB);
     await expect(slots.run(CAROL, () => "refused")).rejects.toBeInstanceOf(SanitizerBusyError);
@@ -59,7 +59,7 @@ describe("sanitizer slots", () => {
   });
 
   it("lets one account hold only its own share of the slots", async () => {
-    const slots = new SanitizerSlots(4, 1);
+    const slots = new OwnerSlots(4, 1, () => new SanitizerBusyError());
     const first = held(slots, ALICE);
     await expect(slots.run(ALICE, () => "second")).rejects.toBeInstanceOf(SanitizerBusyError);
     expect(await slots.run(BOB, () => "other account")).toBe("other account");
@@ -69,7 +69,7 @@ describe("sanitizer slots", () => {
   });
 
   it("frees the slot when the work fails", async () => {
-    const slots = new SanitizerSlots(1, 1);
+    const slots = new OwnerSlots(1, 1, () => new SanitizerBusyError());
     await expect(
       slots.run(ALICE, () => {
         throw new Error("broken");
