@@ -135,7 +135,8 @@ test("inserts a drawing block into a page and shows its image to readers", async
   await page.goto(`${created.path}?edit=true`);
   const content = page.getByRole("textbox", { name: "Page content" });
   await expect(content).toBeEditable();
-  await content.focus();
+  await expect(page.getByText("Saved").or(page.getByText("Editing")).first()).toBeVisible();
+  await content.click();
   await page.keyboard.type("Skizze vom Workshop");
   await page.keyboard.press("Enter");
   await page.keyboard.type("/drawing");
