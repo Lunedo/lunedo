@@ -21762,7 +21762,7 @@
       "get": {
         "operationId": "copies.get",
         "summary": "Get a copy",
-        "description": "Returns the state and progress of a copy the caller started.\n\nRequires the permission `copy.view` on the copy in `copyId`.",
+        "description": "Returns the state and progress of a copy the caller started. Titles, the new item and the IDs of the source and the target space appear only while the caller can still read them; otherwise the result names only the counts.\n\nRequires the permission `copy.view` on the copy in `copyId`.",
         "tags": [
           "Pages"
         ],
@@ -21816,7 +21816,7 @@
                     },
                     "title": {
                       "type": "string",
-                      "description": "Title of the copied item when the copy started."
+                      "description": "Title of the copied item when the copy started, or an empty string when the caller can no longer read the copy or its source."
                     },
                     "descendants": {
                       "type": "boolean",
@@ -122373,7 +122373,7 @@
                     },
                     "title": {
                       "type": "string",
-                      "description": "Title of the copied item when the copy started."
+                      "description": "Title of the copied item when the copy started, or an empty string when the caller can no longer read the copy or its source."
                     },
                     "descendants": {
                       "type": "boolean",

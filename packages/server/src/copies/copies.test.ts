@@ -563,6 +563,34 @@ describe.skipIf(!baseUrl)("copying content", () => {
       expect(JSON.stringify(copy)).not.toContain("Bonus");
     });
 
+    it("shows the copy and its titles to the person who copied only while they can read them", async () => {
+      const { org, wiki, other, as } = await setup();
+      const copier = await member(org.id, "member", "Cora Copier");
+      await grant(as, wiki.id, copier, "reader");
+      await grant(as, other.id, copier, "editor");
+      const source = await page(as, wiki.id, "Payroll plan");
+      const readerAs = accountPrincipal(copier);
+      const { copy, item } = await copyRoot(readerAs, source.id, other.id);
+      expect(await test.services.copies.get(readerAs, copy.id)).toMatchObject({
+        title: "Payroll plan",
+        sourceItemId: source.id,
+        targetSpaceId: other.id,
+        item: { id: item.id, title: "Payroll plan", spaceKey: other.key },
+      });
+      await test.services.pageAccess.change(as, item.id, [{ action: "restrict", kind: "view" }]);
+      await test.services.pageAccess.change(as, source.id, [{ action: "restrict", kind: "view" }]);
+      await test.services.tree.update(as, item.id, { title: "Payroll cuts 2027" });
+      expect(await test.services.copies.get(readerAs, copy.id)).toMatchObject({
+        state: "done",
+        copied: 1,
+        title: "",
+        sourceItemId: null,
+        targetSpaceId: other.id,
+        item: null,
+      });
+      expect(JSON.stringify(await test.services.copies.get(readerAs, copy.id))).not.toContain("Payroll");
+    });
+
     it("does not copy restrictions; the copies inherit the restrictions of their new place", async () => {
       const { reader, wiki, other, as } = await setup();
       const hr = await page(as, wiki.id, "HR");
@@ -813,7 +841,7 @@ describe.skipIf(!baseUrl)("copying content", () => {
       };
       await test.services.copies.work(job);
 
-      const done = await test.services.copies.get(queued.id);
+      const done = await test.services.copies.get(as, queued.id);
       expect(done).toMatchObject({ state: "done", copied: pages.length + 1 });
       const copiedChildren = await children(done?.item?.id ?? "");
       expect(copiedChildren.map((row) => row.title)).not.toContain("Late child");
@@ -840,7 +868,7 @@ describe.skipIf(!baseUrl)("copying content", () => {
       };
       await test.services.copies.work(job);
       expect(created).not.toBeNull();
-      const done = await test.services.copies.get(queued.id);
+      const done = await test.services.copies.get(as, queued.id);
       expect(done).toMatchObject({ state: "done", copied: pages.length + 1 });
       const top = await test.database.execute<{ title: string }>(sql`
         select title from tree_items where space_id = ${other.id} and parent_id is null order by position`);
@@ -864,7 +892,7 @@ describe.skipIf(!baseUrl)("copying content", () => {
       await expect(test.services.copies.work(first)).rejects.toThrow();
       await deletion;
       await test.services.copies.work(testJobContext("copies.run", { copyId: queued.id }, 1));
-      expect(await test.services.copies.get(queued.id)).toMatchObject({
+      expect(await test.services.copies.get(as, queued.id)).toMatchObject({
         state: "failed",
         errorCode: "invalidPlacement",
       });
@@ -895,7 +923,7 @@ describe.skipIf(!baseUrl)("copying content", () => {
       await expect(test.services.copies.work(first)).rejects.toThrow();
       await move;
       await test.services.copies.work(testJobContext("copies.run", { copyId: queued.id }, 1));
-      const done = await test.services.copies.get(queued.id);
+      const done = await test.services.copies.get(as, queued.id);
       expect(done?.state).toBe("done");
       const stale = await test.database.execute<{ count: number }>(sql`
         select count(*)::int as count from tree_items
@@ -923,7 +951,7 @@ describe.skipIf(!baseUrl)("copying content", () => {
       await opened;
       expect(await children(place.id)).toEqual([]);
       await test.services.copies.work(testJobContext("copies.run", { copyId: queued.id }, 1));
-      expect(await test.services.copies.get(queued.id)).toMatchObject({
+      expect(await test.services.copies.get(as, queued.id)).toMatchObject({
         state: "failed",
         errorCode: "copyChangesAccess",
       });
@@ -949,7 +977,7 @@ describe.skipIf(!baseUrl)("copying content", () => {
       await test.services.copies.work(testJobContext("copies.run", { copyId: queued.id }));
 
       expect(await itemsIn(other.id)).toEqual(before);
-      expect(await test.services.copies.get(queued.id)).toMatchObject({
+      expect(await test.services.copies.get(as, queued.id)).toMatchObject({
         state: "failed",
         errorCode: "copyFailed",
       });
@@ -968,7 +996,7 @@ describe.skipIf(!baseUrl)("copying content", () => {
       });
       await test.services.pageAccess.change(as, root.id, [{ action: "restrict", kind: "view" }]);
       await test.services.copies.work(testJobContext("copies.run", { copyId: queued.id }));
-      expect(await test.services.copies.get(queued.id)).toMatchObject({
+      expect(await test.services.copies.get(as, queued.id)).toMatchObject({
         state: "failed",
         errorCode: "copyChangesAccess",
       });
@@ -1003,7 +1031,7 @@ describe.skipIf(!baseUrl)("copying content", () => {
         sql`update item_copies set updated_at = now() - interval '6 hours' where id = ${queued.id}`,
       );
       await test.services.copies.watchdog();
-      expect(await test.services.copies.get(queued.id)).toMatchObject({
+      expect(await test.services.copies.get(as, queued.id)).toMatchObject({
         state: "failed",
         errorCode: "copyInterrupted",
       });

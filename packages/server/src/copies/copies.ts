@@ -335,12 +335,12 @@ export class CopyService {
       { isolationLevel: "repeatable read" },
     );
     if (background) await this.#enqueue(copyId);
-    const summary = await this.get(copyId);
+    const summary = await this.get(actor, copyId);
     if (!summary) throw new Error("The copy was not recorded");
     return summary;
   }
 
-  async get(copyId: string): Promise<CopySummary | null> {
+  async get(viewer: Principal, copyId: string): Promise<CopySummary | null> {
     const result = await this.#database.execute<CopyRow>(sql`
       select c.*, p.done, t.space_id as item_space_id, s.key as item_space_key, t.kind as item_kind,
         t.title as item_title
@@ -350,7 +350,26 @@ export class CopyService {
       left join spaces s on s.id = t.space_id
       where c.id = ${copyId}`);
     const row = result.rows[0];
-    return row ? this.#summary(row) : null;
+    return row ? this.#visibleSummary(viewer, this.#summary(row)) : null;
+  }
+
+  async #visibleSummary(viewer: Principal, summary: CopySummary): Promise<CopySummary> {
+    const sees = async (permission: "item.view" | "space.view", type: "item" | "space", id: string | null) =>
+      id !== null && (await this.#authorization.explain(viewer, permission, { type, id })).allowed;
+    const item = summary.item && (await sees("item.view", "item", summary.item.id)) ? summary.item : null;
+    const sourceItemId = (await sees("item.view", "item", summary.sourceItemId))
+      ? summary.sourceItemId
+      : null;
+    const targetSpaceId = (await sees("space.view", "space", summary.targetSpaceId))
+      ? summary.targetSpaceId
+      : null;
+    return {
+      ...summary,
+      title: item || (!summary.item && sourceItemId) ? summary.title : "",
+      sourceItemId,
+      targetSpaceId,
+      item,
+    };
   }
 
   async sources<T extends { copiedFrom: CopiedFrom | null }>(viewer: Principal, versions: T[]): Promise<T[]> {
