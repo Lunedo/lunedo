@@ -696,6 +696,7 @@ export class ImportPipeline {
     );
     const space = await this.#requireSpace(run.importId);
     await this.#database.transaction(async (tx) => {
+      await lockSpaces(tx, [space.spaceId]);
       for (const page of roots) {
         const itemId = items.get(page.sourceId);
         if (!itemId) continue;
