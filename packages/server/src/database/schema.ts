@@ -53,6 +53,8 @@ export { exportFormat, exportScope, exportState, exports } from "../exports/sche
 export {
   attachments,
   attachmentVersions,
+  displayVersionState,
+  displayVersions,
   storedFileState,
   storedFiles,
 } from "../files/schema.js";
@@ -217,7 +219,7 @@ export {
   treeItems,
   versionReason,
 } from "../spaces/schema.js";
-export { storageState } from "../storage/schema.js";
+export { storageReconcileDeltas, storageState } from "../storage/schema.js";
 export {
   pageTemplates,
   templateCategory,

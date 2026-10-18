@@ -67,6 +67,7 @@ export interface WordDocument {
   pages: readonly WordPage[];
   attachments: readonly PrintAttachment[];
   image(attachmentId: string): Promise<WordImage | null>;
+  leftOut(attachmentId: string): boolean;
 }
 
 const TWIPS_PER_MM = 1440 / 25.4;
@@ -412,6 +413,26 @@ class WordWriter {
           ? AlignmentType.RIGHT
           : AlignmentType.CENTER;
     const image = await this.#document.image(block.attachmentId);
+    if (!image && this.#document.leftOut(block.attachmentId)) {
+      return new Paragraph({
+        alignment,
+        border: {
+          top: { style: BorderStyle.DASHED, size: 4, color: MUTED },
+          bottom: { style: BorderStyle.DASHED, size: 4, color: MUTED },
+          left: { style: BorderStyle.DASHED, size: 4, color: MUTED },
+          right: { style: BorderStyle.DASHED, size: 4, color: MUTED },
+        },
+        children: [
+          new TextRun({
+            text: block.alt
+              ? `${block.alt}: ${this.#document.texts.imageLeftOut}`
+              : this.#document.texts.imageLeftOut,
+            italics: true,
+            color: MUTED,
+          }),
+        ],
+      });
+    }
     if (!image) {
       const label = block.alt || this.#document.texts.labels.image;
       const href = block.href && SAFE_LINK.test(block.href) ? block.href : null;

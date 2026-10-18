@@ -8,6 +8,7 @@ import {
   integer,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -23,6 +24,13 @@ export const storedFileStates = ["pending", "stored", "ready", "orphaned"] as co
 export type StoredFileState = (typeof storedFileStates)[number];
 export const storedFileState = pgEnum("stored_file_state", storedFileStates);
 
+export const displayVersionStates = ["pending", "done", "none", "tooLarge", "failed"] as const;
+export type DisplayVersionState = (typeof displayVersionStates)[number];
+export const displayVersionState = pgEnum("display_version_state", displayVersionStates);
+
+export const displayVersionSizes = ["display", "preview"] as const;
+export type DisplayVersionSize = (typeof displayVersionSizes)[number];
+
 export const storedFiles = pgTable(
   "stored_files",
   {
@@ -33,10 +41,15 @@ export const storedFiles = pgTable(
     contentType: text().notNull().default("application/octet-stream"),
     masterKeyVersion: integer(),
     state: storedFileState().notNull().default("pending"),
+    displayVersionState: displayVersionState(),
+    displayVersionAttempts: integer().notNull().default(0),
     ...timestamps(),
   },
   (table) => [
     uniqueIndex("stored_files_storage_key_unique").on(table.storageKey),
+    index("stored_files_display_versions_pending")
+      .on(table.id)
+      .where(sql`${table.displayVersionState} = 'pending'`),
     index().on(table.state, table.updatedAt),
     index().on(table.masterKeyVersion),
     index().on(table.contentDigest),
@@ -96,5 +109,26 @@ export const attachmentVersions = pgTable(
     uniqueIndex("attachment_versions_number_unique").on(table.attachmentId, table.number),
     index().on(table.fileId),
     index().on(table.uploadedBy),
+  ],
+);
+
+export const displayVersions = pgTable(
+  "display_versions",
+  {
+    sourceFileId: uuid()
+      .notNull()
+      .references(() => storedFiles.id, { onDelete: "cascade" }),
+    size: text({ enum: displayVersionSizes }).notNull(),
+    fileId: uuid()
+      .notNull()
+      .references(() => storedFiles.id),
+    width: integer().notNull(),
+    height: integer().notNull(),
+    createdAt: timestampColumn().notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.sourceFileId, table.size] }),
+    uniqueIndex("display_versions_file_unique").on(table.fileId),
+    check("display_versions_size", sql`${table.size} in ('display', 'preview')`),
   ],
 );

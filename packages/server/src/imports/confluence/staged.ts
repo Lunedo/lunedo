@@ -910,6 +910,62 @@ export async function reportRemovedRestrictions(context: ScanContext): Promise<v
   });
 }
 
+export async function unlessInvalid<T>(request: Promise<T | null>): Promise<T | null> {
+  try {
+    return await request;
+  } catch (error) {
+    if (error instanceof ImportFormatError && error.code === "confluenceInvalidResponse") return null;
+    throw error;
+  }
+}
+
+export async function keepRestricted(
+  context: ScanContext,
+  pageId: string,
+  title: string,
+  reason: "restrictions" | "parent",
+): Promise<void> {
+  await context.staging.put({
+    kind: kinds.restriction,
+    sourceId: `${pageId}/view/unreadable`,
+    ref: pageId,
+    data: {
+      kind: "view",
+      origin: "table",
+      userKey: null,
+      accountId: null,
+      group: null,
+    } satisfies StagedRestriction,
+  });
+  await context.problem("restrictionsUnreadable", { title: title.slice(0, 255), reason });
+}
+
+export async function leaveOutUnreadablePage(
+  context: ScanContext,
+  pageId: string,
+  title: string,
+): Promise<void> {
+  await context.staging.removeIds(kinds.page, [pageId]);
+  await context.problem("pageUnreadable", { title: title.slice(0, 255) });
+}
+
+export async function keepOrphansRestricted(context: ScanContext, roots: ReadonlySet<string>): Promise<void> {
+  await context.staging.flush();
+  const pages = new Map<string, { parentId: string | null; title: string }>();
+  for await (const record of context.staging.iterate<{ title: string }>(kinds.page)) {
+    pages.set(record.sourceId, { parentId: record.parentId, title: record.data.title });
+  }
+  for (const [pageId, page] of pages) {
+    if (!page.parentId || pages.has(page.parentId) || roots.has(pageId)) continue;
+    const own = await context.staging.byRef<StagedRestriction>(kinds.restriction, [pageId]);
+    await context.staging.removeIds(
+      kinds.restriction,
+      own.filter((record) => record.data.kind === "view").map((record) => record.sourceId),
+    );
+    await keepRestricted(context, pageId, page.title, "parent");
+  }
+}
+
 export async function stageRestrictions(staging: StagingStore): Promise<void> {
   await staging.flush();
   if ((await staging.count(kinds.restriction, { field: "origin", value: "table" })) > 0) {

@@ -58,12 +58,17 @@ jobs:
       - name: Use the caches on the runner
         run: node scripts/prepare-ci-cache.ts host "$CI_CACHE_DIR"
       - run: corepack enable
-      - name: Prune the pnpm store of the jobs on the runner
-        run: pnpm store prune
+      - name: Prune the pnpm stores of the jobs on the runner
+        run: |
+          for store in pnpm-store pnpm-store-pull-requests; do
+            mkdir -p "$CI_CACHE_DIR/host/$store"
+            pnpm store prune --store-dir "$CI_CACHE_DIR/host/$store"
+          done
       - name: Prune the pnpm store of the end-to-end container and old Turborepo entries
         run: >-
           docker run --rm --volume "$CI_CACHE_DIR:/ci-cache" --volume "$GITHUB_WORKSPACE:/repo:ro" --workdir /repo
           --env COREPACK_ENABLE_DOWNLOAD_PROMPT=0 "$PLAYWRIGHT_IMAGE" sh -ec
-          'mkdir -p /ci-cache/container/pnpm-store /ci-cache/container/turbo;
+          'mkdir -p /ci-cache/container/pnpm-store /ci-cache/container/pnpm-store-pull-requests /ci-cache/container/turbo;
           corepack pnpm store prune --store-dir /ci-cache/container/pnpm-store;
+          corepack pnpm store prune --store-dir /ci-cache/container/pnpm-store-pull-requests;
           find /ci-cache/host/turbo /ci-cache/container/turbo -type f -mtime +3 -delete'

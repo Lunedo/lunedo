@@ -7,6 +7,7 @@ import {
   DiagramRejectedError,
   DocumentInvalidError,
   EmailInUseError,
+  ExportBusyError,
   ExportError,
   FileTooLargeError,
   ForbiddenError,
@@ -16,6 +17,7 @@ import {
   ProviderResponseError,
   PushSubscriptionError,
   RelyingPartyError,
+  SanitizerBusyError,
   SavedSearchLimitError,
   SavedSearchNameError,
   SceneInvalidError,
@@ -34,6 +36,7 @@ import {
   StorageSettingsError,
   SvgRejectedError,
   TokenRejectedError,
+  UploadTimeoutError,
 } from "@pagehall/server";
 import type { FastifyReply } from "fastify";
 import { ZodError } from "zod";
@@ -141,6 +144,14 @@ function map(error: unknown): Mapped | null {
   if (error instanceof EmailInUseError) return { code: "emailInUse", detail: error.message };
   if (error instanceof ProviderResponseError) return { code: "providerUnavailable", detail: error.message };
   if (error instanceof BusyError) return { code: "busy", detail: error.message };
+  if (error instanceof UploadTimeoutError) return { code: "uploadTimeout", detail: error.message };
+  if (error instanceof SanitizerBusyError) {
+    return {
+      code: "busy",
+      detail: error.message,
+      extensions: { retryAfterSeconds: error.retryAfterSeconds },
+    };
+  }
   if (error instanceof SessionGoneError) return { code: "sessionEnded", detail: error.message };
   if (error instanceof RelyingPartyError) return { code: "instanceUrlMissing", detail: error.message };
   if (error instanceof SmtpConfigurationError)
@@ -175,6 +186,13 @@ function map(error: unknown): Mapped | null {
       code: "invalidStorageSettings",
       detail: error.message,
       extensions: { fields: error.fields.map((field) => `body.${field}`), problem: error.code },
+    };
+  }
+  if (error instanceof ExportBusyError) {
+    return {
+      code: "busy",
+      detail: error.message,
+      extensions: { retryAfterSeconds: error.retryAfterSeconds },
     };
   }
   if (error instanceof ExportError) {

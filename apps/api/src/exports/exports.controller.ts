@@ -148,7 +148,7 @@ export class ExportsController {
       description: "The page as a Markdown file, an HTML file, a ZIP archive, a PDF file or a Word document.",
       example: "# Connect through WireGuard\n",
     },
-    errors: ["exportDisabled", "nothingToExport", "renderUnavailable", "renderFailed"],
+    errors: ["exportDisabled", "nothingToExport", "renderUnavailable", "renderFailed", "busy"],
   })
   async page(
     @Param("pageId") pageId: string,
@@ -191,6 +191,7 @@ export class ExportsController {
       "notEnoughStorage",
       "nothingToExport",
       "tooManyPagesToPrint",
+      "tooManyPagesForFile",
       "renderUnavailable",
     ],
   })
@@ -245,6 +246,7 @@ export class ExportsController {
       "tooManyExports",
       "notEnoughStorage",
       "tooManyPagesToPrint",
+      "tooManyPagesForFile",
       "renderUnavailable",
     ],
   })

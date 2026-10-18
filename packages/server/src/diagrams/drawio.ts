@@ -1,9 +1,11 @@
 import { inflateRawSync } from "node:zlib";
 import { DOMParser, type Element, type Node } from "@xmldom/xmldom";
+import { attributeWarning, type MarkupBudget, takeMarkup } from "./markup.js";
 
-export const MAX_DRAWIO_BYTES = 10 * 1024 * 1024;
+export const MAX_DRAWIO_BYTES = 4 * 1024 * 1024;
+export const MAX_DRAWIO_ELEMENTS = 50_000;
+export const MAX_DRAWIO_ATTRIBUTES = 300_000;
 const MAX_DEPTH = 64;
-const MAX_ELEMENTS = 200_000;
 
 export class DiagramRejectedError extends Error {
   override name = "DiagramRejectedError";
@@ -78,7 +80,7 @@ function parseXml(input: string): Element {
   try {
     const document = new DOMParser({
       onError: (level, message) => {
-        if (level !== "warning") throw new DiagramRejectedError(message);
+        if (level !== "warning" || attributeWarning(level, message)) throw new DiagramRejectedError(message);
       },
     }).parseFromString(input, "text/xml");
     root = document.documentElement;
@@ -91,11 +93,21 @@ function parseXml(input: string): Element {
 
 const MAX_PAGES = 1000;
 
+function tooManyElements(): DiagramRejectedError {
+  return new DiagramRejectedError(
+    `The diagram has more than ${MAX_DRAWIO_ELEMENTS} elements or ${MAX_DRAWIO_ATTRIBUTES} attributes`,
+  );
+}
+
 class DrawioSanitizer {
   readonly texts: string[] = [];
-  #elements = 0;
+  readonly #budget: MarkupBudget;
   #pages = 0;
   #inflated = 0;
+
+  constructor(budget: MarkupBudget) {
+    this.#budget = budget;
+  }
 
   #inflate(compressed: string): string {
     this.#pages += 1;
@@ -111,11 +123,14 @@ class DrawioSanitizer {
     }
     this.#inflated += data.length;
     if (this.#inflated > MAX_DRAWIO_BYTES) throw new DiagramRejectedError("The diagram is too large");
+    let page: string;
     try {
-      return decodeURIComponent(data.toString("latin1"));
+      page = decodeURIComponent(data.toString("latin1"));
     } catch {
       throw new DiagramRejectedError("A page of the diagram cannot be decompressed");
     }
+    if (!takeMarkup(page, this.#budget)) throw tooManyElements();
+    return page;
   }
 
   attributes(element: Element): string {
@@ -143,8 +158,6 @@ class DrawioSanitizer {
 
   element(element: Element, depth: number, inflated = false): string {
     if (depth > MAX_DEPTH) throw new DiagramRejectedError("The diagram is nested too deeply");
-    this.#elements += 1;
-    if (this.#elements > MAX_ELEMENTS) throw new DiagramRejectedError("The diagram has too many elements");
     const name = element.localName ?? "";
     if (element.namespaceURI !== null || !ELEMENTS.has(name)) {
       throw new DiagramRejectedError(`The diagram contains an unknown element: ${name.slice(0, 50)}`);
@@ -176,12 +189,14 @@ export interface SanitizedDrawio {
 export function sanitizeDrawio(input: string): SanitizedDrawio {
   if (Buffer.byteLength(input, "utf8") > MAX_DRAWIO_BYTES)
     throw new DiagramRejectedError("The diagram is too large");
+  const budget = { elements: MAX_DRAWIO_ELEMENTS, attributes: MAX_DRAWIO_ATTRIBUTES };
+  if (!takeMarkup(input, budget)) throw tooManyElements();
   const root = parseXml(input);
   const name = root.localName ?? "";
   if (name !== "mxfile" && name !== "mxGraphModel") {
     throw new DiagramRejectedError("The file is not a draw.io diagram");
   }
-  const sanitizer = new DrawioSanitizer();
+  const sanitizer = new DrawioSanitizer(budget);
   const xml = sanitizer.element(root, 0);
   if (Buffer.byteLength(xml, "utf8") > MAX_DRAWIO_BYTES)
     throw new DiagramRejectedError("The diagram is too large");

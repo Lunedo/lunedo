@@ -22,6 +22,9 @@ export const reportCategories = {
     "contentSkipped",
     "trashedContent",
     "removedRestrictionKept",
+    "restrictionsUnreadable",
+    "pageUnreadable",
+    "listingIncomplete",
     "contentTypeNotImported",
     "likesAndWatchersSkipped",
     "permissionsUnavailable",
@@ -30,6 +33,7 @@ export const reportCategories = {
     "embeddedObject",
     "wordCommentsDropped",
     "unreadableImage",
+    "documentTooLarge",
   ],
 } as const;
 

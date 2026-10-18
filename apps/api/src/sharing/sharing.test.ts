@@ -15,6 +15,7 @@ import {
   signedInClient,
 } from "../testing/accounts.js";
 import { type AuthTestApp, createAuthTestApp, databaseBaseUrl, TestClient } from "../testing/auth-app.js";
+import { grayPng } from "../testing/images.js";
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -204,6 +205,51 @@ describe.skipIf(!databaseBaseUrl)("page access through the API", () => {
         limited = response.statusCode === 429;
       }
       expect(limited).toBe(true);
+    } finally {
+      await test.runtime.settings.clear(anyoneLinksSetting, { organization: organizationId }, "organization");
+    }
+  });
+
+  it("serve display versions through links for anyone only for images of the linked page", async () => {
+    const created = await space([]);
+    const shared = await page(created.id, "Floor plan");
+    const other = await page(created.id, "Private plan");
+    const image = async (pageId: string) => {
+      const response = await owner.post(
+        `/api/v1/pages/${pageId}/attachments?name=plan.png`,
+        grayPng(2600, 1800),
+        { "content-type": "application/octet-stream" },
+      );
+      expect(response.statusCode, response.body).toBe(201);
+      const id = (response.json() as { id: string }).id;
+      const content = await test.runtime.services.attachments.content(id, "draft");
+      await test.runtime.services.displayVersions.create(content?.fileId ?? "", { lastAttempt: false });
+      return id;
+    };
+    const visible = await image(shared);
+    const hidden = await image(other);
+    await test.runtime.settings.set(
+      anyoneLinksSetting,
+      { organization: organizationId },
+      "organization",
+      true,
+    );
+    try {
+      const made = await owner.post(`/api/v1/pages/${shared}/share-links`, {
+        scope: "anyone",
+        expiresAt: new Date(Date.now() + DAY).toISOString(),
+      });
+      expect(made.statusCode, made.body).toBe(201);
+      const { token } = made.json() as { token: string };
+      const visitor = new TestClient(test.app, { remoteAddress: "203.0.113.60" });
+      const base = `/api/v1/share-links/${token}/attachments`;
+      const display = await visitor.get(`${base}/${visible}/content?size=display`);
+      expect(display.statusCode).toBe(200);
+      expect(display.headers["content-type"]).toBe("image/webp");
+      expect((await visitor.get(`${base}/${visible}/content`)).headers["content-type"]).toBe("image/png");
+      for (const size of ["display", "preview"]) {
+        expect((await visitor.get(`${base}/${hidden}/content?size=${size}`)).statusCode).toBe(404);
+      }
     } finally {
       await test.runtime.settings.clear(anyoneLinksSetting, { organization: organizationId }, "organization");
     }

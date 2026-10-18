@@ -1,0 +1,48 @@
+{
+  "$comment": "Packages that ship prebuilt native libraries. The license check reads the bundled libraries from the package's versions.json and needs an entry here for the exact package version, pinned by the SHA-256 of that file, with the license of every bundled library. Licenses in accepted are not OSI-approved and are accepted only for the libraries of the packages named in the same entry; any other package under these licenses still fails.",
+  "bundles": [
+    {
+      "packages": ["@img/sharp-libvips-linux-arm64@1.3.4", "@img/sharp-libvips-linux-x64@1.3.4"],
+      "versionsSha256": "e2611d5d854815a8b33c8a3d2ec649511a9596ccf16844e8eae7cf81e79881c4",
+      "libraries": {
+        "aom": "BSD-2-Clause AND LicenseRef-AOMedia-Patent-1.0",
+        "archive": "BSD-2-Clause",
+        "cairo": "LGPL-2.1-only",
+        "cgif": "MIT",
+        "exif": "LGPL-3.0-only",
+        "expat": "MIT",
+        "ffi": "MIT",
+        "fontconfig": "LicenseRef-fontconfig",
+        "freetype": "FTL",
+        "fribidi": "LGPL-3.0-only",
+        "glib": "LGPL-3.0-only",
+        "harfbuzz": "MIT",
+        "heif": "LGPL-3.0-only",
+        "highway": "BSD-3-Clause",
+        "imagequant": "BSD-2-Clause",
+        "lcms": "MIT",
+        "mozjpeg": "IJG AND Zlib AND BSD-3-Clause",
+        "pango": "LGPL-3.0-only",
+        "pixman": "MIT",
+        "png": "libpng-2.0",
+        "proxy-libintl": "LGPL-3.0-only",
+        "rsvg": "LGPL-3.0-only",
+        "tiff": "libtiff",
+        "uhdr": "MIT",
+        "vips": "LGPL-3.0-only",
+        "webp": "BSD-3-Clause",
+        "xml2": "MIT",
+        "zlib-ng": "Zlib"
+      },
+      "accepted": [
+        "FTL",
+        "IJG",
+        "libpng-2.0",
+        "libtiff",
+        "LicenseRef-fontconfig",
+        "LicenseRef-AOMedia-Patent-1.0"
+      ],
+      "reason": "Prebuilt libvips for sharp, which creates the display versions of images. Licenses taken from the library table in the package README. cairo is offered under LGPL-2.1 or MPL-1.1 and is used under LGPL-2.1, because MPL-1.1 is not compatible with the AGPL. FreeType, IJG, libpng, libtiff and fontconfig are old permissive BSD-style licenses that predate the OSI list and were never submitted; they allow use, change and distribution and ask only for attribution. The AOMedia patent license is a royalty-free patent grant on top of BSD-2-Clause. None of these libraries can be replaced without dropping libvips."
+    }
+  ]
+}

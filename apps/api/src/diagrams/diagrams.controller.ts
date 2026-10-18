@@ -108,7 +108,8 @@ export class DiagramsController {
     params: diagramParams,
     upload: {
       contentTypes: ["application/octet-stream"],
-      description: "The draw.io file (`mxfile` or `mxGraphModel` XML), up to 10 MB.",
+      description:
+        "The draw.io file (`mxfile` or `mxGraphModel` XML), up to 4 MB, 50,000 elements and 300,000 attributes.",
     },
     response: {
       description: "Where the file is stored and the text of the diagram.",
@@ -121,7 +122,14 @@ export class DiagramsController {
         .describe("The stored file."),
       example: { sourceId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a22", sourceVersion: 2, text: "Core switch" },
     },
-    errors: ["invalidDiagram", "fileTooLarge", "storageFull", "unsupportedMediaType"],
+    errors: [
+      "invalidDiagram",
+      "fileTooLarge",
+      "storageFull",
+      "unsupportedMediaType",
+      "busy",
+      "uploadTimeout",
+    ],
   })
   async drawio(
     @Param("pageId") pageId: string,
@@ -156,7 +164,14 @@ export class DiagramsController {
         text: "Router\nSwitch",
       },
     },
-    errors: ["invalidDrawingImage", "fileTooLarge", "storageFull", "unsupportedMediaType"],
+    errors: [
+      "invalidDrawingImage",
+      "fileTooLarge",
+      "storageFull",
+      "unsupportedMediaType",
+      "busy",
+      "uploadTimeout",
+    ],
   })
   async image(
     @Param("pageId") pageId: string,

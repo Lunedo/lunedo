@@ -140,6 +140,9 @@ services:
     environment:
       RENDER_TOKEN: ${PAGEHALL_RENDER_TOKEN:-}
       RENDER_CONCURRENCY: ${RENDER_CONCURRENCY:-2}
+      # Docker Desktop does not give containers the user namespaces Chromium's sandbox needs, so development
+      # runs without it and the container logs a warning. Production setups keep the sandbox on.
+      RENDER_CHROMIUM_SANDBOX: ${RENDER_CHROMIUM_SANDBOX:-false}
     ports:
       - "127.0.0.1:${RENDER_PORT:-3003}:3000"
 

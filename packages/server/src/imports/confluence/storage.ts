@@ -1025,7 +1025,12 @@ function trimInline(nodes: NodeJson[]): NodeJson[] {
 }
 
 function blockIsValid(block: NodeJson): boolean {
-  return validateDocument({ type: "doc", content: [block] }).ok;
+  return validBlock(block) !== null;
+}
+
+function validBlock(block: NodeJson): NodeJson | null {
+  const validated = validateDocument({ type: "doc", content: [block] });
+  return validated.ok ? (validated.document.content?.[0] ?? null) : null;
 }
 
 function countNodes(node: NodeJson): number {
@@ -1066,7 +1071,8 @@ export function convertStorage(root: XmlNode, lookup: StorageLookup): ConvertedP
     const accepted: NodeJson[] = [];
     let failed = false;
     for (const block of converted) {
-      if (blockIsValid(block)) accepted.push(block);
+      const valid = validBlock(block);
+      if (valid) accepted.push(valid);
       else failed = true;
     }
     const result = failed

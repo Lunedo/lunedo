@@ -16,6 +16,7 @@ import { type AuthorizationService, ForbiddenError } from "../authorization/serv
 import type { AccessImpact } from "../authorization/space-access.js";
 import type { ContentActivity } from "../collaboration/content.js";
 import type { Database, Transaction } from "../database/database.js";
+import type { FileService } from "../files/files.js";
 import type { JobContext, JobQueue } from "../jobs/job-queue.js";
 import type { NotificationService } from "../notifications/service.js";
 import type { ValueSigner } from "../sharing/signer.js";
@@ -46,6 +47,7 @@ import { insertFirstVersion } from "../spaces/versions.js";
 import { refreshReaderVisibility, visibleItem } from "../spaces/visibility.js";
 import { isStorageFull } from "../storage/errors.js";
 import type { StorageService } from "../storage/storage.js";
+import { attachmentScenes, copyDrawingScenes } from "../whiteboards/scene-copies.js";
 import { copyItemsJob } from "./jobs.js";
 import type { CopyState } from "./schema.js";
 import { type CopiedFrom, visibleSources } from "./sources.js";
@@ -248,6 +250,7 @@ export class CopyService {
   readonly #people: PeopleService;
   readonly #activity: ContentActivity;
   readonly #signer: ValueSigner;
+  readonly #files: FileService;
   readonly #storage: StorageService;
   readonly #audit: AuditLog;
   readonly #notifications: NotificationService;
@@ -262,6 +265,7 @@ export class CopyService {
     activity: ContentActivity;
     signer: ValueSigner;
     storage: StorageService;
+    files: FileService;
     audit: AuditLog;
     notifications: NotificationService;
     language: (accountId: string) => Promise<Language>;
@@ -273,6 +277,7 @@ export class CopyService {
     this.#activity = options.activity;
     this.#signer = options.signer;
     this.#storage = options.storage;
+    this.#files = options.files;
     this.#audit = options.audit;
     this.#notifications = options.notifications;
     this.#language = options.language;
@@ -335,12 +340,12 @@ export class CopyService {
       { isolationLevel: "repeatable read" },
     );
     if (background) await this.#enqueue(copyId);
-    const summary = await this.get(copyId);
+    const summary = await this.get(actor, copyId);
     if (!summary) throw new Error("The copy was not recorded");
     return summary;
   }
 
-  async get(copyId: string): Promise<CopySummary | null> {
+  async get(viewer: Principal, copyId: string): Promise<CopySummary | null> {
     const result = await this.#database.execute<CopyRow>(sql`
       select c.*, p.done, t.space_id as item_space_id, s.key as item_space_key, t.kind as item_kind,
         t.title as item_title
@@ -350,7 +355,26 @@ export class CopyService {
       left join spaces s on s.id = t.space_id
       where c.id = ${copyId}`);
     const row = result.rows[0];
-    return row ? this.#summary(row) : null;
+    return row ? this.#visibleSummary(viewer, this.#summary(row)) : null;
+  }
+
+  async #visibleSummary(viewer: Principal, summary: CopySummary): Promise<CopySummary> {
+    const sees = async (permission: "item.view" | "space.view", type: "item" | "space", id: string | null) =>
+      id !== null && (await this.#authorization.explain(viewer, permission, { type, id })).allowed;
+    const item = summary.item && (await sees("item.view", "item", summary.item.id)) ? summary.item : null;
+    const sourceItemId = (await sees("item.view", "item", summary.sourceItemId))
+      ? summary.sourceItemId
+      : null;
+    const targetSpaceId = (await sees("space.view", "space", summary.targetSpaceId))
+      ? summary.targetSpaceId
+      : null;
+    return {
+      ...summary,
+      title: item || (!summary.item && sourceItemId) ? summary.title : "",
+      sourceItemId,
+      targetSpaceId,
+      item,
+    };
   }
 
   async sources<T extends { copiedFrom: CopiedFrom | null }>(viewer: Principal, versions: T[]): Promise<T[]> {
@@ -380,6 +404,7 @@ export class CopyService {
       const located = await this.#locate(actor, sourceItemId, request.spaceId);
       const mailIds = await this.#database.transaction(
         async (tx) => {
+          await tx.execute(sql`select set_config('pagehall.tree_settled_later', 'on', true)`);
           await checkParent(tx, this.#authorization, actor, located.targetSpaceId, request.parentId);
           const plan = await this.#plan(tx, actor, sourceItemId, row.descendants);
           const access = await this.#access(tx, actor, plan, located, request.parentId);
@@ -933,7 +958,10 @@ export class CopyService {
         ? migrated(row.snapshot, row.schema_version)
         : migrated(row.version_document, row.version_schema);
     const attachments = await this.#copyAttachments(context, item, documentAttachments(document));
-    const copied = copyPageDocument(document, this.#mapping(context, attachments));
+    const copied = await copyDrawingScenes(
+      copyPageDocument(document, this.#mapping(context, attachments)),
+      attachmentScenes(tx, this.#files, item.copyId, async (id) => attachments.get(id)?.id ?? null),
+    );
     await insertInitialDocument(tx, item.copyId, actorId, copied);
     await insertFirstVersion(tx, item.copyId, actorId, { itemId: item.id, title: item.title });
     const stored = await tx.execute<{ snapshot: DocumentJson }>(

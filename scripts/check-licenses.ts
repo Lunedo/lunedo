@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { type ListedPackage, withDeclaredLicense } from "./license-files.ts";
 import {
   type Allowlist,
+  type BundleEntry,
   type Clarifications,
   findLicenseViolations,
   type PackageLicense,
@@ -26,8 +27,18 @@ const { packages: clarifications } = JSON.parse(
   readFileSync(new URL("../license-clarifications.json", import.meta.url), "utf8"),
 ) as { packages: Clarifications };
 
+const { bundles } = JSON.parse(readFileSync(new URL("../license-bundles.json", import.meta.url), "utf8")) as {
+  bundles: BundleEntry[];
+};
+
 const all = listLicenses(false);
-const violations = findLicenseViolations({ all, production: listLicenses(true), allowlist, clarifications });
+const violations = findLicenseViolations({
+  all,
+  production: listLicenses(true),
+  allowlist,
+  clarifications,
+  bundles,
+});
 
 if (violations.length > 0) {
   console.error(`License check failed:\n  ${violations.join("\n  ")}`);

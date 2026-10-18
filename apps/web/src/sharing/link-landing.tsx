@@ -9,6 +9,7 @@ import { ApiError, networkError, request, toApiError } from "../api/request.js";
 import { PageReadView } from "../editor/read-view.js";
 import { LoadError } from "../errors/failure.js";
 import { problemMessage } from "../errors/problem-message.js";
+import type { ImageSize } from "../files/attachments-api.js";
 import { typeLabel } from "../files/file-preview.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { Redirect } from "../spaces/redirect.js";
@@ -25,14 +26,29 @@ type State =
   | { kind: "password"; error: string | null }
   | { kind: "failed"; error: unknown };
 
-function attachmentHref(token: string, attachmentId: string, download = false): string {
-  return `/api/v1/share-links/${encodeURIComponent(token)}/attachments/${attachmentId}/content${download ? "?download=true" : ""}`;
+function attachmentHref(
+  token: string,
+  attachmentId: string,
+  options: { download?: boolean; size?: ImageSize } = {},
+): string {
+  const query = new URLSearchParams();
+  if (options.download) query.set("download", "true");
+  if (options.size) query.set("size", options.size);
+  const suffix = query.toString();
+  return `/api/v1/share-links/${encodeURIComponent(token)}/attachments/${attachmentId}/content${suffix ? `?${suffix}` : ""}`;
 }
 
-async function attachmentBlob(token: string, attachmentId: string, unlock: string): Promise<Blob> {
+async function attachmentBlob(
+  token: string,
+  attachmentId: string,
+  unlock: string,
+  size?: ImageSize,
+): Promise<Blob> {
   let response: Response;
   try {
-    response = await fetch(attachmentHref(token, attachmentId), { headers: { "x-pagehall-unlock": unlock } });
+    response = await fetch(attachmentHref(token, attachmentId, size ? { size } : {}), {
+      headers: { "x-pagehall-unlock": unlock },
+    });
   } catch {
     throw networkError();
   }
@@ -58,7 +74,8 @@ function useImageUrls(token: string, unlock: string | null, images: readonly str
       new Map(
         await Promise.all(
           images.map(
-            async (id) => [id, URL.createObjectURL(await attachmentBlob(token, id, unlock ?? ""))] as const,
+            async (id) =>
+              [id, URL.createObjectURL(await attachmentBlob(token, id, unlock ?? "", "display"))] as const,
           ),
         ),
       ),
@@ -69,7 +86,8 @@ function useImageUrls(token: string, unlock: string | null, images: readonly str
       for (const url of urls?.values() ?? []) URL.revokeObjectURL(url);
     };
   }, [blobs.data]);
-  return (id: string) => (unlock === null ? attachmentHref(token, id) : (blobs.data?.get(id) ?? ""));
+  return (id: string, _version?: number, size?: ImageSize) =>
+    unlock === null ? attachmentHref(token, id, size ? { size } : {}) : (blobs.data?.get(id) ?? "");
 }
 
 function DownloadLink({
@@ -86,7 +104,11 @@ function DownloadLink({
   const className = "min-h-hit px-2 text-accent underline focus-visible:focus-ring";
   if (unlock === null) {
     return (
-      <a href={attachmentHref(token, attachment.id, true)} download={attachment.name} className={className}>
+      <a
+        href={attachmentHref(token, attachment.id, { download: true })}
+        download={attachment.name}
+        className={className}
+      >
         {t("files.download")}
       </a>
     );
@@ -138,7 +160,7 @@ function AnonymousPage({ token, unlock }: { token: string; unlock: string | null
     token,
     unlock,
     (page.data?.attachments ?? [])
-      .filter((attachment) => attachment.preview === "image")
+      .filter((attachment) => attachment.preview === "image" && !attachment.tooLargeForPreview)
       .map((attachment) => attachment.id),
   );
   if (page.isPending) return <Skeleton className="h-card w-full" />;
@@ -161,7 +183,12 @@ function AnonymousPage({ token, unlock }: { token: string; unlock: string | null
       </header>
       <PageReadView
         document={data.document}
-        references={NO_REFERENCES}
+        references={{
+          ...NO_REFERENCES,
+          tooLargeImages: data.attachments
+            .filter((attachment) => attachment.tooLargeForPreview)
+            .map((attachment) => attachment.id),
+        }}
         pageId={data.itemId}
         attachments={{ url: urlOf, onOpen: () => undefined }}
       />

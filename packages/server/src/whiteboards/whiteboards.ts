@@ -17,6 +17,7 @@ import type { AuditLog } from "../audit/audit-log.js";
 import type { ContentActivity } from "../collaboration/content.js";
 import { type CopiedFrom, copiedFrom } from "../copies/sources.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
+import { readDrawingUpload, sanitizerSlots } from "../diagrams/markup.js";
 import type { FileService } from "../files/files.js";
 import type { SettingsService } from "../settings/service.js";
 import { actorIdOf, auditScopeOf, SpaceError } from "../spaces/common.js";
@@ -33,7 +34,7 @@ import { liveVersionIdleMinutesSetting } from "../spaces/settings.js";
 import { signalDocumentChange, signalSpaceChange } from "../spaces/signals.js";
 import { PRESENCE_STALE_SECONDS, type VersionPerson } from "../spaces/versions.js";
 import type { StorageService } from "../storage/storage.js";
-import { readText, SceneInvalidError } from "./common.js";
+import { SceneInvalidError } from "./common.js";
 import { MAX_PREVIEW_BYTES, sanitizeSvg } from "./svg.js";
 
 export const DELETED_ELEMENT_RETENTION_MS = 24 * 60 * 60 * 1000;
@@ -460,11 +461,14 @@ export class WhiteboardService {
     itemId: string,
     input: { revision: number; body: Readable },
   ): Promise<boolean> {
-    const svg = sanitizeSvg(await readText(input.body, MAX_PREVIEW_BYTES));
-    await this.#storage.requireUpload();
-    const stored = await this.#files.write(Readable.from([Buffer.from(svg, "utf8")]), {
-      name: "preview.svg",
-      maxBytes: MAX_PREVIEW_BYTES,
+    const text = (await readDrawingUpload(actor, input.body, MAX_PREVIEW_BYTES)).toString("utf8");
+    const stored = await sanitizerSlots.run(actor, async () => {
+      const svg = sanitizeSvg(text);
+      await this.#storage.requireUpload();
+      return this.#files.write(Readable.from([Buffer.from(svg, "utf8")]), {
+        name: "preview.svg",
+        maxBytes: MAX_PREVIEW_BYTES,
+      });
     });
     let kept = false;
     try {

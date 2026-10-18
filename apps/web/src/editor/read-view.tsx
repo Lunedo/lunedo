@@ -23,6 +23,7 @@ import { useTranslation } from "react-i18next";
 import { CommentHighlights } from "../collaboration/comment-highlights.js";
 import { reportFilters, TaskReport } from "../collaboration/task-report.js";
 import { ReferencedDiagram } from "../diagrams/referenced-diagram.js";
+import type { AttachmentUrl } from "../files/attachment-source.js";
 import { contentUrl } from "../files/attachments-api.js";
 import { useAttachmentPreview } from "../files/preview-host.js";
 import type { Formatter } from "../format/format.js";
@@ -73,15 +74,19 @@ export function readViewContext(
   references: References,
   t: TFunction,
   format: Formatter,
-  attachmentUrl: (id: string, version?: number) => string = (id, version) =>
-    contentUrl(id, version === undefined ? {} : { version }),
+  attachmentUrl: AttachmentUrl = (id, version, size) =>
+    contentUrl(id, { ...(version === undefined ? {} : { version }), ...(size ? { size } : {}) }),
   options: { embedServices?: readonly EmbedService[] | null; numberHeadings?: boolean } = {},
 ): RenderContext {
   const services = options.embedServices;
   return {
     ...(services ? { embed: (url: string) => resolveEmbed(url, services) } : {}),
     ...(options.numberHeadings ? { numberHeadings: true } : {}),
-    attachment: (id, version) => ({ href: attachmentUrl(id, version) }),
+    attachment: (id, version) => ({
+      href: attachmentUrl(id, version),
+      display: attachmentUrl(id, version, "display"),
+      ...(references.tooLargeImages?.includes(id) ? { tooLarge: true } : {}),
+    }),
     mention: (id) => {
       const name = references.people[id];
       return name ? { name } : null;
@@ -115,6 +120,8 @@ export function readViewContext(
       tableOfContents: t("editor.toc.title"),
       file: t("editor.readView.file"),
       image: t("editor.readView.image"),
+      openFullSize: t("editor.readView.openFullSize"),
+      imageTooLarge: t("editor.readView.imageTooLarge"),
       drawing: t("editor.drawing.label"),
       drawio: t("editor.drawio.label"),
       drawioReference: t("editor.drawioReference.label"),
@@ -198,7 +205,7 @@ export function applyWidths(root: HTMLElement): void {
 }
 
 export interface ReadViewAttachments {
-  url?: (id: string, version?: number) => string;
+  url?: AttachmentUrl;
   onOpen?: (id: string) => void;
 }
 
@@ -355,6 +362,7 @@ export function PageReadView({
     if (thread && !link && openThreads.includes(thread)) collaboration.onThreadClick?.(thread);
     if (
       !link ||
+      link.target === "_blank" ||
       event.defaultPrevented ||
       event.button !== 0 ||
       event.metaKey ||

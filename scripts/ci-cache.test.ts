@@ -6,6 +6,7 @@ import { describe, it } from "node:test";
 import {
   type CacheEntry,
   type CacheFileSystem,
+  cacheAccess,
   cacheEnvironment,
   parseOwner,
   prepareCache,
@@ -52,18 +53,51 @@ describe("runnerDirectory", () => {
 
 describe("cacheEnvironment", () => {
   it("shares the pnpm store and gives each runner its own Turborepo cache", () => {
-    assert.deepEqual(cacheEnvironment("/srv/ci-cache", "host", "r1"), {
+    assert.deepEqual(cacheEnvironment("/srv/ci-cache", "host", "r1", "write"), {
       pnpm_config_store_dir: "/srv/ci-cache/host/pnpm-store",
       TURBO_CACHE_DIR: "/srv/ci-cache/host/turbo/r1",
     });
   });
 
   it("keeps files written by root in the container apart from those of the runner user", () => {
-    assert.deepEqual(cacheEnvironment("/ci-cache", "container", "r2"), {
+    assert.deepEqual(cacheEnvironment("/ci-cache", "container", "r2", "write"), {
       pnpm_config_store_dir: "/ci-cache/container/pnpm-store",
       TURBO_CACHE_DIR: "/ci-cache/container/turbo/r2",
       pnpm_config_cache_dir: "/ci-cache/container/pnpm-cache/r2",
     });
+  });
+});
+
+describe("cacheAccess", () => {
+  it("lets only pushes to main write the caches", () => {
+    assert.equal(cacheAccess("push", "refs/heads/main"), "write");
+    assert.equal(cacheAccess("pull_request", "refs/pull/78/merge"), "read");
+    assert.equal(cacheAccess("push", "refs/heads/fix/review-imports"), "read");
+    assert.equal(cacheAccess("schedule", "refs/heads/main"), "read");
+    assert.equal(cacheAccess("workflow_dispatch", "refs/heads/main"), "read");
+    assert.equal(cacheAccess(undefined, undefined), "read");
+  });
+});
+
+describe("cacheEnvironment for pull requests", () => {
+  it("reads the Turborepo cache of main without writing and keeps its own pnpm store", () => {
+    assert.deepEqual(cacheEnvironment("/srv/ci-cache", "host", "r1", "read"), {
+      pnpm_config_store_dir: "/srv/ci-cache/host/pnpm-store-pull-requests",
+      TURBO_CACHE_DIR: "/srv/ci-cache/host/turbo/r1",
+      TURBO_CACHE: "local:r",
+    });
+    assert.deepEqual(cacheEnvironment("/ci-cache", "container", "r2", "read"), {
+      pnpm_config_store_dir: "/ci-cache/container/pnpm-store-pull-requests",
+      TURBO_CACHE_DIR: "/ci-cache/container/turbo/r2",
+      pnpm_config_cache_dir: "/ci-cache/container/pnpm-cache-pull-requests/r2",
+      TURBO_CACHE: "local:r",
+    });
+  });
+
+  it("creates only directories", () => {
+    const { fs, created } = fakeFileSystem(directory(1001));
+    prepareCache("/srv/ci-cache", "host", "r1", "read", fs);
+    assert.deepEqual(created, ["/srv/ci-cache/host/pnpm-store-pull-requests", "/srv/ci-cache/host/turbo/r1"]);
   });
 });
 
@@ -103,20 +137,20 @@ describe("rootProblem", () => {
 describe("prepareCache", () => {
   it("creates the directories of the job", () => {
     const { fs, created } = fakeFileSystem(directory(1001));
-    prepareCache("/srv/ci-cache", "host", "r1", fs);
+    prepareCache("/srv/ci-cache", "host", "r1", "write", fs);
     assert.deepEqual(created, ["/srv/ci-cache/host/pnpm-store", "/srv/ci-cache/host/turbo/r1"]);
   });
 
   it("fails with the setup hint before creating anything when the root is unusable", () => {
     const { fs, created } = fakeFileSystem(undefined);
-    assert.throws(() => prepareCache("/srv/ci-cache", "host", "r1", fs), /does not exist/);
+    assert.throws(() => prepareCache("/srv/ci-cache", "host", "r1", "write", fs), /does not exist/);
     assert.deepEqual(created, []);
   });
 
   it("explains a directory it cannot create", () => {
     const { fs } = fakeFileSystem(directory(1001), true, true);
     assert.throws(
-      () => prepareCache("/srv/ci-cache", "host", "r1", fs),
+      () => prepareCache("/srv/ci-cache", "host", "r1", "write", fs),
       /Could not create \/srv\/ci-cache\/host\/pnpm-store in the CI cache: EACCES/,
     );
   });
@@ -124,8 +158,10 @@ describe("prepareCache", () => {
   it("works on a real directory", () => {
     const root = mkdtempSync(path.join(tmpdir(), "ci-cache-"));
     try {
-      const env = prepareCache(root.replaceAll("\\", "/"), "host", "r1");
-      for (const target of Object.values(env)) assert.ok(statSync(target).isDirectory());
+      const env = prepareCache(root.replaceAll("\\", "/"), "host", "r1", "read");
+      for (const name of ["pnpm_config_store_dir", "TURBO_CACHE_DIR"]) {
+        assert.ok(statSync(env[name] as string).isDirectory());
+      }
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

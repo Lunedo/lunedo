@@ -1,13 +1,12 @@
-import { createHash } from "node:crypto";
 import { posix } from "node:path";
 import type { Readable } from "node:stream";
-import mammoth from "mammoth";
 import yazl from "yazl";
 import { kinds, StagedConfluenceReader, titleKey } from "../confluence/staged.js";
 import { ImportFormatError } from "../errors.js";
 import { type BundledFile, type ByteSource, isBundle } from "../formats/bytes.js";
 import { ZipArchive, type ZipEntryLocation, type ZipLimits } from "../formats/zip.js";
 import type { ReadContext, ScanContext } from "../source.js";
+import { convertInWorker } from "./convert.js";
 import { convertWordHtml, MEDIA_PREFIX } from "./html.js";
 
 export const MAX_DOCX_BYTES = 100 * 1024 * 1024;
@@ -20,10 +19,20 @@ export const DOCX_ZIP_LIMITS: ZipLimits = {
   maxNameBytes: 1024,
 };
 
+export const MAX_WORD_TEXT_BYTES = 8 * 1024 * 1024;
+export const MAX_WORD_PARTS_BYTES = 32 * 1024 * 1024;
+const MAX_METADATA_BYTES = 1024 * 1024;
 const COMPOUND_FILE = Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]);
 const MACRO_PARTS = /^word\/vbaproject|^word\/vbadata/i;
 const EMBEDDINGS = /^word\/embeddings\//i;
 const MEDIA = /^word\/media\//i;
+const TEXT_PARTS = new Set([
+  "word/document.xml",
+  "word/footnotes.xml",
+  "word/endnotes.xml",
+  "word/comments.xml",
+]);
+const CONVERTED_PARTS = /\.(xml|rels)$/i;
 const MAX_TITLE = 255;
 
 interface DocumentEntry {
@@ -57,19 +66,50 @@ async function readAll(stream: Readable): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
-function zipBuffer(files: readonly { name: string; data: Buffer }[]): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    const zip = new yazl.ZipFile();
-    for (const file of files) zip.addBuffer(file.data, file.name, { compress: false });
-    zip.end();
-    readAll(zip.outputStream as unknown as Readable).then(resolve, reject);
-  });
+async function conversionZip(
+  archive: ZipArchive,
+  entries: readonly DocumentEntry[],
+): Promise<Uint8Array<ArrayBuffer>> {
+  const zip = new yazl.ZipFile();
+  for (const entry of entries) {
+    if (MEDIA.test(entry.name)) {
+      zip.addBuffer(Buffer.from(`${MEDIA_PREFIX}${entry.name}`, "utf8"), entry.name, { compress: false });
+    } else if (CONVERTED_PARTS.test(entry.name) && !EMBEDDINGS.test(entry.name)) {
+      zip.addReadStreamLazy(entry.name, { compress: false, size: entry.size }, (done) => {
+        archive.openAt(entry.location).then(
+          (stream) => done(null, stream),
+          (error: Error) => done(error, undefined as unknown as Readable),
+        );
+      });
+    }
+  }
+  zip.end();
+  const chunks: Buffer[] = [];
+  let length = 0;
+  for await (const chunk of zip.outputStream as AsyncIterable<Buffer>) {
+    chunks.push(chunk);
+    length += chunk.length;
+  }
+  const bytes = new Uint8Array(new ArrayBuffer(length));
+  let offset = 0;
+  for (const chunk of chunks.splice(0)) {
+    bytes.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return bytes;
 }
 
 async function startsWithCompoundFile(source: ByteSource): Promise<boolean> {
   if (source.size < COMPOUND_FILE.length) return false;
   const head = await readAll(await source.read(0, COMPOUND_FILE.length));
   return head.equals(COMPOUND_FILE);
+}
+
+async function tooLarge(fileName: string, context: ScanContext): Promise<void> {
+  await context.problem("documentTooLarge", {
+    file: fileName,
+    limit: Math.round(MAX_WORD_TEXT_BYTES / 1024 / 1024),
+  });
 }
 
 class UniqueNames {
@@ -142,20 +182,25 @@ export class WordReader extends StagedConfluenceReader {
     }
     const read = async (entry: DocumentEntry) => readAll(await archive.openAt(entry.location));
     const types = byName.get("[content_types].xml");
+    if (types && types.size > MAX_METADATA_BYTES) {
+      throw failed("unreadableDocument", "The document is damaged and cannot be read.");
+    }
     const typeText = types ? (await read(types)).toString("utf8") : "";
     if (/macroEnabled/i.test(typeText) || entries.some((entry) => MACRO_PARTS.test(entry.name))) {
       throw failed("macroDocument", "Word documents with macros are not imported. Save it as .docx first.");
     }
-    const media = new Map<string, DocumentEntry>();
-    const kept: { name: string; data: Buffer }[] = [];
-    for (const entry of entries) {
-      if (EMBEDDINGS.test(entry.name)) continue;
-      const data = await read(entry);
-      kept.push({ name: entry.name, data });
-      if (MEDIA.test(entry.name)) media.set(createHash("sha256").update(data).digest("hex"), entry);
+    const textBytes = entries
+      .filter((entry) => TEXT_PARTS.has(entry.name.toLowerCase()))
+      .reduce((sum, entry) => sum + entry.size, 0);
+    const partBytes = entries
+      .filter((entry) => CONVERTED_PARTS.test(entry.name) && !EMBEDDINGS.test(entry.name))
+      .reduce((sum, entry) => sum + entry.size, 0);
+    if (textBytes > MAX_WORD_TEXT_BYTES || partBytes > MAX_WORD_PARTS_BYTES) {
+      await tooLarge(fileName, context);
+      return;
     }
     const core = byName.get("docprops/core.xml");
-    const coreText = core ? (await read(core)).toString("utf8") : "";
+    const coreText = core && core.size <= MAX_METADATA_BYTES ? (await read(core)).toString("utf8") : "";
     const titled = /<dc:title>([^<]*)<\/dc:title>/.exec(coreText)?.[1];
     const title = (titled ? unescapeXml(titled).trim() : "") || documentTitle(fileName);
     const comments = byName.get("word/comments.xml");
@@ -163,35 +208,23 @@ export class WordReader extends StagedConfluenceReader {
       const count = ((await read(comments)).toString("utf8").match(/<w:comment\b/g) ?? []).length;
       if (count > 0) await context.problem("wordCommentsDropped", { file: fileName, count });
     }
-    const unreadable = new Set<string>();
-    let html: string;
-    try {
-      const result = await mammoth.convertToHtml(
-        { buffer: await zipBuffer(kept) },
-        {
-          idPrefix: `d${index}-`,
-          ignoreEmptyParagraphs: true,
-          externalFileAccess: false,
-          convertImage: mammoth.images.imgElement(async (image) => {
-            const data = await image.readAsBuffer();
-            const entry = media.get(createHash("sha256").update(data).digest("hex"));
-            if (!entry) {
-              unreadable.add(image.contentType);
-              return { src: "" };
-            }
-            return { src: `${MEDIA_PREFIX}${entry.name}` };
-          }),
-        },
-      );
-      html = result.value;
-    } catch {
+    const conversion = await convertInWorker({
+      zip: await conversionZip(archive, entries),
+      idPrefix: `d${index}-`,
+    });
+    if (conversion.status === "tooLarge") {
+      await tooLarge(fileName, context);
+      return;
+    }
+    if (conversion.status === "damaged") {
       throw failed("unreadableDocument", "The document is damaged and cannot be read.");
     }
-    if (unreadable.size > 0) await context.problem("unreadableImage", { file: fileName });
+    const html = conversion.html;
+    if (conversion.unreadableImages) await context.problem("unreadableImage", { file: fileName });
     const converted = convertWordHtml(html, {
       prefix: `d${index}-`,
       split: context.options.split === "heading",
-      media: (path) => (byName.has(path.toLowerCase()) ? posix.basename(path) : null),
+      media: (path) => (MEDIA.test(path) && byName.has(path.toLowerCase()) ? posix.basename(path) : null),
     });
     const pages = converted.sections.map((section, position) => ({
       sourceId: position === 0 ? pageId : `${pageId}#${position}`,
@@ -220,7 +253,7 @@ export class WordReader extends StagedConfluenceReader {
       });
       for (const path of page.section.images) {
         const entry = byName.get(path.toLowerCase());
-        if (!entry) continue;
+        if (!entry || !MEDIA.test(entry.name)) continue;
         await this.#attach(
           page.sourceId,
           `${page.sourceId}:${path}`,

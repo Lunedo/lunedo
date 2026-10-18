@@ -297,7 +297,7 @@ describe.skipIf(!baseUrl)("page, decision and task reports", () => {
       const document = doc({ type: "decisionReport", attrs: { ...decisionDefaults, parentId } });
       return renderPageMarkdown(
         document,
-        { people: {}, pages: {}, topics: {} },
+        { people: {}, pages: {}, topics: {}, tooLargeImages: [] },
         {
           childPages: new Map(),
           attachments: null,
@@ -315,7 +315,7 @@ describe.skipIf(!baseUrl)("page, decision and task reports", () => {
       { type: "pageReport", attrs: { ...pageDefaults, spaceId: w.shared.id, labels: ["vpn"] } },
       { type: "decisionReport", attrs: { ...decisionDefaults, spaceId: w.shared.id } },
     );
-    const references = { people: {}, pages: {}, topics: {} };
+    const references = { people: {}, pages: {}, topics: {}, tooLargeImages: [] };
     const forReader = renderPageMarkdown(document, references, {
       childPages: new Map(),
       attachments: null,

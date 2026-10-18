@@ -41,7 +41,7 @@ export interface FakeConfluence extends ConfluenceTransport {
   readonly requests: string[];
 }
 
-function json(status: number, body: unknown, headers: Record<string, string> = {}): TransportResponse {
+export function json(status: number, body: unknown, headers: Record<string, string> = {}): TransportResponse {
   return {
     status,
     headers: { "content-type": "application/json", ...headers },

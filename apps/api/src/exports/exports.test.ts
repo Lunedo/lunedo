@@ -1,4 +1,9 @@
-import { accountAttemptLimitSetting, clientAttemptLimitSetting } from "@pagehall/server";
+import {
+  accountAttemptLimitSetting,
+  clientAttemptLimitSetting,
+  MAX_PARALLEL_PAGE_EXPORTS,
+  pageExportSlots,
+} from "@pagehall/server";
 import { testJobContext } from "@pagehall/server/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
@@ -227,11 +232,36 @@ describe.skipIf(!databaseBaseUrl)("exports through the API", () => {
     expect(invalid.statusCode).toBe(400);
   });
 
+  it("asks to retry a Word file later while the node builds as many as it may", async () => {
+    const context = await setup();
+    const releases: (() => void)[] = [];
+    const held = Array.from({ length: MAX_PARALLEL_PAGE_EXPORTS }, (_, index) =>
+      pageExportSlots.run(
+        { type: "account", id: `holder-${index}` },
+        () => new Promise<void>((resolve) => releases.push(resolve)),
+      ),
+    );
+    const busy = await context.reader.client.get(`/api/v1/pages/${context.pageId}/export?format=docx`);
+    expect(busy.statusCode).toBe(503);
+    expect(busy.headers["retry-after"]).toBe("5");
+    expect(busy.json().type).toContain("busy");
+    for (const release of releases) release();
+    await Promise.all(held);
+    const word = await context.reader.client.get(`/api/v1/pages/${context.pageId}/export?format=docx`);
+    expect(word.statusCode).toBe(200);
+  });
+
   it("builds a Word document of a space with the chosen options and counts what it contains", async () => {
     const context = await setup();
     const counted = await context.exporter.client.get(`/api/v1/spaces/${context.space.id}/exports/summary`);
     expect(counted.statusCode, counted.body).toBe(200);
-    expect(counted.json()).toEqual({ pages: 2, blogPosts: 0, printLimit: 300, serverPdf: false });
+    expect(counted.json()).toEqual({
+      pages: 2,
+      blogPosts: 0,
+      printLimit: 300,
+      fileLimit: 1000,
+      serverPdf: false,
+    });
     const subtree = await context.exporter.client.get(`/api/v1/pages/${context.pageId}/exports/summary`);
     expect(subtree.json()).toMatchObject({ pages: 1 });
     for (const response of [

@@ -20,11 +20,13 @@ export interface References {
   people: Record<string, string>;
   pages: Record<string, PageReference>;
   topics?: Record<string, TopicReference>;
+  tooLargeImages?: string[];
 }
 
 const people = new Map<string, string>();
 const topics = new Map<string, TopicReference>();
 const pages = new Map<string, PageReference>();
+const tooLargeImages = new Set<string>();
 const pending = new Set<string>();
 const listeners = new Set<() => void>();
 let version = 0;
@@ -54,6 +56,12 @@ export function rememberReferences(references: Partial<References>): void {
       changed = true;
     }
   }
+  for (const id of references.tooLargeImages ?? []) {
+    if (!tooLargeImages.has(id)) {
+      tooLargeImages.add(id);
+      changed = true;
+    }
+  }
   for (const [id, topic] of Object.entries(references.topics ?? {})) {
     const known = topics.get(id);
     if (!known || known.title !== topic.title || known.status !== topic.status) {
@@ -62,6 +70,10 @@ export function rememberReferences(references: Partial<References>): void {
     }
   }
   if (changed) emit();
+}
+
+export function useImageTooLarge(id: string | null): boolean {
+  return useSyncExternalStore(subscribe, () => version >= 0 && id !== null && tooLargeImages.has(id));
 }
 
 export function topicReference(id: string): TopicReference | null {

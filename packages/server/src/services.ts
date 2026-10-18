@@ -64,6 +64,7 @@ import {
 import { exportNotificationTypes } from "./exports/notifications.js";
 import { type RenderConnection, RenderService } from "./exports/rendering.js";
 import { AttachmentService } from "./files/attachments.js";
+import { DisplayVersionService } from "./files/display-versions.js";
 import { FileService } from "./files/files.js";
 import { FILE_CLEANUP_SCHEDULE, fileCleanupJob } from "./files/jobs.js";
 import { type FileStore, LocalFileStore } from "./files/store.js";
@@ -293,6 +294,7 @@ export interface AccountServices {
   accessExplanations: AccessExplanationService;
   giveAccessDrafts: GiveAccessDraftService;
   files: FileService;
+  displayVersions: DisplayVersionService;
   storage: StorageService;
   attachments: AttachmentService;
   guestShares: GuestShareService;
@@ -693,6 +695,7 @@ export function createAccountServices(options: {
     signer,
     usage: storageUsage,
   });
+  const displayVersions = new DisplayVersionService({ database, files, logger });
   const storage = new StorageService({
     database,
     store: files.store,
@@ -875,6 +878,7 @@ export function createAccountServices(options: {
     settings,
     mail,
     files,
+    displayVersions,
     storage,
     documents,
     attachments,
@@ -895,6 +899,7 @@ export function createAccountServices(options: {
     activity,
     signer,
     storage,
+    files,
     audit,
     notifications,
     language: (accountId) => mail.languageOf(accountId),
@@ -998,6 +1003,7 @@ export function createAccountServices(options: {
     accessExplanations,
     giveAccessDrafts,
     files,
+    displayVersions,
     storage,
     attachments,
     whiteboards,

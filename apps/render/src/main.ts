@@ -1,5 +1,5 @@
 import { ChromiumRenderer } from "./chromium.js";
-import { loadRenderConfig, RenderConfigError } from "./config.js";
+import { loadRenderConfig, RenderConfigError, sandboxWarning } from "./config.js";
 import { createRenderServer } from "./server.js";
 
 function log(level: "info" | "warn" | "error", message: string, fields: Record<string, unknown> = {}): void {
@@ -17,13 +17,25 @@ async function main(): Promise<void> {
     }
     throw error;
   }
+  const warning = sandboxWarning(config);
+  if (warning) log("warn", warning);
   const renderer = new ChromiumRenderer({
     executablePath: config.executablePath,
     viewerDirectory: config.viewerDirectory,
     sandbox: config.sandbox,
     onBlocked: (url) => log("warn", "Blocked a request of a document", { url }),
   });
-  await renderer.start();
+  try {
+    await renderer.start();
+  } catch (error) {
+    log("error", "Chromium did not start", {
+      error: error instanceof Error ? error.message : String(error),
+      hint: config.sandbox
+        ? "Its sandbox needs user namespaces; see the rendering documentation, or set RENDER_CHROMIUM_SANDBOX=false to run without it."
+        : undefined,
+    });
+    process.exit(1);
+  }
   const server = createRenderServer({
     token: config.token,
     version: process.env.PAGEHALL_VERSION ?? "dev",

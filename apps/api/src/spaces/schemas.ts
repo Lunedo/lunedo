@@ -648,6 +648,11 @@ export const pageReferencesSchema = z
       .describe(
         "Running topics that topic updates and decisions in the document refer to, by ID, as far as the caller may see them.",
       ),
+    tooLargeImages: z
+      .array(uuid("ID of an attachment."))
+      .describe(
+        "Images in the document with more than 100 megapixels, as far as the caller may see them. They have no smaller version and are shown as a file that opens in full size.",
+      ),
   })
   .describe("What mentions and page links in the document point to, as far as the caller may see it.");
 
@@ -678,7 +683,7 @@ export const examplePageContent = {
   revision: 4,
   updatedAt: "2026-10-05T08:10:00.000Z",
   updatedBy: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
-  references: { people: {}, pages: {}, topics: {} },
+  references: { people: {}, pages: {}, topics: {}, tooLargeImages: [] },
 };
 
 export const labelsSchema = z

@@ -1,10 +1,10 @@
 import { createContext, type ReactNode, useContext } from "react";
-import { contentUrl } from "./attachments-api.js";
+import { contentUrl, type ImageSize } from "./attachments-api.js";
 
-export type AttachmentUrl = (attachmentId: string, version?: number) => string;
+export type AttachmentUrl = (attachmentId: string, version?: number, size?: ImageSize) => string;
 
-const defaultUrl: AttachmentUrl = (attachmentId, version) =>
-  contentUrl(attachmentId, version === undefined ? {} : { version });
+const defaultUrl: AttachmentUrl = (attachmentId, version, size) =>
+  contentUrl(attachmentId, { ...(version === undefined ? {} : { version }), ...(size ? { size } : {}) });
 
 const AttachmentSource = createContext<AttachmentUrl>(defaultUrl);
 

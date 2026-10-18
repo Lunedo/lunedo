@@ -277,6 +277,27 @@ describe("the attachments of a page", () => {
     expect(await screen.findByRole("button", { name: /^Report\.pdf/ })).toBeTruthy();
   });
 
+  it("previews an image above the pixel limit with a hint and a link to the full size instead of loading it", async () => {
+    list = [
+      attachment(PHOTO, "Scan.png", {
+        preview: "image",
+        inline: true,
+        size: 512_000,
+        version: 1,
+        versions: 1,
+        tooLargeForPreview: true,
+      }),
+    ];
+    await renderSection(true);
+    await userEvent.click(await screen.findByRole("button", { name: /^Scan\.png/ }));
+    const drawer = await screen.findByRole("dialog", { name: "Scan.png" });
+    expect(await within(drawer).findByText(/too large to preview/)).toBeTruthy();
+    expect(within(drawer).queryByRole("img", { name: "Scan.png" })).toBeNull();
+    const open = within(drawer).getByRole("link", { name: "Open full size" });
+    expect(open.getAttribute("href")).toBe(`/api/v1/attachments/${PHOTO}/content?version=1`);
+    expect(open.getAttribute("target")).toBe("_blank");
+  });
+
   it("opens a preview with versions and restores an earlier one", async () => {
     ({ requests } = routes({
       [`POST /api/v1/attachments/${REPORT}/versions/1/restore`]: () => ({ status: 200, body: {} }),
@@ -285,7 +306,7 @@ describe("the attachments of a page", () => {
     await userEvent.click(await screen.findByRole("button", { name: /^Rack\.png/ }));
     const drawer = await screen.findByRole("dialog", { name: "Rack.png" });
     const image = await within(drawer).findByRole("img", { name: "Rack.png" });
-    expect(image.getAttribute("src")).toBe(`/api/v1/attachments/${PHOTO}/content?version=1`);
+    expect(image.getAttribute("src")).toBe(`/api/v1/attachments/${PHOTO}/content?version=1&size=display`);
     await userEvent.keyboard("{Escape}");
     await userEvent.click(await screen.findByRole("button", { name: /^Report\.pdf/ }));
     const report = await screen.findByRole("dialog", { name: "Report.pdf" });

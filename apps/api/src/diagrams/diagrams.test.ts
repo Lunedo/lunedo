@@ -1,5 +1,12 @@
+import { randomUUID } from "node:crypto";
+import { PassThrough } from "node:stream";
 import { deflateRawSync } from "node:zlib";
-import { accountAttemptLimitSetting, clientAttemptLimitSetting } from "@pagehall/server";
+import {
+  accountAttemptLimitSetting,
+  clientAttemptLimitSetting,
+  MAX_PARALLEL_SANITIZATIONS,
+  sanitizerSlots,
+} from "@pagehall/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -250,6 +257,39 @@ describe.skipIf(!databaseBaseUrl)("diagram blocks through the API", () => {
       octet,
     );
     expect(unknown.statusCode).toBe(400);
+  });
+
+  it("check saves only after their upload arrived, and refuse more than the node can check at once", async () => {
+    const uploaders = await Promise.all(
+      Array.from({ length: MAX_PARALLEL_SANITIZATIONS + 1 }, () => person()),
+    );
+    const { pageId } = await page(
+      uploaders.map((uploader) => ({ principalKind: "account", principalId: uploader.id, role: "editor" })),
+    );
+    const save = (body: Buffer | PassThrough, client = owner) =>
+      client.put(`/api/v1/pages/${pageId}/diagrams/${randomUUID()}/drawio`, body, octet);
+    const slow = uploaders.map(() => new PassThrough());
+    const waiting = uploaders.map((uploader, index) => save(slow[index] as PassThrough, uploader.client));
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect((await save(drawio("While others upload"))).statusCode).toBe(200);
+    for (const [index, body] of slow.entries()) {
+      body.end(drawio("Slow"));
+      expect((await waiting[index])?.statusCode).toBe(200);
+    }
+    const releases: (() => void)[] = [];
+    const held = Array.from({ length: MAX_PARALLEL_SANITIZATIONS }, (_, index) =>
+      sanitizerSlots.run(
+        { type: "account", id: `holder-${index}` },
+        () => new Promise<void>((resolve) => releases.push(resolve)),
+      ),
+    );
+    const refused = await save(drawio("Busy"));
+    expect(refused.statusCode).toBe(503);
+    expect(refused.headers["retry-after"]).toBe("2");
+    expect(refused.json().type).toContain("busy");
+    for (const release of releases) release();
+    await Promise.all(held);
+    expect((await save(drawio("After"))).statusCode).toBe(200);
   });
 
   it("let only editors store diagrams and keep their files from people without access", async () => {

@@ -1,5 +1,12 @@
 import type { Hmac } from "node:crypto";
-import { pipeline as chain, type Readable, Transform, type TransformCallback } from "node:stream";
+import {
+  pipeline as chain,
+  PassThrough,
+  type Readable,
+  Transform,
+  type TransformCallback,
+} from "node:stream";
+import { buffer } from "node:stream/consumers";
 import { pipeline } from "node:stream/promises";
 import { uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
@@ -21,6 +28,14 @@ import type { Database, Executor } from "../database/database.js";
 import type { Logger } from "../logging/logger.js";
 import type { ValueSigner } from "../sharing/signer.js";
 import type { StorageUsage } from "../storage/usage.js";
+import { LocationStripper } from "./location-metadata.js";
+import {
+  locationPatches,
+  type Patch,
+  PatchStream,
+  RANDOM_ACCESS_IMAGE_TYPES,
+  UnsupportedLocationMetadata,
+} from "./location-ranges.js";
 import { type DetectedType, detectType, SNIFF_BYTES } from "./sniff.js";
 import type { ByteRange, FileStore } from "./store.js";
 
@@ -40,6 +55,17 @@ export interface StoredFile {
 }
 
 const CONTENT_DIGEST_PURPOSE = "file-content";
+
+export const DISPLAY_VERSIONS_CHANNEL = "pagehall_display_versions";
+
+export const MAX_DISPLAY_VERSION_PIXELS = 100_000_000;
+
+export const DISPLAY_VERSION_TYPES: ReadonlySet<string> = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+]);
 
 const COMPLETE = sql`state <> 'pending'`;
 
@@ -117,12 +143,16 @@ export class FileService {
     return masterStreamKeys(() => this.#keyRing.ring);
   }
 
-  async write(body: Readable, options: { name: string; maxBytes: number }): Promise<StoredFile> {
+  async write(
+    body: Readable,
+    options: { name: string; maxBytes: number; executor?: Executor; attachment?: boolean },
+  ): Promise<StoredFile> {
+    const executor = options.executor ?? this.#database;
     const id = uuidv7();
     const key = storageKey(id);
     const version = this.#keyRing.ring.currentVersion;
     const mac = await this.#signer.mac(CONTENT_DIGEST_PURPOSE);
-    await this.#database.execute(sql`
+    await executor.execute(sql`
       insert into stored_files (id, storage_key, master_key_version, state) values (${id}, ${key}, ${version}, 'pending')`);
     const inspector = new Inspector(options.maxBytes, mac);
     const encrypt = createEncryptStream(this.#keys(), {
@@ -131,30 +161,80 @@ export class FileService {
     });
     let keyVersion: number;
     let counted = 0;
+    const stripper = new LocationStripper();
     try {
       let failure: Error | null = null;
-      const encrypted = chain(body, inspector, encrypt, (error) => {
+      const strip = options.attachment === true ? stripper : new PassThrough();
+      const encrypted = chain(body, strip, inspector, encrypt, (error) => {
         failure = error ?? null;
       });
       const stored = await this.#store.write(key, encrypted).catch((error: unknown) => {
         throw failure ?? error;
       });
-      await this.#usage?.add(stored);
+      await this.#usage?.add(stored, key);
       counted = stored;
       if (failure) throw failure;
       keyVersion = await this.#rewrapIfOutdated(key, version);
     } catch (error) {
-      await this.#discard(id, key, counted);
+      await this.#discard(executor, id, key, counted);
       throw error;
     }
     const head = Buffer.concat(inspector.head);
     const type = detectType(head, { name: options.name, truncated: inspector.size > head.length });
     const digest = inspector.digest();
-    await this.#database.execute(sql`
+    const pixels = stripper.dimensions ? stripper.dimensions.width * stripper.dimensions.height : 0;
+    const displayVersions =
+      options.attachment !== true || !DISPLAY_VERSION_TYPES.has(type.contentType)
+        ? null
+        : pixels > MAX_DISPLAY_VERSION_PIXELS
+          ? "tooLarge"
+          : "pending";
+    await executor.execute(sql`
       update stored_files set size = ${inspector.size}, content_digest = ${digest},
-        content_type = ${type.contentType}, master_key_version = ${keyVersion}, state = 'stored', updated_at = now()
+        content_type = ${type.contentType}, master_key_version = ${keyVersion}, state = 'stored',
+        display_version_state = ${displayVersions}, updated_at = now()
       where id = ${id}`);
-    return { id, size: inspector.size, digest: digest.toString("hex"), type };
+    const stored = { id, size: inspector.size, digest: digest.toString("hex"), type };
+    if (options.attachment !== true || !RANDOM_ACCESS_IMAGE_TYPES.has(type.contentType)) return stored;
+    return this.#withoutLocation(stored, key, options, executor);
+  }
+
+  async #withoutLocation(
+    stored: StoredFile,
+    key: string,
+    options: { name: string; maxBytes: number; executor?: Executor },
+    executor: Executor,
+  ): Promise<StoredFile> {
+    let patches: Patch[];
+    try {
+      patches = await locationPatches(stored.type.contentType, {
+        size: stored.size,
+        read: async (offset, length) =>
+          length === 0
+            ? Buffer.alloc(0)
+            : buffer(
+                await this.read(
+                  stored.id,
+                  { start: offset, end: offset + length - 1 },
+                  { staged: true, executor },
+                ),
+              ),
+      });
+    } catch (error) {
+      if (!(error instanceof UnsupportedLocationMetadata)) throw error;
+      this.#logger.warn(
+        { fileId: stored.id, contentType: stored.type.contentType, reason: error.message },
+        "Location metadata of an uploaded image could not be read and stays in the file",
+      );
+      return stored;
+    }
+    if (patches.length === 0) return stored;
+    try {
+      const source = await this.read(stored.id, undefined, { staged: true, executor });
+      return await this.write(source.pipe(new PatchStream(patches)), { ...options, attachment: false });
+    } finally {
+      await this.#discard(executor, stored.id, key, (await this.#store.size(key)) ?? 0, "stored");
+    }
   }
 
   async #rewrapIfOutdated(key: string, version: number): Promise<number> {
@@ -188,6 +268,7 @@ export class FileService {
       where id = ${file.id} and state = 'stored'
       returning id`);
     if (claimed.rows.length === 0) throw new Error("The uploaded file was removed before it was saved");
+    await this.#announceDisplayVersions(tx, used);
     return used;
   }
 
@@ -196,13 +277,26 @@ export class FileService {
       update stored_files set state = 'ready', updated_at = now() where id = ${fileId} and state = 'stored'
       returning id`);
     if (claimed.rows.length === 0) throw new Error("The uploaded file was removed before it was saved");
+    await this.#announceDisplayVersions(tx, fileId);
   }
 
-  async #discard(id: string, key: string, stored: number): Promise<void> {
+  async #announceDisplayVersions(tx: Executor, fileId: string): Promise<void> {
+    await tx.execute(sql`
+      select pg_notify(${DISPLAY_VERSIONS_CHANNEL}, '') from stored_files
+      where id = ${fileId} and display_version_state = 'pending'`);
+  }
+
+  async #discard(
+    executor: Executor,
+    id: string,
+    key: string,
+    stored: number,
+    state: "pending" | "stored" = "pending",
+  ): Promise<void> {
     try {
       await this.#store.delete(key);
-      await this.#usage?.add(-stored);
-      await this.#database.execute(sql`delete from stored_files where id = ${id} and state = 'pending'`);
+      await this.#usage?.add(-stored, key);
+      await executor.execute(sql`delete from stored_files where id = ${id} and state = ${state}`);
     } catch (error) {
       this.#logger.warn({ err: error, fileId: id }, "Removing an incomplete upload failed");
     }
@@ -222,8 +316,12 @@ export class FileService {
     return { storage_key: row.storage_key, size: Number(row.size) };
   }
 
-  async read(fileId: string, range?: ByteRange, options: { staged?: boolean } = {}): Promise<Readable> {
-    const row = await this.#row(this.#database, fileId, options.staged ?? false);
+  async read(
+    fileId: string,
+    range?: ByteRange,
+    options: { staged?: boolean; executor?: Executor } = {},
+  ): Promise<Readable> {
+    const row = await this.#row(options.executor ?? this.#database, fileId, options.staged ?? false);
     if (!range || row.size === 0) {
       const source = await this.#store.read(row.storage_key);
       return source.pipe(createDecryptStream(this.#keys(), { associatedData: associatedData(fileId) }));
@@ -293,7 +391,8 @@ export class FileService {
       update stored_files f set state = 'ready', updated_at = now()
       where f.state = 'orphaned' and (exists (select 1 from attachment_versions v where v.file_id = f.id)
         or exists (select 1 from whiteboard_previews p where p.file_id = f.id)
-        or exists (select 1 from template_files t where t.file_id = f.id))`);
+        or exists (select 1 from template_files t where t.file_id = f.id)
+        or exists (select 1 from display_versions d where d.file_id = f.id))`);
     let removed = 0;
     for (const row of result.rows) {
       const claimed = await this.#database.execute(sql`
@@ -302,11 +401,15 @@ export class FileService {
           and not exists (select 1 from attachment_versions v where v.file_id = ${row.id})
           and not exists (select 1 from whiteboard_previews p where p.file_id = ${row.id})
           and not exists (select 1 from template_files t where t.file_id = ${row.id})
+          and not exists (select 1 from display_versions d where d.file_id = ${row.id})
         returning id`);
       if (claimed.rows.length === 0) continue;
+      await this.#database.execute(sql`
+        with released as (delete from display_versions where source_file_id = ${row.id} returning file_id)
+        update stored_files set state = 'orphaned', updated_at = now() where id in (select file_id from released)`);
       const stored = (await this.#store.size(row.storage_key)) ?? 0;
       await this.#store.delete(row.storage_key);
-      await this.#usage?.add(-stored);
+      await this.#usage?.add(-stored, row.storage_key);
       await this.#database.execute(sql`delete from stored_files where id = ${row.id}`);
       removed += 1;
     }

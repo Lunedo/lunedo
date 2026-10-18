@@ -47,10 +47,12 @@ export const exportSchema = z
         "renderUnavailable",
         "renderFailed",
         "renderTooLarge",
+        "tooManyPagesForFile",
+        "tooLargeToBuild",
         "interrupted",
         "internalError",
       ],
-      "Why a failed export stopped: export was turned off for the space, the permission to export the space or page was lost, the API token that started it was revoked, the file store ran short of free space while it was written, the render container for PDF is not set up or cannot be reached, it could not create the PDF, the document was larger than the render container accepts, the worker was interrupted too often, or an unexpected error.",
+      "Why a failed export stopped: export was turned off for the space, the permission to export the space or page was lost, the API token that started it was revoked, the file store ran short of free space while it was written, the render container for PDF is not set up or cannot be reached, it could not create the PDF, the document was larger than the render container accepts, the Word or PDF file would have more pages than the limit, building the file ran out of memory, the worker was interrupted too often, or an unexpected error.",
     ).nullable(),
     createdAt: timestamp("When the export was started."),
     finishedAt: timestamp("When the export finished or failed.").nullable(),
@@ -83,10 +85,20 @@ export const exportCountsSchema = z
     pages: z.number().int().describe("Pages you can read in the scope."),
     blogPosts: z.number().int().describe("Published blog posts you can read; only for a whole space."),
     printLimit: z.number().int().describe("Most pages a browser prints at once through the print view."),
+    fileLimit: z
+      .number()
+      .int()
+      .describe("Most pages a Word or PDF file can hold; larger exports need an HTML or Markdown archive."),
     serverPdf: z
       .boolean()
       .describe("Whether the render container is set up, so PDF can be created on the server."),
   })
   .describe("What an export of a space or of a page with its subpages contains.");
 
-export const exampleExportCounts = { pages: 412, blogPosts: 31, printLimit: 300, serverPdf: false };
+export const exampleExportCounts = {
+  pages: 412,
+  blogPosts: 31,
+  printLimit: 300,
+  fileLimit: 1000,
+  serverPdf: false,
+};

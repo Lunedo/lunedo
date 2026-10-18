@@ -10,6 +10,7 @@ export type AttachmentVersion = Json<
   paths["/api/v1/attachments/{attachmentId}/versions"]["get"]["responses"][200]
 >[number];
 export type PreviewKind = Attachment["preview"];
+export type ImageSize = "display" | "preview";
 
 export const attachmentKeys = {
   list: (pageId: string) => ["items", pageId, "attachments"] as const,
@@ -37,11 +38,12 @@ export function versionsQuery(attachmentId: string) {
 
 export function contentUrl(
   attachmentId: string,
-  options: { version?: number; download?: boolean } = {},
+  options: { version?: number; download?: boolean; size?: ImageSize } = {},
 ): string {
   const query = new URLSearchParams();
   if (options.version !== undefined) query.set("version", String(options.version));
   if (options.download) query.set("download", "true");
+  if (options.size) query.set("size", options.size);
   const suffix = query.toString();
   return `/api/v1/attachments/${attachmentId}/content${suffix ? `?${suffix}` : ""}`;
 }

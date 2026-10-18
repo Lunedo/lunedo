@@ -3,6 +3,7 @@ import { Body, Controller, Delete, Get, Inject, Param, Post, Query, Req, Res } f
 import {
   type AttachmentContent,
   contentDisposition,
+  type DisplayVersionSize,
   type ExportSource,
   FILE_NAME_MAX_LENGTH,
   MAX_TEMPLATES_PER_UPLOAD,
@@ -17,7 +18,7 @@ import { z } from "zod";
 import { Permission } from "../access/route-access.js";
 import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
-import { FILE_CONTENT_SECURITY_POLICY, sendAttachment } from "../files/serve.js";
+import { FILE_CONTENT_SECURITY_POLICY, imageSizeSchema, sendAttachment, sized } from "../files/serve.js";
 import { ApiRoute } from "../http/api-route.js";
 import { notFound, ProblemException } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
@@ -63,6 +64,8 @@ const nameQuery = z
       .describe("Name of the uploaded file. Paths and control characters are removed."),
   })
   .strict();
+
+const sizeQuery = z.object({ size: imageSizeSchema }).strict();
 
 const pageQuery = z.object({ pageId: uuid("The page to save as a template.") }).strict();
 
@@ -284,6 +287,8 @@ const rawTemplateFile = {
 };
 
 const importErrors = [
+  "busy",
+  "uploadTimeout",
   "fileTooLarge",
   "invalidTemplateFile",
   "newerTemplateFormat",
@@ -373,9 +378,18 @@ export class TemplateFilesController {
     scope: TemplateScope,
     templateId: string,
     fileId: string,
+    size: DisplayVersionSize | undefined,
   ) {
     await this.#owned(templateId, scope);
-    return this.#send(request, reply, await this.#services.templates.files.content(templateId, fileId));
+    return this.#send(
+      request,
+      reply,
+      await this.#sized(await this.#services.templates.files.content(templateId, fileId), size),
+    );
+  }
+
+  async #sized(content: AttachmentContent | null, size: DisplayVersionSize | undefined) {
+    return content ? sized(await this.#services.displayVersions.apply(content, size)) : null;
   }
 
   async #send(
@@ -474,12 +488,15 @@ export class TemplateFilesController {
       "Sends a file of a template that can be used in the space: an image the template shows, or a file of a drawing or diagram. Templates of the instance and the organization need edit access to the space.",
     tags: [TAG],
     params: spaceFileParams,
+    query: sizeQuery,
     raw: rawImage,
+    errors: ["imageTooLarge"],
   })
   async spaceTemplateFile(
     @Param("spaceId") spaceId: string,
     @Param("templateId") templateId: string,
     @Param("fileId") fileId: string,
+    @Query() query: z.output<typeof sizeQuery>,
     @Req() request: FastifyRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
   ) {
@@ -493,7 +510,11 @@ export class TemplateFilesController {
         id: spaceId,
       });
     }
-    return this.#send(request, reply, await this.#services.templates.files.content(templateId, fileId));
+    return this.#send(
+      request,
+      reply,
+      await this.#sized(await this.#services.templates.files.content(templateId, fileId), query.size),
+    );
   }
 
   @Post("spaces/:spaceId/templates/:templateId/files")
@@ -514,6 +535,8 @@ export class TemplateFilesController {
       "invalidFileName",
       "storageFull",
       "unsupportedMediaType",
+      "busy",
+      "uploadTimeout",
     ],
   })
   spaceUpload(
@@ -662,16 +685,26 @@ export class TemplateFilesController {
     description: "Sends a file of a template of the organization.",
     tags: [TAG],
     params: organizationFileParams,
+    query: sizeQuery,
     raw: rawImage,
+    errors: ["imageTooLarge"],
   })
   organizationTemplateFile(
     @Param("organizationId") organizationId: string,
     @Param("templateId") templateId: string,
     @Param("fileId") fileId: string,
+    @Query() query: z.output<typeof sizeQuery>,
     @Req() request: FastifyRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
   ) {
-    return this.#file(request, reply, { level: "organization", organizationId }, templateId, fileId);
+    return this.#file(
+      request,
+      reply,
+      { level: "organization", organizationId },
+      templateId,
+      fileId,
+      query.size,
+    );
   }
 
   @Post("organizations/:organizationId/templates/:templateId/files")
@@ -692,6 +725,8 @@ export class TemplateFilesController {
       "invalidFileName",
       "storageFull",
       "unsupportedMediaType",
+      "busy",
+      "uploadTimeout",
     ],
   })
   organizationUpload(
@@ -850,15 +885,18 @@ export class TemplateFilesController {
     description: "Sends a file of a template of the instance.",
     tags: [TAG],
     params: instanceFileParams,
+    query: sizeQuery,
     raw: rawImage,
+    errors: ["imageTooLarge"],
   })
   instanceTemplateFile(
     @Param("templateId") templateId: string,
     @Param("fileId") fileId: string,
+    @Query() query: z.output<typeof sizeQuery>,
     @Req() request: FastifyRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
   ) {
-    return this.#file(request, reply, { level: "instance" }, templateId, fileId);
+    return this.#file(request, reply, { level: "instance" }, templateId, fileId, query.size);
   }
 
   @Post("instance/templates/:templateId/files")
@@ -878,6 +916,8 @@ export class TemplateFilesController {
       "invalidFileName",
       "storageFull",
       "unsupportedMediaType",
+      "busy",
+      "uploadTimeout",
     ],
   })
   instanceUpload(

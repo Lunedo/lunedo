@@ -1,10 +1,27 @@
-import type { AttachmentContent, ByteRange, FileService } from "@pagehall/server";
+import type { AttachmentContent, ByteRange, DisplayVersionSize, FileService } from "@pagehall/server";
 import { contentDisposition } from "@pagehall/server";
 import type { FastifyReply, FastifyRequest } from "fastify";
+import { z } from "zod";
 import { ProblemException } from "../http/problems.js";
 
 export const FILE_CONTENT_SECURITY_POLICY =
   "sandbox; default-src 'none'; img-src 'self' data:; media-src 'self'";
+
+export const imageSizeSchema = z
+  .enum(["original", "display", "preview"])
+  .default("original")
+  .transform((value): DisplayVersionSize | undefined => (value === "original" ? undefined : value))
+  .describe(
+    "Size of an image. `display` sends a version whose longest edge is at most 2048 pixels, `preview` one of at most 400 pixels, both as WebP without metadata. The original is sent while no such version exists, for images that are already small enough, and for every other type. Images above 100 megapixels get no smaller version and answer `imageTooLarge`.",
+  );
+
+export const IMAGE_TOO_LARGE_DETAIL =
+  "The image has more pixels than a smaller version can be made from; open it in full size instead";
+
+export function sized(content: AttachmentContent | null): AttachmentContent {
+  if (!content) throw new ProblemException("imageTooLarge", IMAGE_TOO_LARGE_DETAIL);
+  return content;
+}
 
 export function parseRange(header: string | undefined, size: number): ByteRange | null | "invalid" {
   if (!header) return null;
@@ -29,7 +46,7 @@ export async function sendAttachment(
   content: AttachmentContent,
   options: { inline: boolean; crossOrigin: boolean; staged?: boolean },
 ) {
-  const etag = `"${content.versionId}"`;
+  const etag = `"${content.versionId}${content.displaySize ? `-${content.displaySize}` : ""}"`;
   reply.header("content-type", content.contentType);
   reply.header("x-content-type-options", "nosniff");
   reply.header("content-security-policy", FILE_CONTENT_SECURITY_POLICY);

@@ -1,11 +1,12 @@
 import { appendFileSync } from "node:fs";
-import { parseOwner, prepareCache } from "./ci-cache.ts";
+import { cacheAccess, parseOwner, prepareCache } from "./ci-cache.ts";
 
 const [owner, root] = process.argv.slice(2);
 
 try {
   if (!root) throw new Error("Usage: node scripts/prepare-ci-cache.ts <host|container> <directory>");
-  const env = prepareCache(root, parseOwner(owner), process.env.RUNNER_NAME);
+  const access = cacheAccess(process.env.GITHUB_EVENT_NAME, process.env.GITHUB_REF);
+  const env = prepareCache(root, parseOwner(owner), process.env.RUNNER_NAME, access);
   const lines = Object.entries(env).map(([name, value]) => `${name}=${value}`);
   console.log(lines.join("\n"));
   if (process.env.GITHUB_ENV) appendFileSync(process.env.GITHUB_ENV, `${lines.join("\n")}\n`);

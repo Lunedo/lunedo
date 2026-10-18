@@ -208,6 +208,8 @@ export interface RenderLabels {
   tableOfContents: string;
   file: string;
   image: string;
+  openFullSize: string;
+  imageTooLarge: string;
   drawing: string;
   drawio: string;
   mermaid: string;
@@ -287,6 +289,8 @@ export interface ReferencedWhiteboard {
 export interface ResolvedAttachment {
   readonly href: string;
   readonly image?: boolean;
+  readonly display?: string;
+  readonly tooLarge?: boolean;
 }
 
 export interface RenderContext {
