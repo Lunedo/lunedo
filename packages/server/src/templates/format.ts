@@ -63,7 +63,12 @@ export const templateFileEntrySchema = z
       .string()
       .regex(/^[0-9a-f]{64}$/, "Expected a lowercase hexadecimal SHA-256 hash")
       .describe("SHA-256 hash of the content, lowercase hexadecimal."),
-    name: z.string().min(1).max(255).describe("File name shown when the template is used."),
+    name: z
+      .string()
+      .min(1)
+      .max(255)
+      .regex(/^[^/\\\u0000-\u001f\u007f]+$/, "Expected a file name without paths or control characters")
+      .describe("File name shown when the template is used."),
   })
   .strict()
   .describe("A file the template uses.");

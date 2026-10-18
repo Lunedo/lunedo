@@ -107,6 +107,11 @@ const examples: { name: string; value: unknown; accepted: boolean }[] = [
     accepted: false,
   },
   {
+    name: "a file name with a path",
+    value: changed((copy) => Object.assign(copy.templates[0]?.files[0] as object, { name: "../../etc/passwd" })),
+    accepted: false,
+  },
+  {
     name: "an executable media type",
     value: changed((copy) =>
       Object.assign(copy.templates[0]?.files[0] as object, { mediaType: "text/html" }),

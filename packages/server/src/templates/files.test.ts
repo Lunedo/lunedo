@@ -310,6 +310,30 @@ describe.skipIf(!baseUrl)("template files", () => {
     expect(await read(content?.fileId ?? "")).toEqual(bytes);
   });
 
+  it("takes over files only when everyone who wrote the template can open them, and no restricted pages above a space", async () => {
+    const { org, as, adminId, space: wiki } = await setup();
+    const { attachment } = await pageWithImage(as, wiki.id);
+    const { page: restrictedPage, attachment: restrictedImage } = await pageWithImage(as, wiki.id);
+    await test.services.pageAccess.change(as, restrictedPage.id, [{ action: "restrict", kind: "view" }]);
+    const outsider = await member(org.id);
+    const insert = async (level: "space" | "organization", updatedBy: string, ...ids: string[]) => {
+      const id = uuidv7();
+      await test.database.execute(sql`
+        insert into page_templates (id, level, space_id, organization_id, name, category, title, document,
+          schema_version, fields, files_adopted, created_by, updated_by)
+        values (${id}, ${level}, ${level === "space" ? wiki.id : null}, ${level === "organization" ? org.id : null},
+          ${`Old ${id.slice(-6)}`}, 'teams', 'Old', ${JSON.stringify(doc(...ids.map((value) => image(value))))}::jsonb,
+          10, '[]'::jsonb, false, ${adminId}, ${updatedBy})`);
+      return id;
+    };
+    const changedByOutsider = await insert("space", outsider, attachment.id);
+    const organizationLevel = await insert("organization", adminId, attachment.id, restrictedImage.id);
+    await test.services.templates.adoptPendingFiles(createLogger({ service: "test", level: "silent" }));
+    expect(imageIds((await test.services.templates.get(changedByOutsider))?.document)).toEqual([null]);
+    const files = await templateFiles(organizationLevel);
+    expect(imageIds((await test.services.templates.get(organizationLevel))?.document)).toEqual([files[0]?.id, null]);
+  });
+
   it("refuses to add template files when the storage is almost full", async () => {
     const { as, space: wiki } = await setup();
     const { page } = await pageWithImage(as, wiki.id);

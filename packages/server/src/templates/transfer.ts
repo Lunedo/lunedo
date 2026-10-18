@@ -697,7 +697,7 @@ export class TemplateTransferService {
             prepared.set(id, {
               bytes: result.bytes,
               mediaType: found.entry.mediaType,
-              name: found.entry.name,
+              name: cleanFileName(found.entry.name) ?? `file.${templateFileTypes[found.entry.mediaType]}`,
             });
           } catch (error) {
             problems.push(

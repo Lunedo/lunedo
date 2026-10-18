@@ -18,7 +18,7 @@ A template owns its files: the images it shows and the files that drawing and di
 - A page created from a template gets its own copies of the files as normal attachments. Changing or deleting the template later does not change the page.
 - Deleting a template deletes its files.
 
-Templates saved before Pagehall stored their files kept references to the attachments of the page they came from. After an update, Pagehall copies those files into the templates in the background, as long as the file still exists and the template's author can still open the page in the template's scope. Images whose file is gone become empty image blocks. The worker log reports how many templates, files and emptied images it handled.
+Templates saved before Pagehall stored their files kept references to the attachments of the page they came from. After an update, Pagehall copies those files into the templates in the background, as long as the file still exists, the people who created and last changed the template can still open its page, and the page lies in the template's space or organization. Organization and instance templates take over files of unrestricted pages only. Images whose file is gone become empty image blocks. The worker log reports how many templates, files and emptied images it handled.
 
 ## Exporting templates
 

@@ -460,24 +460,29 @@ export class TemplateService {
       space_id: string | null;
       document: unknown;
       schema_version: number;
-      author: string | null;
+      created_by: string | null;
+      updated_by: string | null;
     }>(sql`
-      select level, organization_id, space_id, document, schema_version, coalesce(created_by, updated_by) as author
+      select level, organization_id, space_id, document, schema_version, created_by, updated_by
       from page_templates where id = ${templateId} and not files_adopted for update`);
     const row = result.rows[0];
     if (!row) return null;
+    const unrestricted = sql`not exists (select 1 from page_restrictions r
+      where r.item_id = any(t.path) and r.kind = 'view')`;
     const within =
       row.level === "space"
         ? sql`t.space_id = ${row.space_id}`
         : row.level === "organization"
-          ? sql`s.organization_id = ${row.organization_id}`
-          : sql`true`;
-    const source = row.author
-      ? sql`${within} and ${visibleItem(this.#authorization, accountPrincipal(row.author), sql`t`, sql`s`)}`
-      : sql`false`;
+          ? sql`s.organization_id = ${row.organization_id} and ${unrestricted}`
+          : unrestricted;
+    const authors = [...new Set([row.created_by, row.updated_by].filter((id): id is string => id !== null))];
+    const visible = authors.map(
+      (author) => sql`${visibleItem(this.#authorization, accountPrincipal(author), sql`t`, sql`s`)}`,
+    );
+    const source = authors.length > 0 ? sql`${within} and ${sql.join(visible, sql` and `)}` : sql`false`;
     const adopted = await this.#files.adopt(tx, {
       templateId,
-      actorId: row.author,
+      actorId: row.created_by ?? row.updated_by,
       document: migrated(row.document, row.schema_version),
       source,
     });
