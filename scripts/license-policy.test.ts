@@ -160,3 +160,57 @@ describe("findLicenseViolations", () => {
     assert.deepEqual(violations, ["Allowlist entry mdn-data is not needed and must be removed"]);
   });
 });
+
+describe("bundled native libraries", () => {
+  const hash = "c".repeat(64);
+  const bundle = {
+    packages: ["@img/sharp-libvips-linux-x64@1.3.4"],
+    versionsSha256: hash,
+    libraries: { vips: "LGPL-3.0-only", freetype: "FTL", png: "libpng-2.0" },
+    accepted: ["FTL", "libpng-2.0"],
+    reason: "Prebuilt libvips",
+  };
+  const libvips = (libraries: string[], sha256 = hash, version = "1.3.4"): PackageLicense => ({
+    name: "@img/sharp-libvips-linux-x64",
+    versions: [version],
+    license: "LGPL-3.0-or-later",
+    bundled: { [version]: { sha256, libraries } },
+  });
+  const check = (pkg: PackageLicense, bundles = [bundle]) =>
+    findLicenseViolations({ all: [pkg], production: [pkg], allowlist: {}, bundles });
+
+  it("accepts the reviewed libraries of the named package version", () => {
+    assert.deepEqual(check(libvips(["freetype", "png", "vips"])), []);
+  });
+
+  it("needs a reviewed entry for every version of a package that bundles libraries", () => {
+    assert.match(check(libvips(["vips"]), []).join("\n"), /needs a reviewed entry in license-bundles\.json/);
+    assert.match(check(libvips(["vips"], hash, "1.4.0")).join("\n"), /needs a reviewed entry/);
+  });
+
+  it("asks for a new review when the list of bundled libraries changes", () => {
+    assert.match(check(libvips(["vips"], "d".repeat(64))).join("\n"), /differ from the reviewed ones/);
+    const missing: PackageLicense = { ...libvips([]), bundled: {} };
+    assert.match(check(missing).join("\n"), /differ from the reviewed ones/);
+  });
+
+  it("rejects a library without a reviewed license or under a license that is not accepted", () => {
+    assert.match(check(libvips(["jpeg", "vips"])).join("\n"), /bundles jpeg, which has no reviewed license/);
+    const narrower = { ...bundle, accepted: ["FTL"] };
+    assert.match(
+      check(libvips(["png"]), [narrower]).join("\n"),
+      /bundles png under libpng-2\.0, which is not accepted/,
+    );
+  });
+
+  it("keeps rejecting other packages under the accepted licenses", () => {
+    const font = { name: "font-tool", versions: ["1.0.0"], license: "FTL" };
+    assert.match(check(font).join("\n"), /font-tool@1\.0\.0 \(FTL\) ships in the image/);
+  });
+
+  it("rejects an entry without a reason or one that accepts an approved license", () => {
+    const violations = check(libvips(["vips"]), [{ ...bundle, reason: " ", accepted: ["MIT"] }]).join("\n");
+    assert.match(violations, /has no reason/);
+    assert.match(violations, /accepts MIT, which needs no exception/);
+  });
+});
