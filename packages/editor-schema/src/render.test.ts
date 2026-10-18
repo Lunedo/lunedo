@@ -832,6 +832,36 @@ describe("task report", () => {
   });
 });
 
+describe("images with a display version", () => {
+  const document = doc({ type: "image", attrs: { attachmentId: ID, alt: "Rack" } });
+  const attachment = (id: string) => ({
+    href: `/api/v1/attachments/${id}/content`,
+    display: `/api/v1/attachments/${id}/content?size=display`,
+  });
+
+  it("show the display version on screen and link the original to open it in full size", () => {
+    expect(renderHtml(document, { attachment, labels: { openFullSize: "Volle Größe" } })).toContain(
+      `<a class="ph-image-full" href="/api/v1/attachments/${ID}/content" target="_blank" rel="noopener noreferrer" title="Volle Größe">` +
+        `<img src="/api/v1/attachments/${ID}/content?size=display" alt="Rack" loading="lazy"></a>`,
+    );
+  });
+
+  it("print the display version without a link and keep the original in Markdown", () => {
+    const printed = renderHtml(document, { attachment, target: "print" });
+    expect(printed).toContain(`<img src="/api/v1/attachments/${ID}/content?size=display" alt="Rack">`);
+    expect(printed).not.toContain("ph-image-full");
+    expect(renderMarkdown(document, { attachment })).toBe(`![Rack](/api/v1/attachments/${ID}/content)\n`);
+  });
+
+  it("show the original without a link when there is no other version", () => {
+    const html = renderHtml(document, {
+      attachment: (id) => ({ href: `/api/v1/attachments/${id}/content` }),
+    });
+    expect(html).toContain(`<img src="/api/v1/attachments/${ID}/content" alt="Rack" loading="lazy">`);
+    expect(html).not.toContain("ph-image-full");
+  });
+});
+
 describe("link addresses", () => {
   it("pass every allowed address through the context, so exports can point links elsewhere", () => {
     const document = doc(

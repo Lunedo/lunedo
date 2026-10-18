@@ -13,6 +13,7 @@ import type { StorageService } from "../storage/storage.js";
 import { type FileService, FileTooLargeError } from "./files.js";
 import { cleanFileName, fileNameKey } from "./names.js";
 import { publishAttachments } from "./publication.js";
+import type { DisplayVersionSize } from "./schema.js";
 import { keepVersionsSetting, MEGABYTE, maxFileSizeSetting } from "./settings.js";
 import type { PreviewKind } from "./sniff.js";
 
@@ -62,6 +63,7 @@ export interface AttachmentContent {
   inline: boolean;
   version: number;
   versionId: string;
+  displaySize?: DisplayVersionSize;
 }
 
 const INLINE_TYPES = new Set([
@@ -584,7 +586,7 @@ export class AttachmentService {
         : sql`p.organization_id = ${scope.organizationId}
             or p.space_id in (select id from spaces where organization_id = ${scope.organizationId})`;
     const result = await this.#database.execute<{ bytes: string | null; files: string }>(sql`
-      select coalesce(sum(f.size), 0) as bytes, count(*) as files
+      select coalesce(sum(f.size), 0) as bytes, count(*) filter (where counted.original) as files
       from (
         select distinct v.attachment_id as owner_id, v.file_id from attachment_versions v
         join attachments a on a.id = v.attachment_id
@@ -594,7 +596,11 @@ export class AttachmentService {
         select distinct tf.template_id, tf.file_id from template_files tf
         join page_templates p on p.id = tf.template_id
         where ${templates}) used
-      join stored_files f on f.id = used.file_id`);
+      cross join lateral (
+        select used.file_id, true as original
+        union all
+        select d.file_id, false from display_versions d where d.source_file_id = used.file_id) counted
+      join stored_files f on f.id = counted.file_id`);
     return { bytes: Number(result.rows[0]?.bytes ?? 0), files: Number(result.rows[0]?.files ?? 0) };
   }
 }

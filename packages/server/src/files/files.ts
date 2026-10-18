@@ -48,6 +48,15 @@ export interface StoredFile {
 
 const CONTENT_DIGEST_PURPOSE = "file-content";
 
+export const DISPLAY_VERSIONS_CHANNEL = "pagehall_display_versions";
+
+export const DISPLAY_VERSION_TYPES: ReadonlySet<string> = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+]);
+
 const COMPLETE = sql`state <> 'pending'`;
 
 class Inspector extends Transform {
@@ -162,9 +171,12 @@ export class FileService {
     const head = Buffer.concat(inspector.head);
     const type = detectType(head, { name: options.name, truncated: inspector.size > head.length });
     const digest = inspector.digest();
+    const displayVersions =
+      options.attachment === true && DISPLAY_VERSION_TYPES.has(type.contentType) ? "pending" : null;
     await executor.execute(sql`
       update stored_files set size = ${inspector.size}, content_digest = ${digest},
-        content_type = ${type.contentType}, master_key_version = ${keyVersion}, state = 'stored', updated_at = now()
+        content_type = ${type.contentType}, master_key_version = ${keyVersion}, state = 'stored',
+        display_version_state = ${displayVersions}, updated_at = now()
       where id = ${id}`);
     return { id, size: inspector.size, digest: digest.toString("hex"), type };
   }
@@ -200,6 +212,7 @@ export class FileService {
       where id = ${file.id} and state = 'stored'
       returning id`);
     if (claimed.rows.length === 0) throw new Error("The uploaded file was removed before it was saved");
+    await this.#announceDisplayVersions(tx, used);
     return used;
   }
 
@@ -208,6 +221,13 @@ export class FileService {
       update stored_files set state = 'ready', updated_at = now() where id = ${fileId} and state = 'stored'
       returning id`);
     if (claimed.rows.length === 0) throw new Error("The uploaded file was removed before it was saved");
+    await this.#announceDisplayVersions(tx, fileId);
+  }
+
+  async #announceDisplayVersions(tx: Executor, fileId: string): Promise<void> {
+    await tx.execute(sql`
+      select pg_notify(${DISPLAY_VERSIONS_CHANNEL}, '') from stored_files
+      where id = ${fileId} and display_version_state = 'pending'`);
   }
 
   async #discard(executor: Executor, id: string, key: string, stored: number): Promise<void> {
@@ -305,7 +325,8 @@ export class FileService {
       update stored_files f set state = 'ready', updated_at = now()
       where f.state = 'orphaned' and (exists (select 1 from attachment_versions v where v.file_id = f.id)
         or exists (select 1 from whiteboard_previews p where p.file_id = f.id)
-        or exists (select 1 from template_files t where t.file_id = f.id))`);
+        or exists (select 1 from template_files t where t.file_id = f.id)
+        or exists (select 1 from display_versions d where d.file_id = f.id))`);
     let removed = 0;
     for (const row of result.rows) {
       const claimed = await this.#database.execute(sql`
@@ -314,8 +335,12 @@ export class FileService {
           and not exists (select 1 from attachment_versions v where v.file_id = ${row.id})
           and not exists (select 1 from whiteboard_previews p where p.file_id = ${row.id})
           and not exists (select 1 from template_files t where t.file_id = ${row.id})
+          and not exists (select 1 from display_versions d where d.file_id = ${row.id})
         returning id`);
       if (claimed.rows.length === 0) continue;
+      await this.#database.execute(sql`
+        with released as (delete from display_versions where source_file_id = ${row.id} returning file_id)
+        update stored_files set state = 'orphaned', updated_at = now() where id in (select file_id from released)`);
       const stored = (await this.#store.size(row.storage_key)) ?? 0;
       await this.#store.delete(row.storage_key);
       await this.#usage?.add(-stored, row.storage_key);

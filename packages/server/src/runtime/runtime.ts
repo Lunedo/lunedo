@@ -25,6 +25,7 @@ import { runMigrations } from "../database/migrate.js";
 import { NotificationListener } from "../database/notifications.js";
 import { createDatabasePool, type DatabasePool } from "../database/pool.js";
 import { embedSettings } from "../embeds/settings.js";
+import { startDisplayVersions } from "../files/jobs.js";
 import { encryptedStreamOwnersOf, fileStoreOf } from "../files/owners.js";
 import { fileSettings } from "../files/settings.js";
 import { readinessChecks } from "../health/readiness.js";
@@ -235,6 +236,7 @@ export async function createServerRuntime(options: {
         await startBlogAnnouncements({ jobs, listener, subscriptions: services.blogSubscriptions, logger });
         await startPushDelivery({ jobs, listener, push: services.push, logger });
         await startChatDelivery({ jobs, listener, channels: services.chatChannels, logger });
+        await startDisplayVersions({ jobs, listener, displayVersions: services.displayVersions, logger });
         metrics.observeJobQueue(jobs);
         await jobs.work(rotateDataKeysJob, keyRotation.run);
         await jobs.work(cleanupJobProgressJob, async () => {

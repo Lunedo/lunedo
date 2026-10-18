@@ -14,6 +14,7 @@ import type { TaskService } from "../collaboration/tasks.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import type { DatabasePool } from "../database/pool.js";
 import type { AttachmentService } from "../files/attachments.js";
+import type { DisplayVersionService } from "../files/display-versions.js";
 import type { FileService } from "../files/files.js";
 import type { ByteRange } from "../files/store.js";
 import type { JobContext, JobQueue } from "../jobs/job-queue.js";
@@ -313,6 +314,7 @@ export class ExportService {
   readonly #settings: SettingsService;
   readonly #mail: MailService;
   readonly #files: FileService;
+  readonly #displayVersions: DisplayVersionService;
   readonly #storage: StorageService;
   readonly #documents: PageDocumentService;
   readonly #attachments: AttachmentService;
@@ -335,6 +337,7 @@ export class ExportService {
     settings: SettingsService;
     mail: MailService;
     files: FileService;
+    displayVersions: DisplayVersionService;
     storage: StorageService;
     documents: PageDocumentService;
     attachments: AttachmentService;
@@ -356,6 +359,7 @@ export class ExportService {
     this.#settings = options.settings;
     this.#mail = options.mail;
     this.#files = options.files;
+    this.#displayVersions = options.displayVersions;
     this.#storage = options.storage;
     this.#documents = options.documents;
     this.#attachments = options.attachments;
@@ -424,6 +428,7 @@ export class ExportService {
       database: this.#database,
       authorization: this.#authorization,
       attachments: this.#attachments,
+      displayVersions: this.#displayVersions,
       files: this.#files,
       comments: this.#comments,
       logger: this.#logger,

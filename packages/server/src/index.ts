@@ -340,9 +340,11 @@ export {
   type AttachmentView,
   previewOf,
 } from "./files/attachments.js";
+export { DisplayVersionService } from "./files/display-versions.js";
 export { FileService, FileTooLargeError, fileStreamOwner } from "./files/files.js";
 export { contentDisposition, FILE_NAME_MAX_LENGTH } from "./files/names.js";
 export { encryptedStreamOwnersOf, fileStoreOf } from "./files/owners.js";
+export { type DisplayVersionSize, displayVersionSizes } from "./files/schema.js";
 export * from "./files/settings.js";
 export { type PreviewKind, previewAllowed } from "./files/sniff.js";
 export {

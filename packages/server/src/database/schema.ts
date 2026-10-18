@@ -53,6 +53,8 @@ export { exportFormat, exportScope, exportState, exports } from "../exports/sche
 export {
   attachments,
   attachmentVersions,
+  displayVersionState,
+  displayVersions,
   storedFileState,
   storedFiles,
 } from "../files/schema.js";

@@ -10450,6 +10450,21 @@
                 "false"
               ]
             }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "description": "Size of an image. `display` sends a version whose longest edge is at most 2048 pixels, `preview` one of at most 400 pixels, both as WebP without metadata. The original is sent while no such version exists, for images that are already small enough, and for every other type.",
+            "schema": {
+              "default": "original",
+              "type": "string",
+              "enum": [
+                "original",
+                "display",
+                "preview"
+              ]
+            }
           }
         ],
         "responses": {
@@ -117464,6 +117479,21 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "description": "Size of an image. `display` sends a version whose longest edge is at most 2048 pixels, `preview` one of at most 400 pixels, both as WebP without metadata. The original is sent while no such version exists, for images that are already small enough, and for every other type.",
+            "schema": {
+              "default": "original",
+              "type": "string",
+              "enum": [
+                "original",
+                "display",
+                "preview"
+              ]
+            }
           }
         ],
         "responses": {
@@ -166737,6 +166767,21 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "description": "Size of an image. `display` sends a version whose longest edge is at most 2048 pixels, `preview` one of at most 400 pixels, both as WebP without metadata. The original is sent while no such version exists, for images that are already small enough, and for every other type.",
+            "schema": {
+              "default": "original",
+              "type": "string",
+              "enum": [
+                "original",
+                "display",
+                "preview"
+              ]
+            }
           }
         ],
         "responses": {
@@ -192323,6 +192368,21 @@
             }
           },
           {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "description": "Size of an image. `display` sends a version whose longest edge is at most 2048 pixels, `preview` one of at most 400 pixels, both as WebP without metadata. The original is sent while no such version exists, for images that are already small enough, and for every other type.",
+            "schema": {
+              "default": "original",
+              "type": "string",
+              "enum": [
+                "original",
+                "display",
+                "preview"
+              ]
+            }
+          },
+          {
             "name": "version",
             "in": "query",
             "required": false,
@@ -217222,6 +217282,21 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "description": "Size of an image. `display` sends a version whose longest edge is at most 2048 pixels, `preview` one of at most 400 pixels, both as WebP without metadata. The original is sent while no such version exists, for images that are already small enough, and for every other type.",
+            "schema": {
+              "default": "original",
+              "type": "string",
+              "enum": [
+                "original",
+                "display",
+                "preview"
+              ]
             }
           }
         ],

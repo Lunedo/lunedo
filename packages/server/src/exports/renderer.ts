@@ -68,7 +68,7 @@ const PAGE_ADDRESS = new RegExp(
   `^/spaces/[^/?#]*/(?:pages|blog)/(${UUID})(?:/[^?#]*)?(?:\\?[^#]*)?(#.*)?$`,
   "i",
 );
-const ATTACHMENT_ADDRESS = new RegExp(`^/api/v1/attachments/(${UUID})/content$`, "i");
+const ATTACHMENT_ADDRESS = new RegExp(`^/api/v1/attachments/(${UUID})/content(\\?size=display)?$`, "i");
 const WHITEBOARD_PREVIEW_ADDRESS = new RegExp(`^/api/v1/whiteboards/(${UUID})/preview$`, "i");
 const MAX_REPORTED_TASKS = 200;
 const MAX_INCLUDES = 50;
@@ -91,7 +91,7 @@ export type PreparedInclusion =
 
 export interface Locator {
   page(pageId: string, format: ExportFormat): string | null;
-  attachment(attachmentId: string): string | null;
+  attachment(attachmentId: string, display?: boolean): string | null;
   preview(itemId: string): string | null;
   index(format: ExportFormat): string | null;
 }
@@ -699,9 +699,10 @@ export class PageExportRenderer {
         const local = locator.page(pageId, format);
         if (local) return `${local}${page?.[2] ?? ""}`;
       }
-      const attachmentId = ATTACHMENT_ADDRESS.exec(address)?.[1]?.toLowerCase();
+      const attachment = ATTACHMENT_ADDRESS.exec(address);
+      const attachmentId = attachment?.[1]?.toLowerCase();
       if (attachmentId) {
-        const local = locator.attachment(attachmentId);
+        const local = locator.attachment(attachmentId, attachment?.[2] !== undefined);
         if (local) return local;
       }
       const boardId = WHITEBOARD_PREVIEW_ADDRESS.exec(address)?.[1]?.toLowerCase();
@@ -745,7 +746,11 @@ export class PageExportRenderer {
             }
           : { href: "", title: "", accessible: false };
       },
-      attachment: (id) => ({ href: `/api/v1/attachments/${id}/content`, image: page.images.has(id) }),
+      attachment: (id) => ({
+        href: `/api/v1/attachments/${id}/content`,
+        display: `/api/v1/attachments/${id}/content?size=display`,
+        image: page.images.has(id),
+      }),
       whiteboard: (id) => {
         const board = page.whiteboards?.get(id);
         if (!board) return null;

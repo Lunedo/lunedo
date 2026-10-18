@@ -1,3 +1,4 @@
+import { Readable } from "node:stream";
 import {
   commentKit,
   type DocumentJson,
@@ -7,11 +8,13 @@ import {
   type RenderContext,
 } from "@pagehall/editor-schema";
 import { sql } from "drizzle-orm";
+import sharp from "sharp";
 import type { Principal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { CommentList, CommentService } from "../collaboration/comments.js";
 import type { Database } from "../database/database.js";
 import type { AttachmentService } from "../files/attachments.js";
+import { type DisplayVersionService, MAX_DISPLAY_VERSION_PIXELS } from "../files/display-versions.js";
 import type { FileService } from "../files/files.js";
 import type { Logger } from "../logging/logger.js";
 import { blocksOfType } from "../spaces/documents.js";
@@ -31,7 +34,9 @@ import { imageInfo, type WordComment, type WordImage, type WordPage, wordDocumen
 export const MAX_EMBEDDED_IMAGE_BYTES = 25 * 1024 * 1024;
 export const MAX_EMBEDDED_TOTAL_BYTES = 100 * 1024 * 1024;
 
-type ImageFile = { fileId: string; size: number; contentType: string } | null;
+type ImageFile = { fileId: string; size: number; contentType: string; data?: Buffer } | null;
+
+const CONVERTED_IMAGE_EDGE = 2048;
 
 interface ListedPage {
   id: string;
@@ -65,6 +70,7 @@ export class PagedExport {
   readonly #database: Database;
   readonly #authorization: AuthorizationService;
   readonly #attachments: AttachmentService;
+  readonly #displayVersions: DisplayVersionService | undefined;
   readonly #files: FileService;
   readonly #comments: CommentService;
   readonly #logger: Logger;
@@ -85,6 +91,7 @@ export class PagedExport {
     database: Database;
     authorization: AuthorizationService;
     attachments: AttachmentService;
+    displayVersions?: DisplayVersionService;
     files: FileService;
     comments: CommentService;
     logger: Logger;
@@ -96,6 +103,7 @@ export class PagedExport {
     this.#database = options.database;
     this.#authorization = options.authorization;
     this.#attachments = options.attachments;
+    this.#displayVersions = options.displayVersions;
     this.#files = options.files;
     this.#comments = options.comments;
     this.#logger = options.logger;
@@ -108,7 +116,8 @@ export class PagedExport {
   #printLocator(ids: ReadonlySet<string>): Locator {
     return {
       page: (pageId) => (ids.has(pageId) ? `#${pageAnchor(pageId)}` : null),
-      attachment: (attachmentId) => `/api/v1/attachments/${attachmentId}/content`,
+      attachment: (attachmentId, display) =>
+        `/api/v1/attachments/${attachmentId}/content${display ? "?size=display" : ""}`,
       preview: (itemId) => whiteboardPreviewPath(itemId),
       index: () => null,
     };
@@ -303,13 +312,16 @@ export class PagedExport {
     const itemId = owner.rows[0]?.item_id;
     if (!itemId) return null;
     if (!this.#exported.has(itemId) && !(await this.#renderer.exportable([itemId])).has(itemId)) return null;
-    const content = await this.#attachments.content(attachmentId, "published");
-    if (!content?.contentType.startsWith("image/")) return null;
-    return this.#within(attachmentId, {
-      fileId: content.fileId,
-      size: content.size,
-      contentType: content.contentType,
-    });
+    const original = await this.#attachments.content(attachmentId, "published");
+    if (!original?.contentType.startsWith("image/")) return null;
+    const content = (await this.#displayVersions?.apply(original, "display")) ?? original;
+    const file = { fileId: content.fileId, size: content.size, contentType: content.contentType };
+    if (file.contentType !== "image/webp") return this.#within(attachmentId, file);
+    if (file.size > MAX_EMBEDDED_IMAGE_BYTES) return this.#within(attachmentId, file);
+    const read = await this.#bytes(file);
+    const converted = read ? await this.#compatible(read) : null;
+    if (!converted) return null;
+    return this.#within(attachmentId, { ...file, ...converted, size: converted.data.length });
   }
 
   #within(id: string, file: NonNullable<ImageFile>): ImageFile {
@@ -344,10 +356,28 @@ export class PagedExport {
   async #wordImage(attachmentId: string): Promise<WordImage | null> {
     const board = this.#boards.get(attachmentId);
     const file = await (board ? this.#boardImage(attachmentId, board) : this.#readable(attachmentId));
-    const data = file ? await this.#bytes(file) : null;
+    const data = file ? (file.data ?? (await this.#bytes(file))) : null;
     if (!data) return null;
     const info = imageInfo(data);
     return info ? { ...info, data } : null;
+  }
+
+  async #compatible(webp: Buffer): Promise<{ data: Buffer; contentType: string } | null> {
+    try {
+      const { hasAlpha } = await sharp(webp, { limitInputPixels: MAX_DISPLAY_VERSION_PIXELS }).metadata();
+      const image = sharp(webp, { limitInputPixels: MAX_DISPLAY_VERSION_PIXELS }).resize({
+        width: CONVERTED_IMAGE_EDGE,
+        height: CONVERTED_IMAGE_EDGE,
+        fit: "inside",
+        withoutEnlargement: true,
+      });
+      return hasAlpha
+        ? { data: await image.png().toBuffer(), contentType: "image/png" }
+        : { data: await image.jpeg({ quality: 85 }).toBuffer(), contentType: "image/jpeg" };
+    } catch (error) {
+      this.#logger.warn({ err: error }, "A WebP image could not be converted for an export");
+      return null;
+    }
   }
 
   async #claim(): Promise<void> {
@@ -361,9 +391,10 @@ export class PagedExport {
   #withPlaceholders(html: string): string {
     if (this.#leftOut.size === 0) return html;
     return html.replace(/<img\b[^>]*\bsrc="([^"]*)"[^>]*>/g, (image, source: string) => {
-      const id = /^\/api\/v1\/(?:attachments|whiteboards)\/([0-9a-f-]{36})\/(?:content|preview)$/.exec(
-        source,
-      )?.[1];
+      const id =
+        /^\/api\/v1\/(?:attachments|whiteboards)\/([0-9a-f-]{36})\/(?:content|preview)(?:\?size=display)?$/.exec(
+          source,
+        )?.[1];
       if (!id || !this.#leftOut.has(id)) return image;
       const alt = /\balt="([^"]*)"/.exec(image)?.[1] ?? "";
       const note = escapeHtml(this.#renderer.texts.imageLeftOut);
@@ -406,8 +437,13 @@ export class PagedExport {
     const assets: RenderAsset[] = [];
     const asset = (path: string, file: ImageFile) => {
       if (!file) return;
-      const { fileId, size, contentType } = file;
-      assets.push({ path, contentType, size, open: () => this.#files.read(fileId) });
+      const { fileId, size, contentType, data } = file;
+      assets.push({
+        path,
+        contentType,
+        size,
+        open: data ? async () => Readable.from([data]) : () => this.#files.read(fileId),
+      });
     };
     for (const id of this.#assetBoards) {
       const board = this.#boards.get(id);

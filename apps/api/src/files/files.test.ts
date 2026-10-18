@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { accountAttemptLimitSetting, clientAttemptLimitSetting, maxFileSizeSetting } from "@pagehall/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
@@ -11,6 +11,7 @@ import {
   signedInClient,
 } from "../testing/accounts.js";
 import { type AuthTestApp, createAuthTestApp, databaseBaseUrl, TestClient } from "../testing/auth-app.js";
+import { grayPng } from "../testing/images.js";
 
 const PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), randomBytes(200)]);
 const HTML = Buffer.from(
@@ -290,6 +291,64 @@ describe.skipIf(!databaseBaseUrl)("attachments through the API", () => {
       listed.json() as { items: { key: string; value: unknown; maximum: unknown }[] }
     ).items.find((setting) => setting.key === "files.keepVersions");
     expect(entry).toMatchObject({ value: 50, maximum: 500 });
+  });
+
+  it("serve display versions of images with the same access check as the original", async () => {
+    const reader = await person();
+    const outsider = await person();
+    const { pageId } = await page([
+      { principalKind: "account", principalId: reader.id, role: "reader" },
+      { principalKind: "account", principalId: outsider.id, role: "reader" },
+    ]);
+    const original = grayPng(3000, 2000);
+    const file = await uploaded(pageId, "floor.png", original);
+    const path = `/api/v1/attachments/${file.id}/content`;
+    const pending = await reader.client.get(`${path}?size=display`);
+    expect(pending.statusCode).toBe(200);
+    expect(pending.headers["content-type"]).toBe("image/png");
+    expect(pending.rawPayload.equals(original)).toBe(true);
+
+    const content = await test.runtime.services.attachments.content(file.id, "draft");
+    await test.runtime.services.displayVersions.create(content?.fileId ?? "", { lastAttempt: false });
+
+    const display = await reader.client.get(`${path}?size=display`);
+    expect(display.statusCode).toBe(200);
+    expect(display.headers["content-type"]).toBe("image/webp");
+    expect(String(display.headers["content-disposition"])).toMatch(/^inline;.*floor\.webp/);
+    expect(display.rawPayload.length).toBeLessThan(original.length);
+    expectIsolated(display.headers);
+    const preview = await reader.client.get(`${path}?size=preview`);
+    expect(preview.headers["content-type"]).toBe("image/webp");
+    expect(preview.rawPayload.length).toBeLessThan(display.rawPayload.length);
+    expect(
+      new Set([display.headers.etag, preview.headers.etag, (await reader.client.get(path)).headers.etag])
+        .size,
+    ).toBe(3);
+    const full = await reader.client.get(path);
+    expect(full.headers["content-type"]).toBe("image/png");
+    expect(full.rawPayload.equals(original)).toBe(true);
+    const download = await reader.client.get(`${path}?download=true`);
+    expect(download.rawPayload.equals(original)).toBe(true);
+    expect((await reader.client.get(`${path}?size=huge`)).statusCode).toBe(400);
+
+    const restricted = await owner.post(`/api/v1/pages/${pageId}/access`, {
+      changes: [
+        { action: "share", holderKind: "account", holderId: reader.id, role: "reader" },
+        { action: "restrict", kind: "view" },
+      ],
+    });
+    expect(restricted.statusCode, restricted.body).toBe(200);
+    const unknown = `/api/v1/attachments/${randomUUID()}/content`;
+    for (const size of ["display", "preview"]) {
+      const hidden = await outsider.client.get(`${path}?size=${size}`);
+      const missing = await outsider.client.get(`${unknown}?size=${size}`);
+      expect(hidden.statusCode).toBe(404);
+      expect({ status: hidden.statusCode, code: hidden.json().code }).toEqual({
+        status: missing.statusCode,
+        code: missing.json().code,
+      });
+    }
+    expect((await reader.client.get(`${path}?size=display`)).headers["content-type"]).toBe("image/webp");
   });
 
   it("give every file version its own ETag, unrelated to the content", async () => {

@@ -24,7 +24,7 @@ import {
   fileLinkSchema,
   keepVersionSchema,
 } from "./schemas.js";
-import { sendAttachment } from "./serve.js";
+import { imageSizeSchema, sendAttachment } from "./serve.js";
 
 const TAG = "Attachments";
 const page = { type: "item", param: "pageId" } as const;
@@ -64,6 +64,7 @@ const contentQuery = z
       .describe(
         "`true` always sends the file as a download. Otherwise images, video and audio are sent inline and everything else as a download.",
       ),
+    size: imageSizeSchema,
   })
   .strict();
 
@@ -304,7 +305,8 @@ export class AttachmentsController {
     const view = await this.#view(actorOf(request), "attachment.edit", attachmentId);
     const content = await this.#services.attachments.content(attachmentId, view, query.version);
     if (!content) throw new ProblemException("versionNotFound", "This version does not exist");
-    return sendAttachment(request, reply, this.#services.files, content, {
+    const sized = await this.#services.displayVersions.apply(content, query.size);
+    return sendAttachment(request, reply, this.#services.files, sized, {
       inline: !query.download,
       crossOrigin: false,
     });

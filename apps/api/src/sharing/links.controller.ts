@@ -6,7 +6,7 @@ import { InternalRoute, Permission, PublicRoute } from "../access/route-access.j
 import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { attachmentListSchema, exampleAttachment } from "../files/schemas.js";
-import { sendAttachment } from "../files/serve.js";
+import { imageSizeSchema, sendAttachment } from "../files/serve.js";
 import { ApiRoute } from "../http/api-route.js";
 import { COOKIES, readCookie } from "../http/cookies.js";
 import { notFound } from "../http/problems.js";
@@ -28,6 +28,7 @@ const UNLOCK_HEADER = "x-pagehall-unlock";
 const versionQuery = z
   .object({
     download: z.enum(["true", "false"]).optional().describe("`true` sends the file as a download."),
+    size: imageSizeSchema,
     version: z.coerce
       .number()
       .int()
@@ -334,7 +335,8 @@ export class ShareLinksController {
     const content = await this.#services.attachments.content(attachmentId, "published", query.version);
     if (!content) throw notFound();
     reply.header("referrer-policy", "no-referrer");
-    return sendAttachment(request, reply, this.#services.files, content, {
+    const sized = await this.#services.displayVersions.apply(content, query.size);
+    return sendAttachment(request, reply, this.#services.files, sized, {
       inline: query.download !== "true",
       crossOrigin: false,
     });

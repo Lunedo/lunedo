@@ -63,15 +63,30 @@ function imageHtml(node: ValidNode, renderer: HtmlRenderer, lazy: boolean): stri
   const id = attrOf<string | null>(node, "attachmentId");
   const resolved = id ? (renderer.context.attachment?.(id) ?? null) : null;
   const href = resolved ? renderer.safeHref(resolved.href) : null;
+  const display = resolved?.display ? renderer.safeHref(resolved.display) : null;
   const width = attrOf<number | null>(node, "width");
   const image = href
     ? `<img${htmlAttributes({
-        src: href,
+        src: display ?? href,
         alt: attrOf<string>(node, "alt"),
         loading: lazy ? "lazy" : null,
         width: lazy ? null : width,
       })}>`
     : "";
+  const full =
+    href && display && display !== href && lazy
+      ? element(
+          "a",
+          {
+            class: "ph-image-full",
+            href,
+            target: "_blank",
+            rel: "noopener noreferrer",
+            title: renderer.label("openFullSize"),
+          },
+          image,
+        )
+      : image;
   return element(
     "figure",
     {
@@ -80,7 +95,7 @@ function imageHtml(node: ValidNode, renderer: HtmlRenderer, lazy: boolean): stri
       "data-align": attrOf<string>(node, "align"),
       "data-width": width,
     },
-    image,
+    full,
   );
 }
 

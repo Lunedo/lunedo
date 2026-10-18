@@ -1,5 +1,7 @@
 import { Readable } from "node:stream";
+import { buffer } from "node:stream/consumers";
 import mammoth from "mammoth";
+import sharp from "sharp";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { accountPrincipal, type Principal } from "../accounts/principal.js";
 import { Secret } from "../config/secret.js";
@@ -150,7 +152,7 @@ describe.skipIf(!baseUrl)("print, PDF and Word exports", () => {
       expect(printed).not.toContain("Salaries");
       expect(printed).not.toContain("Secret task");
       expect(printed).not.toContain("Never published");
-      expect(printed).toContain(`src="/api/v1/attachments/${image}/content"`);
+      expect(printed).toContain(`src="/api/v1/attachments/${image}/content?size=display"`);
       expect(printed).not.toContain('loading="lazy"');
       expect(printed).toContain("@page{size:A4 portrait;");
       expect(printed).toContain('@bottom-left{content:"Exported on ');
@@ -421,6 +423,57 @@ describe.skipIf(!baseUrl)("print, PDF and Word exports", () => {
       expect(file.fileName).toBe("Welcome.docx");
     });
 
+    it("embeds the display version of a large photo in Word and PDF files", async () => {
+      const { admin, space: handbook } = context;
+      const page = await test.services.tree.create(admin, handbook.id, {
+        kind: "page",
+        title: "Site survey",
+        mode: "live",
+        placement: { parentId: null },
+      });
+      const photo = await sharp({ create: { width: 3000, height: 2000, channels: 3, background: "#336699" } })
+        .jpeg()
+        .toBuffer();
+      const uploaded = await test.services.attachments.upload(admin, page.id, {
+        name: "survey.jpg",
+        body: Readable.from([photo]),
+        contentLength: photo.length,
+      });
+      await test.services.documents.replace(
+        admin,
+        page.id,
+        doc({ type: "image", attrs: { attachmentId: uploaded.id, alt: "Survey" } }),
+      );
+      const original = await test.services.attachments.content(uploaded.id, "published");
+      await test.services.displayVersions.create(original?.fileId ?? "", { lastAttempt: false });
+      const display = await test.services.displayVersions.apply(
+        original as NonNullable<typeof original>,
+        "display",
+      );
+      expect(display.displaySize).toBe("display");
+
+      const word = await html(await bytesOf(await test.services.exports.page(admin, page.id, "docx")));
+      const embedded = /<img alt="Survey" src="data:image\/jpeg;base64,([^"]+)"/.exec(word)?.[1];
+      const embeddedSize = await sharp(Buffer.from(embedded ?? "", "base64")).metadata();
+      expect({ width: embeddedSize.width, height: embeddedSize.height }).toEqual({
+        width: 2048,
+        height: 1365,
+      });
+
+      calls.length = 0;
+      await rendered.services.exports.page(admin, page.id, "pdf");
+      const assets = calls[0]?.assets ?? [];
+      expect(assets.map(({ path, contentType }) => ({ path, contentType }))).toEqual([
+        { path: `/api/v1/attachments/${uploaded.id}/content`, contentType: "image/jpeg" },
+      ]);
+      const sent = await sharp(Buffer.from(assets[0]?.data ?? "", "base64")).metadata();
+      expect({ format: sent.format, width: sent.width, height: sent.height }).toEqual({
+        format: "jpeg",
+        width: 2048,
+        height: 1365,
+      });
+    });
+
     it("reads an image that a Word file shows several times only once", async () => {
       const { admin, space: handbook } = context;
       const repeated = await test.services.tree.create(admin, handbook.id, {
@@ -486,8 +539,8 @@ describe.skipIf(!baseUrl)("print, PDF and Word exports", () => {
       await test.services.exports.page(admin, large.id, "pdf");
       const sent = calls.at(-1);
       expect(sent?.assets.map((asset) => asset.path)).toEqual([`/api/v1/attachments/${ids[0]}/content`]);
-      expect(sent?.html).toContain(`src="/api/v1/attachments/${ids[0]}/content"`);
-      expect(sent?.html).not.toContain(`src="/api/v1/attachments/${ids[1]}/content"`);
+      expect(sent?.html).toContain(`src="/api/v1/attachments/${ids[0]}/content?size=display"`);
+      expect(sent?.html).not.toContain(`src="/api/v1/attachments/${ids[1]}/content`);
       expect(sent?.html).toContain(
         `<span class="ph-export-note">${ids[1]}: Image left out because the file would otherwise be too large.`,
       );
@@ -521,6 +574,65 @@ describe.skipIf(!baseUrl)("print, PDF and Word exports", () => {
       paged.noteAssets(page(doc(imageNode(second.id), imageNode(image))));
       const assets = await paged.assets();
       expect(assets.map((asset) => asset.path)).toEqual([`/api/v1/attachments/${image}/content`]);
+    });
+
+    it("counts WebP images after converting them and limits their size", async () => {
+      const { admin, pages } = context;
+      const webp = (width: number, height: number, channels: 3 | 4) =>
+        sharp(
+          Buffer.alloc(width * height * channels).map((_, index) => (index * 7919) % 251),
+          {
+            raw: { width, height, channels },
+          },
+        )
+          .webp({ quality: 30 })
+          .toBuffer();
+      const upload = async (name: string, bytes: Buffer) =>
+        (
+          await test.services.attachments.upload(admin, pages.welcome.id, {
+            name,
+            body: Readable.from([bytes]),
+            contentLength: bytes.length,
+          })
+        ).id;
+      const wide = await upload("panorama.webp", await webp(4000, 600, 3));
+      const transparent = await webp(300, 300, 4);
+      const overlay = await upload("overlay.webp", transparent);
+      const paged = (maxEmbeddedBytes: number) =>
+        new PagedExport({
+          database: test.database,
+          authorization: test.services.authorization,
+          attachments: test.services.attachments,
+          displayVersions: test.services.displayVersions,
+          files: test.services.files,
+          comments: test.services.comments,
+          logger: createLogger({ service: "test", level: "silent" }),
+          renderer: undefined as never,
+          viewer: context.reader,
+          language: "en",
+          maxEmbeddedBytes,
+        });
+      const page = (id: string) =>
+        ({
+          id: pages.welcome.id,
+          document: doc({ type: "image", attrs: { attachmentId: id, alt: "" } }),
+          images: new Set(),
+        }) as unknown as PreparedPage;
+
+      const roomy = paged(100 * 1024 * 1024);
+      roomy.noteAssets(page(wide));
+      const [converted] = await roomy.assets();
+      const data = await buffer(await (converted as NonNullable<typeof converted>).open());
+      const metadata = await sharp(data).metadata();
+      expect({ type: converted?.contentType, size: converted?.size, width: metadata.width }).toEqual({
+        type: "image/jpeg",
+        size: data.length,
+        width: 2048,
+      });
+
+      const tight = paged(transparent.length + 1);
+      tight.noteAssets(page(overlay));
+      expect(await tight.assets()).toEqual([]);
     });
   });
 
