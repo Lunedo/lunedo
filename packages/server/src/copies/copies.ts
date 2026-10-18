@@ -16,6 +16,7 @@ import { type AuthorizationService, ForbiddenError } from "../authorization/serv
 import type { AccessImpact } from "../authorization/space-access.js";
 import type { ContentActivity } from "../collaboration/content.js";
 import type { Database, Transaction } from "../database/database.js";
+import type { FileService } from "../files/files.js";
 import type { JobContext, JobQueue } from "../jobs/job-queue.js";
 import type { NotificationService } from "../notifications/service.js";
 import type { ValueSigner } from "../sharing/signer.js";
@@ -46,6 +47,7 @@ import { insertFirstVersion } from "../spaces/versions.js";
 import { refreshReaderVisibility, visibleItem } from "../spaces/visibility.js";
 import { isStorageFull } from "../storage/errors.js";
 import type { StorageService } from "../storage/storage.js";
+import { attachmentScenes, copyDrawingScenes } from "../whiteboards/scene-copies.js";
 import { copyItemsJob } from "./jobs.js";
 import type { CopyState } from "./schema.js";
 import { type CopiedFrom, visibleSources } from "./sources.js";
@@ -248,6 +250,7 @@ export class CopyService {
   readonly #people: PeopleService;
   readonly #activity: ContentActivity;
   readonly #signer: ValueSigner;
+  readonly #files: FileService;
   readonly #storage: StorageService;
   readonly #audit: AuditLog;
   readonly #notifications: NotificationService;
@@ -262,6 +265,7 @@ export class CopyService {
     activity: ContentActivity;
     signer: ValueSigner;
     storage: StorageService;
+    files: FileService;
     audit: AuditLog;
     notifications: NotificationService;
     language: (accountId: string) => Promise<Language>;
@@ -273,6 +277,7 @@ export class CopyService {
     this.#activity = options.activity;
     this.#signer = options.signer;
     this.#storage = options.storage;
+    this.#files = options.files;
     this.#audit = options.audit;
     this.#notifications = options.notifications;
     this.#language = options.language;
@@ -952,7 +957,10 @@ export class CopyService {
         ? migrated(row.snapshot, row.schema_version)
         : migrated(row.version_document, row.version_schema);
     const attachments = await this.#copyAttachments(context, item, documentAttachments(document));
-    const copied = copyPageDocument(document, this.#mapping(context, attachments));
+    const copied = await copyDrawingScenes(
+      copyPageDocument(document, this.#mapping(context, attachments)),
+      attachmentScenes(tx, this.#files, async (id) => attachments.get(id)?.id ?? null),
+    );
     await insertInitialDocument(tx, item.copyId, actorId, copied);
     await insertFirstVersion(tx, item.copyId, actorId, { itemId: item.id, title: item.title });
     const stored = await tx.execute<{ snapshot: DocumentJson }>(

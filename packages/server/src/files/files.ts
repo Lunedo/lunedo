@@ -117,12 +117,16 @@ export class FileService {
     return masterStreamKeys(() => this.#keyRing.ring);
   }
 
-  async write(body: Readable, options: { name: string; maxBytes: number }): Promise<StoredFile> {
+  async write(
+    body: Readable,
+    options: { name: string; maxBytes: number; executor?: Executor },
+  ): Promise<StoredFile> {
+    const executor = options.executor ?? this.#database;
     const id = uuidv7();
     const key = storageKey(id);
     const version = this.#keyRing.ring.currentVersion;
     const mac = await this.#signer.mac(CONTENT_DIGEST_PURPOSE);
-    await this.#database.execute(sql`
+    await executor.execute(sql`
       insert into stored_files (id, storage_key, master_key_version, state) values (${id}, ${key}, ${version}, 'pending')`);
     const inspector = new Inspector(options.maxBytes, mac);
     const encrypt = createEncryptStream(this.#keys(), {
@@ -144,13 +148,13 @@ export class FileService {
       if (failure) throw failure;
       keyVersion = await this.#rewrapIfOutdated(key, version);
     } catch (error) {
-      await this.#discard(id, key, counted);
+      await this.#discard(executor, id, key, counted);
       throw error;
     }
     const head = Buffer.concat(inspector.head);
     const type = detectType(head, { name: options.name, truncated: inspector.size > head.length });
     const digest = inspector.digest();
-    await this.#database.execute(sql`
+    await executor.execute(sql`
       update stored_files set size = ${inspector.size}, content_digest = ${digest},
         content_type = ${type.contentType}, master_key_version = ${keyVersion}, state = 'stored', updated_at = now()
       where id = ${id}`);
@@ -198,11 +202,11 @@ export class FileService {
     if (claimed.rows.length === 0) throw new Error("The uploaded file was removed before it was saved");
   }
 
-  async #discard(id: string, key: string, stored: number): Promise<void> {
+  async #discard(executor: Executor, id: string, key: string, stored: number): Promise<void> {
     try {
       await this.#store.delete(key);
       await this.#usage?.add(-stored, key);
-      await this.#database.execute(sql`delete from stored_files where id = ${id} and state = 'pending'`);
+      await executor.execute(sql`delete from stored_files where id = ${id} and state = 'pending'`);
     } catch (error) {
       this.#logger.warn({ err: error, fileId: id }, "Removing an incomplete upload failed");
     }

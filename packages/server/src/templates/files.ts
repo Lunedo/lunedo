@@ -5,6 +5,7 @@ import {
   documentAttachments,
   rewriteFileReferences,
 } from "@pagehall/editor-schema";
+import { MAX_SCENE_BYTES } from "@pagehall/editor-schema/scene";
 import { uuidv7 } from "@pagehall/shared";
 import { type SQL, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
@@ -17,6 +18,9 @@ import { MEGABYTE } from "../files/settings.js";
 import { detectType, SNIFF_BYTES } from "../files/sniff.js";
 import { actorIdOf, SpaceError } from "../spaces/common.js";
 import type { StorageService } from "../storage/storage.js";
+import { readText } from "../whiteboards/common.js";
+import { drawingFileNames } from "../whiteboards/drawings.js";
+import { attachmentScenes, copyDrawingScenes, sceneImageIds } from "../whiteboards/scene-copies.js";
 import { sanitizeSvg } from "../whiteboards/svg.js";
 
 export const TEMPLATE_IMAGE_TYPES: ReadonlySet<string> = new Set([
@@ -236,7 +240,53 @@ export class TemplateFileService {
       const id = row ? adopted.get(`${row.attachment_id}:${row.number}`) : undefined;
       return id ? { id, version: reference.version === null ? null : 1 } : null;
     });
-    return { document: rewritten.document, adopted: adopted.size, missing: rewritten.missing };
+    const images = new Map<string, string | null>();
+    const document = await copyDrawingScenes(rewritten.document, {
+      read: (scene) => this.#text(tx, input.templateId, scene.id),
+      image: async (sourceId) => {
+        if (images.has(sourceId)) return images.get(sourceId) ?? null;
+        const found = await tx.execute<{ file_id: string; name: string }>(sql`
+          select v.file_id, v.name
+          from attachments a join attachment_versions v on v.id = a.current_version_id
+          join stored_files f on f.id = v.file_id and f.state = 'ready'
+          join tree_items t on t.id = a.item_id join spaces s on s.id = t.space_id
+          where a.id = ${sourceId} and a.deleted_at is null and ${input.source}`);
+        const row = found.rows[0];
+        const id = row ? uuidv7() : null;
+        if (row && id) {
+          await tx.execute(sql`
+            insert into template_files (id, template_id, file_id, name, created_by)
+            values (${id}, ${input.templateId}, ${row.file_id}, ${row.name}, ${input.actorId})`);
+        }
+        images.set(sourceId, id);
+        return id;
+      },
+      write: async (blockId, scene, current) => {
+        const name = drawingFileNames(blockId).scene;
+        const stored = await this.store(scene, name, MAX_SCENE_BYTES);
+        const id = await this.attach(tx, {
+          templateId: input.templateId,
+          stored,
+          name,
+          actorId: input.actorId,
+        });
+        return { id, version: current.version === null ? null : 1 };
+      },
+    });
+    const kept = await this.keepOwn(tx, input.templateId, document);
+    const takenOver = [...images.values()].filter((id) => id !== null).length;
+    return {
+      document: kept,
+      adopted: adopted.size + takenOver,
+      missing: rewritten.missing + images.size - takenOver,
+    };
+  }
+
+  async #text(tx: Executor, templateId: string, fileId: string): Promise<string | null> {
+    const result = await tx.execute<{ file_id: string }>(sql`
+      select file_id from template_files where template_id = ${templateId} and id = ${fileId}`);
+    const stored = result.rows[0]?.file_id;
+    return stored ? readText(await this.#files.read(stored, undefined, { staged: true }), MAX_SCENE_BYTES) : null;
   }
 
   async keepOwn(tx: Transaction, templateId: string, document: DocumentJson): Promise<DocumentJson> {
@@ -244,7 +294,12 @@ export class TemplateFileService {
     const { document: kept } = rewriteFileReferences(document, (reference) =>
       own.has(reference.id) ? { id: reference.id, version: reference.version === null ? null : 1 } : null,
     );
-    const used = [...new Set(documentAttachments(kept).map((reference) => reference.id))];
+    const used = [
+      ...new Set([
+        ...documentAttachments(kept).map((reference) => reference.id),
+        ...(await sceneImageIds(kept, (scene) => this.#text(tx, templateId, scene.id))),
+      ]),
+    ];
     await tx.execute(sql`
       delete from template_files where template_id = ${templateId}
         and not (id = any(${sql.param(used)}::uuid[]))`);
@@ -261,8 +316,14 @@ export class TemplateFileService {
       document: DocumentJson;
     },
   ): Promise<DocumentJson> {
-    const ids = [...new Set(documentAttachments(input.document).map((reference) => reference.id))];
-    if (ids.length === 0 || !/^[0-9a-f-]{36}$/.test(input.templateId)) return input.document;
+    if (!/^[0-9a-f-]{36}$/.test(input.templateId)) return input.document;
+    const ids = [
+      ...new Set([
+        ...documentAttachments(input.document).map((reference) => reference.id),
+        ...(await sceneImageIds(input.document, (scene) => this.#text(tx, input.templateId, scene.id))),
+      ]),
+    ];
+    if (ids.length === 0) return input.document;
     const result = await tx.execute<{ id: string; name: string; file_id: string }>(sql`
       select tf.id, tf.name, tf.file_id from template_files tf
       join stored_files f on f.id = tf.file_id and f.state = 'ready'
@@ -290,10 +351,14 @@ export class TemplateFileService {
         where id = ${attachmentId}`);
       copied.set(row.id, attachmentId);
     }
-    return rewriteFileReferences(input.document, (reference) => {
+    const rewritten = rewriteFileReferences(input.document, (reference) => {
       const id = copied.get(reference.id);
       return id ? { id, version: reference.version === null ? null : 1 } : null;
     }).document;
+    return copyDrawingScenes(
+      rewritten,
+      attachmentScenes(tx, this.#files, async (id) => copied.get(id) ?? null),
+    );
   }
 
   async hasFiles(templateId: string): Promise<boolean> {

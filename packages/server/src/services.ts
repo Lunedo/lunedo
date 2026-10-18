@@ -895,6 +895,7 @@ export function createAccountServices(options: {
     activity,
     signer,
     storage,
+    files,
     audit,
     notifications,
     language: (accountId) => mail.languageOf(accountId),

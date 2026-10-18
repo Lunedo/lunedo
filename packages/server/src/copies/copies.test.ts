@@ -10,6 +10,7 @@ import { testDatabaseBaseUrl } from "../testing/database.js";
 import { testJobContext } from "../testing/jobs.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { spaceFixtures } from "../testing/spaces.js";
+import { drawingSceneOf, pageWithDrawing } from "../whiteboards/scene.testing.js";
 import { COPY_IN_REQUEST_LIMIT, type CopyImpact, copyTitle } from "./copies.js";
 
 const baseUrl = testDatabaseBaseUrl();
@@ -435,6 +436,42 @@ describe.skipIf(!baseUrl)("copying content", () => {
       expect(backlinks.rows.map((row) => row.target_item_id).sort()).toEqual(
         [copiedChild?.id, outside.id].sort(),
       );
+    });
+
+    it("copies the images inside a drawing, so the copy shows and saves them without the source", async () => {
+      const { org, wiki, other, as } = await setup();
+      const outsider = await member(org.id, "member", "Otto Outsider");
+      await grant(as, other.id, outsider, "editor");
+      const source = await page(as, wiki.id, "Floor plan");
+      const image = await upload(as, source.id, "router.png", "png");
+      const blockId = "01929b1e-0000-7000-8000-00000000d0a1";
+      await pageWithDrawing(test, as, source.id, blockId, image.id);
+      const request = { spaceId: other.id, parentId: null, descendants: false };
+      const impact = await test.services.copies.preview(as, source.id, request);
+      const done = await test.services.copies.copy(as, source.id, {
+        ...request,
+        confirmation: impact.confirmation ?? "",
+      });
+      const item = { id: done.item?.id ?? "" };
+
+      const copied = await drawingSceneOf(test, item.id);
+      const own = (await attachmentsOf(item.id)).map((row) => row.id);
+      expect(copied.images).toHaveLength(1);
+      expect(own).toContain(copied.images[0]);
+      expect(copied.images).not.toContain(image.id);
+      const outsiderAs = accountPrincipal(outsider);
+      const sees = async (id: string) =>
+        (await test.services.authorization.explain(outsiderAs, "attachment.view", { type: "attachment", id }))
+          .allowed;
+      expect(await sees(copied.images[0] ?? "")).toBe(true);
+      expect(await sees(image.id)).toBe(false);
+      await expect(
+        test.services.drawings.saveScene(outsiderAs, item.id, {
+          blockId,
+          body: Readable.from([Buffer.from(copied.text)]),
+        }),
+      ).resolves.toMatchObject({ sceneVersion: 2 });
+      expect((await drawingSceneOf(test, source.id)).images).toEqual([image.id]);
     });
 
     it("copies a whiteboard with its images and preview", async () => {

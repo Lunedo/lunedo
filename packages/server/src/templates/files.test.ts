@@ -9,6 +9,7 @@ import { createLogger } from "../logging/logger.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { spaceFixtures } from "../testing/spaces.js";
+import { drawingSceneOf, pageWithDrawing } from "../whiteboards/scene.testing.js";
 
 const baseUrl = testDatabaseBaseUrl();
 
@@ -170,6 +171,72 @@ describe.skipIf(!baseUrl)("template files", () => {
       const published = await test.services.attachments.content(attachments[0]?.id ?? "", "published");
       expect(published !== null).toBe(mode === "live");
     }
+  });
+
+  it("takes the images inside a drawing into the template and into pages made from it", async () => {
+    const { org, as, space: wiki } = await setup();
+    const source = await test.services.tree.create(as, wiki.id, {
+      kind: "page",
+      title: "Floor plan",
+      mode: "live",
+      placement: { parentId: null },
+    });
+    const image = await upload(as, source.id, "router.png", png());
+    const blockId = "01929b1e-0000-7000-8000-00000000d0b1";
+    await pageWithDrawing(test, as, source.id, blockId, image.id);
+    const template = await test.services.templates.saveFromPage(as, wiki.id, source.id, {
+      name: "Floor plan template",
+      description: "",
+      category: "operations",
+    });
+    const files = await templateFiles(template.id);
+    const router = files.find((file) => file.name === "router.png");
+    const sceneFile = await test.database.execute<{ file_id: string }>(sql`
+      select tf.file_id from template_files tf where tf.template_id = ${template.id}
+        and tf.id = ${String((template.document.content?.[0]?.attrs ?? {}).sceneId)}`);
+    const templateScene = JSON.parse(
+      (await test.services.files.readAll(sceneFile.rows[0]?.file_id ?? "", 1024 * 1024)).toString("utf8"),
+    ) as { files: Record<string, { attachmentId: string }> };
+    expect(Object.values(templateScene.files).map((file) => file.attachmentId)).toEqual([router?.id]);
+
+    await test.services.templates.update(as, template.id, { ...template, document: template.document });
+    expect((await templateFiles(template.id)).map((file) => file.name).sort()).toEqual(
+      files.map((file) => file.name).sort(),
+    );
+    const created = await test.services.templates.instantiate(as, wiki.id, {
+      templateId: template.id,
+      values: {},
+      placement: { parentId: null },
+      mode: "live",
+    });
+    const copied = await drawingSceneOf(test, created.id);
+    const own = (await test.services.attachments.list(as, created.id, "draft")).map((file) => file.id);
+    expect(copied.images).toHaveLength(1);
+    expect(own).toContain(copied.images[0]);
+    expect(copied.images).not.toContain(image.id);
+    const reader = await member(org.id);
+    await test.services.spacePermissions.apply(as, wiki.id, {
+      action: "grant",
+      principalKind: "account",
+      principalId: reader,
+      role: "reader",
+    });
+    await test.services.pageAccess.change(as, source.id, [{ action: "restrict", kind: "view" }]);
+    const sees = async (id: string) =>
+      (
+        await test.services.authorization.explain(accountPrincipal(reader), "attachment.view", {
+          type: "attachment",
+          id,
+        })
+      ).allowed;
+    expect(await sees(copied.images[0] ?? "")).toBe(true);
+    expect(await sees(image.id)).toBe(false);
+    await expect(
+      test.services.drawings.saveScene(as, created.id, {
+        blockId,
+        body: Readable.from([Buffer.from(copied.text)]),
+      }),
+    ).resolves.toMatchObject({ sceneVersion: 2 });
   });
 
   it("lets the template editor add images, keeps only the template's own files and removes unused ones", async () => {
