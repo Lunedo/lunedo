@@ -1,5 +1,13 @@
-import { describe, expect, it } from "vitest";
-import { MAX_PREVIEW_BYTES, SvgRejectedError, sanitizeDiagramSvg, sanitizeSvg } from "./svg.js";
+import { DOMParser } from "@xmldom/xmldom";
+import { describe, expect, it, vi } from "vitest";
+import {
+  MAX_PREVIEW_BYTES,
+  MAX_SVG_ATTRIBUTES,
+  MAX_SVG_ELEMENTS,
+  SvgRejectedError,
+  sanitizeDiagramSvg,
+  sanitizeSvg,
+} from "./svg.js";
 
 const NS = 'xmlns="http://www.w3.org/2000/svg"';
 const PNG = "data:image/png;base64,iVBORw0KGgo=";
@@ -125,5 +133,28 @@ describe("size of diagram images", () => {
     for (const attributes of ['width="huge"', 'height="10furlongs"', 'viewBox="0 0 a b"', 'width="-1"']) {
       expect(() => size(attributes), attributes).toThrow(SvgRejectedError);
     }
+  });
+});
+
+describe("SVG with many elements", () => {
+  const svg = (body: string) => `<svg xmlns="http://www.w3.org/2000/svg">${body}</svg>`;
+
+  it("refuses a drawing above the element or attribute limit before it is parsed", () => {
+    const parse = vi.spyOn(DOMParser.prototype, "parseFromString");
+    try {
+      const elements = svg("<g/>".repeat(MAX_SVG_ELEMENTS));
+      const attributes = svg(`<g ${'x="1" '.repeat(MAX_SVG_ATTRIBUTES)}/>`);
+      for (const input of [elements, attributes]) {
+        expect(() => sanitizeSvg(input)).toThrow(SvgRejectedError);
+        expect(() => sanitizeDiagramSvg(input, 10 * 1024 * 1024)).toThrow(/more than/);
+      }
+      expect(parse).not.toHaveBeenCalled();
+    } finally {
+      parse.mockRestore();
+    }
+  });
+
+  it("accepts a drawing just below the limit", () => {
+    expect(sanitizeSvg(svg("<g/>".repeat(MAX_SVG_ELEMENTS - 2)))).toContain("<g></g>");
   });
 });

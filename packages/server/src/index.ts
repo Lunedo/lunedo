@@ -292,6 +292,7 @@ export {
   type SavedDiagramSource,
 } from "./diagrams/diagrams.js";
 export { DiagramRejectedError, MAX_DRAWIO_BYTES, sanitizeDrawio } from "./diagrams/drawio.js";
+export { MAX_PARALLEL_SANITIZATIONS, SanitizerBusyError } from "./diagrams/markup.js";
 export { EmbedServices } from "./embeds/embeds.js";
 export { allowedEmbedServicesSetting, embedServicesSetting, embedSettings } from "./embeds/settings.js";
 export {

@@ -16,6 +16,7 @@ import {
   ProviderResponseError,
   PushSubscriptionError,
   RelyingPartyError,
+  SanitizerBusyError,
   SavedSearchLimitError,
   SavedSearchNameError,
   SceneInvalidError,
@@ -141,6 +142,13 @@ function map(error: unknown): Mapped | null {
   if (error instanceof EmailInUseError) return { code: "emailInUse", detail: error.message };
   if (error instanceof ProviderResponseError) return { code: "providerUnavailable", detail: error.message };
   if (error instanceof BusyError) return { code: "busy", detail: error.message };
+  if (error instanceof SanitizerBusyError) {
+    return {
+      code: "busy",
+      detail: error.message,
+      extensions: { retryAfterSeconds: error.retryAfterSeconds },
+    };
+  }
   if (error instanceof SessionGoneError) return { code: "sessionEnded", detail: error.message };
   if (error instanceof RelyingPartyError) return { code: "instanceUrlMissing", detail: error.message };
   if (error instanceof SmtpConfigurationError)

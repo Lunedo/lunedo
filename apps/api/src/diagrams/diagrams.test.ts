@@ -1,5 +1,11 @@
+import { randomUUID } from "node:crypto";
+import { PassThrough } from "node:stream";
 import { deflateRawSync } from "node:zlib";
-import { accountAttemptLimitSetting, clientAttemptLimitSetting } from "@pagehall/server";
+import {
+  accountAttemptLimitSetting,
+  clientAttemptLimitSetting,
+  MAX_PARALLEL_SANITIZATIONS,
+} from "@pagehall/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -250,6 +256,31 @@ describe.skipIf(!databaseBaseUrl)("diagram blocks through the API", () => {
       octet,
     );
     expect(unknown.statusCode).toBe(400);
+  });
+
+  it("refuse saves beyond the parallel limit of a node with a time to retry", async () => {
+    const { pageId } = await page();
+    const save = (body: Buffer | PassThrough) =>
+      owner.put(`/api/v1/pages/${pageId}/diagrams/${randomUUID()}/drawio`, body, octet);
+    const bodies = Array.from({ length: MAX_PARALLEL_SANITIZATIONS }, () => new PassThrough());
+    const held = bodies.map((body) => save(body));
+    let refused = await save(drawio("Extra"));
+    for (let attempt = 0; refused.statusCode !== 503 && attempt < 50; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      refused = await save(drawio("Extra"));
+    }
+    expect(refused.statusCode).toBe(503);
+    expect(refused.headers["retry-after"]).toBe("2");
+    expect(refused.json().type).toContain("busy");
+    for (const body of bodies) body.end(drawio("Held"));
+    expect((await Promise.all(held)).map((response) => response.statusCode)).toEqual(bodies.map(() => 200));
+    expect((await save(drawio("After"))).statusCode).toBe(200);
+    const preview = await owner.put(
+      `/api/v1/pages/${pageId}/diagrams/${randomUUID()}/image?type=drawio`,
+      svg("<rect/>"),
+      octet,
+    );
+    expect(preview.statusCode).toBe(200);
   });
 
   it("let only editors store diagrams and keep their files from people without access", async () => {

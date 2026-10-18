@@ -113844,6 +113844,26 @@
               }
             }
           },
+          "503": {
+            "description": "`busy`: The server is busy.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "busy": {
+                    "value": {
+                      "type": "urn:pagehall:problem:busy",
+                      "title": "The server is busy",
+                      "status": 503,
+                      "code": "busy"
+                    }
+                  }
+                }
+              }
+            }
+          },
           "507": {
             "description": "`storageFull`: Storage is almost full.",
             "content": {
@@ -117310,6 +117330,26 @@
                       "title": "Too many requests",
                       "status": 429,
                       "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`busy`: The server is busy.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "busy": {
+                    "value": {
+                      "type": "urn:pagehall:problem:busy",
+                      "title": "The server is busy",
+                      "status": 503,
+                      "code": "busy"
                     }
                   }
                 }
@@ -162882,6 +162922,26 @@
               }
             }
           },
+          "503": {
+            "description": "`busy`: The server is busy.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "busy": {
+                    "value": {
+                      "type": "urn:pagehall:problem:busy",
+                      "title": "The server is busy",
+                      "status": 503,
+                      "code": "busy"
+                    }
+                  }
+                }
+              }
+            }
+          },
           "507": {
             "description": "`storageFull`: Storage is almost full.",
             "content": {
@@ -166492,6 +166552,26 @@
                       "title": "Too many requests",
                       "status": 429,
                       "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`busy`: The server is busy.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "busy": {
+                    "value": {
+                      "type": "urn:pagehall:problem:busy",
+                      "title": "The server is busy",
+                      "status": 503,
+                      "code": "busy"
                     }
                   }
                 }
@@ -176337,7 +176417,7 @@
         ],
         "requestBody": {
           "required": true,
-          "description": "The draw.io file (`mxfile` or `mxGraphModel` XML), up to 10 MB.",
+          "description": "The draw.io file (`mxfile` or `mxGraphModel` XML), up to 4 MB, 50,000 elements and 300,000 attributes.",
           "content": {
             "application/octet-stream": {
               "schema": {
@@ -176553,6 +176633,26 @@
                       "title": "Too many requests",
                       "status": 429,
                       "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`busy`: The server is busy.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "busy": {
+                    "value": {
+                      "type": "urn:pagehall:problem:busy",
+                      "title": "The server is busy",
+                      "status": 503,
+                      "code": "busy"
                     }
                   }
                 }
@@ -176857,6 +176957,26 @@
                       "title": "Too many requests",
                       "status": 429,
                       "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`busy`: The server is busy.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "busy": {
+                    "value": {
+                      "type": "urn:pagehall:problem:busy",
+                      "title": "The server is busy",
+                      "status": 503,
+                      "code": "busy"
                     }
                   }
                 }
@@ -178502,6 +178622,26 @@
                       "title": "Too many requests",
                       "status": 429,
                       "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`busy`: The server is busy.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "busy": {
+                    "value": {
+                      "type": "urn:pagehall:problem:busy",
+                      "title": "The server is busy",
+                      "status": 503,
+                      "code": "busy"
                     }
                   }
                 }
@@ -213123,6 +213263,26 @@
               }
             }
           },
+          "503": {
+            "description": "`busy`: The server is busy.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "busy": {
+                    "value": {
+                      "type": "urn:pagehall:problem:busy",
+                      "title": "The server is busy",
+                      "status": 503,
+                      "code": "busy"
+                    }
+                  }
+                }
+              }
+            }
+          },
           "507": {
             "description": "`storageFull`: Storage is almost full.",
             "content": {
@@ -216734,6 +216894,26 @@
                       "title": "Too many requests",
                       "status": 429,
                       "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`busy`: The server is busy.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "busy": {
+                    "value": {
+                      "type": "urn:pagehall:problem:busy",
+                      "title": "The server is busy",
+                      "status": 503,
+                      "code": "busy"
                     }
                   }
                 }
@@ -224725,6 +224905,26 @@
               }
             }
           },
+          "503": {
+            "description": "`busy`: The server is busy.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "busy": {
+                    "value": {
+                      "type": "urn:pagehall:problem:busy",
+                      "title": "The server is busy",
+                      "status": 503,
+                      "code": "busy"
+                    }
+                  }
+                }
+              }
+            }
+          },
           "507": {
             "description": "`storageFull`: Storage is almost full.",
             "content": {
@@ -226155,7 +226355,7 @@
             }
           },
           "retryAfterSeconds": {
-            "description": "Seconds to wait before retrying, for `rateLimited` and `locked`.",
+            "description": "Seconds to wait before retrying, for `rateLimited`, `locked` and `busy`.",
             "type": "integer",
             "minimum": -9007199254740991,
             "maximum": 9007199254740991

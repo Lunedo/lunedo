@@ -1,6 +1,14 @@
 import { deflateRawSync } from "node:zlib";
-import { describe, expect, it } from "vitest";
-import { DiagramRejectedError, labelText, MAX_DRAWIO_BYTES, sanitizeDrawio } from "./drawio.js";
+import { DOMParser } from "@xmldom/xmldom";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  DiagramRejectedError,
+  labelText,
+  MAX_DRAWIO_ATTRIBUTES,
+  MAX_DRAWIO_BYTES,
+  MAX_DRAWIO_ELEMENTS,
+  sanitizeDrawio,
+} from "./drawio.js";
 
 function compress(xml: string): string {
   return deflateRawSync(Buffer.from(encodeURIComponent(xml))).toString("base64");
@@ -50,6 +58,44 @@ describe("sanitizeDrawio", () => {
     ]) {
       expect(() => sanitizeDrawio(input), input.slice(0, 40)).toThrow(DiagramRejectedError);
     }
+  });
+});
+
+describe("sanitizeDrawio with many elements", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const cells = (count: number) => "<mxCell/>".repeat(count);
+
+  it("refuses a file above the element or attribute limit before it is parsed", () => {
+    const parse = vi.spyOn(DOMParser.prototype, "parseFromString");
+    for (const input of [
+      `<mxfile>${cells(MAX_DRAWIO_ELEMENTS)}</mxfile>`,
+      `<mxfile><mxCell ${Array.from({ length: MAX_DRAWIO_ATTRIBUTES + 1 }, (_, index) => `a${index}=""`).join(" ")}/></mxfile>`,
+    ]) {
+      expect(() => sanitizeDrawio(input)).toThrow(/more than/);
+    }
+    expect(parse).not.toHaveBeenCalled();
+  });
+
+  it("counts compressed pages against the same limit before they are parsed", () => {
+    const half = Math.floor(MAX_DRAWIO_ELEMENTS / 2);
+    const page = compress(`<mxGraphModel><root>${cells(half)}</root></mxGraphModel>`);
+    const parse = vi.spyOn(DOMParser.prototype, "parseFromString");
+    expect(() =>
+      sanitizeDrawio(
+        `<mxfile><diagram name="a">${page}</diagram><diagram name="b">${page}</diagram></mxfile>`,
+      ),
+    ).toThrow(/more than/);
+    expect(parse).toHaveBeenCalledTimes(2);
+  });
+
+  it("accepts a diagram just below the limit", () => {
+    const { xml } = sanitizeDrawio(
+      `<mxGraphModel><root>${cells(MAX_DRAWIO_ELEMENTS - 4)}</root></mxGraphModel>`,
+    );
+    expect(xml.startsWith("<mxGraphModel><root><mxCell>")).toBe(true);
   });
 });
 

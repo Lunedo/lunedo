@@ -20,6 +20,7 @@ import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { Database, Transaction } from "../database/database.js";
 import { sanitizeDrawio } from "../diagrams/drawio.js";
+import { sanitizerSlots } from "../diagrams/markup.js";
 import type { EmbedServices } from "../embeds/embeds.js";
 import type { AttachmentContent } from "../files/attachments.js";
 import { previewOf } from "../files/attachments.js";
@@ -817,18 +818,20 @@ export class TemplateTransferService {
       language: await this.#templates.language(actor),
     };
     const seen = new Set<string>();
-    const checked = manifest.templates.map((raw, index) => {
-      const result = this.#checkTemplate(raw, index, manifest.schemaVersion, archive.files, context);
-      const key = result.template.name.toLowerCase();
-      if (result.template.valid && seen.has(key)) {
-        result.template.problems.push(
-          problem(result.template.name, null, "another template in the file has the same name"),
-        );
-        result.template.valid = false;
-      }
-      seen.add(key);
-      return result;
-    });
+    const checked = await sanitizerSlots.run(() =>
+      manifest.templates.map((raw, index) => {
+        const result = this.#checkTemplate(raw, index, manifest.schemaVersion, archive.files, context);
+        const key = result.template.name.toLowerCase();
+        if (result.template.valid && seen.has(key)) {
+          result.template.problems.push(
+            problem(result.template.name, null, "another template in the file has the same name"),
+          );
+          result.template.valid = false;
+        }
+        seen.add(key);
+        return result;
+      }),
+    );
     const stored: StoredFile[] = [];
     const staged: StagedTemplate[] = [];
     try {

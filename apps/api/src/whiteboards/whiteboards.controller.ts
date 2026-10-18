@@ -267,6 +267,7 @@ export class WhiteboardsController {
       "fileTooLarge",
       "storageFull",
       "unsupportedMediaType",
+      "busy",
     ],
   })
   async storePreview(
@@ -400,7 +401,7 @@ export class WhiteboardsController {
         .describe("The stored image."),
       example: { previewId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a23", previewVersion: 2 },
     },
-    errors: ["invalidDrawingImage", "fileTooLarge", "storageFull", "unsupportedMediaType"],
+    errors: ["invalidDrawingImage", "fileTooLarge", "storageFull", "unsupportedMediaType", "busy"],
   })
   async drawingPreview(
     @Param("pageId") pageId: string,

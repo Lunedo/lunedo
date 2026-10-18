@@ -416,7 +416,7 @@ export const problemSchema = z
       .number()
       .int()
       .optional()
-      .describe("Seconds to wait before retrying, for `rateLimited` and `locked`."),
+      .describe("Seconds to wait before retrying, for `rateLimited`, `locked` and `busy`."),
     problem: z
       .string()
       .optional()

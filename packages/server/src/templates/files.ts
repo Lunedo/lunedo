@@ -9,6 +9,7 @@ import { uuidv7 } from "@pagehall/shared";
 import { type SQL, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
+import { sanitizerSlots } from "../diagrams/markup.js";
 import { type AttachmentContent, previewOf } from "../files/attachments.js";
 import { type FileService, FileTooLargeError, type StoredFile } from "../files/files.js";
 import { cleanFileName, fileNameKey } from "../files/names.js";
@@ -186,7 +187,10 @@ export class TemplateFileService {
       input.body.resume();
       throw error;
     }
-    const image = templateImageBytes(await readBounded(input.body, TEMPLATE_IMAGE_MAX_BYTES), name);
+    const image = await sanitizerSlots.run(
+      async () => templateImageBytes(await readBounded(input.body, TEMPLATE_IMAGE_MAX_BYTES), name),
+      input.body,
+    );
     const stored = await this.store(image.bytes, name, TEMPLATE_IMAGE_MAX_BYTES);
     try {
       const id = await this.#database.transaction(async (tx) => {

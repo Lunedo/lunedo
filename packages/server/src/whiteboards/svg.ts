@@ -1,6 +1,9 @@
 import { DOMParser, type Element, type Node } from "@xmldom/xmldom";
+import { takeMarkup } from "../diagrams/markup.js";
 
 export const MAX_PREVIEW_BYTES = 5 * 1024 * 1024;
+export const MAX_SVG_ELEMENTS = 100_000;
+export const MAX_SVG_ATTRIBUTES = 400_000;
 const MAX_DEPTH = 64;
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const XLINK_NAMESPACE = "http://www.w3.org/1999/xlink";
@@ -423,6 +426,11 @@ function sizeOf(root: Element): { width: number; height: number } {
 
 function parse(input: string, maxBytes: number): Element {
   if (Buffer.byteLength(input, "utf8") > maxBytes) throw new SvgRejectedError("The drawing is too large");
+  if (!takeMarkup(input, { elements: MAX_SVG_ELEMENTS, attributes: MAX_SVG_ATTRIBUTES })) {
+    throw new SvgRejectedError(
+      `The drawing has more than ${MAX_SVG_ELEMENTS} elements or ${MAX_SVG_ATTRIBUTES} attributes`,
+    );
+  }
   if (/<!DOCTYPE|<!ENTITY/i.test(input))
     throw new SvgRejectedError("Document type declarations are not accepted");
   let root: Element | null;
