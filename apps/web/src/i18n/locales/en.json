@@ -1249,6 +1249,7 @@
     "rateLimitedRetry": "Too many requests. Try again in {seconds, plural, one {# second} other {# seconds}}.",
     "internalError": "The server could not complete the request. Try again; if it keeps failing, ask your administrator to check the server log.",
     "busy": "The server is busy. Try again in a moment.",
+    "uploadTimeout": "The upload did not finish in time, probably because the connection is slow. Try again on a faster connection or with a smaller file.",
     "passwordExpired": "Your directory password has expired. Change it the way your organization usually does, for example when signing in to your computer, or contact IT. Pagehall never changes directory passwords.",
     "passwordMustChange": "Your directory password must be changed before you can sign in. Change it the way your organization usually does, for example when signing in to your computer, or contact IT. Pagehall never changes directory passwords.",
     "accountLocked": "Your directory account is locked, usually after too many wrong passwords. Wait until it unlocks or contact IT.",
@@ -1348,6 +1349,7 @@
     "fileTooLarge": "The file is larger than allowed. Choose a smaller file.",
     "fileTooLargeLimit": "The file is larger than the limit of {size}. Choose a smaller file or ask an administrator to raise the limit.",
     "rangeNotSatisfiable": "The file changed while loading. Reload the page.",
+    "imageTooLarge": "The image is too large to show in the page. Open it in full size instead.",
     "tooManyRequests": "You sent many access requests today. Wait until tomorrow or contact an administrator of the space.",
     "linkExpiryTooLate": "Links for anyone may last at most {days, plural, one {# day} other {# days}} in this organization. Choose an earlier date.",
     "versionNotFound": "This version was removed in the meantime. Reload the versions.",
@@ -1526,6 +1528,7 @@
     "storageFull": "Storage is almost full. Your instance administrator has been informed. Try again once space has been freed up.",
     "invalidStorageSettings": "The storage settings are not valid. Check the marked fields and try again.",
     "tooManyPagesToPrint": "Browsers print up to 300 pages at once. Export as Word or HTML instead, or as PDF on the server if your administrator set up the render container.",
+    "tooManyPagesForFile": "Word and PDF files can hold up to 1,000 pages. Export as an HTML or Markdown archive instead, or export a smaller part.",
     "renderUnavailable": "PDF on the server needs the render container, which is not set up or not reachable. Print the PDF through your browser instead, or ask your instance administrator.",
     "renderFailed": "The render container could not create the PDF. Try again; if it fails again, tell your instance administrator.",
     "invalidDiagram": "The draw.io diagram could not be stored because it contains something draw.io does not write, or it is damaged. Undo the last change in draw.io and save again.",
@@ -3752,6 +3755,7 @@
         "updated": "Template changed",
         "deleted": "Template deleted",
         "createdFromRestrictedPage": "Restricted page saved as a template",
+        "filesDropped": "Template images left out",
         "exported": "Templates exported",
         "imported": "Templates imported"
       },
@@ -4460,7 +4464,9 @@
     "attachment": {
       "image": "Image {name}",
       "file": "File {name}",
-      "missingImage": "The image of this block is missing. Add a new image or remove the block."
+      "missingImage": "The image of this block is missing. Add a new image or remove the block.",
+      "imageTooLarge": "{name} is too large to show here.",
+      "openFullSize": "Open full size"
     },
     "presence": {
       "label": "{count, plural, one {# person} other {# people}} on this page",
@@ -4577,10 +4583,12 @@
       "unsupportedMacro": "This content from Confluence is not shown yet.",
       "file": "File",
       "image": "Image",
+      "openFullSize": "Open full size",
       "invalid": "This page cannot be shown because its stored content is damaged. Ask a space admin to restore an earlier version.",
       "taskDone": "Done",
       "taskOpen": "Open",
-      "restrictedContent": "Restricted content"
+      "restrictedContent": "Restricted content",
+      "imageTooLarge": "This image is too large to show here."
     },
     "shortcuts": {
       "slash": "Insert a block",
@@ -6220,7 +6228,9 @@
       "tooLarge": "Download the file to open it.",
       "noneTitle": "No preview for this type",
       "none": "Download the file to open it in a program that supports it.",
-      "fileFailed": "the file details"
+      "fileFailed": "the file details",
+      "imageTooLarge": "This image is too large to preview. Open it in full size to see it.",
+      "openFullSize": "Open full size"
     },
     "versions": {
       "title": "Versions",
@@ -7471,12 +7481,27 @@
         "contentSkipped": {
           "title": "{count, plural, one {# part} other {# parts}} could not be read with the token",
           "hint": "Confluence refused them. Import with a token of an account that can read them, or add them later.",
-          "entry": "{title}: the {part, select, comments {comments} attachments {attachments} restrictions {restrictions} other {content}} could not be read."
+          "entry": "{title}: the {part, select, comments {comments} attachments {attachments} other {content}} could not be read."
         },
         "removedRestrictionKept": {
           "title": "Restrictions kept that Confluence may have removed",
           "hint": "Confluence marks removed restrictions in its export without saying who had them. Pagehall keeps such pages restricted. Check them and remove the restriction where it is not needed.",
           "entry": "{count, plural, one {# page} other {# pages}}: {pages}"
+        },
+        "restrictionsUnreadable": {
+          "title": "{count, plural, one {# page} other {# pages}} kept restricted",
+          "hint": "Confluence did not return who may read them. Pagehall keeps them restricted so that nobody sees more than in Confluence. Check them and set the restriction you need.",
+          "entry": "“{title}” was kept restricted because {reason, select, parent {Confluence did not return its parent page} other {Confluence did not return its restrictions}}."
+        },
+        "pageUnreadable": {
+          "title": "{count, plural, one {# page} other {# pages}} could not be read and were left out",
+          "hint": "Confluence refused them, for example because they were restricted after the import started. Their child pages are kept restricted. Import with the token of an account that can read them.",
+          "entry": "“{title}” could not be read with the token and was left out."
+        },
+        "listingIncomplete": {
+          "title": "{count, plural, one {# list} other {# lists}} read only in part",
+          "hint": "Confluence kept sending more results. Pagehall stopped reading there so that the import ends. Check the content in Confluence and import it again if something is missing.",
+          "entry": "{listing}: {reason, select, repeated {Confluence linked back to results it had already sent} other {the list had more than {limit, number} result pages}}."
         },
         "trashedContent": {
           "title": "{count, plural, one {# page} other {# pages}} in the Confluence trash not imported",
@@ -7522,6 +7547,11 @@
           "title": "{count, plural, one {# document has} other {# documents have}} images that could not be read",
           "hint": "Linked or damaged images are left out.",
           "entry": "{file}: some images could not be read."
+        },
+        "documentTooLarge": {
+          "title": "{count, plural, one {# document} other {# documents}} too large to convert",
+          "hint": "Pagehall left them out; the other documents were imported. Split the document into smaller documents or remove large parts, then import it again.",
+          "entry": "{file}: the document text is larger than {limit, number} MB or needs too much memory to convert."
         },
         "embedNotAllowed": {
           "title": "{count, plural, one {# embed is} other {# embeds are}} shown as a link",
@@ -8401,7 +8431,9 @@
       "internalError": "Something went wrong while building the export. Start it again; if it fails again, tell the person who runs Pagehall.",
       "renderUnavailable": "PDF on the server needs the render container, which is not set up or not reachable. Print the PDF through your browser instead, or ask your instance administrator.",
       "renderFailed": "The render container could not create the PDF. Start the export again; if it fails again, tell your instance administrator.",
-      "renderTooLarge": "The document with its images is larger than the render container accepts. Export fewer pages, or as Word or HTML."
+      "renderTooLarge": "The document with its images is larger than the render container accepts. Export fewer pages, or as Word or HTML.",
+      "tooManyPagesForFile": "The Word or PDF file would have more pages than it can hold. Export as an HTML or Markdown archive instead, or export a smaller part.",
+      "tooLargeToBuild": "Building the file needed more memory than the server has. Export a smaller part, or as an HTML or Markdown archive."
     },
     "screen": {
       "title": "Exports",
@@ -8475,11 +8507,14 @@
       "contents": "Table of contents",
       "contentsDescription": "On the first sheet, with page numbers.",
       "background": "Runs in the background. You get a notification with the download when the file is ready.",
+      "tooManyForFileTitle": "Too many pages for one file",
+      "tooManyForFile": "{count, plural, one {# page} other {# pages}} are more than a Word or PDF file can hold (up to {limit}). Export them as an HTML or Markdown archive, or export a smaller part.",
       "tooManyTitle": "Too many pages for the print view",
       "tooMany": "{count, plural, one {# page} other {# pages}} are more than browsers print reliably at once (up to {limit}). Export as Word or HTML instead.",
       "tooManyServer": "{count, plural, one {# page} other {# pages}} are more than browsers print reliably at once (up to {limit}). Create the PDF on the server, or export as Word or HTML.",
       "useWord": "Export as Word",
       "useHtml": "Export as HTML",
+      "useMarkdown": "Export as Markdown",
       "useServer": "Create PDF on the server",
       "serverChosen": "The PDF is created on the server.",
       "countsFailed": "The number of pages could not be counted. You can still start the export.",

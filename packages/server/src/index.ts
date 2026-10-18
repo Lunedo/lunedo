@@ -292,18 +292,28 @@ export {
   type SavedDiagramSource,
 } from "./diagrams/diagrams.js";
 export { DiagramRejectedError, MAX_DRAWIO_BYTES, sanitizeDrawio } from "./diagrams/drawio.js";
+export {
+  MAX_PARALLEL_SANITIZATIONS,
+  SanitizerBusyError,
+  sanitizerSlots,
+  UploadTimeoutError,
+} from "./diagrams/markup.js";
 export { EmbedServices } from "./embeds/embeds.js";
 export { allowedEmbedServicesSetting, embedServicesSetting, embedSettings } from "./embeds/settings.js";
 export {
   EXPORT_RETENTION_DAYS,
+  ExportBusyError,
   ExportError,
   type ExportFile,
   type ExportRequest,
   ExportService,
   type ExportSummary,
   type ExportSummaryCounts,
+  MAX_PAGE_EXPORT_IMAGE_BYTES,
+  MAX_PARALLEL_PAGE_EXPORTS,
   type PageExportFormat,
   pageExportFormats,
+  pageExportSlots,
 } from "./exports/exports.js";
 export {
   defaultExportOptions,
@@ -312,6 +322,7 @@ export {
   exportFormats,
   exportOptionsSchema,
   MAX_BROWSER_PRINT_PAGES,
+  MAX_FILE_EXPORT_PAGES,
   type Orientation,
   orientations,
   type PaperSize,
@@ -329,9 +340,11 @@ export {
   type AttachmentView,
   previewOf,
 } from "./files/attachments.js";
+export { DisplayVersionService } from "./files/display-versions.js";
 export { FileService, FileTooLargeError, fileStreamOwner } from "./files/files.js";
 export { contentDisposition, FILE_NAME_MAX_LENGTH } from "./files/names.js";
 export { encryptedStreamOwnersOf, fileStoreOf } from "./files/owners.js";
+export { type DisplayVersionSize, displayVersionSizes } from "./files/schema.js";
 export * from "./files/settings.js";
 export { type PreviewKind, previewAllowed } from "./files/sniff.js";
 export {

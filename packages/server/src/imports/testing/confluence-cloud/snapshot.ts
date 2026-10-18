@@ -250,7 +250,9 @@ export async function importSnapshot(database: Database, importId: string): Prom
       row.holder_kind === "group" ? `group:${row.group_key}` : (person(row.account_id) ?? row.holder_kind),
     role: row.role,
   }));
-  roles.sort((left, right) => `${left.holder} ${left.role}`.localeCompare(`${right.holder} ${right.role}`));
+  roles.sort((left, right) =>
+    `${left.holder}\u0000${left.role}`.localeCompare(`${right.holder}\u0000${right.role}`),
+  );
   return { description: space.description, items: result, templates, problems, roles };
 }
 

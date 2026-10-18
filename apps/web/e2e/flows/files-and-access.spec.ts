@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { BASE_URL } from "../support/environment.js";
-import { docx, PNG, pdf, wav, xlsx } from "../support/files.js";
+import { docx, PNG, pdf, photo, wav, xlsx } from "../support/files.js";
 import { expect, test } from "../support/fixtures.js";
 import { callApi, expectAccessible } from "../support/helpers.js";
 import { forwardFrom, SIGNED_OUT } from "../support/people.js";
@@ -328,4 +328,59 @@ test("shows what a person can do and exports the overview", async ({ page, organ
   const lines = (await csv.text()).split("\r\n");
   expect(lines[0]).toBe("person,email,kind,space,page,role,pages,reason");
   expect(lines.some((line) => line.includes("Network plan"))).toBe(true);
+});
+
+test("shows a large photo as its display version and opens the original in full size", async ({
+  page,
+  organization,
+}) => {
+  const { pageId, pagePath } = await place(page, organization);
+  await page.goto(pagePath);
+  const original = photo(3200, 2400);
+  const upload = await page.request.post(`/api/v1/pages/${pageId}/attachments?name=site-survey.png`, {
+    data: original,
+    headers: {
+      "content-type": "application/octet-stream",
+      "X-Pagehall-Request": "1",
+      origin: new URL(page.url()).origin,
+    },
+  });
+  expect(upload.status(), await upload.text()).toBe(201);
+  const file = (await upload.json()) as { id: string };
+  await callApi(page, "PUT", `/api/v1/pages/${pageId}/content`, {
+    document: {
+      type: "doc",
+      content: [
+        { type: "image", attrs: { attachmentId: file.id, alt: "Site survey", width: null, align: "center" } },
+      ],
+    },
+  });
+  await expect
+    .poll(
+      async () =>
+        (await page.request.get(`/api/v1/attachments/${file.id}/content?size=display`)).headers()[
+          "content-type"
+        ],
+      { timeout: 60_000 },
+    )
+    .toBe("image/webp");
+
+  await page.goto(pagePath);
+  const image = page.getByRole("img", { name: "Site survey" });
+  await expect(image).toHaveAttribute("src", `/api/v1/attachments/${file.id}/content?size=display`);
+  await expect.poll(() => image.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBe(2048);
+  const full = page.getByRole("link", { name: "Site survey" });
+  await expect(full).toHaveAttribute("title", "Open full size");
+  const opened = page.waitForEvent("popup");
+  await full.click();
+  const tab = await opened;
+  await tab.waitForLoadState();
+  expect(new URL(tab.url()).pathname + new URL(tab.url()).search).toBe(
+    `/api/v1/attachments/${file.id}/content`,
+  );
+  const shown = await page.request.get(tab.url());
+  expect(shown.headers()["content-type"]).toBe("image/png");
+  expect((await shown.body()).equals(original)).toBe(true);
+  await tab.close();
+  await expect(page).toHaveURL(new RegExp(`${pagePath}$`));
 });

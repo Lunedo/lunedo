@@ -98,7 +98,7 @@ const exampleDraft = {
   changes: 3,
   basedOn: 7,
   contributors: [{ id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20", name: "Anna Berger" }],
-  references: { people: {}, pages: {}, topics: {} },
+  references: { people: {}, pages: {}, topics: {}, tooLargeImages: [] },
 };
 
 const publishSchema = z
@@ -284,7 +284,7 @@ export class VersionsController {
       example: {
         title: exampleDraft.title,
         document: exampleDocument,
-        references: { people: {}, pages: {}, topics: {} },
+        references: { people: {}, pages: {}, topics: {}, tooLargeImages: [] },
       },
     },
   })
@@ -372,7 +372,7 @@ export class VersionsController {
       example: {
         ...exampleVersion,
         document: exampleDocument,
-        references: { people: {}, pages: {}, topics: {} },
+        references: { people: {}, pages: {}, topics: {}, tooLargeImages: [] },
       },
     },
   })
@@ -440,7 +440,7 @@ export class VersionsController {
         diff: { title: null, blocks: [], changes: 0 },
         before: exampleDocument,
         after: exampleDocument,
-        references: { people: {}, pages: {}, topics: {} },
+        references: { people: {}, pages: {}, topics: {}, tooLargeImages: [] },
       },
     },
     errors: ["versionNotFound"],

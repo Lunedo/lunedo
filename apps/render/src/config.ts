@@ -40,6 +40,19 @@ function token(env: NodeJS.ProcessEnv): string {
   return value;
 }
 
+function sandbox(env: NodeJS.ProcessEnv): boolean {
+  const value = env.RENDER_CHROMIUM_SANDBOX;
+  if (value === undefined || value === "" || value === "true") return true;
+  if (value === "false") return false;
+  throw new RenderConfigError("RENDER_CHROMIUM_SANDBOX must be true or false");
+}
+
+export function sandboxWarning(config: Pick<RenderConfig, "sandbox">): string | null {
+  return config.sandbox
+    ? null
+    : "Chromium runs without its sandbox because RENDER_CHROMIUM_SANDBOX is false. A flaw in Chromium could then run code with the rights of this container. Allow user namespaces as described in the rendering documentation and remove the setting.";
+}
+
 export function loadRenderConfig(env: NodeJS.ProcessEnv): RenderConfig {
   const concurrency = integer(env, "RENDER_CONCURRENCY", 2, 1, 16);
   return {
@@ -52,6 +65,6 @@ export function loadRenderConfig(env: NodeJS.ProcessEnv): RenderConfig {
     timeoutSeconds: integer(env, "RENDER_TIMEOUT_SECONDS", 300, 5, 3600),
     executablePath: env.RENDER_BROWSER || undefined,
     viewerDirectory: env.RENDER_VIEWER_DIR || "/app/viewer",
-    sandbox: env.RENDER_CHROMIUM_SANDBOX === "true",
+    sandbox: sandbox(env),
   };
 }

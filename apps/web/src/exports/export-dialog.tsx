@@ -131,9 +131,12 @@ export function ExportForm({
   const target = targetOf(scope, page, space);
   const counts = useQuery({ ...exportCountsQuery(target), enabled: multi && space.mayExportPages });
   const total = counts.data ? counts.data.pages + counts.data.blogPosts : null;
+  const tooManyForFile =
+    paged && multi && total !== null && counts.data !== undefined && total > counts.data.fileLimit;
   const tooMany =
     choice === "pdf" &&
     multi &&
+    !tooManyForFile &&
     total !== null &&
     counts.data !== undefined &&
     total > counts.data.printLimit;
@@ -316,6 +319,21 @@ export function ExportForm({
         <p className="text-sm text-text-muted">{spaceDescription}</p>
       )}
       {counts.isError ? <p className="text-sm text-text-muted">{t("exports.dialog.countsFailed")}</p> : null}
+      {tooManyForFile && counts.data ? (
+        <Notice variant="warning" title={t("exports.dialog.tooManyForFileTitle")}>
+          <span>
+            {t("exports.dialog.tooManyForFile", { count: total ?? 0, limit: counts.data.fileLimit })}
+          </span>
+          <span className="mt-2 flex flex-wrap gap-2">
+            <Button size="sm" variant="secondary" onClick={() => chooseFormat("html")}>
+              {t("exports.dialog.useHtml")}
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => chooseFormat("markdown")}>
+              {t("exports.dialog.useMarkdown")}
+            </Button>
+          </span>
+        </Notice>
+      ) : null}
       {tooMany && counts.data && !serverPdf ? (
         <Notice variant="warning" title={t("exports.dialog.tooManyTitle")}>
           <span>

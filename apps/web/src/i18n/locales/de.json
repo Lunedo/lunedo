@@ -1249,6 +1249,7 @@
     "rateLimitedRetry": "Zu viele Anfragen. Versuche es in {seconds, plural, one {# Sekunde} other {# Sekunden}} erneut.",
     "internalError": "Der Server konnte die Anfrage nicht ausführen. Versuche es erneut; klappt es weiterhin nicht, bitte deine Administration, das Server-Log zu prüfen.",
     "busy": "Der Server ist ausgelastet. Versuche es gleich erneut.",
+    "uploadTimeout": "Der Upload wurde nicht rechtzeitig fertig, wahrscheinlich wegen einer langsamen Verbindung. Versuche es mit einer schnelleren Verbindung oder einer kleineren Datei erneut.",
     "passwordExpired": "Dein Verzeichnispasswort ist abgelaufen. Ändere es auf dem in deiner Organisation üblichen Weg, zum Beispiel bei der Anmeldung am Computer, oder wende dich an die IT. Pagehall ändert Verzeichnispasswörter nie.",
     "passwordMustChange": "Dein Verzeichnispasswort muss geändert werden, bevor du dich anmelden kannst. Ändere es auf dem in deiner Organisation üblichen Weg, zum Beispiel bei der Anmeldung am Computer, oder wende dich an die IT. Pagehall ändert Verzeichnispasswörter nie.",
     "accountLocked": "Dein Verzeichniskonto ist gesperrt, meist nach zu vielen falschen Passwörtern. Warte, bis die Sperre endet, oder wende dich an die IT.",
@@ -1348,6 +1349,7 @@
     "fileTooLarge": "Die Datei ist größer als erlaubt. Wähle eine kleinere Datei.",
     "fileTooLargeLimit": "Die Datei ist größer als die Grenze von {size}. Wähle eine kleinere Datei oder bitte die Administration, die Grenze zu erhöhen.",
     "rangeNotSatisfiable": "Die Datei hat sich beim Laden geändert. Lade die Seite neu.",
+    "imageTooLarge": "Das Bild ist zu groß, um es in der Seite zu zeigen. Öffne es stattdessen in voller Größe.",
     "tooManyRequests": "Du hast heute viele Zugriffsanfragen gesendet. Warte bis morgen oder wende dich an die Space-Admins.",
     "linkExpiryTooLate": "Links für alle dürfen in dieser Organisation höchstens {days, plural, one {# Tag} other {# Tage}} gelten. Wähle ein früheres Datum.",
     "versionNotFound": "Diese Version wurde inzwischen entfernt. Lade die Versionen neu.",
@@ -1526,6 +1528,7 @@
     "storageFull": "Der Speicher ist fast voll. Die Administration der Instanz wurde informiert. Versuche es erneut, sobald Platz geschaffen wurde.",
     "invalidStorageSettings": "Die Speichereinstellungen sind ungültig. Prüfe die markierten Felder und versuche es erneut.",
     "tooManyPagesToPrint": "Browser drucken bis zu 300 Seiten auf einmal. Exportieren Sie stattdessen als Word oder HTML, oder als PDF auf dem Server, falls Ihre Administration den Render-Container eingerichtet hat.",
+    "tooManyPagesForFile": "Word- und PDF-Dateien nehmen bis zu 1.000 Seiten auf. Exportieren Sie stattdessen als HTML- oder Markdown-Archiv oder einen kleineren Teil.",
     "renderUnavailable": "PDF auf dem Server braucht den Render-Container, der nicht eingerichtet oder nicht erreichbar ist. Drucken Sie das PDF stattdessen über Ihren Browser oder fragen Sie Ihre Instanz-Administration.",
     "renderFailed": "Der Render-Container konnte das PDF nicht erstellen. Versuchen Sie es erneut; schlägt es wieder fehl, informieren Sie Ihre Instanz-Administration.",
     "invalidDiagram": "Das draw.io-Diagramm konnte nicht gespeichert werden, weil es etwas enthält, das draw.io nicht schreibt, oder weil es beschädigt ist. Mache die letzte Änderung in draw.io rückgängig und speichere noch einmal.",
@@ -3752,6 +3755,7 @@
         "updated": "Vorlage geändert",
         "deleted": "Vorlage gelöscht",
         "createdFromRestrictedPage": "Eingeschränkte Seite als Vorlage gespeichert",
+        "filesDropped": "Vorlagenbilder ausgelassen",
         "exported": "Vorlagen exportiert",
         "imported": "Vorlagen importiert"
       },
@@ -4460,7 +4464,9 @@
     "attachment": {
       "image": "Bild {name}",
       "file": "Datei {name}",
-      "missingImage": "Das Bild dieses Blocks fehlt. Füge ein neues Bild ein oder entferne den Block."
+      "missingImage": "Das Bild dieses Blocks fehlt. Füge ein neues Bild ein oder entferne den Block.",
+      "imageTooLarge": "{name} ist zu groß, um es hier zu zeigen.",
+      "openFullSize": "In voller Größe öffnen"
     },
     "presence": {
       "label": "{count, plural, one {# Person} other {# Personen}} auf dieser Seite",
@@ -4577,10 +4583,12 @@
       "unsupportedMacro": "Dieser Inhalt aus Confluence wird noch nicht angezeigt.",
       "file": "Datei",
       "image": "Bild",
+      "openFullSize": "In voller Größe öffnen",
       "invalid": "Diese Seite kann nicht angezeigt werden, weil ihr gespeicherter Inhalt beschädigt ist. Bitte einen Space-Admin, eine frühere Version wiederherzustellen.",
       "taskDone": "Erledigt",
       "taskOpen": "Offen",
-      "restrictedContent": "Eingeschränkter Inhalt"
+      "restrictedContent": "Eingeschränkter Inhalt",
+      "imageTooLarge": "Dieses Bild ist zu groß, um es hier zu zeigen."
     },
     "shortcuts": {
       "slash": "Block einfügen",
@@ -6220,7 +6228,9 @@
       "tooLarge": "Lade die Datei herunter, um sie zu öffnen.",
       "noneTitle": "Keine Vorschau für diesen Typ",
       "none": "Lade die Datei herunter, um sie in einem passenden Programm zu öffnen.",
-      "fileFailed": "die Angaben zur Datei"
+      "fileFailed": "die Angaben zur Datei",
+      "imageTooLarge": "Dieses Bild ist zu groß für eine Vorschau. Öffne es in voller Größe, um es zu sehen.",
+      "openFullSize": "In voller Größe öffnen"
     },
     "versions": {
       "title": "Versionen",
@@ -7471,12 +7481,27 @@
         "contentSkipped": {
           "title": "{count, plural, one {# Teil konnte} other {# Teile konnten}} mit dem Token nicht gelesen werden",
           "hint": "Confluence hat sie verweigert. Importiere mit dem Token eines Kontos, das sie lesen kann, oder ergänze sie später.",
-          "entry": "{title}: {part, select, comments {Die Kommentare konnten} attachments {Die Anhänge konnten} restrictions {Die Einschränkungen konnten} other {Der Inhalt konnte}} nicht gelesen werden."
+          "entry": "{title}: {part, select, comments {Die Kommentare konnten} attachments {Die Anhänge konnten} other {Der Inhalt konnte}} nicht gelesen werden."
         },
         "removedRestrictionKept": {
           "title": "Einschränkungen behalten, die Confluence vielleicht entfernt hat",
           "hint": "Confluence markiert entfernte Einschränkungen im Export, ohne zu sagen, für wen sie galten. Pagehall lässt diese Seiten eingeschränkt. Prüfe sie und entferne die Einschränkung, wo sie nicht nötig ist.",
           "entry": "{count, plural, one {# Seite} other {# Seiten}}: {pages}"
+        },
+        "restrictionsUnreadable": {
+          "title": "{count, plural, one {# Seite bleibt} other {# Seiten bleiben}} eingeschränkt",
+          "hint": "Confluence hat nicht mitgeteilt, wer sie lesen darf. Pagehall lässt sie eingeschränkt, damit niemand mehr sieht als in Confluence. Prüfe sie und setze die Einschränkung, die du brauchst.",
+          "entry": "„{title}“ bleibt eingeschränkt, weil {reason, select, parent {Confluence die übergeordnete Seite nicht geliefert hat} other {Confluence die Einschränkungen nicht geliefert hat}}."
+        },
+        "pageUnreadable": {
+          "title": "{count, plural, one {# Seite konnte} other {# Seiten konnten}} nicht gelesen werden und fehlen",
+          "hint": "Confluence hat sie verweigert, zum Beispiel weil sie nach dem Start des Imports eingeschränkt wurden. Ihre Unterseiten bleiben eingeschränkt. Importiere mit dem Token eines Kontos, das sie lesen kann.",
+          "entry": "„{title}“ konnte mit dem Token nicht gelesen werden und wurde ausgelassen."
+        },
+        "listingIncomplete": {
+          "title": "{count, plural, one {# Liste} other {# Listen}} nur teilweise gelesen",
+          "hint": "Confluence hat immer weitere Ergebnisse geschickt. Pagehall hat dort aufgehört, damit der Import endet. Prüfe die Inhalte in Confluence und importiere erneut, wenn etwas fehlt.",
+          "entry": "{listing}: {reason, select, repeated {Confluence hat auf bereits gelieferte Ergebnisse zurückverwiesen} other {die Liste hatte mehr als {limit, number} Ergebnisseiten}}."
         },
         "trashedContent": {
           "title": "{count, plural, one {# Seite} other {# Seiten}} im Papierkorb von Confluence nicht importiert",
@@ -7522,6 +7547,11 @@
           "title": "{count, plural, one {# Dokument enthält} other {# Dokumente enthalten}} Bilder, die nicht lesbar sind",
           "hint": "Verknüpfte oder beschädigte Bilder entfallen.",
           "entry": "{file}: einige Bilder konnten nicht gelesen werden."
+        },
+        "documentTooLarge": {
+          "title": "{count, plural, one {# Dokument ist} other {# Dokumente sind}} zu groß zum Umwandeln",
+          "hint": "Pagehall hat sie ausgelassen; die anderen Dokumente wurden importiert. Teile das Dokument in kleinere Dokumente oder entferne große Teile und importiere es erneut.",
+          "entry": "{file}: Der Text des Dokuments ist größer als {limit, number} MB oder braucht zum Umwandeln zu viel Speicher."
         },
         "embedNotAllowed": {
           "title": "{count, plural, one {# Einbettung wird} other {# Einbettungen werden}} als Link angezeigt",
@@ -8401,7 +8431,9 @@
       "internalError": "Beim Erstellen des Exports ist etwas schiefgegangen. Starte ihn erneut; scheitert er wieder, wende dich an die Person, die Pagehall betreibt.",
       "renderUnavailable": "PDF auf dem Server braucht den Render-Container, der nicht eingerichtet oder nicht erreichbar ist. Drucken Sie das PDF stattdessen über Ihren Browser oder fragen Sie Ihre Instanz-Administration.",
       "renderFailed": "Der Render-Container konnte das PDF nicht erstellen. Starten Sie den Export erneut; schlägt er wieder fehl, informieren Sie Ihre Instanz-Administration.",
-      "renderTooLarge": "Das Dokument mit seinen Bildern ist größer, als der Render-Container annimmt. Exportieren Sie weniger Seiten oder als Word bzw. HTML."
+      "renderTooLarge": "Das Dokument mit seinen Bildern ist größer, als der Render-Container annimmt. Exportieren Sie weniger Seiten oder als Word bzw. HTML.",
+      "tooManyPagesForFile": "Die Word- oder PDF-Datei hätte mehr Seiten, als sie aufnimmt. Exportieren Sie stattdessen als HTML- oder Markdown-Archiv oder einen kleineren Teil.",
+      "tooLargeToBuild": "Für die Datei hätte der Server mehr Speicher gebraucht, als er hat. Exportieren Sie einen kleineren Teil oder als HTML- oder Markdown-Archiv."
     },
     "screen": {
       "title": "Exporte",
@@ -8475,11 +8507,14 @@
       "contents": "Inhaltsverzeichnis",
       "contentsDescription": "Auf dem ersten Blatt, mit Seitenzahlen.",
       "background": "Läuft im Hintergrund. Sie erhalten eine Benachrichtigung mit dem Download, sobald die Datei fertig ist.",
+      "tooManyForFileTitle": "Zu viele Seiten für eine Datei",
+      "tooManyForFile": "{count, plural, one {# Seite ist} other {# Seiten sind}} mehr, als eine Word- oder PDF-Datei aufnimmt (bis zu {limit}). Exportieren Sie sie als HTML- oder Markdown-Archiv oder einen kleineren Teil.",
       "tooManyTitle": "Zu viele Seiten für die Druckansicht",
       "tooMany": "{count, plural, one {# Seite ist} other {# Seiten sind}} mehr, als Browser zuverlässig auf einmal drucken (bis zu {limit}). Exportieren Sie stattdessen als Word oder HTML.",
       "tooManyServer": "{count, plural, one {# Seite ist} other {# Seiten sind}} mehr, als Browser zuverlässig auf einmal drucken (bis zu {limit}). Erstellen Sie das PDF auf dem Server oder exportieren Sie als Word oder HTML.",
       "useWord": "Als Word exportieren",
       "useHtml": "Als HTML exportieren",
+      "useMarkdown": "Als Markdown exportieren",
       "useServer": "PDF auf dem Server erstellen",
       "serverChosen": "Das PDF wird auf dem Server erstellt.",
       "countsFailed": "Die Seiten konnten nicht gezählt werden. Sie können den Export trotzdem starten.",

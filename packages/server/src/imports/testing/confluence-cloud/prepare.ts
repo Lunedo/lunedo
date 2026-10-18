@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { mkdirSync, readdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { gzipSync, inflateRawSync } from "node:zlib";
@@ -52,6 +53,7 @@ const ENCODED_ARI = /("base64EncodedAri"\s*:\s*")([A-Za-z0-9+/]+={0,2})"/g;
 const BASE64 = /[A-Za-z0-9+/]{24,}={0,2}/g;
 const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
 const TEST_SITE_FOLDER = "confluence-cloud";
+export const TEST_DATA_FOLDER = "_Testdata";
 const REPLACEMENT_WORDS = ["test user", "example.org", "example-team"];
 const FAKE_DOMAIN = "example.org";
 const FAKE_SITE = "example.atlassian.net";
@@ -403,20 +405,33 @@ function readActors(index: { actors: Record<string, Omit<Actor, "role">> }): Act
   return Object.entries(index.actors).map(([role, actor]) => ({ role, ...actor }));
 }
 
-export function testSiteFolder(source: string): (relative: string) => Buffer {
-  let root: string;
+export function projectFolder(): string {
+  const common = execFileSync("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], {
+    cwd: import.meta.dirname,
+    encoding: "utf8",
+  }).trim();
+  return path.dirname(path.dirname(common));
+}
+
+function resolved(folder: string): string | null {
   try {
-    root = realpathSync(source);
+    return realpathSync.native(folder);
   } catch {
-    throw new Error(`The folder ${source} does not exist.`);
+    return null;
   }
-  if (path.basename(root) !== TEST_SITE_FOLDER) {
+}
+
+export function testSiteFolder(source: string, project: string): (relative: string) => Buffer {
+  const root = resolved(source);
+  if (!root) throw new Error(`The folder ${source} does not exist.`);
+  const expected = resolved(path.join(project, TEST_DATA_FOLDER, TEST_SITE_FOLDER));
+  if (root !== expected) {
     throw new Error(
-      `Fixtures are made only from the folder ${TEST_SITE_FOLDER} of the test site, not from ${root}.`,
+      `Fixtures are made only from the folder ${TEST_DATA_FOLDER}/${TEST_SITE_FOLDER} next to the repository, not from ${root}.`,
     );
   }
   return (relative) => {
-    const file = realpathSync(path.join(root, relative));
+    const file = realpathSync.native(path.join(root, relative));
     if (!file.startsWith(`${root}${path.sep}`))
       throw new Error(`${relative} lies outside the test site folder.`);
     return readFileSync(file);
@@ -461,8 +476,12 @@ function appNames(texts: Iterable<string>): Set<string> {
   return names;
 }
 
-export function prepare(source: string, target: string): { files: { name: string; bytes: number }[] } {
-  const read = testSiteFolder(source);
+export function prepare(
+  source: string,
+  target: string,
+  project = projectFolder(),
+): { files: { name: string; bytes: number }[] } {
+  const read = testSiteFolder(source, project);
   const index = JSON.parse(read("api-recording/index.json").toString("utf8")) as {
     site: string;
     actors: Record<string, Omit<Actor, "role">>;

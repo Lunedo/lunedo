@@ -1280,6 +1280,12 @@ export const auditCatalog = {
     fields: templateFields.extend({ changes: z.array(z.string()).max(20) }),
     visibility: "organization",
   }),
+  "template.filesDropped": event({
+    actor: ["system", "account"],
+    target: "template",
+    fields: templateFields.extend({ dropped: z.number().int().nonnegative() }),
+    visibility: "organization",
+  }),
   "template.deleted": event({
     actor: ["account"],
     target: "template",

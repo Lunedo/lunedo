@@ -1,5 +1,6 @@
 import { anchorAt, type TextAnchor } from "@pagehall/editor-schema";
 import { IconButton, SkeletonText, useToast } from "@pagehall/ui";
+import { useQuery } from "@tanstack/react-query";
 import type { Editor } from "@tiptap/core";
 import { DragHandle } from "@tiptap/extension-drag-handle-react";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
@@ -8,7 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { useTranslation } from "react-i18next";
 import { CommentHighlights } from "../collaboration/comment-highlights.js";
 import { checkMentionAccess } from "../collaboration/people.js";
-import type { Attachment } from "../files/attachments-api.js";
+import { type Attachment, attachmentsQuery } from "../files/attachments-api.js";
 import { useUploads } from "../files/uploads.js";
 import { preferenceKeys, useUpdatePreference } from "../preferences/preferences.js";
 import { usePreferences } from "../preferences/preferences-provider.js";
@@ -24,6 +25,7 @@ import { FindBar } from "./find-bar.js";
 import { LinkDialog } from "./link-dialog.js";
 import { SelectionMenu, TableMenu } from "./menus.js";
 import { AvatarStack, presenceColor, RemoteCarets, usePresence } from "./presence.js";
+import { rememberReferences } from "./references.js";
 import {
   CollaborationProblemNotice,
   SaveStateIndicator,
@@ -77,6 +79,13 @@ function CollaborativeEditor({
 }: PageEditorProps & { collaboration: PageCollaboration }) {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const attachments = useQuery({ ...attachmentsQuery(pageId), throwOnError: false });
+  useEffect(() => {
+    const tooLargeImages = (attachments.data ?? [])
+      .filter((attachment) => attachment.tooLargeForPreview)
+      .map((attachment) => attachment.id);
+    if (tooLargeImages.length > 0) rememberReferences({ tooLargeImages });
+  }, [attachments.data]);
   const session = useSession();
   const preferences = usePreferences();
   const updatePreference = useUpdatePreference();
@@ -126,7 +135,7 @@ function CollaborativeEditor({
         const current = editorRef.current;
         if (!current || current.isDestroyed) return;
         const node =
-          attachment.preview === "image"
+          attachment.preview === "image" && !attachment.tooLargeForPreview
             ? { type: "image", attrs: { attachmentId: attachment.id, alt: attachment.name } }
             : { type: "file", attrs: { attachmentId: attachment.id, name: attachment.name } };
         const size = current.state.doc.content.size;

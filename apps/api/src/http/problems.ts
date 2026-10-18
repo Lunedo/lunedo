@@ -159,6 +159,7 @@ export const problems = {
   invalidStorageSettings: { status: 400, title: "The storage settings are not valid" },
   tooManyExports: { status: 409, title: "You keep as many exports as allowed" },
   tooManyPagesToPrint: { status: 409, title: "Too many pages to print in a browser" },
+  tooManyPagesForFile: { status: 409, title: "Too many pages for a Word or PDF file" },
   renderUnavailable: { status: 503, title: "Server-side PDF needs the render container" },
   renderFailed: { status: 502, title: "The render container could not create the PDF" },
   holderNotInPagehall: { status: 409, title: "The person or group is not in Pagehall yet" },
@@ -382,11 +383,13 @@ export const problems = {
   uploadTooLarge: { status: 413, title: "The file is larger than uploads allow" },
   unsupportedMediaType: { status: 415, title: "The request body has an unsupported type" },
   rangeNotSatisfiable: { status: 416, title: "The requested range is not available" },
+  imageTooLarge: { status: 409, title: "The image is too large for a smaller version" },
   locked: { status: 429, title: "Too many failed attempts" },
   rateLimited: { status: 429, title: "Too many requests" },
   tooManyRequests: { status: 429, title: "Too many access requests today" },
   internalError: { status: 500, title: "Internal server error" },
   busy: { status: 503, title: "The server is busy" },
+  uploadTimeout: { status: 408, title: "The upload took too long" },
 } as const satisfies Record<string, { status: number; title: string }>;
 
 export type ProblemCode = keyof typeof problems;
@@ -420,7 +423,7 @@ export const problemSchema = z
       .number()
       .int()
       .optional()
-      .describe("Seconds to wait before retrying, for `rateLimited` and `locked`."),
+      .describe("Seconds to wait before retrying, for `rateLimited`, `locked` and `busy`."),
     problem: z
       .string()
       .optional()

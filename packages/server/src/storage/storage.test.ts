@@ -6,7 +6,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import { FileService } from "../files/files.js";
-import type { ByteRange, FileStore, StoreCapacity, StoredObject } from "../files/store.js";
+import type { ByteRange, FileStore, ListProgress, StoreCapacity, StoredObject } from "../files/store.js";
 import { createLogger } from "../logging/logger.js";
 import { smtpSetting } from "../mail/mail-service.js";
 import { outboundPolicy } from "../outbound/guarded-request.js";
@@ -63,8 +63,24 @@ class MemoryObjectStore implements FileStore {
     this.objects.delete(key);
   }
 
-  async *list(): AsyncIterable<StoredObject> {
-    for (const [key, data] of this.objects) yield { key, size: data.length };
+  pageSize = 1000;
+  afterPage: ((page: number) => Promise<void>) | null = null;
+
+  async *list(_prefix?: string, progress?: ListProgress): AsyncIterable<StoredObject> {
+    let after = "";
+    for (let page = 0; ; page += 1) {
+      await progress?.fetching();
+      const keys = [...this.objects.keys()].filter((key) => key > after).sort();
+      const listed = keys
+        .slice(0, this.pageSize)
+        .map((key) => ({ key, size: this.objects.get(key)?.length ?? 0 }));
+      const more = keys.length > this.pageSize;
+      await progress?.fetched(listed.at(-1)?.key ?? null, more);
+      await this.afterPage?.(page);
+      yield* listed;
+      if (!more) return;
+      after = listed.at(-1)?.key ?? after;
+    }
   }
 
   async replaceHead(key: string, head: Buffer): Promise<void> {
@@ -599,6 +615,35 @@ describe.skipIf(!baseUrl)("storage warnings", () => {
       expect((await s3Monitor.status()).usedBytes).toBeNull();
       await test.settings.set(storageS3LimitSetting, {}, "instance", 3000);
       expect(await s3Monitor.status()).toMatchObject({ usedBytes: 1500, totalBytes: 3000, percent: 50 });
+    });
+
+    it("keeps uploads and deletions made while a slow listing runs, without counting them twice", async () => {
+      const { store, monitor: s3Monitor } = s3();
+      const usageRows = new StorageUsage({ database: test.database });
+      for (const key of ["aa/one", "aa/two", "bb/one", "bb/two"]) store.objects.set(key, Buffer.alloc(100));
+      await test.database.execute(sql`insert into storage_state (singleton, used_bytes) values (true, 400)`);
+      store.pageSize = 2;
+      store.afterPage = async (page) => {
+        if (page !== 0) return;
+        store.objects.set("aa/new", Buffer.alloc(50));
+        await usageRows.add(50, "aa/new");
+        store.objects.delete("aa/one");
+        await usageRows.add(-100, "aa/one");
+        store.objects.set("cc/new", Buffer.alloc(70));
+        await usageRows.add(70, "cc/new");
+        store.objects.delete("bb/two");
+        await usageRows.add(-100, "bb/two");
+      };
+      const real = () => [...store.objects.values()].reduce((sum, data) => sum + data.length, 0);
+      expect(await s3Monitor.reconcile()).toBe(real());
+      expect(await usageRows.total()).toBe(320);
+      store.afterPage = null;
+      await usageRows.add(30, "dd/after");
+      expect(await usageRows.total()).toBe(350);
+      const left = await test.database.execute(
+        sql`select count(*)::int as count from storage_reconcile_deltas`,
+      );
+      expect(left.rows[0]).toEqual({ count: 0 });
     });
 
     it("reconciles on the first check before it measures", async () => {

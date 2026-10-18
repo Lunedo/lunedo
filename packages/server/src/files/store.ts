@@ -29,6 +29,11 @@ export interface StoreCapacity {
   total: number;
 }
 
+export interface ListProgress {
+  fetching(): Promise<void>;
+  fetched(lastKey: string | null, more: boolean): Promise<void>;
+}
+
 export interface FileStore {
   readonly kind: "local" | "s3";
   capacity(): Promise<StoreCapacity | null>;
@@ -36,7 +41,7 @@ export interface FileStore {
   read(key: string, range?: ByteRange): Promise<Readable>;
   size(key: string): Promise<number | null>;
   delete(key: string): Promise<void>;
-  list(prefix?: string): AsyncIterable<StoredObject>;
+  list(prefix?: string, progress?: ListProgress): AsyncIterable<StoredObject>;
   replaceHead(key: string, head: Buffer): Promise<void>;
 }
 
@@ -237,10 +242,11 @@ export class S3FileStore implements FileStore {
     await this.#client.send(new DeleteObjectCommand({ Bucket: this.#bucket, Key: this.#name(key) }));
   }
 
-  async *list(prefix = ""): AsyncIterable<StoredObject> {
+  async *list(prefix = "", progress?: ListProgress): AsyncIterable<StoredObject> {
     const base = `${this.#prefix}${ATTACHMENTS_DIRECTORY}/`;
     let token: string | undefined;
     do {
+      await progress?.fetching();
       const page = await this.#client.send(
         new ListObjectsV2Command({
           Bucket: this.#bucket,
@@ -248,6 +254,8 @@ export class S3FileStore implements FileStore {
           ...(token ? { ContinuationToken: token } : {}),
         }),
       );
+      const last = page.Contents?.at(-1)?.Key;
+      await progress?.fetched(last ? last.slice(base.length) : null, page.IsTruncated === true);
       for (const object of page.Contents ?? []) {
         if (!object.Key) continue;
         yield { key: object.Key.slice(base.length), size: object.Size ?? 0 };

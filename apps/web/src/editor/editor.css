@@ -58,6 +58,26 @@ details.ph-expand > div {
   text-align: justify;
 }
 
+.ph-content .ph-image-full {
+  @apply inline-block max-w-full cursor-zoom-in rounded-sm focus-visible:focus-ring;
+}
+
+.ph-content .ph-image-too-large {
+  @apply flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-solid border-border px-3 py-2 text-sm;
+}
+
+.ph-content .ph-image-too-large .ph-image-name {
+  @apply font-medium text-text wrap-anywhere;
+}
+
+.ph-content .ph-image-too-large .ph-image-hint {
+  @apply text-text-muted;
+}
+
+.ph-content .ph-image-too-large .ph-image-open {
+  @apply inline-flex min-h-hit items-center font-medium text-accent underline focus-visible:focus-ring;
+}
+
 .ph-content [data-indent="1"] {
   margin-left: calc(var(--ph-control-md) * 1);
 }

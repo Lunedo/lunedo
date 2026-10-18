@@ -550,7 +550,7 @@ function TemplateForm({
             initial={document}
             label={t("templates.content")}
             images={{
-              url: (fileId) => (template ? transfer.fileUrl(template.id, fileId) : ""),
+              url: (fileId, _version, size) => (template ? transfer.fileUrl(template.id, fileId, size) : ""),
               upload: template ? (file) => transfer.uploadImage(template.id, file) : null,
             }}
             fields={fields

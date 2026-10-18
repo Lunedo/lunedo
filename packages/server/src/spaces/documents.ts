@@ -85,6 +85,7 @@ export interface PageReferences {
     { title: string; spaceKey: string; kind: string; accessible: boolean; inTrash: boolean }
   >;
   topics: Record<string, { title: string; status: "open" | "closed" }>;
+  tooLargeImages: string[];
 }
 
 export interface Backlink {
@@ -610,7 +611,28 @@ export class PageDocumentService {
               where t.id = any(${sql.param(topicIds)}::uuid[])
                 and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}`)
           ).rows;
+    const imageIds = [
+      ...new Set(
+        blocksOfType(document, "image")
+          .map((image) => image.attrs?.attachmentId)
+          .filter((id): id is string => typeof id === "string"),
+      ),
+    ];
+    const tooLarge =
+      imageIds.length === 0
+        ? []
+        : (
+            await this.#database.execute<{ id: string }>(sql`
+              select distinct a.id from attachments a
+              join tree_items t on t.id = a.item_id join spaces s on s.id = t.space_id
+              join attachment_versions v on v.attachment_id = a.id
+                and v.id in (a.current_version_id, a.published_version_id)
+              join stored_files f on f.id = v.file_id
+              where a.id = any(${sql.param(imageIds)}::uuid[]) and f.display_version_state = 'tooLarge'
+                and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)}`)
+          ).rows;
     return {
+      tooLargeImages: tooLarge.map((row) => row.id).sort(),
       topics: Object.fromEntries(
         topics.map((topic) => [topic.id, { title: topic.title, status: topic.status }]),
       ),

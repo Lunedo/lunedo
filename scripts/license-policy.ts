@@ -73,29 +73,48 @@ function parse(tokens: string[]): Expression {
   return result;
 }
 
-function evaluate(expression: Expression): boolean {
-  if ("license" in expression) return approvedLicenses.has(expression.license.replace(/\+$/, ""));
+function evaluate(expression: Expression, accepted: ReadonlySet<string>): boolean {
+  if ("license" in expression) {
+    const license = expression.license.replace(/\+$/, "");
+    return approvedLicenses.has(license) || accepted.has(license);
+  }
   return expression.operator === "AND"
-    ? evaluate(expression.left) && evaluate(expression.right)
-    : evaluate(expression.left) || evaluate(expression.right);
+    ? evaluate(expression.left, accepted) && evaluate(expression.right, accepted)
+    : evaluate(expression.left, accepted) || evaluate(expression.right, accepted);
 }
 
 /** Checks an SPDX license expression such as `MIT OR Apache-2.0`. */
-export function isApprovedLicense(expression: string): boolean {
+export function isApprovedLicense(expression: string, accepted: ReadonlySet<string> = new Set()): boolean {
   try {
-    return evaluate(parse(tokenize(expression)));
+    return evaluate(parse(tokenize(expression)), accepted);
   } catch {
     return false;
   }
 }
 
+export const BUNDLING_PACKAGE = /^@img\/sharp-libvips-/;
+
 export const UNDECLARED_LICENSE = "Unknown";
+
+export interface BundledLibraries {
+  sha256: string;
+  libraries: string[];
+}
 
 export interface PackageLicense {
   name: string;
   versions: string[];
   license: string;
   licenseFiles?: Record<string, string>;
+  bundled?: Record<string, BundledLibraries>;
+}
+
+export interface BundleEntry {
+  packages: string[];
+  versionsSha256: string;
+  libraries: Record<string, string>;
+  accepted: string[];
+  reason: string;
 }
 
 export interface AllowlistEntry {
@@ -124,8 +143,10 @@ export function findLicenseViolations(options: {
   production: readonly PackageLicense[];
   allowlist: Allowlist;
   clarifications?: Clarifications;
+  bundles?: readonly BundleEntry[];
 }): string[] {
   const violations: string[] = [];
+  violations.push(...findBundleViolations(options.all, options.bundles ?? []));
   const clarifications = options.clarifications ?? {};
   const usedClarifications = new Set<string>();
   const reviewedFile = (pkg: PackageLicense, version: string, entry: Clarification): boolean => {
@@ -187,6 +208,49 @@ export function findLicenseViolations(options: {
   }
   for (const name of Object.keys(options.allowlist)) {
     if (!usedEntries.has(name)) violations.push(`Allowlist entry ${name} is not needed and must be removed`);
+  }
+  return violations;
+}
+
+function findBundleViolations(all: readonly PackageLicense[], bundles: readonly BundleEntry[]): string[] {
+  const violations: string[] = [];
+  for (const bundle of bundles) {
+    if (bundle.reason.trim() === "")
+      violations.push(`Bundle entry ${bundle.packages.join(", ")} has no reason`);
+    for (const license of bundle.accepted) {
+      if (approvedLicenses.has(license)) {
+        violations.push(
+          `Bundle entry ${bundle.packages.join(", ")} accepts ${license}, which needs no exception`,
+        );
+      }
+    }
+  }
+  for (const pkg of all) {
+    if (!BUNDLING_PACKAGE.test(pkg.name)) continue;
+    for (const version of pkg.versions) {
+      const key = `${pkg.name}@${version}`;
+      const bundle = bundles.find((entry) => entry.packages.includes(key));
+      if (!bundle) {
+        violations.push(`${key} bundles native libraries and needs a reviewed entry in license-bundles.json`);
+        continue;
+      }
+      const bundled = pkg.bundled?.[version];
+      if (!bundled || bundled.sha256 !== bundle.versionsSha256) {
+        violations.push(
+          `The bundled libraries of ${key} differ from the reviewed ones; review their licenses and update license-bundles.json`,
+        );
+        continue;
+      }
+      const accepted = new Set(bundle.accepted);
+      for (const library of bundled.libraries) {
+        const license = bundle.libraries[library];
+        if (license === undefined) {
+          violations.push(`${key} bundles ${library}, which has no reviewed license`);
+        } else if (!isApprovedLicense(license, accepted)) {
+          violations.push(`${key} bundles ${library} under ${license}, which is not accepted for it`);
+        }
+      }
+    }
   }
   return violations;
 }

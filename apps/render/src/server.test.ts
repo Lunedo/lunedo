@@ -1,6 +1,6 @@
 import type { AddressInfo } from "node:net";
 import { afterEach, describe, expect, it } from "vitest";
-import { loadRenderConfig, RenderConfigError } from "./config.js";
+import { loadRenderConfig, RenderConfigError, sandboxWarning } from "./config.js";
 import { createRenderServer, type Renderer, type RenderJob, type RenderServerOptions } from "./server.js";
 
 const TOKEN = "a".repeat(40);
@@ -205,8 +205,15 @@ describe("render configuration", () => {
       timeoutSeconds: 300,
       maxBytes: 200 * 1024 * 1024,
       port: 3000,
-      sandbox: false,
+      sandbox: true,
     });
+    expect(sandboxWarning(config)).toBeNull();
+    const unsandboxed = loadRenderConfig({ RENDER_TOKEN: TOKEN, RENDER_CHROMIUM_SANDBOX: "false" });
+    expect(unsandboxed.sandbox).toBe(false);
+    expect(sandboxWarning(unsandboxed)).toContain("without its sandbox");
+    expect(() => loadRenderConfig({ RENDER_TOKEN: TOKEN, RENDER_CHROMIUM_SANDBOX: "no" })).toThrow(
+      RenderConfigError,
+    );
     expect(loadRenderConfig({ RENDER_TOKEN: TOKEN, RENDER_CONCURRENCY: "4" }).concurrency).toBe(4);
     expect(() => loadRenderConfig({ RENDER_TOKEN: TOKEN, RENDER_CONCURRENCY: "0" })).toThrow(
       RenderConfigError,

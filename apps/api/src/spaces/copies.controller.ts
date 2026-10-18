@@ -56,7 +56,11 @@ export const copySchema = z
       copyStates,
       "`queued` and `running` while a large copy runs in the background, `done` when the copy exists, `failed` when nothing was created.",
     ),
-    title: z.string().describe("Title of the copied item when the copy started."),
+    title: z
+      .string()
+      .describe(
+        "Title of the copied item when the copy started, or an empty string when the caller can no longer read the copy or its source.",
+      ),
     descendants: z.boolean().describe("Whether the items below were copied as well."),
     sourceItemId: uuid("The copied item, or null when it was deleted permanently since.").nullable(),
     targetSpaceId: uuid("The target space, or null when it was deleted permanently since.").nullable(),
@@ -186,13 +190,14 @@ export class CopiesController {
   @Permission("copy.view", copyResource)
   @ApiRoute({
     summary: "Get a copy",
-    description: "Returns the state and progress of a copy the caller started.",
+    description:
+      "Returns the state and progress of a copy the caller started. Titles, the new item and the IDs of the source and the target space appear only while the caller can still read them; otherwise the result names only the counts.",
     tags: [TAG],
     params: copyParams,
     response: { description: "The copy.", schema: copySchema, example: exampleCopy },
   })
-  async get(@Param("copyId") copyId: string) {
-    const copy = await this.#services.copies.get(copyId);
+  async get(@Param("copyId") copyId: string, @Req() request: FastifyRequest) {
+    const copy = await this.#services.copies.get(actorOf(request), copyId);
     if (!copy) throw notFound("The copy does not exist.");
     return copy;
   }

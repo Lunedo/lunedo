@@ -256,6 +256,15 @@ describe("storage format conversion", () => {
     expect(page.notes).toContainEqual({ code: "macroDataTruncated", macro: "details" });
   });
 
+  it("truncates long pages by the size of the stored document", async () => {
+    const line = (index: number) => `${index} ${"network switch printer ".repeat(3)}`.slice(0, 60);
+    const page = await convert(
+      Array.from({ length: 17_500 }, (_, index) => `<p>${line(index)}</p>`).join(""),
+    );
+    expect(validateDocument(page.document).ok).toBe(true);
+    expect(page.notes).toContainEqual({ code: "contentTruncated" });
+  });
+
   it("never produces script, event handlers or unsafe links from crafted content", async () => {
     const page = await convert(
       [

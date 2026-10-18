@@ -24,6 +24,8 @@ const ERROR_CODES = new Set([
   "renderUnavailable",
   "renderFailed",
   "renderTooLarge",
+  "tooManyPagesForFile",
+  "tooLargeToBuild",
   "interrupted",
   "internalError",
 ]);

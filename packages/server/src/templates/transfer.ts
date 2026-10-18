@@ -20,6 +20,7 @@ import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { Database, Transaction } from "../database/database.js";
 import { sanitizeDrawio } from "../diagrams/drawio.js";
+import { readDrawingUpload, sanitizerSlots } from "../diagrams/markup.js";
 import type { EmbedServices } from "../embeds/embeds.js";
 import type { AttachmentContent } from "../files/attachments.js";
 import { previewOf } from "../files/attachments.js";
@@ -212,21 +213,6 @@ function roleAccepts(role: FileRole, mediaType: string): boolean {
     case "diagramSource":
       return mediaType === DRAWIO_TYPE;
   }
-}
-
-async function readUpload(body: Readable): Promise<Buffer> {
-  const parts: Buffer[] = [];
-  let size = 0;
-  for await (const chunk of body) {
-    const part = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string);
-    size += part.length;
-    if (size > TEMPLATE_UPLOAD_MAX_BYTES) {
-      body.destroy();
-      throw new FileTooLargeError(TEMPLATE_UPLOAD_MAX_BYTES);
-    }
-    parts.push(part);
-  }
-  return Buffer.concat(parts);
 }
 
 function scopeColumns(scope: TemplateScope) {
@@ -803,7 +789,7 @@ export class TemplateTransferService {
       input.body.resume();
       throw error;
     }
-    const bytes = await readUpload(input.body);
+    const bytes = await readDrawingUpload(actor, input.body, TEMPLATE_UPLOAD_MAX_BYTES);
     const archive = isZip(bytes) ? await readTemplateArchive(bytes) : { manifest: bytes, files: new Map() };
     const manifest = this.#parseManifest(archive.manifest);
     const organizationId = await this.#organizationOf(scope);
@@ -817,18 +803,20 @@ export class TemplateTransferService {
       language: await this.#templates.language(actor),
     };
     const seen = new Set<string>();
-    const checked = manifest.templates.map((raw, index) => {
-      const result = this.#checkTemplate(raw, index, manifest.schemaVersion, archive.files, context);
-      const key = result.template.name.toLowerCase();
-      if (result.template.valid && seen.has(key)) {
-        result.template.problems.push(
-          problem(result.template.name, null, "another template in the file has the same name"),
-        );
-        result.template.valid = false;
-      }
-      seen.add(key);
-      return result;
-    });
+    const checked = await sanitizerSlots.run(actor, () =>
+      manifest.templates.map((raw, index) => {
+        const result = this.#checkTemplate(raw, index, manifest.schemaVersion, archive.files, context);
+        const key = result.template.name.toLowerCase();
+        if (result.template.valid && seen.has(key)) {
+          result.template.problems.push(
+            problem(result.template.name, null, "another template in the file has the same name"),
+          );
+          result.template.valid = false;
+        }
+        seen.add(key);
+        return result;
+      }),
+    );
     const stored: StoredFile[] = [];
     const staged: StagedTemplate[] = [];
     try {

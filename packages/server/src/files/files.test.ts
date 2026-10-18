@@ -6,6 +6,7 @@ import { Readable } from "node:stream";
 import { buffer } from "node:stream/consumers";
 import { CreateBucketCommand, S3Client } from "@aws-sdk/client-s3";
 import { sql } from "drizzle-orm";
+import sharp from "sharp";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Secret } from "../config/secret.js";
 import { FileKeyProvider } from "../crypto/key-provider.js";
@@ -142,6 +143,25 @@ describe.skipIf(!baseUrl)("the encrypted file store", () => {
     );
     expect(onDisk.subarray(0, 3).toString()).toBe("PHS");
     expect(onDisk.includes(Buffer.from("data.bin"))).toBe(false);
+  });
+
+  it("removes location metadata only from attachments and keeps other files byte for byte", async () => {
+    const files = service(new LocalFileStore(mkdtempSync(path.join(tmpdir(), "pagehall-store-"))));
+    const photo = await sharp({ create: { width: 8, height: 8, channels: 3, background: "#000000" } })
+      .withExif({ IFD0: { Copyright: "Test" }, IFD3: { GPSLatitudeRef: "N", GPSLatitude: "47/1 4/1 12/1" } })
+      .jpeg()
+      .toBuffer();
+    const part = Buffer.concat([photo, randomBytes(64)]);
+    const kept = await files.write(Readable.from([part]), { name: "import-part-2", maxBytes: 1_000_000 });
+    const stripped = await files.write(Readable.from([part]), {
+      name: "import-part-2",
+      maxBytes: 1_000_000,
+      attachment: true,
+    });
+    expect(await buffer(await files.read(kept.id, undefined, { staged: true }))).toEqual(part);
+    expect((await buffer(await files.read(stripped.id, undefined, { staged: true }))).equals(part)).toBe(
+      false,
+    );
   });
 
   it("refuses a file above the limit while it streams and leaves nothing behind", async () => {

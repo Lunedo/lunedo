@@ -9,7 +9,7 @@ import {
 import { isUuid, uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
-import { accountPrincipal, type Principal } from "../accounts/principal.js";
+import { accountPrincipal, type Principal, SYSTEM } from "../accounts/principal.js";
 import { accountScopeChain } from "../accounts/scope.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { AuthorizationService } from "../authorization/service.js";
@@ -444,7 +444,7 @@ export class TemplateService {
     const current = await this.get(templateId);
     if (!scope || !current) throw new SpaceError("templateNotFound", "The template does not exist");
     await this.#database.transaction(async (tx) => {
-      await this.#adoptLocked(tx, templateId);
+      await this.#adoptLocked(tx, templateId, actor);
       const document = await this.#files.keepOwn(tx, templateId, clean.document);
       await tx.execute(sql`
         update page_templates set name = ${clean.name}, description = ${clean.description},
@@ -484,8 +484,10 @@ export class TemplateService {
   async #adoptLocked(
     tx: Transaction,
     templateId: string,
+    actor: Principal,
   ): Promise<{ adopted: number; missing: number } | null> {
     const result = await tx.execute<{
+      name: string;
       level: TemplateLevel;
       organization_id: string | null;
       space_id: string | null;
@@ -494,18 +496,19 @@ export class TemplateService {
       created_by: string | null;
       updated_by: string | null;
     }>(sql`
-      select level, organization_id, space_id, document, schema_version, created_by, updated_by
+      select name, level, organization_id, space_id, document, schema_version, created_by, updated_by
       from page_templates where id = ${templateId} and not files_adopted for update`);
     const row = result.rows[0];
     if (!row) return null;
-    const unrestricted = sql`not exists (select 1 from page_restrictions r
-      where r.item_id = any(t.path) and r.kind = 'view')`;
+    const readableByEveryMember = sql`s.organization_id = ${row.organization_id}
+      and s.visibility in ('organization', 'instance') and not s.confidential and t.reader_visible
+      and not exists (select 1 from page_restrictions r where r.item_id = any(t.path) and r.kind = 'view')`;
     const within =
       row.level === "space"
         ? sql`t.space_id = ${row.space_id}`
         : row.level === "organization"
-          ? sql`s.organization_id = ${row.organization_id} and ${unrestricted}`
-          : unrestricted;
+          ? readableByEveryMember
+          : sql`false`;
     const authors = [...new Set([row.created_by, row.updated_by].filter((id): id is string => id !== null))];
     const visible = authors.map(
       (author) => sql`${visibleItem(this.#authorization, accountPrincipal(author), sql`t`, sql`s`)}`,
@@ -521,11 +524,25 @@ export class TemplateService {
       update page_templates set document = ${JSON.stringify(adopted.document)}::jsonb,
         schema_version = ${editorSchemaVersion}, files_adopted = true
       where id = ${templateId}`);
+    if (adopted.missing > 0 && row.level !== "space") {
+      await this.#audit.record(tx, {
+        name: "template.filesDropped",
+        actor,
+        targetId: templateId,
+        fields: {
+          name: row.name,
+          level: row.level,
+          organizationId: row.organization_id,
+          dropped: adopted.missing,
+        },
+        scope: auditScopeOf({ organizationId: row.organization_id }),
+      });
+    }
     return { adopted: adopted.adopted, missing: adopted.missing };
   }
 
   async ensureFiles(templateId: string): Promise<void> {
-    await this.#database.transaction((tx) => this.#adoptLocked(tx, templateId));
+    await this.#database.transaction((tx) => this.#adoptLocked(tx, templateId, SYSTEM));
   }
 
   async hasPendingFiles(): Promise<boolean> {
@@ -543,7 +560,7 @@ export class TemplateService {
       );
       if (pending.rows.length === 0) break;
       for (const { id } of pending.rows) {
-        const counts = await this.#database.transaction((tx) => this.#adoptLocked(tx, id));
+        const counts = await this.#database.transaction((tx) => this.#adoptLocked(tx, id, SYSTEM));
         if (!counts) continue;
         totals.templates += 1;
         totals.files += counts.adopted;

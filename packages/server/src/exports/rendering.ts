@@ -1,3 +1,4 @@
+import { Readable } from "node:stream";
 import type { Secret } from "../config/secret.js";
 import type { Logger } from "../logging/logger.js";
 
@@ -9,7 +10,8 @@ export interface RenderConnection {
 export interface RenderAsset {
   path: string;
   contentType: string;
-  data: Buffer;
+  size: number;
+  open(): Promise<Readable>;
 }
 
 export interface RenderInfo {
@@ -123,25 +125,30 @@ export class RenderService {
     if (!connection) throw new RenderError("unavailable");
     const status = await this.status();
     if (status.state !== "healthy") throw new RenderError("unavailable");
-    const body = JSON.stringify({
-      html,
-      baseUrl: /^https?:\/\//.test(baseUrl) ? new URL(baseUrl).origin : null,
-      assets: assets.map((asset) => ({
-        path: asset.path,
-        contentType: asset.contentType,
-        data: asset.data.toString("base64"),
-      })),
-    });
-    if (Buffer.byteLength(body) > status.maxBytes) throw new RenderError("tooLarge");
+    const head = `{"html":${JSON.stringify(html)},"baseUrl":${JSON.stringify(
+      /^https?:\/\//.test(baseUrl) ? new URL(baseUrl).origin : null,
+    )},"assets":[`;
+    const prefixes = assets.map(
+      (asset, index) =>
+        `${index > 0 ? "," : ""}{"path":${JSON.stringify(asset.path)},"contentType":${JSON.stringify(asset.contentType)},"data":"`,
+    );
+    const estimate =
+      Buffer.byteLength(head) +
+      prefixes.reduce((sum, prefix) => sum + Buffer.byteLength(prefix) + 2, 0) +
+      assets.reduce((sum, asset) => sum + Math.ceil(asset.size / 3) * 4, 0) +
+      2;
+    if (estimate > status.maxBytes) throw new RenderError("tooLarge");
+    const body = Readable.toWeb(Readable.from(requestBody(head, assets, prefixes)));
     const timeout = AbortSignal.timeout(status.timeoutSeconds * 1000 + RESPONSE_MARGIN_MS);
     let response: Response;
     try {
       response = await this.#fetch(`${connection.url}/v1/pdf`, {
         method: "POST",
         headers: { ...this.#headers(connection), "content-type": "application/json" },
-        body,
+        body: body as ReadableStream<Uint8Array>,
+        duplex: "half",
         signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
-      });
+      } as RequestInit);
     } catch (error) {
       if (signal?.aborted) throw error;
       this.#logger.warn({ err: error }, "The render service could not be reached");
@@ -155,4 +162,24 @@ export class RenderService {
     if (pdf.subarray(0, 5).toString("latin1") !== "%PDF-") throw new RenderError("failed");
     return pdf;
   }
+}
+
+async function* requestBody(
+  head: string,
+  assets: readonly RenderAsset[],
+  prefixes: readonly string[],
+): AsyncGenerator<Buffer> {
+  yield Buffer.from(head, "utf8");
+  for (const [index, asset] of assets.entries()) {
+    yield Buffer.from(prefixes[index] ?? "", "utf8");
+    let carry: Buffer = Buffer.alloc(0);
+    for await (const chunk of await asset.open()) {
+      const data = carry.length > 0 ? Buffer.concat([carry, chunk as Buffer]) : (chunk as Buffer);
+      const usable = data.length - (data.length % 3);
+      yield Buffer.from(data.subarray(0, usable).toString("base64"), "ascii");
+      carry = data.subarray(usable);
+    }
+    yield Buffer.from(`${carry.toString("base64")}"}`, "ascii");
+  }
+  yield Buffer.from("]}", "ascii");
 }

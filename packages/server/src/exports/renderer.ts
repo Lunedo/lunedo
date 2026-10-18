@@ -68,7 +68,7 @@ const PAGE_ADDRESS = new RegExp(
   `^/spaces/[^/?#]*/(?:pages|blog)/(${UUID})(?:/[^?#]*)?(?:\\?[^#]*)?(#.*)?$`,
   "i",
 );
-const ATTACHMENT_ADDRESS = new RegExp(`^/api/v1/attachments/(${UUID})/content$`, "i");
+const ATTACHMENT_ADDRESS = new RegExp(`^/api/v1/attachments/(${UUID})/content(\\?size=display)?$`, "i");
 const WHITEBOARD_PREVIEW_ADDRESS = new RegExp(`^/api/v1/whiteboards/(${UUID})/preview$`, "i");
 const MAX_REPORTED_TASKS = 200;
 const MAX_INCLUDES = 50;
@@ -91,7 +91,7 @@ export type PreparedInclusion =
 
 export interface Locator {
   page(pageId: string, format: ExportFormat): string | null;
-  attachment(attachmentId: string): string | null;
+  attachment(attachmentId: string, display?: boolean): string | null;
   preview(itemId: string): string | null;
   index(format: ExportFormat): string | null;
 }
@@ -375,7 +375,7 @@ export class PageExportRenderer {
         const statuses = await this.#tasks.statuses(this.#viewer, pageId);
         return new Map(statuses.map((status) => [status.id, status.done]));
       });
-      const diagrams = await this.#documents.referencedDiagrams(this.#viewer, document);
+      const diagrams = await this.#diagrams(document);
       const whiteboards = await this.#whiteboards(document);
       const images = await this.#previewImages(document);
       const meeting = await this.#meeting(pageId);
@@ -383,6 +383,7 @@ export class PageExportRenderer {
         people: { ...reports?.references.people, ...references.people },
         pages: { ...reports?.references.pages, ...references.pages },
         topics: references.topics,
+        tooLargeImages: references.tooLargeImages,
       };
       const referenced = new Set<string>(Object.keys(merged.pages));
       for (const report of reports?.propertiesReports.values() ?? []) {
@@ -492,7 +493,7 @@ export class PageExportRenderer {
         version: readable.version,
         updatedAt: readable.updatedAt,
         document,
-        references: { people: {}, pages: {}, topics: {} },
+        references: { people: {}, pages: {}, topics: {}, tooLargeImages: [] },
         childPages: null,
         attachments: null,
         pageReports: null,
@@ -512,16 +513,26 @@ export class PageExportRenderer {
     }
   }
 
-  async #whiteboards(document: DocumentJson): Promise<Map<string, ReferencedBoard>> {
-    const found = await this.#documents.referencedWhiteboards(this.#viewer, document);
-    const visible = await this.#readerVisible(found.keys());
-    const result = new Map<string, ReferencedBoard>();
-    for (const [id, board] of found) {
-      if (!visible.has(id)) continue;
-      if (!(await this.#authorization.authorize(this.#viewer, "item.export", { type: "item", id }))) continue;
-      result.set(id, board);
+  async exportable(ids: Iterable<string>): Promise<Set<string>> {
+    const result = new Set<string>();
+    for (const id of await this.#readerVisible(ids)) {
+      if (await this.#authorization.authorize(this.#viewer, "item.export", { type: "item", id }))
+        result.add(id);
     }
     return result;
+  }
+
+  async #whiteboards(document: DocumentJson): Promise<Map<string, ReferencedBoard>> {
+    const found = await this.#documents.referencedWhiteboards(this.#viewer, document);
+    const exportable = await this.exportable(found.keys());
+    return new Map([...found].filter(([id]) => exportable.has(id)));
+  }
+
+  async #diagrams(document: DocumentJson): Promise<Map<string, ReferencedDiagram>> {
+    const found = await this.#documents.referencedDiagrams(this.#viewer, document);
+    const pageOf = (key: string) => key.slice(0, key.indexOf("/"));
+    const exportable = await this.exportable([...found.keys()].map(pageOf));
+    return new Map([...found].filter(([key]) => exportable.has(pageOf(key))));
   }
 
   async #previewImages(document: DocumentJson): Promise<Set<string>> {
@@ -570,7 +581,7 @@ export class PageExportRenderer {
       version: null,
       updatedAt: new Date(row.changed_at),
       document: { type: "doc", content: [] },
-      references: { people: {}, pages: {}, topics: {} },
+      references: { people: {}, pages: {}, topics: {}, tooLargeImages: [] },
       childPages: null,
       attachments: null,
       pageReports: null,
@@ -689,9 +700,10 @@ export class PageExportRenderer {
         const local = locator.page(pageId, format);
         if (local) return `${local}${page?.[2] ?? ""}`;
       }
-      const attachmentId = ATTACHMENT_ADDRESS.exec(address)?.[1]?.toLowerCase();
+      const attachment = ATTACHMENT_ADDRESS.exec(address);
+      const attachmentId = attachment?.[1]?.toLowerCase();
       if (attachmentId) {
-        const local = locator.attachment(attachmentId);
+        const local = locator.attachment(attachmentId, attachment?.[2] !== undefined);
         if (local) return local;
       }
       const boardId = WHITEBOARD_PREVIEW_ADDRESS.exec(address)?.[1]?.toLowerCase();
@@ -735,7 +747,12 @@ export class PageExportRenderer {
             }
           : { href: "", title: "", accessible: false };
       },
-      attachment: (id) => ({ href: `/api/v1/attachments/${id}/content`, image: page.images.has(id) }),
+      attachment: (id) => ({
+        href: `/api/v1/attachments/${id}/content`,
+        display: `/api/v1/attachments/${id}/content?size=display`,
+        image: page.images.has(id),
+        ...(references.tooLargeImages.includes(id) ? { tooLarge: true } : {}),
+      }),
       whiteboard: (id) => {
         const board = page.whiteboards?.get(id);
         if (!board) return null;

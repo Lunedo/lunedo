@@ -130,6 +130,7 @@ function counts(total: { pages: number; blogPosts?: number; serverPdf?: boolean;
       pages: total.pages,
       blogPosts: total.blogPosts ?? 0,
       printLimit: 300,
+      fileLimit: 1000,
       serverPdf: total.serverPdf ?? false,
       largeWritesPaused: total.paused ?? false,
     },
@@ -238,6 +239,24 @@ describe("export dialog", () => {
       (screen.getByRole("radio", { name: /^Word/ }) as HTMLButtonElement).getAttribute("aria-checked"),
     ).toBe("true");
     expect(screen.queryByText("Too many pages for the print view")).toBeNull();
+  });
+
+  it("offers an HTML or Markdown archive before the click when Word or PDF would hold too many pages", async () => {
+    api({ [`GET /api/v1/spaces/${SPACE}/exports/summary`]: counts({ pages: 1200, serverPdf: true }) });
+    await dialog();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("radio", { name: /^Word/ }));
+    await user.click(screen.getByRole("radio", { name: /The whole space/ }));
+    expect(await screen.findByText("Too many pages for one file")).toBeTruthy();
+    expect(
+      screen.getByText(/1,200 pages are more than a Word or PDF file can hold \(up to 1000\)/),
+    ).toBeTruthy();
+    expect(screen.queryByText("Too many pages for the print view")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Export as Markdown" }));
+    expect(
+      (screen.getByRole("radio", { name: /^Markdown/ }) as HTMLButtonElement).getAttribute("aria-checked"),
+    ).toBe("true");
+    expect(screen.queryByText("Too many pages for one file")).toBeNull();
   });
 
   it("shows readers the scopes of several pages as unavailable and says why", async () => {

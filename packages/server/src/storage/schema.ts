@@ -1,5 +1,16 @@
 import { sql } from "drizzle-orm";
-import { bigint, boolean, check, pgTable, smallint, timestamp } from "drizzle-orm/pg-core";
+import {
+  bigint,
+  boolean,
+  check,
+  index,
+  integer,
+  pgTable,
+  smallint,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { timestamps } from "../database/columns.js";
 
 const timestampColumn = () => timestamp({ withTimezone: true, mode: "date" });
@@ -14,6 +25,10 @@ export const storageState = pgTable(
     reachedLevel: smallint().notNull().default(0),
     notifiedAt: timestampColumn(),
     checkedAt: timestampColumn(),
+    reconcileRun: uuid(),
+    reconcilePages: integer().notNull().default(0),
+    reconcileFetching: boolean().notNull().default(false),
+    reconcileDone: boolean().notNull().default(false),
     ...timestamps(),
   },
   (table) => [
@@ -24,4 +39,19 @@ export const storageState = pgTable(
     ),
     check("storage_state_used", sql`${table.usedBytes} >= 0`),
   ],
+);
+
+export const storageReconcileDeltas = pgTable(
+  "storage_reconcile_deltas",
+  {
+    id: uuid().primaryKey(),
+    run: uuid().notNull(),
+    key: text().notNull(),
+    delta: bigint({ mode: "number" }).notNull(),
+    pages: integer().notNull(),
+    fetching: boolean().notNull(),
+    done: boolean().notNull(),
+    createdAt: timestampColumn().notNull().defaultNow(),
+  },
+  (table) => [index().on(table.run)],
 );

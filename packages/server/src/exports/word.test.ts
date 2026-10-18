@@ -90,6 +90,7 @@ function document(pages: WordPage[], options: Partial<ExportOptions> = {}): Word
       const info = imageInfo(PNG);
       return info ? { ...info, data: PNG } : null;
     },
+    leftOut: () => false,
   };
 }
 

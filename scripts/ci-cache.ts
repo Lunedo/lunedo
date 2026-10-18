@@ -45,13 +45,26 @@ export function runnerDirectory(runner: string | undefined): string {
   return name;
 }
 
-export function cacheEnvironment(root: string, owner: CacheOwner, runner: string): Record<string, string> {
+export type CacheAccess = "write" | "read";
+
+export function cacheAccess(event: string | undefined, ref: string | undefined): CacheAccess {
+  return event === "push" && ref === "refs/heads/main" ? "write" : "read";
+}
+
+export function cacheEnvironment(
+  root: string,
+  owner: CacheOwner,
+  runner: string,
+  access: CacheAccess,
+): Record<string, string> {
   const base = path.posix.join(root, owner);
+  const own = access === "write" ? "" : "-pull-requests";
   const env: Record<string, string> = {
-    pnpm_config_store_dir: path.posix.join(base, "pnpm-store"),
+    pnpm_config_store_dir: path.posix.join(base, `pnpm-store${own}`),
     TURBO_CACHE_DIR: path.posix.join(base, "turbo", runner),
   };
-  if (owner === "container") env.pnpm_config_cache_dir = path.posix.join(base, "pnpm-cache", runner);
+  if (owner === "container") env.pnpm_config_cache_dir = path.posix.join(base, `pnpm-cache${own}`, runner);
+  if (access === "read") env.TURBO_CACHE = "local:r";
   return env;
 }
 
@@ -71,12 +84,14 @@ export function prepareCache(
   root: string,
   owner: CacheOwner,
   runner: string | undefined,
+  access: CacheAccess,
   fs: CacheFileSystem = nodeFileSystem,
 ): Record<string, string> {
   const problem = rootProblem(root, owner, fs);
   if (problem) throw new Error(problem);
-  const env = cacheEnvironment(root, owner, runnerDirectory(runner));
-  for (const directory of Object.values(env)) {
+  const env = cacheEnvironment(root, owner, runnerDirectory(runner), access);
+  const directories = Object.entries(env).flatMap(([name, value]) => (/_dir$/i.test(name) ? [value] : []));
+  for (const directory of directories) {
     try {
       fs.mkdir(directory);
     } catch (error) {

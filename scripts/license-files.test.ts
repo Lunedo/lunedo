@@ -68,4 +68,21 @@ describe("withDeclaredLicense", () => {
     assert.equal(result.license, UNDECLARED_LICENSE);
     assert.deepEqual(result.licenseFiles, {});
   });
+
+  it("reads the bundled libraries of a prebuilt libvips package", () => {
+    const versions = JSON.stringify({ vips: "8.18.7", png: "1.6.58" });
+    const directory = packageDir(
+      "libvips",
+      { name: "@img/sharp-libvips-linux-x64", version: "1.3.4", license: "LGPL-3.0-or-later" },
+      { "versions.json": versions },
+    );
+    const result = withDeclaredLicense({
+      name: "@img/sharp-libvips-linux-x64",
+      versions: ["1.3.4"],
+      license: "LGPL-3.0-or-later",
+      paths: [directory],
+    });
+    assert.deepEqual(result.bundled, { "1.3.4": { sha256: sha256(versions), libraries: ["png", "vips"] } });
+    assert.equal(result.license, "LGPL-3.0-or-later");
+  });
 });

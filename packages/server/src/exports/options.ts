@@ -26,6 +26,7 @@ export const defaultExportOptions: ExportOptions = exportOptionsSchema.parse({})
 export const PAGED_FORMATS: ReadonlySet<ExportFormat> = new Set(["print", "pdf", "docx"]);
 
 export const MAX_BROWSER_PRINT_PAGES = 300;
+export const MAX_FILE_EXPORT_PAGES = 1000;
 
 export function readExportOptions(value: unknown): ExportOptions {
   const parsed = exportOptionsSchema.safeParse(value ?? {});

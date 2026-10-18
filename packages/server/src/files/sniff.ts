@@ -37,6 +37,9 @@ function binary(head: Buffer): DetectedType | null {
   if (ascii(head, 0, 6) === "GIF87a" || ascii(head, 0, 6) === "GIF89a") {
     return { contentType: "image/gif" };
   }
+  if (startsWith(head, [0x49, 0x49, 0x2a, 0x00]) || startsWith(head, [0x4d, 0x4d, 0x00, 0x2a])) {
+    return { contentType: "image/tiff" };
+  }
   if (ascii(head, 0, 4) === "RIFF" && ascii(head, 8, 4) === "WEBP") {
     return { contentType: "image/webp" };
   }
@@ -46,6 +49,9 @@ function binary(head: Buffer): DetectedType | null {
   if (ascii(head, 4, 4) === "ftyp") {
     const brand = ascii(head, 8, 4);
     if (brand === "avif" || brand === "avis") return { contentType: "image/avif" };
+    if (["heic", "heix", "heim", "heis", "hevc", "hevx"].includes(brand))
+      return { contentType: "image/heic" };
+    if (brand === "mif1" || brand === "msf1") return { contentType: "image/heif" };
     if (["M4A ", "M4B "].includes(brand)) return { contentType: "audio/mp4" };
     if (brand === "qt  ") return { contentType: "video/quicktime" };
     return { contentType: "video/mp4" };

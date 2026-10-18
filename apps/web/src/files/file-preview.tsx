@@ -1,7 +1,7 @@
 import { Badge, Button, Drawer, EmptyState, Notice, Skeleton, useToast } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
-import { Download, FileQuestion, History, Pin, PinOff, RotateCcw } from "lucide-react";
+import { Download, FileQuestion, History, ImageOff, Maximize2, Pin, PinOff, RotateCcw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
@@ -34,12 +34,15 @@ const FRAME_LIMITS: Record<FramePreviewKind, number> = {
 
 export interface PreviewSource {
   url: (version?: number) => string;
+  displayUrl?: (version?: number) => string;
   downloadUrl: (version?: number) => string;
 }
 
 export function attachmentSource(attachmentId: string): PreviewSource {
   return {
     url: (version) => contentUrl(attachmentId, version === undefined ? {} : { version }),
+    displayUrl: (version) =>
+      contentUrl(attachmentId, { size: "display", ...(version === undefined ? {} : { version }) }),
     downloadUrl: (version) =>
       contentUrl(attachmentId, { download: true, ...(version === undefined ? {} : { version }) }),
   };
@@ -117,16 +120,37 @@ export function PreviewBody({
   source,
   frame,
 }: {
-  attachment: Pick<Attachment, "name" | "preview" | "size" | "inline" | "version">;
+  attachment: Pick<Attachment, "name" | "preview" | "size" | "inline" | "version"> & {
+    tooLargeForPreview?: boolean;
+  };
   source: PreviewSource;
   frame?: FrameOptions;
 }) {
   const { t } = useTranslation();
   switch (attachment.preview) {
     case "image":
+      if (attachment.tooLargeForPreview) {
+        return (
+          <div className="flex flex-col items-start gap-2 rounded-md border border-border p-4">
+            <p className="flex items-center gap-2 text-sm text-text-muted">
+              <ImageOff aria-hidden="true" className="size-icon shrink-0" />
+              {t("files.preview.imageTooLarge")}
+            </p>
+            <a
+              href={source.url(attachment.version)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-hit items-center gap-2 font-medium text-accent underline focus-visible:focus-ring"
+            >
+              <Maximize2 aria-hidden="true" className="size-icon" />
+              {t("files.preview.openFullSize")}
+            </a>
+          </div>
+        );
+      }
       return (
         <img
-          src={source.url(attachment.version)}
+          src={(source.displayUrl ?? source.url)(attachment.version)}
           alt={attachment.name}
           className="mx-auto max-h-card max-w-full rounded-md"
         />

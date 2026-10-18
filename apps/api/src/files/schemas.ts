@@ -32,6 +32,11 @@ export const attachmentSchema = z
     contentType: z.string().describe("Media type, decided from the content of the file."),
     preview: extensibleEnum(previewKinds, "How the file can be previewed; `none` offers only the download."),
     inline: z.boolean().describe("Whether browsers may show the file directly: images, video and audio."),
+    tooLargeForPreview: z
+      .boolean()
+      .describe(
+        "Whether the image has more than 100 megapixels. Such images get no smaller version; pages and previews show them as a file that opens in full size.",
+      ),
     version: z.number().int().describe("Number of the current version."),
     versions: z.number().int().describe("Number of stored versions."),
     draft: extensibleEnum(
@@ -84,6 +89,7 @@ export const exampleAttachment = {
   contentType: "image/png",
   preview: "image",
   inline: true,
+  tooLargeForPreview: false,
   version: 2,
   versions: 2,
   draft: null,

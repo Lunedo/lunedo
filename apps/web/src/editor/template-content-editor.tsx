@@ -5,7 +5,8 @@ import { Braces, ImagePlus, MessageSquareText } from "lucide-react";
 import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { problemMessage } from "../errors/problem-message.js";
-import { AttachmentSourceProvider } from "../files/attachment-source.js";
+import { AttachmentSourceProvider, type AttachmentUrl } from "../files/attachment-source.js";
+import { uploadQueue } from "../files/upload-queue.js";
 import { type EditorActions, registerEditorActions } from "./actions.js";
 import { EmbedDialog } from "./embed-dialog.js";
 import { EmojiPicker } from "./emoji-picker.js";
@@ -22,7 +23,7 @@ export interface TemplateFieldOption {
 }
 
 export interface TemplateImages {
-  url: (fileId: string) => string;
+  url: AttachmentUrl;
   upload: ((file: File) => Promise<{ id: string; name: string }>) | null;
 }
 
@@ -46,17 +47,23 @@ export function TemplateContentEditor({
   const editorRef = useRef<Editor | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(0);
-  const upload = images?.upload ?? null;
-  const uploadRef = useRef(upload);
+  const direct = images?.upload ?? null;
+  const latest = useRef(direct);
+  latest.current = direct;
+  const queued = useRef(
+    uploadQueue((file: File) => {
+      const current = latest.current;
+      return current ? current(file) : Promise.reject(new Error("The template is not saved yet"));
+    }),
+  );
+  const upload = direct ? queued.current : null;
   const onChangeRef = useRef(onChange);
   useEffect(() => {
-    uploadRef.current = upload;
     onChangeRef.current = onChange;
-  }, [upload, onChange]);
+  }, [onChange]);
   const canUpload = upload !== null;
   const insertImages = useCallback(
     (files: File[], position: number | null) => {
-      const upload = uploadRef.current;
       if (!upload) return;
       for (const file of files) {
         if (!IMAGE_TYPES.includes(file.type)) {
@@ -89,7 +96,7 @@ export function TemplateContentEditor({
           .finally(() => setUploading((count) => count - 1));
       }
     },
-    [t, toast],
+    [upload, t, toast],
   );
   const [linkOpen, setLinkOpen] = useState(false);
   const [embedOpen, setEmbedOpen] = useState(false);
