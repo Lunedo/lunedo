@@ -76,6 +76,10 @@ function isElement(value: unknown): value is SyncElement {
   );
 }
 
+export function storedElements(doc: Y.Doc): SyncElement[] {
+  return [...doc.getMap<unknown>(SCENE_ELEMENTS).values()].filter(isElement);
+}
+
 export class SceneSync {
   readonly #doc: Y.Doc;
   readonly #target: SceneTarget;
@@ -131,7 +135,7 @@ export class SceneSync {
   }
 
   remoteElements(): SyncElement[] {
-    return [...this.#elements().values()].filter(isElement);
+    return storedElements(this.#doc);
   }
 
   pull(): void {

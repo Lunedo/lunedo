@@ -31,6 +31,7 @@ import {
   type RefusedElement,
   SceneSync,
   type SyncElement,
+  storedElements,
 } from "./scene-sync.js";
 
 const STICKY_BACKGROUND = "#ffec99";
@@ -82,6 +83,24 @@ function initialElements(scene: Scene): ExcalidrawElement[] {
   return scene.elements as unknown as ExcalidrawElement[];
 }
 
+function whenInitialized(api: ExcalidrawImperativeAPI, start: () => void): () => void {
+  if (!api.getAppState().isLoading) {
+    start();
+    return () => undefined;
+  }
+  let started = false;
+  const unsubscribe = api.onChange((_elements, appState) => {
+    if (started || appState.isLoading) return;
+    started = true;
+    unsubscribe();
+    start();
+  });
+  return () => {
+    started = true;
+    unsubscribe();
+  };
+}
+
 function selectedIds(appState: AppState): string[] {
   return Object.entries(appState.selectedElementIds)
     .filter(([, selected]) => selected)
@@ -118,14 +137,16 @@ export function ExcalidrawBoard({
   const lastPointer = useRef(0);
   const initialData = useMemo(
     () => ({
-      elements: initialElements(scene),
+      elements: doc
+        ? (storedElements(doc).filter((element) => !element.isDeleted) as unknown as ExcalidrawElement[])
+        : initialElements(scene),
       appState: {
         viewBackgroundColor: scene.settings.viewBackgroundColor ?? "#ffffff",
         viewModeEnabled: !editable,
       },
       scrollToContent: true,
     }),
-    [scene, editable],
+    [scene, editable, doc],
   );
 
   useEffect(() => {
@@ -173,25 +194,28 @@ export function ExcalidrawBoard({
           captureUpdate: CaptureUpdateAction.NEVER,
         }),
     };
-    const created = new SceneSync({
-      doc,
-      target,
-      reconcile: (local, remote) =>
-        reconcileElements(
-          local as unknown as readonly OrderedExcalidrawElement[],
-          remote as unknown as readonly RemoteExcalidrawElement[],
-          api.getAppState(),
-        ) as unknown as SyncElement[],
-      files,
-      editable,
-      ...(onRefused ? { onRefused } : {}),
-      ...(onFileFailed ? { onFileFailed } : {}),
-      ...(onLocalChange ? { onSent: onLocalChange } : {}),
+    const stop = whenInitialized(api, () => {
+      const created = new SceneSync({
+        doc,
+        target,
+        reconcile: (local, remote) =>
+          reconcileElements(
+            local as unknown as readonly OrderedExcalidrawElement[],
+            remote as unknown as readonly RemoteExcalidrawElement[],
+            api.getAppState(),
+          ) as unknown as SyncElement[],
+        files,
+        editable,
+        ...(onRefused ? { onRefused } : {}),
+        ...(onFileFailed ? { onFileFailed } : {}),
+        ...(onLocalChange ? { onSent: onLocalChange } : {}),
+      });
+      sync.current = created;
+      created.pull();
     });
-    sync.current = created;
-    created.pull();
     return () => {
-      created.destroy();
+      stop();
+      sync.current?.destroy();
       sync.current = null;
     };
   }, [api, doc, files, editable, onRefused, onFileFailed, onLocalChange]);

@@ -27,11 +27,11 @@ function canvas(page: Page) {
   return page.locator("canvas.excalidraw__canvas.interactive");
 }
 
-async function drawRectangle(page: Page) {
+async function drawRectangle(page: Page, at = 0.6) {
   const box = await canvas(page).boundingBox();
   if (!box) throw new Error("The whiteboard canvas is not visible");
-  const x = box.x + box.width * 0.6;
-  const y = box.y + box.height * 0.6;
+  const x = box.x + box.width * at;
+  const y = box.y + box.height * at;
   await page.keyboard.press("r");
   await page.mouse.move(x, y);
   await page.mouse.down();
@@ -160,4 +160,49 @@ test("inserts a drawing block into a page and shows its image to readers", async
   ]);
   await page.goto(created.path);
   await expect(page.locator("figure.ph-drawing img")).toBeVisible();
+});
+
+test("shows the stored scene after a reload and to a person who joins later, and both see live changes", async ({
+  page,
+  organization,
+}) => {
+  const { spaceId, spaceKey } = await teamSpace(page, organization);
+  const colleague = await organization.invite("Konrad");
+  const created = (await callApi(page, "POST", `/api/v1/spaces/${spaceId}/items`, {
+    kind: "whiteboard",
+    title: "Office move plan",
+    parentId: null,
+  })) as { id: string };
+  const path = `/spaces/${spaceKey}/whiteboards/${created.id}/office-move-plan`;
+  await page.goto(path);
+  await expect(canvas(page)).toBeVisible({ timeout: 30_000 });
+  const empty = await paintedPixels(page);
+  await canvas(page).click({ position: { x: 400, y: 300 } });
+  await drawRectangle(page);
+  await page.getByRole("button", { name: "Sticky note" }).click();
+  await expect(page.getByRole("status").getByText("Saved", { exact: true })).toBeVisible({ timeout: 20_000 });
+  await expect.poll(async () => (await storedScene(page, created.id)).scene.elements.length).toBe(3);
+
+  await page.reload();
+  await expect(canvas(page)).toBeVisible({ timeout: 30_000 });
+  await expect.poll(() => paintedPixels(page), { timeout: 20_000 }).toBeGreaterThan(empty + 50);
+  const reloaded = await paintedPixels(page);
+
+  const second = await organization.signIn(colleague);
+  try {
+    await second.page.goto(path);
+    await expect(canvas(second.page)).toBeVisible({ timeout: 30_000 });
+    await expect.poll(() => paintedPixels(second.page), { timeout: 20_000 }).toBeGreaterThan(empty + 50);
+    const joined = await paintedPixels(second.page);
+
+    await canvas(second.page).click({ position: { x: 200, y: 150 } });
+    await drawRectangle(second.page, 0.3);
+    await expect.poll(() => paintedPixels(second.page), { timeout: 20_000 }).toBeGreaterThan(joined + 50);
+    await expect
+      .poll(async () => (await storedScene(page, created.id)).scene.elements.length, { timeout: 20_000 })
+      .toBe(4);
+    await expect.poll(() => paintedPixels(page), { timeout: 20_000 }).toBeGreaterThan(reloaded + 50);
+  } finally {
+    await second.context.close();
+  }
 });
