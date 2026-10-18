@@ -6,6 +6,11 @@ import { createPage } from "../support/places.js";
 
 test.use({ instanceAdministrator: true });
 
+const IMAGE = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAeklEQVR4nO3PUQkAIBTAwJfEJAYzviH8OITBAtxm7fN1wwUNaEEDWtCAFjSgBQ1oQQNa0IAWNKAFDWhBA1rQgBY0oAUNaEEDWtCAFjSgBQ1oQQNa0IAWNKAFDWhBA1rQgBY0oAUNaEEDWtCAFjSgBQ1oQQNa0IAWPHYBHp8gxMscTuAAAAAASUVORK5CYII=",
+  "base64",
+);
+
 interface Board {
   spaceId: string;
   spaceKey: string;
@@ -206,4 +211,43 @@ test("shows the stored scene after a reload and to a person who joins later, and
   } finally {
     await second.context.close();
   }
+});
+
+test("keeps an image on a whiteboard after a reload", async ({ page, organization }) => {
+  const { spaceId, spaceKey } = await teamSpace(page, organization);
+  const created = (await callApi(page, "POST", `/api/v1/spaces/${spaceId}/items`, {
+    kind: "whiteboard",
+    title: "Floor plan",
+    parentId: null,
+  })) as { id: string };
+  await page.goto(`/spaces/${spaceKey}/whiteboards/${created.id}/floor-plan`);
+  await expect(canvas(page)).toBeVisible({ timeout: 30_000 });
+  await canvas(page).click({ position: { x: 400, y: 300 } });
+  await page.evaluate((base64) => {
+    const bytes = Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([bytes], "plan.png", { type: "image/png" }));
+    document.dispatchEvent(new ClipboardEvent("paste", { clipboardData: transfer, bubbles: true }));
+  }, IMAGE.toString("base64"));
+  await expect
+    .poll(
+      async () => {
+        const stored = await storedScene(page, created.id);
+        return stored.scene.elements.filter((element) => element.type === "image").length;
+      },
+      { timeout: 20_000 },
+    )
+    .toBe(1);
+  await expect
+    .poll(
+      async () =>
+        Object.keys(((await storedScene(page, created.id)).scene as { files?: object }).files ?? {}).length,
+      {
+        timeout: 20_000,
+      },
+    )
+    .toBe(1);
+  await page.reload();
+  await expect(canvas(page)).toBeVisible({ timeout: 30_000 });
+  await expect.poll(() => paintedPixels(page), { timeout: 20_000 }).toBeGreaterThan(50);
 });
