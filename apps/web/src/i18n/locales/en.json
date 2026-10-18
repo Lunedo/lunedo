@@ -4761,7 +4761,7 @@
       "save": "Save drawing",
       "saveFailed": "The drawing could not be saved",
       "loadFailed": "The drawing could not be loaded",
-      "discardDescription": "Your changes since opening the drawing are lost. The drawing on the page stays as it was.",
+      "discardDescription": "Discard your changes since you opened the drawing? The drawing on the page stays as it was.",
       "discard": "Discard changes",
       "keepEditing": "Keep editing"
     },
@@ -4783,7 +4783,7 @@
       "startFailedHint": "The editor is served by this Pagehall instance. Check your connection to Pagehall, then try again. If it keeps failing, ask your administrator to check the draw.io files of the instance.",
       "gliffyFailed": "The Gliffy diagram could not be converted",
       "gliffyFailedHint": "draw.io could not read this Gliffy file. The page keeps showing its image. Download the Gliffy file from the attachments of the page to keep it, or close and draw the diagram again.",
-      "discardDescription": "Your changes since opening the diagram are lost. The diagram on the page stays as it was.",
+      "discardDescription": "Discard your changes since you opened the diagram? The diagram on the page stays as it was.",
       "discard": "Discard changes",
       "keepEditing": "Keep editing",
       "servedLocally": "draw.io {version} is served by this Pagehall instance and works without internet access. Diagrams never leave the server.",

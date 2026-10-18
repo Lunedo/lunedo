@@ -211,7 +211,7 @@ function LivePreview({ svg, label }: { svg: string; label: string }) {
   return url ? <img src={url} alt={label} className="mx-auto max-w-full" /> : null;
 }
 
-export function TextDiagramView({ node, selected, editor, updateAttributes }: NodeViewProps) {
+export function TextDiagramView({ node, selected, editor, updateAttributes, deleteNode }: NodeViewProps) {
   const { t } = useTranslation();
   const context = usePageContext();
   const editable = useEditable(editor);
@@ -234,10 +234,16 @@ export function TextDiagramView({ node, selected, editor, updateAttributes }: No
   const [saving, setSaving] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   useEditingPresence(blockId, editing);
+  const inserted = useRef(false);
   useOpenOnInsert(blockId, editable, () => {
+    inserted.current = true;
     setDraft(stored.length > 0 ? stored : DIAGRAM_STARTERS[type]);
     setEditing(true);
   });
+
+  useEffect(() => {
+    if (editing) textarea.current?.focus();
+  }, [editing]);
 
   useEffect(() => {
     if (!editing) return;
@@ -281,6 +287,7 @@ export function TextDiagramView({ node, selected, editor, updateAttributes }: No
         return;
       }
       const image = await storeImage(context.pageId, blockId, type, result.svg);
+      inserted.current = false;
       updateAttributes({ source: draft, ...image });
       setEditing(false);
       setView("preview");
@@ -364,7 +371,13 @@ export function TextDiagramView({ node, selected, editor, updateAttributes }: No
             )}
           </div>
           <div className="flex flex-wrap justify-end gap-2">
-            <Button variant="secondary" onClick={() => setEditing(false)}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                if (inserted.current && !hasImage) deleteNode();
+                else setEditing(false);
+              }}
+            >
               {t("common.cancel")}
             </Button>
             <Button variant="primary" icon={Check} loading={saving} onClick={() => void save()}>

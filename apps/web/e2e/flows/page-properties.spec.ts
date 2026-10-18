@@ -83,6 +83,7 @@ test("collects page properties of two pages in a report on a third page and incl
   const report = page.locator(".ph-properties-report-block");
   await expect(report.getByRole("link", { name: "Site Graz" })).toBeVisible();
   await expect(report.getByRole("link", { name: "Site Linz" })).toBeVisible();
+  await content(page).focus();
   await page.keyboard.press("Control+End");
   await insert(page, "einbinden", /^Include excerpt/);
   const include = page.locator(".ph-include-block");
@@ -179,13 +180,17 @@ test("inserts blocks whose names have spaces from the slash menu", async ({ page
   await page.keyboard.press("Enter");
   await expect(page.locator(".ph-properties-report-block")).toBeVisible();
   await expect(content(page)).not.toContainText("/page properties report");
+  await expect(page.locator(".ph-properties-report-block :focus")).toHaveCount(1);
 
+  await content(page).focus();
   await page.keyboard.press("Control+End");
   await page.keyboard.press("Enter");
   await page.keyboard.type("/include excerpt");
   await page.keyboard.press("Enter");
   await expect(page.locator(".ph-include-block")).toBeVisible();
+  await expect(page.locator(".ph-include-block").getByRole("combobox", { name: "Page" })).toBeFocused();
 
+  await content(page).focus();
   await page.keyboard.press("Control+End");
   await page.keyboard.press("Enter");
   await page.keyboard.type("/ and then we went home");

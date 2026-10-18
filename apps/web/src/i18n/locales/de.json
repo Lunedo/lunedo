@@ -4761,7 +4761,7 @@
       "save": "Zeichnung speichern",
       "saveFailed": "Die Zeichnung konnte nicht gespeichert werden",
       "loadFailed": "Die Zeichnung konnte nicht geladen werden",
-      "discardDescription": "Deine Änderungen seit dem Öffnen gehen verloren. Die Zeichnung auf der Seite bleibt, wie sie war.",
+      "discardDescription": "Deine Änderungen seit dem Öffnen verwerfen? Die Zeichnung auf der Seite bleibt, wie sie war.",
       "discard": "Änderungen verwerfen",
       "keepEditing": "Weiter bearbeiten"
     },
@@ -4783,7 +4783,7 @@
       "startFailedHint": "Der Editor wird von dieser Pagehall-Instanz ausgeliefert. Prüfe deine Verbindung zu Pagehall und versuche es noch einmal. Wenn es weiter fehlschlägt, bitte deine Administration, die draw.io-Dateien der Instanz zu prüfen.",
       "gliffyFailed": "Das Gliffy-Diagramm konnte nicht umgewandelt werden",
       "gliffyFailedHint": "draw.io konnte diese Gliffy-Datei nicht lesen. Die Seite zeigt weiter ihr Bild. Lade die Gliffy-Datei aus den Anhängen der Seite herunter, um sie zu behalten, oder schließe und zeichne das Diagramm neu.",
-      "discardDescription": "Deine Änderungen seit dem Öffnen des Diagramms gehen verloren. Das Diagramm auf der Seite bleibt, wie es war.",
+      "discardDescription": "Deine Änderungen seit dem Öffnen des Diagramms verwerfen? Das Diagramm auf der Seite bleibt, wie es war.",
       "discard": "Änderungen verwerfen",
       "keepEditing": "Weiter bearbeiten",
       "servedLocally": "draw.io {version} wird von dieser Pagehall-Instanz ausgeliefert und funktioniert ohne Internetzugang. Diagramme verlassen den Server nie.",
