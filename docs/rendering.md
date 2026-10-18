@@ -17,7 +17,7 @@ The print view is tested in Chromium. Chrome and Edge take the paper size and or
 
 ## Setting up the render container
 
-The image `pagehall-render` (built from `docker/render.Dockerfile`) runs headless Chromium from Debian and a small service on port 3000. Add it next to Pagehall and give both the same token of at least 32 characters, for example from `openssl rand -hex 32`:
+The image `pagehall-render` (built from `docker/render.Dockerfile`) runs headless Chromium from Debian and a small service on port 3000. Add it next to Pagehall and give both the same token of at least 32 characters, for example from `openssl rand -hex 32`. Put the container only on an internal network that it shares with Pagehall: it then reaches neither the database nor the internet, and nothing but Pagehall reaches it.
 
 ```yaml
 services:
@@ -26,12 +26,32 @@ services:
     restart: unless-stopped
     environment:
       RENDER_TOKEN: ${PAGEHALL_RENDER_TOKEN}
+    security_opt:
+      - seccomp=./chromium-seccomp.json
+    networks: [render]
 
   pagehall:
     environment:
       PAGEHALL_RENDER_URL: http://pagehall-render:3000
       PAGEHALL_RENDER_TOKEN: ${PAGEHALL_RENDER_TOKEN}
+    networks: [default, render]
+
+networks:
+  render:
+    internal: true
 ```
+
+Leave the database, Redis and storage on the `default` network only. `internal: true` gives the `render` network no route out, so the container cannot open connections to the internet either.
+
+### Chromium's sandbox
+
+Chromium runs with its own sandbox by default. The sandbox needs user namespaces, which container runtimes restrict:
+
+- The host must allow unprivileged user namespaces. Debian allows them; on Ubuntu 23.10 and later, AppArmor restricts them, so set `kernel.apparmor_restrict_unprivileged_userns=0` with `sysctl` or give the container an AppArmor profile that allows them.
+- Docker's default seccomp profile refuses the system calls that create user namespaces. Run the container with a seccomp profile that allows them, as in the example above. Start from Docker's default profile (`profiles/seccomp/default.json` in the Moby repository) and allow `clone`, `clone3`, `unshare` and `setns` without the `CAP_SYS_ADMIN` condition, or use the Chromium profile that Playwright publishes in its repository (`utils/docker/seccomp_profile.json`). Do not use `seccomp=unconfined` or `privileged: true`.
+- Podman in rootless mode and Kubernetes with user namespaces enabled (`hostUsers: false`) allow the sandbox without further settings.
+
+If Chromium cannot start with the sandbox, the container stops with the error "Chromium did not start" and this hint. `RENDER_CHROMIUM_SANDBOX=false` turns the sandbox off as an explicit exception; the container then logs a warning at every start, because a flaw in Chromium's image or font decoding could run code with the rights of the container. Keep the internal network in that case above all.
 
 Restart Pagehall. Settings, Instance, Rendering shows whether the container answers, its version, its browser, the documents it renders at the same time and its limits. In development, start it with `docker compose -f docker/compose.dev.yml --profile render up -d render` and set `PAGEHALL_RENDER_URL=http://render:3000` and `PAGEHALL_RENDER_TOKEN` for the app.
 
@@ -45,13 +65,14 @@ Settings of the container:
 | `RENDER_MAX_WAITING` | 10 per parallel document | Documents that may wait; further requests are refused with 503. |
 | `RENDER_MAX_MEGABYTES` | `200` | Largest request, the HTML with its images, in MB. Larger requests are refused with 413. |
 | `RENDER_TIMEOUT_SECONDS` | `300` | Longest time for one document; then it is stopped and refused with 504. |
-| `RENDER_CHROMIUM_SANDBOX` | `false` | `true` turns on Chromium's own sandbox where the container runtime allows user namespaces. |
+| `RENDER_CHROMIUM_SANDBOX` | `true` | Chromium's own sandbox. `false` turns it off and logs a warning; see [Chromium's sandbox](#chromiums-sandbox). |
 
 `GET /health` answers without a token for health checks. `GET /v1/info` and `POST /v1/pdf` need the token.
 
 ## Security
 
-- Only Pagehall's API and worker talk to the container; it needs no access to anything else. Keep it in an internal network and do not publish its port.
+- Only Pagehall's API and worker talk to the container; it needs no access to anything else. Keep it on an internal network without a route out, away from the database, and do not publish its port.
+- Chromium runs in its sandbox unless `RENDER_CHROMIUM_SANDBOX=false`.
 - Every request carries the token, which the container compares in constant time.
 - Pagehall sends the complete document: the print-ready HTML of what the exporting person may read, and the images they may read. The container serves only these and its own viewer to Chromium; every other request, including to the instance itself and to other hosts, is blocked, and host names do not resolve.
 - No JavaScript of the document runs. The viewer parses the document without executing scripts and allows only its own scripts, the pagination library included, through its content security policy.
