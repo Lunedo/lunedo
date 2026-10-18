@@ -24,7 +24,7 @@ test("switches the whole interface at once when the own language changes", async
   await expect(
     page.getByRole("navigation", { name: "Einstellungen" }).getByRole("link", { name: "Sicherheit" }).first(),
   ).toBeVisible();
-  await expect(page.getByRole("group", { name: "Textgröße" })).toContainText("100%");
+  await expect(page.getByRole("group", { name: "Textgröße" })).toContainText(/100\s%/);
   const sample = /\d{2}[./-]\d{2}[./-]\d{4}/.exec(englishDate ?? "")?.[0] ?? "missing";
   await expect(page.getByRole("combobox", { name: "Datumsformat", exact: true })).toContainText(sample);
   await expect(page.locator("html")).toHaveAttribute("lang", "de");
