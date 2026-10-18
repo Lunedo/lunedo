@@ -34,7 +34,7 @@ import { liveVersionIdleMinutesSetting } from "../spaces/settings.js";
 import { signalDocumentChange, signalSpaceChange } from "../spaces/signals.js";
 import { PRESENCE_STALE_SECONDS, type VersionPerson } from "../spaces/versions.js";
 import type { StorageService } from "../storage/storage.js";
-import { readText, SceneInvalidError } from "./common.js";
+import { SceneInvalidError } from "./common.js";
 import { MAX_PREVIEW_BYTES, sanitizeSvg } from "./svg.js";
 
 export const DELETED_ELEMENT_RETENTION_MS = 24 * 60 * 60 * 1000;
