@@ -1,5 +1,5 @@
 import { type IncludeRequest, MAX_EXCERPT_NAME_LENGTH, MAX_INCLUDE_DEPTH } from "@pagehall/editor-schema";
-import { Checkbox, Combobox, Field, Input, SkeletonText } from "@pagehall/ui";
+import { Checkbox, Combobox, Field, Input, Notice, SkeletonText } from "@pagehall/ui";
 import { useQuery } from "@tanstack/react-query";
 import { NodeViewContent, type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
 import { FileInput, Quote, TextQuote } from "lucide-react";
@@ -115,7 +115,9 @@ export function IncludedContent({
   const { page, document, references, state, hiddenFromSomeReaders } = content.data;
   if (state === "noExcerpt" || !document) return <Note>{t("editor.include.noExcerpt")}</Note>;
   const hint =
-    placeholders && hiddenFromSomeReaders ? <Note>{t("editor.include.hiddenFromSomeReaders")}</Note> : null;
+    placeholders && hiddenFromSomeReaders ? (
+      <Notice variant="warning">{t("editor.include.hiddenFromSomeReaders")}</Notice>
+    ) : null;
   const body = (
     <IncludeChain.Provider value={ancestors}>
       <PageReadView document={document} references={references as References} pageId={page.id} />
