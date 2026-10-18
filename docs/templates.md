@@ -13,7 +13,7 @@ Templates give new pages a starting point: a title pattern, input fields asked f
 
 A template owns its files: the images it shows and the files that drawing and diagram blocks use. They are stored like attachments, encrypted, counted in the storage of the organization or space, and refused with the usual message when the storage is almost full.
 
-- **Save as template** on a page copies the current version of every file the page shows into the template. If the page or a page above it is restricted, the dialog warns that these images become visible to everyone who can use the template. Only the page's own files are taken over.
+- **Save as template** on a page copies the current version of every file the page shows into the template. If the page or a page above it is restricted, the dialog says that its content and images become visible to everyone who can use the space's templates, and saves only after this is confirmed; the save is recorded in the audit log. Only the page's own files are taken over.
 - The template editor adds images with the image button or by dropping them into the content. Templates accept PNG, JPEG, GIF, WebP and SVG images up to 5 MB; SVG images are cleaned of scripts and links. Removing an image from the content and saving removes the file.
 - A page created from a template gets its own copies of the files as normal attachments. Changing or deleting the template later does not change the page.
 - Deleting a template deletes its files.

@@ -1546,6 +1546,7 @@
     "confluenceRateLimited": "Confluence asked to slow down. Wait a minute and try again.",
     "confluenceSpaceMissing": "The space does not exist or the token cannot read it. Choose another space.",
     "copyChangesAccess": "The copy can be opened by people who cannot open the original. Check who gains access, then confirm the copy.",
+    "templateFromRestrictedPage": "The page is restricted. Confirm that everyone who can use the templates of this space may see its content, then save again.",
     "notCopyable": "Only pages, folders and whiteboards can be copied. Copy a page or folder instead.",
     "neverPublished": "The page has never been published, so it has no content to copy. Publish it first, then copy it.",
     "otherOrganization": "Content can only be copied within its organization. Choose a space of the same organization."
@@ -3749,6 +3750,7 @@
         "created": "Template created",
         "updated": "Template changed",
         "deleted": "Template deleted",
+        "createdFromRestrictedPage": "Restricted page saved as a template",
         "exported": "Templates exported",
         "imported": "Templates imported"
       },
@@ -5706,7 +5708,11 @@
     "importConfirmFailed": "The templates could not be imported",
     "imported": "Templates imported: {created} new, {replaced} replaced",
     "saveFiles": "The template gets its own copy of {count, plural, one {the image of the page} other {the # images of the page}}.",
-    "saveRestricted": "This page is restricted. {count, plural, one {Its image becomes} other {Its # images become}} visible to everyone who can use the template."
+    "saveRestricted": "{count, plural, =0 {} one {This includes the image of the page.} other {This includes the # images of the page.}}",
+    "restrictedTitle": "This page is restricted",
+    "restrictedAudience": "As a template, its content becomes visible to everyone who can use the templates of {space}: all its editors and space admins, also those who cannot open the page now.",
+    "restrictedConfirm": "Everyone who can use the templates of {space} may see this content",
+    "restrictedRequired": "Confirm that everyone who can use the templates of this space may see the content, or cancel."
   },
   "versions": {
     "history": "Version history",

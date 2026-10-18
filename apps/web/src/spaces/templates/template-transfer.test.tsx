@@ -241,26 +241,69 @@ describe("importing templates", () => {
 });
 
 describe("saving a page as a template", () => {
-  it("warns that the images of a restricted page become visible to everyone who can use the template", async () => {
-    mockApi({
+  function routes(restricted: boolean) {
+    return mockApi({
       "GET /api/v1/auth/session": () => problem(401, "notSignedIn"),
       [`GET /api/v1/spaces/${SPACE}/templates/from-page/files`]: () => ({
-        body: { files: 2, restricted: true },
+        body: { files: 2, restricted },
       }),
+      [`POST /api/v1/spaces/${SPACE}/templates/from-page`]: () => ({ status: 201, body: retro }),
     });
+  }
+
+  async function open() {
     await renderWithProviders(
       <SaveTemplateDialog
         spaceId={SPACE}
+        spaceName="IT Operations"
         page={{ id: PAGE, title: "Salaries" }}
         open
         onOpenChange={() => undefined}
       />,
     );
+  }
+
+  it("names who will see a restricted page and saves only after the confirmation", async () => {
+    const { requests } = routes(true);
+    await open();
+    expect(await screen.findByText("This page is restricted")).toBeTruthy();
     expect(
-      await screen.findByText(
-        "This page is restricted. Its 2 images become visible to everyone who can use the template.",
+      screen.getByText(
+        /As a template, its content becomes visible to everyone who can use the templates of IT Operations: all its editors and space admins, also those who cannot open the page now\. This includes the 2 images of the page\./,
       ),
     ).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Save template" }));
+    const confirm = screen.getByRole("checkbox", {
+      name: "Everyone who can use the templates of IT Operations may see this content",
+    });
+    await waitFor(() => expect(document.activeElement).toBe(confirm));
+    expect(
+      screen.getByText(
+        "Confirm that everyone who can use the templates of this space may see the content, or cancel.",
+      ),
+    ).toBeTruthy();
+    expect(requests.some((r) => r.method === "POST")).toBe(false);
+
+    await userEvent.click(confirm);
+    await userEvent.click(screen.getByRole("button", { name: "Save template" }));
+    await waitFor(() => expect(requests.some((r) => r.method === "POST")).toBe(true));
+    expect(requests.find((r) => r.method === "POST")?.body).toMatchObject({
+      pageId: PAGE,
+      name: "Salaries",
+      confirmRestricted: true,
+    });
+  });
+
+  it("asks for no confirmation for a page without a restriction", async () => {
+    const { requests } = routes(false);
+    await open();
+    expect(
+      await screen.findByText(/The template gets its own copy of the 2 images of the page/),
+    ).toBeTruthy();
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Save template" }));
+    await waitFor(() => expect(requests.some((r) => r.method === "POST")).toBe(true));
+    expect(requests.find((r) => r.method === "POST")?.body).toMatchObject({ confirmRestricted: false });
   });
 });
 

@@ -217557,7 +217557,7 @@
       "post": {
         "operationId": "templates.saveFromPage",
         "summary": "Save a page as a space template",
-        "description": "Creates a space template from the current content of a page of the space, including its draft. Editors can do this; space admins can then add input fields.\n\nRequires the permission `space.edit` on the space in `spaceId`.",
+        "description": "Creates a space template from the current content of a page of the space, including its draft. Editors can do this; space admins can then add input fields. When the page or a page above it has a view restriction, everyone who can use the space's templates would see its content, so the request must confirm this with `confirmRestricted`; the save is then recorded in the audit log.\n\nRequires the permission `space.edit` on the space in `spaceId`.",
         "tags": [
           "Templates"
         ],
@@ -217621,6 +217621,11 @@
                       "teams"
                     ],
                     "description": "Category in the gallery: meetings, decisions, projects, engineering, operations, knowledge or teams."
+                  },
+                  "confirmRestricted": {
+                    "default": false,
+                    "description": "Confirms that everyone who can use the space's templates may see the content of a page with a view restriction. Without it, saving a restricted page is refused with `templateFromRestrictedPage`.",
+                    "type": "boolean"
                   }
                 },
                 "required": [
@@ -218021,6 +218026,26 @@
                       "title": "Not found",
                       "status": 404,
                       "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`templateFromRestrictedPage`: The page is restricted; saving it as a template needs a confirmation.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "templateFromRestrictedPage": {
+                    "value": {
+                      "type": "urn:pagehall:problem:templateFromRestrictedPage",
+                      "title": "The page is restricted; saving it as a template needs a confirmation",
+                      "status": 409,
+                      "code": "templateFromRestrictedPage"
                     }
                   }
                 }

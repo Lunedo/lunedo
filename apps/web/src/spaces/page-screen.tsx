@@ -477,6 +477,7 @@ function PageArticle({
         />
         <SaveTemplateDialog
           spaceId={space.id}
+          spaceName={spaceDisplayName(t, space)}
           page={{ id: page.id, title }}
           open={savingTemplate}
           onOpenChange={setSavingTemplate}

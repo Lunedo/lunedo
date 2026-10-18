@@ -124,6 +124,81 @@ describe.skipIf(!baseUrl)("template files", () => {
     expect(await test.services.templates.pageFiles(wiki.id, page.id)).toEqual({ files: 1, restricted: true });
   });
 
+  it("saves a restricted page as a template only when confirmed, and audits it", async () => {
+    const { as, space: wiki } = await setup();
+    const parent = await test.services.tree.create(as, wiki.id, {
+      kind: "page",
+      title: "HR",
+      mode: "live",
+      placement: { parentId: null },
+    });
+    const page = await test.services.tree.create(as, wiki.id, {
+      kind: "page",
+      title: "Salary bands",
+      mode: "live",
+      placement: { parentId: parent.id },
+    });
+    await test.services.pageAccess.change(as, parent.id, [{ action: "restrict", kind: "view" }]);
+    const count = async () =>
+      (
+        await test.database.execute(
+          sql`select 1 from page_templates where space_id = ${wiki.id} and name = 'Salary bands'`,
+        )
+      ).rows.length;
+    await expect(
+      test.services.templates.saveFromPage(as, wiki.id, page.id, {
+        name: "Salary bands",
+        description: "",
+        category: "teams",
+      }),
+    ).rejects.toMatchObject({ code: "templateFromRestrictedPage" });
+    await expect(
+      test.services.templates.saveFromPage(as, wiki.id, page.id, {
+        name: "Salary bands",
+        description: "",
+        category: "teams",
+        confirmRestricted: false,
+      }),
+    ).rejects.toMatchObject({ code: "templateFromRestrictedPage" });
+    expect(await count()).toBe(0);
+
+    const template = await test.services.templates.saveFromPage(as, wiki.id, page.id, {
+      name: "Salary bands",
+      description: "",
+      category: "teams",
+      confirmRestricted: true,
+    });
+    expect(await count()).toBe(1);
+    const audited = await test.database.execute<{ fields: Record<string, unknown> }>(sql`
+      select fields from audit_events
+      where name = 'template.createdFromRestrictedPage' and target_id = ${page.id}`);
+    expect(audited.rows).toHaveLength(1);
+    expect(audited.rows[0]?.fields).toMatchObject({
+      spaceId: wiki.id,
+      title: "Salary bands",
+      templateId: template.id,
+      templateName: "Salary bands",
+    });
+  });
+
+  it("does not audit saving an unrestricted page as a template", async () => {
+    const { as, space: wiki } = await setup();
+    const page = await test.services.tree.create(as, wiki.id, {
+      kind: "page",
+      title: "Open runbook",
+      mode: "live",
+      placement: { parentId: null },
+    });
+    await test.services.templates.saveFromPage(as, wiki.id, page.id, {
+      name: "Open runbook",
+      description: "",
+      category: "operations",
+    });
+    const audited = await test.database.execute(sql`
+      select 1 from audit_events where name = 'template.createdFromRestrictedPage' and target_id = ${page.id}`);
+    expect(audited.rows).toEqual([]);
+  });
+
   it("does not take files from other pages into a template saved from a page", async () => {
     const { as, space: wiki } = await setup();
     const { attachment: foreign } = await pageWithImage(as, wiki.id);

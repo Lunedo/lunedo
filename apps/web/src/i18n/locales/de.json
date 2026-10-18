@@ -1546,6 +1546,7 @@
     "confluenceRateLimited": "Confluence hat um Verlangsamung gebeten. Warte eine Minute und versuche es erneut.",
     "confluenceSpaceMissing": "Den Bereich gibt es nicht, oder das Token kann ihn nicht lesen. Wähle einen anderen Bereich.",
     "copyChangesAccess": "Die Kopie kann von Personen geöffnet werden, die das Original nicht öffnen können. Prüfe, wer Zugriff erhält, und bestätige dann die Kopie.",
+    "templateFromRestrictedPage": "Die Seite ist eingeschränkt. Bestätige, dass alle, die die Vorlagen dieses Space verwenden können, ihren Inhalt sehen dürfen, und speichere dann erneut.",
     "notCopyable": "Nur Seiten, Ordner und Whiteboards können kopiert werden. Kopiere stattdessen eine Seite oder einen Ordner.",
     "neverPublished": "Die Seite wurde nie veröffentlicht und hat daher keinen Inhalt zum Kopieren. Veröffentliche sie zuerst und kopiere sie dann.",
     "otherOrganization": "Inhalte können nur innerhalb ihrer Organisation kopiert werden. Wähle einen Space derselben Organisation."
@@ -3749,6 +3750,7 @@
         "created": "Vorlage erstellt",
         "updated": "Vorlage geändert",
         "deleted": "Vorlage gelöscht",
+        "createdFromRestrictedPage": "Eingeschränkte Seite als Vorlage gespeichert",
         "exported": "Vorlagen exportiert",
         "imported": "Vorlagen importiert"
       },
@@ -5706,7 +5708,11 @@
     "importConfirmFailed": "Die Vorlagen konnten nicht importiert werden",
     "imported": "Vorlagen importiert: {created} neu, {replaced} ersetzt",
     "saveFiles": "Die Vorlage erhält eine eigene Kopie {count, plural, one {des Bildes der Seite} other {der # Bilder der Seite}}.",
-    "saveRestricted": "Diese Seite ist eingeschränkt. {count, plural, one {Ihr Bild wird} other {Ihre # Bilder werden}} für alle sichtbar, die die Vorlage verwenden können."
+    "saveRestricted": "{count, plural, =0 {} one {Das gilt auch für das Bild der Seite.} other {Das gilt auch für die # Bilder der Seite.}}",
+    "restrictedTitle": "Diese Seite ist eingeschränkt",
+    "restrictedAudience": "Als Vorlage wird ihr Inhalt für alle sichtbar, die die Vorlagen von {space} verwenden können: alle Bearbeiter und Space-Admins, auch wenn sie die Seite jetzt nicht öffnen können.",
+    "restrictedConfirm": "Alle, die die Vorlagen von {space} verwenden können, dürfen diesen Inhalt sehen",
+    "restrictedRequired": "Bestätige, dass alle, die die Vorlagen dieses Space verwenden können, den Inhalt sehen dürfen, oder brich ab."
   },
   "versions": {
     "history": "Versionsverlauf",
