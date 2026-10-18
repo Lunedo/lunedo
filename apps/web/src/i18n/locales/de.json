@@ -4926,6 +4926,7 @@
       "nameLabel": "Name des Auszugs"
     },
     "roadmap": {
+      "scrollRegion": "Roadmap, seitlich scrollen für alle Monate",
       "title": "Roadmap",
       "readOnly": "Importierte Roadmap. Roadmaps lassen sich bearbeiten, sobald die Planung verfügbar ist.",
       "asList": "Als Liste anzeigen"

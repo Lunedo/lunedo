@@ -4926,6 +4926,7 @@
       "nameLabel": "Name of the excerpt"
     },
     "roadmap": {
+      "scrollRegion": "Roadmap, scroll sideways to see all months",
       "title": "Roadmap",
       "readOnly": "Imported roadmap. Roadmaps can be edited once planning is available.",
       "asList": "Show as list"
