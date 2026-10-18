@@ -1,5 +1,6 @@
 import {
   Activity,
+  AppWindow,
   BellRing,
   Bot,
   Building2,
@@ -311,6 +312,15 @@ navigationItems.register(
     icon: HardDrive,
     labelKey: "navigation.storage",
     to: `${INSTANCE}/storage`,
+    permission: "instance.settings.view",
+  },
+  {
+    id: "instance.embeds",
+    order: 67,
+    section: "instance",
+    icon: AppWindow,
+    labelKey: "navigation.embeds",
+    to: `${INSTANCE}/embeds`,
     permission: "instance.settings.view",
   },
   {

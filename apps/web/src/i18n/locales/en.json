@@ -1075,7 +1075,8 @@
     "exports": "Exports",
     "announcements": "Announcements",
     "storage": "Storage",
-    "rendering": "Rendering"
+    "rendering": "Rendering",
+    "embeds": "External embeds"
   },
   "commands": {
     "label": "Command palette",
@@ -4933,7 +4934,7 @@
     },
     "embed": {
       "label": "External embed",
-      "notAllowed": "Not on the embed allowlist, shown as a link. Organization administrators manage the list.",
+      "notAllowed": "Not on the embed allowlist, shown as a link. Instance administrators manage the list; organization administrators can narrow it.",
       "from": "Embedded from {service}",
       "loadsWhenVisible": "The content loads from the service when you scroll to it.",
       "address": "Address",
@@ -9104,6 +9105,10 @@
     }
   },
   "embeds": {
+    "settings": {
+      "title": "External embeds",
+      "description": "Which services pages may embed, such as videos and diagrams from other sites. Organizations can narrow the list for their own content."
+    },
     "allowlist": {
       "title": "External embeds allowlist",
       "instanceDescription": "Pages can embed content only from these services. Other addresses appear as a link. The reader's browser loads the content directly from the service. Organizations can narrow this list, not extend it.",

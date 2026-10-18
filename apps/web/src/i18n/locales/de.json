@@ -1075,7 +1075,8 @@
     "exports": "Exporte",
     "announcements": "Ankündigungen",
     "storage": "Speicher",
-    "rendering": "Rendering"
+    "rendering": "Rendering",
+    "embeds": "Externe Einbettungen"
   },
   "commands": {
     "label": "Befehlspalette",
@@ -4933,7 +4934,7 @@
     },
     "embed": {
       "label": "Externe Einbettung",
-      "notAllowed": "Nicht auf der Liste erlaubter Einbettungen, daher als Link angezeigt. Organisationsadministratoren verwalten die Liste.",
+      "notAllowed": "Nicht auf der Liste erlaubter Einbettungen, daher als Link angezeigt. Instanz-Administratoren verwalten die Liste; Organisationsadministratoren können sie einschränken.",
       "from": "Eingebettet von {service}",
       "loadsWhenVisible": "Der Inhalt wird vom Dienst geladen, sobald du dorthin scrollst.",
       "address": "Adresse",
@@ -9104,6 +9105,10 @@
     }
   },
   "embeds": {
+    "settings": {
+      "title": "Externe Einbettungen",
+      "description": "Welche Dienste Seiten einbetten dürfen, etwa Videos und Diagramme anderer Websites. Organisationen können die Liste für ihre Inhalte einschränken."
+    },
     "allowlist": {
       "title": "Liste erlaubter Einbettungen",
       "instanceDescription": "Seiten können nur Inhalte dieser Dienste einbetten. Andere Adressen erscheinen als Link. Der Browser der Lesenden lädt den Inhalt direkt vom Dienst. Organisationen können diese Liste einschränken, nicht erweitern.",
