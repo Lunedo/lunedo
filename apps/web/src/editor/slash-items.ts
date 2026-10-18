@@ -693,7 +693,17 @@ export function filterSlashCommands(
         ...command.keywords.map(normalize),
       ].join(" ");
       if (!words.every((word) => haystack.includes(word))) return null;
-      const score = label.startsWith(words[0] ?? "") ? 0 : label.includes(words[0] ?? "") ? 1 : 2;
+      const phrase = words.join(" ");
+      const first = words[0] ?? "";
+      const score = label.startsWith(phrase)
+        ? 0
+        : label.includes(phrase)
+          ? 1
+          : label.startsWith(first)
+            ? 2
+            : label.includes(first)
+              ? 3
+              : 4;
       return { command, score };
     })
     .filter((entry): entry is { command: SlashCommandDefinition; score: number } => entry !== null);
@@ -705,6 +715,21 @@ export function filterSlashCommands(
         left.score - right.score,
     )
     .map((entry) => entry.command);
+}
+
+const UNMATCHED_WORDS_TO_CLOSE = 2;
+
+export function slashMenuOpen(query: string, t: TFunction): boolean {
+  if (/^\s/.test(query)) return false;
+  const words = normalize(query).split(/\s+/).filter(Boolean);
+  let matched = words.length;
+  while (
+    matched > 0 &&
+    filterSlashCommands(slashCommands, words.slice(0, matched).join(" "), t).length === 0
+  ) {
+    matched -= 1;
+  }
+  return words.length - matched < UNMATCHED_WORDS_TO_CLOSE;
 }
 
 export function slashSuggestionItems(query: string, t: TFunction): SuggestionItem[] {

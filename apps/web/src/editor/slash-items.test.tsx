@@ -3,7 +3,7 @@ import { createRef } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { initI18n } from "../i18n/index.js";
 import { renderWithProviders } from "../testing/render.js";
-import { filterSlashCommands, slashCommands, slashSuggestionItems } from "./slash-items.js";
+import { filterSlashCommands, slashCommands, slashMenuOpen, slashSuggestionItems } from "./slash-items.js";
 import { moveIndex, SuggestionList, type SuggestionListHandle } from "./suggestion-list.js";
 
 describe("slash commands", () => {
@@ -69,6 +69,30 @@ describe("slash commands", () => {
       "blockMath",
       "inlineMath",
     ]);
+  });
+
+  it("filter by names with spaces and put the whole name first", async () => {
+    const { t } = await initI18n(["en"]);
+    for (const [query, id] of [
+      ["page properties report", "propertiesReport"],
+      ["include excerpt", "includeExcerpt"],
+      ["content by label", "contentByLabel"],
+      ["link to whiteboard", "whiteboard"],
+      ["draw.io diagram", "drawio"],
+    ] as const) {
+      expect(filterSlashCommands(slashCommands, query, t)[0]?.id, query).toBe(id);
+      expect(slashMenuOpen(query, t), query).toBe(true);
+    }
+  });
+
+  it("stay open for one word without a match, close after several or after a space right behind the slash", async () => {
+    const { t } = await initI18n(["en"]);
+    expect(slashMenuOpen("", t)).toBe(true);
+    expect(slashMenuOpen("xyzzy", t)).toBe(true);
+    expect(slashMenuOpen("page xyzzy", t)).toBe(true);
+    expect(slashMenuOpen("page xyzzy again", t)).toBe(false);
+    expect(slashMenuOpen("and then we went home", t)).toBe(false);
+    expect(slashMenuOpen(" or", t)).toBe(false);
   });
 });
 

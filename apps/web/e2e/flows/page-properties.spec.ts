@@ -169,3 +169,26 @@ test("renders a page for a reader who cannot see the pages and whiteboard it inc
   await page.goto(`/spaces/${operations.key}/pages/${sites}/network-sites`);
   await expect(page.getByText("Call the security lead.").first()).toBeVisible();
 });
+
+test("inserts blocks whose names have spaces from the slash menu", async ({ page, organization }) => {
+  const { spaceId, spaceKey } = await sitesSpace(page, organization);
+  const created = await createPage(page, spaceId, spaceKey, "Slash names");
+  await openEditor(page, created.path, "Blocks by name");
+  await page.keyboard.type("/page properties report");
+  await expect(page.getByRole("option").first()).toHaveAccessibleName(/^Page properties report/);
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".ph-properties-report-block")).toBeVisible();
+  await expect(content(page)).not.toContainText("/page properties report");
+
+  await page.keyboard.press("Control+End");
+  await page.keyboard.press("Enter");
+  await page.keyboard.type("/include excerpt");
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".ph-include-block")).toBeVisible();
+
+  await page.keyboard.press("Control+End");
+  await page.keyboard.press("Enter");
+  await page.keyboard.type("/ and then we went home");
+  await expect(page.getByRole("listbox")).toHaveCount(0);
+  await expect(content(page)).toContainText("/ and then we went home");
+});

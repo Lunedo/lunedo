@@ -46,7 +46,7 @@ import { searchPeople } from "../references.js";
 import { DecisionReportView, PageReportView } from "../reports.js";
 import { RoadmapView } from "../roadmap-view.js";
 import { schemaExtensions } from "../schema/extensions.js";
-import { slashSuggestionItems } from "../slash-items.js";
+import { slashMenuOpen, slashSuggestionItems } from "../slash-items.js";
 import { TemplateButtonView } from "../template-button.js";
 import { BlockFormatting } from "./block-formatting.js";
 import { DocumentEdges } from "./document-edges.js";
@@ -229,6 +229,7 @@ export function createEditorExtensions(options: EditorExtensionOptions): AnyExte
     Placeholder.extend({ name: "emptyHint" }).configure({ placeholder: t("editor.placeholder") }),
     SlashCommand.configure({
       items: (query) => slashSuggestionItems(query, t),
+      open: (query) => slashMenuOpen(query, t),
       labels: labels("editor.suggestions.blocks"),
     }),
     PageLinkSuggestion.configure({
