@@ -39,7 +39,7 @@ for (const source of sources) {
     if (isTextPath(source.name)) binary.push(source.name);
     continue;
   }
-  for (const reference of findPrivateReferences(content)) {
+  for (const reference of findPrivateReferences(content, source.name)) {
     findings.push(`${source.name}:${reference.line}: ${reference.text}`);
   }
 }

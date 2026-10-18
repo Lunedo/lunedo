@@ -28,6 +28,22 @@ describe("findPrivateReferences", () => {
     assert.equal(findPrivateReferences(`${"ADR"}-0011 and ${adr("0013")}`).length, 2);
   });
 
+  it("lets only the fixture script name the test data folder", () => {
+    const script = "packages/server/src/imports/testing/confluence-cloud/prepare.ts";
+    const content = `read from ${folder("Testdata")}/x\nsee ${folder("Prompts")}`;
+    assert.deepEqual(findPrivateReferences(content, script), [{ line: 2, text: folder("Prompts") }]);
+    assert.deepEqual(findPrivateReferences(content, script.replaceAll("/", "\\")), [
+      { line: 2, text: folder("Prompts") },
+    ]);
+    for (const other of [
+      "packages/server/src/imports/testing/confluence-cloud/fixtures.ts",
+      "packages/server/src/imports/testing/confluence-cloud/prepare.test.ts",
+      "prepare.ts",
+    ]) {
+      assert.equal(findPrivateReferences(content, other).length, 2, other);
+    }
+  });
+
   it("ignores other text", () => {
     assert.deepEqual(findPrivateReferences("ADR without a number, docs/ and prompts"), []);
   });

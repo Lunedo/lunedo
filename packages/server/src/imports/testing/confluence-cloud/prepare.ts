@@ -53,7 +53,7 @@ const ENCODED_ARI = /("base64EncodedAri"\s*:\s*")([A-Za-z0-9+/]+={0,2})"/g;
 const BASE64 = /[A-Za-z0-9+/]{24,}={0,2}/g;
 const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
 const TEST_SITE_FOLDER = "confluence-cloud";
-export const TEST_DATA_FOLDER = ["_", "Testdata"].join("");
+export const TEST_DATA_FOLDER = "_Testdata";
 const REPLACEMENT_WORDS = ["test user", "example.org", "example-team"];
 const FAKE_DOMAIN = "example.org";
 const FAKE_SITE = "example.atlassian.net";
