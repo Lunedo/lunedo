@@ -3747,6 +3747,7 @@
         "created": "Template created",
         "updated": "Template changed",
         "deleted": "Template deleted",
+        "filesDropped": "Template images left out",
         "exported": "Templates exported",
         "imported": "Templates imported"
       },

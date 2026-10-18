@@ -3747,6 +3747,7 @@
         "created": "Vorlage erstellt",
         "updated": "Vorlage geändert",
         "deleted": "Vorlage gelöscht",
+        "filesDropped": "Vorlagenbilder ausgelassen",
         "exported": "Vorlagen exportiert",
         "imported": "Vorlagen importiert"
       },

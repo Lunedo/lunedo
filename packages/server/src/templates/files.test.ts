@@ -312,8 +312,10 @@ describe.skipIf(!baseUrl)("template files", () => {
 
   it("takes over files only when everyone who wrote the template can open them, and no restricted pages above a space", async () => {
     const { org, as, adminId, space: wiki } = await setup();
+    const open = await space(org.id, adminId, { visibility: "organization" });
     const { attachment } = await pageWithImage(as, wiki.id);
-    const { page: restrictedPage, attachment: restrictedImage } = await pageWithImage(as, wiki.id);
+    const { attachment: openImage } = await pageWithImage(as, open.id);
+    const { page: restrictedPage, attachment: restrictedImage } = await pageWithImage(as, open.id);
     await test.services.pageAccess.change(as, restrictedPage.id, [{ action: "restrict", kind: "view" }]);
     const outsider = await member(org.id);
     const insert = async (level: "space" | "organization", updatedBy: string, ...ids: string[]) => {
@@ -327,7 +329,7 @@ describe.skipIf(!baseUrl)("template files", () => {
       return id;
     };
     const changedByOutsider = await insert("space", outsider, attachment.id);
-    const organizationLevel = await insert("organization", adminId, attachment.id, restrictedImage.id);
+    const organizationLevel = await insert("organization", adminId, openImage.id, restrictedImage.id);
     await test.services.templates.adoptPendingFiles(createLogger({ service: "test", level: "silent" }));
     expect(imageIds((await test.services.templates.get(changedByOutsider))?.document)).toEqual([null]);
     const files = await templateFiles(organizationLevel);
@@ -335,6 +337,70 @@ describe.skipIf(!baseUrl)("template files", () => {
       files[0]?.id,
       null,
     ]);
+  });
+
+  it("takes over files for organization and instance templates only from pages every user of the template can read", async () => {
+    const { org, as, adminId } = await setup();
+    const open = await space(org.id, adminId, { visibility: "organization" });
+    const closed = await space(org.id, adminId);
+    const council = await test.services.spaces.create(
+      as,
+      org.id,
+      {
+        name: "Works council",
+        key: `C${uuidv7().slice(-6).toUpperCase()}`,
+        confidential: true,
+        visibility: "private",
+        grants: [],
+      },
+      test.services.spacePermissions.holders,
+    );
+    const foreignOrg = await organization();
+    const foreignAdmin = accountPrincipal(foreignOrg.owner);
+    const foreign = await space(foreignOrg.id, foreignOrg.owner, { visibility: "instance" });
+    const { attachment: shared } = await pageWithImage(as, open.id);
+    const { attachment: privateImage } = await pageWithImage(as, closed.id);
+    const { attachment: councilImage } = await pageWithImage(as, council.id);
+    const { attachment: foreignImage } = await pageWithImage(foreignAdmin, foreign.id);
+    const insert = async (level: "organization" | "instance", ...ids: string[]) => {
+      const id = uuidv7();
+      await test.database.execute(sql`
+        insert into page_templates (id, level, organization_id, name, category, title, document, schema_version,
+          fields, files_adopted, created_by)
+        values (${id}, ${level}, ${level === "organization" ? org.id : null}, ${`Old ${id.slice(-6)}`}, 'teams',
+          'Old', ${JSON.stringify(doc(...ids.map((value) => image(value))))}::jsonb, 10, '[]'::jsonb, false,
+          ${adminId})`);
+      return id;
+    };
+    const organizationLevel = await insert("organization", shared.id, privateImage.id, councilImage.id);
+    const instanceLevel = await insert("instance", shared.id, foreignImage.id);
+    const info = vi.fn();
+    const logger = { ...createLogger({ service: "test", level: "silent" }), info } as never;
+    await test.services.templates.adoptPendingFiles(logger);
+    const files = await templateFiles(organizationLevel);
+    expect(files).toHaveLength(1);
+    expect(imageIds((await test.services.templates.get(organizationLevel))?.document)).toEqual([
+      files[0]?.id,
+      null,
+      null,
+    ]);
+    expect(await templateFiles(instanceLevel)).toEqual([]);
+    expect(imageIds((await test.services.templates.get(instanceLevel))?.document)).toEqual([null, null]);
+    expect(info).toHaveBeenCalledWith(
+      expect.objectContaining({ templates: 2, files: 1, emptied: 4 }),
+      expect.any(String),
+    );
+    const audited = await test.database.execute<{ target_id: string; dropped: number }>(sql`
+      select target_id, (fields ->> 'dropped')::int as dropped from audit_events
+      where name = 'template.filesDropped' and target_id in (${organizationLevel}, ${instanceLevel})
+      order by (fields ->> 'dropped')::int`);
+    expect(audited.rows).toHaveLength(2);
+    expect(audited.rows).toEqual(
+      expect.arrayContaining([
+        { target_id: organizationLevel, dropped: 2 },
+        { target_id: instanceLevel, dropped: 2 },
+      ]),
+    );
   });
 
   it("refuses to add template files when the storage is almost full", async () => {

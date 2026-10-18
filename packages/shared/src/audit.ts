@@ -178,6 +178,7 @@ export const auditEventNames = [
   "template.created",
   "template.updated",
   "template.deleted",
+  "template.filesDropped",
   "template.exported",
   "template.imported",
   "import.started",
