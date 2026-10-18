@@ -374,6 +374,48 @@ export interface CopyMapping {
   href(href: string): string;
 }
 
+export const portableRemovals = [
+  "pageLink",
+  "mention",
+  "include",
+  "diagramReference",
+  "whiteboard",
+  "templateButton",
+  "report",
+  "roadmap",
+  "person",
+  "comment",
+  "meetingTopic",
+  "file",
+  "unsupportedMacro",
+] as const;
+export type PortableRemoval = (typeof portableRemovals)[number];
+
+export const fileRoles = [
+  "image",
+  "file",
+  "drawingScene",
+  "drawingPreview",
+  "diagramSource",
+  "diagramPreview",
+] as const;
+export type FileRole = (typeof fileRoles)[number];
+
+export interface PortableContext {
+  strips(kind: PortableRemoval): boolean;
+  readonly renewsIds: boolean;
+  file(reference: CopiedAttachment, role: FileRole): CopiedAttachment | null;
+  isInternalHref(href: string): boolean;
+  isBuiltInTemplate(id: string): boolean;
+  localId(): string;
+  removed(kind: PortableRemoval): void;
+}
+
+export type PortableAttributes = (
+  attrs: Record<string, unknown>,
+  context: PortableContext,
+) => Record<string, unknown> | null;
+
 export interface NodeDefinition {
   name: string;
   spec: Omit<NodeSpec, "attrs" | "toDOM" | "parseDOM" | "content" | "marks"> & {
@@ -389,6 +431,7 @@ export interface NodeDefinition {
   text?: (node: ValidNode) => string;
   heading?: (node: ValidNode, text: string) => { level: number; text: string };
   copy?: (attrs: Record<string, unknown>, mapping: CopyMapping) => Record<string, unknown>;
+  portable?: PortableAttributes;
 }
 
 export interface MarkDefinition {
@@ -399,6 +442,7 @@ export interface MarkDefinition {
   word?: (mark: ValidMark, style: WordTextStyle, renderer: WordRenderer) => WordTextStyle;
   markdown: (mark: ValidMark, content: string, renderer: MarkdownRenderer) => string;
   copy?: (attrs: Record<string, unknown>, mapping: CopyMapping) => Record<string, unknown> | null;
+  portable?: PortableAttributes;
 }
 
 export interface EditorModule {

@@ -142,6 +142,13 @@ export const templateButtonModule = defineModule({
         label: optional(z.string().max(MAX_TEMPLATE_BUTTON_LABEL), ""),
         title: optional(z.string().max(MAX_TEMPLATE_TITLE_PATTERN), ""),
       },
+      portable: (attrs, context) => {
+        if (!context.strips("templateButton") || context.isBuiltInTemplate(String(attrs.templateId))) {
+          return attrs;
+        }
+        context.removed("templateButton");
+        return null;
+      },
       html: (node, renderer) => {
         const label = attrOf<string>(node, "label").trim() || renderer.label("templateButton");
         return element(

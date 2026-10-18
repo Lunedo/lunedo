@@ -218,6 +218,12 @@ export {
   versionReason,
 } from "../spaces/schema.js";
 export { storageState } from "../storage/schema.js";
-export { pageTemplates, templateCategory, templateLevel } from "../templates/schema.js";
+export {
+  pageTemplates,
+  templateCategory,
+  templateFiles,
+  templateImports,
+  templateLevel,
+} from "../templates/schema.js";
 export { apiTokens, serviceAccountResponsibles, serviceAccounts } from "../tokens/schema.js";
 export { whiteboardDocuments, whiteboardPreviews, whiteboardVersions } from "../whiteboards/schema.js";

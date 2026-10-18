@@ -304,6 +304,21 @@ export const problems = {
   discardedDraftNotFound: { status: 404, title: "The discarded draft does not exist" },
   trashEntryNotFound: { status: 404, title: "The trash entry does not exist" },
   templateNotFound: { status: 404, title: "The template does not exist" },
+  templateImportNotFound: { status: 404, title: "The import preview does not exist anymore" },
+  unsupportedTemplateFile: { status: 400, title: "Templates hold PNG, JPEG, GIF, WebP and SVG images only" },
+  invalidTemplateFile: { status: 400, title: "The file is not a valid Pagehall template file" },
+  newerTemplateFormat: { status: 400, title: "The template file was written by a newer Pagehall" },
+  tooManyTemplates: { status: 400, title: "The file holds more templates than allowed" },
+  tooManyTemplateFiles: { status: 400, title: "The archive holds more files than allowed" },
+  templateArchiveTooLarge: { status: 413, title: "The archive unpacks to more than allowed" },
+  templateArchiveCompression: { status: 400, title: "A file in the archive is compressed too strongly" },
+  unsafeTemplateArchive: { status: 400, title: "The archive contains unsafe entries" },
+  nestedTemplateArchive: { status: 400, title: "The archive contains another archive" },
+  unexpectedTemplateEntry: { status: 400, title: "The archive contains an unexpected file" },
+  invalidTemplatesInFile: { status: 409, title: "Some templates in the file are not valid" },
+  templateNameTaken: { status: 409, title: "A template with this name exists already" },
+  noTemplates: { status: 400, title: "There are no templates to export" },
+  templateExportTooLarge: { status: 400, title: "The export would be larger than allowed" },
   domainTaken: { status: 409, title: "The domain belongs to another organization" },
   roleNameTaken: { status: 409, title: "The role name is taken" },
   groupNameTaken: { status: 409, title: "The group name is taken" },
@@ -486,6 +501,32 @@ export const problemSchema = z
       .describe(
         "Number of trash entries of former parent pages the caller can restore together with the content, for `restrictedParentInTrash`; 0 when the caller cannot restore all of them.",
       ),
+    fileVersion: z
+      .number()
+      .int()
+      .optional()
+      .describe("Format or editor schema version of the file, for `newerTemplateFormat`."),
+    supportedVersion: z
+      .number()
+      .int()
+      .optional()
+      .describe("Highest format or editor schema version this Pagehall reads, for `newerTemplateFormat`."),
+    templateIndex: z
+      .number()
+      .int()
+      .optional()
+      .describe("Position of the template in the file, counted from 0, for `templateNameTaken`."),
+    templateProblems: z
+      .array(
+        z
+          .object({
+            place: z.string().nullable().describe("Where in the template, such as `field 3` or `content`."),
+            message: z.string().describe("Explanation for people, naming the template and the place."),
+          })
+          .describe("A problem in a template of the file."),
+      )
+      .optional()
+      .describe("What is wrong with the templates of the file, for `invalidTemplatesInFile`."),
     problems: z
       .array(
         z

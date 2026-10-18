@@ -11,6 +11,7 @@ import {
   required,
   type WordRenderer,
 } from "../module.js";
+import { portableFiles } from "../portable.js";
 import { element, headingNumberHtml, htmlAttributes, markdownUrl } from "../text.js";
 import { imageAlignments, uuidValue } from "../values.js";
 import { type WordContent, wordText } from "../word.js";
@@ -59,8 +60,8 @@ export const sectionModule = defineModule({
 });
 
 function imageHtml(node: ValidNode, renderer: HtmlRenderer, lazy: boolean): string {
-  const id = attrOf<string>(node, "attachmentId");
-  const resolved = renderer.context.attachment?.(id) ?? null;
+  const id = attrOf<string | null>(node, "attachmentId");
+  const resolved = id ? (renderer.context.attachment?.(id) ?? null) : null;
   const href = resolved ? renderer.safeHref(resolved.href) : null;
   const width = attrOf<number | null>(node, "width");
   const image = href
@@ -90,16 +91,18 @@ export const imageModule = defineModule({
       name: "image",
       spec: { group: "block", atom: true, draggable: true },
       attrs: {
-        attachmentId: required(uuidValue),
+        attachmentId: optional(uuidValue.nullable(), null),
         alt: optional(z.string().max(1000), ""),
         width: optional(z.number().int().min(1).max(10_000).nullable(), null),
         align: optional(z.enum(imageAlignments), "center"),
       },
       copy: copyAttachmentAttributes([["attachmentId", null]]),
+      portable: portableFiles([["attachmentId", null, "image"]]),
       html: (node, renderer) => imageHtml(node, renderer, true),
       print: (node, renderer) => imageHtml(node, renderer, false),
       word: (node, renderer) => {
-        const id = attrOf<string>(node, "attachmentId");
+        const id = attrOf<string | null>(node, "attachmentId");
+        if (!id) return [];
         const resolved = renderer.context.attachment?.(id) ?? null;
         return [
           {
@@ -113,7 +116,8 @@ export const imageModule = defineModule({
         ];
       },
       markdown: (node, renderer) => {
-        const resolved = renderer.context.attachment?.(attrOf<string>(node, "attachmentId")) ?? null;
+        const id = attrOf<string | null>(node, "attachmentId");
+        const resolved = id ? (renderer.context.attachment?.(id) ?? null) : null;
         const href = resolved ? renderer.safeHref(resolved.href) : null;
         return `![${renderer.escape(attrOf<string>(node, "alt"))}](${href ? markdownUrl(href) : ""})`;
       },
@@ -234,6 +238,7 @@ export const fileModule = defineModule({
         zoom: optional(z.number().int().min(MIN_PREVIEW_ZOOM).max(MAX_PREVIEW_ZOOM).nullable(), null),
       },
       copy: copyAttachmentAttributes([["attachmentId", null]]),
+      portable: portableFiles([["attachmentId", null, "file"]], { required: true }),
       html: fileHtml,
       print: filePrint,
       word: fileWord,

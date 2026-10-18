@@ -27,7 +27,7 @@ export async function sendAttachment(
   reply: FastifyReply,
   files: FileService,
   content: AttachmentContent,
-  options: { inline: boolean; crossOrigin: boolean },
+  options: { inline: boolean; crossOrigin: boolean; staged?: boolean },
 ) {
   const etag = `"${content.versionId}"`;
   reply.header("content-type", content.contentType);
@@ -55,8 +55,8 @@ export async function sendAttachment(
     reply.status(206);
     reply.header("content-range", `bytes ${range.start}-${range.end}/${content.size}`);
     reply.header("content-length", String(range.end - range.start + 1));
-    return files.read(content.fileId, range);
+    return files.read(content.fileId, range, { staged: options.staged ?? false });
   }
   reply.header("content-length", String(content.size));
-  return files.read(content.fileId);
+  return files.read(content.fileId, undefined, { staged: options.staged ?? false });
 }

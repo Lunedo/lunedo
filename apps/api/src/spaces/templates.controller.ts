@@ -47,13 +47,13 @@ const SPACE_SETTING_KEYS = new Set([
   "content.language",
 ]);
 
-const categorySchema = z
+export const categorySchema = z
   .enum(templateCategories)
   .describe(
     "Category in the gallery: meetings, decisions, projects, engineering, operations, knowledge or teams.",
   );
 
-const fieldSchema = z
+export const fieldSchema = z
   .object({
     key: z
       .string()
@@ -75,7 +75,7 @@ const fieldSchema = z
   .strict()
   .describe("An input field asked for when a page is created from the template.");
 
-const seriesDefaultsResponse = z
+export const seriesDefaultsResponse = z
   .object({
     rhythm: z
       .object({
@@ -91,7 +91,7 @@ const seriesDefaultsResponse = z
   })
   .describe("Defaults of a series template.");
 
-const templateSchema = z
+export const templateSchema = z
   .object({
     id: z.string().describe("ID of the template. Built-in templates have IDs starting with `builtin:`."),
     level: z
@@ -116,7 +116,7 @@ const templateSchema = z
   })
   .describe("A page template.");
 
-const exampleTemplate = {
+export const exampleTemplate = {
   id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a70",
   level: "space",
   organizationId: null,

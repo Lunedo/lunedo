@@ -1494,6 +1494,21 @@
     "discardedDraftNotFound": "Der verworfene Entwurf wurde inzwischen wiederhergestellt oder ersetzt. Lade die Seite neu.",
     "trashEntryNotFound": "Jemand hat den Eintrag inzwischen wiederhergestellt oder gelöscht. Lade den Papierkorb neu.",
     "templateNotFound": "Die Vorlage wurde inzwischen gelöscht. Lade neu und wähle eine andere Vorlage.",
+    "templateImportNotFound": "Die Importvorschau ist abgelaufen oder wurde schon importiert. Lade die Datei erneut hoch.",
+    "unsupportedTemplateFile": "Vorlagen können nur PNG-, JPEG-, GIF-, WebP- und SVG-Bilder enthalten. Wähle ein Bild in einem dieser Formate.",
+    "invalidTemplateFile": "Die Datei ist keine Pagehall-Vorlagendatei. Wähle eine Datei mit der Endung .pagehall-template.json oder .pagehall-template.zip.",
+    "newerTemplateFormat": "Die Vorlagendatei stammt von einem neueren Pagehall. Bitte die Instanz-Administration, Pagehall zu aktualisieren, und importiere sie dann erneut.",
+    "tooManyTemplates": "Die Datei enthält mehr als 50 Vorlagen. Teile sie in kleinere Dateien auf oder exportiere weniger Vorlagen auf einmal.",
+    "tooManyTemplateFiles": "Die Datei enthält mehr als 200 Dateien. Teile sie in kleinere Dateien auf.",
+    "templateArchiveTooLarge": "Die Datei ist entpackt größer als erlaubt: 5 MB pro Datei und 20 MB insgesamt. Verwende kleinere Bilder.",
+    "templateArchiveCompression": "Eine Datei im Archiv ist viel stärker komprimiert als Bilder und wurde deshalb abgelehnt. Exportiere die Vorlagen erneut aus Pagehall.",
+    "unsafeTemplateArchive": "Das Archiv enthält Verknüpfungen, Pfade außerhalb des Archivs oder verschlüsselte Dateien. Exportiere die Vorlagen erneut aus Pagehall.",
+    "nestedTemplateArchive": "Das Archiv enthält ein weiteres Archiv. Eine Vorlagendatei enthält nur template.json und ihre Bilder.",
+    "unexpectedTemplateEntry": "Das Archiv enthält Dateien, die eine Vorlagendatei nicht enthalten darf. Erlaubt sind nur template.json und files/<Hash>.<Endung>.",
+    "invalidTemplatesInFile": "Einige Vorlagen in der Datei sind ungültig. Importiere nur die gültigen oder korrigiere die Datei und lade sie erneut hoch.",
+    "templateNameTaken": "Eine Vorlage mit diesem Namen gibt es schon. Ersetze sie oder wähle einen anderen Namen.",
+    "noTemplates": "Hier gibt es keine Vorlagen zum Exportieren. Lege zuerst eine Vorlage an.",
+    "templateExportTooLarge": "Der Export wäre größer als 20 MB, die Grenze für den erneuten Import. Exportiere weniger Vorlagen auf einmal.",
     "accountHasOrganization": "Dieses Konto ist bereits Mitglied einer Organisation. Lade die Seite neu.",
     "unsupportedMediaType": "Pagehall kann diese Art von Datei oder Daten nicht lesen. Wähle eine Datei des erwarteten Typs und versuche es erneut.",
     "chatAddress": {
@@ -3730,7 +3745,9 @@
       "template": {
         "created": "Vorlage erstellt",
         "updated": "Vorlage geändert",
-        "deleted": "Vorlage gelöscht"
+        "deleted": "Vorlage gelöscht",
+        "exported": "Vorlagen exportiert",
+        "imported": "Vorlagen importiert"
       },
       "blogPost": {
         "publishedBySchedule": "Blogbeitrag planmäßig veröffentlicht",

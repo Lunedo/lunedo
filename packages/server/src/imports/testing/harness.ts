@@ -71,6 +71,7 @@ export function importHarness(test: () => TestServices, options: ImportHarnessOp
         audit: services.audit,
         versions: services.versions,
         trash: services.trash,
+        templateFiles: services.templates.files,
       }),
       folder: services.imports.folder,
       jobs: undefined,

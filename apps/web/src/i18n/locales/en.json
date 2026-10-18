@@ -1494,6 +1494,21 @@
     "discardedDraftNotFound": "The discarded draft was restored or replaced in the meantime. Reload the page.",
     "trashEntryNotFound": "Someone restored or deleted it in the meantime. Reload the trash.",
     "templateNotFound": "The template was deleted in the meantime. Reload and choose another template.",
+    "templateImportNotFound": "The import preview has expired or was already imported. Upload the file again.",
+    "unsupportedTemplateFile": "Templates can hold PNG, JPEG, GIF, WebP and SVG images only. Choose an image in one of these formats.",
+    "invalidTemplateFile": "The file is not a Pagehall template file. Choose a file ending in .pagehall-template.json or .pagehall-template.zip.",
+    "newerTemplateFormat": "The template file was written by a newer Pagehall. Ask your instance administrator to update Pagehall, then import it again.",
+    "tooManyTemplates": "The file holds more than 50 templates. Split it into smaller files, or export fewer templates at a time.",
+    "tooManyTemplateFiles": "The file holds more than 200 files. Split it into smaller files.",
+    "templateArchiveTooLarge": "The file unpacks to more than allowed: 5 MB per file and 20 MB in total. Use smaller images.",
+    "templateArchiveCompression": "A file in the archive is compressed far more than images are, so it was refused. Export the templates again from Pagehall.",
+    "unsafeTemplateArchive": "The archive contains links, paths outside the archive or encrypted files. Export the templates again from Pagehall.",
+    "nestedTemplateArchive": "The archive contains another archive. A template file holds only template.json and its images.",
+    "unexpectedTemplateEntry": "The archive contains files a template file may not hold. It may only contain template.json and files/<hash>.<extension>.",
+    "invalidTemplatesInFile": "Some templates in the file are not valid. Import only the valid ones, or fix the file and upload it again.",
+    "templateNameTaken": "A template with this name exists already. Replace it or choose another name.",
+    "noTemplates": "There are no templates to export here. Create a template first.",
+    "templateExportTooLarge": "The export would be larger than 20 MB, the limit for importing it again. Export fewer templates at a time.",
     "accountHasOrganization": "This account is a member of an organization already. Reload the page.",
     "unsupportedMediaType": "Pagehall cannot read this kind of file or data. Choose a file of the expected type and try again.",
     "chatAddress": {
@@ -3730,7 +3745,9 @@
       "template": {
         "created": "Template created",
         "updated": "Template changed",
-        "deleted": "Template deleted"
+        "deleted": "Template deleted",
+        "exported": "Templates exported",
+        "imported": "Templates imported"
       },
       "blogPost": {
         "publishedBySchedule": "Blog post published by schedule",

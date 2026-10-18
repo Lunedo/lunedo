@@ -63,7 +63,8 @@ const TAG_DESCRIPTIONS: Record<string, string> = {
   Spaces: "Spaces, their settings and permissions, and personal spaces.",
   Versions: "Drafts, publishing, editing modes, versions, comparison and restoring of pages.",
   Trash: "Deleting and restoring content in two trash stages, archiving spaces and deleting spaces.",
-  Templates: "Page templates of the instance, organizations and spaces, and the template gallery.",
+  Templates:
+    "Page templates of the instance, organizations and spaces, the template gallery, the images templates hold, and export and import of templates as files.",
   Pages: "The page tree with pages, folders and links, page content, labels and backlinks.",
   Search: "Searching pages, blog posts and comments the caller can read.",
   Watching: "Watching and muting pages, blog posts, meeting series and spaces.",

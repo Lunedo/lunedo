@@ -391,19 +391,28 @@ export class MeetingService {
         .map((field) => [field.key, localDate(date, series.time_zone)]),
     );
     const prepared = await this.#templates.prepare(actor, template, values, language);
+    const actorId = actorIdOf(actor);
+    const id = uuidv7();
     let document: DocumentJson = options.carry ? withoutStableIds(options.carry) : prepared.document;
-    document = addTopicUpdates(document, await this.#openTopicIds(tx, series.item_id), labels);
-    document = withSeriesTaskReport(document, series.item_id, labels);
     const when = at.startsAt ? displayDate(at.startsAt, series.time_zone, language) : labels.notScheduled;
     const title = `${series.title} · ${when}`.slice(0, 255);
     const first = await tx.execute<{ position: string | null }>(sql`
       select min(position) as position from tree_items where parent_id = ${series.item_id}`);
     const position = positionBetween(null, first.rows[0]?.position ?? null);
-    const actorId = actorIdOf(actor);
-    const id = uuidv7();
     await tx.execute(sql`
       insert into tree_items (id, space_id, parent_id, kind, position, title, mode, creator_id, owner_id)
       values (${id}, ${series.space_id}, ${series.item_id}, 'page', ${position}, ${title}, 'live', ${actorId}, ${actorId})`);
+    if (!options.carry) {
+      document = await this.#templates.files.copyToPage(tx, {
+        templateId: template.id,
+        itemId: id,
+        live: true,
+        actorId,
+        document,
+      });
+    }
+    document = addTopicUpdates(document, await this.#openTopicIds(tx, series.item_id), labels);
+    document = withSeriesTaskReport(document, series.item_id, labels);
     await insertInitialDocument(tx, id, actorId, document);
     await tx.execute(sql`
       insert into meetings (item_id, series_id, recurrence_id, starts_at, duration_minutes, state)

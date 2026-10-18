@@ -109,6 +109,11 @@ const templateFields = z.object({
   level: z.enum(["instance", "organization"]),
   organizationId: z.uuid().nullable(),
 });
+const templateTransferFields = z.object({
+  level: z.enum(["instance", "organization", "space"]),
+  organizationId: z.uuid().nullable(),
+  spaceId: z.uuid().nullable(),
+});
 const restrictionKindNames = ["view", "edit"] as const;
 const pageShareFields = pageFields.extend({
   principalKind: z.enum(["account", "group"]),
@@ -1279,6 +1284,26 @@ export const auditCatalog = {
     actor: ["account"],
     target: "template",
     fields: templateFields,
+    visibility: "organization",
+  }),
+  "template.exported": event({
+    actor: ["account"],
+    target: "template",
+    fields: templateTransferFields.extend({
+      templates: z.number().int().nonnegative(),
+      builtIn: z.boolean(),
+      removed: z.record(z.string(), z.number().int().nonnegative()),
+    }),
+    visibility: "organization",
+  }),
+  "template.imported": event({
+    actor: ["account"],
+    target: "template",
+    fields: templateTransferFields.extend({
+      fileName: z.string(),
+      created: z.array(z.string()).max(50),
+      replaced: z.array(z.string()).max(50),
+    }),
     visibility: "organization",
   }),
   "page.restrictionSet": event({

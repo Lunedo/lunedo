@@ -2,6 +2,7 @@ import { z } from "zod";
 import { copyPageAttribute } from "../copying.js";
 import type { ValidNode } from "../json.js";
 import { attrOf, defineModule, optional, type PageLinkTarget, required } from "../module.js";
+import { removedNode } from "../portable.js";
 import { element, markdownUrl } from "../text.js";
 import { emojiValue, isoDateValue, uuidValue } from "../values.js";
 import { wordText } from "../word.js";
@@ -23,6 +24,7 @@ export const mentionModule = defineModule({
       name: "mention",
       spec: { ...inlineAtom, selectable: true },
       attrs: { id: required(uuidValue) },
+      portable: removedNode("mention"),
       html: (node, renderer) =>
         element(
           "span",
@@ -50,6 +52,7 @@ export const pageLinkModule = defineModule({
         title: optional(z.string().max(255).nullable(), null),
       },
       copy: copyPageAttribute("pageId", "spaceId"),
+      portable: removedNode("pageLink"),
       validate: (node) => {
         if (attrOf<string | null>(node, "pageId") !== null) return null;
         const title = attrOf<string | null>(node, "title");

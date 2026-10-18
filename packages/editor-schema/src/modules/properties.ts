@@ -26,6 +26,7 @@ import {
   type PropertiesReportRequest,
   type WordRenderer,
 } from "../module.js";
+import { clearedAttributes } from "../portable.js";
 import { element, markdownUrl } from "../text.js";
 import {
   labelsValue,
@@ -724,6 +725,7 @@ export const propertiesReportModule = defineModule({
         showLabels: optional(z.boolean(), false),
         query: optional(z.string().min(1).max(MAX_IMPORTED_QUERY_LENGTH).nullable(), null),
       },
+      portable: clearedAttributes("report", { spaceIds: [], query: null }),
       html: propertiesReportHtml,
       word: propertiesReportWord,
       markdown: propertiesReportMarkdown,

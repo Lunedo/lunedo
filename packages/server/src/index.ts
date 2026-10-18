@@ -861,6 +861,7 @@ export {
   type StorageStatus,
   type StorageThresholds,
 } from "./storage/storage.js";
+export { type TemplateLanguage, templateLanguages } from "./templates/builtin/types.js";
 export {
   MAX_CHOICE_OPTIONS,
   MAX_TEMPLATE_FIELDS,
@@ -868,6 +869,23 @@ export {
   templateFieldSchema,
   templateFieldTypes,
 } from "./templates/fields.js";
+export {
+  TEMPLATE_IMAGE_MAX_BYTES,
+  TEMPLATE_IMAGE_TYPES,
+  type TemplateFile,
+  TemplateFileService,
+} from "./templates/files.js";
+export {
+  MAX_FILES_PER_UPLOAD,
+  MAX_TEMPLATES_PER_UPLOAD,
+  TEMPLATE_ENTRY_MAX_BYTES,
+  TEMPLATE_FORMAT,
+  TEMPLATE_FORMAT_VERSION,
+  TEMPLATE_UPLOAD_MAX_BYTES,
+  TemplateFileError,
+  templateFormatJsonSchema,
+  templateRemovalKinds,
+} from "./templates/format.js";
 export { type TemplateCategory, type TemplateLevel, templateCategories } from "./templates/schema.js";
 export {
   type PageTemplate,
@@ -879,6 +897,16 @@ export {
   type TemplateScope,
   TemplateService,
 } from "./templates/templates.js";
+export {
+  type ExportedTemplate,
+  type ExportSource,
+  type ImportDecision,
+  type ImportedTemplate,
+  type TemplateExport,
+  type TemplateImportPreview,
+  type TemplateImportResult,
+  TemplateTransferService,
+} from "./templates/transfer.js";
 export {
   type ApiToken,
   type AuthenticatedToken,

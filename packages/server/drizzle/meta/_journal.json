@@ -533,6 +533,13 @@
       "when": 1792270039079,
       "tag": "0075_item_copies",
       "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1792314192715,
+      "tag": "0076_template_files",
+      "breakpoints": true
     }
   ]
 }

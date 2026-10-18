@@ -26,6 +26,7 @@ import {
   optional,
   type WordRenderer,
 } from "../module.js";
+import { clearedAttributes } from "../portable.js";
 import { element, markdownUrl, prefixLines } from "../text.js";
 import { uuidValue } from "../values.js";
 import { type WordContent, type WordListItem, wordText } from "../word.js";
@@ -205,6 +206,7 @@ export const childPagesModule = defineModule({
         reverse: optional(z.boolean(), false),
       },
       copy: copyPageAttribute("pageId"),
+      portable: clearedAttributes("report", { pageId: null }),
       html: (node, renderer) => {
         const request = childPagesRequest(node);
         const pages = renderer.context.childPages?.(request) ?? null;

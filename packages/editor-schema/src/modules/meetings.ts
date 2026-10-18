@@ -1,5 +1,6 @@
 import { firstSourceElement, type MacroConverter, sourceElements } from "../importing.js";
 import { attrOf, defineModule, optional, required } from "../module.js";
+import { clearedAttributes, removedNode } from "../portable.js";
 import { element, prefixLines } from "../text.js";
 import { uuidValue } from "../values.js";
 import { wordText } from "../word.js";
@@ -11,6 +12,7 @@ export const topicUpdateModule = defineModule({
       name: "topicUpdate",
       spec: { content: "block+", group: "block", defining: true, isolating: true },
       attrs: { topicId: required(uuidValue) },
+      portable: removedNode("meetingTopic"),
       html: (node, renderer) => {
         const topicId = attrOf<string>(node, "topicId");
         const title = renderer.topicTitle(topicId);
@@ -65,6 +67,11 @@ export const decisionModule = defineModule({
         id: optional(uuidValue.nullable(), null),
         topicId: optional(uuidValue.nullable(), null),
       },
+      portable: (attrs, context) =>
+        clearedAttributes("meetingTopic", { topicId: null })(
+          context.renewsIds ? { ...attrs, id: null } : attrs,
+          context,
+        ),
       html: (node, renderer) =>
         element(
           "aside",

@@ -14,6 +14,7 @@ import {
 import type { NodeJson, ValidNode } from "../json.js";
 import type { Heading, HtmlRenderer } from "../module.js";
 import { attrOf, defineModule, optional, required } from "../module.js";
+import { removedNode } from "../portable.js";
 import { element, escapeHtml, fenceFor, inlineCode, markdownUrl, prefixLines } from "../text.js";
 import { type CalloutVariant, type ContentColor, calloutVariants, colorValue } from "../values.js";
 import { wordText } from "../word.js";
@@ -442,6 +443,7 @@ export const unsupportedMacroModule = defineModule({
     {
       name: "unsupportedMacro",
       spec: { group: "block", atom: true },
+      portable: removedNode("unsupportedMacro"),
       attrs: {
         name: required(z.string().min(1).max(200)),
         data: optional(
