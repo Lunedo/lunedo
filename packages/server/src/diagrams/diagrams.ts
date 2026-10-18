@@ -7,7 +7,7 @@ import type { AttachmentService } from "../files/attachments.js";
 import { SpaceError } from "../spaces/common.js";
 import { SvgRejectedError, sanitizeDiagramSvg } from "../whiteboards/svg.js";
 import { MAX_DRAWIO_BYTES, sanitizeDrawio } from "./drawio.js";
-import { readUpload, sanitizerSlots } from "./markup.js";
+import { readDrawingUpload, sanitizerSlots } from "./markup.js";
 
 export const MAX_DIAGRAM_IMAGE_BYTES: Readonly<Record<DiagramType, number>> = {
   drawio: 10 * 1024 * 1024,
@@ -56,7 +56,7 @@ export class DiagramService {
     input: { blockId: string; body: Readable },
   ): Promise<SavedDiagramSource> {
     await this.#requirePage(itemId);
-    const text = (await readUpload(input.body, MAX_DRAWIO_BYTES)).toString("utf8");
+    const text = (await readDrawingUpload(actor, input.body, MAX_DRAWIO_BYTES)).toString("utf8");
     const { sanitized, stored } = await sanitizerSlots.run(actor, async () => {
       const sanitized = sanitizeDrawio(text);
       const stored = await this.#attachments.upload(actor, itemId, {
@@ -79,7 +79,7 @@ export class DiagramService {
   ): Promise<SavedDiagramPreview> {
     await this.#requirePage(itemId);
     const limit = MAX_DIAGRAM_IMAGE_BYTES[input.type];
-    const text = (await readUpload(input.body, limit)).toString("utf8");
+    const text = (await readDrawingUpload(actor, input.body, limit)).toString("utf8");
     const { sanitized, preview } = await sanitizerSlots.run(actor, async () => {
       const sanitized = sanitizeDiagramSvg(text, limit);
       if (sanitized.width > MAX_DIAGRAM_IMAGE_SIZE || sanitized.height > MAX_DIAGRAM_IMAGE_SIZE) {

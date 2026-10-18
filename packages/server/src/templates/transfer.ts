@@ -20,7 +20,7 @@ import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { Database, Transaction } from "../database/database.js";
 import { sanitizeDrawio } from "../diagrams/drawio.js";
-import { readUpload, sanitizerSlots } from "../diagrams/markup.js";
+import { readDrawingUpload, sanitizerSlots } from "../diagrams/markup.js";
 import type { EmbedServices } from "../embeds/embeds.js";
 import type { AttachmentContent } from "../files/attachments.js";
 import { previewOf } from "../files/attachments.js";
@@ -789,7 +789,7 @@ export class TemplateTransferService {
       input.body.resume();
       throw error;
     }
-    const bytes = await readUpload(input.body, TEMPLATE_UPLOAD_MAX_BYTES);
+    const bytes = await readDrawingUpload(actor, input.body, TEMPLATE_UPLOAD_MAX_BYTES);
     const archive = isZip(bytes) ? await readTemplateArchive(bytes) : { manifest: bytes, files: new Map() };
     const manifest = this.#parseManifest(archive.manifest);
     const organizationId = await this.#organizationOf(scope);

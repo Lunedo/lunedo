@@ -4,7 +4,7 @@ import { MAX_SCENE_BYTES, sceneText, validateScene, visibleScene } from "@pageha
 import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { Database } from "../database/database.js";
-import { readUpload, sanitizerSlots } from "../diagrams/markup.js";
+import { readDrawingUpload, sanitizerSlots } from "../diagrams/markup.js";
 import type { AttachmentService } from "../files/attachments.js";
 import { SpaceError } from "../spaces/common.js";
 import { parseScene, readText, SceneInvalidError } from "./common.js";
@@ -77,7 +77,7 @@ export class DrawingService {
     input: { blockId: string; body: Readable },
   ): Promise<SavedDrawingPreview> {
     await this.#requirePage(itemId);
-    const text = (await readUpload(input.body, MAX_PREVIEW_BYTES)).toString("utf8");
+    const text = (await readDrawingUpload(actor, input.body, MAX_PREVIEW_BYTES)).toString("utf8");
     const preview = await sanitizerSlots.run(actor, async () =>
       this.#attachments.upload(actor, itemId, {
         name: drawingFileNames(input.blockId).preview,

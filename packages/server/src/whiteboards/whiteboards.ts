@@ -17,7 +17,7 @@ import type { AuditLog } from "../audit/audit-log.js";
 import type { ContentActivity } from "../collaboration/content.js";
 import { type CopiedFrom, copiedFrom } from "../copies/sources.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
-import { readUpload, sanitizerSlots } from "../diagrams/markup.js";
+import { readDrawingUpload, sanitizerSlots } from "../diagrams/markup.js";
 import type { FileService } from "../files/files.js";
 import type { SettingsService } from "../settings/service.js";
 import { actorIdOf, auditScopeOf, SpaceError } from "../spaces/common.js";
@@ -461,7 +461,7 @@ export class WhiteboardService {
     itemId: string,
     input: { revision: number; body: Readable },
   ): Promise<boolean> {
-    const text = (await readUpload(input.body, MAX_PREVIEW_BYTES)).toString("utf8");
+    const text = (await readDrawingUpload(actor, input.body, MAX_PREVIEW_BYTES)).toString("utf8");
     const stored = await sanitizerSlots.run(actor, async () => {
       const svg = sanitizeSvg(text);
       await this.#storage.requireUpload();

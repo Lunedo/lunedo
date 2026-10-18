@@ -3,7 +3,15 @@ import { describe, expect, it } from "vitest";
 import { accountPrincipal } from "../accounts/principal.js";
 import { FileTooLargeError } from "../files/files.js";
 import { DiagramRejectedError, sanitizeDrawio } from "./drawio.js";
-import { readUpload, SanitizerBusyError, SanitizerSlots, takeMarkup, UploadTimeoutError } from "./markup.js";
+import {
+  MAX_PARALLEL_UPLOADS_PER_ACCOUNT,
+  readDrawingUpload,
+  readUpload,
+  SanitizerBusyError,
+  SanitizerSlots,
+  takeMarkup,
+  UploadTimeoutError,
+} from "./markup.js";
 
 const ALICE = accountPrincipal("alice");
 const BOB = accountPrincipal("bob");
@@ -89,5 +97,24 @@ describe("readUpload", () => {
     const body = new PassThrough();
     body.end("x".repeat(101));
     await expect(readUpload(body, 100)).rejects.toBeInstanceOf(FileTooLargeError);
+  });
+});
+
+describe("readDrawingUpload", () => {
+  it("refuses more parallel uploads of one account without reading them", async () => {
+    const owner = accountPrincipal("uploader");
+    const slow = Array.from({ length: MAX_PARALLEL_UPLOADS_PER_ACCOUNT }, () => new PassThrough());
+    const reading = slow.map((body) => readDrawingUpload(owner, body, 100));
+    const extra = new PassThrough();
+    await expect(readDrawingUpload(owner, extra, 100)).rejects.toBeInstanceOf(SanitizerBusyError);
+    expect(extra.readableFlowing).toBe(true);
+    const other = new PassThrough();
+    other.end("<svg/>");
+    expect((await readDrawingUpload(BOB, other, 100)).toString("utf8")).toBe("<svg/>");
+    for (const body of slow) body.end("<svg/>");
+    await Promise.all(reading);
+    const again = new PassThrough();
+    again.end("<svg/>");
+    expect((await readDrawingUpload(owner, again, 100)).toString("utf8")).toBe("<svg/>");
   });
 });

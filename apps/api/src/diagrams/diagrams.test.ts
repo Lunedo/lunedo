@@ -260,11 +260,16 @@ describe.skipIf(!databaseBaseUrl)("diagram blocks through the API", () => {
   });
 
   it("check saves only after their upload arrived, and refuse more than the node can check at once", async () => {
-    const { pageId } = await page();
-    const save = (body: Buffer | PassThrough) =>
-      owner.put(`/api/v1/pages/${pageId}/diagrams/${randomUUID()}/drawio`, body, octet);
-    const slow = Array.from({ length: MAX_PARALLEL_SANITIZATIONS + 1 }, () => new PassThrough());
-    const waiting = slow.map((body) => save(body));
+    const uploaders = await Promise.all(
+      Array.from({ length: MAX_PARALLEL_SANITIZATIONS + 1 }, () => person()),
+    );
+    const { pageId } = await page(
+      uploaders.map((uploader) => ({ principalKind: "account", principalId: uploader.id, role: "editor" })),
+    );
+    const save = (body: Buffer | PassThrough, client = owner) =>
+      client.put(`/api/v1/pages/${pageId}/diagrams/${randomUUID()}/drawio`, body, octet);
+    const slow = uploaders.map(() => new PassThrough());
+    const waiting = uploaders.map((uploader, index) => save(slow[index] as PassThrough, uploader.client));
     await new Promise((resolve) => setTimeout(resolve, 100));
     expect((await save(drawio("While others upload"))).statusCode).toBe(200);
     for (const [index, body] of slow.entries()) {

@@ -27,7 +27,9 @@ export class SanitizerBusyError extends Error {
   readonly retryAfterSeconds = 2;
 
   constructor() {
-    super("Too many drawings and diagrams are being checked at the moment; try again in a few seconds");
+    super(
+      "Too many drawings and diagrams are being uploaded or checked at the moment; try again in a few seconds",
+    );
   }
 }
 
@@ -67,6 +69,11 @@ export const sanitizerSlots = new SanitizerSlots(
   MAX_PARALLEL_SANITIZATIONS_PER_ACCOUNT,
 );
 
+export const MAX_PARALLEL_UPLOADS = 32;
+export const MAX_PARALLEL_UPLOADS_PER_ACCOUNT = 2;
+
+export const uploadSlots = new SanitizerSlots(MAX_PARALLEL_UPLOADS, MAX_PARALLEL_UPLOADS_PER_ACCOUNT);
+
 export function attributeWarning(level: string, message: string): boolean {
   return level === "warning" && /attribute/i.test(message);
 }
@@ -78,6 +85,15 @@ export class UploadTimeoutError extends Error {
 
   constructor(readonly timeoutMs: number) {
     super(`The upload did not arrive within ${Math.round(timeoutMs / 1000)} seconds`);
+  }
+}
+
+export async function readDrawingUpload(owner: Principal, body: Readable, maxBytes: number): Promise<Buffer> {
+  try {
+    return await uploadSlots.run(owner, () => readUpload(body, maxBytes));
+  } catch (error) {
+    if (error instanceof SanitizerBusyError) body.resume();
+    throw error;
   }
 }
 
