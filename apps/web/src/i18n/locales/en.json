@@ -5585,6 +5585,7 @@
     "actions": "Actions",
     "actionsFor": "Actions for {name}",
     "edit": "Edit template",
+    "editNamed": "Edit template {name}",
     "delete": "Delete template",
     "deleteTitle": "Delete {name}?",
     "deleteDescription": "The template disappears from the gallery. Pages created from it stay as they are.",

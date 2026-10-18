@@ -5585,6 +5585,7 @@
     "actions": "Aktionen",
     "actionsFor": "Aktionen für {name}",
     "edit": "Vorlage bearbeiten",
+    "editNamed": "Vorlage {name} bearbeiten",
     "delete": "Vorlage löschen",
     "deleteTitle": "{name} löschen?",
     "deleteDescription": "Die Vorlage verschwindet aus der Galerie. Damit erstellte Seiten bleiben unverändert.",

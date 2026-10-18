@@ -355,6 +355,33 @@ describe("saving a page as a template", () => {
 });
 
 describe("the template editor", () => {
+  it("opens a template from its row and shows a partial selection", async () => {
+    const second = { ...retro, id: IMPORT, name: "Incident review" };
+    mockApi({ "GET /api/v1/auth/session": () => problem(401, "notSignedIn") });
+    await renderWithProviders(
+      inRouter(
+        <TemplatesManager
+          templates={[retro, second]}
+          loading={false}
+          error={null}
+          onRetry={() => undefined}
+          canManage
+          transfer={fakeApi()}
+          onImported={async () => undefined}
+          onCreate={async () => undefined}
+          onUpdate={async () => undefined}
+          onDelete={async () => undefined}
+        />,
+      ),
+    );
+    await userEvent.click(await screen.findByRole("checkbox", { name: "Select Retro" }));
+    expect(screen.getByRole("checkbox", { name: "Select all templates" }).getAttribute("aria-checked")).toBe(
+      "mixed",
+    );
+    await userEvent.click(screen.getByRole("row", { name: "Edit template Incident review" }));
+    expect(await screen.findByRole("dialog", { name: "Edit template" })).toBeTruthy();
+  });
+
   it("accepts typing into name, description and content of a new template", async () => {
     const onCreate = vi.fn(async (_input: unknown) => undefined);
     await renderManager(fakeApi(), { onCreate });
