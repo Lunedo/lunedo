@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { isDiagramReply, isDiagramRequest, renderedProblem, sourceProblem, svgSize } from "./protocol.js";
+import {
+  isDiagramReply,
+  isDiagramRequest,
+  renderedProblem,
+  sourceProblem,
+  svgSize,
+  syntaxProblem,
+} from "./protocol.js";
 
 describe("text diagram protocol", () => {
   it("refuses PlantUML sources that read files, addresses or the environment", () => {
@@ -40,5 +47,45 @@ describe("text diagram protocol", () => {
     expect(isDiagramReply({ type: "failed", id: 2, reason: "syntax", detail: "" })).toBe(true);
     expect(isDiagramReply({ type: "rendered", svg: "<svg/>" })).toBe(false);
     expect(isDiagramReply(null)).toBe(false);
+  });
+});
+
+describe("diagram syntax errors", () => {
+  it("name the line of the person's own source, never past its end", () => {
+    const source = "flowchart LR\nA[Start] --> B[Done\nB -->\n";
+    const parser = Object.assign(
+      new Error("Parse error on line 4:\n...B -->\n------^\nExpecting 'SQE', 'PE'"),
+      {
+        hash: { loc: { first_line: 4 } },
+      },
+    );
+    expect(syntaxProblem("mermaid", source, parser).line).toBe(3);
+    expect(
+      syntaxProblem(
+        "mermaid",
+        "---\ntitle: Plan\n---\nflowchart LR\nA -->",
+        new Error("Parse error on line 2"),
+      ).line,
+    ).toBe(5);
+    expect(syntaxProblem("mermaid", "pie", new Error("Something odd")).line).toBeNull();
+  });
+
+  it("remove PlantUML placeholders and headers from the details", () => {
+    const message = [
+      "PlantUML version $version$",
+      "$git.commit.id$",
+      "[Unknown compile time]",
+      "[From textarea (line 3)]",
+      "",
+      "Syntax Error? (Assumed diagram type: sequence)",
+    ].join("\n");
+    const problem = syntaxProblem(
+      "plantuml",
+      "@startuml\nAlice -> Bob\nthis is wrong\n@enduml",
+      new Error(message),
+    );
+    expect(problem.line).toBe(3);
+    expect(problem.detail).toBe("Syntax Error? (Assumed diagram type: sequence)");
+    expect(problem.detail).not.toMatch(/\$/);
   });
 });

@@ -4813,6 +4813,7 @@
       "edit": "Edit",
       "sourceLabel": "Source of the {name}",
       "problemTitle": "The diagram cannot be shown yet",
+      "details": "Details",
       "saveFailed": "The diagram could not be saved",
       "rendering": "The preview appears here while you type.",
       "save": "Save diagram",
@@ -4820,7 +4821,8 @@
       "empty": "Empty diagram. Choose Edit to write its source.",
       "emptyReadOnly": "This diagram is empty.",
       "failures": {
-        "syntax": "The source has an error, so the last working preview is kept. Fix the line the message names: {detail}",
+        "syntax": "The source has an error, so the last working preview is kept. Check brackets, arrows and quotes, then try again.",
+        "syntaxLine": "Line {line} of the source has an error, so the last working preview is kept. Check brackets, arrows and quotes on that line and the line before it.",
         "include": "Including files or addresses is turned off for safety ({detail}). Copy the content into the diagram instead.",
         "htmlLabels": "HTML labels are turned off for safety. Remove the htmlLabels setting from the diagram.",
         "tooLarge": "The diagram is too large to store. Split it into smaller diagrams.",

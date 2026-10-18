@@ -4813,6 +4813,7 @@
       "edit": "Bearbeiten",
       "sourceLabel": "Quelltext von {name}",
       "problemTitle": "Das Diagramm kann noch nicht angezeigt werden",
+      "details": "Details",
       "saveFailed": "Das Diagramm konnte nicht gespeichert werden",
       "rendering": "Die Vorschau erscheint hier, während du tippst.",
       "save": "Diagramm speichern",
@@ -4820,7 +4821,8 @@
       "empty": "Leeres Diagramm. Wähle „Bearbeiten“, um den Quelltext zu schreiben.",
       "emptyReadOnly": "Dieses Diagramm ist leer.",
       "failures": {
-        "syntax": "Der Quelltext enthält einen Fehler, deshalb bleibt die letzte funktionierende Vorschau stehen. Korrigiere die genannte Zeile: {detail}",
+        "syntax": "Der Quelltext enthält einen Fehler, deshalb bleibt die letzte funktionierende Vorschau stehen. Prüfe Klammern, Pfeile und Anführungszeichen und versuche es dann erneut.",
+        "syntaxLine": "Zeile {line} des Quelltexts enthält einen Fehler, deshalb bleibt die letzte funktionierende Vorschau stehen. Prüfe Klammern, Pfeile und Anführungszeichen in dieser Zeile und in der Zeile davor.",
         "include": "Das Einbinden von Dateien oder Adressen ist aus Sicherheitsgründen abgeschaltet ({detail}). Kopiere den Inhalt stattdessen in das Diagramm.",
         "htmlLabels": "HTML-Beschriftungen sind aus Sicherheitsgründen abgeschaltet. Entferne die Einstellung htmlLabels aus dem Diagramm.",
         "tooLarge": "Das Diagramm ist zu groß zum Speichern. Teile es in kleinere Diagramme auf.",

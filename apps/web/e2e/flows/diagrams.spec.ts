@@ -30,7 +30,8 @@ function outsideRequests(page: Page): string[] {
 async function insertBlock(page: Page, command: string, option: RegExp) {
   const content = page.getByRole("textbox", { name: "Page content" });
   await expect(content).toBeEditable();
-  await content.focus();
+  await expect(page.getByText("Saved").or(page.getByText("Editing")).first()).toBeVisible();
+  await content.click();
   await content.press("Control+End");
   await content.press("Enter");
   await content.pressSequentially(command);
@@ -132,6 +133,10 @@ test("renders a Mermaid block in the sandbox, keeps the last good image on error
   await source.fill("flowchart LR\n  A[Incident reported] --> B[Ticket\n  B --> ");
   await expect(block.getByText("The diagram cannot be shown yet")).toBeVisible({ timeout: 20_000 });
   await expect(block.getByRole("img", { name: "Mermaid diagram" })).toBeVisible();
+  await expect(block.getByText(/^Line 2 of the source has an error/)).toBeVisible();
+  await expect(block.getByText(/Expecting/)).toBeHidden();
+  await block.getByText("Details", { exact: true }).click();
+  await expect(block.getByText(/Expecting/)).toBeVisible();
   await source.fill('flowchart LR\n  A[Incident reported] --> B[Ticket]\n  click A "https://evil.example"');
   await block.getByRole("button", { name: "Save diagram" }).click();
   await expect(source).toBeHidden({ timeout: 20_000 });
@@ -172,6 +177,11 @@ test("refuses PlantUML includes and renders PlantUML in the browser", async ({ p
   });
   await source.fill("@startuml\nAlice -> Bob: Hello\n@enduml");
   await expect(block.getByRole("img", { name: "PlantUML diagram" })).toBeVisible({ timeout: 30_000 });
+  await source.fill("@startuml\nAlice -> Bob: Hello\nthis is ((( not valid\n@enduml");
+  await expect(block.getByText(/^Line 3 of the source has an error/)).toBeVisible({ timeout: 30_000 });
+  await expect(block.getByText(/\$version\$|git\.commit/)).toHaveCount(0);
+  await source.fill("@startuml\nAlice -> Bob: Hello\n@enduml");
+  await expect(block.getByText("The diagram cannot be shown yet")).toBeHidden({ timeout: 30_000 });
   await block.getByRole("button", { name: "Save diagram" }).click();
   await expect(source).toBeHidden({ timeout: 20_000 });
   await expect(block.getByRole("img", { name: "PlantUML diagram" })).toBeVisible();
