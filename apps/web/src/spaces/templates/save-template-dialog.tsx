@@ -4,11 +4,12 @@ import {
   Field,
   focusFirstInvalidSoon,
   Input,
+  Notice,
   Select,
   Textarea,
   useToast,
 } from "@pagehall/ui";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -53,6 +54,16 @@ function SaveTemplateForm({
   const [category, setCategory] = useState<TemplateCategory>("knowledge");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const files = useQuery({
+    queryKey: ["templates", "from-page", page.id],
+    queryFn: () =>
+      request(() =>
+        api.GET("/api/v1/spaces/{spaceId}/templates/from-page/files", {
+          params: { path: { spaceId }, query: { pageId: page.id } },
+        }),
+      ),
+    gcTime: 0,
+  });
 
   const save = async () => {
     if (name.trim().length === 0 || name.trim().length > 100) {
@@ -89,6 +100,13 @@ function SaveTemplateForm({
       }}
     >
       <p className="text-sm text-text-muted">{t("templates.saveDescription")}</p>
+      {files.data && files.data.files > 0 ? (
+        <Notice variant={files.data.restricted ? "warning" : "info"}>
+          {files.data.restricted
+            ? t("templates.saveRestricted", { count: files.data.files })
+            : t("templates.saveFiles", { count: files.data.files })}
+        </Notice>
+      ) : null}
       <Field label={t("templates.name")} error={error ?? undefined} required>
         <Input
           value={name}

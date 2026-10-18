@@ -8,7 +8,7 @@ import { storeImage } from "../../diagrams/diagram-api.js";
 import { ReferencedDiagram } from "../../diagrams/referenced-diagram.js";
 import { type RenderResult, textDiagramRenderer } from "../../diagrams/text-renderer.js";
 import { problemMessage } from "../../errors/problem-message.js";
-import { contentUrl } from "../../files/attachments-api.js";
+import { useAttachmentUrl } from "../../files/attachment-source.js";
 import { translateKey } from "../../i18n/translate.js";
 import { useEditable, usePageContext } from "../context.js";
 import { useOtherEditors } from "./drawing-view.js";
@@ -77,9 +77,10 @@ function DiagramHeader({
 }
 
 function StoredImage({ id, version, label }: { id: string; version: number; label: string }) {
+  const attachmentUrl = useAttachmentUrl();
   return (
     <img
-      src={contentUrl(id, { version })}
+      src={attachmentUrl(id, version)}
       alt={label}
       loading="lazy"
       draggable={false}
