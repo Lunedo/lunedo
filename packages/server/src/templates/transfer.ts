@@ -818,7 +818,7 @@ export class TemplateTransferService {
       language: await this.#templates.language(actor),
     };
     const seen = new Set<string>();
-    const checked = await sanitizerSlots.run(() =>
+    const checked = await sanitizerSlots.run(actor, () =>
       manifest.templates.map((raw, index) => {
         const result = this.#checkTemplate(raw, index, manifest.schemaVersion, archive.files, context);
         const key = result.template.name.toLowerCase();

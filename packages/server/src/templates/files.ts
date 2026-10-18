@@ -188,6 +188,7 @@ export class TemplateFileService {
       throw error;
     }
     const image = await sanitizerSlots.run(
+      actor,
       async () => templateImageBytes(await readBounded(input.body, TEMPLATE_IMAGE_MAX_BYTES), name),
       input.body,
     );

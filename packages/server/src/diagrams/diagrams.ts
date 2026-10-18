@@ -58,6 +58,7 @@ export class DiagramService {
   ): Promise<SavedDiagramSource> {
     await this.#requirePage(itemId);
     const sanitized = await sanitizerSlots.run(
+      actor,
       async () => sanitizeDrawio(await readText(input.body, MAX_DRAWIO_BYTES)),
       input.body,
     );
@@ -80,6 +81,7 @@ export class DiagramService {
     await this.#requirePage(itemId);
     const limit = MAX_DIAGRAM_IMAGE_BYTES[input.type];
     const sanitized = await sanitizerSlots.run(
+      actor,
       async () => sanitizeDiagramSvg(await readText(input.body, limit), limit),
       input.body,
     );

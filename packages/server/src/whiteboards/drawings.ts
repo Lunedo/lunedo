@@ -78,6 +78,7 @@ export class DrawingService {
   ): Promise<SavedDrawingPreview> {
     await this.#requirePage(itemId);
     const svg = await sanitizerSlots.run(
+      actor,
       async () => sanitizeSvg(await readText(input.body, MAX_PREVIEW_BYTES)),
       input.body,
     );

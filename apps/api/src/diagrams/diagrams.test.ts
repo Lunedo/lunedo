@@ -258,29 +258,39 @@ describe.skipIf(!databaseBaseUrl)("diagram blocks through the API", () => {
     expect(unknown.statusCode).toBe(400);
   });
 
-  it("refuse saves beyond the parallel limit of a node with a time to retry", async () => {
-    const { pageId } = await page();
-    const save = (body: Buffer | PassThrough) =>
-      owner.put(`/api/v1/pages/${pageId}/diagrams/${randomUUID()}/drawio`, body, octet);
-    const bodies = Array.from({ length: MAX_PARALLEL_SANITIZATIONS }, () => new PassThrough());
-    const held = bodies.map((body) => save(body));
-    let refused = await save(drawio("Extra"));
-    for (let attempt = 0; refused.statusCode !== 503 && attempt < 50; attempt += 1) {
-      await new Promise((resolve) => setTimeout(resolve, 20));
-      refused = await save(drawio("Extra"));
-    }
+  it("refuse saves beyond the parallel limit of a node or an account with a time to retry", async () => {
+    const editors = await Promise.all(Array.from({ length: MAX_PARALLEL_SANITIZATIONS }, () => person()));
+    const { pageId } = await page(
+      editors.map((editor) => ({ principalKind: "account", principalId: editor.id, role: "editor" })),
+    );
+    const save = (client: TestClient, body: Buffer | PassThrough) =>
+      client.put(`/api/v1/pages/${pageId}/diagrams/${randomUUID()}/drawio`, body, octet);
+    const busy = async (client: TestClient) => {
+      let response = await save(client, drawio("Extra"));
+      for (let attempt = 0; response.statusCode !== 503 && attempt < 50; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        response = await save(client, drawio("Extra"));
+      }
+      return response;
+    };
+    const first = new PassThrough();
+    const firstSave = save(editors[0]?.client as TestClient, first);
+    const own = await busy(editors[0]?.client as TestClient);
+    expect(own.statusCode).toBe(503);
+    expect(own.headers["retry-after"]).toBe("2");
+    expect((await save(owner, drawio("Owner"))).statusCode).toBe(200);
+    const bodies = [first, ...editors.slice(1).map(() => new PassThrough())];
+    const held = [
+      firstSave,
+      ...editors.slice(1).map((editor, index) => save(editor.client, bodies[index + 1] as PassThrough)),
+    ];
+    const refused = await busy(owner);
     expect(refused.statusCode).toBe(503);
     expect(refused.headers["retry-after"]).toBe("2");
     expect(refused.json().type).toContain("busy");
     for (const body of bodies) body.end(drawio("Held"));
     expect((await Promise.all(held)).map((response) => response.statusCode)).toEqual(bodies.map(() => 200));
-    expect((await save(drawio("After"))).statusCode).toBe(200);
-    const preview = await owner.put(
-      `/api/v1/pages/${pageId}/diagrams/${randomUUID()}/image?type=drawio`,
-      svg("<rect/>"),
-      octet,
-    );
-    expect(preview.statusCode).toBe(200);
+    expect((await save(owner, drawio("After"))).statusCode).toBe(200);
   });
 
   it("let only editors store diagrams and keep their files from people without access", async () => {

@@ -462,6 +462,7 @@ export class WhiteboardService {
     input: { revision: number; body: Readable },
   ): Promise<boolean> {
     const svg = await sanitizerSlots.run(
+      actor,
       async () => sanitizeSvg(await readText(input.body, MAX_PREVIEW_BYTES)),
       input.body,
     );

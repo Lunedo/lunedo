@@ -1,4 +1,5 @@
 import type { Readable } from "node:stream";
+import type { Principal } from "../accounts/principal.js";
 
 export interface MarkupBudget {
   elements: number;
@@ -30,27 +31,44 @@ export class SanitizerBusyError extends Error {
 }
 
 export const MAX_PARALLEL_SANITIZATIONS = 4;
+export const MAX_PARALLEL_SANITIZATIONS_PER_ACCOUNT = 1;
 
 export class SanitizerSlots {
   readonly #limit: number;
+  readonly #perOwner: number;
+  readonly #owners = new Map<string, number>();
   #running = 0;
 
-  constructor(limit: number) {
+  constructor(limit: number, perOwner: number) {
     this.#limit = limit;
+    this.#perOwner = perOwner;
   }
 
-  async run<T>(work: () => Promise<T> | T, unread?: Readable): Promise<T> {
-    if (this.#running >= this.#limit) {
+  async run<T>(owner: Principal, work: () => Promise<T> | T, unread?: Readable): Promise<T> {
+    const key = owner.type === "account" ? owner.id : owner.type;
+    const held = this.#owners.get(key) ?? 0;
+    if (this.#running >= this.#limit || held >= this.#perOwner) {
       unread?.resume();
       throw new SanitizerBusyError();
     }
     this.#running += 1;
+    this.#owners.set(key, held + 1);
     try {
       return await work();
     } finally {
       this.#running -= 1;
+      const left = (this.#owners.get(key) ?? 1) - 1;
+      if (left > 0) this.#owners.set(key, left);
+      else this.#owners.delete(key);
     }
   }
 }
 
-export const sanitizerSlots = new SanitizerSlots(MAX_PARALLEL_SANITIZATIONS);
+export const sanitizerSlots = new SanitizerSlots(
+  MAX_PARALLEL_SANITIZATIONS,
+  MAX_PARALLEL_SANITIZATIONS_PER_ACCOUNT,
+);
+
+export function attributeWarning(level: string, message: string): boolean {
+  return level === "warning" && /attribute/i.test(message);
+}

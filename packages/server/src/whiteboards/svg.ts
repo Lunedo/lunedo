@@ -1,5 +1,5 @@
 import { DOMParser, type Element, type Node } from "@xmldom/xmldom";
-import { takeMarkup } from "../diagrams/markup.js";
+import { attributeWarning, takeMarkup } from "../diagrams/markup.js";
 
 export const MAX_PREVIEW_BYTES = 5 * 1024 * 1024;
 export const MAX_SVG_ELEMENTS = 100_000;
@@ -437,7 +437,7 @@ function parse(input: string, maxBytes: number): Element {
   try {
     const document = new DOMParser({
       onError: (level, message) => {
-        if (level !== "warning") throw new SvgRejectedError(message);
+        if (level !== "warning" || attributeWarning(level, message)) throw new SvgRejectedError(message);
       },
     }).parseFromString(input, "image/svg+xml");
     root = document.documentElement;

@@ -1,6 +1,6 @@
 import { inflateRawSync } from "node:zlib";
 import { DOMParser, type Element, type Node } from "@xmldom/xmldom";
-import { type MarkupBudget, takeMarkup } from "./markup.js";
+import { attributeWarning, type MarkupBudget, takeMarkup } from "./markup.js";
 
 export const MAX_DRAWIO_BYTES = 4 * 1024 * 1024;
 export const MAX_DRAWIO_ELEMENTS = 50_000;
@@ -80,7 +80,7 @@ function parseXml(input: string): Element {
   try {
     const document = new DOMParser({
       onError: (level, message) => {
-        if (level !== "warning") throw new DiagramRejectedError(message);
+        if (level !== "warning" || attributeWarning(level, message)) throw new DiagramRejectedError(message);
       },
     }).parseFromString(input, "text/xml");
     root = document.documentElement;
