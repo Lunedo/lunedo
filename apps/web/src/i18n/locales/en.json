@@ -1245,6 +1245,7 @@
     "rateLimitedRetry": "Too many requests. Try again in {seconds, plural, one {# second} other {# seconds}}.",
     "internalError": "The server could not complete the request. Try again; if it keeps failing, ask your administrator to check the server log.",
     "busy": "The server is busy. Try again in a moment.",
+    "uploadTimeout": "The upload did not finish in time, probably because the connection is slow. Try again on a faster connection or with a smaller file.",
     "passwordExpired": "Your directory password has expired. Change it the way your organization usually does, for example when signing in to your computer, or contact IT. Pagehall never changes directory passwords.",
     "passwordMustChange": "Your directory password must be changed before you can sign in. Change it the way your organization usually does, for example when signing in to your computer, or contact IT. Pagehall never changes directory passwords.",
     "accountLocked": "Your directory account is locked, usually after too many wrong passwords. Wait until it unlocks or contact IT.",

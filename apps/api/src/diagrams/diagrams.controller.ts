@@ -122,7 +122,14 @@ export class DiagramsController {
         .describe("The stored file."),
       example: { sourceId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a22", sourceVersion: 2, text: "Core switch" },
     },
-    errors: ["invalidDiagram", "fileTooLarge", "storageFull", "unsupportedMediaType", "busy"],
+    errors: [
+      "invalidDiagram",
+      "fileTooLarge",
+      "storageFull",
+      "unsupportedMediaType",
+      "busy",
+      "uploadTimeout",
+    ],
   })
   async drawio(
     @Param("pageId") pageId: string,
@@ -157,7 +164,14 @@ export class DiagramsController {
         text: "Router\nSwitch",
       },
     },
-    errors: ["invalidDrawingImage", "fileTooLarge", "storageFull", "unsupportedMediaType", "busy"],
+    errors: [
+      "invalidDrawingImage",
+      "fileTooLarge",
+      "storageFull",
+      "unsupportedMediaType",
+      "busy",
+      "uploadTimeout",
+    ],
   })
   async image(
     @Param("pageId") pageId: string,

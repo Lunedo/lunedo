@@ -35,6 +35,7 @@ import {
   StorageSettingsError,
   SvgRejectedError,
   TokenRejectedError,
+  UploadTimeoutError,
 } from "@pagehall/server";
 import type { FastifyReply } from "fastify";
 import { ZodError } from "zod";
@@ -142,6 +143,7 @@ function map(error: unknown): Mapped | null {
   if (error instanceof EmailInUseError) return { code: "emailInUse", detail: error.message };
   if (error instanceof ProviderResponseError) return { code: "providerUnavailable", detail: error.message };
   if (error instanceof BusyError) return { code: "busy", detail: error.message };
+  if (error instanceof UploadTimeoutError) return { code: "uploadTimeout", detail: error.message };
   if (error instanceof SanitizerBusyError) {
     return {
       code: "busy",

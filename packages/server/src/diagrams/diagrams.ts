@@ -5,10 +5,9 @@ import type { Principal } from "../accounts/principal.js";
 import type { Database } from "../database/database.js";
 import type { AttachmentService } from "../files/attachments.js";
 import { SpaceError } from "../spaces/common.js";
-import { readText } from "../whiteboards/common.js";
 import { SvgRejectedError, sanitizeDiagramSvg } from "../whiteboards/svg.js";
 import { MAX_DRAWIO_BYTES, sanitizeDrawio } from "./drawio.js";
-import { sanitizerSlots } from "./markup.js";
+import { readUpload, sanitizerSlots } from "./markup.js";
 
 export const MAX_DIAGRAM_IMAGE_BYTES: Readonly<Record<DiagramType, number>> = {
   drawio: 10 * 1024 * 1024,
@@ -57,14 +56,14 @@ export class DiagramService {
     input: { blockId: string; body: Readable },
   ): Promise<SavedDiagramSource> {
     await this.#requirePage(itemId);
-    const sanitized = await sanitizerSlots.run(
-      actor,
-      async () => sanitizeDrawio(await readText(input.body, MAX_DRAWIO_BYTES)),
-      input.body,
-    );
-    const stored = await this.#attachments.upload(actor, itemId, {
-      name: diagramFileNames("drawio", input.blockId).source,
-      body: Readable.from([Buffer.from(sanitized.xml, "utf8")]),
+    const text = (await readUpload(input.body, MAX_DRAWIO_BYTES)).toString("utf8");
+    const { sanitized, stored } = await sanitizerSlots.run(actor, async () => {
+      const sanitized = sanitizeDrawio(text);
+      const stored = await this.#attachments.upload(actor, itemId, {
+        name: diagramFileNames("drawio", input.blockId).source,
+        body: Readable.from([Buffer.from(sanitized.xml, "utf8")]),
+      });
+      return { sanitized, stored };
     });
     return {
       sourceId: stored.id,
@@ -80,19 +79,19 @@ export class DiagramService {
   ): Promise<SavedDiagramPreview> {
     await this.#requirePage(itemId);
     const limit = MAX_DIAGRAM_IMAGE_BYTES[input.type];
-    const sanitized = await sanitizerSlots.run(
-      actor,
-      async () => sanitizeDiagramSvg(await readText(input.body, limit), limit),
-      input.body,
-    );
-    if (sanitized.width > MAX_DIAGRAM_IMAGE_SIZE || sanitized.height > MAX_DIAGRAM_IMAGE_SIZE) {
-      throw new SvgRejectedError(
-        `The diagram is larger than ${MAX_DIAGRAM_IMAGE_SIZE} by ${MAX_DIAGRAM_IMAGE_SIZE} pixels`,
-      );
-    }
-    const preview = await this.#attachments.upload(actor, itemId, {
-      name: diagramFileNames(input.type, input.blockId).preview,
-      body: Readable.from([Buffer.from(sanitized.svg, "utf8")]),
+    const text = (await readUpload(input.body, limit)).toString("utf8");
+    const { sanitized, preview } = await sanitizerSlots.run(actor, async () => {
+      const sanitized = sanitizeDiagramSvg(text, limit);
+      if (sanitized.width > MAX_DIAGRAM_IMAGE_SIZE || sanitized.height > MAX_DIAGRAM_IMAGE_SIZE) {
+        throw new SvgRejectedError(
+          `The diagram is larger than ${MAX_DIAGRAM_IMAGE_SIZE} by ${MAX_DIAGRAM_IMAGE_SIZE} pixels`,
+        );
+      }
+      const preview = await this.#attachments.upload(actor, itemId, {
+        name: diagramFileNames(input.type, input.blockId).preview,
+        body: Readable.from([Buffer.from(sanitized.svg, "utf8")]),
+      });
+      return { sanitized, preview };
     });
     return {
       previewId: preview.id,

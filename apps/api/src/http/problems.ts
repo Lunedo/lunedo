@@ -383,6 +383,7 @@ export const problems = {
   tooManyRequests: { status: 429, title: "Too many access requests today" },
   internalError: { status: 500, title: "Internal server error" },
   busy: { status: 503, title: "The server is busy" },
+  uploadTimeout: { status: 408, title: "The upload took too long" },
 } as const satisfies Record<string, { status: number; title: string }>;
 
 export type ProblemCode = keyof typeof problems;

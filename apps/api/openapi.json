@@ -113777,6 +113777,26 @@
               }
             }
           },
+          "408": {
+            "description": "`uploadTimeout`: The upload took too long.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "uploadTimeout": {
+                    "value": {
+                      "type": "urn:pagehall:problem:uploadTimeout",
+                      "title": "The upload took too long",
+                      "status": 408,
+                      "code": "uploadTimeout"
+                    }
+                  }
+                }
+              }
+            }
+          },
           "413": {
             "description": "`fileTooLarge`: The file is larger than allowed. `templateArchiveTooLarge`: The archive unpacks to more than allowed.",
             "content": {
@@ -117271,6 +117291,26 @@
                       "title": "Not found",
                       "status": 404,
                       "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "408": {
+            "description": "`uploadTimeout`: The upload took too long.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "uploadTimeout": {
+                    "value": {
+                      "type": "urn:pagehall:problem:uploadTimeout",
+                      "title": "The upload took too long",
+                      "status": 408,
+                      "code": "uploadTimeout"
                     }
                   }
                 }
@@ -162855,6 +162895,26 @@
               }
             }
           },
+          "408": {
+            "description": "`uploadTimeout`: The upload took too long.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "uploadTimeout": {
+                    "value": {
+                      "type": "urn:pagehall:problem:uploadTimeout",
+                      "title": "The upload took too long",
+                      "status": 408,
+                      "code": "uploadTimeout"
+                    }
+                  }
+                }
+              }
+            }
+          },
           "413": {
             "description": "`fileTooLarge`: The file is larger than allowed. `templateArchiveTooLarge`: The archive unpacks to more than allowed.",
             "content": {
@@ -166493,6 +166553,26 @@
                       "title": "Not found",
                       "status": 404,
                       "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "408": {
+            "description": "`uploadTimeout`: The upload took too long.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "uploadTimeout": {
+                    "value": {
+                      "type": "urn:pagehall:problem:uploadTimeout",
+                      "title": "The upload took too long",
+                      "status": 408,
+                      "code": "uploadTimeout"
                     }
                   }
                 }
@@ -176580,6 +176660,26 @@
               }
             }
           },
+          "408": {
+            "description": "`uploadTimeout`: The upload took too long.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "uploadTimeout": {
+                    "value": {
+                      "type": "urn:pagehall:problem:uploadTimeout",
+                      "title": "The upload took too long",
+                      "status": 408,
+                      "code": "uploadTimeout"
+                    }
+                  }
+                }
+              }
+            }
+          },
           "413": {
             "description": "`fileTooLarge`: The file is larger than allowed.",
             "content": {
@@ -176898,6 +176998,26 @@
                       "title": "Not found",
                       "status": 404,
                       "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "408": {
+            "description": "`uploadTimeout`: The upload took too long.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "uploadTimeout": {
+                    "value": {
+                      "type": "urn:pagehall:problem:uploadTimeout",
+                      "title": "The upload took too long",
+                      "status": 408,
+                      "code": "uploadTimeout"
                     }
                   }
                 }
@@ -178563,6 +178683,26 @@
                       "title": "Not found",
                       "status": 404,
                       "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "408": {
+            "description": "`uploadTimeout`: The upload took too long.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "uploadTimeout": {
+                    "value": {
+                      "type": "urn:pagehall:problem:uploadTimeout",
+                      "title": "The upload took too long",
+                      "status": 408,
+                      "code": "uploadTimeout"
                     }
                   }
                 }
@@ -213196,6 +213336,26 @@
               }
             }
           },
+          "408": {
+            "description": "`uploadTimeout`: The upload took too long.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "uploadTimeout": {
+                    "value": {
+                      "type": "urn:pagehall:problem:uploadTimeout",
+                      "title": "The upload took too long",
+                      "status": 408,
+                      "code": "uploadTimeout"
+                    }
+                  }
+                }
+              }
+            }
+          },
           "413": {
             "description": "`fileTooLarge`: The file is larger than allowed. `templateArchiveTooLarge`: The archive unpacks to more than allowed.",
             "content": {
@@ -216835,6 +216995,26 @@
                       "title": "Not found",
                       "status": 404,
                       "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "408": {
+            "description": "`uploadTimeout`: The upload took too long.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "uploadTimeout": {
+                    "value": {
+                      "type": "urn:pagehall:problem:uploadTimeout",
+                      "title": "The upload took too long",
+                      "status": 408,
+                      "code": "uploadTimeout"
                     }
                   }
                 }
@@ -224820,6 +225000,26 @@
                       "title": "Not found",
                       "status": 404,
                       "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "408": {
+            "description": "`uploadTimeout`: The upload took too long.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "uploadTimeout": {
+                    "value": {
+                      "type": "urn:pagehall:problem:uploadTimeout",
+                      "title": "The upload took too long",
+                      "status": 408,
+                      "code": "uploadTimeout"
                     }
                   }
                 }

@@ -9,7 +9,7 @@ import { uuidv7 } from "@pagehall/shared";
 import { type SQL, sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
-import { sanitizerSlots } from "../diagrams/markup.js";
+import { readUpload, sanitizerSlots } from "../diagrams/markup.js";
 import { type AttachmentContent, previewOf } from "../files/attachments.js";
 import { type FileService, FileTooLargeError, type StoredFile } from "../files/files.js";
 import { cleanFileName, fileNameKey } from "../files/names.js";
@@ -72,21 +72,6 @@ export function uniqueFileName(name: string, taken: Set<string>): string {
   }
   taken.add(fileNameKey(candidate));
   return candidate;
-}
-
-async function readBounded(body: Readable, maxBytes: number): Promise<Buffer> {
-  const parts: Buffer[] = [];
-  let size = 0;
-  for await (const chunk of body) {
-    const part = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string);
-    size += part.length;
-    if (size > maxBytes) {
-      body.destroy();
-      throw new FileTooLargeError(maxBytes);
-    }
-    parts.push(part);
-  }
-  return Buffer.concat(parts);
 }
 
 export function templateImageBytes(bytes: Buffer, name: string): { bytes: Buffer; contentType: string } {
@@ -187,12 +172,10 @@ export class TemplateFileService {
       input.body.resume();
       throw error;
     }
-    const image = await sanitizerSlots.run(
-      actor,
-      async () => templateImageBytes(await readBounded(input.body, TEMPLATE_IMAGE_MAX_BYTES), name),
-      input.body,
+    const bytes = await readUpload(input.body, TEMPLATE_IMAGE_MAX_BYTES);
+    const stored = await sanitizerSlots.run(actor, async () =>
+      this.store(templateImageBytes(bytes, name).bytes, name, TEMPLATE_IMAGE_MAX_BYTES),
     );
-    const stored = await this.store(image.bytes, name, TEMPLATE_IMAGE_MAX_BYTES);
     try {
       const id = await this.#database.transaction(async (tx) => {
         const template = await tx.execute(

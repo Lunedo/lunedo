@@ -1,8 +1,9 @@
 import { PassThrough } from "node:stream";
 import { describe, expect, it } from "vitest";
 import { accountPrincipal } from "../accounts/principal.js";
+import { FileTooLargeError } from "../files/files.js";
 import { DiagramRejectedError, sanitizeDrawio } from "./drawio.js";
-import { SanitizerBusyError, SanitizerSlots, takeMarkup } from "./markup.js";
+import { readUpload, SanitizerBusyError, SanitizerSlots, takeMarkup, UploadTimeoutError } from "./markup.js";
 
 const ALICE = accountPrincipal("alice");
 const BOB = accountPrincipal("bob");
@@ -42,9 +43,7 @@ describe("sanitizer slots", () => {
     const slots = new SanitizerSlots(2, 1);
     const first = held(slots, ALICE);
     const second = held(slots, BOB);
-    const body = new PassThrough();
-    await expect(slots.run(CAROL, () => "refused", body)).rejects.toBeInstanceOf(SanitizerBusyError);
-    expect(body.readableFlowing).toBe(true);
+    await expect(slots.run(CAROL, () => "refused")).rejects.toBeInstanceOf(SanitizerBusyError);
     first.release();
     second.release();
     expect(await Promise.all([first.done, second.done])).toEqual(["held", "held"]);
@@ -69,5 +68,26 @@ describe("sanitizer slots", () => {
       }),
     ).rejects.toThrow("broken");
     expect(await slots.run(ALICE, () => "next")).toBe("next");
+  });
+});
+
+describe("readUpload", () => {
+  it("reads the whole body", async () => {
+    const body = new PassThrough();
+    body.end("<mxfile/>");
+    expect((await readUpload(body, 100)).toString("utf8")).toBe("<mxfile/>");
+  });
+
+  it("gives up on a body that does not arrive in time", async () => {
+    const body = new PassThrough();
+    body.write("<mxfile>");
+    await expect(readUpload(body, 100, 50)).rejects.toBeInstanceOf(UploadTimeoutError);
+    expect(body.destroyed).toBe(true);
+  });
+
+  it("refuses a body above the limit", async () => {
+    const body = new PassThrough();
+    body.end("x".repeat(101));
+    await expect(readUpload(body, 100)).rejects.toBeInstanceOf(FileTooLargeError);
   });
 });

@@ -1,5 +1,6 @@
 import type { Readable } from "node:stream";
 import type { Principal } from "../accounts/principal.js";
+import { FileTooLargeError } from "../files/files.js";
 
 export interface MarkupBudget {
   elements: number;
@@ -44,13 +45,10 @@ export class SanitizerSlots {
     this.#perOwner = perOwner;
   }
 
-  async run<T>(owner: Principal, work: () => Promise<T> | T, unread?: Readable): Promise<T> {
+  async run<T>(owner: Principal, work: () => Promise<T> | T): Promise<T> {
     const key = owner.type === "account" ? owner.id : owner.type;
     const held = this.#owners.get(key) ?? 0;
-    if (this.#running >= this.#limit || held >= this.#perOwner) {
-      unread?.resume();
-      throw new SanitizerBusyError();
-    }
+    if (this.#running >= this.#limit || held >= this.#perOwner) throw new SanitizerBusyError();
     this.#running += 1;
     this.#owners.set(key, held + 1);
     try {
@@ -71,4 +69,38 @@ export const sanitizerSlots = new SanitizerSlots(
 
 export function attributeWarning(level: string, message: string): boolean {
   return level === "warning" && /attribute/i.test(message);
+}
+
+export const UPLOAD_READ_TIMEOUT_MS = 30_000;
+
+export class UploadTimeoutError extends Error {
+  override name = "UploadTimeoutError";
+
+  constructor(readonly timeoutMs: number) {
+    super(`The upload did not arrive within ${Math.round(timeoutMs / 1000)} seconds`);
+  }
+}
+
+export async function readUpload(
+  body: Readable,
+  maxBytes: number,
+  timeoutMs = UPLOAD_READ_TIMEOUT_MS,
+): Promise<Buffer> {
+  const timer = setTimeout(() => body.destroy(new UploadTimeoutError(timeoutMs)), timeoutMs);
+  const parts: Buffer[] = [];
+  let size = 0;
+  try {
+    for await (const chunk of body) {
+      const part = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string);
+      size += part.length;
+      if (size > maxBytes) {
+        body.destroy();
+        throw new FileTooLargeError(maxBytes);
+      }
+      parts.push(part);
+    }
+  } finally {
+    clearTimeout(timer);
+  }
+  return Buffer.concat(parts);
 }

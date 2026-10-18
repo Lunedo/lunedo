@@ -285,6 +285,7 @@ const rawTemplateFile = {
 
 const importErrors = [
   "busy",
+  "uploadTimeout",
   "fileTooLarge",
   "invalidTemplateFile",
   "newerTemplateFormat",
@@ -516,6 +517,7 @@ export class TemplateFilesController {
       "storageFull",
       "unsupportedMediaType",
       "busy",
+      "uploadTimeout",
     ],
   })
   spaceUpload(
@@ -695,6 +697,7 @@ export class TemplateFilesController {
       "storageFull",
       "unsupportedMediaType",
       "busy",
+      "uploadTimeout",
     ],
   })
   organizationUpload(
@@ -882,6 +885,7 @@ export class TemplateFilesController {
       "storageFull",
       "unsupportedMediaType",
       "busy",
+      "uploadTimeout",
     ],
   })
   instanceUpload(
