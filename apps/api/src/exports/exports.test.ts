@@ -231,7 +231,13 @@ describe.skipIf(!databaseBaseUrl)("exports through the API", () => {
     const context = await setup();
     const counted = await context.exporter.client.get(`/api/v1/spaces/${context.space.id}/exports/summary`);
     expect(counted.statusCode, counted.body).toBe(200);
-    expect(counted.json()).toEqual({ pages: 2, blogPosts: 0, printLimit: 300, serverPdf: false });
+    expect(counted.json()).toEqual({
+      pages: 2,
+      blogPosts: 0,
+      printLimit: 300,
+      serverPdf: false,
+      largeWritesPaused: false,
+    });
     const subtree = await context.exporter.client.get(`/api/v1/pages/${context.pageId}/exports/summary`);
     expect(subtree.json()).toMatchObject({ pages: 1 });
     for (const response of [

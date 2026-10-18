@@ -64,6 +64,7 @@ test("exports a page at once and a space in the background, and stops when expor
 
   const dialog = await openExport(page, space.pagePath);
   await dialog.getByRole("radio", { name: /^HTML/ }).check();
+  await dialog.getByText("More options").click();
   await dialog.getByRole("switch", { name: "Include attachments" }).click();
   await expectAccessible(page, "export dialog");
   const download = page.waitForEvent("download");
@@ -150,7 +151,10 @@ test("lays out the print view of a page and opens the print dialog", async ({ pa
   });
   const space = await handbook(page, organization.id);
   const dialog = await openExport(page, space.pagePath);
+  await page.setViewportSize({ width: 1440, height: 900 });
   await expect(dialog.getByText("Your browser opens the print dialog — choose “Save as PDF”.")).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Open print view" })).toBeInViewport();
+  await dialog.getByText("More options").click();
   await dialog.getByRole("radio", { name: "Landscape" }).click();
   await dialog.getByRole("button", { name: "Open print view" }).click();
 

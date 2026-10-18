@@ -8477,7 +8477,15 @@
       "preparePrint": "Prepare print view",
       "download": "Download",
       "start": "Start export",
-      "failed": "“{name}” was not exported"
+      "failed": "“{name}” was not exported",
+      "withSubpages": "{title} and its subpages",
+      "moreOptions": "More options",
+      "pausedTitle": "Exports of several pages are paused",
+      "paused": "The file storage is almost full, so exports of a whole space or of a page with its subpages are paused.",
+      "pausedPageWorks": "Exporting this page alone still works.",
+      "storageFullAdmin": "The file storage is almost full. Free up space or raise the warning levels in the storage settings, then start the export again.",
+      "storageFullMember": "Ask an instance administrator to free up storage, then start the export again.",
+      "openStorage": "Open the storage settings"
     },
     "print": {
       "title": "Print view · {title}",

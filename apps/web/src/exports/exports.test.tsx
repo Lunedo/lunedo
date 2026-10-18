@@ -124,13 +124,14 @@ function dialog(
   );
 }
 
-function counts(total: { pages: number; blogPosts?: number; serverPdf?: boolean }) {
+function counts(total: { pages: number; blogPosts?: number; serverPdf?: boolean; paused?: boolean }) {
   return () => ({
     body: {
       pages: total.pages,
       blogPosts: total.blogPosts ?? 0,
       printLimit: 300,
       serverPdf: total.serverPdf ?? false,
+      largeWritesPaused: total.paused ?? false,
     },
   });
 }
@@ -263,7 +264,26 @@ describe("export dialog", () => {
     await user.click(await screen.findByRole("radio", { name: /^Word/ }));
     await user.click(screen.getByRole("radio", { name: /This page and its subpages/ }));
     await user.click(screen.getByRole("button", { name: "Start export" }));
-    expect(await screen.findByText(/Your instance administrator needs to free up space/)).toBeTruthy();
+    expect(await screen.findByText("“VPN setup and its subpages” was not exported")).toBeTruthy();
+    expect(
+      screen.getByText("Ask an instance administrator to free up storage, then start the export again."),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+  });
+
+  it("says before the start that exports of several pages are paused, and that this page alone still works", async () => {
+    api({
+      [`GET /api/v1/pages/${PAGE}/exports/summary`]: counts({ pages: 2, paused: true }),
+    });
+    await dialog();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("radio", { name: /^Word/ }));
+    expect(screen.queryByText("Exports of several pages are paused")).toBeNull();
+    await user.click(screen.getByRole("radio", { name: /This page and its subpages/ }));
+    expect(await screen.findByText("Exports of several pages are paused")).toBeTruthy();
+    expect(screen.getByText(/Exporting this page alone still works/)).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Start export" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(requests.some((request) => request.method === "POST")).toBe(false);
   });
 
   it("says why an export cannot start and keeps the dialog open", async () => {

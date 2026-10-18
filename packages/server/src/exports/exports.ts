@@ -133,6 +133,7 @@ export interface ExportSummaryCounts {
   blogPosts: number;
   printLimit: number;
   serverPdf: boolean;
+  largeWritesPaused: boolean;
 }
 
 export class ExportError extends Error {
@@ -599,6 +600,13 @@ export class ExportService {
       ...(await this.#countPages(actor, subject.spaceId, subject.rootItemId)),
       printLimit: MAX_BROWSER_PRINT_PAGES,
       serverPdf: this.#render.configured,
+      largeWritesPaused: await this.#storage.requireLargeWrite().then(
+        () => false,
+        (error: unknown) => {
+          if (error instanceof StorageFullError) return true;
+          throw error;
+        },
+      ),
     };
   }
 

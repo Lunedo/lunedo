@@ -4,7 +4,9 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { Printer } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { isApiError } from "../api/request.js";
 import { useFailureToast } from "../errors/failure.js";
+import { useCan } from "../shell/shell-context.js";
 import {
   defaultExportOptions,
   downloadPageExport,
@@ -135,7 +137,14 @@ export function ExportForm({
     total !== null &&
     counts.data !== undefined &&
     total > counts.data.printLimit;
-  const name = page?.title ?? space.name;
+  const name =
+    scope === "space" || !page
+      ? space.name
+      : scope === "pages"
+        ? t("exports.dialog.withSubpages", { title: page.title })
+        : page.title;
+  const storageAdmin = useCan("instance.settings.manage");
+  const paused = multi && counts.data?.largeWritesPaused === true;
 
   if (!space.exportEnabled || (page && !page.publishable && scope === "page")) {
     return (
@@ -205,7 +214,25 @@ export function ExportForm({
       }
       onDone();
     } catch (failure) {
-      showFailure(t("exports.dialog.failed", { name }), failure, () => void run());
+      if (isApiError(failure, "notEnoughStorage")) {
+        toast({
+          variant: "error",
+          title: t("exports.dialog.failed", { name }),
+          description: storageAdmin
+            ? t("exports.dialog.storageFullAdmin")
+            : t("exports.dialog.storageFullMember"),
+          ...(storageAdmin
+            ? {
+                action: {
+                  label: t("exports.dialog.openStorage"),
+                  onSelect: () => void navigate({ to: "/settings/instance/storage" }),
+                },
+              }
+            : {}),
+        });
+      } else {
+        showFailure(t("exports.dialog.failed", { name }), failure, () => void run());
+      }
     } finally {
       setBusy(false);
     }
@@ -312,61 +339,88 @@ export function ExportForm({
         </Notice>
       ) : null}
       {serverPdf ? <p className="text-sm">{t("exports.dialog.serverChosen")}</p> : null}
-      <fieldset className="flex flex-col gap-3">
-        <legend className="mb-2 font-medium">{t("exports.dialog.content")}</legend>
-        <OptionSwitch
-          label={t("exports.dialog.attachments")}
-          description={paged ? t("exports.dialog.attachmentsPaged") : t("exports.dialog.attachmentsFiles")}
-          checked={options.attachments}
-          onCheckedChange={(attachments) => set({ attachments })}
-        />
-        {paged ? (
-          <>
-            <OptionSwitch
-              label={t("exports.dialog.comments")}
-              description={t("exports.dialog.commentsDescription")}
-              checked={options.comments}
-              onCheckedChange={(comments) => set({ comments })}
-            />
-            <OptionSwitch
-              label={t("exports.dialog.contents")}
-              description={t("exports.dialog.contentsDescription")}
-              checked={options.contents}
-              onCheckedChange={(contents) => set({ contents })}
-            />
-          </>
-        ) : null}
-      </fieldset>
-      {paged ? (
-        <div className="flex flex-wrap gap-4">
-          <div className="flex min-w-0 flex-col gap-1">
-            <span className="font-medium">{t("exports.dialog.paper")}</span>
-            <SegmentedControl
-              label={t("exports.dialog.paper")}
-              value={options.paper}
-              onValueChange={(paper) => set({ paper: paper as ExportOptions["paper"] })}
-              options={(["a4", "letter"] as const).map((value) => ({
-                value,
-                label: t(`exports.dialog.papers.${value}`),
-              }))}
-            />
-          </div>
-          <div className="flex min-w-0 flex-col gap-1">
-            <span className="font-medium">{t("exports.dialog.orientation")}</span>
-            <SegmentedControl
-              label={t("exports.dialog.orientation")}
-              value={options.orientation}
-              onValueChange={(orientation) =>
-                set({ orientation: orientation as ExportOptions["orientation"] })
+      {paused ? (
+        <Notice
+          variant="warning"
+          title={t("exports.dialog.pausedTitle")}
+          {...(storageAdmin
+            ? {
+                action: (
+                  <Link to="/settings/instance/storage" className="font-medium text-accent hover:underline">
+                    {t("exports.dialog.openStorage")}
+                  </Link>
+                ),
               }
-              options={(["portrait", "landscape"] as const).map((value) => ({
-                value,
-                label: t(`exports.dialog.orientations.${value}`),
-              }))}
-            />
-          </div>
-        </div>
+            : {})}
+        >
+          {t("exports.dialog.paused")} {page ? t("exports.dialog.pausedPageWorks") : null}{" "}
+          {storageAdmin ? null : t("exports.dialog.storageFullMember")}
+        </Notice>
       ) : null}
+      <details className="rounded-md border border-border">
+        <summary className="flex min-h-hit cursor-pointer items-center rounded-md px-4 py-2 font-medium focus-visible:focus-ring">
+          {t("exports.dialog.moreOptions")}
+        </summary>
+        <div className="flex flex-col gap-5 border-t border-border p-4">
+          <fieldset className="flex flex-col gap-3">
+            <legend className="mb-2 font-medium">{t("exports.dialog.content")}</legend>
+            <OptionSwitch
+              label={t("exports.dialog.attachments")}
+              description={
+                paged ? t("exports.dialog.attachmentsPaged") : t("exports.dialog.attachmentsFiles")
+              }
+              checked={options.attachments}
+              onCheckedChange={(attachments) => set({ attachments })}
+            />
+            {paged ? (
+              <>
+                <OptionSwitch
+                  label={t("exports.dialog.comments")}
+                  description={t("exports.dialog.commentsDescription")}
+                  checked={options.comments}
+                  onCheckedChange={(comments) => set({ comments })}
+                />
+                <OptionSwitch
+                  label={t("exports.dialog.contents")}
+                  description={t("exports.dialog.contentsDescription")}
+                  checked={options.contents}
+                  onCheckedChange={(contents) => set({ contents })}
+                />
+              </>
+            ) : null}
+          </fieldset>
+          {paged ? (
+            <div className="flex flex-wrap gap-4">
+              <div className="flex min-w-0 flex-col gap-1">
+                <span className="font-medium">{t("exports.dialog.paper")}</span>
+                <SegmentedControl
+                  label={t("exports.dialog.paper")}
+                  value={options.paper}
+                  onValueChange={(paper) => set({ paper: paper as ExportOptions["paper"] })}
+                  options={(["a4", "letter"] as const).map((value) => ({
+                    value,
+                    label: t(`exports.dialog.papers.${value}`),
+                  }))}
+                />
+              </div>
+              <div className="flex min-w-0 flex-col gap-1">
+                <span className="font-medium">{t("exports.dialog.orientation")}</span>
+                <SegmentedControl
+                  label={t("exports.dialog.orientation")}
+                  value={options.orientation}
+                  onValueChange={(orientation) =>
+                    set({ orientation: orientation as ExportOptions["orientation"] })
+                  }
+                  options={(["portrait", "landscape"] as const).map((value) => ({
+                    value,
+                    label: t(`exports.dialog.orientations.${value}`),
+                  }))}
+                />
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </details>
       {multi && (choice !== "pdf" || serverPdf) ? (
         <p className="text-sm text-text-muted">{t("exports.dialog.background")}</p>
       ) : null}
@@ -380,6 +434,7 @@ export function ExportForm({
           type="submit"
           variant="primary"
           loading={busy}
+          disabled={paused}
           {...(choice === "pdf" && !serverPdf ? { icon: Printer } : {})}
         >
           {label}

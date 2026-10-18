@@ -86,7 +86,18 @@ export const exportCountsSchema = z
     serverPdf: z
       .boolean()
       .describe("Whether the render container is set up, so PDF can be created on the server."),
+    largeWritesPaused: z
+      .boolean()
+      .describe(
+        "Whether the file store is so full that exports of a space or of a page with its subpages are refused right now.",
+      ),
   })
   .describe("What an export of a space or of a page with its subpages contains.");
 
-export const exampleExportCounts = { pages: 412, blogPosts: 31, printLimit: 300, serverPdf: false };
+export const exampleExportCounts = {
+  pages: 412,
+  blogPosts: 31,
+  printLimit: 300,
+  serverPdf: false,
+  largeWritesPaused: false,
+};

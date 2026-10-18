@@ -8477,7 +8477,15 @@
       "preparePrint": "Druckansicht vorbereiten",
       "download": "Herunterladen",
       "start": "Export starten",
-      "failed": "„{name}“ wurde nicht exportiert"
+      "failed": "„{name}“ wurde nicht exportiert",
+      "withSubpages": "{title} mit Unterseiten",
+      "moreOptions": "Weitere Optionen",
+      "pausedTitle": "Exporte mehrerer Seiten sind pausiert",
+      "paused": "Der Dateispeicher ist fast voll, deshalb sind Exporte eines ganzen Space oder einer Seite mit Unterseiten pausiert.",
+      "pausedPageWorks": "Der Export nur dieser Seite funktioniert weiterhin.",
+      "storageFullAdmin": "Der Dateispeicher ist fast voll. Gib in den Speicher-Einstellungen Platz frei oder erhöhe die Warnstufen und starte den Export dann erneut.",
+      "storageFullMember": "Bitte eine Instanz-Administration, Speicher freizugeben, und starte den Export dann erneut.",
+      "openStorage": "Speicher-Einstellungen öffnen"
     },
     "print": {
       "title": "Druckansicht · {title}",

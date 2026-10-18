@@ -179795,13 +179795,18 @@
                     "serverPdf": {
                       "type": "boolean",
                       "description": "Whether the render container is set up, so PDF can be created on the server."
+                    },
+                    "largeWritesPaused": {
+                      "type": "boolean",
+                      "description": "Whether the file store is so full that exports of a space or of a page with its subpages are refused right now."
                     }
                   },
                   "required": [
                     "pages",
                     "blogPosts",
                     "printLimit",
-                    "serverPdf"
+                    "serverPdf",
+                    "largeWritesPaused"
                   ],
                   "additionalProperties": false,
                   "description": "What an export of a space or of a page with its subpages contains."
@@ -179810,7 +179815,8 @@
                   "pages": 412,
                   "blogPosts": 31,
                   "printLimit": 300,
-                  "serverPdf": false
+                  "serverPdf": false,
+                  "largeWritesPaused": false
                 }
               }
             }
@@ -200999,13 +201005,18 @@
                     "serverPdf": {
                       "type": "boolean",
                       "description": "Whether the render container is set up, so PDF can be created on the server."
+                    },
+                    "largeWritesPaused": {
+                      "type": "boolean",
+                      "description": "Whether the file store is so full that exports of a space or of a page with its subpages are refused right now."
                     }
                   },
                   "required": [
                     "pages",
                     "blogPosts",
                     "printLimit",
-                    "serverPdf"
+                    "serverPdf",
+                    "largeWritesPaused"
                   ],
                   "additionalProperties": false,
                   "description": "What an export of a space or of a page with its subpages contains."
@@ -201014,7 +201025,8 @@
                   "pages": 412,
                   "blogPosts": 31,
                   "printLimit": 300,
-                  "serverPdf": false
+                  "serverPdf": false,
+                  "largeWritesPaused": false
                 }
               }
             }
