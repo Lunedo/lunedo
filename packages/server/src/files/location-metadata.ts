@@ -2,8 +2,8 @@ import { Transform, type TransformCallback } from "node:stream";
 import { crc32 } from "node:zlib";
 
 const MAX_METADATA_BYTES = 1024 * 1024;
-const GPS_IFD = 0x8825;
-const TYPE_SIZES: Readonly<Record<number, number>> = {
+export const GPS_IFD = 0x8825;
+export const TYPE_SIZES: Readonly<Record<number, number>> = {
   1: 1,
   2: 1,
   3: 2,
@@ -23,7 +23,7 @@ const XMP_EXTENSION_HEADER = Buffer.from("http://ns.adobe.com/xmp/extension/\0",
 const PHOTOSHOP_HEADER = Buffer.from("Photoshop 3.0\0", "latin1");
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const IPTC_LOCATION_DATASETS = new Set([26, 27, 90, 92, 95, 100, 101]);
-const SPACE = 0x20;
+export const SPACE = 0x20;
 const XMP_KEYWORD = "XML:com.adobe.xmp";
 const RAW_PROFILE_KEYWORD = "Raw profile type ";
 const JPEG_START = Buffer.from([0xff, 0xd8, 0xff]);
@@ -31,7 +31,7 @@ const JPEG_END = Buffer.from([0xff, 0xd9]);
 const PNG_METADATA_CHUNKS = new Set(["eXIf", "tEXt", "zTXt", "iTXt"]);
 const REMOVED_PNG_CHUNK = "phRm";
 
-function stripTiffLocation(tiff: Buffer): void {
+export function stripTiffLocation(tiff: Buffer): void {
   if (tiff.length < 8) return;
   const order = tiff.toString("latin1", 0, 2);
   if (order !== "II" && order !== "MM") return;
@@ -65,7 +65,7 @@ function startsWith(data: Buffer, prefix: Buffer, offset = 0): boolean {
   );
 }
 
-function blankIptc(data: Buffer, start: number, end: number): void {
+export function blankIptc(data: Buffer, start: number, end: number): void {
   let at = start;
   while (at + 5 <= end && data[at] === 0x1c) {
     const record = data[at + 1];
@@ -79,8 +79,8 @@ function blankIptc(data: Buffer, start: number, end: number): void {
   }
 }
 
-function stripPhotoshop(data: Buffer): void {
-  let at = PHOTOSHOP_HEADER.length;
+export function stripPhotoshop(data: Buffer, from = PHOTOSHOP_HEADER.length): void {
+  let at = from;
   while (at + 12 <= data.length && data.toString("latin1", at, at + 4) === "8BIM") {
     const id = data.readUInt16BE(at + 4);
     const nameLength = data[at + 6] ?? 0;

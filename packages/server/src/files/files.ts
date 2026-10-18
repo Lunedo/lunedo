@@ -6,6 +6,7 @@ import {
   Transform,
   type TransformCallback,
 } from "node:stream";
+import { buffer } from "node:stream/consumers";
 import { pipeline } from "node:stream/promises";
 import { uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
@@ -28,6 +29,13 @@ import type { Logger } from "../logging/logger.js";
 import type { ValueSigner } from "../sharing/signer.js";
 import type { StorageUsage } from "../storage/usage.js";
 import { LocationStripper } from "./location-metadata.js";
+import {
+  locationPatches,
+  type Patch,
+  PatchStream,
+  RANDOM_ACCESS_IMAGE_TYPES,
+  UnsupportedLocationMetadata,
+} from "./location-ranges.js";
 import { type DetectedType, detectType, SNIFF_BYTES } from "./sniff.js";
 import type { ByteRange, FileStore } from "./store.js";
 
@@ -186,7 +194,47 @@ export class FileService {
         content_type = ${type.contentType}, master_key_version = ${keyVersion}, state = 'stored',
         display_version_state = ${displayVersions}, updated_at = now()
       where id = ${id}`);
-    return { id, size: inspector.size, digest: digest.toString("hex"), type };
+    const stored = { id, size: inspector.size, digest: digest.toString("hex"), type };
+    if (options.attachment !== true || !RANDOM_ACCESS_IMAGE_TYPES.has(type.contentType)) return stored;
+    return this.#withoutLocation(stored, key, options, executor);
+  }
+
+  async #withoutLocation(
+    stored: StoredFile,
+    key: string,
+    options: { name: string; maxBytes: number; executor?: Executor },
+    executor: Executor,
+  ): Promise<StoredFile> {
+    let patches: Patch[];
+    try {
+      patches = await locationPatches(stored.type.contentType, {
+        size: stored.size,
+        read: async (offset, length) =>
+          length === 0
+            ? Buffer.alloc(0)
+            : buffer(
+                await this.read(
+                  stored.id,
+                  { start: offset, end: offset + length - 1 },
+                  { staged: true, executor },
+                ),
+              ),
+      });
+    } catch (error) {
+      if (!(error instanceof UnsupportedLocationMetadata)) throw error;
+      this.#logger.warn(
+        { fileId: stored.id, contentType: stored.type.contentType, reason: error.message },
+        "Location metadata of an uploaded image could not be read and stays in the file",
+      );
+      return stored;
+    }
+    if (patches.length === 0) return stored;
+    try {
+      const source = await this.read(stored.id, undefined, { staged: true, executor });
+      return await this.write(source.pipe(new PatchStream(patches)), { ...options, attachment: false });
+    } finally {
+      await this.#discard(executor, stored.id, key, (await this.#store.size(key)) ?? 0, "stored");
+    }
   }
 
   async #rewrapIfOutdated(key: string, version: number): Promise<number> {
@@ -238,11 +286,17 @@ export class FileService {
       where id = ${fileId} and display_version_state = 'pending'`);
   }
 
-  async #discard(executor: Executor, id: string, key: string, stored: number): Promise<void> {
+  async #discard(
+    executor: Executor,
+    id: string,
+    key: string,
+    stored: number,
+    state: "pending" | "stored" = "pending",
+  ): Promise<void> {
     try {
       await this.#store.delete(key);
       await this.#usage?.add(-stored, key);
-      await executor.execute(sql`delete from stored_files where id = ${id} and state = 'pending'`);
+      await executor.execute(sql`delete from stored_files where id = ${id} and state = ${state}`);
     } catch (error) {
       this.#logger.warn({ err: error, fileId: id }, "Removing an incomplete upload failed");
     }
@@ -262,8 +316,12 @@ export class FileService {
     return { storage_key: row.storage_key, size: Number(row.size) };
   }
 
-  async read(fileId: string, range?: ByteRange, options: { staged?: boolean } = {}): Promise<Readable> {
-    const row = await this.#row(this.#database, fileId, options.staged ?? false);
+  async read(
+    fileId: string,
+    range?: ByteRange,
+    options: { staged?: boolean; executor?: Executor } = {},
+  ): Promise<Readable> {
+    const row = await this.#row(options.executor ?? this.#database, fileId, options.staged ?? false);
     if (!range || row.size === 0) {
       const source = await this.#store.read(row.storage_key);
       return source.pipe(createDecryptStream(this.#keys(), { associatedData: associatedData(fileId) }));
