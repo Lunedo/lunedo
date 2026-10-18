@@ -38,6 +38,7 @@ import {
   type ExportFormat,
   type ExportOptions,
   MAX_BROWSER_PRINT_PAGES,
+  MAX_FILE_EXPORT_PAGES,
   readExportOptions,
 } from "./options.js";
 import { type PagedEntry, PagedExport } from "./paged.js";
@@ -84,6 +85,7 @@ export type ExportErrorCode =
   | "nothingToExport"
   | "tooManyExports"
   | "tooManyPagesToPrint"
+  | "tooManyPagesForFile"
   | "renderUnavailable"
   | "renderFailed";
 
@@ -95,6 +97,8 @@ export type ExportFailureCode =
   | "renderUnavailable"
   | "renderFailed"
   | "renderTooLarge"
+  | "tooManyPagesForFile"
+  | "tooLargeToBuild"
   | "interrupted"
   | "internalError";
 
@@ -118,6 +122,17 @@ const EXTENSIONS: Record<ExportFormat, string> = {
   docx: "docx",
 };
 
+function tooManyForFile(total: number): string {
+  return `Word and PDF files can hold up to ${MAX_FILE_EXPORT_PAGES} pages, and this export has ${total}. Export it as an HTML or Markdown archive instead, or export a smaller part.`;
+}
+
+function outOfMemory(error: unknown): boolean {
+  return (
+    error instanceof RangeError &&
+    /allocation failed|invalid (string|array|typed array) length|out of memory/i.test(error.message)
+  );
+}
+
 function renderFailure(error: RenderError): ExportFailureCode {
   if (error.reason === "unavailable") return "renderUnavailable";
   if (error.reason === "tooLarge") return "renderTooLarge";
@@ -133,6 +148,7 @@ export interface ExportSummaryCounts {
   pages: number;
   blogPosts: number;
   printLimit: number;
+  fileLimit: number;
   serverPdf: boolean;
 }
 
@@ -623,6 +639,7 @@ export class ExportService {
     return {
       ...(await this.#countPages(actor, subject.spaceId, subject.rootItemId)),
       printLimit: MAX_BROWSER_PRINT_PAGES,
+      fileLimit: MAX_FILE_EXPORT_PAGES,
       serverPdf: this.#render.configured,
     };
   }
@@ -640,13 +657,17 @@ export class ExportService {
     }
     const subject = await this.#subject(target);
     if (!subject) throw new ExportError("nothingToExport", "There is nothing to export");
-    if (request.format === "print") {
+    if (request.format === "print" || request.format === "docx" || request.format === "pdf") {
       const counted = await this.#countPages(actor, subject.spaceId, subject.rootItemId);
-      if (counted.pages + counted.blogPosts > MAX_BROWSER_PRINT_PAGES) {
+      const total = counted.pages + counted.blogPosts;
+      if (request.format === "print" && total > MAX_BROWSER_PRINT_PAGES) {
         throw new ExportError(
           "tooManyPagesToPrint",
           `Browsers can print up to ${MAX_BROWSER_PRINT_PAGES} pages at once. Export as Word or HTML instead, or as PDF on the server if the render container is set up.`,
         );
+      }
+      if (request.format !== "print" && total > MAX_FILE_EXPORT_PAGES) {
+        throw new ExportError("tooManyPagesForFile", tooManyForFile(total));
       }
     }
     const running = await this.#database.execute(sql`
@@ -1015,6 +1036,11 @@ export class ExportService {
           await this.#fail(row, error.code);
           return;
         }
+        if (outOfMemory(error)) {
+          this.#logger.error({ err: error, exportId: id }, "An export ran out of memory and is not retried");
+          await this.#fail(row, "tooLargeToBuild");
+          return;
+        }
         if (job.signal.aborted) throw error;
         if (row.attempts + 1 >= MAX_EXPORT_ATTEMPTS) {
           this.#logger.error({ err: error, exportId: id }, "An export failed after all attempts");
@@ -1180,6 +1206,9 @@ export class ExportService {
     const now = new Date();
     let archive: Readable;
     if (paged) {
+      if (row.format !== "print" && plan.pages.length > MAX_FILE_EXPORT_PAGES) {
+        throw new ExportFailure("tooManyPagesForFile");
+      }
       const depths = new Map(items.map((item) => [item.id, item.path.length]));
       const base = Math.min(...plan.pages.map((node) => depths.get(node.id) ?? 1));
       const pagedExport = this.#paged(viewer, renderer, language);

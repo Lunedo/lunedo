@@ -1523,6 +1523,7 @@
     "storageFull": "Der Speicher ist fast voll. Die Administration der Instanz wurde informiert. Versuche es erneut, sobald Platz geschaffen wurde.",
     "invalidStorageSettings": "Die Speichereinstellungen sind ungültig. Prüfe die markierten Felder und versuche es erneut.",
     "tooManyPagesToPrint": "Browser drucken bis zu 300 Seiten auf einmal. Exportieren Sie stattdessen als Word oder HTML, oder als PDF auf dem Server, falls Ihre Administration den Render-Container eingerichtet hat.",
+    "tooManyPagesForFile": "Word- und PDF-Dateien nehmen bis zu 1.000 Seiten auf. Exportieren Sie stattdessen als HTML- oder Markdown-Archiv oder einen kleineren Teil.",
     "renderUnavailable": "PDF auf dem Server braucht den Render-Container, der nicht eingerichtet oder nicht erreichbar ist. Drucken Sie das PDF stattdessen über Ihren Browser oder fragen Sie Ihre Instanz-Administration.",
     "renderFailed": "Der Render-Container konnte das PDF nicht erstellen. Versuchen Sie es erneut; schlägt es wieder fehl, informieren Sie Ihre Instanz-Administration.",
     "invalidDiagram": "Das draw.io-Diagramm konnte nicht gespeichert werden, weil es etwas enthält, das draw.io nicht schreibt, oder weil es beschädigt ist. Mache die letzte Änderung in draw.io rückgängig und speichere noch einmal.",
@@ -8397,7 +8398,9 @@
       "internalError": "Beim Erstellen des Exports ist etwas schiefgegangen. Starte ihn erneut; scheitert er wieder, wende dich an die Person, die Pagehall betreibt.",
       "renderUnavailable": "PDF auf dem Server braucht den Render-Container, der nicht eingerichtet oder nicht erreichbar ist. Drucken Sie das PDF stattdessen über Ihren Browser oder fragen Sie Ihre Instanz-Administration.",
       "renderFailed": "Der Render-Container konnte das PDF nicht erstellen. Starten Sie den Export erneut; schlägt er wieder fehl, informieren Sie Ihre Instanz-Administration.",
-      "renderTooLarge": "Das Dokument mit seinen Bildern ist größer, als der Render-Container annimmt. Exportieren Sie weniger Seiten oder als Word bzw. HTML."
+      "renderTooLarge": "Das Dokument mit seinen Bildern ist größer, als der Render-Container annimmt. Exportieren Sie weniger Seiten oder als Word bzw. HTML.",
+      "tooManyPagesForFile": "Die Word- oder PDF-Datei hätte mehr Seiten, als sie aufnimmt. Exportieren Sie stattdessen als HTML- oder Markdown-Archiv oder einen kleineren Teil.",
+      "tooLargeToBuild": "Für die Datei hätte der Server mehr Speicher gebraucht, als er hat. Exportieren Sie einen kleineren Teil oder als HTML- oder Markdown-Archiv."
     },
     "screen": {
       "title": "Exporte",
@@ -8471,11 +8474,14 @@
       "contents": "Inhaltsverzeichnis",
       "contentsDescription": "Auf dem ersten Blatt, mit Seitenzahlen.",
       "background": "Läuft im Hintergrund. Sie erhalten eine Benachrichtigung mit dem Download, sobald die Datei fertig ist.",
+      "tooManyForFileTitle": "Zu viele Seiten für eine Datei",
+      "tooManyForFile": "{count, plural, one {# Seite ist} other {# Seiten sind}} mehr, als eine Word- oder PDF-Datei aufnimmt (bis zu {limit}). Exportieren Sie sie als HTML- oder Markdown-Archiv oder einen kleineren Teil.",
       "tooManyTitle": "Zu viele Seiten für die Druckansicht",
       "tooMany": "{count, plural, one {# Seite ist} other {# Seiten sind}} mehr, als Browser zuverlässig auf einmal drucken (bis zu {limit}). Exportieren Sie stattdessen als Word oder HTML.",
       "tooManyServer": "{count, plural, one {# Seite ist} other {# Seiten sind}} mehr, als Browser zuverlässig auf einmal drucken (bis zu {limit}). Erstellen Sie das PDF auf dem Server oder exportieren Sie als Word oder HTML.",
       "useWord": "Als Word exportieren",
       "useHtml": "Als HTML exportieren",
+      "useMarkdown": "Als Markdown exportieren",
       "useServer": "PDF auf dem Server erstellen",
       "serverChosen": "Das PDF wird auf dem Server erstellt.",
       "countsFailed": "Die Seiten konnten nicht gezählt werden. Sie können den Export trotzdem starten.",

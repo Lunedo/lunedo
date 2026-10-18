@@ -322,6 +322,7 @@ export {
   exportFormats,
   exportOptionsSchema,
   MAX_BROWSER_PRINT_PAGES,
+  MAX_FILE_EXPORT_PAGES,
   type Orientation,
   orientations,
   type PaperSize,

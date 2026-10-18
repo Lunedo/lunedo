@@ -259,6 +259,7 @@ describe.skipIf(!databaseBaseUrl)("exports through the API", () => {
       pages: 2,
       blogPosts: 0,
       printLimit: 300,
+      fileLimit: 1000,
       serverPdf: false,
     });
     const subtree = await context.exporter.client.get(`/api/v1/pages/${context.pageId}/exports/summary`);

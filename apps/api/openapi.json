@@ -22776,6 +22776,8 @@
                               "renderUnavailable",
                               "renderFailed",
                               "renderTooLarge",
+                              "tooManyPagesForFile",
+                              "tooLargeToBuild",
                               "interrupted",
                               "internalError"
                             ]
@@ -22784,7 +22786,7 @@
                             "type": "null"
                           }
                         ],
-                        "description": "Why a failed export stopped: export was turned off for the space, the permission to export the space or page was lost, the API token that started it was revoked, the file store ran short of free space while it was written, the render container for PDF is not set up or cannot be reached, it could not create the PDF, the document was larger than the render container accepts, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
+                        "description": "Why a failed export stopped: export was turned off for the space, the permission to export the space or page was lost, the API token that started it was revoked, the file store ran short of free space while it was written, the render container for PDF is not set up or cannot be reached, it could not create the PDF, the document was larger than the render container accepts, the Word or PDF file would have more pages than the limit, building the file ran out of memory, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
                       },
                       "createdAt": {
                         "type": "string",
@@ -23323,6 +23325,8 @@
                             "renderUnavailable",
                             "renderFailed",
                             "renderTooLarge",
+                            "tooManyPagesForFile",
+                            "tooLargeToBuild",
                             "interrupted",
                             "internalError"
                           ]
@@ -23331,7 +23335,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Why a failed export stopped: export was turned off for the space, the permission to export the space or page was lost, the API token that started it was revoked, the file store ran short of free space while it was written, the render container for PDF is not set up or cannot be reached, it could not create the PDF, the document was larger than the render container accepts, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
+                      "description": "Why a failed export stopped: export was turned off for the space, the permission to export the space or page was lost, the API token that started it was revoked, the file store ran short of free space while it was written, the render container for PDF is not set up or cannot be reached, it could not create the PDF, the document was larger than the render container accepts, the Word or PDF file would have more pages than the limit, building the file ran out of memory, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
                     },
                     "createdAt": {
                       "type": "string",
@@ -179717,6 +179721,8 @@
                             "renderUnavailable",
                             "renderFailed",
                             "renderTooLarge",
+                            "tooManyPagesForFile",
+                            "tooLargeToBuild",
                             "interrupted",
                             "internalError"
                           ]
@@ -179725,7 +179731,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Why a failed export stopped: export was turned off for the space, the permission to export the space or page was lost, the API token that started it was revoked, the file store ran short of free space while it was written, the render container for PDF is not set up or cannot be reached, it could not create the PDF, the document was larger than the render container accepts, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
+                      "description": "Why a failed export stopped: export was turned off for the space, the permission to export the space or page was lost, the API token that started it was revoked, the file store ran short of free space while it was written, the render container for PDF is not set up or cannot be reached, it could not create the PDF, the document was larger than the render container accepts, the Word or PDF file would have more pages than the limit, building the file ran out of memory, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
                     },
                     "createdAt": {
                       "type": "string",
@@ -179919,7 +179925,7 @@
             }
           },
           "409": {
-            "description": "`exportRunning`: Another export of yours is still running. `nothingToExport`: There is nothing to export. `tooManyExports`: You keep as many exports as allowed. `tooManyPagesToPrint`: Too many pages to print in a browser.",
+            "description": "`exportRunning`: Another export of yours is still running. `nothingToExport`: There is nothing to export. `tooManyExports`: You keep as many exports as allowed. `tooManyPagesForFile`: Too many pages for a Word or PDF file. `tooManyPagesToPrint`: Too many pages to print in a browser.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -179948,6 +179954,14 @@
                       "title": "You keep as many exports as allowed",
                       "status": 409,
                       "code": "tooManyExports"
+                    }
+                  },
+                  "tooManyPagesForFile": {
+                    "value": {
+                      "type": "urn:pagehall:problem:tooManyPagesForFile",
+                      "title": "Too many pages for a Word or PDF file",
+                      "status": 409,
+                      "code": "tooManyPagesForFile"
                     }
                   },
                   "tooManyPagesToPrint": {
@@ -180084,6 +180098,12 @@
                       "maximum": 9007199254740991,
                       "description": "Most pages a browser prints at once through the print view."
                     },
+                    "fileLimit": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Most pages a Word or PDF file can hold; larger exports need an HTML or Markdown archive."
+                    },
                     "serverPdf": {
                       "type": "boolean",
                       "description": "Whether the render container is set up, so PDF can be created on the server."
@@ -180093,6 +180113,7 @@
                     "pages",
                     "blogPosts",
                     "printLimit",
+                    "fileLimit",
                     "serverPdf"
                   ],
                   "additionalProperties": false,
@@ -180102,6 +180123,7 @@
                   "pages": 412,
                   "blogPosts": 31,
                   "printLimit": 300,
+                  "fileLimit": 1000,
                   "serverPdf": false
                 }
               }
@@ -200929,6 +200951,8 @@
                             "renderUnavailable",
                             "renderFailed",
                             "renderTooLarge",
+                            "tooManyPagesForFile",
+                            "tooLargeToBuild",
                             "interrupted",
                             "internalError"
                           ]
@@ -200937,7 +200961,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Why a failed export stopped: export was turned off for the space, the permission to export the space or page was lost, the API token that started it was revoked, the file store ran short of free space while it was written, the render container for PDF is not set up or cannot be reached, it could not create the PDF, the document was larger than the render container accepts, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
+                      "description": "Why a failed export stopped: export was turned off for the space, the permission to export the space or page was lost, the API token that started it was revoked, the file store ran short of free space while it was written, the render container for PDF is not set up or cannot be reached, it could not create the PDF, the document was larger than the render container accepts, the Word or PDF file would have more pages than the limit, building the file ran out of memory, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
                     },
                     "createdAt": {
                       "type": "string",
@@ -201131,7 +201155,7 @@
             }
           },
           "409": {
-            "description": "`exportRunning`: Another export of yours is still running. `tooManyExports`: You keep as many exports as allowed. `tooManyPagesToPrint`: Too many pages to print in a browser.",
+            "description": "`exportRunning`: Another export of yours is still running. `tooManyExports`: You keep as many exports as allowed. `tooManyPagesForFile`: Too many pages for a Word or PDF file. `tooManyPagesToPrint`: Too many pages to print in a browser.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -201152,6 +201176,14 @@
                       "title": "You keep as many exports as allowed",
                       "status": 409,
                       "code": "tooManyExports"
+                    }
+                  },
+                  "tooManyPagesForFile": {
+                    "value": {
+                      "type": "urn:pagehall:problem:tooManyPagesForFile",
+                      "title": "Too many pages for a Word or PDF file",
+                      "status": 409,
+                      "code": "tooManyPagesForFile"
                     }
                   },
                   "tooManyPagesToPrint": {
@@ -201288,6 +201320,12 @@
                       "maximum": 9007199254740991,
                       "description": "Most pages a browser prints at once through the print view."
                     },
+                    "fileLimit": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Most pages a Word or PDF file can hold; larger exports need an HTML or Markdown archive."
+                    },
                     "serverPdf": {
                       "type": "boolean",
                       "description": "Whether the render container is set up, so PDF can be created on the server."
@@ -201297,6 +201335,7 @@
                     "pages",
                     "blogPosts",
                     "printLimit",
+                    "fileLimit",
                     "serverPdf"
                   ],
                   "additionalProperties": false,
@@ -201306,6 +201345,7 @@
                   "pages": 412,
                   "blogPosts": 31,
                   "printLimit": 300,
+                  "fileLimit": 1000,
                   "serverPdf": false
                 }
               }

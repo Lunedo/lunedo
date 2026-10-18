@@ -1523,6 +1523,7 @@
     "storageFull": "Storage is almost full. Your instance administrator has been informed. Try again once space has been freed up.",
     "invalidStorageSettings": "The storage settings are not valid. Check the marked fields and try again.",
     "tooManyPagesToPrint": "Browsers print up to 300 pages at once. Export as Word or HTML instead, or as PDF on the server if your administrator set up the render container.",
+    "tooManyPagesForFile": "Word and PDF files can hold up to 1,000 pages. Export as an HTML or Markdown archive instead, or export a smaller part.",
     "renderUnavailable": "PDF on the server needs the render container, which is not set up or not reachable. Print the PDF through your browser instead, or ask your instance administrator.",
     "renderFailed": "The render container could not create the PDF. Try again; if it fails again, tell your instance administrator.",
     "invalidDiagram": "The draw.io diagram could not be stored because it contains something draw.io does not write, or it is damaged. Undo the last change in draw.io and save again.",
@@ -8397,7 +8398,9 @@
       "internalError": "Something went wrong while building the export. Start it again; if it fails again, tell the person who runs Pagehall.",
       "renderUnavailable": "PDF on the server needs the render container, which is not set up or not reachable. Print the PDF through your browser instead, or ask your instance administrator.",
       "renderFailed": "The render container could not create the PDF. Start the export again; if it fails again, tell your instance administrator.",
-      "renderTooLarge": "The document with its images is larger than the render container accepts. Export fewer pages, or as Word or HTML."
+      "renderTooLarge": "The document with its images is larger than the render container accepts. Export fewer pages, or as Word or HTML.",
+      "tooManyPagesForFile": "The Word or PDF file would have more pages than it can hold. Export as an HTML or Markdown archive instead, or export a smaller part.",
+      "tooLargeToBuild": "Building the file needed more memory than the server has. Export a smaller part, or as an HTML or Markdown archive."
     },
     "screen": {
       "title": "Exports",
@@ -8471,11 +8474,14 @@
       "contents": "Table of contents",
       "contentsDescription": "On the first sheet, with page numbers.",
       "background": "Runs in the background. You get a notification with the download when the file is ready.",
+      "tooManyForFileTitle": "Too many pages for one file",
+      "tooManyForFile": "{count, plural, one {# page} other {# pages}} are more than a Word or PDF file can hold (up to {limit}). Export them as an HTML or Markdown archive, or export a smaller part.",
       "tooManyTitle": "Too many pages for the print view",
       "tooMany": "{count, plural, one {# page} other {# pages}} are more than browsers print reliably at once (up to {limit}). Export as Word or HTML instead.",
       "tooManyServer": "{count, plural, one {# page} other {# pages}} are more than browsers print reliably at once (up to {limit}). Create the PDF on the server, or export as Word or HTML.",
       "useWord": "Export as Word",
       "useHtml": "Export as HTML",
+      "useMarkdown": "Export as Markdown",
       "useServer": "Create PDF on the server",
       "serverChosen": "The PDF is created on the server.",
       "countsFailed": "The number of pages could not be counted. You can still start the export.",

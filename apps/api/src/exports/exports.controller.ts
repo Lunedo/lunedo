@@ -191,6 +191,7 @@ export class ExportsController {
       "notEnoughStorage",
       "nothingToExport",
       "tooManyPagesToPrint",
+      "tooManyPagesForFile",
       "renderUnavailable",
     ],
   })
@@ -245,6 +246,7 @@ export class ExportsController {
       "tooManyExports",
       "notEnoughStorage",
       "tooManyPagesToPrint",
+      "tooManyPagesForFile",
       "renderUnavailable",
     ],
   })

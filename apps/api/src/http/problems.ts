@@ -159,6 +159,7 @@ export const problems = {
   invalidStorageSettings: { status: 400, title: "The storage settings are not valid" },
   tooManyExports: { status: 409, title: "You keep as many exports as allowed" },
   tooManyPagesToPrint: { status: 409, title: "Too many pages to print in a browser" },
+  tooManyPagesForFile: { status: 409, title: "Too many pages for a Word or PDF file" },
   renderUnavailable: { status: 503, title: "Server-side PDF needs the render container" },
   renderFailed: { status: 502, title: "The render container could not create the PDF" },
   holderNotInPagehall: { status: 409, title: "The person or group is not in Pagehall yet" },
