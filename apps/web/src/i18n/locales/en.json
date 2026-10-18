@@ -8156,6 +8156,8 @@
       "checkFailed": "The connection could not be tested",
       "checkFailedAction": "Check the address and the token, then test the connection again.",
       "required": "Test the connection first, then continue.",
+      "allowSites": "Allow other sites in the import settings of the instance",
+      "askToAllowSites": "Instance administrators allow other sites under Settings › Instance › Pages and trash › Imports.",
       "deletedTitle": "Enter the token again",
       "deleted": "Pagehall deleted the token of this draft on {when}, because the draft was left alone for a week or because its importer lost the permission to import. Test the connection again to continue.",
       "sitePlaceholder": "example.atlassian.net",

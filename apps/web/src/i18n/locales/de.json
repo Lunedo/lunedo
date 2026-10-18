@@ -8156,6 +8156,8 @@
       "checkFailed": "Die Verbindung konnte nicht getestet werden",
       "checkFailedAction": "Prüfe Adresse und Token und teste die Verbindung dann erneut.",
       "required": "Teste zuerst die Verbindung und fahre dann fort.",
+      "allowSites": "Weitere Sites in den Import-Einstellungen der Instanz erlauben",
+      "askToAllowSites": "Instanz-Administratoren erlauben weitere Sites unter Einstellungen › Instanz › Seiten und Papierkorb › Importe.",
       "deletedTitle": "Token erneut eingeben",
       "deleted": "Pagehall hat das Token dieses Entwurfs am {when} gelöscht, weil der Entwurf eine Woche lang unbearbeitet blieb oder weil die importierende Person das Recht zum Importieren verloren hat. Teste die Verbindung erneut, um fortzufahren.",
       "sitePlaceholder": "example.atlassian.net",

@@ -20,12 +20,15 @@ import {
   Textarea,
 } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { CheckCircle2, FileText, Upload, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { isApiError } from "../api/request.js";
 import { LoadError, useFailureToast } from "../errors/failure.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { useFormat } from "../preferences/preferences-provider.js";
+import { useOrganizationState } from "../shell/shell-context.js";
 import {
   type ConnectionBody,
   connectionSpacesQuery,
@@ -105,7 +108,42 @@ export function ThrottleNotice({ until }: { until: string | null }) {
   );
 }
 
-type ConnectionProblems = { site?: string; email?: string; token?: string; baseUrl?: string };
+type ConnectionProblems = {
+  site?: string;
+  email?: string;
+  token?: string;
+  baseUrl?: string;
+  certificates?: string;
+};
+
+const ADDRESS_PROBLEMS = new Set([
+  "invalidAtlassianSite",
+  "confluenceBlocked",
+  "confluenceRedirect",
+  "confluenceUnreachable",
+  "confluenceInvalidResponse",
+  "confluenceResponseTooLarge",
+]);
+const ALLOWED_SITE_PROBLEMS = new Set(["invalidAtlassianSite", "confluenceBlocked"]);
+
+function connectionField(code: string, cloud: boolean): keyof ConnectionProblems | null {
+  if (ADDRESS_PROBLEMS.has(code)) return cloud ? "site" : "baseUrl";
+  if (code === "confluenceCertificate") return cloud ? "site" : "certificates";
+  if (code === "confluenceUnauthorized") return "token";
+  return null;
+}
+
+function AllowedSitesHint() {
+  const { t } = useTranslation();
+  const administrator = useOrganizationState().can("instance.settings.manage");
+  return administrator ? (
+    <Link to="/settings/instance/content" className="text-sm text-accent underline">
+      {t("imports.connection.allowSites")}
+    </Link>
+  ) : (
+    <p className="text-sm text-text-muted">{t("imports.connection.askToAllowSites")}</p>
+  );
+}
 
 export function ConnectionStep({
   entry,
@@ -131,6 +169,9 @@ export function ConnectionStep({
   const [certificates, setCertificates] = useState("");
   const [errors, setErrors] = useState<ConnectionProblems>({});
   const [failure, setFailure] = useState<unknown>(null);
+  const [allowedSites, setAllowedSites] = useState(false);
+  const [advanced, setAdvanced] = useState(false);
+  const [requiredShown, setRequiredShown] = useState(true);
   const [checking, setChecking] = useState(false);
   const [seenAttempt, setSeenAttempt] = useState(attempt);
 
@@ -148,6 +189,7 @@ export function ConnectionStep({
 
   if (seenAttempt !== attempt) {
     setSeenAttempt(attempt);
+    setRequiredShown(true);
     if (editing) setErrors(problems());
   }
 
@@ -155,6 +197,8 @@ export function ConnectionStep({
     const next = problems();
     setErrors(next);
     setFailure(null);
+    setAllowedSites(false);
+    setRequiredShown(false);
     if (Object.keys(next).length > 0) {
       focusFirstInvalidSoon();
       return;
@@ -174,7 +218,15 @@ export function ConnectionStep({
       setToken("");
       setEditing(false);
     } catch (problem) {
-      setFailure(problem);
+      const field = isApiError(problem) ? connectionField(problem.code, cloud) : null;
+      if (field) {
+        setErrors({ [field]: problemMessage(t, problem) });
+        setAllowedSites(isApiError(problem) && ALLOWED_SITE_PROBLEMS.has(problem.code));
+        if (field === "certificates") setAdvanced(true);
+        focusFirstInvalidSoon();
+      } else {
+        setFailure(problem);
+      }
     } finally {
       setChecking(false);
     }
@@ -184,7 +236,7 @@ export function ConnectionStep({
   return (
     <Section title={t(cloud ? "imports.connection.cloudTitle" : "imports.connection.dataCenterTitle")}>
       <div className="flex flex-col gap-4 p-4">
-        {error ? <FieldError>{error}</FieldError> : null}
+        {error && requiredShown ? <FieldError>{error}</FieldError> : null}
         {deleted && entry.tokenDeletedAt ? (
           <Notice variant="warning" title={t("imports.connection.deletedTitle")}>
             {t("imports.connection.deleted", { when: format.dateTime(entry.tokenDeletedAt) })}
@@ -232,6 +284,11 @@ export function ConnectionStep({
                     onChange={(event) => setSite(event.target.value)}
                   />
                 </Field>
+                {allowedSites ? (
+                  <div className="md:col-span-2">
+                    <AllowedSitesHint />
+                  </div>
+                ) : null}
                 <Field
                   label={t("imports.connection.email")}
                   {...(errors.email ? { error: errors.email } : {})}
@@ -261,6 +318,7 @@ export function ConnectionStep({
                 />
               </Field>
             )}
+            {allowedSites && !cloud ? <AllowedSitesHint /> : null}
             <Field
               label={t(cloud ? "imports.connection.apiToken" : "imports.connection.accessToken")}
               hint={t(cloud ? "imports.connection.apiTokenHint" : "imports.connection.accessTokenHint")}
@@ -275,7 +333,11 @@ export function ConnectionStep({
               />
             </Field>
             {cloud ? null : (
-              <details className="rounded-md border border-border">
+              <details
+                className="rounded-md border border-border"
+                open={advanced}
+                onToggle={(event) => setAdvanced(event.currentTarget.open)}
+              >
                 <summary className="flex min-h-hit cursor-pointer items-center rounded-md px-4 py-2 font-medium focus-visible:focus-ring">
                   {t("imports.connection.advanced")}
                 </summary>
@@ -283,6 +345,7 @@ export function ConnectionStep({
                   <Field
                     label={t("imports.connection.certificates")}
                     hint={t("imports.connection.certificatesHint")}
+                    {...(errors.certificates ? { error: errors.certificates } : {})}
                   >
                     <Textarea
                       rows={6}
@@ -318,7 +381,7 @@ export function ConnectionStep({
                   {t("common.cancel")}
                 </Button>
               ) : null}
-              <Button type="submit" variant="primary" loading={checking}>
+              <Button type="submit" variant="secondary" loading={checking}>
                 {t("imports.connection.test")}
               </Button>
             </div>
