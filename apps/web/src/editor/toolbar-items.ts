@@ -98,6 +98,23 @@ export function blockTypeLabel(editor: Editor, t: TFunction): string {
   return t("editor.blocks.paragraph");
 }
 
+export function sameToolbarItems(
+  left: readonly ToolbarItem[],
+  right: readonly ToolbarItem[] | null,
+): boolean {
+  return (
+    right !== null &&
+    left.length === right.length &&
+    left.every(
+      (item, index) =>
+        item.id === right[index]?.id &&
+        item.active === right[index]?.active &&
+        item.text === right[index]?.text &&
+        item.icon === right[index]?.icon,
+    )
+  );
+}
+
 export function toolbarItems(editor: Editor, t: TFunction, actions: EditorActions): ToolbarItem[] {
   const chain = () => editor.chain().focus();
   const mark = (

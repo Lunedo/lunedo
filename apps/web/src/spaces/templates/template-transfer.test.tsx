@@ -75,7 +75,13 @@ function fakeApi(preview?: ImportPreview): TemplateLevelApi & { [key: string]: R
   } as unknown as TemplateLevelApi & { [key: string]: ReturnType<typeof vi.fn> };
 }
 
-async function renderManager(api: TemplateLevelApi) {
+async function renderManager(
+  api: TemplateLevelApi,
+  handlers: {
+    onCreate?: (input: unknown) => Promise<void>;
+    onUpdate?: (id: string, input: unknown) => Promise<void>;
+  } = {},
+) {
   mockApi({ "GET /api/v1/auth/session": () => problem(401, "notSignedIn") });
   const onImported = vi.fn(async () => undefined);
   await renderWithProviders(
@@ -88,8 +94,8 @@ async function renderManager(api: TemplateLevelApi) {
         canManage
         transfer={api}
         onImported={onImported}
-        onCreate={async () => undefined}
-        onUpdate={async () => undefined}
+        onCreate={handlers.onCreate ?? (async () => undefined)}
+        onUpdate={handlers.onUpdate ?? (async () => undefined)}
         onDelete={async () => undefined}
       />,
     ),
@@ -255,5 +261,58 @@ describe("saving a page as a template", () => {
         "This page is restricted. Its 2 images become visible to everyone who can use the template.",
       ),
     ).toBeTruthy();
+  });
+});
+
+describe("the template editor", () => {
+  it("accepts typing into name, description and content of a new template", async () => {
+    const onCreate = vi.fn(async (_input: unknown) => undefined);
+    await renderManager(fakeApi(), { onCreate });
+    await userEvent.click(await screen.findByRole("button", { name: "Create template" }));
+    const dialog = await screen.findByRole("dialog", { name: "New template" });
+    await userEvent.type(within(dialog).getByRole("textbox", { name: /^Name/ }), "Site survey");
+    await userEvent.type(within(dialog).getByRole("textbox", { name: /^Description/ }), "Checklist");
+    await userEvent.type(within(dialog).getByRole("textbox", { name: /^Title of new pages/ }), "Survey");
+    const content = await within(dialog).findByRole("textbox", { name: "Content" }, { timeout: 5000 });
+    await userEvent.click(content);
+    await userEvent.keyboard("Rooms and racks");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Create template" }));
+    await waitFor(() => expect(onCreate).toHaveBeenCalledTimes(1));
+    expect(onCreate.mock.calls[0]).toEqual([
+      expect.objectContaining({
+        name: "Site survey",
+        description: "Checklist",
+        title: "Survey",
+        document: expect.objectContaining({
+          content: [expect.objectContaining({ content: [{ type: "text", text: "Rooms and racks" }] })],
+        }),
+      }),
+    ]);
+  });
+
+  it("accepts typing into the content of an existing template", async () => {
+    const onUpdate = vi.fn(async (_id: string, _input: unknown) => undefined);
+    await renderManager(fakeApi(), { onUpdate });
+    await userEvent.click(await screen.findByRole("button", { name: "Actions for Retro" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Edit template" }));
+    const dialog = await screen.findByRole("dialog", { name: "Edit template" });
+    const content = await within(dialog).findByRole("textbox", { name: "Content" }, { timeout: 5000 });
+    await userEvent.click(content);
+    await userEvent.keyboard("Went well");
+    await userEvent.type(within(dialog).getByRole("textbox", { name: /^Name/ }), " 2027");
+    const title = within(dialog).getByRole("textbox", { name: /^Title of new pages/ });
+    await userEvent.clear(title);
+    await userEvent.type(title, "Retro");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save template" }));
+    await waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
+    expect(onUpdate.mock.calls[0]).toEqual([
+      RETRO,
+      expect.objectContaining({
+        name: "Retro 2027",
+        document: expect.objectContaining({
+          content: [expect.objectContaining({ content: [{ type: "text", text: "Went well" }] })],
+        }),
+      }),
+    ]);
   });
 });

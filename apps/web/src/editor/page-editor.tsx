@@ -31,7 +31,7 @@ import {
 } from "./save-indicator.js";
 import type { SaveState } from "./save-state.js";
 import { EditorToolbar, type ToolbarHandle } from "./toolbar.js";
-import { toolbarItems } from "./toolbar-items.js";
+import { sameToolbarItems, toolbarItems } from "./toolbar-items.js";
 import "./editor.css";
 
 export interface PageEditorProps {
@@ -218,16 +218,7 @@ function CollaborativeEditor({
   const items = useEditorState({
     editor,
     selector: ({ editor: current }) => (current ? toolbarItems(current, t, actions) : []),
-    equalityFn: (left, right) =>
-      right !== null &&
-      left.length === right.length &&
-      left.every(
-        (item, index) =>
-          item.id === right[index]?.id &&
-          item.active === right[index]?.active &&
-          item.text === right[index]?.text &&
-          item.icon === right[index]?.icon,
-      ),
+    equalityFn: sameToolbarItems,
   });
 
   const editable = useEditorState({

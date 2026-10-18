@@ -8,6 +8,7 @@ import { PreferencesProvider } from "../preferences/preferences-provider.js";
 import { SystemCheckStep } from "../screens/setup/steps/system-check-step.js";
 import { mockApi, problem, renderWithProviders } from "../testing/render.js";
 import { useFailureToast } from "./failure.js";
+import { ScreenErrorScreen } from "./route-error.js";
 
 const ORGANIZATION = {
   id: "01929b1e-6f2a-7c3d-8e9f-0a1b2c3d4e5f",
@@ -222,5 +223,21 @@ describe("screens that cannot load", () => {
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
     await waitFor(() => expect(screen.queryByText("This page could not be loaded")).toBeNull());
     expect(await screen.findByRole("heading", { name: "Service accounts", level: 1 })).toBeTruthy();
+  });
+
+  it("blame the browser, not the server, for an error in the page and offer a reload", async () => {
+    const reload = vi.fn();
+    vi.stubGlobal("location", { ...window.location, reload });
+    await renderWithProviders(
+      <ScreenErrorScreen
+        error={new Error("Maximum update depth exceeded")}
+        reset={() => undefined}
+        info={{ componentStack: "" }}
+      />,
+    );
+    expect(screen.getByText("Something went wrong in this browser")).toBeTruthy();
+    expect(screen.queryByText(/server gave an unexpected answer/)).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Reload page" }));
+    expect(reload).toHaveBeenCalledTimes(1);
   });
 });

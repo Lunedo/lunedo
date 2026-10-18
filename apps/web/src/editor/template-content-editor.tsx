@@ -13,7 +13,7 @@ import { createEditorExtensions } from "./extensions/index.js";
 import { LinkDialog } from "./link-dialog.js";
 import { SelectionMenu, TableMenu } from "./menus.js";
 import { EditorToolbar } from "./toolbar.js";
-import { toolbarItems } from "./toolbar-items.js";
+import { sameToolbarItems, toolbarItems } from "./toolbar-items.js";
 import "./editor.css";
 
 export interface TemplateFieldOption {
@@ -47,8 +47,16 @@ export function TemplateContentEditor({
   const fileInput = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(0);
   const upload = images?.upload ?? null;
+  const uploadRef = useRef(upload);
+  const onChangeRef = useRef(onChange);
+  useEffect(() => {
+    uploadRef.current = upload;
+    onChangeRef.current = onChange;
+  }, [upload, onChange]);
+  const canUpload = upload !== null;
   const insertImages = useCallback(
     (files: File[], position: number | null) => {
+      const upload = uploadRef.current;
       if (!upload) return;
       for (const file of files) {
         if (!IMAGE_TYPES.includes(file.type)) {
@@ -81,7 +89,7 @@ export function TemplateContentEditor({
           .finally(() => setUploading((count) => count - 1));
       }
     },
-    [upload, t, toast],
+    [t, toast],
   );
   const [linkOpen, setLinkOpen] = useState(false);
   const [embedOpen, setEmbedOpen] = useState(false);
@@ -96,26 +104,29 @@ export function TemplateContentEditor({
     }),
     [],
   );
-  const editor = useEditor({
-    extensions: createEditorExtensions({
-      t,
-      spaceId: null,
-      collaboration: null,
-      ...(upload ? { onFiles: insertImages } : {}),
-    }),
-    content: initial as object,
-    editorProps: {
-      attributes: {
-        class: "ph-content ph-editor-content",
-        "aria-label": label,
-        "aria-multiline": "true",
-        role: "textbox",
+  const editor = useEditor(
+    {
+      extensions: createEditorExtensions({
+        t,
+        spaceId: null,
+        collaboration: null,
+        ...(canUpload ? { onFiles: insertImages } : {}),
+      }),
+      content: initial as object,
+      editorProps: {
+        attributes: {
+          class: "ph-content ph-editor-content",
+          "aria-label": label,
+          "aria-multiline": "true",
+          role: "textbox",
+        },
       },
+      immediatelyRender: true,
+      shouldRerenderOnTransaction: false,
+      onUpdate: ({ editor: current }) => onChangeRef.current(current.getJSON()),
     },
-    immediatelyRender: true,
-    shouldRerenderOnTransaction: false,
-    onUpdate: ({ editor: current }) => onChange(current.getJSON()),
-  });
+    [canUpload, insertImages],
+  );
   useEffect(() => {
     editorRef.current = editor;
   }, [editor]);
@@ -123,6 +134,7 @@ export function TemplateContentEditor({
   const items = useEditorState({
     editor,
     selector: ({ editor: current }) => (current ? toolbarItems(current, t, actions) : []),
+    equalityFn: sameToolbarItems,
   });
   if (!editor) return null;
   const content = (
