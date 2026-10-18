@@ -4688,6 +4688,7 @@
       "allSpaces": "Alle Spaces, die ich lesen kann",
       "labels": "Labels",
       "searchLabel": "Label suchen oder eingeben",
+      "newLabel": "Neues Label",
       "labelHint": "Label eingeben, um danach zu filtern.",
       "tooManyLabels": "Bis zu {count} Labels wählen. Entferne eines, bevor du ein weiteres hinzufügst.",
       "searchPage": "Seite suchen",

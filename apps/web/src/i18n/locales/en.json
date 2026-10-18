@@ -4688,6 +4688,7 @@
       "allSpaces": "All spaces I can read",
       "labels": "Labels",
       "searchLabel": "Search or type a label",
+      "newLabel": "New label",
       "labelHint": "Type a label to filter by it.",
       "tooManyLabels": "Choose up to {count} labels. Remove one before you add another.",
       "searchPage": "Search for a page",

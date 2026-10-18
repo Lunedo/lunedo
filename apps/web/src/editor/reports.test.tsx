@@ -7,7 +7,7 @@ import { PreferencesProvider } from "../preferences/preferences-provider.js";
 import { SpaceContext, type SpaceContextValue } from "../spaces/space-context.js";
 import { mockApi, problem, renderWithProviders } from "../testing/render.js";
 import { PageReadView } from "./read-view.js";
-import { decisionReportFromAttrs, pageReportFromAttrs } from "./reports.js";
+import { decisionReportFromAttrs, LabelsField, pageReportFromAttrs } from "./reports.js";
 import { TemplateButtonSettingsForm } from "./template-button.js";
 
 const PAGE = "01929b1e-0000-7000-8000-000000000001";
@@ -229,6 +229,31 @@ describe("template button settings", () => {
     await userEvent.clear(title);
     await userEvent.type(title, "{{topic} notes{Enter}");
     expect(onChange).toHaveBeenCalledWith({ title: "{topic} notes" });
+  });
+});
+
+describe("label filter field", () => {
+  it("offers a matching existing label first and marks a typed one as new", async () => {
+    mockApi({
+      "GET /api/v1/auth/session": () => problem(401, "notSignedIn"),
+      "GET /api/v1/spaces/space-1/labels": () => ({ body: ["network"] }),
+    });
+    const onChange = vi.fn();
+    await renderWithProviders(
+      <LabelsField
+        labels={[]}
+        spaceId="space-1"
+        label="Labels"
+        hint="Pages with these labels"
+        onChange={onChange}
+      />,
+    );
+    await userEvent.type(screen.getByRole("combobox", { name: "Labels" }), "netw");
+    await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(2));
+    expect(screen.getAllByRole("option")[0]?.textContent).toBe("network");
+    expect(screen.getAllByRole("option")[1]?.textContent).toContain("New label");
+    await userEvent.keyboard("{Enter}");
+    expect(onChange).toHaveBeenLastCalledWith(["network"]);
   });
 });
 

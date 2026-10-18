@@ -178,7 +178,9 @@ export function LabelsField({
               )
             : [];
           const items: ComboboxItem[] = suggestions.map((value) => ({ value, label: value }));
-          if (typed && !suggestions.includes(typed)) items.unshift({ value: typed, label: typed });
+          if (typed && !suggestions.includes(typed)) {
+            items.push({ value: typed, label: typed, marker: t("editor.reports.newLabel") });
+          }
           return { items };
         }}
         onValueChange={(next) => {
