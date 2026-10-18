@@ -2686,7 +2686,7 @@
       "watchSpace": "Diesen Space beobachten",
       "menu": "Beobachtungsoptionen für {name}",
       "unwatch": "Nicht mehr beobachten",
-      "mute": "Stummschalten …",
+      "mute": "Stummschalten…",
       "unmuteAction": "Stummschaltung aufheben",
       "started": "Du beobachtest jetzt {name}.",
       "mutedToast": "{name} ist stummgeschaltet.",
@@ -4244,7 +4244,7 @@
     "anonymize": {
       "title": "Konto anonymisieren",
       "summary": "Entfernt Name, E-Mail-Adresse und Profil endgültig. Inhalte zeigen danach eine ehemalige Person.",
-      "open": "Konto anonymisieren …",
+      "open": "Konto anonymisieren…",
       "irreversible": "Das lässt sich nicht rückgängig machen",
       "removesProfile": "Name, E-Mail-Adresse, Anmeldenamen und Profil von {name} werden entfernt. Das Konto erscheint als ehemalige Person mit einer kurzen ID.",
       "deletesAccess": "Verknüpfte Anmeldungen, Sitzungen, API-Tokens, Passkeys, zweite Faktoren und persönliche Einstellungen werden gelöscht.",
@@ -5310,7 +5310,7 @@
     "editRestricted": "Eingeschränkt: Nur die Zugriffsliste kann sie bearbeiten",
     "newWhiteboard": "Neues Whiteboard",
     "newWhiteboardInside": "Neues Whiteboard darin",
-    "copy": "Kopieren …"
+    "copy": "Kopieren…"
   },
   "move": {
     "title": "{title} verschieben",
