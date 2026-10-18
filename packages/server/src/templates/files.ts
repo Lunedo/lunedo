@@ -286,7 +286,9 @@ export class TemplateFileService {
     const result = await tx.execute<{ file_id: string }>(sql`
       select file_id from template_files where template_id = ${templateId} and id = ${fileId}`);
     const stored = result.rows[0]?.file_id;
-    return stored ? readText(await this.#files.read(stored, undefined, { staged: true }), MAX_SCENE_BYTES) : null;
+    return stored
+      ? readText(await this.#files.read(stored, undefined, { staged: true }), MAX_SCENE_BYTES)
+      : null;
   }
 
   async keepOwn(tx: Transaction, templateId: string, document: DocumentJson): Promise<DocumentJson> {
@@ -357,7 +359,7 @@ export class TemplateFileService {
     }).document;
     return copyDrawingScenes(
       rewritten,
-      attachmentScenes(tx, this.#files, async (id) => copied.get(id) ?? null),
+      attachmentScenes(tx, this.#files, input.itemId, async (id) => copied.get(id) ?? null),
     );
   }
 

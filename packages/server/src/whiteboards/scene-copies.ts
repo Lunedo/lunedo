@@ -90,13 +90,14 @@ export async function copyDrawingScenes(
 export function attachmentScenes(
   tx: Executor,
   files: FileService,
+  itemId: string,
   image: DrawingSceneCopy["image"],
 ): DrawingSceneCopy {
   return {
     read: async (scene) => {
       const result = await tx.execute<{ file_id: string }>(sql`
         select v.file_id from attachment_versions v join attachments a on a.id = v.attachment_id
-        where v.attachment_id = ${scene.id}
+        where v.attachment_id = ${scene.id} and a.item_id = ${itemId}
           and (v.number = ${scene.version} or (${scene.version}::int is null and v.id = a.current_version_id))`);
       const fileId = result.rows[0]?.file_id;
       return fileId ? readText(await files.read(fileId), MAX_SCENE_BYTES) : null;
@@ -111,7 +112,7 @@ export function attachmentScenes(
       await files.commit(tx, stored.id);
       await tx.execute(sql`
         update attachment_versions v set file_id = ${stored.id} from attachments a
-        where a.id = v.attachment_id and v.attachment_id = ${current.id}
+        where a.id = v.attachment_id and v.attachment_id = ${current.id} and a.item_id = ${itemId}
           and (v.number = ${current.version} or (${current.version}::int is null and v.id = a.current_version_id))`);
       return current;
     },

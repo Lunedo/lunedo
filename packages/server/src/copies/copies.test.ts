@@ -438,6 +438,32 @@ describe.skipIf(!baseUrl)("copying content", () => {
       );
     });
 
+    it("never rewrites the drawing scene of another page that a copied block points to", async () => {
+      const { wiki, other, as } = await setup();
+      const owner = await page(as, wiki.id, "Owner of the drawing");
+      const image = await upload(as, owner.id, "router.png", "png");
+      const blockId = "01929b1e-0000-7000-8000-00000000d0a2";
+      await pageWithDrawing(test, as, owner.id, blockId, image.id);
+      const before = await drawingSceneOf(test, owner.id);
+      const files = async () =>
+        (
+          await test.database.execute<{ file_id: string }>(
+            sql`select file_id from attachment_versions where attachment_id = ${before.sceneId} order by number`,
+          )
+        ).rows;
+      const stored = await files();
+      const borrower = await page(as, wiki.id, "Borrower");
+      await test.services.documents.replace(as, borrower.id, {
+        type: "doc",
+        content: [{ type: "drawing", attrs: { id: blockId, sceneId: before.sceneId, sceneVersion: 1 } }],
+      });
+
+      await copyRoot(as, borrower.id, other.id);
+
+      expect(await files()).toEqual(stored);
+      expect((await drawingSceneOf(test, owner.id)).images).toEqual([image.id]);
+    });
+
     it("copies the images inside a drawing, so the copy shows and saves them without the source", async () => {
       const { org, wiki, other, as } = await setup();
       const outsider = await member(org.id, "member", "Otto Outsider");

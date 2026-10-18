@@ -959,7 +959,7 @@ export class CopyService {
     const attachments = await this.#copyAttachments(context, item, documentAttachments(document));
     const copied = await copyDrawingScenes(
       copyPageDocument(document, this.#mapping(context, attachments)),
-      attachmentScenes(tx, this.#files, async (id) => attachments.get(id)?.id ?? null),
+      attachmentScenes(tx, this.#files, item.copyId, async (id) => attachments.get(id)?.id ?? null),
     );
     await insertInitialDocument(tx, item.copyId, actorId, copied);
     await insertFirstVersion(tx, item.copyId, actorId, { itemId: item.id, title: item.title });
