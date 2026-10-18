@@ -97,7 +97,7 @@ test("exports a template with an image and imports it into another space under a
   await name.fill("Onboarding for engineers");
   await importDialog.getByRole("button", { name: "Import 1 template" }).click();
   await expect(page.getByText("Templates imported: 1 new, 0 replaced").first()).toBeVisible();
-  await expect(page.getByRole("cell", { name: /Onboarding for engineers/ })).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: "Select Onboarding for engineers" })).toBeVisible();
 
   await page.goto(`/spaces/${target.key}`);
   await page.getByRole("button", { name: "Create in this space" }).click();
@@ -105,7 +105,8 @@ test("exports a template with an image and imports it into another space under a
   const gallery = page.getByRole("dialog", { name: "Create in Engineering" });
   await gallery.getByRole("button", { name: /Onboarding for engineers/ }).click();
   await gallery.getByRole("button", { name: "Create from Onboarding for engineers" }).click();
-  const image = page.getByRole("img", { name: "Team photo" }).first();
+  await expect(gallery).toBeHidden();
+  const image = page.getByRole("textbox", { name: "Page content" }).getByRole("img", { name: "Team photo" });
   await expect(image).toBeVisible();
   await expect
     .poll(() => image.evaluate((element) => (element as HTMLImageElement).naturalWidth))
