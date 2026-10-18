@@ -79,7 +79,11 @@ function SharedPage({ page }: { page: ItemDetails }) {
     <UploadsProvider pageId={page.id}>
       <AttachmentPreviewProvider canEdit={canEdit} requested={search.attachment}>
         <PageDropZone enabled={canEdit} title={page.title}>
-          <main id="main" tabIndex={-1} className="flex min-w-0 flex-1 overflow-y-auto outline-none">
+          <main
+            id="main"
+            tabIndex={0}
+            className="flex min-w-0 flex-1 overflow-y-auto outline-none focus-visible:focus-ring"
+          >
             <article className="mx-auto flex w-full max-w-content flex-col gap-4 px-4 pt-6 pb-12 md:px-8">
               <PageHeader
                 title={page.title}

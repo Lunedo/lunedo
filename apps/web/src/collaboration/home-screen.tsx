@@ -91,7 +91,11 @@ export function HomeScreen() {
   useDocumentTitle(t("home.title"));
   const name = session.account?.name ?? "";
   return (
-    <main id="main" tabIndex={-1} className="min-w-0 flex-1 overflow-y-auto outline-none">
+    <main
+      id="main"
+      tabIndex={0}
+      className="min-w-0 flex-1 overflow-y-auto outline-none focus-visible:focus-ring"
+    >
       <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 pt-6 pb-12 md:px-8">
         <PageHeader title={t("home.title")} description={t("home.greeting", { name })} icon={Sun} />
         {home.isPending ? (
