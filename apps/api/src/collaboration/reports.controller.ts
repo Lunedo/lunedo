@@ -229,7 +229,7 @@ export class ReportsController {
           spaceId: exampleReportPage.spaceId,
         },
         document: exampleDocument,
-        references: { people: {}, pages: {}, topics: {} },
+        references: { people: {}, pages: {}, topics: {}, tooLargeImages: [] },
         hiddenFromSomeReaders: false,
       },
     },
@@ -253,7 +253,7 @@ export class ReportsController {
         state: "noExcerpt",
         page: included.page,
         document: null,
-        references: { people: {}, pages: {}, topics: {} },
+        references: { people: {}, pages: {}, topics: {}, tooLargeImages: [] },
         hiddenFromSomeReaders: included.hiddenFromSomeReaders,
       };
     }

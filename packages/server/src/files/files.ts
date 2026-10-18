@@ -50,6 +50,8 @@ const CONTENT_DIGEST_PURPOSE = "file-content";
 
 export const DISPLAY_VERSIONS_CHANNEL = "pagehall_display_versions";
 
+export const MAX_DISPLAY_VERSION_PIXELS = 100_000_000;
+
 export const DISPLAY_VERSION_TYPES: ReadonlySet<string> = new Set([
   "image/png",
   "image/jpeg",
@@ -151,9 +153,10 @@ export class FileService {
     });
     let keyVersion: number;
     let counted = 0;
+    const stripper = new LocationStripper();
     try {
       let failure: Error | null = null;
-      const strip = options.attachment === true ? new LocationStripper() : new PassThrough();
+      const strip = options.attachment === true ? stripper : new PassThrough();
       const encrypted = chain(body, strip, inspector, encrypt, (error) => {
         failure = error ?? null;
       });
@@ -171,8 +174,13 @@ export class FileService {
     const head = Buffer.concat(inspector.head);
     const type = detectType(head, { name: options.name, truncated: inspector.size > head.length });
     const digest = inspector.digest();
+    const pixels = stripper.dimensions ? stripper.dimensions.width * stripper.dimensions.height : 0;
     const displayVersions =
-      options.attachment === true && DISPLAY_VERSION_TYPES.has(type.contentType) ? "pending" : null;
+      options.attachment !== true || !DISPLAY_VERSION_TYPES.has(type.contentType)
+        ? null
+        : pixels > MAX_DISPLAY_VERSION_PIXELS
+          ? "tooLarge"
+          : "pending";
     await executor.execute(sql`
       update stored_files set size = ${inspector.size}, content_digest = ${digest},
         content_type = ${type.contentType}, master_key_version = ${keyVersion}, state = 'stored',

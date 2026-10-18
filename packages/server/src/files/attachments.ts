@@ -45,6 +45,7 @@ export interface Attachment {
   contentType: string;
   preview: PreviewKind;
   inline: boolean;
+  tooLargeForPreview: boolean;
   version: number;
   versions: number;
   draft: AttachmentDraftChange | null;
@@ -64,6 +65,7 @@ export interface AttachmentContent {
   version: number;
   versionId: string;
   displaySize?: DisplayVersionSize;
+  tooLargeForPreview?: boolean;
 }
 
 const INLINE_TYPES = new Set([
@@ -111,6 +113,7 @@ interface AttachmentRow {
   name: string;
   size: string | number;
   content_type: string;
+  display_version_state: string | null;
   number: number;
   versions: string | number;
   draft: AttachmentDraftChange | null;
@@ -154,7 +157,7 @@ export class AttachmentService {
   #select(view: AttachmentView) {
     if (view === "published") {
       return sql`
-        select a.id, a.item_id, v.name, f.size, f.content_type, v.number,
+        select a.id, a.item_id, v.name, f.size, f.content_type, f.display_version_state, v.number,
           (select count(*) from attachment_versions av
             where av.attachment_id = a.id and av.published_at is not null) as versions,
           null as draft, v.uploaded_by, v.created_at as uploaded_at, a.created_at
@@ -163,7 +166,7 @@ export class AttachmentService {
         where true`;
     }
     return sql`
-      select a.id, a.item_id, v.name, f.size, f.content_type, v.number,
+      select a.id, a.item_id, v.name, f.size, f.content_type, f.display_version_state, v.number,
         (select count(*) from attachment_versions av where av.attachment_id = a.id) as versions,
         case when a.deleted_at is not null then 'deleted'
           when a.published_version_id is null then 'added'
@@ -186,6 +189,7 @@ export class AttachmentService {
       size: Number(row.size),
       contentType: row.content_type,
       ...previewOf(row.content_type, row.name),
+      tooLargeForPreview: row.display_version_state === "tooLarge",
       version: row.number,
       versions: Number(row.versions),
       draft: row.draft,
@@ -554,8 +558,10 @@ export class AttachmentService {
       content_type: string;
       number: number;
       version_id: string;
+      display_version_state: string | null;
     }>(sql`
-      select a.id, v.file_id, v.name, f.size, f.content_type, v.number, v.id as version_id
+      select a.id, v.file_id, v.name, f.size, f.content_type, v.number, v.id as version_id,
+        f.display_version_state
       from attachments a join attachment_versions v on v.attachment_id = a.id and ${version}
       join stored_files f on f.id = v.file_id and f.state <> 'pending'
       where a.id = ${attachmentId} ${view === "draft" ? sql`and ${IN_DRAFT}` : sql``}`);
@@ -570,6 +576,7 @@ export class AttachmentService {
       ...previewOf(row.content_type, row.name),
       version: row.number,
       versionId: row.version_id,
+      tooLargeForPreview: row.display_version_state === "tooLarge",
     };
   }
 

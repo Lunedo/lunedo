@@ -853,6 +853,22 @@ describe("images with a display version", () => {
     expect(renderMarkdown(document, { attachment })).toBe(`![Rack](/api/v1/attachments/${ID}/content)\n`);
   });
 
+  it("show an image above the pixel limit as a file that opens in full size, without loading it", () => {
+    const tooLarge = (id: string) => ({ ...attachment(id), tooLarge: true });
+    const html = renderHtml(document, { attachment: tooLarge });
+    expect(html).not.toContain("<img");
+    expect(html).toContain('class="ph-image ph-image-too-large"');
+    expect(html).toContain('<span class="ph-image-name">Rack</span>');
+    expect(html).toContain('<span class="ph-image-hint">This image is too large to show here.</span>');
+    expect(html).toContain(
+      `<a class="ph-image-open" href="/api/v1/attachments/${ID}/content" target="_blank" rel="noopener noreferrer">Open full size</a>`,
+    );
+    const printed = renderHtml(document, { attachment: tooLarge, target: "print" });
+    expect(printed).not.toContain("<img");
+    expect(printed).not.toContain("<a ");
+    expect(printed).toContain("This image is too large to show here.");
+  });
+
   it("show the original without a link when there is no other version", () => {
     const html = renderHtml(document, {
       attachment: (id) => ({ href: `/api/v1/attachments/${id}/content` }),

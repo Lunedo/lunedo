@@ -383,6 +383,7 @@ export class PageExportRenderer {
         people: { ...reports?.references.people, ...references.people },
         pages: { ...reports?.references.pages, ...references.pages },
         topics: references.topics,
+        tooLargeImages: references.tooLargeImages,
       };
       const referenced = new Set<string>(Object.keys(merged.pages));
       for (const report of reports?.propertiesReports.values() ?? []) {
@@ -492,7 +493,7 @@ export class PageExportRenderer {
         version: readable.version,
         updatedAt: readable.updatedAt,
         document,
-        references: { people: {}, pages: {}, topics: {} },
+        references: { people: {}, pages: {}, topics: {}, tooLargeImages: [] },
         childPages: null,
         attachments: null,
         pageReports: null,
@@ -580,7 +581,7 @@ export class PageExportRenderer {
       version: null,
       updatedAt: new Date(row.changed_at),
       document: { type: "doc", content: [] },
-      references: { people: {}, pages: {}, topics: {} },
+      references: { people: {}, pages: {}, topics: {}, tooLargeImages: [] },
       childPages: null,
       attachments: null,
       pageReports: null,
@@ -750,6 +751,7 @@ export class PageExportRenderer {
         href: `/api/v1/attachments/${id}/content`,
         display: `/api/v1/attachments/${id}/content?size=display`,
         image: page.images.has(id),
+        ...(references.tooLargeImages.includes(id) ? { tooLarge: true } : {}),
       }),
       whiteboard: (id) => {
         const board = page.whiteboards?.get(id);

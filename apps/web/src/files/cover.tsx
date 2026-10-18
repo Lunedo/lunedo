@@ -51,7 +51,9 @@ export function CoverEditor({
   const queryClient = useQueryClient();
   const attachments = useQuery({ ...attachmentsQuery(itemId), throwOnError: false });
   const [local, setLocal] = useState<Cover | null>(cover);
-  const images = (attachments.data ?? []).filter((attachment) => attachment.preview === "image");
+  const images = (attachments.data ?? []).filter(
+    (attachment) => attachment.preview === "image" && !attachment.tooLargeForPreview,
+  );
 
   const save = (next: Cover | null) => {
     const previous = local;

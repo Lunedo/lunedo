@@ -22,3 +22,11 @@ export function grayPng(width: number, height: number): Buffer {
     chunk("IEND", Buffer.alloc(0)),
   ]);
 }
+
+export function oversizedPng(width: number, height: number): Buffer {
+  const image = Buffer.from(grayPng(4, 4));
+  image.writeUInt32BE(width, 16);
+  image.writeUInt32BE(height, 20);
+  image.writeUInt32BE(crc32(image.subarray(12, 29)) >>> 0, 29);
+  return image;
+}

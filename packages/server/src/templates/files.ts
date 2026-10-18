@@ -53,6 +53,7 @@ type FileRow = {
   size: string | number;
   content_type: string;
   file_id: string;
+  display_version_state?: string | null;
 };
 
 function toFile(row: FileRow): TemplateFile {
@@ -117,7 +118,7 @@ export class TemplateFileService {
 
   async content(templateId: string, fileId: string): Promise<AttachmentContent | null> {
     const result = await this.#database.execute<FileRow>(sql`
-      select tf.id, tf.template_id, tf.name, f.size, f.content_type, tf.file_id
+      select tf.id, tf.template_id, tf.name, f.size, f.content_type, tf.file_id, f.display_version_state
       from template_files tf join stored_files f on f.id = tf.file_id and f.state = 'ready'
       where tf.template_id = ${templateId} and tf.id = ${fileId}`);
     const row = result.rows[0];
@@ -131,6 +132,7 @@ export class TemplateFileService {
       ...previewOf(row.content_type, row.name),
       version: 1,
       versionId: row.id,
+      tooLargeForPreview: row.display_version_state === "tooLarge",
     };
   }
 

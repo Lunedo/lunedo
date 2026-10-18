@@ -1345,6 +1345,7 @@
     "fileTooLarge": "The file is larger than allowed. Choose a smaller file.",
     "fileTooLargeLimit": "The file is larger than the limit of {size}. Choose a smaller file or ask an administrator to raise the limit.",
     "rangeNotSatisfiable": "The file changed while loading. Reload the page.",
+    "imageTooLarge": "The image is too large to show in the page. Open it in full size instead.",
     "tooManyRequests": "You sent many access requests today. Wait until tomorrow or contact an administrator of the space.",
     "linkExpiryTooLate": "Links for anyone may last at most {days, plural, one {# day} other {# days}} in this organization. Choose an earlier date.",
     "versionNotFound": "This version was removed in the meantime. Reload the versions.",
@@ -4457,7 +4458,9 @@
     "attachment": {
       "image": "Image {name}",
       "file": "File {name}",
-      "missingImage": "The image of this block is missing. Add a new image or remove the block."
+      "missingImage": "The image of this block is missing. Add a new image or remove the block.",
+      "imageTooLarge": "{name} is too large to show here.",
+      "openFullSize": "Open full size"
     },
     "presence": {
       "label": "{count, plural, one {# person} other {# people}} on this page",
@@ -4578,7 +4581,8 @@
       "invalid": "This page cannot be shown because its stored content is damaged. Ask a space admin to restore an earlier version.",
       "taskDone": "Done",
       "taskOpen": "Open",
-      "restrictedContent": "Restricted content"
+      "restrictedContent": "Restricted content",
+      "imageTooLarge": "This image is too large to show here."
     },
     "shortcuts": {
       "slash": "Insert a block",
@@ -6203,7 +6207,9 @@
       "tooLarge": "Download the file to open it.",
       "noneTitle": "No preview for this type",
       "none": "Download the file to open it in a program that supports it.",
-      "fileFailed": "the file details"
+      "fileFailed": "the file details",
+      "imageTooLarge": "This image is too large to preview. Open it in full size to see it.",
+      "openFullSize": "Open full size"
     },
     "versions": {
       "title": "Versions",

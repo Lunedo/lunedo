@@ -187,7 +187,7 @@ export class ReportService {
       propertiesReports: new Map(),
       contentByLabel: new Map(),
       relatedLabels: new Map(),
-      references: { people: {}, pages: {}, topics: {} },
+      references: { people: {}, pages: {}, topics: {}, tooLargeImages: [] },
     };
     const cells: NodeJson[] = [];
     for (const block of blocksOfType(document, "propertiesReport")) {

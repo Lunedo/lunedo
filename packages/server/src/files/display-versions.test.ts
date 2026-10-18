@@ -127,7 +127,9 @@ describe.skipIf(!baseUrl)("display versions of images", () => {
   }
 
   async function sized(attachmentId: string, size: "display" | "preview") {
-    return test.services.displayVersions.apply(await sourceOf(attachmentId), size);
+    const content = await test.services.displayVersions.apply(await sourceOf(attachmentId), size);
+    if (!content) throw new Error("The image is too large to show");
+    return content;
   }
 
   it.each([
@@ -246,16 +248,82 @@ describe.skipIf(!baseUrl)("display versions of images", () => {
     ).toBe(2);
   });
 
-  it("refuses images above the pixel limit without decoding them", async () => {
+  it("marks images above the pixel limit at upload and never serves a smaller version of them", async () => {
     const { page, editor } = await setup();
     const huge = declaredPng(20_000, 20_000, await photo(4, 4, "png"));
     const attachment = await upload(editor, page.id, "huge.png", huge);
     const source = await sourceOf(attachment.id);
 
-    expect(await test.services.displayVersions.create(source.fileId, { lastAttempt: false })).toBe("none");
-
+    expect(attachment.tooLargeForPreview).toBe(true);
+    expect(source.tooLargeForPreview).toBe(true);
+    expect(await stateOf(source.fileId)).toBe("tooLarge");
+    expect(await test.services.displayVersions.create(source.fileId, { lastAttempt: false })).toBe("skipped");
     expect(await versionsOf(source.fileId)).toEqual([]);
-    expect(await sized(attachment.id, "display")).toEqual(source);
+    for (const size of ["display", "preview"] as const) {
+      expect(await test.services.displayVersions.apply(source, size)).toBeNull();
+    }
+    expect(await test.services.displayVersions.apply(source, undefined)).toEqual(source);
+    const small = await upload(editor, page.id, "small.png", await photo(300, 200, "png"));
+    expect(small.tooLargeForPreview).toBe(false);
+  });
+
+  it("marks existing images above the pixel limit when their versions are made, without decoding them", async () => {
+    const { page, editor } = await setup();
+    const attachment = await upload(
+      editor,
+      page.id,
+      "old.png",
+      declaredPng(20_000, 20_000, await photo(4, 4, "png")),
+    );
+    const source = await sourceOf(attachment.id);
+    await test.database.execute(
+      sql`update stored_files set display_version_state = 'pending' where id = ${source.fileId}`,
+    );
+
+    expect(await test.services.displayVersions.create(source.fileId, { lastAttempt: false })).toBe(
+      "tooLarge",
+    );
+
+    expect(await stateOf(source.fileId)).toBe("tooLarge");
+    expect(await versionsOf(source.fileId)).toEqual([]);
+  });
+
+  it("names images above the pixel limit in the references only for people who can see them", async () => {
+    const org = await organization();
+    const editorId = await member(org.id, "member", "Editor");
+    const readerId = await member(org.id, "member", "Reader");
+    const wiki = await space(org.id, editorId, {
+      grants: [{ principalKind: "account", principalId: readerId, role: "reader" }],
+    });
+    const editor = accountPrincipal(editorId);
+    const create = (title: string) =>
+      test.services.tree.create(editor, wiki.id, {
+        kind: "page",
+        title,
+        mode: "live",
+        placement: { parentId: null },
+      });
+    const page = await create("Photos");
+    const secret = await create("Secret");
+    const tooLarge = async () => declaredPng(20_000, 20_000, await photo(4, 4, "png"));
+    const huge = await upload(editor, page.id, "huge.png", await tooLarge());
+    const normal = await upload(editor, page.id, "normal.png", await photo(300, 200, "png"));
+    const hidden = await upload(editor, secret.id, "hidden.png", await tooLarge());
+    await test.services.pageAccess.change(editor, secret.id, [{ action: "restrict", kind: "view" }]);
+    const document = {
+      type: "doc" as const,
+      content: [huge, normal, hidden].map((file) => ({
+        type: "image",
+        attrs: { attachmentId: file.id, alt: "" },
+      })),
+    };
+
+    expect((await test.services.documents.references(editor, document)).tooLargeImages).toEqual(
+      [huge.id, hidden.id].sort(),
+    );
+    expect(
+      (await test.services.documents.references(accountPrincipal(readerId), document)).tooLargeImages,
+    ).toEqual([huge.id]);
   });
 
   it("uses the original while a version is pending and after it failed for good", async () => {
@@ -322,7 +390,7 @@ describe.skipIf(!baseUrl)("display versions of images", () => {
     );
     const templateFile = await test.services.templates.files.content(template.id, files.rows[0]?.id ?? "");
     if (!templateFile) throw new Error("The template has no file");
-    expect((await test.services.displayVersions.apply(templateFile, "display")).fileId).toBe(
+    expect((await test.services.displayVersions.apply(templateFile, "display"))?.fileId).toBe(
       display?.file_id,
     );
 

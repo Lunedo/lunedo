@@ -24,7 +24,7 @@ export const storedFileStates = ["pending", "stored", "ready", "orphaned"] as co
 export type StoredFileState = (typeof storedFileStates)[number];
 export const storedFileState = pgEnum("stored_file_state", storedFileStates);
 
-export const displayVersionStates = ["pending", "done", "none", "failed"] as const;
+export const displayVersionStates = ["pending", "done", "none", "tooLarge", "failed"] as const;
 export type DisplayVersionState = (typeof displayVersionStates)[number];
 export const displayVersionState = pgEnum("display_version_state", displayVersionStates);
 

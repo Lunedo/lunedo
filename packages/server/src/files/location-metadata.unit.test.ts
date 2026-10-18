@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { Readable } from "node:stream";
 import { buffer } from "node:stream/consumers";
 import { crc32 } from "node:zlib";
-import sharp from "sharp";
+import sharp, { type Sharp } from "sharp";
 import { describe, expect, it } from "vitest";
 import { gpsFields } from "./exif.testing.js";
 import { LocationStripper } from "./location-metadata.js";
@@ -174,6 +174,22 @@ describe("location metadata", () => {
     expect(result.length).toBe(withProfile.length);
     expect(result.includes(Buffer.from("4750534c61746974756465"))).toBe(false);
     expect((await sharp(result).raw().toBuffer()).equals(await sharp(original).raw().toBuffer())).toBe(true);
+  });
+
+  it.each([
+    ["jpeg", (image: Sharp) => image.jpeg()],
+    ["png", (image: Sharp) => image.png()],
+    ["gif", (image: Sharp) => image.gif()],
+    ["lossy webp", (image: Sharp) => image.webp()],
+    ["lossless webp", (image: Sharp) => image.webp({ lossless: true })],
+    ["extended webp", (image: Sharp) => image.withExif({ IFD0: { Copyright: "Test" } }).webp()],
+  ] as const)("reads the size of a %s from its header", async (_format, encode) => {
+    const data = await encode(
+      sharp({ create: { width: 321, height: 123, channels: 3, background: "#123456" } }),
+    ).toBuffer();
+    const stripper = new LocationStripper();
+    await buffer(Readable.from([data.subarray(0, 5), data.subarray(5)]).pipe(stripper));
+    expect(stripper.dimensions).toEqual({ width: 321, height: 123 });
   });
 
   it("passes other files through unchanged", async () => {

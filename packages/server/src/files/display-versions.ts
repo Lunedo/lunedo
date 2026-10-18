@@ -4,7 +4,12 @@ import sharp from "sharp";
 import type { Database, Executor } from "../database/database.js";
 import type { Logger } from "../logging/logger.js";
 import type { AttachmentContent } from "./attachments.js";
-import { DISPLAY_VERSION_TYPES, type FileService, FileTooLargeError } from "./files.js";
+import {
+  DISPLAY_VERSION_TYPES,
+  type FileService,
+  FileTooLargeError,
+  MAX_DISPLAY_VERSION_PIXELS,
+} from "./files.js";
 import type { DisplayVersionSize } from "./schema.js";
 import { MEGABYTE } from "./settings.js";
 
@@ -13,7 +18,6 @@ export const DISPLAY_VERSION_EDGES: Readonly<Record<DisplayVersionSize, number>>
   preview: 400,
 };
 
-export const MAX_DISPLAY_VERSION_PIXELS = 100_000_000;
 export const MAX_DISPLAY_VERSION_SOURCE_BYTES = 256 * MEGABYTE;
 export const MAX_DISPLAY_VERSION_ATTEMPTS = 3;
 const ENCODE_TIMEOUT_SECONDS = 5 * 60;
@@ -27,7 +31,7 @@ function isAnimatedPng(data: Buffer): boolean {
   return animation >= 0 && animation < data.indexOf("IDAT", 8, "latin1");
 }
 
-export type DisplayVersionOutcome = "done" | "none" | "failed" | "skipped";
+export type DisplayVersionOutcome = "done" | "none" | "tooLarge" | "failed" | "skipped";
 
 export interface DisplayVersionFile {
   fileId: string;
@@ -70,8 +74,12 @@ export class DisplayVersionService {
     return row ? { fileId: row.file_id, size: Number(row.size), contentType: row.content_type } : null;
   }
 
-  async apply(content: AttachmentContent, size: DisplayVersionSize | undefined): Promise<AttachmentContent> {
+  async apply(
+    content: AttachmentContent,
+    size: DisplayVersionSize | undefined,
+  ): Promise<AttachmentContent | null> {
     if (size === undefined || content.preview !== "image") return content;
+    if (content.tooLargeForPreview) return null;
     const version = await this.find(content.fileId, size);
     if (!version) return content;
     return {
@@ -138,7 +146,7 @@ export class DisplayVersionService {
     }
     try {
       const rendered = await this.#render(fileId);
-      if (rendered === null) return this.#finish(fileId, "none");
+      if (typeof rendered === "string") return this.#finish(fileId, rendered);
       return await this.#store(fileId, rendered);
     } catch (error) {
       if (!options.lastAttempt && source.attempts < MAX_DISPLAY_VERSION_ATTEMPTS) throw error;
@@ -148,22 +156,22 @@ export class DisplayVersionService {
     }
   }
 
-  async #render(fileId: string): Promise<Rendered[] | null> {
+  async #render(fileId: string): Promise<Rendered[] | "none" | "tooLarge"> {
     let input: Buffer;
     try {
       input = await this.#files.readAll(fileId, MAX_DISPLAY_VERSION_SOURCE_BYTES);
     } catch (error) {
-      if (error instanceof FileTooLargeError) return null;
+      if (error instanceof FileTooLargeError) return "none";
       throw error;
     }
     const metadata = await sharp(input, { limitInputPixels: false }).metadata();
     const width = metadata.width ?? 0;
     const height = metadata.height ?? 0;
-    if ((metadata.pages ?? 1) > 1 || isAnimatedPng(input)) return null;
     if (width * height > MAX_DISPLAY_VERSION_PIXELS) {
       this.#logger.info({ fileId, width, height }, "Image has too many pixels for display versions");
-      return null;
+      return "tooLarge";
     }
+    if ((metadata.pages ?? 1) > 1 || isAnimatedPng(input)) return "none";
     const longest = Math.max(width, height);
     const rendered: Rendered[] = [];
     let source = input;
@@ -179,7 +187,7 @@ export class DisplayVersionService {
       rendered.push({ size, data: output.data, width: output.info.width, height: output.info.height });
       if (size === "display") source = output.data;
     }
-    return rendered.length > 0 ? rendered : null;
+    return rendered.length > 0 ? rendered : "none";
   }
 
   async #store(sourceFileId: string, rendered: Rendered[]): Promise<DisplayVersionOutcome> {
@@ -223,7 +231,7 @@ export class DisplayVersionService {
       where id = any(${sql.param(fileIds)}::uuid[]) and state in ('pending', 'stored')`);
   }
 
-  async #finish(fileId: string, state: "none" | "failed"): Promise<DisplayVersionOutcome> {
+  async #finish(fileId: string, state: "none" | "tooLarge" | "failed"): Promise<DisplayVersionOutcome> {
     await this.#database.execute(sql`
       update stored_files set display_version_state = ${state}, updated_at = now()
       where id = ${fileId} and display_version_state = 'pending'`);

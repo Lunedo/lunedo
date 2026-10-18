@@ -1345,6 +1345,7 @@
     "fileTooLarge": "Die Datei ist größer als erlaubt. Wähle eine kleinere Datei.",
     "fileTooLargeLimit": "Die Datei ist größer als die Grenze von {size}. Wähle eine kleinere Datei oder bitte die Administration, die Grenze zu erhöhen.",
     "rangeNotSatisfiable": "Die Datei hat sich beim Laden geändert. Lade die Seite neu.",
+    "imageTooLarge": "Das Bild ist zu groß, um es in der Seite zu zeigen. Öffne es stattdessen in voller Größe.",
     "tooManyRequests": "Du hast heute viele Zugriffsanfragen gesendet. Warte bis morgen oder wende dich an die Space-Admins.",
     "linkExpiryTooLate": "Links für alle dürfen in dieser Organisation höchstens {days, plural, one {# Tag} other {# Tage}} gelten. Wähle ein früheres Datum.",
     "versionNotFound": "Diese Version wurde inzwischen entfernt. Lade die Versionen neu.",
@@ -4457,7 +4458,9 @@
     "attachment": {
       "image": "Bild {name}",
       "file": "Datei {name}",
-      "missingImage": "Das Bild dieses Blocks fehlt. Füge ein neues Bild ein oder entferne den Block."
+      "missingImage": "Das Bild dieses Blocks fehlt. Füge ein neues Bild ein oder entferne den Block.",
+      "imageTooLarge": "{name} ist zu groß, um es hier zu zeigen.",
+      "openFullSize": "In voller Größe öffnen"
     },
     "presence": {
       "label": "{count, plural, one {# Person} other {# Personen}} auf dieser Seite",
@@ -4578,7 +4581,8 @@
       "invalid": "Diese Seite kann nicht angezeigt werden, weil ihr gespeicherter Inhalt beschädigt ist. Bitte einen Space-Admin, eine frühere Version wiederherzustellen.",
       "taskDone": "Erledigt",
       "taskOpen": "Offen",
-      "restrictedContent": "Eingeschränkter Inhalt"
+      "restrictedContent": "Eingeschränkter Inhalt",
+      "imageTooLarge": "Dieses Bild ist zu groß, um es hier zu zeigen."
     },
     "shortcuts": {
       "slash": "Block einfügen",
@@ -6203,7 +6207,9 @@
       "tooLarge": "Lade die Datei herunter, um sie zu öffnen.",
       "noneTitle": "Keine Vorschau für diesen Typ",
       "none": "Lade die Datei herunter, um sie in einem passenden Programm zu öffnen.",
-      "fileFailed": "die Angaben zur Datei"
+      "fileFailed": "die Angaben zur Datei",
+      "imageTooLarge": "Dieses Bild ist zu groß für eine Vorschau. Öffne es in voller Größe, um es zu sehen.",
+      "openFullSize": "In voller Größe öffnen"
     },
     "versions": {
       "title": "Versionen",

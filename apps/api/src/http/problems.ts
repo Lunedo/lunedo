@@ -379,6 +379,7 @@ export const problems = {
   uploadTooLarge: { status: 413, title: "The file is larger than uploads allow" },
   unsupportedMediaType: { status: 415, title: "The request body has an unsupported type" },
   rangeNotSatisfiable: { status: 416, title: "The requested range is not available" },
+  imageTooLarge: { status: 409, title: "The image is too large for a smaller version" },
   locked: { status: 429, title: "Too many failed attempts" },
   rateLimited: { status: 429, title: "Too many requests" },
   tooManyRequests: { status: 429, title: "Too many access requests today" },

@@ -85,6 +85,7 @@ export function readViewContext(
     attachment: (id, version) => ({
       href: attachmentUrl(id, version),
       display: attachmentUrl(id, version, "display"),
+      ...(references.tooLargeImages?.includes(id) ? { tooLarge: true } : {}),
     }),
     mention: (id) => {
       const name = references.people[id];
@@ -120,6 +121,7 @@ export function readViewContext(
       file: t("editor.readView.file"),
       image: t("editor.readView.image"),
       openFullSize: t("editor.readView.openFullSize"),
+      imageTooLarge: t("editor.readView.imageTooLarge"),
       drawing: t("editor.drawing.label"),
       drawio: t("editor.drawio.label"),
       drawioReference: t("editor.drawioReference.label"),

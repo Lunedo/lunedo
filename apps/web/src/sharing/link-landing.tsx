@@ -160,7 +160,7 @@ function AnonymousPage({ token, unlock }: { token: string; unlock: string | null
     token,
     unlock,
     (page.data?.attachments ?? [])
-      .filter((attachment) => attachment.preview === "image")
+      .filter((attachment) => attachment.preview === "image" && !attachment.tooLargeForPreview)
       .map((attachment) => attachment.id),
   );
   if (page.isPending) return <Skeleton className="h-card w-full" />;
@@ -183,7 +183,12 @@ function AnonymousPage({ token, unlock }: { token: string; unlock: string | null
       </header>
       <PageReadView
         document={data.document}
-        references={NO_REFERENCES}
+        references={{
+          ...NO_REFERENCES,
+          tooLargeImages: data.attachments
+            .filter((attachment) => attachment.tooLargeForPreview)
+            .map((attachment) => attachment.id),
+        }}
         pageId={data.itemId}
         attachments={{ url: urlOf, onOpen: () => undefined }}
       />

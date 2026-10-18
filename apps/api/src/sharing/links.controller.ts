@@ -6,7 +6,7 @@ import { InternalRoute, Permission, PublicRoute } from "../access/route-access.j
 import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { attachmentListSchema, exampleAttachment } from "../files/schemas.js";
-import { imageSizeSchema, sendAttachment } from "../files/serve.js";
+import { imageSizeSchema, sendAttachment, sized } from "../files/serve.js";
 import { ApiRoute } from "../http/api-route.js";
 import { COOKIES, readCookie } from "../http/cookies.js";
 import { notFound } from "../http/problems.js";
@@ -320,7 +320,14 @@ export class ShareLinksController {
       description: "The file, sent like the regular download.",
       example: "",
     },
-    errors: ["linkNotFound", "signInRequired", "passwordRequired", "rateLimited", "rangeNotSatisfiable"],
+    errors: [
+      "linkNotFound",
+      "signInRequired",
+      "passwordRequired",
+      "rateLimited",
+      "rangeNotSatisfiable",
+      "imageTooLarge",
+    ],
   })
   async attachment(
     @Param("token") token: string,
@@ -335,8 +342,8 @@ export class ShareLinksController {
     const content = await this.#services.attachments.content(attachmentId, "published", query.version);
     if (!content) throw notFound();
     reply.header("referrer-policy", "no-referrer");
-    const sized = await this.#services.displayVersions.apply(content, query.size);
-    return sendAttachment(request, reply, this.#services.files, sized, {
+    const shown = sized(await this.#services.displayVersions.apply(content, query.size));
+    return sendAttachment(request, reply, this.#services.files, shown, {
       inline: query.download !== "true",
       crossOrigin: false,
     });

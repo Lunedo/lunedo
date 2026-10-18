@@ -24,7 +24,7 @@ import {
   fileLinkSchema,
   keepVersionSchema,
 } from "./schemas.js";
-import { imageSizeSchema, sendAttachment } from "./serve.js";
+import { imageSizeSchema, sendAttachment, sized } from "./serve.js";
 
 const TAG = "Attachments";
 const page = { type: "item", param: "pageId" } as const;
@@ -294,7 +294,7 @@ export class AttachmentsController {
     params: attachmentParams,
     query: contentQuery,
     raw: rawFile,
-    errors: ["versionNotFound", "rangeNotSatisfiable"],
+    errors: ["versionNotFound", "rangeNotSatisfiable", "imageTooLarge"],
   })
   async content(
     @Param("attachmentId") attachmentId: string,
@@ -305,8 +305,8 @@ export class AttachmentsController {
     const view = await this.#view(actorOf(request), "attachment.edit", attachmentId);
     const content = await this.#services.attachments.content(attachmentId, view, query.version);
     if (!content) throw new ProblemException("versionNotFound", "This version does not exist");
-    const sized = await this.#services.displayVersions.apply(content, query.size);
-    return sendAttachment(request, reply, this.#services.files, sized, {
+    const shown = sized(await this.#services.displayVersions.apply(content, query.size));
+    return sendAttachment(request, reply, this.#services.files, shown, {
       inline: !query.download,
       crossOrigin: false,
     });

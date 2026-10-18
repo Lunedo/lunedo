@@ -11,7 +11,7 @@ import {
   signedInClient,
 } from "../testing/accounts.js";
 import { type AuthTestApp, createAuthTestApp, databaseBaseUrl, TestClient } from "../testing/auth-app.js";
-import { grayPng } from "../testing/images.js";
+import { grayPng, oversizedPng } from "../testing/images.js";
 
 const PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), randomBytes(200)]);
 const HTML = Buffer.from(
@@ -349,6 +349,28 @@ describe.skipIf(!databaseBaseUrl)("attachments through the API", () => {
       });
     }
     expect((await reader.client.get(`${path}?size=display`)).headers["content-type"]).toBe("image/webp");
+  });
+
+  it("refuse smaller versions of images above the pixel limit and still send the original", async () => {
+    const outsider = await person();
+    const { pageId } = await page([{ principalKind: "account", principalId: outsider.id, role: "reader" }]);
+    const original = oversizedPng(20_000, 20_000);
+    const file = await uploaded(pageId, "scan.png", original);
+    expect(file).toMatchObject({ preview: "image", tooLargeForPreview: true });
+    const path = `/api/v1/attachments/${file.id}/content`;
+    for (const size of ["display", "preview"]) {
+      const refused = await owner.get(`${path}?size=${size}`);
+      expect(refused.statusCode).toBe(409);
+      expect(refused.json()).toMatchObject({ code: "imageTooLarge" });
+    }
+    const full = await owner.get(path);
+    expect(full.statusCode).toBe(200);
+    expect(full.rawPayload.equals(original)).toBe(true);
+    const restricted = await owner.post(`/api/v1/pages/${pageId}/access`, {
+      changes: [{ action: "restrict", kind: "view" }],
+    });
+    expect(restricted.statusCode, restricted.body).toBe(200);
+    expect((await outsider.client.get(`${path}?size=display`)).statusCode).toBe(404);
   });
 
   it("give every file version its own ETag, unrelated to the content", async () => {

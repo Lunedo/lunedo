@@ -1,5 +1,6 @@
 import { Readable } from "node:stream";
 import { buffer } from "node:stream/consumers";
+import { crc32 } from "node:zlib";
 import mammoth from "mammoth";
 import sharp from "sharp";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -450,7 +451,7 @@ describe.skipIf(!baseUrl)("print, PDF and Word exports", () => {
         original as NonNullable<typeof original>,
         "display",
       );
-      expect(display.displaySize).toBe("display");
+      expect(display?.displaySize).toBe("display");
 
       const word = await html(await bytesOf(await test.services.exports.page(admin, page.id, "docx")));
       const embedded = /<img alt="Survey" src="data:image\/jpeg;base64,([^"]+)"/.exec(word)?.[1];
@@ -472,6 +473,41 @@ describe.skipIf(!baseUrl)("print, PDF and Word exports", () => {
         width: 2048,
         height: 1365,
       });
+    });
+
+    it("shows images above the pixel limit as a note and never sends them to the renderer", async () => {
+      const { admin, space: handbook } = context;
+      const page = await test.services.tree.create(admin, handbook.id, {
+        kind: "page",
+        title: "Scans",
+        mode: "live",
+        placement: { parentId: null },
+      });
+      const small = await sharp({ create: { width: 4, height: 4, channels: 3, background: "#000000" } })
+        .png()
+        .toBuffer();
+      const huge = Buffer.from(small);
+      huge.writeUInt32BE(20_000, 16);
+      huge.writeUInt32BE(20_000, 20);
+      huge.writeUInt32BE(crc32(huge.subarray(12, 29)) >>> 0, 29);
+      const uploaded = await test.services.attachments.upload(admin, page.id, {
+        name: "scan.png",
+        body: Readable.from([huge]),
+        contentLength: huge.length,
+      });
+      await test.services.documents.replace(
+        admin,
+        page.id,
+        doc({ type: "image", attrs: { attachmentId: uploaded.id, alt: "Scan" } }),
+      );
+      calls.length = 0;
+      await rendered.services.exports.page(admin, page.id, "pdf");
+      const sent = calls.at(-1);
+      expect(sent?.assets).toEqual([]);
+      expect(sent?.html).not.toContain(`/api/v1/attachments/${uploaded.id}/content`);
+      expect(sent?.html).toContain("This image is too large to show here.");
+      const word = await html(await bytesOf(await test.services.exports.page(admin, page.id, "docx")));
+      expect(word).not.toContain("<img");
     });
 
     it("reads an image that a Word file shows several times only once", async () => {

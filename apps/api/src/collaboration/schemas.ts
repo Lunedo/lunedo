@@ -748,7 +748,12 @@ export const examplePropertiesReport = {
       ],
     },
   ],
-  references: { people: { [exampleReportPage.author.id]: "Anna Berger" }, pages: {}, topics: {} },
+  references: {
+    people: { [exampleReportPage.author.id]: "Anna Berger" },
+    pages: {},
+    topics: {},
+    tooLargeImages: [],
+  },
 };
 
 export const contentByLabelQuerySchema = z

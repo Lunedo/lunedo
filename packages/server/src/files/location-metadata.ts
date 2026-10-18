@@ -133,6 +133,15 @@ function stripWebpChunk(type: string, chunk: Buffer): void {
 
 type Format = "detect" | "jpeg" | "scan" | "next" | "png" | "webp" | "pass";
 
+export interface ImageDimensions {
+  width: number;
+  height: number;
+}
+
+function isStartOfFrame(marker: number): boolean {
+  return marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc;
+}
+
 export class LocationStripper extends Transform {
   #format: Format = "detect";
   #pending: Buffer = Buffer.alloc(0);
@@ -142,6 +151,15 @@ export class LocationStripper extends Transform {
   #blankByte = 0;
   #crc: number | undefined;
   #padding = 0;
+  #dimensions: ImageDimensions | null = null;
+
+  get dimensions(): ImageDimensions | null {
+    return this.#dimensions;
+  }
+
+  #measure(width: number, height: number): void {
+    this.#dimensions ??= { width, height };
+  }
 
   override _transform(chunk: Buffer, _encoding: BufferEncoding, done: TransformCallback): void {
     this.#pending = this.#pending.length > 0 ? Buffer.concat([this.#pending, chunk]) : chunk;
@@ -246,6 +264,9 @@ export class LocationStripper extends Transform {
     if (head[0] === 0xff && head[1] === 0xd8) return "jpeg";
     if (startsWith(head, PNG_SIGNATURE)) return "png";
     if (head.toString("latin1", 0, 4) === "RIFF" && head.toString("latin1", 8, 12) === "WEBP") return "webp";
+    if (head.length >= 10 && /^GIF8[79]a$/.test(head.toString("latin1", 0, 6))) {
+      this.#measure(head.readUInt16LE(6), head.readUInt16LE(8));
+    }
     return "pass";
   }
 
@@ -281,6 +302,10 @@ export class LocationStripper extends Transform {
     }
     if (data.length < 4) return false;
     const total = 2 + data.readUInt16BE(2);
+    if (isStartOfFrame(marker) && this.#dimensions === null) {
+      if (data.length < 9) return false;
+      this.#measure(data.readUInt16BE(7), data.readUInt16BE(5));
+    }
     if (marker !== 0xe1 && marker !== 0xed) {
       this.#through = total;
       return true;
@@ -327,6 +352,10 @@ export class LocationStripper extends Transform {
     if (data.length < 8) return false;
     const total = 12 + data.readUInt32BE(0);
     const type = data.toString("latin1", 4, 8);
+    if (type === "IHDR" && this.#dimensions === null) {
+      if (data.length < 16) return false;
+      this.#measure(data.readUInt32BE(8), data.readUInt32BE(12));
+    }
     if (!PNG_METADATA_CHUNKS.has(type)) {
       this.#through = total;
       return true;
@@ -344,6 +373,25 @@ export class LocationStripper extends Transform {
     return true;
   }
 
+  #measureWebp(type: string, data: Buffer): boolean {
+    if (type === "VP8X") {
+      if (data.length < 18) return false;
+      this.#measure(1 + data.readUIntLE(12, 3), 1 + data.readUIntLE(15, 3));
+    } else if (type === "VP8 ") {
+      if (data.length < 18) return false;
+      if (data[11] === 0x9d && data[12] === 0x01 && data[13] === 0x2a) {
+        this.#measure(data.readUInt16LE(14) & 0x3fff, data.readUInt16LE(16) & 0x3fff);
+      }
+    } else if (type === "VP8L") {
+      if (data.length < 13) return false;
+      if (data[8] === 0x2f) {
+        const bits = data.readUInt32LE(9);
+        this.#measure((bits & 0x3fff) + 1, ((bits >>> 14) & 0x3fff) + 1);
+      }
+    }
+    return true;
+  }
+
   #webp(): boolean {
     if (!this.#started) {
       this.#started = true;
@@ -355,6 +403,7 @@ export class LocationStripper extends Transform {
     const size = data.readUInt32LE(4);
     const total = 8 + size + (size % 2);
     const type = data.toString("latin1", 0, 4);
+    if (this.#dimensions === null && !this.#measureWebp(type, data)) return false;
     if (type !== "EXIF" && type !== "XMP ") {
       this.#through = total;
       return true;

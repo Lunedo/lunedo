@@ -12,8 +12,16 @@ export const imageSizeSchema = z
   .default("original")
   .transform((value): DisplayVersionSize | undefined => (value === "original" ? undefined : value))
   .describe(
-    "Size of an image. `display` sends a version whose longest edge is at most 2048 pixels, `preview` one of at most 400 pixels, both as WebP without metadata. The original is sent while no such version exists, for images that are already small enough, and for every other type.",
+    "Size of an image. `display` sends a version whose longest edge is at most 2048 pixels, `preview` one of at most 400 pixels, both as WebP without metadata. The original is sent while no such version exists, for images that are already small enough, and for every other type. Images above 100 megapixels get no smaller version and answer `imageTooLarge`.",
   );
+
+export const IMAGE_TOO_LARGE_DETAIL =
+  "The image has more pixels than a smaller version can be made from; open it in full size instead";
+
+export function sized(content: AttachmentContent | null): AttachmentContent {
+  if (!content) throw new ProblemException("imageTooLarge", IMAGE_TOO_LARGE_DETAIL);
+  return content;
+}
 
 export function parseRange(header: string | undefined, size: number): ByteRange | null | "invalid" {
   if (!header) return null;

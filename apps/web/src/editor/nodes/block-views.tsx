@@ -10,6 +10,7 @@ import { useAttachmentUrl } from "../../files/attachment-source.js";
 import { useAttachmentPreview } from "../../files/preview-host.js";
 import { translateKey } from "../../i18n/translate.js";
 import { useEditable } from "../context.js";
+import { useImageTooLarge } from "../references.js";
 
 export interface TocEntry {
   level: number;
@@ -308,6 +309,7 @@ export function AttachmentView({ node, selected }: NodeViewProps) {
   const attachmentUrl = useAttachmentUrl();
   const id = typeof node.attrs.attachmentId === "string" ? node.attrs.attachmentId : null;
   const isImage = node.type.name === "image";
+  const tooLarge = useImageTooLarge(isImage ? id : null);
   const name = String((isImage ? node.attrs.alt : node.attrs.name) || "");
   return (
     <NodeViewWrapper
@@ -315,7 +317,22 @@ export function AttachmentView({ node, selected }: NodeViewProps) {
       data-align={isImage ? String(node.attrs.align) : undefined}
       contentEditable={false}
     >
-      {isImage && id ? (
+      {isImage && id && tooLarge ? (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-border px-3 py-2 text-sm">
+          <span className="flex min-w-0 items-center gap-2 text-text-muted">
+            <ImageOff aria-hidden="true" className="size-icon shrink-0" />
+            {t("editor.attachment.imageTooLarge", { name: name || t("editor.readView.image") })}
+          </span>
+          <a
+            href={attachmentUrl(id)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-hit items-center font-medium text-accent underline focus-visible:focus-ring"
+          >
+            {t("editor.attachment.openFullSize")}
+          </a>
+        </div>
+      ) : isImage && id ? (
         <img src={attachmentUrl(id, undefined, "display")} alt={name} loading="lazy" draggable={false} />
       ) : isImage || !id ? (
         <p className="ph-image-empty flex min-h-hit items-center gap-2 rounded-md border border-dashed border-border px-3 text-sm text-text-muted">

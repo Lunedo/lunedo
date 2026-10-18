@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ApiError } from "../api/request.js";
 import { renderWithProviders } from "../testing/render.js";
+import { rememberReferences } from "./references.js";
 import { TemplateContentEditor } from "./template-content-editor.js";
 
 vi.mock("@tiptap/react", async (original) => ({
@@ -18,6 +19,33 @@ function images(document: unknown): number {
 }
 
 describe("template content editor", () => {
+  it("shows an image above the pixel limit as a file that opens in full size, and others at display size", async () => {
+    const big = "01929b1e-0000-7000-8000-0000000000e1";
+    const small = "01929b1e-0000-7000-8000-0000000000e2";
+    rememberReferences({ tooLargeImages: [big] });
+    await renderWithProviders(
+      <TemplateContentEditor
+        initial={{
+          type: "doc",
+          content: [
+            { type: "image", attrs: { attachmentId: big, alt: "Scan" } },
+            { type: "image", attrs: { attachmentId: small, alt: "Logo" } },
+          ],
+        }}
+        fields={[]}
+        label="Template content"
+        images={{ url: (id, _version, size) => `/files/${id}${size ? `?size=${size}` : ""}`, upload: null }}
+        onChange={vi.fn()}
+      />,
+    );
+    expect(await screen.findByText("Scan is too large to show here.")).toBeTruthy();
+    expect(screen.queryByRole("img", { name: "Scan" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Open full size" }).getAttribute("href")).toBe(`/files/${big}`);
+    expect(screen.getByRole("img", { name: "Logo" }).getAttribute("src")).toBe(
+      `/files/${small}?size=display`,
+    );
+  });
+
   it("uploads ten images chosen at once one after the other instead of failing", async () => {
     let running = 0;
     let most = 0;

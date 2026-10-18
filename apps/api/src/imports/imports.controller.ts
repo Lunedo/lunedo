@@ -1289,7 +1289,7 @@ export class ImportsController {
         diff: { title: null, blocks: [], changes: 0 },
         before: { type: "doc", content: [] },
         after: { type: "doc", content: [] },
-        references: { people: {}, pages: {}, topics: {} },
+        references: { people: {}, pages: {}, topics: {}, tooLargeImages: [] },
       },
     },
     errors: [

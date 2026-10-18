@@ -112,6 +112,27 @@ describe("page read view", () => {
     expect(window.location.pathname).not.toContain("/api/v1/attachments");
   });
 
+  it("shows an image above the pixel limit as a file that opens in full size", async () => {
+    await renderWithProviders(
+      <PreferencesProvider>
+        <PageReadView
+          document={{
+            type: "doc",
+            content: [{ type: "image", attrs: { attachmentId: SECRET, alt: "Floor scan" } }],
+          }}
+          references={{ ...references, tooLargeImages: [SECRET] }}
+          pageId={PAGE}
+        />
+      </PreferencesProvider>,
+    );
+    expect(screen.queryByRole("img")).toBeNull();
+    expect(screen.getByText("Floor scan")).toBeTruthy();
+    expect(screen.getByText("This image is too large to show here.")).toBeTruthy();
+    const open = screen.getByRole("link", { name: "Open full size" });
+    expect(open.getAttribute("href")).toBe(`/api/v1/attachments/${SECRET}/content`);
+    expect(open.getAttribute("target")).toBe("_blank");
+  });
+
   it("keeps the checkbox and its focus when a task changes its status", async () => {
     const task = "01929b1e-0000-7000-8000-000000000005";
     const checklist = {

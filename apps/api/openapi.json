@@ -10166,6 +10166,10 @@
                       "type": "boolean",
                       "description": "Whether browsers may show the file directly: images, video and audio."
                     },
+                    "tooLargeForPreview": {
+                      "type": "boolean",
+                      "description": "Whether the image has more than 100 megapixels. Such images get no smaller version; pages and previews show them as a file that opens in full size."
+                    },
                     "version": {
                       "type": "integer",
                       "minimum": -9007199254740991,
@@ -10244,6 +10248,7 @@
                     "contentType",
                     "preview",
                     "inline",
+                    "tooLargeForPreview",
                     "version",
                     "versions",
                     "draft",
@@ -10262,6 +10267,7 @@
                   "contentType": "image/png",
                   "preview": "image",
                   "inline": true,
+                  "tooLargeForPreview": false,
                   "version": 2,
                   "versions": 2,
                   "draft": null,
@@ -10455,7 +10461,7 @@
             "name": "size",
             "in": "query",
             "required": false,
-            "description": "Size of an image. `display` sends a version whose longest edge is at most 2048 pixels, `preview` one of at most 400 pixels, both as WebP without metadata. The original is sent while no such version exists, for images that are already small enough, and for every other type.",
+            "description": "Size of an image. `display` sends a version whose longest edge is at most 2048 pixels, `preview` one of at most 400 pixels, both as WebP without metadata. The original is sent while no such version exists, for images that are already small enough, and for every other type. Images above 100 megapixels get no smaller version and answer `imageTooLarge`.",
             "schema": {
               "default": "original",
               "type": "string",
@@ -10591,6 +10597,26 @@
                       "title": "The version does not exist",
                       "status": 404,
                       "code": "versionNotFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`imageTooLarge`: The image is too large for a smaller version.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "imageTooLarge": {
+                    "value": {
+                      "type": "urn:pagehall:problem:imageTooLarge",
+                      "title": "The image is too large for a smaller version",
+                      "status": 409,
+                      "code": "imageTooLarge"
                     }
                   }
                 }
@@ -11499,6 +11525,10 @@
                       "type": "boolean",
                       "description": "Whether browsers may show the file directly: images, video and audio."
                     },
+                    "tooLargeForPreview": {
+                      "type": "boolean",
+                      "description": "Whether the image has more than 100 megapixels. Such images get no smaller version; pages and previews show them as a file that opens in full size."
+                    },
                     "version": {
                       "type": "integer",
                       "minimum": -9007199254740991,
@@ -11577,6 +11607,7 @@
                     "contentType",
                     "preview",
                     "inline",
+                    "tooLargeForPreview",
                     "version",
                     "versions",
                     "draft",
@@ -11595,6 +11626,7 @@
                   "contentType": "image/png",
                   "preview": "image",
                   "inline": true,
+                  "tooLargeForPreview": false,
                   "version": 2,
                   "versions": 2,
                   "draft": null,
@@ -32911,12 +32943,22 @@
                             "description": "A running topic."
                           },
                           "description": "Running topics that topic updates and decisions in the document refer to, by ID, as far as the caller may see them."
+                        },
+                        "tooLargeImages": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of an attachment."
+                          },
+                          "description": "Images in the document with more than 100 megapixels, as far as the caller may see them. They have no smaller version and are shown as a file that opens in full size."
                         }
                       },
                       "required": [
                         "people",
                         "pages",
-                        "topics"
+                        "topics",
+                        "tooLargeImages"
                       ],
                       "additionalProperties": false,
                       "description": "What mentions and page links in the document point to, as far as the caller may see it."
@@ -32968,7 +33010,8 @@
                   "references": {
                     "people": {},
                     "pages": {},
-                    "topics": {}
+                    "topics": {},
+                    "tooLargeImages": []
                   }
                 }
               }
@@ -117484,7 +117527,7 @@
             "name": "size",
             "in": "query",
             "required": false,
-            "description": "Size of an image. `display` sends a version whose longest edge is at most 2048 pixels, `preview` one of at most 400 pixels, both as WebP without metadata. The original is sent while no such version exists, for images that are already small enough, and for every other type.",
+            "description": "Size of an image. `display` sends a version whose longest edge is at most 2048 pixels, `preview` one of at most 400 pixels, both as WebP without metadata. The original is sent while no such version exists, for images that are already small enough, and for every other type. Images above 100 megapixels get no smaller version and answer `imageTooLarge`.",
             "schema": {
               "default": "original",
               "type": "string",
@@ -117672,6 +117715,26 @@
                       "title": "Not found",
                       "status": 404,
                       "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`imageTooLarge`: The image is too large for a smaller version.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "imageTooLarge": {
+                    "value": {
+                      "type": "urn:pagehall:problem:imageTooLarge",
+                      "title": "The image is too large for a smaller version",
+                      "status": 409,
+                      "code": "imageTooLarge"
                     }
                   }
                 }
@@ -166772,7 +166835,7 @@
             "name": "size",
             "in": "query",
             "required": false,
-            "description": "Size of an image. `display` sends a version whose longest edge is at most 2048 pixels, `preview` one of at most 400 pixels, both as WebP without metadata. The original is sent while no such version exists, for images that are already small enough, and for every other type.",
+            "description": "Size of an image. `display` sends a version whose longest edge is at most 2048 pixels, `preview` one of at most 400 pixels, both as WebP without metadata. The original is sent while no such version exists, for images that are already small enough, and for every other type. Images above 100 megapixels get no smaller version and answer `imageTooLarge`.",
             "schema": {
               "default": "original",
               "type": "string",
@@ -166960,6 +167023,26 @@
                       "title": "Not found",
                       "status": 404,
                       "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`imageTooLarge`: The image is too large for a smaller version.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "imageTooLarge": {
+                    "value": {
+                      "type": "urn:pagehall:problem:imageTooLarge",
+                      "title": "The image is too large for a smaller version",
+                      "status": 409,
+                      "code": "imageTooLarge"
                     }
                   }
                 }
@@ -172376,6 +172459,10 @@
                         "type": "boolean",
                         "description": "Whether browsers may show the file directly: images, video and audio."
                       },
+                      "tooLargeForPreview": {
+                        "type": "boolean",
+                        "description": "Whether the image has more than 100 megapixels. Such images get no smaller version; pages and previews show them as a file that opens in full size."
+                      },
                       "version": {
                         "type": "integer",
                         "minimum": -9007199254740991,
@@ -172454,6 +172541,7 @@
                       "contentType",
                       "preview",
                       "inline",
+                      "tooLargeForPreview",
                       "version",
                       "versions",
                       "draft",
@@ -172475,6 +172563,7 @@
                     "contentType": "image/png",
                     "preview": "image",
                     "inline": true,
+                    "tooLargeForPreview": false,
                     "version": 2,
                     "versions": 2,
                     "draft": null,
@@ -172716,6 +172805,10 @@
                       "type": "boolean",
                       "description": "Whether browsers may show the file directly: images, video and audio."
                     },
+                    "tooLargeForPreview": {
+                      "type": "boolean",
+                      "description": "Whether the image has more than 100 megapixels. Such images get no smaller version; pages and previews show them as a file that opens in full size."
+                    },
                     "version": {
                       "type": "integer",
                       "minimum": -9007199254740991,
@@ -172794,6 +172887,7 @@
                     "contentType",
                     "preview",
                     "inline",
+                    "tooLargeForPreview",
                     "version",
                     "versions",
                     "draft",
@@ -172812,6 +172906,7 @@
                   "contentType": "image/png",
                   "preview": "image",
                   "inline": true,
+                  "tooLargeForPreview": false,
                   "version": 2,
                   "versions": 2,
                   "draft": null,
@@ -173125,6 +173220,10 @@
                       "type": "boolean",
                       "description": "Whether browsers may show the file directly: images, video and audio."
                     },
+                    "tooLargeForPreview": {
+                      "type": "boolean",
+                      "description": "Whether the image has more than 100 megapixels. Such images get no smaller version; pages and previews show them as a file that opens in full size."
+                    },
                     "version": {
                       "type": "integer",
                       "minimum": -9007199254740991,
@@ -173203,6 +173302,7 @@
                     "contentType",
                     "preview",
                     "inline",
+                    "tooLargeForPreview",
                     "version",
                     "versions",
                     "draft",
@@ -173221,6 +173321,7 @@
                   "contentType": "image/png",
                   "preview": "image",
                   "inline": true,
+                  "tooLargeForPreview": false,
                   "version": 2,
                   "versions": 2,
                   "draft": null,
@@ -174692,12 +174793,22 @@
                             "description": "A running topic."
                           },
                           "description": "Running topics that topic updates and decisions in the document refer to, by ID, as far as the caller may see them."
+                        },
+                        "tooLargeImages": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of an attachment."
+                          },
+                          "description": "Images in the document with more than 100 megapixels, as far as the caller may see them. They have no smaller version and are shown as a file that opens in full size."
                         }
                       },
                       "required": [
                         "people",
                         "pages",
-                        "topics"
+                        "topics",
+                        "tooLargeImages"
                       ],
                       "additionalProperties": false,
                       "description": "What mentions and page links in the document point to, as far as the caller may see it."
@@ -174749,7 +174860,8 @@
                   "references": {
                     "people": {},
                     "pages": {},
-                    "topics": {}
+                    "topics": {},
+                    "tooLargeImages": []
                   }
                 }
               }
@@ -175062,12 +175174,22 @@
                             "description": "A running topic."
                           },
                           "description": "Running topics that topic updates and decisions in the document refer to, by ID, as far as the caller may see them."
+                        },
+                        "tooLargeImages": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of an attachment."
+                          },
+                          "description": "Images in the document with more than 100 megapixels, as far as the caller may see them. They have no smaller version and are shown as a file that opens in full size."
                         }
                       },
                       "required": [
                         "people",
                         "pages",
-                        "topics"
+                        "topics",
+                        "tooLargeImages"
                       ],
                       "additionalProperties": false,
                       "description": "What mentions and page links in the document point to, as far as the caller may see it."
@@ -175112,7 +175234,8 @@
                   "references": {
                     "people": {},
                     "pages": {},
-                    "topics": {}
+                    "topics": {},
+                    "tooLargeImages": []
                   }
                 }
               }
@@ -175452,12 +175575,22 @@
                             "description": "A running topic."
                           },
                           "description": "Running topics that topic updates and decisions in the document refer to, by ID, as far as the caller may see them."
+                        },
+                        "tooLargeImages": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of an attachment."
+                          },
+                          "description": "Images in the document with more than 100 megapixels, as far as the caller may see them. They have no smaller version and are shown as a file that opens in full size."
                         }
                       },
                       "required": [
                         "people",
                         "pages",
-                        "topics"
+                        "topics",
+                        "tooLargeImages"
                       ],
                       "additionalProperties": false,
                       "description": "What mentions and page links in the document point to, as far as the caller may see it."
@@ -175502,7 +175635,8 @@
                   "references": {
                     "people": {},
                     "pages": {},
-                    "topics": {}
+                    "topics": {},
+                    "tooLargeImages": []
                   }
                 }
               }
@@ -177585,12 +177719,22 @@
                             "description": "A running topic."
                           },
                           "description": "Running topics that topic updates and decisions in the document refer to, by ID, as far as the caller may see them."
+                        },
+                        "tooLargeImages": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of an attachment."
+                          },
+                          "description": "Images in the document with more than 100 megapixels, as far as the caller may see them. They have no smaller version and are shown as a file that opens in full size."
                         }
                       },
                       "required": [
                         "people",
                         "pages",
-                        "topics"
+                        "topics",
+                        "tooLargeImages"
                       ],
                       "additionalProperties": false,
                       "description": "What mentions and page links in the document point to, as far as the caller may see it."
@@ -177623,7 +177767,8 @@
                   "references": {
                     "people": {},
                     "pages": {},
-                    "topics": {}
+                    "topics": {},
+                    "tooLargeImages": []
                   }
                 }
               }
@@ -178151,12 +178296,22 @@
                             "description": "A running topic."
                           },
                           "description": "Running topics that topic updates and decisions in the document refer to, by ID, as far as the caller may see them."
+                        },
+                        "tooLargeImages": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of an attachment."
+                          },
+                          "description": "Images in the document with more than 100 megapixels, as far as the caller may see them. They have no smaller version and are shown as a file that opens in full size."
                         }
                       },
                       "required": [
                         "people",
                         "pages",
-                        "topics"
+                        "topics",
+                        "tooLargeImages"
                       ],
                       "additionalProperties": false,
                       "description": "What mentions and page links in the document point to, as far as the caller may see it."
@@ -178206,7 +178361,8 @@
                   "references": {
                     "people": {},
                     "pages": {},
-                    "topics": {}
+                    "topics": {},
+                    "tooLargeImages": []
                   }
                 }
               }
@@ -181254,12 +181410,22 @@
                             "description": "A running topic."
                           },
                           "description": "Running topics that topic updates and decisions in the document refer to, by ID, as far as the caller may see them."
+                        },
+                        "tooLargeImages": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of an attachment."
+                          },
+                          "description": "Images in the document with more than 100 megapixels, as far as the caller may see them. They have no smaller version and are shown as a file that opens in full size."
                         }
                       },
                       "required": [
                         "people",
                         "pages",
-                        "topics"
+                        "topics",
+                        "tooLargeImages"
                       ],
                       "additionalProperties": false,
                       "description": "What mentions and page links in the document point to, as far as the caller may see it."
@@ -181304,7 +181470,8 @@
                   "references": {
                     "people": {},
                     "pages": {},
-                    "topics": {}
+                    "topics": {},
+                    "tooLargeImages": []
                   },
                   "hiddenFromSomeReaders": false
                 }
@@ -186685,12 +186852,22 @@
                             "description": "A running topic."
                           },
                           "description": "Running topics that topic updates and decisions in the document refer to, by ID, as far as the caller may see them."
+                        },
+                        "tooLargeImages": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of an attachment."
+                          },
+                          "description": "Images in the document with more than 100 megapixels, as far as the caller may see them. They have no smaller version and are shown as a file that opens in full size."
                         }
                       },
                       "required": [
                         "people",
                         "pages",
-                        "topics"
+                        "topics",
+                        "tooLargeImages"
                       ],
                       "additionalProperties": false,
                       "description": "What mentions and page links in the document point to, as far as the caller may see it."
@@ -186747,7 +186924,8 @@
                   "references": {
                     "people": {},
                     "pages": {},
-                    "topics": {}
+                    "topics": {},
+                    "tooLargeImages": []
                   }
                 }
               }
@@ -188959,12 +189137,22 @@
                             "description": "A running topic."
                           },
                           "description": "Running topics that topic updates and decisions in the document refer to, by ID, as far as the caller may see them."
+                        },
+                        "tooLargeImages": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of an attachment."
+                          },
+                          "description": "Images in the document with more than 100 megapixels, as far as the caller may see them. They have no smaller version and are shown as a file that opens in full size."
                         }
                       },
                       "required": [
                         "people",
                         "pages",
-                        "topics"
+                        "topics",
+                        "tooLargeImages"
                       ],
                       "additionalProperties": false,
                       "description": "What mentions and page links in the document point to, as far as the caller may see it."
@@ -189039,7 +189227,8 @@
                       "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20": "Anna Berger"
                     },
                     "pages": {},
-                    "topics": {}
+                    "topics": {},
+                    "tooLargeImages": []
                   }
                 }
               }
@@ -192371,7 +192560,7 @@
             "name": "size",
             "in": "query",
             "required": false,
-            "description": "Size of an image. `display` sends a version whose longest edge is at most 2048 pixels, `preview` one of at most 400 pixels, both as WebP without metadata. The original is sent while no such version exists, for images that are already small enough, and for every other type.",
+            "description": "Size of an image. `display` sends a version whose longest edge is at most 2048 pixels, `preview` one of at most 400 pixels, both as WebP without metadata. The original is sent while no such version exists, for images that are already small enough, and for every other type. Images above 100 megapixels get no smaller version and answer `imageTooLarge`.",
             "schema": {
               "default": "original",
               "type": "string",
@@ -192490,6 +192679,26 @@
                       "title": "Not found",
                       "status": 404,
                       "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`imageTooLarge`: The image is too large for a smaller version.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "imageTooLarge": {
+                    "value": {
+                      "type": "urn:pagehall:problem:imageTooLarge",
+                      "title": "The image is too large for a smaller version",
+                      "status": 409,
+                      "code": "imageTooLarge"
                     }
                   }
                 }
@@ -192862,6 +193071,10 @@
                             "type": "boolean",
                             "description": "Whether browsers may show the file directly: images, video and audio."
                           },
+                          "tooLargeForPreview": {
+                            "type": "boolean",
+                            "description": "Whether the image has more than 100 megapixels. Such images get no smaller version; pages and previews show them as a file that opens in full size."
+                          },
                           "version": {
                             "type": "integer",
                             "minimum": -9007199254740991,
@@ -192940,6 +193153,7 @@
                           "contentType",
                           "preview",
                           "inline",
+                          "tooLargeForPreview",
                           "version",
                           "versions",
                           "draft",
@@ -192990,6 +193204,7 @@
                       "contentType": "image/png",
                       "preview": "image",
                       "inline": true,
+                      "tooLargeForPreview": false,
                       "version": 2,
                       "versions": 2,
                       "draft": null,
@@ -217288,7 +217503,7 @@
             "name": "size",
             "in": "query",
             "required": false,
-            "description": "Size of an image. `display` sends a version whose longest edge is at most 2048 pixels, `preview` one of at most 400 pixels, both as WebP without metadata. The original is sent while no such version exists, for images that are already small enough, and for every other type.",
+            "description": "Size of an image. `display` sends a version whose longest edge is at most 2048 pixels, `preview` one of at most 400 pixels, both as WebP without metadata. The original is sent while no such version exists, for images that are already small enough, and for every other type. Images above 100 megapixels get no smaller version and answer `imageTooLarge`.",
             "schema": {
               "default": "original",
               "type": "string",
@@ -217476,6 +217691,26 @@
                       "title": "Not found",
                       "status": 404,
                       "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`imageTooLarge`: The image is too large for a smaller version.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "imageTooLarge": {
+                    "value": {
+                      "type": "urn:pagehall:problem:imageTooLarge",
+                      "title": "The image is too large for a smaller version",
+                      "status": 409,
+                      "code": "imageTooLarge"
                     }
                   }
                 }

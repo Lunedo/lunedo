@@ -1,4 +1,4 @@
-CREATE TYPE "public"."display_version_state" AS ENUM('pending', 'done', 'none', 'failed');--> statement-breakpoint
+CREATE TYPE "public"."display_version_state" AS ENUM('pending', 'done', 'none', 'tooLarge', 'failed');--> statement-breakpoint
 CREATE TABLE "display_versions" (
 	"source_file_id" uuid NOT NULL,
 	"size" text NOT NULL,

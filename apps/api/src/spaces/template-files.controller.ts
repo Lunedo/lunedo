@@ -18,7 +18,7 @@ import { z } from "zod";
 import { Permission } from "../access/route-access.js";
 import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
-import { FILE_CONTENT_SECURITY_POLICY, imageSizeSchema, sendAttachment } from "../files/serve.js";
+import { FILE_CONTENT_SECURITY_POLICY, imageSizeSchema, sendAttachment, sized } from "../files/serve.js";
 import { ApiRoute } from "../http/api-route.js";
 import { notFound, ProblemException } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
@@ -389,7 +389,7 @@ export class TemplateFilesController {
   }
 
   async #sized(content: AttachmentContent | null, size: DisplayVersionSize | undefined) {
-    return content ? this.#services.displayVersions.apply(content, size) : null;
+    return content ? sized(await this.#services.displayVersions.apply(content, size)) : null;
   }
 
   async #send(
@@ -490,6 +490,7 @@ export class TemplateFilesController {
     params: spaceFileParams,
     query: sizeQuery,
     raw: rawImage,
+    errors: ["imageTooLarge"],
   })
   async spaceTemplateFile(
     @Param("spaceId") spaceId: string,
@@ -686,6 +687,7 @@ export class TemplateFilesController {
     params: organizationFileParams,
     query: sizeQuery,
     raw: rawImage,
+    errors: ["imageTooLarge"],
   })
   organizationTemplateFile(
     @Param("organizationId") organizationId: string,
@@ -885,6 +887,7 @@ export class TemplateFilesController {
     params: instanceFileParams,
     query: sizeQuery,
     raw: rawImage,
+    errors: ["imageTooLarge"],
   })
   instanceTemplateFile(
     @Param("templateId") templateId: string,

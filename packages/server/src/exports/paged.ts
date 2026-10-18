@@ -14,8 +14,8 @@ import type { AuthorizationService } from "../authorization/service.js";
 import type { CommentList, CommentService } from "../collaboration/comments.js";
 import type { Database } from "../database/database.js";
 import type { AttachmentService } from "../files/attachments.js";
-import { type DisplayVersionService, MAX_DISPLAY_VERSION_PIXELS } from "../files/display-versions.js";
-import type { FileService } from "../files/files.js";
+import type { DisplayVersionService } from "../files/display-versions.js";
+import { type FileService, MAX_DISPLAY_VERSION_PIXELS } from "../files/files.js";
 import type { Logger } from "../logging/logger.js";
 import { blocksOfType } from "../spaces/documents.js";
 import type { ExportOptions } from "./options.js";
@@ -314,7 +314,11 @@ export class PagedExport {
     if (!this.#exported.has(itemId) && !(await this.#renderer.exportable([itemId])).has(itemId)) return null;
     const original = await this.#attachments.content(attachmentId, "published");
     if (!original?.contentType.startsWith("image/")) return null;
-    const content = (await this.#displayVersions?.apply(original, "display")) ?? original;
+    const content = this.#displayVersions ? await this.#displayVersions.apply(original, "display") : original;
+    if (!content) {
+      this.#leftOut.add(attachmentId);
+      return null;
+    }
     const file = { fileId: content.fileId, size: content.size, contentType: content.contentType };
     if (file.contentType !== "image/webp") return this.#within(attachmentId, file);
     if (file.size > MAX_EMBEDDED_IMAGE_BYTES) return this.#within(attachmentId, file);

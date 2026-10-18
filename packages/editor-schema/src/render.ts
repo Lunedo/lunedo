@@ -38,6 +38,7 @@ export const defaultLabels: RenderLabels = {
   file: "File",
   image: "Image",
   openFullSize: "Open full size",
+  imageTooLarge: "This image is too large to show here.",
   drawing: "Drawing",
   drawio: "draw.io diagram",
   mermaid: "Mermaid diagram",
