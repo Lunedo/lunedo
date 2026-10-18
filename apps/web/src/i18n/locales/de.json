@@ -7514,6 +7514,11 @@
           "hint": "Verknüpfte oder beschädigte Bilder entfallen.",
           "entry": "{file}: einige Bilder konnten nicht gelesen werden."
         },
+        "documentTooLarge": {
+          "title": "{count, plural, one {# Dokument ist} other {# Dokumente sind}} zu groß zum Umwandeln",
+          "hint": "Pagehall hat sie ausgelassen; die anderen Dokumente wurden importiert. Teile das Dokument in kleinere Dokumente oder entferne große Teile und importiere es erneut.",
+          "entry": "{file}: Der Text des Dokuments ist größer als {limit, number} MB oder braucht zum Umwandeln zu viel Speicher."
+        },
         "embedNotAllowed": {
           "title": "{count, plural, one {# Einbettung wird} other {# Einbettungen werden}} als Link angezeigt",
           "hint": "Ihre Adresse steht nicht auf der Liste erlaubter Einbettungen dieser Organisation. Nimm den Dienst in die Liste auf, um sie eingebettet anzuzeigen.",

@@ -43392,7 +43392,8 @@
                               "unresolvedFileLink",
                               "embeddedObject",
                               "wordCommentsDropped",
-                              "unreadableImage"
+                              "unreadableImage",
+                              "documentTooLarge"
                             ]
                           },
                           "count": {

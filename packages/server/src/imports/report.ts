@@ -33,6 +33,7 @@ export const reportCategories = {
     "embeddedObject",
     "wordCommentsDropped",
     "unreadableImage",
+    "documentTooLarge",
   ],
 } as const;
 

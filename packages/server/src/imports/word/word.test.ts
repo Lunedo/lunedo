@@ -1,4 +1,4 @@
-import type { NodeJson } from "@pagehall/editor-schema";
+import { MAX_DOCUMENT_BYTES, type NodeJson } from "@pagehall/editor-schema";
 import {
   Document,
   ExternalHyperlink,
@@ -22,7 +22,8 @@ import type { ScanContext } from "../source.js";
 import { StagingStore } from "../staging.js";
 import { importHarness } from "../testing/harness.js";
 import { createZip } from "../testing/zip-writer.js";
-import { MAX_DOCX_BYTES, WordReader } from "./reader.js";
+import { convertInWorker } from "./convert.js";
+import { MAX_DOCX_BYTES, MAX_WORD_TEXT_BYTES, WordReader } from "./reader.js";
 
 const baseUrl = testDatabaseBaseUrl();
 const PNG = Buffer.from(
@@ -90,6 +91,43 @@ async function handbook(): Promise<Buffer> {
     ],
   });
   return Packer.toBuffer(document);
+}
+
+const WORDS = ["router", "switch", "policy", "network", "printer", "backup", "server", "account", "token"];
+
+function longDocument(textBytes: number, last: string): Buffer {
+  const head =
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>';
+  const tail = `<w:p><w:r><w:t>${last}</w:t></w:r></w:p></w:body></w:document>`;
+  const paragraphs: string[] = [];
+  let size = Buffer.byteLength(head) + Buffer.byteLength(tail);
+  for (let index = 0; ; index += 1) {
+    const words = Array.from({ length: 12 }, (_, word) => WORDS[(index * 7 + word * 5) % WORDS.length]);
+    const paragraph = `<w:p><w:r><w:t>${index} ${words.join(" ")}</w:t></w:r></w:p>`;
+    if (size + paragraph.length > textBytes) break;
+    paragraphs.push(paragraph);
+    size += paragraph.length;
+  }
+  const filler = "x".repeat(textBytes - size);
+  const document = `${head}${paragraphs.join("")}<w:p><w:r><w:t>${filler}</w:t></w:r></w:p>${tail}`;
+  return createZip([
+    {
+      name: "[Content_Types].xml",
+      data:
+        '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+        '<Default Extension="xml" ContentType="application/xml"/>' +
+        '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+        '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>',
+    },
+    {
+      name: "_rels/.rels",
+      data:
+        '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+        '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>',
+    },
+    { name: "word/document.xml", data: document },
+  ]);
 }
 
 function macroDocument(): Buffer {
@@ -215,6 +253,103 @@ describe.skipIf(!baseUrl)("Word document imports", () => {
     const view = await test.services.imports.get(harness.as(organization.owner), id);
     expect(view.state).toBe("draft");
     expect(view.errorCode).toBe("macroDocument");
+  });
+
+  describe("large documents", () => {
+    const LIMIT = MAX_WORD_TEXT_BYTES - 64;
+
+    it("leaves out a document above the size limit, reports it and imports the next one", async () => {
+      const organization = await fixtures.organization();
+      const view = await harness.importedFiles({
+        organizationId: organization.id,
+        admin: organization.owner,
+        source: "word",
+        files: [
+          { name: "manual.docx", data: longDocument(MAX_WORD_TEXT_BYTES + 1, "Never shown") },
+          { name: "security.docx", data: await handbook() },
+        ],
+        key: "WORDBIG",
+      });
+      expect(view.state).toBe("review");
+      expect((await pages(view.quarantineSpace?.id as string)).map((page) => page.title)).toEqual([
+        "IT security policy",
+      ]);
+      const report = await test.services.imports.entries(harness.as(organization.owner), view.id, {
+        code: "documentTooLarge",
+        limit: 10,
+      });
+      expect(report.entries.map((entry) => entry.details)).toEqual([{ file: "manual.docx", limit: 8 }]);
+    });
+
+    it("saves its place after a document that is too large, so a new run does not convert it again", async () => {
+      const organization = await fixtures.organization();
+      const id = (
+        await test.services.imports.create(harness.as(organization.owner), organization.id, {
+          source: "word",
+        })
+      ).id;
+      const checkpoints: Record<string, unknown>[] = [];
+      const problems: { code: string; details?: Record<string, string | number> }[] = [];
+      const context = (checkpoint: Record<string, unknown>): ScanContext => ({
+        staging: new StagingStore(test.database, id),
+        checkpoint,
+        options: {},
+        history: false,
+        async saveCheckpoint(next) {
+          checkpoints.push(next);
+        },
+        async progress() {},
+        async problem(code, details) {
+          problems.push({ code, ...(details ? { details } : {}) });
+        },
+        signal: new AbortController().signal,
+      });
+      const files = bundleOf([
+        { name: "manual.docx", source: bufferSource(longDocument(MAX_WORD_TEXT_BYTES + 1, "Never shown")) },
+        { name: "security.docx", source: bufferSource(await handbook()) },
+      ]);
+      await new WordReader().scan(files, context({}));
+      expect(checkpoints).toEqual([{ documents: 1 }, { documents: 2 }]);
+      expect(problems.filter((problem) => problem.code === "documentTooLarge")).toHaveLength(1);
+      problems.length = 0;
+      await new WordReader().scan(files, context({ documents: 1 }));
+      expect(problems.filter((problem) => problem.code === "documentTooLarge")).toEqual([]);
+    });
+
+    it("converts a document just below the size limit", async () => {
+      const organization = await fixtures.organization();
+      const view = await harness.importedFiles({
+        organizationId: organization.id,
+        admin: organization.owner,
+        source: "word",
+        files: [{ name: "manual.docx", data: longDocument(LIMIT, "The last paragraph") }],
+        key: "WORDLIMIT",
+      });
+      expect(view.state).toBe("review");
+      const [page] = await pages(view.quarantineSpace?.id as string);
+      expect(page?.title).toBe("manual");
+      const document = await documentOf(page?.id as string);
+      expect(textOf(document)).toContain("0 router backup switch");
+      expect(Buffer.byteLength(JSON.stringify(document))).toBeLessThanOrEqual(MAX_DOCUMENT_BYTES);
+      const codes = await test.database.execute<{ code: string }>(
+        sql`select distinct code from import_problems where import_id = ${view.id} order by code`,
+      );
+      expect(codes.rows.map((row) => row.code)).toEqual(["contentTruncated"]);
+    }, 120_000);
+
+    it("reports a conversion that runs out of memory or time as too large", async () => {
+      const zip = () => new Uint8Array(longDocument(2 * 1024 * 1024, "End"));
+      expect(
+        await convertInWorker({ zip: zip(), idPrefix: "d0-" }, { maxHeapMb: 16, timeoutMs: 60_000 }),
+      ).toEqual({
+        status: "tooLarge",
+      });
+      expect(
+        await convertInWorker({ zip: zip(), idPrefix: "d0-" }, { maxHeapMb: 512, timeoutMs: 1 }),
+      ).toEqual({
+        status: "tooLarge",
+      });
+    });
   });
 
   describe("crafted files", () => {

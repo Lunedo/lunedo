@@ -7514,6 +7514,11 @@
           "hint": "Linked or damaged images are left out.",
           "entry": "{file}: some images could not be read."
         },
+        "documentTooLarge": {
+          "title": "{count, plural, one {# document} other {# documents}} too large to convert",
+          "hint": "Pagehall left them out; the other documents were imported. Split the document into smaller documents or remove large parts, then import it again.",
+          "entry": "{file}: the document text is larger than {limit, number} MB or needs too much memory to convert."
+        },
         "embedNotAllowed": {
           "title": "{count, plural, one {# embed is} other {# embeds are}} shown as a link",
           "hint": "Their address is not on the embed allowlist of this organization. Add the service to the allowlist to show them embedded.",
