@@ -15,7 +15,16 @@ describe("isApprovedLicense", () => {
   });
 
   it("rejects licenses that are not OSI-approved", () => {
-    for (const license of ["CC0-1.0", "CC-BY-4.0", "BUSL-1.1", "SSPL-1.0", "UNKNOWN", "UNLICENSED", ""]) {
+    for (const license of [
+      "CC0-1.0",
+      "CC-BY-4.0",
+      "BUSL-1.1",
+      "SSPL-1.0",
+      "MPL-1.1",
+      "UNKNOWN",
+      "UNLICENSED",
+      "",
+    ]) {
       assert.equal(isApprovedLicense(license), false, license);
     }
   });

@@ -7,7 +7,7 @@
       "libraries": {
         "aom": "BSD-2-Clause AND LicenseRef-AOMedia-Patent-1.0",
         "archive": "BSD-2-Clause",
-        "cairo": "MPL-1.1",
+        "cairo": "LGPL-2.1-only",
         "cgif": "MIT",
         "exif": "LGPL-3.0-only",
         "expat": "MIT",
@@ -42,7 +42,7 @@
         "LicenseRef-fontconfig",
         "LicenseRef-AOMedia-Patent-1.0"
       ],
-      "reason": "Prebuilt libvips for sharp, which creates the display versions of images. Licenses taken from the library table in the package README. FreeType, IJG, libpng, libtiff and fontconfig are old permissive BSD-style licenses that predate the OSI list and were never submitted; they allow use, change and distribution and ask only for attribution. The AOMedia patent license is a royalty-free patent grant on top of BSD-2-Clause. None of these libraries can be replaced without dropping libvips."
+      "reason": "Prebuilt libvips for sharp, which creates the display versions of images. Licenses taken from the library table in the package README. cairo is offered under LGPL-2.1 or MPL-1.1 and is used under LGPL-2.1, because MPL-1.1 is not compatible with the AGPL. FreeType, IJG, libpng, libtiff and fontconfig are old permissive BSD-style licenses that predate the OSI list and were never submitted; they allow use, change and distribution and ask only for attribution. The AOMedia patent license is a royalty-free patent grant on top of BSD-2-Clause. None of these libraries can be replaced without dropping libvips."
     }
   ]
 }

@@ -18,7 +18,6 @@ export const approvedLicenses = new Set([
   "LGPL-3.0-or-later",
   "MIT",
   "MIT-0",
-  "MPL-1.1",
   "MPL-2.0",
   "OFL-1.1",
   "PSF-2.0",
