@@ -179,6 +179,14 @@ export class StagingStore {
     return result.rows.map((row) => toStored<T>(row));
   }
 
+  async children<T>(kind: string, parentId: string): Promise<StoredRecord<T>[]> {
+    const result = await this.#database.execute<RecordRow>(sql`
+      select source_id, ref, sort, parent_id, ordinal, data from import_records
+      where import_id = ${this.#importId} and kind = ${kind} and parent_id = ${parentId}
+      order by source_id`);
+    return result.rows.map((row) => toStored<T>(row));
+  }
+
   async parents(kind: string, sourceIds: readonly string[]): Promise<Set<string>> {
     if (sourceIds.length === 0) return new Set();
     const result = await this.#database.execute<{ parent_id: string }>(sql`

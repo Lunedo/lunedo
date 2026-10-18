@@ -910,6 +910,49 @@ export async function reportRemovedRestrictions(context: ScanContext): Promise<v
   });
 }
 
+export async function unlessInvalid<T>(request: Promise<T | null>): Promise<T | null> {
+  try {
+    return await request;
+  } catch (error) {
+    if (error instanceof ImportFormatError && error.code === "confluenceInvalidResponse") return null;
+    throw error;
+  }
+}
+
+export async function keepRestricted(
+  context: ScanContext,
+  pageId: string,
+  title: string,
+  reason: "restrictions" | "parent",
+): Promise<void> {
+  await context.staging.put({
+    kind: kinds.restriction,
+    sourceId: `${pageId}/view/unreadable`,
+    ref: pageId,
+    data: {
+      kind: "view",
+      origin: "table",
+      userKey: null,
+      accountId: null,
+      group: null,
+    } satisfies StagedRestriction,
+  });
+  await context.problem("restrictionsUnreadable", { title: title.slice(0, 255), reason });
+}
+
+export async function leaveOutUnreadablePage(
+  context: ScanContext,
+  pageId: string,
+  title: string,
+): Promise<void> {
+  await context.staging.flush();
+  for (const child of await context.staging.children<{ title: string }>(kinds.page, pageId)) {
+    await keepRestricted(context, child.sourceId, child.data.title, "parent");
+  }
+  await context.staging.removeIds(kinds.page, [pageId]);
+  await context.problem("pageUnreadable", { title: title.slice(0, 255) });
+}
+
 export async function stageRestrictions(staging: StagingStore): Promise<void> {
   await staging.flush();
   if ((await staging.count(kinds.restriction, { field: "origin", value: "table" })) > 0) {

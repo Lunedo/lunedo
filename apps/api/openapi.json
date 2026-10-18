@@ -43382,6 +43382,8 @@
                               "contentSkipped",
                               "trashedContent",
                               "removedRestrictionKept",
+                              "restrictionsUnreadable",
+                              "pageUnreadable",
                               "listingIncomplete",
                               "contentTypeNotImported",
                               "likesAndWatchersSkipped",

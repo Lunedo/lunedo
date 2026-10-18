@@ -906,10 +906,76 @@ describe.skipIf(!baseUrl)("Confluence API imports", () => {
       }
     }
 
+    async function restricted(importId: string): Promise<Map<string, boolean>> {
+      const result = await test.database.execute<{ title: string; restricted: boolean }>(sql`
+        select t.title, exists (select 1 from page_restrictions r where r.item_id = any(t.path) and r.kind = 'view')
+          as restricted
+        from imports i join tree_items t on t.space_id = i.quarantine_space_id
+        where i.id = ${importId} and t.trash_entry_id is null`);
+      return new Map(result.rows.map((row) => [row.title, row.restricted]));
+    }
+
     async function reported(owner: ReturnType<typeof as>, importId: string, code: string) {
       const report = await test.services.imports.entries(owner, importId, { code, limit: 20 });
       return report.entries.map((entry) => entry.details);
     }
+
+    const restrictionPath = (kind: Kind, pageId: string) =>
+      kind === "cloud"
+        ? `/wiki/rest/api/content/${pageId}/restriction`
+        : `/confluence/rest/api/content/${pageId}/restriction/byOperation`;
+
+    it.each([
+      ["cloud", 403],
+      ["cloud", 404],
+      ["dataCenter", 403],
+      ["dataCenter", 404],
+      ["cloud", 405],
+      ["dataCenter", 405],
+    ] as const)(
+      "keeps a %s page and its children restricted when its restrictions answer %i",
+      async (kind, status) => {
+        const { view, owner } = await importedFrom(
+          kind,
+          `UNR${kind === "cloud" ? "C" : "D"}${status}`,
+          (url) => (url.pathname === restrictionPath(kind, "7101") ? response(status) : null),
+        );
+        expect(view.state).toBe("review");
+        const found = await restricted(view.id);
+        expect(found.get("Guide")).toBe(true);
+        expect(found.get("Guide details")).toBe(true);
+        expect(found.get("Notes")).toBe(false);
+        expect(await reported(owner, view.id, "restrictionsUnreadable")).toEqual([
+          { title: "Guide", reason: "restrictions" },
+        ]);
+        const holders = await test.database.execute(sql`
+        select 1 from page_restriction_holders h join tree_items t on t.id = h.item_id
+        join imports i on i.quarantine_space_id = t.space_id where i.id = ${view.id} and t.title = 'Guide'`);
+        expect(holders.rows).toEqual([]);
+      },
+    );
+
+    it.each([403, 404])(
+      "leaves out a Cloud page whose details answer %i and keeps its children restricted",
+      async (status) => {
+        const { view, owner } = await importedFrom("cloud", `UNRPAGE${status}`, (url) =>
+          url.pathname === "/wiki/api/v2/pages/7101" ? response(status) : null,
+        );
+        expect(view.state).toBe("review");
+        const found = await restricted(view.id);
+        expect(found.has("Guide")).toBe(false);
+        expect(found.get("Guide details")).toBe(true);
+        expect(found.get("Secret")).toBe(true);
+        expect(found.get("Notes")).toBe(false);
+        expect(await reported(owner, view.id, "pageUnreadable")).toEqual([{ title: "Guide" }]);
+        expect(await reported(owner, view.id, "restrictionsUnreadable")).toEqual(
+          expect.arrayContaining([
+            { title: "Guide details", reason: "parent" },
+            { title: "Secret", reason: "parent" },
+          ]),
+        );
+      },
+    );
 
     it.each(["cloud", "dataCenter"] as const)(
       "stops a %s listing whose next link repeats and reports it",

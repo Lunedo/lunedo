@@ -7447,12 +7447,22 @@
         "contentSkipped": {
           "title": "{count, plural, one {# part} other {# parts}} could not be read with the token",
           "hint": "Confluence refused them. Import with a token of an account that can read them, or add them later.",
-          "entry": "{title}: the {part, select, comments {comments} attachments {attachments} restrictions {restrictions} other {content}} could not be read."
+          "entry": "{title}: the {part, select, comments {comments} attachments {attachments} other {content}} could not be read."
         },
         "removedRestrictionKept": {
           "title": "Restrictions kept that Confluence may have removed",
           "hint": "Confluence marks removed restrictions in its export without saying who had them. Pagehall keeps such pages restricted. Check them and remove the restriction where it is not needed.",
           "entry": "{count, plural, one {# page} other {# pages}}: {pages}"
+        },
+        "restrictionsUnreadable": {
+          "title": "{count, plural, one {# page} other {# pages}} kept restricted",
+          "hint": "Confluence did not return who may read them. Pagehall keeps them restricted so that nobody sees more than in Confluence. Check them and set the restriction you need.",
+          "entry": "“{title}” was kept restricted because {reason, select, parent {Confluence did not return its parent page} other {Confluence did not return its restrictions}}."
+        },
+        "pageUnreadable": {
+          "title": "{count, plural, one {# page} other {# pages}} could not be read and were left out",
+          "hint": "Confluence refused them, for example because they were restricted after the import started. Their child pages are kept restricted. Import with the token of an account that can read them.",
+          "entry": "“{title}” could not be read with the token and was left out."
         },
         "listingIncomplete": {
           "title": "{count, plural, one {# list} other {# lists}} read only in part",

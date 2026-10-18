@@ -22,6 +22,8 @@ export const reportCategories = {
     "contentSkipped",
     "trashedContent",
     "removedRestrictionKept",
+    "restrictionsUnreadable",
+    "pageUnreadable",
     "listingIncomplete",
     "contentTypeNotImported",
     "likesAndWatchersSkipped",

@@ -7447,12 +7447,22 @@
         "contentSkipped": {
           "title": "{count, plural, one {# Teil konnte} other {# Teile konnten}} mit dem Token nicht gelesen werden",
           "hint": "Confluence hat sie verweigert. Importiere mit dem Token eines Kontos, das sie lesen kann, oder ergänze sie später.",
-          "entry": "{title}: {part, select, comments {Die Kommentare konnten} attachments {Die Anhänge konnten} restrictions {Die Einschränkungen konnten} other {Der Inhalt konnte}} nicht gelesen werden."
+          "entry": "{title}: {part, select, comments {Die Kommentare konnten} attachments {Die Anhänge konnten} other {Der Inhalt konnte}} nicht gelesen werden."
         },
         "removedRestrictionKept": {
           "title": "Einschränkungen behalten, die Confluence vielleicht entfernt hat",
           "hint": "Confluence markiert entfernte Einschränkungen im Export, ohne zu sagen, für wen sie galten. Pagehall lässt diese Seiten eingeschränkt. Prüfe sie und entferne die Einschränkung, wo sie nicht nötig ist.",
           "entry": "{count, plural, one {# Seite} other {# Seiten}}: {pages}"
+        },
+        "restrictionsUnreadable": {
+          "title": "{count, plural, one {# Seite bleibt} other {# Seiten bleiben}} eingeschränkt",
+          "hint": "Confluence hat nicht mitgeteilt, wer sie lesen darf. Pagehall lässt sie eingeschränkt, damit niemand mehr sieht als in Confluence. Prüfe sie und setze die Einschränkung, die du brauchst.",
+          "entry": "„{title}“ bleibt eingeschränkt, weil {reason, select, parent {Confluence die übergeordnete Seite nicht geliefert hat} other {Confluence die Einschränkungen nicht geliefert hat}}."
+        },
+        "pageUnreadable": {
+          "title": "{count, plural, one {# Seite konnte} other {# Seiten konnten}} nicht gelesen werden und fehlen",
+          "hint": "Confluence hat sie verweigert, zum Beispiel weil sie nach dem Start des Imports eingeschränkt wurden. Ihre Unterseiten bleiben eingeschränkt. Importiere mit dem Token eines Kontos, das sie lesen kann.",
+          "entry": "„{title}“ konnte mit dem Token nicht gelesen werden und wurde ausgelassen."
         },
         "listingIncomplete": {
           "title": "{count, plural, one {# Liste} other {# Listen}} nur teilweise gelesen",

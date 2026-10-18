@@ -7,12 +7,15 @@ import {
   confluenceDate,
   contentKind,
   formerTitleRecord,
+  keepRestricted,
   kinds,
+  leaveOutUnreadablePage,
   PAGE_STATUS_PROPERTY,
   pageSort,
   reportTrashed,
   stageTrashed,
   titleKey,
+  unlessInvalid,
   versionSort,
 } from "./staged.js";
 
@@ -566,7 +569,7 @@ async function details(
     contentSchema,
   );
   if (!content) {
-    await skipped("content");
+    await leaveOutUnreadablePage(context, pageId, page.title);
     return;
   }
   const body = content.body?.storage?.value;
@@ -623,11 +626,13 @@ async function details(
   await comments(api, context, pageId, collection, "footer-comments", () => skipped("comments"));
   await comments(api, context, pageId, collection, "inline-comments", () => skipped("comments"));
   await attachments(api, context, pageId, collection, () => skipped("attachments"));
-  const restrictions = await api.json(
-    `/rest/api/content/${pageId}/restriction?expand=restrictions.user,restrictions.group,content`,
-    restrictionSchema,
+  const restrictions = await unlessInvalid(
+    api.json(
+      `/rest/api/content/${pageId}/restriction?expand=restrictions.user,restrictions.group,content`,
+      restrictionSchema,
+    ),
   );
-  if (!restrictions) await skipped("restrictions");
+  if (!restrictions) await keepRestricted(context, pageId, page.title, "restrictions");
   for (const entry of restrictions?.results ?? []) {
     const kind = entry.operation === "read" ? "view" : entry.operation === "update" ? "edit" : null;
     if (!kind) continue;

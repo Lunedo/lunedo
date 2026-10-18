@@ -14,11 +14,13 @@ import { ListingGuard, type ListingStopped, reportStoppedListing } from "./pagin
 import {
   confluenceDate,
   formerTitleRecord,
+  keepRestricted,
   kinds,
   pageSort,
   StagedConfluenceReader,
   type StagedFile,
   titleKey,
+  unlessInvalid,
   versionSort,
 } from "./staged.js";
 
@@ -791,11 +793,13 @@ export class ConfluenceApiReader extends StagedConfluenceReader {
       const next = await attachmentPages.follow(nextPath(attachments._links?.next));
       attachments = next ? await api.json(next, contentListSchema) : null;
     }
-    const restrictions = await api.json(
-      apiPath(`/content/${pageId}/restriction/byOperation?expand=restrictions.user,restrictions.group`),
-      restrictionsSchema,
+    const restrictions = await unlessInvalid(
+      api.json(
+        apiPath(`/content/${pageId}/restriction/byOperation?expand=restrictions.user,restrictions.group`),
+        restrictionsSchema,
+      ),
     );
-    if (restrictions === null) await skipped("restrictions");
+    if (restrictions === null) await keepRestricted(context, pageId, page.title, "restrictions");
     for (const [operation, kind] of [
       ["read", "view"],
       ["update", "edit"],
