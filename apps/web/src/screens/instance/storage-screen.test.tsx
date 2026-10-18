@@ -300,6 +300,13 @@ describe("the storage banner", () => {
     expect(screen.getByText(/96.2% of the file store is used/)).toBeTruthy();
   });
 
+  it("offers no link to the storage settings on the storage settings themselves", async () => {
+    api({ "GET /api/v1/instance/storage": () => ({ body: status({ level: 1, percent: 83 }) }) });
+    await renderAt("/settings/instance/storage");
+    await screen.findByText("The file store is filling up");
+    expect(screen.queryByRole("link", { name: "Open the storage settings" })).toBeNull();
+  });
+
   it("names the level that is active", async () => {
     api({ "GET /api/v1/instance/storage": () => ({ body: status({ level: 2, percent: 91 }) }) });
     await renderAt("/settings/instance/mail");
