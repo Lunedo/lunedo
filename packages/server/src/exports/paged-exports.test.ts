@@ -1,6 +1,6 @@
 import { Readable } from "node:stream";
 import mammoth from "mammoth";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { accountPrincipal, type Principal } from "../accounts/principal.js";
 import { Secret } from "../config/secret.js";
 import { createLogger } from "../logging/logger.js";
@@ -419,6 +419,39 @@ describe.skipIf(!baseUrl)("print, PDF and Word exports", () => {
       await Promise.all([own, other]);
       const file = await test.services.exports.page(context.reader, context.pages.welcome.id, "docx");
       expect(file.fileName).toBe("Welcome.docx");
+    });
+
+    it("reads an image that a Word file shows several times only once", async () => {
+      const { admin, space: handbook } = context;
+      const repeated = await test.services.tree.create(admin, handbook.id, {
+        kind: "page",
+        title: "Repeated image",
+        mode: "live",
+        placement: { parentId: null },
+      });
+      const uploaded = await test.services.attachments.upload(admin, repeated.id, {
+        name: "logo.png",
+        body: Readable.from([PNG]),
+        contentLength: PNG.length,
+      });
+      await test.services.documents.replace(
+        admin,
+        repeated.id,
+        doc(
+          ...Array.from({ length: 5 }, () => ({
+            type: "image",
+            attrs: { attachmentId: uploaded.id, alt: "Logo" },
+          })),
+        ),
+      );
+      const read = vi.spyOn(test.services.files, "read");
+      try {
+        const file = await test.services.exports.page(admin, repeated.id, "docx");
+        expect(((await html(await bytesOf(file))).match(/<img /g) ?? []).length).toBe(5);
+        expect(read).toHaveBeenCalledTimes(1);
+      } finally {
+        read.mockRestore();
+      }
     });
 
     it("leaves out images above the smaller budget of files built while the request waits", async () => {

@@ -71,6 +71,7 @@ export class PagedExport {
   readonly #viewer: Principal;
   readonly #language: string;
   readonly #images = new Map<string, Promise<ImageFile>>();
+  readonly #wordImages = new Map<string, Promise<WordImage | null>>();
   readonly #boards = new Map<string, BoardPreview>();
   readonly #exported = new Set<string>();
   readonly #assetIds = new Set<string>();
@@ -321,7 +322,15 @@ export class PagedExport {
     }
   }
 
-  async #image(attachmentId: string): Promise<WordImage | null> {
+  #image(attachmentId: string): Promise<WordImage | null> {
+    const cached = this.#wordImages.get(attachmentId);
+    if (cached) return cached;
+    const reading = this.#wordImage(attachmentId);
+    this.#wordImages.set(attachmentId, reading);
+    return reading;
+  }
+
+  async #wordImage(attachmentId: string): Promise<WordImage | null> {
     const board = this.#boards.get(attachmentId);
     const file = await (board ? this.#boardImage(attachmentId, board) : this.#readable(attachmentId));
     const data = file ? await this.#bytes(file) : null;
