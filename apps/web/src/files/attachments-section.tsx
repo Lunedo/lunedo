@@ -8,6 +8,7 @@ import {
   FileSpreadsheet,
   FileText,
   FileVideo,
+  LocateFixed,
   MoreHorizontal,
   Paperclip,
   RotateCcw,
@@ -15,7 +16,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { type DragEvent, type ReactNode, useRef, useState } from "react";
+import { type DragEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { request } from "../api/request.js";
@@ -23,6 +24,7 @@ import { LoadError } from "../errors/failure.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { type Attachment, attachmentKeys, attachmentsQuery, contentUrl } from "./attachments-api.js";
+import { blockSelector, type DiagramFile, diagramFile, diagramPositions } from "./diagram-files.js";
 import { typeLabel } from "./file-preview.js";
 import { useAttachmentPreview } from "./preview-host.js";
 import { type UploadItem, useUploads } from "./uploads.js";
@@ -199,6 +201,117 @@ export function AttachmentsSection({ pageId, canEdit }: { pageId: string; canEdi
     }
   };
 
+  const all = attachments.data;
+  const diagrams = useMemo(
+    () =>
+      (all ?? []).flatMap((attachment) => {
+        const diagram = diagramFile(attachment.name);
+        return diagram ? [{ attachment, diagram }] : [];
+      }),
+    [all],
+  );
+  const ordinary = (all ?? []).filter((attachment) => diagramFile(attachment.name) === null);
+  const [positions, setPositions] = useState<Map<string, number>>(new Map());
+  useEffect(() => {
+    setPositions(
+      diagramPositions(
+        diagrams.map(({ diagram }) => diagram),
+        document,
+      ),
+    );
+  }, [diagrams]);
+
+  const showInPage = (diagram: DiagramFile) => {
+    const block = document.querySelector<HTMLElement>(blockSelector(diagram));
+    if (!block) return;
+    block.scrollIntoView({ block: "center" });
+    block.querySelector<HTMLElement>("button, a, [tabindex]")?.focus();
+  };
+
+  const renderRow = (attachment: Attachment, diagram: DiagramFile | null) => {
+    const Icon = kindIcon(attachment.preview);
+    return (
+      <li key={attachment.id} className="flex items-center gap-2 py-1">
+        <button
+          type="button"
+          onClick={() => preview?.open(attachment.id)}
+          className="flex min-h-hit min-w-0 flex-1 items-center gap-3 rounded-md px-2 text-start hover:bg-hover focus-visible:focus-ring"
+        >
+          <Icon aria-hidden="true" className="size-icon-lg shrink-0 text-text-muted" />
+          <span className="flex min-w-0 flex-col">
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="truncate font-medium" title={attachment.name}>
+                {diagram
+                  ? t("files.diagramName", {
+                      type: t(`editor.${diagram.kind}.label`),
+                      number: positions.get(diagram.blockId) ?? 1,
+                      part: diagram.part === "image" ? t("files.diagramImage") : t("files.diagramSource"),
+                    })
+                  : attachment.name}
+              </span>
+              {attachment.draft ? (
+                <Badge variant="warning">
+                  {attachment.draft === "added"
+                    ? t("files.draftAdded")
+                    : attachment.draft === "deleted"
+                      ? t("files.draftDeleted")
+                      : t("files.draftChanged")}
+                </Badge>
+              ) : null}
+            </span>
+            <span className="truncate text-sm text-text-muted">
+              {t("files.rowMeta", {
+                type: typeLabel(t, attachment),
+                size: format.bytes(attachment.size),
+                version: attachment.version,
+                date: format.date(attachment.uploadedAt),
+              })}
+            </span>
+          </span>
+        </button>
+        <Menu
+          trigger={<IconButton label={t("files.actions", { name: attachment.name })} icon={MoreHorizontal} />}
+          items={[
+            {
+              label: t("files.preview.open"),
+              icon: Eye,
+              onSelect: () => preview?.open(attachment.id),
+            },
+            ...(diagram
+              ? [{ label: t("files.showDiagram"), icon: LocateFixed, onSelect: () => showInPage(diagram) }]
+              : []),
+            {
+              label: t("files.download"),
+              icon: Download,
+              onSelect: () => {
+                globalThis.location.assign(contentUrl(attachment.id, { download: true }));
+              },
+            },
+            ...(canEdit && attachment.draft === "deleted"
+              ? [
+                  {
+                    label: t("files.undelete"),
+                    icon: RotateCcw,
+                    onSelect: () => void undelete(attachment),
+                  },
+                ]
+              : canEdit
+                ? [
+                    { type: "separator" as const },
+                    {
+                      label: t("files.delete"),
+                      icon: Trash2,
+                      danger: true,
+                      onSelect: () => void remove(attachment),
+                    },
+                  ]
+                : []),
+          ]}
+        />
+      </li>
+    );
+  };
+
   if (attachments.isPending) return <Skeleton className="h-12 w-full" />;
   if (attachments.isError) {
     return (
@@ -254,85 +367,18 @@ export function AttachmentsSection({ pageId, canEdit }: { pageId: string; canEdi
           ))}
         </ul>
       ) : null}
-      {list.length > 0 ? (
+      {ordinary.length > 0 ? (
         <ul className="flex flex-col divide-y divide-border">
-          {list.map((attachment) => {
-            const Icon = kindIcon(attachment.preview);
-            return (
-              <li key={attachment.id} className="flex items-center gap-2 py-1">
-                <button
-                  type="button"
-                  onClick={() => preview?.open(attachment.id)}
-                  className="flex min-h-hit min-w-0 flex-1 items-center gap-3 rounded-md px-2 text-start hover:bg-hover focus-visible:focus-ring"
-                >
-                  <Icon aria-hidden="true" className="size-icon-lg shrink-0 text-text-muted" />
-                  <span className="flex min-w-0 flex-col">
-                    <span className="flex min-w-0 items-center gap-2">
-                      <span className="truncate font-medium" title={attachment.name}>
-                        {attachment.name}
-                      </span>
-                      {attachment.draft ? (
-                        <Badge variant="warning">
-                          {attachment.draft === "added"
-                            ? t("files.draftAdded")
-                            : attachment.draft === "deleted"
-                              ? t("files.draftDeleted")
-                              : t("files.draftChanged")}
-                        </Badge>
-                      ) : null}
-                    </span>
-                    <span className="truncate text-sm text-text-muted">
-                      {t("files.rowMeta", {
-                        type: typeLabel(t, attachment),
-                        size: format.bytes(attachment.size),
-                        version: attachment.version,
-                        date: format.date(attachment.uploadedAt),
-                      })}
-                    </span>
-                  </span>
-                </button>
-                <Menu
-                  trigger={
-                    <IconButton label={t("files.actions", { name: attachment.name })} icon={MoreHorizontal} />
-                  }
-                  items={[
-                    {
-                      label: t("files.preview.open"),
-                      icon: Eye,
-                      onSelect: () => preview?.open(attachment.id),
-                    },
-                    {
-                      label: t("files.download"),
-                      icon: Download,
-                      onSelect: () => {
-                        globalThis.location.assign(contentUrl(attachment.id, { download: true }));
-                      },
-                    },
-                    ...(canEdit && attachment.draft === "deleted"
-                      ? [
-                          {
-                            label: t("files.undelete"),
-                            icon: RotateCcw,
-                            onSelect: () => void undelete(attachment),
-                          },
-                        ]
-                      : canEdit
-                        ? [
-                            { type: "separator" as const },
-                            {
-                              label: t("files.delete"),
-                              icon: Trash2,
-                              danger: true,
-                              onSelect: () => void remove(attachment),
-                            },
-                          ]
-                        : []),
-                  ]}
-                />
-              </li>
-            );
-          })}
+          {ordinary.map((attachment) => renderRow(attachment, null))}
         </ul>
+      ) : null}
+      {diagrams.length > 0 ? (
+        <>
+          <h3 className="mt-2 text-sm font-semibold">{t("files.diagramFiles")}</h3>
+          <ul aria-label={t("files.diagramFiles")} className="flex flex-col divide-y divide-border">
+            {diagrams.map(({ attachment, diagram }) => renderRow(attachment, diagram))}
+          </ul>
+        </>
       ) : null}
     </section>
   );

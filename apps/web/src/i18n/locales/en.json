@@ -6174,6 +6174,11 @@
   },
   "files": {
     "title": "Attachments",
+    "diagramFiles": "Diagram files",
+    "diagramName": "{type} {number} · {part}",
+    "diagramSource": "source",
+    "diagramImage": "image",
+    "showDiagram": "Show in page",
     "upload": "Upload files",
     "uploads": "Uploads in progress",
     "empty": "No files yet. Upload files or drop them on the page.",
