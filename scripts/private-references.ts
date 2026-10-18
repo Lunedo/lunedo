@@ -13,3 +13,29 @@ export function findPrivateReferences(content: string): PrivateReference[] {
   }
   return references;
 }
+
+const textExtensions = new Set([
+  "cjs",
+  "css",
+  "html",
+  "js",
+  "json",
+  "jsonc",
+  "md",
+  "mjs",
+  "mts",
+  "sh",
+  "sql",
+  "svg",
+  "ts",
+  "tsx",
+  "txt",
+  "xml",
+  "yaml",
+  "yml",
+]);
+
+export function isTextPath(name: string): boolean {
+  const dot = name.lastIndexOf(".");
+  return dot > name.lastIndexOf("/") && textExtensions.has(name.slice(dot + 1).toLowerCase());
+}

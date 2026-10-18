@@ -52,6 +52,22 @@ describe("check-private-references", () => {
     assert.equal(run().status, 1);
   });
 
+  it("refuses text files that git treats as binary", () => {
+    writeFileSync(path.join(repo, "image.png"), Buffer.from([0x89, 0x50, 0x00, 0x01]));
+    writeFileSync(path.join(repo, "clean.ts"), "export const x = 1;\n");
+    execFileSync("git", ["-C", repo, "add", "image.png", "clean.ts"]);
+    execFileSync("git", ["-C", repo, "rm", "--cached", "--quiet", "--ignore-unmatch", "leak.md"]);
+    assert.equal(run("--staged").status, 0);
+    writeFileSync(path.join(repo, "reader.ts"), "const key = `a\0b`;\n");
+    execFileSync("git", ["-C", repo, "add", "reader.ts"]);
+    const staged = run("--staged");
+    assert.equal(staged.status, 1);
+    assert.ok(staged.stderr.includes("reader.ts"));
+    assert.ok(!staged.stderr.includes("image.png"));
+    assert.equal(run().status, 1);
+    execFileSync("git", ["-C", repo, "rm", "--cached", "--quiet", "reader.ts"]);
+  });
+
   it("checks commit messages", () => {
     const message = path.join(repo, "MESSAGE");
     writeFileSync(message, "fix: follow the decision\n");
