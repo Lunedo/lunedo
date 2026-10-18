@@ -3,6 +3,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ApiError } from "../../api/request.js";
 import { PreferencesProvider } from "../../preferences/preferences-provider.js";
 import { mockApi, problem, renderWithProviders } from "../../testing/render.js";
 import type { PageTemplate } from "../content-queries.js";
@@ -169,6 +170,52 @@ describe("importing templates", () => {
       ),
     );
     expect(onImported).toHaveBeenCalled();
+  });
+
+  it("marks a conflicting template and shows a taken name at its field", async () => {
+    const api = fakeApi({
+      id: IMPORT,
+      fileName: "retro.pagehall-template.json",
+      expiresAt: "2026-10-18T20:00:00.000Z",
+      templates: [imported({ conflict: { templateId: RETRO, suggestedName: "Retro (imported)" } })],
+    });
+    await renderManager(api);
+    await userEvent.click(await screen.findByRole("button", { name: "Import" }));
+    await chooseFile();
+    await userEvent.click(screen.getByRole("button", { name: "Check file" }));
+    expect(await screen.findByText("A template with this name exists")).toBeTruthy();
+    expect(screen.queryByText("Ready")).toBeNull();
+    const name = await screen.findByLabelText(/Name of the new template/);
+    await userEvent.clear(name);
+    await userEvent.type(name, "retro");
+    await userEvent.click(screen.getByRole("button", { name: "Import 1 template" }));
+    expect(
+      await screen.findByText(
+        "A template with this name exists already. Enter another name, or choose to replace it.",
+      ),
+    ).toBeTruthy();
+    await waitFor(() => expect(document.activeElement).toBe(name));
+    expect(api.confirm).not.toHaveBeenCalled();
+
+    vi.mocked(api.confirm).mockRejectedValueOnce(
+      new ApiError(409, {
+        type: "urn:pagehall:problem:templateNameTaken",
+        title: "Taken",
+        status: 409,
+        code: "templateNameTaken",
+        templateIndex: 0,
+      } as ConstructorParameters<typeof ApiError>[1]),
+    );
+    await userEvent.clear(name);
+    await userEvent.type(name, "Retro created meanwhile");
+    await userEvent.click(screen.getByRole("button", { name: "Import 1 template" }));
+    await waitFor(() => expect(api.confirm).toHaveBeenCalledTimes(1));
+    expect(
+      await screen.findByText(
+        "A template with this name exists already. Enter another name, or choose to replace it.",
+      ),
+    ).toBeTruthy();
+    await waitFor(() => expect(document.activeElement).toBe(name));
   });
 
   it("replaces the existing template when chosen", async () => {

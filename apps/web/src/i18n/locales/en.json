@@ -5691,6 +5691,8 @@
     "importFailed": "{name} could not be checked",
     "importContents": "Templates in the file",
     "importValid": "Ready",
+    "importExists": "A template with this name exists",
+    "importNameTaken": "A template with this name exists already. Enter another name, or choose to replace it.",
     "importInvalid": "Not valid",
     "importFields": "{count, plural, =0 {No input fields} one {# input field} other {# input fields}}",
     "importProblems": "Why it cannot be imported",

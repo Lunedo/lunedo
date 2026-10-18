@@ -5691,6 +5691,8 @@
     "importFailed": "{name} konnte nicht geprüft werden",
     "importContents": "Vorlagen in der Datei",
     "importValid": "Bereit",
+    "importExists": "Eine Vorlage mit diesem Namen gibt es schon",
+    "importNameTaken": "Eine Vorlage mit diesem Namen gibt es schon. Gib einen anderen Namen ein oder wähle Ersetzen.",
     "importInvalid": "Ungültig",
     "importFields": "{count, plural, =0 {Keine Eingabefelder} one {# Eingabefeld} other {# Eingabefelder}}",
     "importProblems": "Warum sie nicht importiert werden kann",
