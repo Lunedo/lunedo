@@ -217,7 +217,7 @@ export {
   treeItems,
   versionReason,
 } from "../spaces/schema.js";
-export { storageState } from "../storage/schema.js";
+export { storageReconcileDeltas, storageState } from "../storage/schema.js";
 export {
   pageTemplates,
   templateCategory,

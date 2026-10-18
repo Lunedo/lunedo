@@ -139,7 +139,7 @@ export class FileService {
       const stored = await this.#store.write(key, encrypted).catch((error: unknown) => {
         throw failure ?? error;
       });
-      await this.#usage?.add(stored);
+      await this.#usage?.add(stored, key);
       counted = stored;
       if (failure) throw failure;
       keyVersion = await this.#rewrapIfOutdated(key, version);
@@ -201,7 +201,7 @@ export class FileService {
   async #discard(id: string, key: string, stored: number): Promise<void> {
     try {
       await this.#store.delete(key);
-      await this.#usage?.add(-stored);
+      await this.#usage?.add(-stored, key);
       await this.#database.execute(sql`delete from stored_files where id = ${id} and state = 'pending'`);
     } catch (error) {
       this.#logger.warn({ err: error, fileId: id }, "Removing an incomplete upload failed");
@@ -306,7 +306,7 @@ export class FileService {
       if (claimed.rows.length === 0) continue;
       const stored = (await this.#store.size(row.storage_key)) ?? 0;
       await this.#store.delete(row.storage_key);
-      await this.#usage?.add(-stored);
+      await this.#usage?.add(-stored, row.storage_key);
       await this.#database.execute(sql`delete from stored_files where id = ${row.id}`);
       removed += 1;
     }
