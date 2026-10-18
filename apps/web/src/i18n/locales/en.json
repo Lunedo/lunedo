@@ -957,8 +957,8 @@
     "previousPage": "Previous page",
     "required": "required",
     "showPassword": "Show password",
-    "sortAscending": "Sorted ascending",
-    "sortDescending": "Sorted descending",
+    "sortAscending": "Sort ascending",
+    "sortDescending": "Sort descending",
     "breadcrumbs": "Breadcrumbs",
     "notifications": "Notifications",
     "decrease": "Decrease",
@@ -1075,7 +1075,8 @@
     "exports": "Exports",
     "announcements": "Announcements",
     "storage": "Storage",
-    "rendering": "Rendering"
+    "rendering": "Rendering",
+    "embeds": "External embeds"
   },
   "commands": {
     "label": "Command palette",
@@ -1133,6 +1134,9 @@
     "forbiddenTitle": "No access",
     "forbiddenDescription": "Your roles do not allow you to see this page. Ask an owner of the organization for access if you need it.",
     "failedTitle": "This page could not be loaded",
+    "browserTitle": "Something went wrong in this browser",
+    "browserCause": "The page stopped because of an error in the browser, not on the server. Your saved work is not affected. Reload the page; if it happens again, tell your administrator what you did just before.",
+    "reload": "Reload page",
     "retry": "Try again",
     "uploadTooLarge": "The file is larger than uploads allow. Ask the instance administrators to raise the upload limit, or to place the file in your organization's import folder."
   },
@@ -1546,6 +1550,7 @@
     "confluenceRateLimited": "Confluence asked to slow down. Wait a minute and try again.",
     "confluenceSpaceMissing": "The space does not exist or the token cannot read it. Choose another space.",
     "copyChangesAccess": "The copy can be opened by people who cannot open the original. Check who gains access, then confirm the copy.",
+    "templateFromRestrictedPage": "The page is restricted. Confirm that everyone who can use the templates of this space may see its content, then save again.",
     "notCopyable": "Only pages, folders and whiteboards can be copied. Copy a page or folder instead.",
     "neverPublished": "The page has never been published, so it has no content to copy. Publish it first, then copy it.",
     "otherOrganization": "Content can only be copied within its organization. Choose a space of the same organization."
@@ -3749,6 +3754,7 @@
         "created": "Template created",
         "updated": "Template changed",
         "deleted": "Template deleted",
+        "createdFromRestrictedPage": "Restricted page saved as a template",
         "filesDropped": "Template images left out",
         "exported": "Templates exported",
         "imported": "Templates imported"
@@ -4690,7 +4696,9 @@
       "otherSpace": "Another space",
       "allSpaces": "All spaces I can read",
       "labels": "Labels",
+      "moreOptions": "More options",
       "searchLabel": "Search or type a label",
+      "newLabel": "New label",
       "labelHint": "Type a label to filter by it.",
       "tooManyLabels": "Choose up to {count} labels. Remove one before you add another.",
       "searchPage": "Search for a page",
@@ -4763,7 +4771,7 @@
       "save": "Save drawing",
       "saveFailed": "The drawing could not be saved",
       "loadFailed": "The drawing could not be loaded",
-      "discardDescription": "Your changes since opening the drawing are lost. The drawing on the page stays as it was.",
+      "discardDescription": "Discard your changes since you opened the drawing? The drawing on the page stays as it was.",
       "discard": "Discard changes",
       "keepEditing": "Keep editing"
     },
@@ -4785,7 +4793,7 @@
       "startFailedHint": "The editor is served by this Pagehall instance. Check your connection to Pagehall, then try again. If it keeps failing, ask your administrator to check the draw.io files of the instance.",
       "gliffyFailed": "The Gliffy diagram could not be converted",
       "gliffyFailedHint": "draw.io could not read this Gliffy file. The page keeps showing its image. Download the Gliffy file from the attachments of the page to keep it, or close and draw the diagram again.",
-      "discardDescription": "Your changes since opening the diagram are lost. The diagram on the page stays as it was.",
+      "discardDescription": "Discard your changes since you opened the diagram? The diagram on the page stays as it was.",
       "discard": "Discard changes",
       "keepEditing": "Keep editing",
       "servedLocally": "draw.io {version} is served by this Pagehall instance and works without internet access. Diagrams never leave the server.",
@@ -4816,6 +4824,7 @@
       "edit": "Edit",
       "sourceLabel": "Source of the {name}",
       "problemTitle": "The diagram cannot be shown yet",
+      "details": "Details",
       "saveFailed": "The diagram could not be saved",
       "rendering": "The preview appears here while you type.",
       "save": "Save diagram",
@@ -4823,7 +4832,8 @@
       "empty": "Empty diagram. Choose Edit to write its source.",
       "emptyReadOnly": "This diagram is empty.",
       "failures": {
-        "syntax": "The source has an error, so the last working preview is kept. Fix the line the message names: {detail}",
+        "syntax": "The source has an error, so the last working preview is kept. Check brackets, arrows and quotes, then try again.",
+        "syntaxLine": "Line {line} of the source has an error, so the last working preview is kept. Check brackets, arrows and quotes on that line and the line before it.",
         "include": "Including files or addresses is turned off for safety ({detail}). Copy the content into the diagram instead.",
         "htmlLabels": "HTML labels are turned off for safety. Remove the htmlLabels setting from the diagram.",
         "tooLarge": "The diagram is too large to store. Split it into smaller diagrams.",
@@ -4845,6 +4855,7 @@
       "setIdLabel": "ID of the page properties"
     },
     "propertiesReport": {
+      "newColumn": "Not on any page yet",
       "title": "Page properties report",
       "loadFailed": "The pages of the report could not be loaded.",
       "empty": "No pages you can see have page properties that match the filters.",
@@ -4877,10 +4888,10 @@
       "loadFailed": "The pages with these labels could not be loaded.",
       "empty": "No pages you can see have these labels.",
       "labelsHint": "Pages with these labels.",
-      "match": "Labels",
+      "match": "Pages must have",
       "matchAny": "Any of the labels",
       "matchAll": "All of the labels",
-      "kinds": "Show",
+      "kinds": "Kinds of content",
       "kindsAll": "Pages and blog posts",
       "kindsPage": "Pages",
       "kindsBlogPost": "Blog posts",
@@ -4924,13 +4935,14 @@
       "nameLabel": "Name of the excerpt"
     },
     "roadmap": {
+      "scrollRegion": "Roadmap, scroll sideways to see all months",
       "title": "Roadmap",
       "readOnly": "Imported roadmap. Roadmaps can be edited once planning is available.",
       "asList": "Show as list"
     },
     "embed": {
       "label": "External embed",
-      "notAllowed": "Not on the embed allowlist, shown as a link. Organization administrators manage the list.",
+      "notAllowed": "Not on the embed allowlist, shown as a link. Instance administrators manage the list; organization administrators can narrow it.",
       "from": "Embedded from {service}",
       "loadsWhenVisible": "The content loads from the service when you scroll to it.",
       "address": "Address",
@@ -5567,7 +5579,7 @@
     "create": "Create template",
     "createAction": "Create template",
     "createTitle": "New template",
-    "editTitle": "Change template",
+    "editTitle": "Edit template",
     "saveChanges": "Save template",
     "emptyTitle": "No templates yet",
     "emptyDescription": "Templates you create here appear in the gallery when someone creates a page.",
@@ -5580,7 +5592,8 @@
     "updated": "Changed",
     "actions": "Actions",
     "actionsFor": "Actions for {name}",
-    "edit": "Change",
+    "edit": "Edit template",
+    "editNamed": "Edit template {name}",
     "delete": "Delete template",
     "deleteTitle": "Delete {name}?",
     "deleteDescription": "The template disappears from the gallery. Pages created from it stay as they are.",
@@ -5691,6 +5704,8 @@
     "importFailed": "{name} could not be checked",
     "importContents": "Templates in the file",
     "importValid": "Ready",
+    "importExists": "A template with this name exists",
+    "importNameTaken": "A template with this name exists already. Enter another name, or choose to replace it.",
     "importInvalid": "Not valid",
     "importFields": "{count, plural, =0 {No input fields} one {# input field} other {# input fields}}",
     "importProblems": "Why it cannot be imported",
@@ -5711,7 +5726,11 @@
     "importConfirmFailed": "The templates could not be imported",
     "imported": "Templates imported: {created} new, {replaced} replaced",
     "saveFiles": "The template gets its own copy of {count, plural, one {the image of the page} other {the # images of the page}}.",
-    "saveRestricted": "This page is restricted. {count, plural, one {Its image becomes} other {Its # images become}} visible to everyone who can use the template."
+    "saveRestricted": "{count, plural, =0 {} one {This includes the image of the page.} other {This includes the # images of the page.}}",
+    "restrictedTitle": "This page is restricted",
+    "restrictedAudience": "As a template, its content becomes visible to everyone who can use the templates of {space}: all its editors and space admins, also those who cannot open the page now.",
+    "restrictedConfirm": "Everyone who can use the templates of {space} may see this content",
+    "restrictedRequired": "Confirm that everyone who can use the templates of this space may see the content, or cancel."
   },
   "versions": {
     "history": "Version history",
@@ -5923,6 +5942,8 @@
     "placeholder": "Write a comment",
     "newPageComment": "New comment on the page",
     "newInline": "Comment on the selected text",
+    "newOnElement": "Comment on the selected element",
+    "newBoardComment": "New comment on the whiteboard",
     "replyLabel": "Reply",
     "editLabel": "Edit comment",
     "comment": "Comment",
@@ -6153,6 +6174,11 @@
   },
   "files": {
     "title": "Attachments",
+    "diagramFiles": "Diagram files",
+    "diagramName": "{type} {number} · {part}",
+    "diagramSource": "source",
+    "diagramImage": "image",
+    "showDiagram": "Show in page",
     "upload": "Upload files",
     "uploads": "Uploads in progress",
     "empty": "No files yet. Upload files or drop them on the page.",
@@ -6984,11 +7010,11 @@
   },
   "imports": {
     "title": "Import",
-    "description": "Bring spaces from Confluence into Pagehall. Every import runs into a quarantine space first, which only you and the reviewers you add can see.",
+    "description": "Bring content into Pagehall from Confluence, Markdown folders or Word documents. Every import runs into a quarantine space first, which only you and the reviewers you add can see.",
     "untitled": "New import",
     "states": {
       "draft": "Draft",
-      "analyzing": "Reading the export",
+      "analyzing": "Reading the content",
       "ready": "Ready to start",
       "running": "Running",
       "held": "Waiting for an administrator",
@@ -7053,7 +7079,7 @@
       "createFailed": "The import could not be started",
       "loadFailed": "The imports could not be loaded",
       "empty": "No imports yet",
-      "emptyDescription": "Imports of Confluence spaces appear here, with their progress and report.",
+      "emptyDescription": "Imports appear here, with their progress and report.",
       "continue": "Continue",
       "showProgress": "Show progress",
       "openReport": "Open report",
@@ -7097,7 +7123,7 @@
       "saving": "Saving the draft…",
       "saved": "Draft saved",
       "saveFailed": "The draft could not be saved",
-      "reading": "Reading the export",
+      "reading": "Reading the content",
       "readingDescription": "Pagehall checks the file and counts what it contains. You can continue with the next step meanwhile.",
       "danger": "Danger zone",
       "deleteDraft": "Delete draft",
@@ -7139,6 +7165,7 @@
         "nameRequired": "Enter a name for the space.",
         "key": "Key",
         "keyHint": "Taken from Confluence. Appears in links.",
+        "keyHintFile": "Suggested from the name of the folder or file. Appears in links.",
         "keyInvalid": "Use 2 to 10 letters or digits.",
         "keyTaken": "The key {key} is already used by another space. Choose another key.",
         "sourceUrl": "Address of the Confluence site",
@@ -7231,6 +7258,8 @@
       "drop": "Drop the export here",
       "choose": "Choose a file",
       "hint": "ZIP file from Confluence, up to {size}.",
+      "markdownHint": "ZIP file with Markdown files, up to {size}.",
+      "dropMarkdown": "Drop the ZIP file here",
       "progress": "{sent} of {total}",
       "progressLabel": "Upload progress",
       "waiting": "Connection lost. The upload continues as soon as the server can be reached again.",
@@ -8174,6 +8203,8 @@
       "checkFailed": "The connection could not be tested",
       "checkFailedAction": "Check the address and the token, then test the connection again.",
       "required": "Test the connection first, then continue.",
+      "allowSites": "Allow other sites in the import settings of the instance",
+      "askToAllowSites": "Instance administrators allow other sites under Settings › Instance › Pages and trash › Imports.",
       "deletedTitle": "Enter the token again",
       "deleted": "Pagehall deleted the token of this draft on {when}, because the draft was left alone for a week or because its importer lost the permission to import. Test the connection again to continue.",
       "sitePlaceholder": "example.atlassian.net",
@@ -8496,7 +8527,15 @@
       "preparePrint": "Prepare print view",
       "download": "Download",
       "start": "Start export",
-      "failed": "“{name}” was not exported"
+      "failed": "“{name}” was not exported",
+      "withSubpages": "{title} and its subpages",
+      "moreOptions": "More options",
+      "pausedTitle": "Exports of several pages are paused",
+      "paused": "The file storage is almost full, so exports of a whole space or of a page with its subpages are paused.",
+      "pausedPageWorks": "Exporting this page alone still works.",
+      "storageFullAdmin": "The file storage is almost full. Free up space or raise the warning levels in the storage settings, then start the export again.",
+      "storageFullMember": "Ask an instance administrator to free up storage, then start the export again.",
+      "openStorage": "Open the storage settings"
     },
     "print": {
       "title": "Print view · {title}",
@@ -8557,7 +8596,7 @@
       "attachment": "Attachment",
       "topic": "Running topic",
       "decision": "Decision",
-      "whiteboard": "Whiteboards"
+      "whiteboard": "Whiteboard"
     },
     "quick": {
       "label": "Search",
@@ -9025,6 +9064,7 @@
       "embed": "Embedded web content is not available on whiteboards yet. Add a link instead.",
       "other": "An element contains something whiteboards cannot store, such as a link that does not start with http, https or a Pagehall address. Undo the change or edit the link."
     },
+    "menu": "Whiteboard menu",
     "stickyNote": {
       "add": "Sticky note",
       "placeholder": "Note"
@@ -9109,6 +9149,10 @@
     }
   },
   "embeds": {
+    "settings": {
+      "title": "External embeds",
+      "description": "Which services pages may embed, such as videos and diagrams from other sites. Organizations can narrow the list for their own content."
+    },
     "allowlist": {
       "title": "External embeds allowlist",
       "instanceDescription": "Pages can embed content only from these services. Other addresses appear as a link. The reader's browser loads the content directly from the service. Organizations can narrow this list, not extend it.",
@@ -9180,7 +9224,7 @@
     "wider": "Restrictions of the original are not copied. At the new place, the people listed above can open content they cannot open today.",
     "widerConfirm": "I want these people to be able to open the copy",
     "widerRequired": "Confirm that these people may open the copy, or choose another place.",
-    "submit": "Copy",
+    "submit": "Create copy",
     "submitToSpace": "Copy to {space}",
     "copied": "{title} copied",
     "copiedToSpace": "{title} copied to {space}",

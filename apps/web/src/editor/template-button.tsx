@@ -164,7 +164,11 @@ export function TemplateButton({
   const spaceId = page?.spaceId ?? space?.space.id ?? null;
   const spaceKey = page?.spaceKey ?? space?.space.key ?? "";
   const canCreate = editing || (space?.canEdit ?? false);
-  const gallery = useQuery({ ...galleryQuery(spaceId ?? ""), enabled: spaceId !== null && canCreate });
+  const gallery = useQuery({
+    ...galleryQuery(spaceId ?? ""),
+    enabled: spaceId !== null && canCreate,
+    throwOnError: false,
+  });
   const [open, setOpen] = useState(false);
   const template = gallery.data?.find((candidate) => candidate.id === button.templateId) ?? null;
   const label = button.label.trim() || template?.name || t("editor.templateButton.defaultLabel");
@@ -284,7 +288,11 @@ export function TemplateButtonSettingsForm({
   onChange: (changes: Partial<TemplateButtonSettings>) => void;
 }) {
   const { t } = useTranslation();
-  const gallery = useQuery({ ...galleryQuery(spaceId ?? ""), enabled: spaceId !== null });
+  const gallery = useQuery({
+    ...galleryQuery(spaceId ?? ""),
+    enabled: spaceId !== null,
+    throwOnError: false,
+  });
   const templates = (gallery.data ?? []).filter((template) => !template.series);
   const template = templates.find((candidate) => candidate.id === button.templateId) ?? null;
   const keys = template?.fields.map((field) => field.key) ?? [];

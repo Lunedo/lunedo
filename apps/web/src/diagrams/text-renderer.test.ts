@@ -51,8 +51,8 @@ describe("text diagram renderer", () => {
     expect(next).not.toBe(frame);
     reply(next, { type: "ready" });
     await new Promise((resolve) => setTimeout(resolve, 5));
-    reply(next, { type: "failed", id: 2, reason: "syntax", detail: "line 2" });
-    await expect(second).resolves.toEqual({ ok: false, reason: "syntax", detail: "line 2" });
+    reply(next, { type: "failed", id: 2, reason: "syntax", detail: "line 2", line: 2 });
+    await expect(second).resolves.toEqual({ ok: false, reason: "syntax", detail: "line 2", line: 2 });
     renderer.dispose();
   });
 

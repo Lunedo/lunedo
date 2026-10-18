@@ -243,6 +243,10 @@ export const problems = {
   itemMoved: { status: 409, title: "The item was moved at the same moment" },
   moveChangesAccess: { status: 409, title: "The move changes who can access the content" },
   copyChangesAccess: { status: 409, title: "The copy can be read by people who cannot read the source" },
+  templateFromRestrictedPage: {
+    status: 409,
+    title: "The page is restricted; saving it as a template needs a confirmation",
+  },
   notCopyable: { status: 409, title: "Only pages, folders and whiteboards can be copied" },
   neverPublished: { status: 409, title: "The page has never been published" },
   otherOrganization: { status: 409, title: "Content stays within its organization" },

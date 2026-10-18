@@ -20,6 +20,7 @@ import {
   Move,
   Presentation,
   Smartphone,
+  StickyNote,
   Trash2,
 } from "lucide-react";
 import {
@@ -37,7 +38,13 @@ import { useTranslation } from "react-i18next";
 import type { DescribeElement } from "../collaboration/comments-panel.js";
 import { StarButton, useContentCollaboration } from "../collaboration/content-collaboration.js";
 import { closeCollaboration, openCollaboration, type PageCollaboration } from "../editor/collaboration.js";
-import { AvatarStack, type PresenceUser, presenceColor, usePresence } from "../editor/presence.js";
+import {
+  AvatarStack,
+  cursorColor,
+  type PresenceUser,
+  presenceColor,
+  usePresence,
+} from "../editor/presence.js";
 import { CollaborationProblemNotice, SaveStateIndicator } from "../editor/save-indicator.js";
 import { LoadError } from "../errors/failure.js";
 import { problemMessage } from "../errors/problem-message.js";
@@ -253,8 +260,10 @@ export function WhiteboardView({
     [t, toast],
   );
 
+  const [boardReady, setBoardReady] = useState(false);
   const onReady = useCallback((ready: BoardHandle) => {
     handle.current = ready;
+    setBoardReady(true);
   }, []);
 
   const onLocalChange = useCallback(() => {
@@ -305,7 +314,18 @@ export function WhiteboardView({
             actions={
               <>
                 {editing ? <SaveStateIndicator state={snapshot.saveState} /> : null}
-                {editing ? <AvatarStack self={self} others={others} /> : null}
+                {editing ? (
+                  <AvatarStack self={self} others={others} colorFor={(user) => cursorColor(user.id)} />
+                ) : null}
+                {editing && boardReady ? (
+                  <Button
+                    variant="secondary"
+                    icon={StickyNote}
+                    onClick={() => handle.current?.addStickyNote()}
+                  >
+                    {t("whiteboards.stickyNote.add")}
+                  </Button>
+                ) : null}
                 {commentButton}
                 {share}
                 <StarButton target={{ itemId: board.id }} title={board.title} />

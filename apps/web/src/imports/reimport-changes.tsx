@@ -296,6 +296,7 @@ function ConflictsTab({ entry, editable }: { entry: ImportView; editable: boolea
       return next;
     });
   const all = open.length > 0 && open.every((row) => selected.has(row.id));
+  const some = open.some((row) => selected.has(row.id));
   const chosen = open.filter((row) => selected.has(row.id));
   const offered = CONFLICT_DECISIONS.filter((decision) =>
     chosen.every((row) => row.decisions.includes(decision)),
@@ -335,7 +336,7 @@ function ConflictsTab({ entry, editable }: { entry: ImportView; editable: boolea
                   key: "select",
                   header: (
                     <Checkbox
-                      checked={all}
+                      checked={all ? true : some ? "mixed" : false}
                       onCheckedChange={(on) =>
                         setSelected(on ? new Set(open.map((row) => row.id)) : new Set())
                       }
@@ -514,6 +515,7 @@ function DeletedTab({ entry, editable }: { entry: ImportView; editable: boolean 
   const gone = rows.filter((row) => row.change === "gone");
   const open = pages.filter((row) => !row.appliedAt);
   const all = open.length > 0 && open.every((row) => selected.has(row.id));
+  const some = open.some((row) => selected.has(row.id));
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm text-text-muted">{t("imports.reimport.deletedHint")}</p>
@@ -548,7 +550,7 @@ function DeletedTab({ entry, editable }: { entry: ImportView; editable: boolean 
                   key: "select",
                   header: (
                     <Checkbox
-                      checked={all}
+                      checked={all ? true : some ? "mixed" : false}
                       onCheckedChange={(on) =>
                         setSelected(on ? new Set(open.map((row) => row.id)) : new Set())
                       }

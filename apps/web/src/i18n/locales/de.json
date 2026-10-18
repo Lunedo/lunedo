@@ -957,8 +957,8 @@
     "previousPage": "Vorherige Seite",
     "required": "erforderlich",
     "showPassword": "Passwort anzeigen",
-    "sortAscending": "Aufsteigend sortiert",
-    "sortDescending": "Absteigend sortiert",
+    "sortAscending": "Aufsteigend sortieren",
+    "sortDescending": "Absteigend sortieren",
     "breadcrumbs": "Pfadnavigation",
     "notifications": "Benachrichtigungen",
     "decrease": "Verringern",
@@ -1075,7 +1075,8 @@
     "exports": "Exporte",
     "announcements": "Ankündigungen",
     "storage": "Speicher",
-    "rendering": "Rendering"
+    "rendering": "Rendering",
+    "embeds": "Externe Einbettungen"
   },
   "commands": {
     "label": "Befehlspalette",
@@ -1133,6 +1134,9 @@
     "forbiddenTitle": "Kein Zugriff",
     "forbiddenDescription": "Deine Rollen erlauben dir diese Seite nicht. Bitte einen Owner der Organisation um Zugriff, wenn du ihn brauchst.",
     "failedTitle": "Diese Seite konnte nicht geladen werden",
+    "browserTitle": "In diesem Browser ist etwas schiefgegangen",
+    "browserCause": "Die Seite wurde wegen eines Fehlers im Browser angehalten, nicht auf dem Server. Deine gespeicherte Arbeit ist davon nicht betroffen. Lade die Seite neu; wenn es wieder passiert, sag deiner Administration, was du kurz davor getan hast.",
+    "reload": "Seite neu laden",
     "retry": "Erneut versuchen",
     "uploadTooLarge": "Die Datei ist größer als für Uploads erlaubt. Bitte die Instanz-Administration, das Upload-Limit zu erhöhen oder die Datei in den Import-Ordner deiner Organisation zu legen."
   },
@@ -1546,6 +1550,7 @@
     "confluenceRateLimited": "Confluence hat um Verlangsamung gebeten. Warte eine Minute und versuche es erneut.",
     "confluenceSpaceMissing": "Den Bereich gibt es nicht, oder das Token kann ihn nicht lesen. Wähle einen anderen Bereich.",
     "copyChangesAccess": "Die Kopie kann von Personen geöffnet werden, die das Original nicht öffnen können. Prüfe, wer Zugriff erhält, und bestätige dann die Kopie.",
+    "templateFromRestrictedPage": "Die Seite ist eingeschränkt. Bestätige, dass alle, die die Vorlagen dieses Space verwenden können, ihren Inhalt sehen dürfen, und speichere dann erneut.",
     "notCopyable": "Nur Seiten, Ordner und Whiteboards können kopiert werden. Kopiere stattdessen eine Seite oder einen Ordner.",
     "neverPublished": "Die Seite wurde nie veröffentlicht und hat daher keinen Inhalt zum Kopieren. Veröffentliche sie zuerst und kopiere sie dann.",
     "otherOrganization": "Inhalte können nur innerhalb ihrer Organisation kopiert werden. Wähle einen Space derselben Organisation."
@@ -2685,7 +2690,7 @@
       "watchSpace": "Diesen Space beobachten",
       "menu": "Beobachtungsoptionen für {name}",
       "unwatch": "Nicht mehr beobachten",
-      "mute": "Stummschalten …",
+      "mute": "Stummschalten…",
       "unmuteAction": "Stummschaltung aufheben",
       "started": "Du beobachtest jetzt {name}.",
       "mutedToast": "{name} ist stummgeschaltet.",
@@ -3749,6 +3754,7 @@
         "created": "Vorlage erstellt",
         "updated": "Vorlage geändert",
         "deleted": "Vorlage gelöscht",
+        "createdFromRestrictedPage": "Eingeschränkte Seite als Vorlage gespeichert",
         "filesDropped": "Vorlagenbilder ausgelassen",
         "exported": "Vorlagen exportiert",
         "imported": "Vorlagen importiert"
@@ -4243,7 +4249,7 @@
     "anonymize": {
       "title": "Konto anonymisieren",
       "summary": "Entfernt Name, E-Mail-Adresse und Profil endgültig. Inhalte zeigen danach eine ehemalige Person.",
-      "open": "Konto anonymisieren …",
+      "open": "Konto anonymisieren…",
       "irreversible": "Das lässt sich nicht rückgängig machen",
       "removesProfile": "Name, E-Mail-Adresse, Anmeldenamen und Profil von {name} werden entfernt. Das Konto erscheint als ehemalige Person mit einer kurzen ID.",
       "deletesAccess": "Verknüpfte Anmeldungen, Sitzungen, API-Tokens, Passkeys, zweite Faktoren und persönliche Einstellungen werden gelöscht.",
@@ -4690,7 +4696,9 @@
       "otherSpace": "Ein anderer Space",
       "allSpaces": "Alle Spaces, die ich lesen kann",
       "labels": "Labels",
+      "moreOptions": "Weitere Optionen",
       "searchLabel": "Label suchen oder eingeben",
+      "newLabel": "Neues Label",
       "labelHint": "Label eingeben, um danach zu filtern.",
       "tooManyLabels": "Bis zu {count} Labels wählen. Entferne eines, bevor du ein weiteres hinzufügst.",
       "searchPage": "Seite suchen",
@@ -4763,7 +4771,7 @@
       "save": "Zeichnung speichern",
       "saveFailed": "Die Zeichnung konnte nicht gespeichert werden",
       "loadFailed": "Die Zeichnung konnte nicht geladen werden",
-      "discardDescription": "Deine Änderungen seit dem Öffnen gehen verloren. Die Zeichnung auf der Seite bleibt, wie sie war.",
+      "discardDescription": "Deine Änderungen seit dem Öffnen verwerfen? Die Zeichnung auf der Seite bleibt, wie sie war.",
       "discard": "Änderungen verwerfen",
       "keepEditing": "Weiter bearbeiten"
     },
@@ -4785,7 +4793,7 @@
       "startFailedHint": "Der Editor wird von dieser Pagehall-Instanz ausgeliefert. Prüfe deine Verbindung zu Pagehall und versuche es noch einmal. Wenn es weiter fehlschlägt, bitte deine Administration, die draw.io-Dateien der Instanz zu prüfen.",
       "gliffyFailed": "Das Gliffy-Diagramm konnte nicht umgewandelt werden",
       "gliffyFailedHint": "draw.io konnte diese Gliffy-Datei nicht lesen. Die Seite zeigt weiter ihr Bild. Lade die Gliffy-Datei aus den Anhängen der Seite herunter, um sie zu behalten, oder schließe und zeichne das Diagramm neu.",
-      "discardDescription": "Deine Änderungen seit dem Öffnen des Diagramms gehen verloren. Das Diagramm auf der Seite bleibt, wie es war.",
+      "discardDescription": "Deine Änderungen seit dem Öffnen des Diagramms verwerfen? Das Diagramm auf der Seite bleibt, wie es war.",
       "discard": "Änderungen verwerfen",
       "keepEditing": "Weiter bearbeiten",
       "servedLocally": "draw.io {version} wird von dieser Pagehall-Instanz ausgeliefert und funktioniert ohne Internetzugang. Diagramme verlassen den Server nie.",
@@ -4816,6 +4824,7 @@
       "edit": "Bearbeiten",
       "sourceLabel": "Quelltext von {name}",
       "problemTitle": "Das Diagramm kann noch nicht angezeigt werden",
+      "details": "Details",
       "saveFailed": "Das Diagramm konnte nicht gespeichert werden",
       "rendering": "Die Vorschau erscheint hier, während du tippst.",
       "save": "Diagramm speichern",
@@ -4823,7 +4832,8 @@
       "empty": "Leeres Diagramm. Wähle „Bearbeiten“, um den Quelltext zu schreiben.",
       "emptyReadOnly": "Dieses Diagramm ist leer.",
       "failures": {
-        "syntax": "Der Quelltext enthält einen Fehler, deshalb bleibt die letzte funktionierende Vorschau stehen. Korrigiere die genannte Zeile: {detail}",
+        "syntax": "Der Quelltext enthält einen Fehler, deshalb bleibt die letzte funktionierende Vorschau stehen. Prüfe Klammern, Pfeile und Anführungszeichen und versuche es dann erneut.",
+        "syntaxLine": "Zeile {line} des Quelltexts enthält einen Fehler, deshalb bleibt die letzte funktionierende Vorschau stehen. Prüfe Klammern, Pfeile und Anführungszeichen in dieser Zeile und in der Zeile davor.",
         "include": "Das Einbinden von Dateien oder Adressen ist aus Sicherheitsgründen abgeschaltet ({detail}). Kopiere den Inhalt stattdessen in das Diagramm.",
         "htmlLabels": "HTML-Beschriftungen sind aus Sicherheitsgründen abgeschaltet. Entferne die Einstellung htmlLabels aus dem Diagramm.",
         "tooLarge": "Das Diagramm ist zu groß zum Speichern. Teile es in kleinere Diagramme auf.",
@@ -4845,6 +4855,7 @@
       "setIdLabel": "ID der Seiteneigenschaften"
     },
     "propertiesReport": {
+      "newColumn": "Noch auf keiner Seite",
       "title": "Bericht zu Seiteneigenschaften",
       "loadFailed": "Die Seiten des Berichts konnten nicht geladen werden.",
       "empty": "Keine Seite, die Sie sehen können, hat Seiteneigenschaften, die zu den Filtern passen.",
@@ -4877,10 +4888,10 @@
       "loadFailed": "Die Seiten mit diesen Labels konnten nicht geladen werden.",
       "empty": "Keine Seite, die Sie sehen können, hat diese Labels.",
       "labelsHint": "Seiten mit diesen Labels.",
-      "match": "Labels",
+      "match": "Seiten brauchen",
       "matchAny": "Eines der Labels",
       "matchAll": "Alle Labels",
-      "kinds": "Anzeigen",
+      "kinds": "Inhaltsarten",
       "kindsAll": "Seiten und Blogbeiträge",
       "kindsPage": "Seiten",
       "kindsBlogPost": "Blogbeiträge",
@@ -4924,13 +4935,14 @@
       "nameLabel": "Name des Auszugs"
     },
     "roadmap": {
+      "scrollRegion": "Roadmap, seitlich scrollen für alle Monate",
       "title": "Roadmap",
       "readOnly": "Importierte Roadmap. Roadmaps lassen sich bearbeiten, sobald die Planung verfügbar ist.",
       "asList": "Als Liste anzeigen"
     },
     "embed": {
       "label": "Externe Einbettung",
-      "notAllowed": "Nicht auf der Liste erlaubter Einbettungen, daher als Link angezeigt. Organisationsadministratoren verwalten die Liste.",
+      "notAllowed": "Nicht auf der Liste erlaubter Einbettungen, daher als Link angezeigt. Instanz-Administratoren verwalten die Liste; Organisationsadministratoren können sie einschränken.",
       "from": "Eingebettet von {service}",
       "loadsWhenVisible": "Der Inhalt wird vom Dienst geladen, sobald du dorthin scrollst.",
       "address": "Adresse",
@@ -5310,7 +5322,7 @@
     "editRestricted": "Eingeschränkt: Nur die Zugriffsliste kann sie bearbeiten",
     "newWhiteboard": "Neues Whiteboard",
     "newWhiteboardInside": "Neues Whiteboard darin",
-    "copy": "Kopieren …"
+    "copy": "Kopieren…"
   },
   "move": {
     "title": "{title} verschieben",
@@ -5567,7 +5579,7 @@
     "create": "Vorlage erstellen",
     "createAction": "Vorlage erstellen",
     "createTitle": "Neue Vorlage",
-    "editTitle": "Vorlage ändern",
+    "editTitle": "Vorlage bearbeiten",
     "saveChanges": "Vorlage speichern",
     "emptyTitle": "Noch keine Vorlagen",
     "emptyDescription": "Vorlagen, die du hier erstellst, erscheinen in der Galerie beim Anlegen einer Seite.",
@@ -5580,7 +5592,8 @@
     "updated": "Geändert",
     "actions": "Aktionen",
     "actionsFor": "Aktionen für {name}",
-    "edit": "Ändern",
+    "edit": "Vorlage bearbeiten",
+    "editNamed": "Vorlage {name} bearbeiten",
     "delete": "Vorlage löschen",
     "deleteTitle": "{name} löschen?",
     "deleteDescription": "Die Vorlage verschwindet aus der Galerie. Damit erstellte Seiten bleiben unverändert.",
@@ -5691,6 +5704,8 @@
     "importFailed": "{name} konnte nicht geprüft werden",
     "importContents": "Vorlagen in der Datei",
     "importValid": "Bereit",
+    "importExists": "Eine Vorlage mit diesem Namen gibt es schon",
+    "importNameTaken": "Eine Vorlage mit diesem Namen gibt es schon. Gib einen anderen Namen ein oder wähle Ersetzen.",
     "importInvalid": "Ungültig",
     "importFields": "{count, plural, =0 {Keine Eingabefelder} one {# Eingabefeld} other {# Eingabefelder}}",
     "importProblems": "Warum sie nicht importiert werden kann",
@@ -5711,7 +5726,11 @@
     "importConfirmFailed": "Die Vorlagen konnten nicht importiert werden",
     "imported": "Vorlagen importiert: {created} neu, {replaced} ersetzt",
     "saveFiles": "Die Vorlage erhält eine eigene Kopie {count, plural, one {des Bildes der Seite} other {der # Bilder der Seite}}.",
-    "saveRestricted": "Diese Seite ist eingeschränkt. {count, plural, one {Ihr Bild wird} other {Ihre # Bilder werden}} für alle sichtbar, die die Vorlage verwenden können."
+    "saveRestricted": "{count, plural, =0 {} one {Das gilt auch für das Bild der Seite.} other {Das gilt auch für die # Bilder der Seite.}}",
+    "restrictedTitle": "Diese Seite ist eingeschränkt",
+    "restrictedAudience": "Als Vorlage wird ihr Inhalt für alle sichtbar, die die Vorlagen von {space} verwenden können: alle Bearbeiter und Space-Admins, auch wenn sie die Seite jetzt nicht öffnen können.",
+    "restrictedConfirm": "Alle, die die Vorlagen von {space} verwenden können, dürfen diesen Inhalt sehen",
+    "restrictedRequired": "Bestätige, dass alle, die die Vorlagen dieses Space verwenden können, den Inhalt sehen dürfen, oder brich ab."
   },
   "versions": {
     "history": "Versionsverlauf",
@@ -5923,6 +5942,8 @@
     "placeholder": "Kommentar schreiben",
     "newPageComment": "Neuer Kommentar zur Seite",
     "newInline": "Kommentar zum markierten Text",
+    "newOnElement": "Kommentar zum ausgewählten Element",
+    "newBoardComment": "Neuer Kommentar zum Whiteboard",
     "replyLabel": "Antwort",
     "editLabel": "Kommentar bearbeiten",
     "comment": "Kommentieren",
@@ -6153,6 +6174,11 @@
   },
   "files": {
     "title": "Anhänge",
+    "diagramFiles": "Diagrammdateien",
+    "diagramName": "{type} {number} · {part}",
+    "diagramSource": "Quelle",
+    "diagramImage": "Bild",
+    "showDiagram": "Auf der Seite zeigen",
     "upload": "Dateien hochladen",
     "uploads": "Laufende Uploads",
     "empty": "Noch keine Dateien. Lade Dateien hoch oder ziehe sie auf die Seite.",
@@ -6984,11 +7010,11 @@
   },
   "imports": {
     "title": "Import",
-    "description": "Spaces aus Confluence nach Pagehall übernehmen. Jeder Import läuft zuerst in einen Quarantäne-Space, den nur du und die von dir hinzugefügten Import-Prüfer sehen.",
+    "description": "Hol Inhalte aus Confluence, Markdown-Ordnern oder Word-Dokumenten in Pagehall. Jeder Import landet zuerst in einem Quarantäne-Space, den nur du und die Prüfer, die du hinzufügst, sehen.",
     "untitled": "Neuer Import",
     "states": {
       "draft": "Entwurf",
-      "analyzing": "Export wird gelesen",
+      "analyzing": "Inhalt wird gelesen",
       "ready": "Bereit zum Start",
       "running": "Läuft",
       "held": "Wartet auf die Administration",
@@ -7053,7 +7079,7 @@
       "createFailed": "Der Import konnte nicht angelegt werden",
       "loadFailed": "Die Importe konnten nicht geladen werden",
       "empty": "Noch keine Importe",
-      "emptyDescription": "Hier erscheinen Importe von Confluence-Spaces mit Fortschritt und Bericht.",
+      "emptyDescription": "Importe erscheinen hier, mit ihrem Fortschritt und Bericht.",
       "continue": "Fortsetzen",
       "showProgress": "Fortschritt anzeigen",
       "openReport": "Bericht öffnen",
@@ -7097,7 +7123,7 @@
       "saving": "Entwurf wird gespeichert …",
       "saved": "Entwurf gespeichert",
       "saveFailed": "Der Entwurf konnte nicht gespeichert werden",
-      "reading": "Export wird gelesen",
+      "reading": "Inhalt wird gelesen",
       "readingDescription": "Pagehall prüft die Datei und zählt, was sie enthält. Du kannst inzwischen mit dem nächsten Schritt weitermachen.",
       "danger": "Gefahrenbereich",
       "deleteDraft": "Entwurf löschen",
@@ -7139,6 +7165,7 @@
         "nameRequired": "Gib einen Namen für den Space ein.",
         "key": "Schlüssel",
         "keyHint": "Aus Confluence übernommen. Erscheint in Links.",
+        "keyHintFile": "Aus dem Namen des Ordners oder der Datei vorgeschlagen. Erscheint in Links.",
         "keyInvalid": "Verwende 2 bis 10 Buchstaben oder Ziffern.",
         "keyTaken": "Der Schlüssel {key} gehört schon einem anderen Space. Wähle einen anderen Schlüssel.",
         "sourceUrl": "Adresse der Confluence-Site",
@@ -7231,6 +7258,8 @@
       "drop": "Export hier ablegen",
       "choose": "Datei auswählen",
       "hint": "ZIP-Datei aus Confluence, bis {size}.",
+      "markdownHint": "ZIP-Datei mit Markdown-Dateien, bis {size}.",
+      "dropMarkdown": "ZIP-Datei hier ablegen",
       "progress": "{sent} von {total}",
       "progressLabel": "Fortschritt des Uploads",
       "waiting": "Verbindung unterbrochen. Der Upload läuft weiter, sobald der Server wieder erreichbar ist.",
@@ -8174,6 +8203,8 @@
       "checkFailed": "Die Verbindung konnte nicht getestet werden",
       "checkFailedAction": "Prüfe Adresse und Token und teste die Verbindung dann erneut.",
       "required": "Teste zuerst die Verbindung und fahre dann fort.",
+      "allowSites": "Weitere Sites in den Import-Einstellungen der Instanz erlauben",
+      "askToAllowSites": "Instanz-Administratoren erlauben weitere Sites unter Einstellungen › Instanz › Seiten und Papierkorb › Importe.",
       "deletedTitle": "Token erneut eingeben",
       "deleted": "Pagehall hat das Token dieses Entwurfs am {when} gelöscht, weil der Entwurf eine Woche lang unbearbeitet blieb oder weil die importierende Person das Recht zum Importieren verloren hat. Teste die Verbindung erneut, um fortzufahren.",
       "sitePlaceholder": "example.atlassian.net",
@@ -8496,7 +8527,15 @@
       "preparePrint": "Druckansicht vorbereiten",
       "download": "Herunterladen",
       "start": "Export starten",
-      "failed": "„{name}“ wurde nicht exportiert"
+      "failed": "„{name}“ wurde nicht exportiert",
+      "withSubpages": "{title} mit Unterseiten",
+      "moreOptions": "Weitere Optionen",
+      "pausedTitle": "Exporte mehrerer Seiten sind pausiert",
+      "paused": "Der Dateispeicher ist fast voll, deshalb sind Exporte eines ganzen Space oder einer Seite mit Unterseiten pausiert.",
+      "pausedPageWorks": "Der Export nur dieser Seite funktioniert weiterhin.",
+      "storageFullAdmin": "Der Dateispeicher ist fast voll. Gib in den Speicher-Einstellungen Platz frei oder erhöhe die Warnstufen und starte den Export dann erneut.",
+      "storageFullMember": "Bitte eine Instanz-Administration, Speicher freizugeben, und starte den Export dann erneut.",
+      "openStorage": "Speicher-Einstellungen öffnen"
     },
     "print": {
       "title": "Druckansicht · {title}",
@@ -8557,7 +8596,7 @@
       "attachment": "Anhang",
       "topic": "Laufendes Thema",
       "decision": "Entscheidung",
-      "whiteboard": "Whiteboards"
+      "whiteboard": "Whiteboard"
     },
     "quick": {
       "label": "Suche",
@@ -9025,6 +9064,7 @@
       "embed": "Eingebettete Webinhalte sind auf Whiteboards noch nicht verfügbar. Füge stattdessen einen Link ein.",
       "other": "Ein Element enthält etwas, das Whiteboards nicht speichern können, etwa einen Link, der nicht mit http, https oder einer Pagehall-Adresse beginnt. Mach die Änderung rückgängig oder ändere den Link."
     },
+    "menu": "Whiteboard-Menü",
     "stickyNote": {
       "add": "Haftnotiz",
       "placeholder": "Notiz"
@@ -9109,6 +9149,10 @@
     }
   },
   "embeds": {
+    "settings": {
+      "title": "Externe Einbettungen",
+      "description": "Welche Dienste Seiten einbetten dürfen, etwa Videos und Diagramme anderer Websites. Organisationen können die Liste für ihre Inhalte einschränken."
+    },
     "allowlist": {
       "title": "Liste erlaubter Einbettungen",
       "instanceDescription": "Seiten können nur Inhalte dieser Dienste einbetten. Andere Adressen erscheinen als Link. Der Browser der Lesenden lädt den Inhalt direkt vom Dienst. Organisationen können diese Liste einschränken, nicht erweitern.",
@@ -9180,7 +9224,7 @@
     "wider": "Beschränkungen des Originals werden nicht kopiert. Am neuen Ort können die oben genannten Personen Inhalte öffnen, die sie heute nicht öffnen können.",
     "widerConfirm": "Diese Personen sollen die Kopie öffnen können",
     "widerRequired": "Bestätige, dass diese Personen die Kopie öffnen dürfen, oder wähle einen anderen Ort.",
-    "submit": "Kopieren",
+    "submit": "Kopie anlegen",
     "submitToSpace": "Nach {space} kopieren",
     "copied": "{title} kopiert",
     "copiedToSpace": "{title} nach {space} kopiert",

@@ -3,7 +3,7 @@ import { useQueryErrorResetBoundary } from "@tanstack/react-query";
 import { type ErrorComponentProps, Link, useRouter } from "@tanstack/react-router";
 import { Compass, Lock } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { isApiError } from "../api/request.js";
+import { ApiError, isApiError } from "../api/request.js";
 import { isRetryable } from "./failure.js";
 import { problemMessage } from "./problem-message.js";
 
@@ -53,6 +53,18 @@ export function ScreenErrorScreen({ error, reset }: ErrorComponentProps) {
   const retry = useRetry(reset);
   if (isApiError(error, "notFound")) return <NotFoundScreen />;
   if (isApiError(error, "forbidden")) return <ForbiddenScreen />;
+  if (!(error instanceof ApiError)) {
+    return (
+      <div className="mx-auto w-full max-w-content p-6">
+        <ErrorState
+          title={t("errors.browserTitle")}
+          cause={t("errors.browserCause")}
+          onRetry={() => window.location.reload()}
+          retryLabel={t("errors.reload")}
+        />
+      </div>
+    );
+  }
   return (
     <div className="mx-auto w-full max-w-content p-6">
       <ErrorState

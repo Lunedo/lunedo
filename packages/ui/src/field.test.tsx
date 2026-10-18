@@ -82,6 +82,17 @@ describe("Checkbox and Switch", () => {
     expect(toggle.getAttribute("aria-checked")).toBe("true");
   });
 
+  it("shows a mixed state and checks fully on click", async () => {
+    const changes: boolean[] = [];
+    renderUi(
+      <Checkbox checked="mixed" onCheckedChange={(next) => changes.push(next)} aria-label="Select all" />,
+    );
+    const box = screen.getByRole("checkbox", { name: "Select all" });
+    expect(box.getAttribute("aria-checked")).toBe("mixed");
+    await userEvent.click(box);
+    expect(changes).toEqual([true]);
+  });
+
   it("keeps a switch with a reason focusable, explains it and ignores changes", async () => {
     const changes: boolean[] = [];
     renderUi(

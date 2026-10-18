@@ -49,7 +49,11 @@ export function ReferencedDiagram({
   const { t } = useTranslation();
   const open = useOpenPath();
   const known = pageId !== null && diagramId !== null;
-  const diagram = useQuery({ ...referencedDiagramQuery(pageId ?? "", diagramId ?? ""), enabled: known });
+  const diagram = useQuery({
+    ...referencedDiagramQuery(pageId ?? "", diagramId ?? ""),
+    enabled: known,
+    throwOnError: false,
+  });
   const label = t("editor.drawio.label");
   const data = diagram.data;
   const follow = (event: MouseEvent<HTMLAnchorElement>) => {

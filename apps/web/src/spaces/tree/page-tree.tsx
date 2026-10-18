@@ -97,6 +97,7 @@ export function useChildren(spaceId: string, parentId: string | null, enabled = 
       ),
     getNextPageParam: (page) => page.nextCursor ?? undefined,
     staleTime: 10_000,
+    throwOnError: false,
   });
 }
 

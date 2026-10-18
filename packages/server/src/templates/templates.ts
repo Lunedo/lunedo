@@ -369,29 +369,60 @@ export class TemplateService {
     const located = await this.#tree.spaceOf(pageId);
     if (!page || located !== spaceId) throw new SpaceError("itemNotFound", "The page does not exist");
     const ids = [...new Set(documentAttachments(page.document).map((reference) => reference.id))];
-    const result = await this.#database.execute<{ files: string | number; restricted: boolean }>(sql`
-      select (select count(*) from attachments a
-          where a.item_id = ${pageId} and a.deleted_at is null and a.id = any(${sql.param(ids)}::uuid[])) as files,
-        exists (select 1 from tree_items t join page_restrictions r on r.item_id = any(t.path) and r.kind = 'view'
-          where t.id = ${pageId}) as restricted`);
-    const row = result.rows[0];
-    return { files: Number(row?.files ?? 0), restricted: row?.restricted ?? false };
+    const result = await this.#database.execute<{ files: string | number }>(sql`
+      select count(*) as files from attachments a
+      where a.item_id = ${pageId} and a.deleted_at is null and a.id = any(${sql.param(ids)}::uuid[])`);
+    return {
+      files: Number(result.rows[0]?.files ?? 0),
+      restricted: await this.#viewRestricted(this.#database, pageId),
+    };
+  }
+
+  async #viewRestricted(executor: Executor, pageId: string): Promise<boolean> {
+    const result = await executor.execute<{ restricted: boolean }>(sql`
+      select exists (select 1 from tree_items t join page_restrictions r on r.item_id = any(t.path) and r.kind = 'view'
+        where t.id = ${pageId}) as restricted`);
+    return result.rows[0]?.restricted ?? false;
   }
 
   async saveFromPage(
     actor: Principal,
     spaceId: string,
     pageId: string,
-    input: Omit<TemplateInput, "document" | "fields" | "title"> & { title?: string | undefined },
+    input: Omit<TemplateInput, "document" | "fields" | "title"> & {
+      title?: string | undefined;
+      confirmRestricted?: boolean | undefined;
+    },
   ): Promise<PageTemplate> {
     const page = await this.#documents.snapshot(pageId);
     const located = await this.#tree.spaceOf(pageId);
     if (!page || located !== spaceId) throw new SpaceError("itemNotFound", "The page does not exist");
-    const title = input.title ?? (await this.#tree.get(actor, pageId))?.title ?? input.name;
-    const clean = cleanTemplate({ ...input, title, fields: [], document: page.document });
+    const pageTitle = (await this.#tree.get(actor, pageId))?.title ?? "";
+    const title = input.title ?? (pageTitle || input.name);
+    const { confirmRestricted = false, ...fields } = input;
+    const clean = cleanTemplate({ ...fields, title, fields: [], document: page.document });
     if (documentAttachments(clean.document).length > 0) await this.#storage.requireUpload();
     const id = await this.#database.transaction(async (tx) => {
+      const restricted = await this.#viewRestricted(tx, pageId);
+      if (restricted && !confirmRestricted) {
+        throw new SpaceError(
+          "templateFromRestrictedPage",
+          "The page is restricted. Everyone who can use the space's templates would see its content. Confirm to save it anyway.",
+        );
+      }
       const id = await this.insert(tx, actor, { level: "space", spaceId }, clean);
+      if (restricted) {
+        const space = await tx.execute<{ organization_id: string }>(
+          sql`select organization_id from spaces where id = ${spaceId}`,
+        );
+        await this.#audit.record(tx, {
+          name: "template.createdFromRestrictedPage",
+          actor,
+          targetId: pageId,
+          fields: { spaceId, title: pageTitle, templateId: id, templateName: clean.name },
+          scope: auditScopeOf({ organizationId: space.rows[0]?.organization_id ?? null }),
+        });
+      }
       const adopted = await this.#files.adopt(tx, {
         templateId: id,
         actorId: actorIdOf(actor),

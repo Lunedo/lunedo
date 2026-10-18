@@ -1,5 +1,6 @@
 import {
   Button,
+  Checkbox,
   Dialog,
   Field,
   focusFirstInvalidSoon,
@@ -13,18 +14,20 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
-import { request } from "../../api/request.js";
+import { isApiError, request } from "../../api/request.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { contentKeys } from "../content-queries.js";
 import { TEMPLATE_CATEGORIES, type TemplateCategory } from "./template-categories.js";
 
 export function SaveTemplateDialog({
   spaceId,
+  spaceName,
   page,
   open,
   onOpenChange,
 }: {
   spaceId: string;
+  spaceName: string;
   page: { id: string; title: string };
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -32,17 +35,26 @@ export function SaveTemplateDialog({
   const { t } = useTranslation();
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title={t("templates.saveTitle")} size="sm">
-      {open ? <SaveTemplateForm spaceId={spaceId} page={page} onDone={() => onOpenChange(false)} /> : null}
+      {open ? (
+        <SaveTemplateForm
+          spaceId={spaceId}
+          spaceName={spaceName}
+          page={page}
+          onDone={() => onOpenChange(false)}
+        />
+      ) : null}
     </Dialog>
   );
 }
 
 function SaveTemplateForm({
   spaceId,
+  spaceName,
   page,
   onDone,
 }: {
   spaceId: string;
+  spaceName: string;
   page: { id: string; title: string };
   onDone: () => void;
 }) {
@@ -53,6 +65,8 @@ function SaveTemplateForm({
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<TemplateCategory>("knowledge");
   const [error, setError] = useState<string | null>(null);
+  const [confirmed, setConfirmed] = useState(false);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const files = useQuery({
     queryKey: ["templates", "from-page", page.id],
@@ -65,9 +79,13 @@ function SaveTemplateForm({
     gcTime: 0,
   });
 
+  const restricted = files.data?.restricted ?? false;
   const save = async () => {
-    if (name.trim().length === 0 || name.trim().length > 100) {
-      setError(t("templates.nameInvalid"));
+    const nameInvalid = name.trim().length === 0 || name.trim().length > 100;
+    setError(nameInvalid ? t("templates.nameInvalid") : null);
+    const unconfirmed = restricted && !confirmed;
+    setConfirmError(unconfirmed ? t("templates.restrictedRequired") : null);
+    if (nameInvalid || unconfirmed) {
       focusFirstInvalidSoon();
       return;
     }
@@ -76,7 +94,13 @@ function SaveTemplateForm({
       await request(() =>
         api.POST("/api/v1/spaces/{spaceId}/templates/from-page", {
           params: { path: { spaceId } },
-          body: { pageId: page.id, name: name.trim(), description: description.trim(), category },
+          body: {
+            pageId: page.id,
+            name: name.trim(),
+            description: description.trim(),
+            category,
+            confirmRestricted: restricted && confirmed,
+          },
         }),
       );
       await queryClient.invalidateQueries({ queryKey: contentKeys.gallery(spaceId) });
@@ -84,6 +108,13 @@ function SaveTemplateForm({
       toast({ title: t("templates.saved", { name: name.trim() }), variant: "success" });
       onDone();
     } catch (failure) {
+      if (isApiError(failure, "templateFromRestrictedPage")) {
+        await files.refetch();
+        setConfirmed(false);
+        setConfirmError(t("templates.restrictedRequired"));
+        focusFirstInvalidSoon();
+        return;
+      }
       toast({ title: t("templates.saveFailed"), description: problemMessage(t, failure), variant: "error" });
     } finally {
       setSaving(false);
@@ -100,12 +131,26 @@ function SaveTemplateForm({
       }}
     >
       <p className="text-sm text-text-muted">{t("templates.saveDescription")}</p>
-      {files.data && files.data.files > 0 ? (
-        <Notice variant={files.data.restricted ? "warning" : "info"}>
-          {files.data.restricted
-            ? t("templates.saveRestricted", { count: files.data.files })
-            : t("templates.saveFiles", { count: files.data.files })}
+      {files.data?.restricted ? (
+        <Notice variant="warning" title={t("templates.restrictedTitle")}>
+          <div className="flex flex-col gap-3">
+            <p>
+              {t("templates.restrictedAudience", { space: spaceName })}{" "}
+              {t("templates.saveRestricted", { count: files.data.files })}
+            </p>
+            <Checkbox
+              checked={confirmed}
+              onCheckedChange={(checked) => {
+                setConfirmed(checked);
+                if (checked) setConfirmError(null);
+              }}
+              label={t("templates.restrictedConfirm", { space: spaceName })}
+              {...(confirmError ? { error: confirmError } : {})}
+            />
+          </div>
         </Notice>
+      ) : files.data && files.data.files > 0 ? (
+        <Notice variant="info">{t("templates.saveFiles", { count: files.data.files })}</Notice>
       ) : null}
       <Field label={t("templates.name")} error={error ?? undefined} required>
         <Input

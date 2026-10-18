@@ -6,6 +6,11 @@ import { createPage } from "../support/places.js";
 
 test.use({ instanceAdministrator: true });
 
+const IMAGE = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAeklEQVR4nO3PUQkAIBTAwJfEJAYzviH8OITBAtxm7fN1wwUNaEEDWtCAFjSgBQ1oQQNa0IAWNKAFDWhBA1rQgBY0oAUNaEEDWtCAFjSgBQ1oQQNa0IAWNKAFDWhBA1rQgBY0oAUNaEEDWtCAFjSgBQ1oQQNa0IAWPHYBHp8gxMscTuAAAAAASUVORK5CYII=",
+  "base64",
+);
+
 interface Board {
   spaceId: string;
   spaceKey: string;
@@ -27,11 +32,11 @@ function canvas(page: Page) {
   return page.locator("canvas.excalidraw__canvas.interactive");
 }
 
-async function drawRectangle(page: Page) {
+async function drawRectangle(page: Page, at = 0.6) {
   const box = await canvas(page).boundingBox();
   if (!box) throw new Error("The whiteboard canvas is not visible");
-  const x = box.x + box.width * 0.6;
-  const y = box.y + box.height * 0.6;
+  const x = box.x + box.width * at;
+  const y = box.y + box.height * at;
   await page.keyboard.press("r");
   await page.mouse.move(x, y);
   await page.mouse.down();
@@ -135,7 +140,8 @@ test("inserts a drawing block into a page and shows its image to readers", async
   await page.goto(`${created.path}?edit=true`);
   const content = page.getByRole("textbox", { name: "Page content" });
   await expect(content).toBeEditable();
-  await content.focus();
+  await expect(page.getByText("Saved").or(page.getByText("Editing")).first()).toBeVisible();
+  await content.click();
   await page.keyboard.type("Skizze vom Workshop");
   await page.keyboard.press("Enter");
   await page.keyboard.type("/drawing");
@@ -160,4 +166,88 @@ test("inserts a drawing block into a page and shows its image to readers", async
   ]);
   await page.goto(created.path);
   await expect(page.locator("figure.ph-drawing img")).toBeVisible();
+});
+
+test("shows the stored scene after a reload and to a person who joins later, and both see live changes", async ({
+  page,
+  organization,
+}) => {
+  const { spaceId, spaceKey } = await teamSpace(page, organization);
+  const colleague = await organization.invite("Konrad");
+  const created = (await callApi(page, "POST", `/api/v1/spaces/${spaceId}/items`, {
+    kind: "whiteboard",
+    title: "Office move plan",
+    parentId: null,
+  })) as { id: string };
+  const path = `/spaces/${spaceKey}/whiteboards/${created.id}/office-move-plan`;
+  await page.goto(path);
+  await expect(canvas(page)).toBeVisible({ timeout: 30_000 });
+  const empty = await paintedPixels(page);
+  await canvas(page).click({ position: { x: 400, y: 300 } });
+  await drawRectangle(page);
+  await page.getByRole("button", { name: "Sticky note" }).click();
+  await expect(page.getByRole("status").getByText("Saved", { exact: true })).toBeVisible({ timeout: 20_000 });
+  await expect.poll(async () => (await storedScene(page, created.id)).scene.elements.length).toBe(3);
+
+  await page.reload();
+  await expect(canvas(page)).toBeVisible({ timeout: 30_000 });
+  await expect.poll(() => paintedPixels(page), { timeout: 20_000 }).toBeGreaterThan(empty + 50);
+  const reloaded = await paintedPixels(page);
+
+  const second = await organization.signIn(colleague);
+  try {
+    await second.page.goto(path);
+    await expect(canvas(second.page)).toBeVisible({ timeout: 30_000 });
+    await expect.poll(() => paintedPixels(second.page), { timeout: 20_000 }).toBeGreaterThan(empty + 50);
+    const joined = await paintedPixels(second.page);
+
+    await canvas(second.page).click({ position: { x: 200, y: 150 } });
+    await drawRectangle(second.page, 0.3);
+    await expect.poll(() => paintedPixels(second.page), { timeout: 20_000 }).toBeGreaterThan(joined + 50);
+    await expect
+      .poll(async () => (await storedScene(page, created.id)).scene.elements.length, { timeout: 20_000 })
+      .toBe(4);
+    await expect.poll(() => paintedPixels(page), { timeout: 20_000 }).toBeGreaterThan(reloaded + 50);
+  } finally {
+    await second.context.close();
+  }
+});
+
+test("keeps an image on a whiteboard after a reload", async ({ page, organization }) => {
+  const { spaceId, spaceKey } = await teamSpace(page, organization);
+  const created = (await callApi(page, "POST", `/api/v1/spaces/${spaceId}/items`, {
+    kind: "whiteboard",
+    title: "Floor plan",
+    parentId: null,
+  })) as { id: string };
+  await page.goto(`/spaces/${spaceKey}/whiteboards/${created.id}/floor-plan`);
+  await expect(canvas(page)).toBeVisible({ timeout: 30_000 });
+  await canvas(page).click({ position: { x: 400, y: 300 } });
+  await page.evaluate((base64) => {
+    const bytes = Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([bytes], "plan.png", { type: "image/png" }));
+    document.dispatchEvent(new ClipboardEvent("paste", { clipboardData: transfer, bubbles: true }));
+  }, IMAGE.toString("base64"));
+  await expect
+    .poll(
+      async () => {
+        const stored = await storedScene(page, created.id);
+        return stored.scene.elements.filter((element) => element.type === "image").length;
+      },
+      { timeout: 20_000 },
+    )
+    .toBe(1);
+  await expect
+    .poll(
+      async () =>
+        Object.keys(((await storedScene(page, created.id)).scene as { files?: object }).files ?? {}).length,
+      {
+        timeout: 20_000,
+      },
+    )
+    .toBe(1);
+  await page.reload();
+  await expect(canvas(page)).toBeVisible({ timeout: 30_000 });
+  await expect.poll(() => paintedPixels(page), { timeout: 20_000 }).toBeGreaterThan(50);
 });

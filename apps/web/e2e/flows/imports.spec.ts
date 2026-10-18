@@ -185,6 +185,7 @@ test("an administrator imports a Markdown folder and a Word document through the
   const wordImport = importIdFrom(page);
   await page.getByRole("radio", { name: /Word documents/ }).check();
   await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByRole("heading", { name: "Upload", level: 1 })).toBeVisible();
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(
     page.getByText("Add at least one Word document and wait until every upload is finished."),

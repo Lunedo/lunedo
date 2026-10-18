@@ -7,7 +7,9 @@ import {
 
 export const DIAGRAM_FRAME_URL = "/diagram.html";
 
-export type RenderResult = { ok: true; svg: string } | { ok: false; reason: DiagramFailure; detail: string };
+export type RenderResult =
+  | { ok: true; svg: string }
+  | { ok: false; reason: DiagramFailure; detail: string; line?: number | null };
 
 interface Pending {
   id: number;
@@ -94,7 +96,7 @@ export class TextDiagramRenderer {
         finish(
           reply.type === "rendered"
             ? { ok: true, svg: reply.svg }
-            : { ok: false, reason: reply.reason, detail: reply.detail },
+            : { ok: false, reason: reply.reason, detail: reply.detail, line: reply.line ?? null },
         );
       };
       window.addEventListener("message", onMessage);

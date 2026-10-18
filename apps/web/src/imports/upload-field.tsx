@@ -21,8 +21,10 @@ export function UploadField({
   onLinked,
   onComplete,
   invalid = false,
+  markdown = false,
 }: {
   invalid?: boolean;
+  markdown?: boolean;
   organizationId: string;
   current: ImportView["file"];
   maxBytes: number;
@@ -111,9 +113,13 @@ export function UploadField({
       >
         <Icon icon={Upload} className="text-text-muted" />
         <span className="flex min-w-0 flex-1 flex-col">
-          <span className="font-medium">{t("imports.upload.drop")}</span>
+          <span className="font-medium">
+            {markdown ? t("imports.upload.dropMarkdown") : t("imports.upload.drop")}
+          </span>
           <span id={hintId} className="text-sm text-text-muted">
-            {t("imports.upload.hint", { size: format.bytes(maxBytes) })}
+            {markdown
+              ? t("imports.upload.markdownHint", { size: format.bytes(maxBytes) })
+              : t("imports.upload.hint", { size: format.bytes(maxBytes) })}
           </span>
         </span>
         <span className="font-medium text-accent">{t("imports.upload.choose")}</span>

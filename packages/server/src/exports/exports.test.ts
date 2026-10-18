@@ -472,6 +472,19 @@ describe.skipIf(!baseUrl)("exports", () => {
       return Number(result.rows[0]?.count ?? 0);
     }
 
+    it("tells before the start whether large exports are paused", async () => {
+      const context = await setup();
+      capacity(() => 95 * MEGABYTE);
+      await expect(
+        test.services.exports.counts(context.steward, { spaceId: context.space.id }),
+      ).resolves.toMatchObject({ largeWritesPaused: true });
+      vi.restoreAllMocks();
+      capacity(() => 500 * MEGABYTE);
+      await expect(
+        test.services.exports.counts(context.steward, { spaceId: context.space.id }),
+      ).resolves.toMatchObject({ largeWritesPaused: false });
+    });
+
     it("refuses an export that would leave less than a tenth free, counting waiting exports", async () => {
       const context = await setup();
       capacity(() => 95 * MEGABYTE);

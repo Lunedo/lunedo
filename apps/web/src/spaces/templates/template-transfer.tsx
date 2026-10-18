@@ -21,6 +21,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Download, FileUp, Upload } from "lucide-react";
 import { useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { isApiError } from "../../api/request.js";
 import { readViewContext } from "../../editor/read-view.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
@@ -236,8 +237,12 @@ function TemplatePreviewCard({
         {template.category ? (
           <Badge variant="neutral">{t(`templates.categories.${template.category}`)}</Badge>
         ) : null}
-        <Badge variant={template.valid ? "success" : "danger"}>
-          {template.valid ? t("templates.importValid") : t("templates.importInvalid")}
+        <Badge variant={!template.valid ? "danger" : template.conflict ? "warning" : "success"}>
+          {!template.valid
+            ? t("templates.importInvalid")
+            : template.conflict
+              ? t("templates.importExists")
+              : t("templates.importValid")}
         </Badge>
       </div>
       {template.valid ? (
@@ -457,11 +462,21 @@ export function ImportDialog({
   const confirm = async () => {
     if (!preview) return;
     const found: Record<number, string> = {};
+    const taken = new Set(
+      preview.templates
+        .filter((template) => template.conflict)
+        .map((template) => template.name.toLowerCase()),
+    );
+    const chosen = new Set<string>();
     for (const [index, choice] of Object.entries(choices)) {
+      if (choice.action !== "create") continue;
       const name = choice.name.trim();
-      if (choice.action === "create" && (name.length === 0 || name.length > NAME_MAX_LENGTH)) {
+      if (name.length === 0 || name.length > NAME_MAX_LENGTH)
         found[Number(index)] = t("templates.nameInvalid");
+      else if (taken.has(name.toLowerCase()) || chosen.has(name.toLowerCase())) {
+        found[Number(index)] = t("templates.importNameTaken");
       }
+      chosen.add(name.toLowerCase());
     }
     setErrors(found);
     if (Object.keys(found).length > 0) {
@@ -485,6 +500,12 @@ export function ImportDialog({
       reset();
       onOpenChange(false);
     } catch (error) {
+      const index = isApiError(error, "templateNameTaken") ? error.problem.templateIndex : undefined;
+      if (index !== undefined && choices[index]?.action === "create") {
+        setErrors({ [index]: t("templates.importNameTaken") });
+        focusFirstInvalidSoon();
+        return;
+      }
       toast({
         variant: "error",
         title: t("templates.importConfirmFailed"),

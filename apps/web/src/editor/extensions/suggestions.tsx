@@ -62,13 +62,14 @@ function runItem({ editor, range, props }: { editor: Editor; range: Range; props
 
 export interface SlashOptions {
   items: (query: string) => SuggestionItem[];
+  open: (query: string) => boolean;
   labels: () => SuggestionLabels;
 }
 
 export const SlashCommand = Extension.create<SlashOptions>({
   name: "slashCommand",
   addOptions() {
-    return { items: () => [], labels: () => ({ label: "", empty: "" }) };
+    return { items: () => [], open: () => true, labels: () => ({ label: "", empty: "" }) };
   },
   addProseMirrorPlugins() {
     return [
@@ -76,8 +77,9 @@ export const SlashCommand = Extension.create<SlashOptions>({
         pluginKey: new PluginKey("slashCommand"),
         editor: this.editor,
         char: "/",
-        allowSpaces: false,
+        allowSpaces: true,
         allow: ({ state }) => !state.selection.$from.parent.type.spec.code,
+        shouldShow: ({ query }) => this.options.open(query),
         items: ({ query }) => this.options.items(query),
         command: runItem,
         render: suggestionRender(this.options.labels),

@@ -14,7 +14,7 @@ import { createEditorExtensions } from "./extensions/index.js";
 import { LinkDialog } from "./link-dialog.js";
 import { SelectionMenu, TableMenu } from "./menus.js";
 import { EditorToolbar } from "./toolbar.js";
-import { toolbarItems } from "./toolbar-items.js";
+import { sameToolbarItems, toolbarItems } from "./toolbar-items.js";
 import "./editor.css";
 
 export interface TemplateFieldOption {
@@ -57,6 +57,11 @@ export function TemplateContentEditor({
     }),
   );
   const upload = direct ? queued.current : null;
+  const onChangeRef = useRef(onChange);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+  const canUpload = upload !== null;
   const insertImages = useCallback(
     (files: File[], position: number | null) => {
       if (!upload) return;
@@ -106,26 +111,29 @@ export function TemplateContentEditor({
     }),
     [],
   );
-  const editor = useEditor({
-    extensions: createEditorExtensions({
-      t,
-      spaceId: null,
-      collaboration: null,
-      ...(upload ? { onFiles: insertImages } : {}),
-    }),
-    content: initial as object,
-    editorProps: {
-      attributes: {
-        class: "ph-content ph-editor-content",
-        "aria-label": label,
-        "aria-multiline": "true",
-        role: "textbox",
+  const editor = useEditor(
+    {
+      extensions: createEditorExtensions({
+        t,
+        spaceId: null,
+        collaboration: null,
+        ...(canUpload ? { onFiles: insertImages } : {}),
+      }),
+      content: initial as object,
+      editorProps: {
+        attributes: {
+          class: "ph-content ph-editor-content",
+          "aria-label": label,
+          "aria-multiline": "true",
+          role: "textbox",
+        },
       },
+      immediatelyRender: true,
+      shouldRerenderOnTransaction: false,
+      onUpdate: ({ editor: current }) => onChangeRef.current(current.getJSON()),
     },
-    immediatelyRender: true,
-    shouldRerenderOnTransaction: false,
-    onUpdate: ({ editor: current }) => onChange(current.getJSON()),
-  });
+    [canUpload, insertImages],
+  );
   useEffect(() => {
     editorRef.current = editor;
   }, [editor]);
@@ -133,6 +141,7 @@ export function TemplateContentEditor({
   const items = useEditorState({
     editor,
     selector: ({ editor: current }) => (current ? toolbarItems(current, t, actions) : []),
+    equalityFn: sameToolbarItems,
   });
   if (!editor) return null;
   const content = (

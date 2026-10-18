@@ -252,5 +252,31 @@ describe.skipIf(!databaseBaseUrl)("template files through the API", () => {
       `/api/v1/spaces/${spaceId}/templates/from-page/files?pageId=${pageId}`,
     );
     expect(before.json()).toEqual({ files: 0, restricted: false });
+    const restricted = await admin.client.post(`/api/v1/pages/${pageId}/access`, {
+      changes: [{ action: "restrict", kind: "view" }],
+    });
+    expect(restricted.statusCode, restricted.body).toBe(200);
+    const after = await admin.client.get(
+      `/api/v1/spaces/${spaceId}/templates/from-page/files?pageId=${pageId}`,
+    );
+    expect(after.json()).toEqual({ files: 0, restricted: true });
+
+    const body = { pageId, name: "Salaries", category: "teams" };
+    const refused = await admin.client.post(`/api/v1/spaces/${spaceId}/templates/from-page`, body);
+    expect(refused.statusCode).toBe(409);
+    expect(refused.json()).toMatchObject({ code: "templateFromRestrictedPage" });
+    const listed = await admin.client.get(`/api/v1/spaces/${spaceId}/templates`);
+    expect(JSON.stringify(listed.json())).not.toContain("Salaries");
+
+    const saved = await admin.client.post(`/api/v1/spaces/${spaceId}/templates/from-page`, {
+      ...body,
+      confirmRestricted: true,
+    });
+    expect(saved.statusCode, saved.body).toBe(201);
+    const audit = await owner.get(
+      `/api/v1/organizations/${organizationId}/audit-events?name=template.createdFromRestrictedPage`,
+    );
+    expect(audit.statusCode, audit.body).toBe(200);
+    expect(JSON.stringify(audit.json())).toContain(saved.json().id);
   });
 });

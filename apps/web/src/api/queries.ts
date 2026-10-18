@@ -1,4 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
+import { withLanguageNumberFormat } from "../format/language-formats.js";
 import { api } from "./client.js";
 import { isApiError, request } from "./request.js";
 
@@ -30,7 +31,7 @@ async function fetchSession() {
 }
 
 async function fetchPreferences() {
-  return request(() => api.GET("/api/v1/account/preferences"));
+  return withLanguageNumberFormat(await request(() => api.GET("/api/v1/account/preferences")));
 }
 
 export async function fetchAllPages<T>(

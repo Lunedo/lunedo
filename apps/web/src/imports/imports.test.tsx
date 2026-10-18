@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App, createQueryClient } from "../app.js";
 import { initI18n } from "../i18n/index.js";
-import { mockApi } from "../testing/render.js";
+import { mockApi, problem } from "../testing/render.js";
 import { combinedSha256, sha256Hex, uploadParts } from "./upload.js";
 
 const OLIVIA = {
@@ -828,6 +828,38 @@ describe("new import sources in the wizard", () => {
       token: "secret-token",
     });
     expect(screen.queryByDisplayValue("secret-token")).toBeNull();
+  });
+
+  it("shows connection problems at the field they belong to and clears the old message", async () => {
+    let reply = problem(400, "invalidAtlassianSite");
+    setup(
+      {
+        [`GET /api/v1/imports/${IMPORT_ID}`]: () => ({ body: draft({ source: "confluence-cloud" }) }),
+        [`PATCH /api/v1/imports/${IMPORT_ID}`]: () => ({ body: draft({ source: "confluence-cloud" }) }),
+        [`PUT /api/v1/imports/${IMPORT_ID}/connection`]: () => reply,
+      },
+      ["organization.imports.manage"],
+    );
+    await open(`/settings/organizations/${ORGANIZATION.id}/imports/${IMPORT_ID}/setup?step=1`);
+    await userEvent.click(await screen.findByRole("button", { name: "Continue" }));
+    expect(await screen.findByText("Test the connection first, then continue.")).toBeTruthy();
+    const site = screen.getByLabelText("Site address");
+    await userEvent.type(site, "wiki.example.invalid");
+    await userEvent.type(screen.getByLabelText("Your Atlassian e-mail address"), "olivia@example.org");
+    await userEvent.type(screen.getByLabelText("API token"), "secret-token");
+    await userEvent.click(screen.getByRole("button", { name: "Test connection" }));
+    await waitFor(() => expect(site.getAttribute("aria-invalid")).toBe("true"));
+    await waitFor(() => expect(document.activeElement).toBe(site));
+    expect(screen.queryByText("Test the connection first, then continue.")).toBeNull();
+    expect(screen.getByText(/Instance administrators allow other sites under Settings/)).toBeTruthy();
+    expect(screen.queryByText("The connection could not be tested")).toBeNull();
+
+    reply = problem(401, "confluenceUnauthorized");
+    await userEvent.click(screen.getByRole("button", { name: "Test connection" }));
+    const token = screen.getByLabelText("API token");
+    await waitFor(() => expect(token.getAttribute("aria-invalid")).toBe("true"));
+    expect(site.getAttribute("aria-invalid")).not.toBe("true");
+    expect(screen.queryByText(/Instance administrators allow other sites/)).toBeNull();
   });
 
   it("lets people choose spaces and page trees and saves the selection when continuing", async () => {

@@ -172,9 +172,29 @@ export function DrawioReferenceView({ node, selected }: NodeViewProps) {
   );
 }
 
-function renderFailure(t: ReturnType<typeof useTranslation>["t"], result: RenderResult): string | null {
+interface RenderProblem {
+  message: string;
+  details: string | null;
+}
+
+function renderFailure(
+  t: ReturnType<typeof useTranslation>["t"],
+  result: RenderResult,
+): RenderProblem | null {
   if (result.ok) return null;
-  return translateKey(t, `editor.diagram.failures.${result.reason}`, { detail: result.detail });
+  if (result.reason === "syntax") {
+    return {
+      message:
+        typeof result.line === "number"
+          ? translateKey(t, "editor.diagram.failures.syntaxLine", { line: result.line })
+          : translateKey(t, "editor.diagram.failures.syntax"),
+      details: result.detail || null,
+    };
+  }
+  return {
+    message: translateKey(t, `editor.diagram.failures.${result.reason}`, { detail: result.detail }),
+    details: null,
+  };
 }
 
 function svgUrl(svg: string): string {
@@ -191,7 +211,7 @@ function LivePreview({ svg, label }: { svg: string; label: string }) {
   return url ? <img src={url} alt={label} className="mx-auto max-w-full" /> : null;
 }
 
-export function TextDiagramView({ node, selected, editor, updateAttributes }: NodeViewProps) {
+export function TextDiagramView({ node, selected, editor, updateAttributes, deleteNode }: NodeViewProps) {
   const { t } = useTranslation();
   const context = usePageContext();
   const editable = useEditable(editor);
@@ -210,14 +230,20 @@ export function TextDiagramView({ node, selected, editor, updateAttributes }: No
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(stored);
   const [rendered, setRendered] = useState<string | null>(null);
-  const [problem, setProblem] = useState<string | null>(null);
+  const [problem, setProblem] = useState<RenderProblem | null>(null);
   const [saving, setSaving] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   useEditingPresence(blockId, editing);
+  const inserted = useRef(false);
   useOpenOnInsert(blockId, editable, () => {
+    inserted.current = true;
     setDraft(stored.length > 0 ? stored : DIAGRAM_STARTERS[type]);
     setEditing(true);
   });
+
+  useEffect(() => {
+    if (editing) textarea.current?.focus();
+  }, [editing]);
 
   useEffect(() => {
     if (!editing) return;
@@ -261,6 +287,7 @@ export function TextDiagramView({ node, selected, editor, updateAttributes }: No
         return;
       }
       const image = await storeImage(context.pageId, blockId, type, result.svg);
+      inserted.current = false;
       updateAttributes({ source: draft, ...image });
       setEditing(false);
       setView("preview");
@@ -316,9 +343,17 @@ export function TextDiagramView({ node, selected, editor, updateAttributes }: No
           />
           {problem ? (
             <Notice variant="warning" title={t("editor.diagram.problemTitle")}>
-              <p id={errorId} className="whitespace-pre-wrap">
-                {problem}
-              </p>
+              <p id={errorId}>{problem.message}</p>
+              {problem.details ? (
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-sm font-medium">
+                    {t("editor.diagram.details")}
+                  </summary>
+                  <pre className="mt-1 overflow-x-auto font-mono text-sm whitespace-pre-wrap">
+                    {problem.details}
+                  </pre>
+                </details>
+              ) : null}
             </Notice>
           ) : null}
           {failure ? (
@@ -336,7 +371,13 @@ export function TextDiagramView({ node, selected, editor, updateAttributes }: No
             )}
           </div>
           <div className="flex flex-wrap justify-end gap-2">
-            <Button variant="secondary" onClick={() => setEditing(false)}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                if (inserted.current && !hasImage) deleteNode();
+                else setEditing(false);
+              }}
+            >
               {t("common.cancel")}
             </Button>
             <Button variant="primary" icon={Check} loading={saving} onClick={() => void save()}>

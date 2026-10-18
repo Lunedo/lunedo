@@ -538,6 +538,10 @@ details.ph-expand > summary {
   color: var(--ph-color-on-accent);
 }
 
+.ph-presence-avatar-cursor {
+  color: var(--ph-color-text);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ph-remote-caret {
     transition: none;
@@ -1204,4 +1208,22 @@ details.ph-expand > summary {
 .ph-tabs-editor[data-active="18"] > .ph-tabs-editor-content [data-type="tab"]:not(:nth-child(19)),
 .ph-tabs-editor[data-active="19"] > .ph-tabs-editor-content [data-type="tab"]:not(:nth-child(20)) {
   display: none;
+}
+
+.ph-content .ph-roadmap-scroll[data-overflow-end] {
+  mask-image: linear-gradient(to right, black calc(100% - var(--spacing-8)), transparent);
+}
+
+.ph-content .ph-roadmap-scroll[data-overflow-start] {
+  mask-image: linear-gradient(to left, black calc(100% - var(--spacing-8)), transparent);
+}
+
+.ph-content .ph-roadmap-scroll[data-overflow-start][data-overflow-end] {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black var(--spacing-8),
+    black calc(100% - var(--spacing-8)),
+    transparent
+  );
 }

@@ -54,6 +54,7 @@ import { translateKey } from "../i18n/translate.js";
 import { editorActions } from "./actions.js";
 import { pageScopeOf } from "./extensions/page-scope.js";
 import type { SuggestionItem } from "./extensions/suggestions.js";
+import { insertAndFocus } from "./focus-inserted.js";
 import { COLUMN_LAYOUTS } from "./nodes/block-views.js";
 import { DIAGRAM_STARTERS, openDiagramWhenInserted } from "./nodes/diagram-views.js";
 import { openDrawingWhenInserted } from "./nodes/drawing-view.js";
@@ -310,12 +311,10 @@ export const slashCommands: SlashCommandDefinition[] = [
     keywords: ["page properties report", "details summary", "report", "eigenschaften", "bericht"],
     run: (editor, range) => {
       const spaceId = pageScopeOf(editor);
-      editor
-        .chain()
-        .focus()
-        .deleteRange(range)
-        .insertContent({ type: "propertiesReport", attrs: { spaceIds: spaceId ? [spaceId] : [] } })
-        .run();
+      insertAndFocus(editor, range, {
+        type: "propertiesReport",
+        attrs: { spaceIds: spaceId ? [spaceId] : [] },
+      });
     },
   },
   {
@@ -327,12 +326,10 @@ export const slashCommands: SlashCommandDefinition[] = [
     keywords: ["content by label", "labels", "tagged pages", "inhalte nach label", "labels"],
     run: (editor, range) => {
       const spaceId = pageScopeOf(editor);
-      editor
-        .chain()
-        .focus()
-        .deleteRange(range)
-        .insertContent({ type: "contentByLabel", attrs: { spaceIds: spaceId ? [spaceId] : [] } })
-        .run();
+      insertAndFocus(editor, range, {
+        type: "contentByLabel",
+        attrs: { spaceIds: spaceId ? [spaceId] : [] },
+      });
     },
   },
   {
@@ -367,8 +364,7 @@ export const slashCommands: SlashCommandDefinition[] = [
     labelKey: "editor.blocks.includeExcerpt",
     descriptionKey: "editor.blocks.includeExcerptDescription",
     keywords: ["excerpt include", "include", "reuse", "auszug einbinden", "einbinden"],
-    run: (editor, range) =>
-      editor.chain().focus().deleteRange(range).insertContent({ type: "includeExcerpt" }).run(),
+    run: (editor, range) => insertAndFocus(editor, range, { type: "includeExcerpt" }),
   },
   {
     id: "includePage",
@@ -377,8 +373,7 @@ export const slashCommands: SlashCommandDefinition[] = [
     labelKey: "editor.blocks.includePage",
     descriptionKey: "editor.blocks.includePageDescription",
     keywords: ["include page", "include", "reuse", "seite einbinden", "einbinden"],
-    run: (editor, range) =>
-      editor.chain().focus().deleteRange(range).insertContent({ type: "includePage" }).run(),
+    run: (editor, range) => insertAndFocus(editor, range, { type: "includePage" }),
   },
   {
     id: "templateButton",
@@ -575,8 +570,7 @@ export const slashCommands: SlashCommandDefinition[] = [
     labelKey: "editor.blocks.whiteboard",
     descriptionKey: "editor.blocks.whiteboardDescription",
     keywords: ["whiteboard", "board", "link", "verknüpfen", "tafel"],
-    run: (editor, range) =>
-      editor.chain().focus().deleteRange(range).insertContent({ type: "whiteboard" }).run(),
+    run: (editor, range) => insertAndFocus(editor, range, { type: "whiteboard" }),
   },
   {
     id: "tabs",
@@ -693,7 +687,17 @@ export function filterSlashCommands(
         ...command.keywords.map(normalize),
       ].join(" ");
       if (!words.every((word) => haystack.includes(word))) return null;
-      const score = label.startsWith(words[0] ?? "") ? 0 : label.includes(words[0] ?? "") ? 1 : 2;
+      const phrase = words.join(" ");
+      const first = words[0] ?? "";
+      const score = label.startsWith(phrase)
+        ? 0
+        : label.includes(phrase)
+          ? 1
+          : label.startsWith(first)
+            ? 2
+            : label.includes(first)
+              ? 3
+              : 4;
       return { command, score };
     })
     .filter((entry): entry is { command: SlashCommandDefinition; score: number } => entry !== null);
@@ -705,6 +709,21 @@ export function filterSlashCommands(
         left.score - right.score,
     )
     .map((entry) => entry.command);
+}
+
+const UNMATCHED_WORDS_TO_CLOSE = 2;
+
+export function slashMenuOpen(query: string, t: TFunction): boolean {
+  if (/^\s/.test(query)) return false;
+  const words = normalize(query).split(/\s+/).filter(Boolean);
+  let matched = words.length;
+  while (
+    matched > 0 &&
+    filterSlashCommands(slashCommands, words.slice(0, matched).join(" "), t).length === 0
+  ) {
+    matched -= 1;
+  }
+  return words.length - matched < UNMATCHED_WORDS_TO_CLOSE;
 }
 
 export function slashSuggestionItems(query: string, t: TFunction): SuggestionItem[] {

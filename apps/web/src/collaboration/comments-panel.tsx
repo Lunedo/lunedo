@@ -463,14 +463,14 @@ export function CommentsPanel({
         {pending ? (
           <section
             className="flex flex-col gap-2 rounded-md border border-accent p-3"
-            aria-label={t("comments.newInline")}
+            aria-label={isElementAnchor(pending) ? t("comments.newOnElement") : t("comments.newInline")}
           >
             <blockquote className="border-l-4 border-warning pl-2 text-sm text-text-muted">
               {isElementAnchor(pending) ? pending.label : `“${pending.exact}”`}
             </blockquote>
             <CommentComposer
               pageId={itemId}
-              label={t("comments.newInline")}
+              label={isElementAnchor(pending) ? t("comments.newOnElement") : t("comments.newInline")}
               placeholder={t("comments.placeholder")}
               submitLabel={t("comments.comment")}
               autoFocus
@@ -533,7 +533,7 @@ export function CommentsPanel({
         <div className="border-t border-border p-4">
           <CommentComposer
             pageId={itemId}
-            label={t("comments.newPageComment")}
+            label={describeElement ? t("comments.newBoardComment") : t("comments.newPageComment")}
             placeholder={t("comments.placeholder")}
             submitLabel={t("comments.comment")}
             onSubmit={(body) => create(body)}

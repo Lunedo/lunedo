@@ -138,8 +138,8 @@ const LABELS: Record<PageLanguage, UiLabels> = {
   },
   de: {
     close: "Schließen",
-    sortAscending: "Aufsteigend sortiert",
-    sortDescending: "Absteigend sortiert",
+    sortAscending: "Aufsteigend sortieren",
+    sortDescending: "Absteigend sortieren",
     notSorted: "Nicht sortiert",
     previousPage: "Vorherige Seite",
     nextPage: "Nächste Seite",

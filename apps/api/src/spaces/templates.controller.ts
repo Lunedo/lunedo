@@ -176,6 +176,12 @@ const fromPageSchema = z
     name: z.string().max(TEMPLATE_NAME_MAX_LENGTH).describe("Name, 1 to 100 characters."),
     description: z.string().max(TEMPLATE_DESCRIPTION_MAX_LENGTH).default("").describe("Short description."),
     category: categorySchema,
+    confirmRestricted: z
+      .boolean()
+      .default(false)
+      .describe(
+        "Confirms that everyone who can use the space's templates may see the content of a page with a view restriction. Without it, saving a restricted page is refused with `templateFromRestrictedPage`.",
+      ),
   })
   .strict()
   .describe("A page to save as a space template.");
@@ -269,14 +275,14 @@ export class TemplatesController {
   @ApiRoute({
     summary: "Save a page as a space template",
     description:
-      "Creates a space template from the current content of a page of the space, including its draft. Editors can do this; space admins can then add input fields.",
+      "Creates a space template from the current content of a page of the space, including its draft. Editors can do this; space admins can then add input fields. When the page or a page above it has a view restriction, everyone who can use the space's templates would see its content, so the request must confirm this with `confirmRestricted`; the save is then recorded in the audit log.",
     tags: [TAG],
     status: 201,
     params: spaceParams,
     body: fromPageSchema,
     bodyExample: { pageId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a40", name: "Runbook", category: "operations" },
     response: { description: "The template.", schema: templateSchema, example: exampleTemplate },
-    errors: ["invalidTemplateName", "invalidDescription"],
+    errors: ["invalidTemplateName", "invalidDescription", "templateFromRestrictedPage"],
   })
   async saveFromPage(
     @Param("spaceId") spaceId: string,
@@ -289,6 +295,7 @@ export class TemplatesController {
       name: body.name,
       description: body.description,
       category: body.category,
+      confirmRestricted: body.confirmRestricted,
     });
   }
 

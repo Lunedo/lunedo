@@ -87,6 +87,7 @@ export function ContentByLabelList({
   const items = useQuery({
     queryKey: ["reports", "contentByLabel", list],
     enabled: list.labels.length > 0,
+    throwOnError: false,
     queryFn: () =>
       request(() =>
         api.GET("/api/v1/reports/content-by-label", {
@@ -288,6 +289,7 @@ export function RelatedLabelsList({ pageId, labels }: { pageId: string; labels: 
   const { t } = useTranslation();
   const related = useQuery({
     queryKey: ["reports", "relatedLabels", pageId, labels],
+    throwOnError: false,
     queryFn: () =>
       request(() =>
         api.GET("/api/v1/pages/{pageId}/related-labels", {

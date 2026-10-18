@@ -1292,6 +1292,12 @@ export const auditCatalog = {
     fields: templateFields,
     visibility: "organization",
   }),
+  "template.createdFromRestrictedPage": event({
+    actor: ["account"],
+    target: "page",
+    fields: pageFields.extend({ templateId: z.uuid(), templateName: z.string() }),
+    visibility: "organization",
+  }),
   "template.exported": event({
     actor: ["account"],
     target: "template",

@@ -152,6 +152,21 @@ describe("the attachments of a page", () => {
     expect(screen.queryByRole("button", { name: "Upload files" })).toBeNull();
   });
 
+  it("groups the files of diagram blocks under readable names", async () => {
+    const block = "0a1c7905-2312-4c79-81cf-65b67e4d9709";
+    list = [
+      attachment(REPORT, "Report.pdf"),
+      attachment(PHOTO, `drawio-${block}.drawio`),
+      attachment(REPORT.replace("c1", "c4"), `drawio-${block}.svg`, { preview: "image", inline: true }),
+    ];
+    await renderSection(false);
+    const group = await screen.findByRole("list", { name: "Diagram files" });
+    expect(within(group).getByRole("button", { name: /^draw\.io diagram 1 · source/ })).toBeTruthy();
+    expect(within(group).getByRole("button", { name: /^draw\.io diagram 1 · image/ })).toBeTruthy();
+    expect(within(group).queryByText(/Report\.pdf/)).toBeNull();
+    expect(screen.getByRole("button", { name: /^Report\.pdf/ })).toBeTruthy();
+  });
+
   it("marks files that readers do not see yet as new or changed in the draft", async () => {
     list = [
       attachment(REPORT, "Report.pdf", { draft: "changed" }),

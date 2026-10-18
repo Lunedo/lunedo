@@ -102,6 +102,10 @@ export function useOrganizationState(): OrganizationState {
   return value;
 }
 
+export function useCan(action: string): boolean {
+  return useContext(OrganizationContext)?.can(action) ?? false;
+}
+
 export function useSession(): SessionInfo {
   const session = useQuery({ ...sessionQuery, throwOnError: false });
   const state = useContext(OrganizationContext);

@@ -12,7 +12,7 @@ import { createEditorExtensions } from "../editor/extensions/index.js";
 import { SaveStateIndicator, useUnsavedChangesWarning } from "../editor/save-indicator.js";
 import { type SaveState, TYPING_PAUSE_MS } from "../editor/save-state.js";
 import { EditorToolbar } from "../editor/toolbar.js";
-import { toolbarItems } from "../editor/toolbar-items.js";
+import { sameToolbarItems, toolbarItems } from "../editor/toolbar-items.js";
 import { LoadError } from "../errors/failure.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { contentQuery } from "../spaces/space-queries.js";
@@ -191,6 +191,7 @@ function NotesEditor({
   const items = useEditorState({
     editor,
     selector: ({ editor: current }) => (current ? toolbarItems(current, t, actions) : []),
+    equalityFn: sameToolbarItems,
   });
 
   const copy = async () => {

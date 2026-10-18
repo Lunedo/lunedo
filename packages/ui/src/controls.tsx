@@ -1,4 +1,4 @@
-import { Check, ChevronDown, CircleAlert } from "lucide-react";
+import { Check, ChevronDown, CircleAlert, Minus } from "lucide-react";
 import {
   Checkbox as CheckboxPrimitive,
   RadioGroup as RadioGroupPrimitive,
@@ -137,7 +137,7 @@ export function Select({
 }
 
 export interface CheckboxProps {
-  checked: boolean;
+  checked: boolean | "mixed";
   onCheckedChange: (checked: boolean) => void;
   label?: ReactNode;
   description?: ReactNode;
@@ -167,7 +167,7 @@ export function Checkbox({
         {...field}
         {...(error ? { "aria-invalid": true } : {})}
         id={id}
-        checked={checked}
+        checked={checked === "mixed" ? "indeterminate" : checked}
         onCheckedChange={(state) => onCheckedChange(state === true)}
         {...(disabled !== undefined ? { disabled } : {})}
         {...(props["aria-label"] ? { "aria-label": props["aria-label"] } : {})}
@@ -175,10 +175,11 @@ export function Checkbox({
         className={classNames(
           HIT_AREA,
           "mt-1 flex size-4 shrink-0 items-center justify-center rounded-sm border border-control-border bg-control text-on-accent focus-visible:focus-ring aria-invalid:border-danger disabled:cursor-not-allowed disabled:border-dashed disabled:bg-surface-sunken aria-checked:border-accent aria-checked:bg-accent disabled:aria-checked:border-control-border disabled:aria-checked:bg-control-border",
+          checked === "mixed" && !disabled && "border-accent bg-accent",
         )}
       >
         <CheckboxPrimitive.Indicator>
-          <Icon icon={Check} size="sm" />
+          <Icon icon={checked === "mixed" ? Minus : Check} size="sm" />
         </CheckboxPrimitive.Indicator>
       </CheckboxPrimitive.Root>
       {(label || description || error) && (

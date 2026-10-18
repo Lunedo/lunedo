@@ -58,6 +58,7 @@ import {
   PageReportTable,
   pageReportFromAttrs,
 } from "./reports.js";
+import { markScrollEdges } from "./scroll-edges.js";
 import {
   ACCORDION_QUERY,
   enhanceTabs,
@@ -273,6 +274,9 @@ export function PageReadView({
     }
   }, [content, references, t, format, attachmentUrl, embedServices, numberHeadings]);
 
+  const scrollLabel = useRef("");
+  scrollLabel.current = t("editor.roadmap.scrollRegion");
+
   useLayoutEffect(() => {
     rememberReferences(references);
   }, [references]);
@@ -281,6 +285,7 @@ export function PageReadView({
     const root = container.current;
     if (!root || html === null) return;
     applyWidths(root);
+    const stopEdges = markScrollEdges(root, scrollLabel.current);
     const placeholders = (selector: string) => {
       const found = Array.from(root.querySelectorAll<HTMLElement>(selector));
       for (const element of found) element.replaceChildren();
@@ -309,12 +314,15 @@ export function PageReadView({
     );
     const narrow = globalThis.matchMedia?.(ACCORDION_QUERY);
     const tabs = enhanceTabs(root, narrow?.matches ?? false);
-    if (!narrow || tabs.length === 0) return;
+    if (!narrow || tabs.length === 0) return stopEdges;
     const change = () => {
       for (const element of tabs) setTabsMode(element, narrow.matches);
     };
     narrow.addEventListener("change", change);
-    return () => narrow.removeEventListener("change", change);
+    return () => {
+      narrow.removeEventListener("change", change);
+      stopEdges();
+    };
   }, [html]);
 
   useLayoutEffect(() => {

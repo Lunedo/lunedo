@@ -52,6 +52,7 @@ export function DrawioEditor({ pageId, blockId, source, title, onSaved, onClose 
     queryFn: () => (source ? loadText(source.id, source.version) : Promise.resolve(EMPTY_DRAWIO)),
     staleTime: Number.POSITIVE_INFINITY,
     gcTime: 0,
+    throwOnError: false,
   });
   const xml = loaded.data;
 

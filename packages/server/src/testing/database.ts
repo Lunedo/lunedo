@@ -6,6 +6,9 @@ import { migrationsFolder, runMigrations } from "../database/migrate.js";
 import { createDatabasePool } from "../database/pool.js";
 import { createLogger } from "../logging/logger.js";
 
+const CLOSE_ATTEMPTS = 40;
+const CLOSE_INTERVAL_MS = 50;
+
 /**
  * Base URL of the PostgreSQL server for integration tests. Tests that need a database are
  * skipped locally without it; in CI a missing URL is an error so that they cannot be skipped silently.
@@ -45,6 +48,14 @@ export async function createTemporaryDatabase(
       const client = new pg.Client({ connectionString: baseUrl });
       await client.connect();
       try {
+        for (let attempt = 0; attempt < CLOSE_ATTEMPTS; attempt += 1) {
+          const open = await client.query<{ count: number }>(
+            "select count(*)::int as count from pg_stat_activity where datname = $1",
+            [name],
+          );
+          if ((open.rows[0]?.count ?? 0) === 0) break;
+          await new Promise((resolve) => setTimeout(resolve, CLOSE_INTERVAL_MS));
+        }
         await client.query(`drop database if exists "${name}" with (force)`);
       } finally {
         await client.end();

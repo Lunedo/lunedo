@@ -4,6 +4,7 @@ import {
   isDiagramRequest,
   renderedProblem,
   sourceProblem,
+  syntaxProblem,
 } from "./protocol.js";
 
 const MERMAID_SECURE_KEYS = [
@@ -90,8 +91,8 @@ async function render(request: DiagramRequest): Promise<void> {
         : await renderPlantUml(request.source),
     );
   } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    post({ type: "failed", id: request.id, reason: "syntax", detail: detail.slice(0, 2000) });
+    const { line, detail } = syntaxProblem(request.diagram, request.source, error);
+    post({ type: "failed", id: request.id, reason: "syntax", detail, line });
     return;
   }
   const problem = renderedProblem(svg);

@@ -791,6 +791,11 @@ const instanceProviderRoute = createRoute({
     "InstanceProviderScreen",
   ),
 });
+const instanceEmbedsRoute = instanceScreen(
+  "/embeds",
+  () => import("./screens/instance/embeds-screen.js"),
+  "InstanceEmbedsScreen",
+);
 const instanceRenderingRoute = instanceScreen(
   "/rendering",
   () => import("./screens/instance/rendering-screen.js"),
@@ -954,6 +959,7 @@ const routeTree = rootRoute.addChildren([
         instanceMailRoute,
         instanceStorageRoute,
         instanceRenderingRoute,
+        instanceEmbedsRoute,
         breakGlassRoute,
         instanceNotificationsRoute,
         instanceAnnouncementsRoute,

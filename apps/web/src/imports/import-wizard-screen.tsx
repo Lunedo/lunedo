@@ -816,6 +816,7 @@ function FileSection({
           {where === "upload" ? (
             <UploadField
               invalid={Boolean(fileError)}
+              markdown={entry.source === "markdown"}
               organizationId={organizationId}
               current={entry.file?.kind === "upload" ? entry.file : null}
               maxBytes={folder.data?.maxUploadBytes ?? Number.MAX_SAFE_INTEGER}
@@ -1008,7 +1009,11 @@ function SpaceStep({
           </Field>
           <Field
             label={t("imports.wizard.space.key")}
-            hint={t("imports.wizard.space.keyHint")}
+            hint={
+              inputOf(entry.source) === "export" || inputOf(entry.source) === "connection"
+                ? t("imports.wizard.space.keyHint")
+                : t("imports.wizard.space.keyHintFile")
+            }
             {...(errors.spaceKey ? { error: errors.spaceKey } : {})}
           >
             <Input

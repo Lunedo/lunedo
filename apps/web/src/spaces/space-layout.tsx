@@ -186,7 +186,12 @@ function SpaceFrame({ space }: { space: SpaceWithRole }) {
             {navigation}
           </nav>
         )}
-        <main id="main" tabIndex={-1} className="min-w-0 flex-1 overflow-y-auto outline-none">
+        <main
+          id="main"
+          // biome-ignore lint/a11y/noNoninteractiveTabindex: the content area scrolls and must be reachable by keyboard
+          tabIndex={0}
+          className="min-w-0 flex-1 overflow-y-auto outline-none focus-visible:focus-ring"
+        >
           <div className="flex items-center gap-2 border-b border-border px-4 py-2 md:hidden">
             <Button variant="secondary" size="sm" icon={ListTree} onClick={() => setTreeOpen(true)}>
               {t("spaces.pagesButton")}

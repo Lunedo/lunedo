@@ -260,6 +260,11 @@ export const SETTINGS_INDEX: Readonly<Record<string, IndexSection[]>> = {
     section("instance.security.apiTokens", INSTANCE_TOKEN_KEYS.map(setting)),
   ],
   "instance.storage": [section("storage.reminder.title", [setting("storage.reminder")])],
+  "instance.embeds": [
+    section("embeds.allowlist.title", [
+      row("embedAllowlist", "embeds.allowlist.title", "embeds.allowlist.instanceDescription"),
+    ]),
+  ],
   "instance.signInProviders": [
     section("identityProviders.otherMethods", [setting("auth.passwordSignIn")]),
     section("emergencyRecipients.title", [

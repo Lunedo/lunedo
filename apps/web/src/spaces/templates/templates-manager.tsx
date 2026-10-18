@@ -94,7 +94,9 @@ export function TemplatesManager({
           header: (
             <Checkbox
               aria-label={t("templates.selectAll")}
-              checked={rows.length > 0 && chosen.length === rows.length}
+              checked={
+                rows.length > 0 && chosen.length === rows.length ? true : chosen.length > 0 ? "mixed" : false
+              }
               onCheckedChange={(checked) =>
                 setSelected(checked ? new Set(rows.map((template) => template.id)) : new Set())
               }
@@ -137,6 +139,12 @@ export function TemplatesManager({
         caption={t("templates.title")}
         rows={templates ?? []}
         rowKey={(template) => template.id}
+        {...(canManage
+          ? {
+              onRowClick: (template: PageTemplate) => setEditing(template),
+              rowLabel: (template: PageTemplate) => t("templates.editNamed", { name: template.name }),
+            }
+          : {})}
         loading={loading}
         empty={
           <EmptyState

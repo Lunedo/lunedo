@@ -89,6 +89,8 @@ export function CopyDialog({
   );
 }
 
+const COPY_TARGETS = ["spaces", "list", "copy"];
+
 function useFinished() {
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -99,11 +101,17 @@ function useFinished() {
     const target = copy.item;
     if (!target) return;
     const left = copy.hidden + copy.skipped;
+    const listed = queryClient
+      .getQueryData<{ items: (Parameters<typeof spaceDisplayName>[1] & { id: string })[] }>(COPY_TARGETS)
+      ?.items.find((entry) => entry.id === target.spaceId);
     toast({
       title:
         target.spaceId === sourceSpaceId
           ? t("copy.copied", { title: copy.title })
-          : t("copy.copiedToSpace", { title: copy.title, space: target.spaceKey }),
+          : t("copy.copiedToSpace", {
+              title: copy.title,
+              space: listed ? spaceDisplayName(t, listed) : target.spaceKey,
+            }),
       ...(left > 0 ? { description: t("copy.left", { count: left }) } : {}),
       variant: "success",
     });
@@ -216,7 +224,7 @@ function CopyForm({
   const [failure, setFailure] = useState<string | null>(null);
   const [copying, setCopying] = useState(false);
   const spaces = useQuery({
-    queryKey: ["spaces", "list", "copy"],
+    queryKey: COPY_TARGETS,
     queryFn: () =>
       request(() => api.GET("/api/v1/spaces", { params: { query: { limit: 200, role: "editor" } } })),
   });

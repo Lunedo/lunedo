@@ -615,7 +615,7 @@ describe("page tree", () => {
     expect(
       within(section).getByText("2 items below are left out because you cannot open them."),
     ).toBeTruthy();
-    await userEvent.click(within(dialog).getByRole("button", { name: /^Copy$/ }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Create copy" }));
     expect(
       await within(dialog).findByText(
         "Confirm that these people may open the copy, or choose another place.",
@@ -627,7 +627,7 @@ describe("page tree", () => {
     expect(document.activeElement).toBe(confirm);
     expect(requests.some((request) => request.path.endsWith(`/items/${NETWORK}/copy`))).toBe(false);
     await userEvent.click(confirm);
-    await userEvent.click(within(dialog).getByRole("button", { name: /^Copy$/ }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Create copy" }));
     await waitFor(() =>
       expect(requests.find((request) => request.path.endsWith(`/items/${NETWORK}/copy`))?.body).toEqual({
         spaceId: SPACE_ID,
@@ -697,7 +697,7 @@ describe("page tree", () => {
     await userEvent.click(await screen.findByRole("menuitem", { name: "Copy…" }));
     const dialog = await screen.findByRole("dialog", { name: "Copy Network" });
     expect(await within(dialog).findByText(/It runs in the background/)).toBeTruthy();
-    await userEvent.click(within(dialog).getByRole("button", { name: /^Copy$/ }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Create copy" }));
     const running = await screen.findByRole("dialog", { name: "Copying Network" });
     expect(await within(running).findByText("15 of 30 items copied")).toBeTruthy();
     expect(within(running).getByRole("progressbar").getAttribute("aria-valuenow")).toBe("50");

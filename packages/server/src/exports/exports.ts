@@ -151,6 +151,7 @@ export interface ExportSummaryCounts {
   printLimit: number;
   fileLimit: number;
   serverPdf: boolean;
+  largeWritesPaused: boolean;
 }
 
 export const MAX_PAGE_EXPORT_IMAGE_BYTES = 20 * 1024 * 1024;
@@ -646,6 +647,13 @@ export class ExportService {
       printLimit: MAX_BROWSER_PRINT_PAGES,
       fileLimit: MAX_FILE_EXPORT_PAGES,
       serverPdf: this.#render.configured,
+      largeWritesPaused: await this.#storage.requireLargeWrite().then(
+        () => false,
+        (error: unknown) => {
+          if (error instanceof StorageFullError) return true;
+          throw error;
+        },
+      ),
     };
   }
 

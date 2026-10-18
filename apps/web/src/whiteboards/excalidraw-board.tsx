@@ -19,18 +19,18 @@ import type {
 } from "@excalidraw/excalidraw/types";
 import type { HocuspocusProvider } from "@hocuspocus/provider";
 import type { Scene, SceneFile } from "@pagehall/editor-schema/scene";
-import { Button } from "@pagehall/ui";
-import { StickyNote } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type * as Y from "yjs";
-import type { PresenceColor, PresenceUser } from "../editor/presence.js";
+import type { PresenceUser } from "../editor/presence.js";
+import { nameUnlabeledControls } from "./controls.js";
 import {
   type FileStore,
   type LocalFile,
   type RefusedElement,
   SceneSync,
   type SyncElement,
+  storedElements,
 } from "./scene-sync.js";
 
 const STICKY_BACKGROUND = "#ffec99";
@@ -43,6 +43,7 @@ export interface BoardHandle {
   exportSvg: () => Promise<string>;
   version: () => number;
   sceneForSaving: (files: (file: LocalFile) => Promise<SceneFile>) => Promise<Scene>;
+  addStickyNote: () => void;
 }
 
 export interface ExcalidrawBoardProps {
@@ -74,12 +75,26 @@ function useDocumentTheme(): "light" | "dark" {
   return theme;
 }
 
-function paletteColor(color: PresenceColor): string {
-  return getComputedStyle(document.documentElement).getPropertyValue(`--ph-palette-${color}`).trim();
-}
-
 function initialElements(scene: Scene): ExcalidrawElement[] {
   return scene.elements as unknown as ExcalidrawElement[];
+}
+
+function whenInitialized(api: ExcalidrawImperativeAPI, start: () => void): () => void {
+  if (!api.getAppState().isLoading) {
+    start();
+    return () => undefined;
+  }
+  let started = false;
+  const unsubscribe = api.onChange((_elements, appState) => {
+    if (started || appState.isLoading) return;
+    started = true;
+    unsubscribe();
+    start();
+  });
+  return () => {
+    started = true;
+    unsubscribe();
+  };
 }
 
 function selectedIds(appState: AppState): string[] {
@@ -116,16 +131,19 @@ export function ExcalidrawBoard({
   const sync = useRef<SceneSync | null>(null);
   const selection = useRef<string>("");
   const lastPointer = useRef(0);
+  const container = useRef<HTMLDivElement>(null);
   const initialData = useMemo(
     () => ({
-      elements: initialElements(scene),
+      elements: doc
+        ? (storedElements(doc).filter((element) => !element.isDeleted) as unknown as ExcalidrawElement[])
+        : initialElements(scene),
       appState: {
         viewBackgroundColor: scene.settings.viewBackgroundColor ?? "#ffffff",
         viewModeEnabled: !editable,
       },
       scrollToContent: true,
     }),
-    [scene, editable],
+    [scene, editable, doc],
   );
 
   useEffect(() => {
@@ -173,25 +191,28 @@ export function ExcalidrawBoard({
           captureUpdate: CaptureUpdateAction.NEVER,
         }),
     };
-    const created = new SceneSync({
-      doc,
-      target,
-      reconcile: (local, remote) =>
-        reconcileElements(
-          local as unknown as readonly OrderedExcalidrawElement[],
-          remote as unknown as readonly RemoteExcalidrawElement[],
-          api.getAppState(),
-        ) as unknown as SyncElement[],
-      files,
-      editable,
-      ...(onRefused ? { onRefused } : {}),
-      ...(onFileFailed ? { onFileFailed } : {}),
-      ...(onLocalChange ? { onSent: onLocalChange } : {}),
+    const stop = whenInitialized(api, () => {
+      const created = new SceneSync({
+        doc,
+        target,
+        reconcile: (local, remote) =>
+          reconcileElements(
+            local as unknown as readonly OrderedExcalidrawElement[],
+            remote as unknown as readonly RemoteExcalidrawElement[],
+            api.getAppState(),
+          ) as unknown as SyncElement[],
+        files,
+        editable,
+        ...(onRefused ? { onRefused } : {}),
+        ...(onFileFailed ? { onFileFailed } : {}),
+        ...(onLocalChange ? { onSent: onLocalChange } : {}),
+      });
+      sync.current = created;
+      created.pull();
     });
-    sync.current = created;
-    created.pull();
     return () => {
-      created.destroy();
+      stop();
+      sync.current?.destroy();
       sync.current = null;
     };
   }, [api, doc, files, editable, onRefused, onFileFailed, onLocalChange]);
@@ -206,11 +227,9 @@ export function ExcalidrawBoard({
         if (clientId === awareness.clientID) return;
         const presence = state as RemotePresence;
         if (!presence.user?.id) return;
-        const color = paletteColor(presence.user.color);
         collaborators.set(String(clientId) as SocketId, {
           id: presence.user.id,
           username: presence.user.name,
-          color: { background: color, stroke: color },
           ...(presence.pointer ? { pointer: presence.pointer } : {}),
           ...(presence.button ? { button: presence.button } : {}),
           selectedElementIds: Object.fromEntries((presence.selection ?? []).map((id) => [id, true])),
@@ -228,6 +247,16 @@ export function ExcalidrawBoard({
   useEffect(() => {
     if (provider && self) provider.setAwarenessField("user", self);
   }, [provider, self]);
+
+  useEffect(() => {
+    const element = container.current;
+    if (!element) return;
+    const label = () => nameUnlabeledControls(element, t("whiteboards.menu"));
+    label();
+    const observer = new MutationObserver(label);
+    observer.observe(element, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [t]);
 
   const focusElement = useCallback(
     (elementId: string) => {
@@ -277,18 +306,6 @@ export function ExcalidrawBoard({
     [api, scene],
   );
 
-  useEffect(() => {
-    if (api) {
-      onReady?.({
-        api,
-        focusElement,
-        exportSvg,
-        sceneForSaving,
-        version: () => getSceneVersion(api.getSceneElementsIncludingDeleted()),
-      });
-    }
-  }, [api, onReady, focusElement, exportSvg, sceneForSaving]);
-
   const addStickyNote = useCallback(() => {
     if (!api) return;
     const appState = api.getAppState();
@@ -319,6 +336,19 @@ export function ExcalidrawBoard({
     });
   }, [api, t]);
 
+  useEffect(() => {
+    if (api) {
+      onReady?.({
+        api,
+        focusElement,
+        exportSvg,
+        sceneForSaving,
+        addStickyNote,
+        version: () => getSceneVersion(api.getSceneElementsIncludingDeleted()),
+      });
+    }
+  }, [api, onReady, focusElement, exportSvg, sceneForSaving, addStickyNote]);
+
   const onChange = useCallback(
     (_elements: readonly OrderedExcalidrawElement[], appState: AppState) => {
       sync.current?.changed();
@@ -346,7 +376,7 @@ export function ExcalidrawBoard({
   );
 
   return (
-    <div className="ph-whiteboard h-full w-full">
+    <div ref={container} className="ph-whiteboard h-full w-full">
       <Excalidraw
         excalidrawAPI={setApi}
         initialData={initialData}
@@ -371,13 +401,6 @@ export function ExcalidrawBoard({
           },
           tools: { image: editable },
         }}
-        renderTopRightUI={() =>
-          editable ? (
-            <Button size="sm" variant="secondary" icon={StickyNote} onClick={addStickyNote}>
-              {t("whiteboards.stickyNote.add")}
-            </Button>
-          ) : null
-        }
       >
         <MainMenu>
           <MainMenu.DefaultItems.SaveAsImage />
