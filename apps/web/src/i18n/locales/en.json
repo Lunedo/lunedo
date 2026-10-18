@@ -7454,6 +7454,11 @@
           "hint": "Confluence marks removed restrictions in its export without saying who had them. Pagehall keeps such pages restricted. Check them and remove the restriction where it is not needed.",
           "entry": "{count, plural, one {# page} other {# pages}}: {pages}"
         },
+        "listingIncomplete": {
+          "title": "{count, plural, one {# list} other {# lists}} read only in part",
+          "hint": "Confluence kept sending more results. Pagehall stopped reading there so that the import ends. Check the content in Confluence and import it again if something is missing.",
+          "entry": "{listing}: {reason, select, repeated {Confluence linked back to results it had already sent} other {the list had more than {limit, number} result pages}}."
+        },
         "trashedContent": {
           "title": "{count, plural, one {# page} other {# pages}} in the Confluence trash not imported",
           "hint": "They were deleted in Confluence. Restore them there and import again if you need them.",

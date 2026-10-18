@@ -11,12 +11,14 @@ import {
   type FakeConfluence,
   fakeConfluence,
   fakeConfluenceSpaces,
+  json,
   response,
 } from "../testing/confluence-api.js";
 import type { SyntheticExport } from "../testing/confluence-export.js";
 import { ALICE, BOB, PNG } from "../testing/fixture.js";
 import { importHarness } from "../testing/harness.js";
 import type { ConfluenceTransport, TransportResponse } from "./api-client.js";
+import { MAX_LISTING_PAGES } from "./paging.js";
 
 const baseUrl = testDatabaseBaseUrl();
 const SITE = "example.atlassian.net";
@@ -838,5 +840,98 @@ describe.skipIf(!baseUrl)("Confluence API imports", () => {
     expect(view.state).toBe("review");
     expect(view.targetSpace?.id).toBe(spaceId);
     expect(view.counts).toMatchObject({ new: 1, updated: 1, conflicts: 0, deleted: 0 });
+  });
+
+  describe("content Confluence does not return", () => {
+    type Kind = "cloud" | "dataCenter";
+    const DC_SITE = "wiki.example.com";
+
+    function guarded(): SyntheticExport {
+      const model = apiModel();
+      return {
+        ...model,
+        pages: [
+          ...model.pages,
+          {
+            id: "7105",
+            title: "Guide details",
+            parentId: "7101",
+            position: 1,
+            body: "<p>Details</p>",
+            creatorKey: ALICE.key,
+          },
+        ],
+      };
+    }
+
+    async function importedFrom(
+      kind: Kind,
+      key: string,
+      before: (url: URL) => TransportResponse | null,
+      restricted: ReadonlySet<string> = new Set(),
+    ) {
+      const organization = await fixtures.organization();
+      const imports = test.services.imports;
+      const owner = as(organization.owner);
+      if (kind === "dataCenter") {
+        await test.settings.set(atlassianHostsSetting, {}, "instance", DC_SITE);
+        serve(guarded(), {
+          kind: "dataCenter",
+          site: DC_SITE,
+          basePath: "/confluence",
+          authorization: `Bearer ${TOKEN}`,
+          before,
+          restricted,
+        });
+      } else serve(guarded(), { before, restricted });
+      try {
+        const draft = await imports.create(owner, organization.id, {
+          source: kind === "cloud" ? "confluence-cloud" : "confluence-dc",
+        });
+        await imports.setConnection(
+          owner,
+          draft.id,
+          kind === "cloud"
+            ? { kind: "cloud", site: SITE, email: EMAIL, token: TOKEN }
+            : { kind: "dataCenter", baseUrl: `https://${DC_SITE}/confluence/`, token: TOKEN },
+        );
+        await imports.update(owner, draft.id, { options: { spaceKey: "APIX" } });
+        await harness.drive(draft.id);
+        await imports.update(owner, draft.id, { spaceName: `Imported ${key}`, spaceKey: key });
+        await imports.start(owner, draft.id);
+        await harness.drive(draft.id);
+        return { view: await imports.get(owner, draft.id), owner };
+      } finally {
+        if (kind === "dataCenter") await test.settings.set(atlassianHostsSetting, {}, "instance", "");
+      }
+    }
+
+    async function reported(owner: ReturnType<typeof as>, importId: string, code: string) {
+      const report = await test.services.imports.entries(owner, importId, { code, limit: 20 });
+      return report.entries.map((entry) => entry.details);
+    }
+
+    it.each(["cloud", "dataCenter"] as const)(
+      "stops a %s listing whose next link repeats and reports it",
+      async (kind) => {
+        const listing =
+          kind === "cloud" ? "/api/v2/pages/7101/attachments" : "/rest/api/content/7101/child/attachment";
+        const prefix = kind === "cloud" ? "/wiki" : "/confluence";
+        let requests = 0;
+        const { view, owner } = await importedFrom(kind, `LOOP${kind === "cloud" ? "C" : "D"}`, (url) => {
+          if (url.pathname !== `${prefix}${listing}`) return null;
+          requests += 1;
+          return json(200, {
+            results: [],
+            _links: { next: `${kind === "cloud" ? "/wiki" : ""}${listing}?cursor=again` },
+          });
+        });
+        expect(view.state).toBe("review");
+        expect(requests).toBeLessThanOrEqual(4);
+        expect(await reported(owner, view.id, "listingIncomplete")).toEqual([
+          { listing, reason: "repeated", limit: MAX_LISTING_PAGES },
+        ]);
+      },
+    );
   });
 });

@@ -7454,6 +7454,11 @@
           "hint": "Confluence markiert entfernte Einschränkungen im Export, ohne zu sagen, für wen sie galten. Pagehall lässt diese Seiten eingeschränkt. Prüfe sie und entferne die Einschränkung, wo sie nicht nötig ist.",
           "entry": "{count, plural, one {# Seite} other {# Seiten}}: {pages}"
         },
+        "listingIncomplete": {
+          "title": "{count, plural, one {# Liste} other {# Listen}} nur teilweise gelesen",
+          "hint": "Confluence hat immer weitere Ergebnisse geschickt. Pagehall hat dort aufgehört, damit der Import endet. Prüfe die Inhalte in Confluence und importiere erneut, wenn etwas fehlt.",
+          "entry": "{listing}: {reason, select, repeated {Confluence hat auf bereits gelieferte Ergebnisse zurückverwiesen} other {die Liste hatte mehr als {limit, number} Ergebnisseiten}}."
+        },
         "trashedContent": {
           "title": "{count, plural, one {# Seite} other {# Seiten}} im Papierkorb von Confluence nicht importiert",
           "hint": "Sie wurden in Confluence gelöscht. Stelle sie dort wieder her und importiere erneut, wenn du sie brauchst.",

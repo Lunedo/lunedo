@@ -2,6 +2,7 @@ import { z } from "zod";
 import { ImportFormatError } from "../errors.js";
 import type { ScanContext } from "../source.js";
 import type { ConfluenceApi } from "./api-client.js";
+import { ListingGuard, reportStoppedListing } from "./paging.js";
 import {
   confluenceDate,
   contentKind,
@@ -220,10 +221,12 @@ function escapeHtml(value: string): string {
 
 async function* listing<T>(
   api: ConfluenceApi,
+  context: ScanContext,
   first: string,
   schema: z.ZodType<{ results: T[]; _links?: { next?: string | null | undefined } | undefined }>,
   refused?: () => Promise<void>,
 ): AsyncGenerator<T> {
+  const guard = new ListingGuard(first, reportStoppedListing(context));
   for (let path: string | null = first; path; ) {
     const page = await api.json(path, schema);
     if (!page) {
@@ -231,7 +234,7 @@ async function* listing<T>(
       return;
     }
     for (const item of page.results) yield item;
-    path = nextPath(page._links?.next);
+    path = await guard.follow(nextPath(page._links?.next));
   }
 }
 
@@ -328,6 +331,7 @@ export async function scanCloud(api: ConfluenceApi, context: ScanContext, spaceK
         ? `/api/v2/spaces/${space.sourceId}/pages?depth=all&status=current&status=archived&status=trashed`
         : `/api/v2/spaces/${space.sourceId}/blogposts?status=current&status=trashed`;
     let path: string | null = wanted ? (checkpoint.next ?? first) : null;
+    const guard = new ListingGuard(path ?? first, reportStoppedListing(context));
     let count = 0;
     while (path) {
       const page = await api.json(path, listOf(nodeSchema));
@@ -336,7 +340,7 @@ export async function scanCloud(api: ConfluenceApi, context: ScanContext, spaceK
         await stageNode(node, collection === "pages" ? "page" : "blogpost", collection === "blogposts");
         count += 1;
       }
-      path = nextPath(page._links?.next);
+      path = await guard.follow(nextPath(page._links?.next));
       if (!path) break;
       await context.progress({ done: count, total: count + page.results.length });
       await save({ step, next: path, after: null });
@@ -371,6 +375,7 @@ export async function scanCloud(api: ConfluenceApi, context: ScanContext, spaceK
         if (!collection || visited.has(record.sourceId)) continue;
         for await (const child of listing(
           api,
+          context,
           `/api/v2/${collection}/${record.sourceId}/direct-children`,
           listOf(childSchema),
         )) {
@@ -389,10 +394,9 @@ export async function scanCloud(api: ConfluenceApi, context: ScanContext, spaceK
   if (checkpoint.step === "permissions") {
     const groups = new Map<string, string | null>();
     let read = false;
-    for (
-      let path: string | null = checkpoint.next ?? `/api/v2/spaces/${space.sourceId}/permissions`;
-      path;
-    ) {
+    const first = checkpoint.next ?? `/api/v2/spaces/${space.sourceId}/permissions`;
+    const guard = new ListingGuard(first, reportStoppedListing(context));
+    for (let path: string | null = first; path; ) {
       const page = await api.json(path, listOf(permissionSchema));
       if (!page) break;
       read = true;
@@ -439,7 +443,7 @@ export async function scanCloud(api: ConfluenceApi, context: ScanContext, spaceK
           });
         }
       }
-      path = nextPath(page._links?.next);
+      path = await guard.follow(nextPath(page._links?.next));
       if (path) await save({ step: "permissions", next: path, after: null });
     }
     if (!read) await context.problem("permissionsUnavailable", {});
@@ -464,6 +468,7 @@ export async function scanCloud(api: ConfluenceApi, context: ScanContext, spaceK
   if (checkpoint.step === "templates") {
     for await (const template of listing(
       api,
+      context,
       `/rest/api/template/page?expand=body&limit=100&spaceKey=${encodeURIComponent(space.data.key)}&start=0`,
       listOf(templateSchema),
     )) {
@@ -570,7 +575,7 @@ async function details(
     await stageMentions(context, body);
   }
   const labels = content.labels?.meta?.hasMore
-    ? listing(api, `/api/v2/${collection}/${pageId}/labels`, listOf(labelSchema))
+    ? listing(api, context, `/api/v2/${collection}/${pageId}/labels`, listOf(labelSchema))
     : (content.labels?.results ?? []);
   for await (const label of labels) {
     const prefix = (label.prefix ?? "global").trim().toLowerCase();
@@ -586,7 +591,7 @@ async function details(
     });
   }
   const properties = content.properties?.meta?.hasMore
-    ? listing(api, `/api/v2/${collection}/${pageId}/properties`, listOf(propertySchema))
+    ? listing(api, context, `/api/v2/${collection}/${pageId}/properties`, listOf(propertySchema))
     : (content.properties?.results ?? []);
   for await (const property of properties) {
     if (property.key !== PAGE_STATUS_PROPERTY) continue;
@@ -604,7 +609,12 @@ async function details(
     });
   }
   if (!blog) {
-    for await (const child of listing(api, `/api/v2/pages/${pageId}/direct-children`, listOf(childSchema))) {
+    for await (const child of listing(
+      api,
+      context,
+      `/api/v2/pages/${pageId}/direct-children`,
+      listOf(childSchema),
+    )) {
       if (child.type === "page") continue;
       if ((await context.staging.get(kinds.page, [child.id])).size > 0) continue;
       await stageChild(api, child, stageNode);
@@ -663,7 +673,8 @@ async function comments(
   const inline = kind === "inline-comments";
   const first = `/api/v2/${collection}/${pageId}/${kind}?body-format=storage${inline ? `&${RESOLUTION_STATUSES}` : ""}`;
   const queue: string[] = [];
-  for await (const comment of listing(api, first, listOf(commentSchema), refused)) queue.push(comment.id);
+  for await (const comment of listing(api, context, first, listOf(commentSchema), refused))
+    queue.push(comment.id);
   for (let index = 0; index < queue.length; index += 1) {
     const commentId = queue[index] as string;
     const comment = await api.json(
@@ -718,6 +729,7 @@ async function comments(
     }
     for await (const child of listing(
       api,
+      context,
       `/api/v2/${kind}/${commentId}/children?body-format=storage`,
       listOf(commentSchema),
     )) {
@@ -735,6 +747,7 @@ async function attachments(
 ): Promise<void> {
   for await (const attachment of listing(
     api,
+    context,
     `/api/v2/${collection}/${pageId}/attachments`,
     listOf(attachmentSchema),
     refused,
@@ -744,6 +757,7 @@ async function attachments(
     const versions = [];
     for await (const version of listing(
       api,
+      context,
       `/api/v2/attachments/${attachment.id}/versions`,
       listOf(versionSchema),
     )) {
@@ -792,6 +806,7 @@ async function history(
 ): Promise<void> {
   for await (const version of listing(
     api,
+    context,
     `/api/v2/${collection}/${pageId}/versions?body-format=storage`,
     listOf(historySchema),
   )) {

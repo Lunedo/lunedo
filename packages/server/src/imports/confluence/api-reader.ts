@@ -10,6 +10,7 @@ import { signalImportChange } from "../signals.js";
 import type { ReadContext, ScanContext } from "../source.js";
 import { ConfluenceApi, type ConfluenceConnection, type ConfluenceTransport } from "./api-client.js";
 import { scanCloud } from "./cloud-scan.js";
+import { ListingGuard, type ListingStopped, reportStoppedListing } from "./paging.js";
 import {
   confluenceDate,
   formerTitleRecord,
@@ -255,13 +256,15 @@ async function* pages<T>(
   api: ConfluenceApi,
   first: string,
   schema: z.ZodType<{ results: T[]; _links?: { next?: string | null | undefined } | undefined }>,
+  stopped?: ListingStopped,
 ): AsyncGenerator<T> {
+  const guard = new ListingGuard(first, stopped);
   let path: string | null = first;
   while (path) {
     const page = await api.json(path, schema);
     if (!page) return;
     for (const item of page.results) yield item;
-    path = nextPath(page._links?.next);
+    path = await guard.follow(nextPath(page._links?.next));
   }
 }
 
@@ -365,10 +368,15 @@ export class ConfluenceApiReader extends StagedConfluenceReader {
     const key = encodeURIComponent(space.key);
     const parents = new Map<string, string | null>();
     const titles = new Map<string, string>();
+    let complete = true;
+    const stopped = async () => {
+      complete = false;
+    };
     for await (const content of pages(
       api,
       apiPath(`/content?spaceKey=${key}&type=page&status=current&limit=100&expand=ancestors`),
       contentListSchema,
+      stopped,
     )) {
       parents.set(content.id, (content.ancestors ?? []).at(-1)?.id ?? null);
       titles.set(content.id, content.title);
@@ -379,6 +387,7 @@ export class ConfluenceApiReader extends StagedConfluenceReader {
       api,
       apiPath(`/content?spaceKey=${key}&type=blogpost&status=current&limit=100`),
       contentListSchema,
+      stopped,
     )) {
       blogPosts += 1;
       if (blogPosts >= MAX_TREE_PAGES) break;
@@ -402,13 +411,13 @@ export class ConfluenceApiReader extends StagedConfluenceReader {
       trees.set(top, entry);
     }
     let bytes = 0;
-    let complete = true;
     let read = 0;
     const cql = encodeURIComponent(`space="${space.key.replace(/"/g, "")}" and type=attachment`);
     for await (const attachment of pages(
       api,
       apiPath(`/content/search?cql=${cql}&limit=200&expand=container,extensions`),
       attachmentSearchSchema,
+      stopped,
     )) {
       read += 1;
       if (read > MAX_SIZED_ATTACHMENTS) {
@@ -463,6 +472,7 @@ export class ConfluenceApiReader extends StagedConfluenceReader {
       checkpoint = next;
       await context.saveCheckpoint({ ...next });
     };
+    const stopped = reportStoppedListing(context);
     const users = new Set<string>();
     const user = async (value: ApiUser | null | undefined): Promise<string | null> => {
       const key = userKeyOf(value);
@@ -571,6 +581,7 @@ export class ConfluenceApiReader extends StagedConfluenceReader {
       if (checkpoint.step !== step) continue;
       const wanted = type === "page" || (selected.size === 0 && context.options.blogPosts !== false);
       let path: string | null = wanted ? (checkpoint.next ?? listing(type)) : null;
+      const guard = new ListingGuard(path ?? listing(type), stopped);
       let count = 0;
       while (path) {
         const page = await api.json(path, contentListSchema);
@@ -580,7 +591,7 @@ export class ConfluenceApiReader extends StagedConfluenceReader {
           await stageContent(content, type === "blogpost");
           count += 1;
         }
-        path = nextPath(page._links?.next);
+        path = await guard.follow(nextPath(page._links?.next));
         if (!path) break;
         await context.progress({ done: count, total: count + LIST_LIMIT });
         await save({ step, next: path, after: null });
@@ -646,6 +657,7 @@ export class ConfluenceApiReader extends StagedConfluenceReader {
           `/template/page?spaceKey=${encodeURIComponent(spaceRecord.key)}&expand=body.storage&limit=50`,
         ),
         templateListSchema,
+        stopped,
       )) {
         const body = template.body?.storage?.value;
         if (body === undefined) continue;
@@ -685,6 +697,10 @@ export class ConfluenceApiReader extends StagedConfluenceReader {
       contentListSchema,
     );
     if (comments === null) await skipped("comments");
+    const commentPages = new ListingGuard(
+      apiPath(`/content/${pageId}/child/comment`),
+      reportStoppedListing(context),
+    );
     let path: string | null = null;
     let current = comments;
     for (;;) {
@@ -733,7 +749,7 @@ export class ConfluenceApiReader extends StagedConfluenceReader {
           });
         }
       }
-      path = nextPath(current?._links?.next);
+      path = await commentPages.follow(nextPath(current?._links?.next));
       if (!path) break;
       current = await api.json(path, contentListSchema);
     }
@@ -742,6 +758,10 @@ export class ConfluenceApiReader extends StagedConfluenceReader {
       contentListSchema,
     );
     if (attachments === null) await skipped("attachments");
+    const attachmentPages = new ListingGuard(
+      apiPath(`/content/${pageId}/child/attachment`),
+      reportStoppedListing(context),
+    );
     while (attachments) {
       for (const attachment of attachments.results) {
         const sourceId = attachmentId(attachment.id);
@@ -768,7 +788,7 @@ export class ConfluenceApiReader extends StagedConfluenceReader {
           });
         }
       }
-      const next = nextPath(attachments._links?.next);
+      const next = await attachmentPages.follow(nextPath(attachments._links?.next));
       attachments = next ? await api.json(next, contentListSchema) : null;
     }
     const restrictions = await api.json(
@@ -823,6 +843,7 @@ export class ConfluenceApiReader extends StagedConfluenceReader {
       api,
       apiPath(`/content/${pageId}/version?limit=50`),
       versionListSchema,
+      reportStoppedListing(context),
     )) {
       if (version.number >= current || version.number < 1) continue;
       const content = await api.json(
