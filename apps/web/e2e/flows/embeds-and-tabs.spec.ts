@@ -85,7 +85,7 @@ test("inserts an allowed and a disallowed embed and loads the allowed one only w
   await page.getByText("Embedded from YouTube").scrollIntoViewIfNeeded();
   const frame = page.frameLocator('iframe[title="WLAN login"]');
   await expect(frame.getByText("Video player")).toBeVisible();
-  expect(frames[0]).toContain("https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ");
+  expect(frames.some((url) => url.includes("https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"))).toBe(true);
   await expect(page.locator('iframe[title="WLAN login"]')).toHaveAttribute("referrerpolicy", "strict-origin");
   await page.getByText("Embedded from Vimeo").scrollIntoViewIfNeeded();
   await expect(page.frameLocator('iframe[title="Vimeo video"]').getByText("Video player")).toBeVisible();

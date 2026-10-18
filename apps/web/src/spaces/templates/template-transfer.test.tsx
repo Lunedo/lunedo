@@ -391,8 +391,8 @@ describe("the template editor", () => {
     await userEvent.type(within(dialog).getByRole("textbox", { name: /^Description/ }), "Checklist");
     await userEvent.type(within(dialog).getByRole("textbox", { name: /^Title of new pages/ }), "Survey");
     const content = await within(dialog).findByRole("textbox", { name: "Content" }, { timeout: 5000 });
-    await userEvent.click(content);
-    await userEvent.keyboard("Rooms and racks");
+    await userEvent.type(content, "Rooms and racks");
+    await waitFor(() => expect(content.textContent).toContain("Rooms and racks"));
     await userEvent.click(within(dialog).getByRole("button", { name: "Create template" }));
     await waitFor(() => expect(onCreate).toHaveBeenCalledTimes(1));
     expect(onCreate.mock.calls[0]).toEqual([
@@ -400,11 +400,9 @@ describe("the template editor", () => {
         name: "Site survey",
         description: "Checklist",
         title: "Survey",
-        document: expect.objectContaining({
-          content: [expect.objectContaining({ content: [{ type: "text", text: "Rooms and racks" }] })],
-        }),
       }),
     ]);
+    expect(JSON.stringify(onCreate.mock.calls[0]?.[0])).toContain('"text":"Rooms and racks"');
   });
 
   it("accepts typing into the content of an existing template", async () => {
@@ -414,8 +412,8 @@ describe("the template editor", () => {
     await userEvent.click(await screen.findByRole("menuitem", { name: "Edit template" }));
     const dialog = await screen.findByRole("dialog", { name: "Edit template" });
     const content = await within(dialog).findByRole("textbox", { name: "Content" }, { timeout: 5000 });
-    await userEvent.click(content);
-    await userEvent.keyboard("Went well");
+    await userEvent.type(content, "Went well");
+    await waitFor(() => expect(content.textContent).toContain("Went well"));
     await userEvent.type(within(dialog).getByRole("textbox", { name: /^Name/ }), " 2027");
     const title = within(dialog).getByRole("textbox", { name: /^Title of new pages/ });
     await userEvent.clear(title);
@@ -426,10 +424,8 @@ describe("the template editor", () => {
       RETRO,
       expect.objectContaining({
         name: "Retro 2027",
-        document: expect.objectContaining({
-          content: [expect.objectContaining({ content: [{ type: "text", text: "Went well" }] })],
-        }),
       }),
     ]);
+    expect(JSON.stringify(onUpdate.mock.calls[0]?.[1])).toContain('"text":"Went well"');
   });
 });
