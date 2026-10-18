@@ -10,8 +10,8 @@ import { initI18n } from "../i18n/index.js";
 
 const labels: UiLabels = {
   close: "Close",
-  sortAscending: "Sorted ascending",
-  sortDescending: "Sorted descending",
+  sortAscending: "Sort ascending",
+  sortDescending: "Sort descending",
   notSorted: "Not sorted",
   previousPage: "Previous page",
   nextPage: "Next page",

@@ -957,8 +957,8 @@
     "previousPage": "Vorherige Seite",
     "required": "erforderlich",
     "showPassword": "Passwort anzeigen",
-    "sortAscending": "Aufsteigend sortiert",
-    "sortDescending": "Absteigend sortiert",
+    "sortAscending": "Aufsteigend sortieren",
+    "sortDescending": "Absteigend sortieren",
     "breadcrumbs": "Pfadnavigation",
     "notifications": "Benachrichtigungen",
     "decrease": "Verringern",
@@ -4687,6 +4687,7 @@
       "otherSpace": "Ein anderer Space",
       "allSpaces": "Alle Spaces, die ich lesen kann",
       "labels": "Labels",
+      "moreOptions": "Weitere Optionen",
       "searchLabel": "Label suchen oder eingeben",
       "newLabel": "Neues Label",
       "labelHint": "Label eingeben, um danach zu filtern.",
@@ -4845,6 +4846,7 @@
       "setIdLabel": "ID der Seiteneigenschaften"
     },
     "propertiesReport": {
+      "newColumn": "Noch auf keiner Seite",
       "title": "Bericht zu Seiteneigenschaften",
       "loadFailed": "Die Seiten des Berichts konnten nicht geladen werden.",
       "empty": "Keine Seite, die Sie sehen können, hat Seiteneigenschaften, die zu den Filtern passen.",

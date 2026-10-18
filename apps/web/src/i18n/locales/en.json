@@ -957,8 +957,8 @@
     "previousPage": "Previous page",
     "required": "required",
     "showPassword": "Show password",
-    "sortAscending": "Sorted ascending",
-    "sortDescending": "Sorted descending",
+    "sortAscending": "Sort ascending",
+    "sortDescending": "Sort descending",
     "breadcrumbs": "Breadcrumbs",
     "notifications": "Notifications",
     "decrease": "Decrease",
@@ -4687,6 +4687,7 @@
       "otherSpace": "Another space",
       "allSpaces": "All spaces I can read",
       "labels": "Labels",
+      "moreOptions": "More options",
       "searchLabel": "Search or type a label",
       "newLabel": "New label",
       "labelHint": "Type a label to filter by it.",
@@ -4845,6 +4846,7 @@
       "setIdLabel": "ID of the page properties"
     },
     "propertiesReport": {
+      "newColumn": "Not on any page yet",
       "title": "Page properties report",
       "loadFailed": "The pages of the report could not be loaded.",
       "empty": "No pages you can see have page properties that match the filters.",

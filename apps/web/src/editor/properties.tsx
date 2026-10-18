@@ -375,9 +375,9 @@ export function PropertiesReportSettings({
               .replaceAll(",", " ")
               .slice(0, MAX_PROPERTY_KEY_LENGTH);
             const matching = keys.filter((key) => key.toLowerCase().includes(typed.toLowerCase()));
-            const items = columnItems(matching);
+            const items: ComboboxItem[] = columnItems(matching);
             if (typed && !keys.some((key) => key.toLowerCase() === typed.toLowerCase())) {
-              items.unshift({ value: typed, label: typed });
+              items.push({ value: typed, label: typed, marker: t("editor.propertiesReport.newColumn") });
             }
             return { items };
           }}
@@ -420,43 +420,50 @@ export function PropertiesReportSettings({
             }))}
         />
       </Field>
-      <Field
-        label={t("editor.propertiesReport.firstColumn")}
-        hint={t("editor.propertiesReport.firstColumnHint")}
-      >
-        <Input
-          value={firstColumn}
-          maxLength={MAX_PROPERTY_KEY_LENGTH}
-          placeholder={t("editor.pageReport.page")}
-          onChange={(event) => setFirstColumn(event.target.value)}
-          onBlur={() => onChange({ firstColumn: firstColumn.trim() })}
-        />
-      </Field>
-      <Field label={t("editor.propertiesReport.setId")} hint={t("editor.propertiesReport.setIdHint")}>
-        <Input
-          value={setId}
-          maxLength={MAX_PROPERTY_SET_ID_LENGTH}
-          onChange={(event) => setSetId(event.target.value)}
-          onBlur={() => onChange({ setId: setId.trim() || null })}
-        />
-      </Field>
-      <div className="flex flex-col gap-2 sm:col-span-2">
-        <Checkbox
-          checked={report.reverse}
-          onCheckedChange={(reverse) => onChange({ reverse })}
-          label={t("editor.reports.reverse")}
-        />
-        <Checkbox
-          checked={display.showCreator}
-          onCheckedChange={(showCreator) => onChange({ showCreator })}
-          label={t("editor.propertiesReport.showCreator")}
-        />
-        <Checkbox
-          checked={display.showLabels}
-          onCheckedChange={(showLabels) => onChange({ showLabels })}
-          label={t("editor.propertiesReport.showLabels")}
-        />
-      </div>
+      <details className="rounded-md border border-border sm:col-span-2">
+        <summary className="flex min-h-hit cursor-pointer items-center rounded-md px-4 py-2 font-medium focus-visible:focus-ring">
+          {t("editor.reports.moreOptions")}
+        </summary>
+        <div className="grid gap-3 border-t border-border p-4 sm:grid-cols-2">
+          <Field
+            label={t("editor.propertiesReport.firstColumn")}
+            hint={t("editor.propertiesReport.firstColumnHint")}
+          >
+            <Input
+              value={firstColumn}
+              maxLength={MAX_PROPERTY_KEY_LENGTH}
+              placeholder={t("editor.pageReport.page")}
+              onChange={(event) => setFirstColumn(event.target.value)}
+              onBlur={() => onChange({ firstColumn: firstColumn.trim() })}
+            />
+          </Field>
+          <Field label={t("editor.propertiesReport.setId")} hint={t("editor.propertiesReport.setIdHint")}>
+            <Input
+              value={setId}
+              maxLength={MAX_PROPERTY_SET_ID_LENGTH}
+              onChange={(event) => setSetId(event.target.value)}
+              onBlur={() => onChange({ setId: setId.trim() || null })}
+            />
+          </Field>
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <Checkbox
+              checked={report.reverse}
+              onCheckedChange={(reverse) => onChange({ reverse })}
+              label={t("editor.reports.reverse")}
+            />
+            <Checkbox
+              checked={display.showCreator}
+              onCheckedChange={(showCreator) => onChange({ showCreator })}
+              label={t("editor.propertiesReport.showCreator")}
+            />
+            <Checkbox
+              checked={display.showLabels}
+              onCheckedChange={(showLabels) => onChange({ showLabels })}
+              label={t("editor.propertiesReport.showLabels")}
+            />
+          </div>
+        </div>
+      </details>
     </div>
   );
 }
