@@ -945,12 +945,25 @@ export async function leaveOutUnreadablePage(
   pageId: string,
   title: string,
 ): Promise<void> {
-  await context.staging.flush();
-  for (const child of await context.staging.children<{ title: string }>(kinds.page, pageId)) {
-    await keepRestricted(context, child.sourceId, child.data.title, "parent");
-  }
   await context.staging.removeIds(kinds.page, [pageId]);
   await context.problem("pageUnreadable", { title: title.slice(0, 255) });
+}
+
+export async function keepOrphansRestricted(context: ScanContext, roots: ReadonlySet<string>): Promise<void> {
+  await context.staging.flush();
+  const pages = new Map<string, { parentId: string | null; title: string }>();
+  for await (const record of context.staging.iterate<{ title: string }>(kinds.page)) {
+    pages.set(record.sourceId, { parentId: record.parentId, title: record.data.title });
+  }
+  for (const [pageId, page] of pages) {
+    if (!page.parentId || pages.has(page.parentId) || roots.has(pageId)) continue;
+    const own = await context.staging.byRef<StagedRestriction>(kinds.restriction, [pageId]);
+    await context.staging.removeIds(
+      kinds.restriction,
+      own.filter((record) => record.data.kind === "view").map((record) => record.sourceId),
+    );
+    await keepRestricted(context, pageId, page.title, "parent");
+  }
 }
 
 export async function stageRestrictions(staging: StagingStore): Promise<void> {

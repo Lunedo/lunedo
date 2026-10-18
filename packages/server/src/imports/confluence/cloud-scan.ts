@@ -7,6 +7,7 @@ import {
   confluenceDate,
   contentKind,
   formerTitleRecord,
+  keepOrphansRestricted,
   keepRestricted,
   kinds,
   leaveOutUnreadablePage,
@@ -493,7 +494,7 @@ export async function scanCloud(api: ConfluenceApi, context: ScanContext, spaceK
     }
     await save({ step: "done", next: null, after: null });
   }
-  await context.staging.flush();
+  await keepOrphansRestricted(context, selected);
   await context.staging.orderTree(kinds.page, selected.size > 0 ? [...selected] : []);
   await reportTrashed(context, space.sourceId);
 }

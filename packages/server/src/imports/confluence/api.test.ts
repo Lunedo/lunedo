@@ -860,6 +860,23 @@ describe.skipIf(!baseUrl)("Confluence API imports", () => {
             body: "<p>Details</p>",
             creatorKey: ALICE.key,
           },
+          {
+            id: "7106",
+            title: "Guide folder",
+            parentId: "7101",
+            position: 2,
+            body: "",
+            creatorKey: ALICE.key,
+            kind: "folder",
+          },
+          {
+            id: "7107",
+            title: "Folder page",
+            parentId: "7106",
+            position: 0,
+            body: "<p>In the folder</p>",
+            creatorKey: ALICE.key,
+          },
         ],
       };
     }
@@ -944,6 +961,7 @@ describe.skipIf(!baseUrl)("Confluence API imports", () => {
         const found = await restricted(view.id);
         expect(found.get("Guide")).toBe(true);
         expect(found.get("Guide details")).toBe(true);
+        if (kind === "cloud") expect(found.get("Folder page")).toBe(true);
         expect(found.get("Notes")).toBe(false);
         expect(await reported(owner, view.id, "restrictionsUnreadable")).toEqual([
           { title: "Guide", reason: "restrictions" },
@@ -964,14 +982,22 @@ describe.skipIf(!baseUrl)("Confluence API imports", () => {
         expect(view.state).toBe("review");
         const found = await restricted(view.id);
         expect(found.has("Guide")).toBe(false);
+        expect(found.has("Guide folder")).toBe(false);
         expect(found.get("Guide details")).toBe(true);
         expect(found.get("Secret")).toBe(true);
+        expect(found.get("Folder page")).toBe(true);
         expect(found.get("Notes")).toBe(false);
+        const readers = await test.database.execute(sql`
+          select 1 from page_restriction_holders h join tree_items t on t.id = h.item_id
+          join imports i on i.quarantine_space_id = t.space_id
+          where i.id = ${view.id} and t.title = 'Secret' and h.kind = 'view'`);
+        expect(readers.rows).toEqual([]);
         expect(await reported(owner, view.id, "pageUnreadable")).toEqual([{ title: "Guide" }]);
         expect(await reported(owner, view.id, "restrictionsUnreadable")).toEqual(
           expect.arrayContaining([
             { title: "Guide details", reason: "parent" },
             { title: "Secret", reason: "parent" },
+            { title: "Folder page", reason: "parent" },
           ]),
         );
       },
