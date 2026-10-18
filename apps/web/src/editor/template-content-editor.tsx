@@ -6,6 +6,7 @@ import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } fro
 import { useTranslation } from "react-i18next";
 import { problemMessage } from "../errors/problem-message.js";
 import { AttachmentSourceProvider } from "../files/attachment-source.js";
+import { uploadQueue } from "../files/upload-queue.js";
 import { type EditorActions, registerEditorActions } from "./actions.js";
 import { EmbedDialog } from "./embed-dialog.js";
 import { EmojiPicker } from "./emoji-picker.js";
@@ -46,7 +47,16 @@ export function TemplateContentEditor({
   const editorRef = useRef<Editor | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(0);
-  const upload = images?.upload ?? null;
+  const direct = images?.upload ?? null;
+  const latest = useRef(direct);
+  latest.current = direct;
+  const queued = useRef(
+    uploadQueue((file: File) => {
+      const current = latest.current;
+      return current ? current(file) : Promise.reject(new Error("The template is not saved yet"));
+    }),
+  );
+  const upload = direct ? queued.current : null;
   const insertImages = useCallback(
     (files: File[], position: number | null) => {
       if (!upload) return;
