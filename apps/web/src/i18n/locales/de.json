@@ -5929,6 +5929,8 @@
     "placeholder": "Kommentar schreiben",
     "newPageComment": "Neuer Kommentar zur Seite",
     "newInline": "Kommentar zum markierten Text",
+    "newOnElement": "Kommentar zum ausgewählten Element",
+    "newBoardComment": "Neuer Kommentar zum Whiteboard",
     "replyLabel": "Antwort",
     "editLabel": "Kommentar bearbeiten",
     "comment": "Kommentieren",
@@ -8546,7 +8548,7 @@
       "attachment": "Anhang",
       "topic": "Laufendes Thema",
       "decision": "Entscheidung",
-      "whiteboard": "Whiteboards"
+      "whiteboard": "Whiteboard"
     },
     "quick": {
       "label": "Suche",
@@ -9014,6 +9016,7 @@
       "embed": "Eingebettete Webinhalte sind auf Whiteboards noch nicht verfügbar. Füge stattdessen einen Link ein.",
       "other": "Ein Element enthält etwas, das Whiteboards nicht speichern können, etwa einen Link, der nicht mit http, https oder einer Pagehall-Adresse beginnt. Mach die Änderung rückgängig oder ändere den Link."
     },
+    "menu": "Whiteboard-Menü",
     "stickyNote": {
       "add": "Haftnotiz",
       "placeholder": "Notiz"

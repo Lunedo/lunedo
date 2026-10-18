@@ -20,6 +20,7 @@ import {
   Move,
   Presentation,
   Smartphone,
+  StickyNote,
   Trash2,
 } from "lucide-react";
 import {
@@ -253,8 +254,10 @@ export function WhiteboardView({
     [t, toast],
   );
 
+  const [boardReady, setBoardReady] = useState(false);
   const onReady = useCallback((ready: BoardHandle) => {
     handle.current = ready;
+    setBoardReady(true);
   }, []);
 
   const onLocalChange = useCallback(() => {
@@ -306,6 +309,15 @@ export function WhiteboardView({
               <>
                 {editing ? <SaveStateIndicator state={snapshot.saveState} /> : null}
                 {editing ? <AvatarStack self={self} others={others} /> : null}
+                {editing && boardReady ? (
+                  <Button
+                    variant="secondary"
+                    icon={StickyNote}
+                    onClick={() => handle.current?.addStickyNote()}
+                  >
+                    {t("whiteboards.stickyNote.add")}
+                  </Button>
+                ) : null}
                 {commentButton}
                 {share}
                 <StarButton target={{ itemId: board.id }} title={board.title} />

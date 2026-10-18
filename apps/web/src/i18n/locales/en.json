@@ -5929,6 +5929,8 @@
     "placeholder": "Write a comment",
     "newPageComment": "New comment on the page",
     "newInline": "Comment on the selected text",
+    "newOnElement": "Comment on the selected element",
+    "newBoardComment": "New comment on the whiteboard",
     "replyLabel": "Reply",
     "editLabel": "Edit comment",
     "comment": "Comment",
@@ -8546,7 +8548,7 @@
       "attachment": "Attachment",
       "topic": "Running topic",
       "decision": "Decision",
-      "whiteboard": "Whiteboards"
+      "whiteboard": "Whiteboard"
     },
     "quick": {
       "label": "Search",
@@ -9014,6 +9016,7 @@
       "embed": "Embedded web content is not available on whiteboards yet. Add a link instead.",
       "other": "An element contains something whiteboards cannot store, such as a link that does not start with http, https or a Pagehall address. Undo the change or edit the link."
     },
+    "menu": "Whiteboard menu",
     "stickyNote": {
       "add": "Sticky note",
       "placeholder": "Note"
