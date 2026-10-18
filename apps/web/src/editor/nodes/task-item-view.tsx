@@ -21,7 +21,11 @@ export function TaskItemView({ node, editor, updateAttributes }: NodeViewProps) 
   const assignee = (node.attrs.assignee as string | null) ?? null;
   const dueDate = (node.attrs.dueDate as string | null) ?? null;
   const assigneeName = usePersonName(assignee ?? "");
-  const statuses = useQuery({ ...taskStatusesQuery(page?.pageId ?? ""), enabled: page !== null });
+  const statuses = useQuery({
+    ...taskStatusesQuery(page?.pageId ?? ""),
+    enabled: page !== null,
+    throwOnError: false,
+  });
   const editable = useEditable(editor);
   const setStatus = useSetTaskStatus(page?.pageId ?? null, { onPage: editable });
   const hintId = useId();

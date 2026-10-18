@@ -1,10 +1,11 @@
 import { ToastProvider, TooltipProvider, type UiLabels, UiProvider } from "@pagehall/ui";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
 import type { i18n } from "i18next";
 import type { ReactNode } from "react";
 import { I18nextProvider } from "react-i18next";
 import { vi } from "vitest";
+import { createQueryClient } from "../api/query-client.js";
 import { initI18n } from "../i18n/index.js";
 
 const labels: UiLabels = {
@@ -60,8 +61,10 @@ export async function renderWithProviders(
   seed?: (queryClient: QueryClient) => void,
 ): Promise<{ queryClient: QueryClient; i18n: i18n }> {
   const instance: i18n = await initI18n([language]);
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  const queryClient = createQueryClient();
+  queryClient.setDefaultOptions({
+    ...queryClient.getDefaultOptions(),
+    queries: { ...queryClient.getDefaultOptions().queries, retry: false },
   });
   seed?.(queryClient);
   render(

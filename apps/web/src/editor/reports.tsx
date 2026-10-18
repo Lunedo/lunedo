@@ -247,7 +247,12 @@ function ParentField({
   onChange: (parentId: string | null) => void;
 }) {
   const { t } = useTranslation();
-  const parent = useQuery({ ...itemQuery(parentId ?? ""), enabled: parentId !== null, retry: false });
+  const parent = useQuery({
+    ...itemQuery(parentId ?? ""),
+    enabled: parentId !== null,
+    retry: false,
+    throwOnError: false,
+  });
   return (
     <Field label={t("editor.decisionReport.parent")} hint={t("editor.decisionReport.parentHint")}>
       <Combobox
@@ -274,6 +279,7 @@ export function PageReportTable({ request: report }: { request: PageReportReques
   const format = useFormat();
   const pages = useQuery({
     queryKey: ["reports", "pages", report],
+    throwOnError: false,
     queryFn: () =>
       request(() =>
         api.GET("/api/v1/reports/pages", {
@@ -387,6 +393,7 @@ export function DecisionReportList({ request: report }: { request: DecisionRepor
   const format = useFormat();
   const decisions = useInfiniteQuery({
     queryKey: ["reports", "decisions", report],
+    throwOnError: false,
     initialPageParam: null as string | null,
     queryFn: ({ pageParam }) =>
       request(() =>

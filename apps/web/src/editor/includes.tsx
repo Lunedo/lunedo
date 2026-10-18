@@ -69,6 +69,7 @@ export function IncludedContent({
   const content = useQuery({
     queryKey: ["pages", hostId, "inclusion", include],
     enabled: target && !loop && !tooDeep,
+    throwOnError: false,
     retry: (count, error) => !notFound(error) && count < 2,
     queryFn: () =>
       request(() =>
@@ -162,7 +163,12 @@ function IncludeSettings({
 }) {
   const { t } = useTranslation();
   const pageId = textOrNull(attrs.pageId);
-  const target = useQuery({ ...itemQuery(pageId ?? ""), enabled: pageId !== null, retry: false });
+  const target = useQuery({
+    ...itemQuery(pageId ?? ""),
+    enabled: pageId !== null,
+    retry: false,
+    throwOnError: false,
+  });
   const [name, setName] = useState(String(attrs.name ?? ""));
   const imported = textOrNull(attrs.sourceTitle);
   return (

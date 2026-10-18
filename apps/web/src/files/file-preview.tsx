@@ -72,6 +72,7 @@ function FramedPreview({
     queryFn: ({ signal }) => fetchBytes(source.url(attachment.version), signal),
     staleTime: 0,
     gcTime: 0,
+    throwOnError: false,
   });
   const onFailed = useCallback(() => setFailed(true), []);
   if (attachment.size > FRAME_LIMITS[kind]) {
@@ -169,7 +170,7 @@ function Versions({ attachment, canEdit }: { attachment: Attachment; canEdit: bo
   const format = useFormat();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const versions = useQuery(versionsQuery(attachment.id));
+  const versions = useQuery({ ...versionsQuery(attachment.id), throwOnError: false });
   const [restoring, setRestoring] = useState<number | null>(null);
   const [keeping, setKeeping] = useState<number | null>(null);
   if (versions.isPending) return <Skeleton className="h-12 w-full" />;

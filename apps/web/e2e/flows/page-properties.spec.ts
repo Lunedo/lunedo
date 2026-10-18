@@ -100,3 +100,72 @@ test("collects page properties of two pages in a report on a third page and incl
   await table.getByRole("link", { name: "Site Graz" }).click();
   await expect(page).toHaveURL(new RegExp(graz.id));
 });
+
+test("renders a page for a reader who cannot see the pages and whiteboard it includes", async ({
+  page,
+  organization,
+}) => {
+  await page.goto("/spaces");
+  const space = async (name: string, visibility: string, grants: unknown[]) => {
+    const key = `IN${unique()}`;
+    const created = (await callApi(page, "POST", `/api/v1/organizations/${organization.id}/spaces`, {
+      name,
+      key,
+      visibility,
+      grants,
+    })) as { id: string };
+    return { id: created.id, key };
+  };
+  const operations = await space("IT Operations", "organization", [
+    { principalKind: "organizationMembers", principalId: null, role: "reader" },
+  ]);
+  const security = await space("Security", "private", []);
+  const published = async (spaceId: string, title: string, content: unknown[]) => {
+    const created = (await callApi(page, "POST", `/api/v1/spaces/${spaceId}/items`, {
+      kind: "page",
+      title,
+      parentId: null,
+      mode: "publish",
+    })) as { id: string };
+    await callApi(page, "PUT", `/api/v1/pages/${created.id}/content`, { document: { type: "doc", content } });
+    await callApi(page, "POST", `/api/v1/pages/${created.id}/publish`, {});
+    return created.id;
+  };
+  const paragraph = (text: string) => ({ type: "paragraph", content: [{ type: "text", text }] });
+  const incident = await published(security.id, "Incident response", [
+    {
+      type: "excerpt",
+      attrs: { name: null, hidden: false },
+      content: [paragraph("Call the security lead.")],
+    },
+  ]);
+  const board = (await callApi(page, "POST", `/api/v1/spaces/${security.id}/items`, {
+    kind: "whiteboard",
+    title: "Threat model",
+    parentId: null,
+  })) as { id: string };
+  const sites = await published(operations.id, "Network sites", [
+    paragraph("Every site has two uplinks."),
+    { type: "includeExcerpt", attrs: { pageId: incident, name: null, panel: true } },
+    { type: "includePage", attrs: { pageId: incident } },
+    { type: "whiteboard", attrs: { whiteboardId: board.id } },
+    paragraph("Ask the network team for changes."),
+  ]);
+
+  const reader = await organization.invite("Chris");
+  const second = await organization.signIn(reader);
+  try {
+    await second.page.goto(`/spaces/${operations.key}/pages/${sites}/network-sites`);
+    await expect(second.page.getByText("Every site has two uplinks.")).toBeVisible();
+    await expect(second.page.getByText("Ask the network team for changes.")).toBeVisible();
+    await expect(second.page.getByText("Page not found")).toHaveCount(0);
+    await expect(second.page.getByText("Call the security lead.")).toHaveCount(0);
+    await expect(second.page.getByText("Incident response")).toHaveCount(0);
+    await expect(second.page.getByText("Threat model")).toHaveCount(0);
+  } finally {
+    await second.context.close();
+  }
+
+  await page.goto(`/spaces/${operations.key}/pages/${sites}/network-sites`);
+  await expect(page.getByText("Call the security lead.").first()).toBeVisible();
+});

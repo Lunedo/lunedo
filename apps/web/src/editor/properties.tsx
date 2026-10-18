@@ -201,6 +201,7 @@ export function PropertiesReportTable({
   const result = useQuery({
     queryKey: ["reports", "properties", report, sort, offset],
     placeholderData: keepPreviousData,
+    throwOnError: false,
     queryFn: () =>
       request(() =>
         api.GET("/api/v1/reports/properties", {
@@ -464,6 +465,7 @@ function useReportKeys(report: PropertiesReportRequest, enabled: boolean): strin
   const keys = useQuery({
     queryKey: ["reports", "properties", "keys", report.spaceIds, report.labels, report.setId],
     enabled,
+    throwOnError: false,
     queryFn: () =>
       request(() =>
         api.GET("/api/v1/reports/properties", {

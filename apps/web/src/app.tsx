@@ -1,27 +1,11 @@
 import { ToastProvider, TooltipProvider, type UiLabels, UiProvider } from "@pagehall/ui";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import type { i18n } from "i18next";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { I18nextProvider, useTranslation } from "react-i18next";
-import { ApiError } from "./api/request.js";
+import { createQueryClient } from "./api/query-client.js";
 import { createAppRouter } from "./router.js";
-
-export function createQueryClient(): QueryClient {
-  return new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: (failures, error) => {
-          if (error instanceof ApiError && error.status > 0 && error.status < 500) return false;
-          return failures < 2;
-        },
-        throwOnError: (error, query) =>
-          query.state.data === undefined && !(error instanceof ApiError && error.status === 401),
-      },
-      mutations: { retry: false },
-    },
-  });
-}
 
 function TranslatedUi({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
@@ -103,3 +87,4 @@ export function App({ i18n, queryClient: providedClient }: { i18n: i18n; queryCl
     </I18nextProvider>
   );
 }
+export { createQueryClient };

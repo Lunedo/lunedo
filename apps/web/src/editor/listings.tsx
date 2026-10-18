@@ -108,7 +108,7 @@ function ChildLevel({
   request: ChildPagesRequest;
 }) {
   const { t } = useTranslation();
-  const children = useQuery({ ...childrenQuery(spaceId, parentId), retry: false });
+  const children = useQuery({ ...childrenQuery(spaceId, parentId), retry: false, throwOnError: false });
   if (children.isPending) return level === 1 ? <SkeletonText lines={2} /> : null;
   if (children.isError) {
     if (hidden(children.error)) return level === 1 ? <Empty text={t("editor.childPages.empty")} /> : null;
@@ -154,7 +154,12 @@ export function ChildPagesList({
 }) {
   const { t } = useTranslation();
   const rootId = request.pageId ?? currentPageId;
-  const root = useQuery({ ...itemQuery(rootId ?? ""), enabled: rootId !== null, retry: false });
+  const root = useQuery({
+    ...itemQuery(rootId ?? ""),
+    enabled: rootId !== null,
+    retry: false,
+    throwOnError: false,
+  });
   if (!rootId) return <Empty text={t("editor.childPages.ofThisPageLater")} />;
   if (root.isPending) return <SkeletonText lines={2} />;
   if (root.isError) {
@@ -183,7 +188,12 @@ export function AttachmentList({
   const { t } = useTranslation();
   const format = useFormat();
   const preview = useAttachmentPreview();
-  const attachments = useQuery({ ...attachmentsQuery(pageId ?? ""), enabled: pageId !== null, retry: false });
+  const attachments = useQuery({
+    ...attachmentsQuery(pageId ?? ""),
+    enabled: pageId !== null,
+    retry: false,
+    throwOnError: false,
+  });
   if (!pageId) return <Empty text={t("editor.attachmentList.ofThisPageLater")} />;
   if (attachments.isPending) return <SkeletonText lines={2} />;
   if (attachments.isError) {
@@ -245,6 +255,7 @@ export function ChildPagesSettings({
     ...itemQuery(request.pageId ?? ""),
     enabled: request.pageId !== null,
     retry: false,
+    throwOnError: false,
   });
   const scope = request.pageId || choosing ? "other" : "this";
   return (
