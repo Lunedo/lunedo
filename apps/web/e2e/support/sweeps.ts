@@ -9,7 +9,14 @@ export const APPEARANCES = [
 export const WIDTHS = [1440, 390] as const;
 
 export async function screenshot(page: Page, file: string): Promise<void> {
+  const viewport = page.viewportSize();
+  const hidden = await page.evaluate(() => {
+    const main = document.querySelector("#main");
+    return main ? main.scrollHeight - main.clientHeight : 0;
+  });
+  if (viewport && hidden > 0) await page.setViewportSize({ ...viewport, height: viewport.height + hidden });
   await page.screenshot({ fullPage: true, path: test.info().outputPath(file) });
+  if (viewport && hidden > 0) await page.setViewportSize(viewport);
   await test.info().attach(file, { path: test.info().outputPath(file), contentType: "image/png" });
 }
 

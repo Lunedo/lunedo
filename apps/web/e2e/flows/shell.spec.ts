@@ -160,3 +160,74 @@ test("keeps long German labels inside the layout at desktop width", async ({ pag
   }
   await setAppearance(page, { language: "en", textSize: 1 });
 });
+
+test("scrolls only the content area while rail, sidebar and editor toolbar stay in place", async ({
+  page,
+  organization,
+}) => {
+  await page.goto("/spaces");
+  const key = `SC${Date.now().toString(36).toUpperCase().slice(-6)}`;
+  const space = (await callApi(page, "POST", `/api/v1/organizations/${organization.id}/spaces`, {
+    name: "Long pages",
+    key,
+    visibility: "private",
+    grants: [],
+  })) as { id: string };
+  const created = (await callApi(page, "POST", `/api/v1/spaces/${space.id}/items`, {
+    kind: "page",
+    title: "Long page",
+    parentId: null,
+    mode: "publish",
+  })) as { id: string };
+  const paragraphs = Array.from({ length: 120 }, (_, index) => ({
+    type: "paragraph",
+    content: [{ type: "text", text: `Paragraph ${index + 1} of a long page about the network.` }],
+  }));
+  await callApi(page, "PUT", `/api/v1/pages/${created.id}/content`, {
+    document: { type: "doc", content: paragraphs },
+  });
+  await callApi(page, "POST", `/api/v1/pages/${created.id}/publish`, {});
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  const expectOnlyContentScrolls = async (path: string, stays: string[]) => {
+    const before = await Promise.all(stays.map((selector) => page.locator(selector).first().boundingBox()));
+    await page.locator("#main").hover();
+    await page.mouse.wheel(0, 2000);
+    await expect
+      .poll(() => page.locator("#main").evaluate((main) => main.scrollTop), { message: path })
+      .toBeGreaterThan(0);
+    expect(await page.evaluate(() => window.scrollY), path).toBe(0);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight),
+      path,
+    ).toBeLessThanOrEqual(0);
+    const after = await Promise.all(stays.map((selector) => page.locator(selector).first().boundingBox()));
+    expect(
+      after.map((box) => box?.y),
+      path,
+    ).toEqual(before.map((box) => box?.y));
+  };
+
+  const pagePath = `/spaces/${key}/pages/${created.id}/long-page`;
+  await page.goto(pagePath);
+  await expect(page.getByText("Paragraph 120 of a long page about the network.")).toBeAttached();
+  await expectOnlyContentScrolls(pagePath, [
+    "nav[aria-label='Main navigation']",
+    "nav[aria-label^='Navigation of']",
+  ]);
+
+  await page.goto(`${pagePath}?edit=true`);
+  await expect(page.getByRole("textbox", { name: "Page content" })).toBeEditable();
+  await expectOnlyContentScrolls(`${pagePath}?edit=true`, ["nav[aria-label='Main navigation']"]);
+  const toolbar = await page.locator(".ph-editor-bar").boundingBox();
+  const main = await page.locator("#main").boundingBox();
+  expect(toolbar?.y).toBeGreaterThanOrEqual(main?.y ?? 0);
+  expect(toolbar?.y).toBeLessThan((main?.y ?? 0) + 10);
+
+  await page.goto("/settings/instance/rendering");
+  await expect(page.locator("#main h1")).toBeVisible();
+  await expectOnlyContentScrolls("/settings/instance/rendering", [
+    "nav[aria-label='Main navigation']",
+    "nav[aria-label='Settings']",
+  ]);
+});

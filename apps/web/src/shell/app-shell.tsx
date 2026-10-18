@@ -98,7 +98,7 @@ function ShellFrame() {
 
   return (
     <ShellStateContext value={state}>
-      <div className="flex h-full bg-bg text-text">
+      <div className="relative flex h-full overflow-hidden bg-bg text-text">
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-surface focus:p-2 focus:shadow-popover"
@@ -127,13 +127,13 @@ function ShellFrame() {
             ))}
         </Rail>
         {notificationsOpen ? <NotificationPanel onClose={() => setNotificationsOpen(false)} /> : null}
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <AnnouncementBanners />
           <InsecureProvidersBanner />
           <MissingGroupsBanner />
           <WithoutOrganizationBanner />
           <WithheldRolesBanner />
-          <div className="flex min-w-0 flex-1">
+          <div className="flex min-h-0 min-w-0 flex-1">
             <Outlet />
           </div>
         </div>
