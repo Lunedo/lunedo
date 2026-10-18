@@ -820,7 +820,7 @@ export class ImportPipeline {
         }
         let stored: Awaited<ReturnType<FileService["write"]>>;
         try {
-          stored = await this.#files.write(stream, { name, maxBytes: limit });
+          stored = await this.#files.write(stream, { name, maxBytes: limit, attachment: true });
         } catch (error) {
           stream.destroy();
           if (error instanceof FileTooLargeError) {

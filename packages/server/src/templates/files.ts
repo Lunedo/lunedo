@@ -135,7 +135,7 @@ export class TemplateFileService {
   }
 
   async store(bytes: Buffer, name: string, maxBytes: number): Promise<StoredFile> {
-    return this.#files.write(Readable.from([bytes]), { name, maxBytes });
+    return this.#files.write(Readable.from([bytes]), { name, maxBytes, attachment: true });
   }
 
   async attach(

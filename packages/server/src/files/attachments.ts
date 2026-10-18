@@ -266,7 +266,7 @@ export class AttachmentService {
       input.body.resume();
       throw error;
     }
-    const stored = await this.#files.write(input.body, { name, maxBytes: limit });
+    const stored = await this.#files.write(input.body, { name, maxBytes: limit, attachment: true });
     try {
       const attachmentId = await this.#database.transaction(async (tx) => {
         const location = await this.#location(tx, itemId);

@@ -3,12 +3,14 @@ import { Readable } from "node:stream";
 import { buffer } from "node:stream/consumers";
 import { uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
+import sharp from "sharp";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { accountPrincipal, type Principal } from "../accounts/principal.js";
 import { SettingAboveMaximumError, SettingLockedError } from "../settings/service.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { spaceFixtures } from "../testing/spaces.js";
+import { gpsFields } from "./exif.testing.js";
 import { FileTooLargeError } from "./files.js";
 import { keepVersionsMaximumSetting, keepVersionsSetting, maxFileSizeSetting } from "./settings.js";
 
@@ -95,6 +97,25 @@ describe.skipIf(!baseUrl)("attachments", () => {
     }
     throw new Error("No session waited for a lock");
   }
+
+  it("removes the location from the metadata of an uploaded photo and keeps the image", async () => {
+    const context = await setup();
+    const photo = await sharp({ create: { width: 40, height: 20, channels: 3, background: "#228844" } })
+      .withExif({ IFD3: { GPSLatitudeRef: "N", GPSLatitude: "47/1 4/1 12/1" } })
+      .withMetadata({ orientation: 3 })
+      .jpeg()
+      .toBuffer();
+    const uploaded = await upload(context, "photo.jpg", photo);
+    const content = await test.services.attachments.content(uploaded.id, "draft");
+    const stored = await buffer(await test.services.files.read(content?.fileId ?? ""));
+    expect(stored.length).toBe(photo.length);
+    expect(stored.equals(photo)).toBe(false);
+    expect(gpsFields((await sharp(photo).metadata()).exif)).toBeGreaterThan(0);
+    const metadata = await sharp(stored).metadata();
+    expect(gpsFields(metadata.exif)).toBe(0);
+    expect(metadata.orientation).toBe(3);
+    expect((await sharp(stored).raw().toBuffer()).equals(await sharp(photo).raw().toBuffer())).toBe(true);
+  });
 
   it("lists name, type and size and keeps a new version for the same name", async () => {
     const context = await setup();

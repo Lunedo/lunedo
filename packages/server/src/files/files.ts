@@ -1,5 +1,11 @@
 import type { Hmac } from "node:crypto";
-import { pipeline as chain, type Readable, Transform, type TransformCallback } from "node:stream";
+import {
+  pipeline as chain,
+  PassThrough,
+  type Readable,
+  Transform,
+  type TransformCallback,
+} from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
@@ -21,6 +27,7 @@ import type { Database, Executor } from "../database/database.js";
 import type { Logger } from "../logging/logger.js";
 import type { ValueSigner } from "../sharing/signer.js";
 import type { StorageUsage } from "../storage/usage.js";
+import { LocationStripper } from "./location-metadata.js";
 import { type DetectedType, detectType, SNIFF_BYTES } from "./sniff.js";
 import type { ByteRange, FileStore } from "./store.js";
 
@@ -119,7 +126,7 @@ export class FileService {
 
   async write(
     body: Readable,
-    options: { name: string; maxBytes: number; executor?: Executor },
+    options: { name: string; maxBytes: number; executor?: Executor; attachment?: boolean },
   ): Promise<StoredFile> {
     const executor = options.executor ?? this.#database;
     const id = uuidv7();
@@ -137,7 +144,8 @@ export class FileService {
     let counted = 0;
     try {
       let failure: Error | null = null;
-      const encrypted = chain(body, inspector, encrypt, (error) => {
+      const strip = options.attachment === true ? new LocationStripper() : new PassThrough();
+      const encrypted = chain(body, strip, inspector, encrypt, (error) => {
         failure = error ?? null;
       });
       const stored = await this.#store.write(key, encrypted).catch((error: unknown) => {
