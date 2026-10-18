@@ -108,6 +108,29 @@ describe.skipIf(!baseUrl)("Markdown folder imports", () => {
     return { organization, view };
   }
 
+  it("suggests the front matter title of the root index file as the space name", async () => {
+    const organization = await fixtures.organization();
+    const analyzed = async (files: ZipFileSpec[]) => {
+      const id = await harness.analyzedFiles({
+        organizationId: organization.id,
+        admin: organization.owner,
+        source: "markdown",
+        files: [{ name: "handbook.zip", data: createZip(files) }],
+      });
+      const row = await test.database.execute<{ space_name: string | null; space_key: string | null }>(
+        sql`select space_name, space_key from imports where id = ${id}`,
+      );
+      return row.rows[0];
+    };
+    const titled = wiki.map((file) =>
+      file.name === "handbook/README.md"
+        ? { ...file, data: "---\ntitle: Team handbook\n---\nStart with the guides.\n" }
+        : file,
+    );
+    expect(await analyzed(titled)).toMatchObject({ space_name: "Team handbook" });
+    expect(await analyzed(wiki)).toMatchObject({ space_name: "handbook" });
+  });
+
   it("turns folders into the page tree with index files, front matter, links, images and diagrams", async () => {
     const { organization, view } = await importWiki(wiki, "MDWIKI");
     expect(view.state).toBe("review");

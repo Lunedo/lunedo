@@ -4,7 +4,7 @@ import { ImportFormatError } from "../errors.js";
 import type { ByteSource } from "../formats/bytes.js";
 import { DEFAULT_ZIP_LIMITS, ZipArchive, type ZipEntryLocation, type ZipLimits } from "../formats/zip.js";
 import type { ScanContext } from "../source.js";
-import { convertMarkdown, type MarkdownLookup } from "./convert.js";
+import { convertMarkdown, type MarkdownLookup, parseFrontMatter, splitFrontMatter } from "./convert.js";
 
 export const MARKDOWN_ZIP_LIMITS: ZipLimits = { ...DEFAULT_ZIP_LIMITS, maxEntries: 100_000 };
 export const MAX_MARKDOWN_BYTES = 5 * 1024 * 1024;
@@ -263,12 +263,15 @@ export class MarkdownReader extends StagedConfluenceReader {
         await context.problem("unsupportedMarkdown", { file: entry.path, construct: "tooLarge" });
       }
     }
-    const spaceName = displayName(tree.root || "Markdown");
+    const folderName = displayName(tree.root || "Markdown");
     const rootIndex = tree.folders.get("")?.index ?? null;
+    const spaceName = rootIndex
+      ? ((await this.#frontMatterTitle(archive, tree, rootIndex)) ?? folderName)
+      : folderName;
     await context.staging.put({
       kind: kinds.space,
       sourceId: `md:${tree.root || "markdown"}`,
-      data: { key: spaceName, name: spaceName, homePageId: rootIndex ? pageIdOf(rootIndex) : null },
+      data: { key: folderName, name: spaceName, homePageId: rootIndex ? pageIdOf(rootIndex) : null },
     });
     const skip = typeof context.checkpoint.files === "number" ? context.checkpoint.files : 0;
     for (const [index, path] of tree.markdown.entries()) {
@@ -303,6 +306,14 @@ export class MarkdownReader extends StagedConfluenceReader {
     await context.staging.flush();
     await context.staging.orderTree(kinds.page, rootIndex ? [pageIdOf(rootIndex)] : []);
     await context.saveCheckpoint({ files: tree.markdown.length });
+  }
+
+  async #frontMatterTitle(archive: ZipArchive, tree: MarkdownTree, path: string): Promise<string | null> {
+    const entry = tree.files.get(path);
+    if (!entry || entry.size > MAX_MARKDOWN_BYTES) return null;
+    const { yaml } = splitFrontMatter(await readText(archive, entry));
+    const title = parseFrontMatter(yaml, () => undefined).title?.trim();
+    return title ? title.slice(0, 100) : null;
   }
 
   async #page(archive: ZipArchive, tree: MarkdownTree, path: string, context: ScanContext): Promise<void> {
