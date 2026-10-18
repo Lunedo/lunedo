@@ -24,6 +24,7 @@ import {
   type RelatedLabel,
   type WordRenderer,
 } from "../module.js";
+import { clearedAttributes } from "../portable.js";
 import { element, markdownUrl } from "../text.js";
 import { labelsValue, spaceIdsValue } from "../values.js";
 import { type WordContent, wordText } from "../word.js";
@@ -322,6 +323,7 @@ export const contentByLabelModule = defineModule({
         title: optional(z.string().max(MAX_LABEL_BLOCK_TITLE), ""),
         query: optional(z.string().min(1).max(MAX_IMPORTED_QUERY_LENGTH).nullable(), null),
       },
+      portable: clearedAttributes("report", { spaceIds: [], query: null }),
       html: contentByLabelHtml,
       word: contentByLabelWord,
       markdown: contentByLabelMarkdown,

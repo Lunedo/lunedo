@@ -16,7 +16,7 @@ import {
   Textarea,
   useToast,
 } from "@pagehall/ui";
-import { LayoutTemplate, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Download, FileUp, LayoutTemplate, Pencil, Plus, Trash2, X } from "lucide-react";
 import { lazy, Suspense, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LoadError } from "../../errors/failure.js";
@@ -24,6 +24,8 @@ import { problemMessage } from "../../errors/problem-message.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import type { PageTemplate, TemplateField } from "../content-queries.js";
 import { TEMPLATE_CATEGORIES, type TemplateCategory } from "./template-categories.js";
+import { BuiltInExport, ExportDialog, ImportDialog } from "./template-transfer.js";
+import type { TemplateLevelApi } from "./template-transfer-api.js";
 
 const TemplateContentEditor = lazy(() =>
   import("../../editor/template-content-editor.js").then((module) => ({
@@ -50,6 +52,8 @@ export function TemplatesManager({
   error,
   onRetry,
   canManage,
+  transfer,
+  onImported,
   onCreate,
   onUpdate,
   onDelete,
@@ -59,6 +63,8 @@ export function TemplatesManager({
   error: unknown;
   onRetry: () => void;
   canManage: boolean;
+  transfer: TemplateLevelApi;
+  onImported: () => Promise<void>;
   onCreate: (input: TemplateInput) => Promise<unknown>;
   onUpdate: (id: string, input: TemplateInput) => Promise<unknown>;
   onDelete: (id: string) => Promise<unknown>;
@@ -68,14 +74,63 @@ export function TemplatesManager({
   const { toast } = useToast();
   const [editing, setEditing] = useState<PageTemplate | "new" | null>(null);
   const [deleting, setDeleting] = useState<PageTemplate | null>(null);
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  const [exporting, setExporting] = useState<string[] | null | false>(false);
+  const [importing, setImporting] = useState(false);
   if (error) return <LoadError what={t("templates.loadFailed")} error={error} onRetry={onRetry} />;
+  const rows = templates ?? [];
+  const chosen = rows.filter((template) => selected.has(template.id)).map((template) => template.id);
+  const toggle = (id: string, checked: boolean) =>
+    setSelected((current) => {
+      const next = new Set(current);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  const selection = canManage
+    ? [
+        {
+          key: "select",
+          header: (
+            <Checkbox
+              aria-label={t("templates.selectAll")}
+              checked={rows.length > 0 && chosen.length === rows.length}
+              onCheckedChange={(checked) =>
+                setSelected(checked ? new Set(rows.map((template) => template.id)) : new Set())
+              }
+            />
+          ),
+          cell: (template: PageTemplate) => (
+            <Checkbox
+              aria-label={t("templates.select", { name: template.name })}
+              checked={selected.has(template.id)}
+              onCheckedChange={(checked) => toggle(template.id, checked)}
+            />
+          ),
+        },
+      ]
+    : [];
   return (
     <div className="flex flex-col gap-4">
       {canManage ? (
-        <div>
+        <div className="flex flex-wrap gap-2">
           <Button variant="primary" icon={Plus} onClick={() => setEditing("new")}>
             {t("templates.create")}
           </Button>
+          <Button variant="secondary" icon={FileUp} onClick={() => setImporting(true)}>
+            {t("templates.import")}
+          </Button>
+          {rows.length > 0 ? (
+            <Button
+              variant="secondary"
+              icon={Download}
+              onClick={() => setExporting(chosen.length > 0 ? chosen : null)}
+            >
+              {chosen.length > 0
+                ? t("templates.exportSelected", { count: chosen.length })
+                : t("templates.exportAll")}
+            </Button>
+          ) : null}
         </div>
       ) : null}
       <Table
@@ -100,6 +155,7 @@ export function TemplatesManager({
           />
         }
         columns={[
+          ...selection,
           {
             key: "name",
             header: t("templates.name"),
@@ -162,6 +218,7 @@ export function TemplatesManager({
       />
       <TemplateDialog
         template={editing}
+        transfer={transfer}
         onOpenChange={(open) => !open && setEditing(null)}
         onSave={async (input) => {
           if (editing === "new") await onCreate(input);
@@ -170,6 +227,18 @@ export function TemplatesManager({
           setEditing(null);
         }}
       />
+      {canManage ? (
+        <>
+          <ExportDialog
+            api={transfer}
+            templateIds={exporting === false ? null : exporting}
+            open={exporting !== false}
+            onOpenChange={(open) => !open && setExporting(false)}
+          />
+          <ImportDialog api={transfer} open={importing} onOpenChange={setImporting} onImported={onImported} />
+          <BuiltInExport api={transfer} />
+        </>
+      ) : null}
       <ConfirmDialog
         open={deleting !== null}
         onOpenChange={(open) => !open && setDeleting(null)}
@@ -198,10 +267,12 @@ export function TemplatesManager({
 
 function TemplateDialog({
   template,
+  transfer,
   onOpenChange,
   onSave,
 }: {
   template: PageTemplate | "new" | null;
+  transfer: TemplateLevelApi;
   onOpenChange: (open: boolean) => void;
   onSave: (input: TemplateInput) => Promise<void>;
 }) {
@@ -217,6 +288,7 @@ function TemplateDialog({
         <TemplateForm
           key={template === "new" ? "new" : template.id}
           template={template === "new" ? null : template}
+          transfer={transfer}
           onCancel={() => onOpenChange(false)}
           onSave={onSave}
         />
@@ -245,10 +317,12 @@ function toDraft(field: TemplateField): FieldDraft {
 
 function TemplateForm({
   template,
+  transfer,
   onCancel,
   onSave,
 }: {
   template: PageTemplate | null;
+  transfer: TemplateLevelApi;
   onCancel: () => void;
   onSave: (input: TemplateInput) => Promise<void>;
 }) {
@@ -467,6 +541,10 @@ function TemplateForm({
           <TemplateContentEditor
             initial={document}
             label={t("templates.content")}
+            images={{
+              url: (fileId) => (template ? transfer.fileUrl(template.id, fileId) : ""),
+              upload: template ? (file) => transfer.uploadImage(template.id, file) : null,
+            }}
             fields={fields
               .filter((field) => KEY_PATTERN.test(field.key))
               .map((field) => ({ key: field.key, label: field.label }))}

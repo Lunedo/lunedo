@@ -2,6 +2,7 @@ import { z } from "zod";
 import { copyAttachmentAttributes } from "../copying.js";
 import type { ValidNode } from "../json.js";
 import { attrOf, defineModule, type HtmlRenderer, optional, required } from "../module.js";
+import { portableFiles } from "../portable.js";
 import { element, htmlAttributes, markdownUrl } from "../text.js";
 import { uuidValue } from "../values.js";
 import { wordText } from "../word.js";
@@ -41,6 +42,17 @@ export const drawingModule = defineModule({
         ["sceneId", "sceneVersion"],
         ["previewId", "previewVersion"],
       ]),
+      portable: (attrs, context) => {
+        const portable = portableFiles(
+          [
+            ["sceneId", "sceneVersion", "drawingScene"],
+            ["previewId", "previewVersion", "drawingPreview"],
+          ],
+          { localId: "id" },
+        )(attrs, context);
+        if (!portable || portable.sceneId !== null) return portable;
+        return { ...portable, previewId: null, previewVersion: null };
+      },
       validate: (node) => {
         const scene = attrOf<string | null>(node, "sceneId");
         const preview = attrOf<string | null>(node, "previewId");

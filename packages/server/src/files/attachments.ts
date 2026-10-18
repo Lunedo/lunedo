@@ -578,13 +578,22 @@ export class AttachmentService {
       "spaceId" in scope
         ? sql`t.space_id = ${scope.spaceId}`
         : sql`s.organization_id = ${scope.organizationId}`;
+    const templates =
+      "spaceId" in scope
+        ? sql`p.space_id = ${scope.spaceId}`
+        : sql`p.organization_id = ${scope.organizationId}
+            or p.space_id in (select id from spaces where organization_id = ${scope.organizationId})`;
     const result = await this.#database.execute<{ bytes: string | null; files: string }>(sql`
       select coalesce(sum(f.size), 0) as bytes, count(*) as files
       from (
-        select distinct v.attachment_id, v.file_id from attachment_versions v
+        select distinct v.attachment_id as owner_id, v.file_id from attachment_versions v
         join attachments a on a.id = v.attachment_id
         join tree_items t on t.id = a.item_id join spaces s on s.id = t.space_id
-        where ${filter}) used
+        where ${filter}
+        union
+        select distinct tf.template_id, tf.file_id from template_files tf
+        join page_templates p on p.id = tf.template_id
+        where ${templates}) used
       join stored_files f on f.id = used.file_id`);
     return { bytes: Number(result.rows[0]?.bytes ?? 0), files: Number(result.rows[0]?.files ?? 0) };
   }

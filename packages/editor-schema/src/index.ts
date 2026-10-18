@@ -2,8 +2,16 @@ import { addInlineCommentMark, hasAnchor, type TextAnchor } from "./anchors.js";
 import { copiedAttachments, copyDocument } from "./copying.js";
 import type { DocumentJson } from "./json.js";
 import { createEditorKit, type Section } from "./kit.js";
-import type { CopiedAttachment, CopyMapping, Heading, RenderContext } from "./module.js";
+import type {
+  CopiedAttachment,
+  CopyMapping,
+  FileRole,
+  Heading,
+  PortableContext,
+  RenderContext,
+} from "./module.js";
 import { createDefaultRegistry } from "./modules/index.js";
+import { fileReferencesDocument, type PortableRemovals, portableDocument } from "./portable.js";
 import type { ValidationResult } from "./validate.js";
 import type { WordBlock } from "./word.js";
 
@@ -76,7 +84,7 @@ export {
   migrateDocument,
   migrations,
 } from "./migrations.js";
-export type { CopiedAttachment, CopyMapping } from "./module.js";
+export type { CopiedAttachment, CopyMapping, FileRole, PortableContext, PortableRemoval } from "./module.js";
 export {
   type AttributeSpec,
   attrOf,
@@ -91,6 +99,7 @@ export {
   decisionReportOrders,
   defineModule,
   type EditorModule,
+  fileRoles,
   type Heading,
   type HtmlRenderer,
   type IncludedContent,
@@ -111,6 +120,7 @@ export {
   type PropertiesReport,
   type PropertiesReportRequest,
   pageReportSorts,
+  portableRemovals,
   type ReferencedDiagram,
   type ReferencedWhiteboard,
   type RelatedLabel,
@@ -206,6 +216,7 @@ export {
   templateTitlePattern,
   titlePatternFields,
 } from "./modules/templates.js";
+export type { PortableRemovals } from "./portable.js";
 export { defaultLabels, formatBytes, headingNumbers, MAX_EXPENSIVE_RENDER_COST } from "./render.js";
 export { escapeHtml, markdownUrl, slugify } from "./text.js";
 export {
@@ -303,6 +314,20 @@ export function copyPageDocument(doc: DocumentJson, mapping: CopyMapping): Docum
 
 export function documentAttachments(doc: DocumentJson): CopiedAttachment[] {
   return copiedAttachments(modules, doc);
+}
+
+export function portableTemplateDocument(
+  doc: DocumentJson,
+  context: Omit<PortableContext, "removed" | "strips" | "renewsIds">,
+): { document: DocumentJson; removed: PortableRemovals } {
+  return portableDocument(modules, doc, { ...context, strips: () => true, renewsIds: true });
+}
+
+export function rewriteFileReferences(
+  doc: DocumentJson,
+  file: (reference: CopiedAttachment, role: FileRole) => CopiedAttachment | null,
+): { document: DocumentJson; missing: number } {
+  return fileReferencesDocument(modules, doc, file);
 }
 
 export function plainText(doc: DocumentJson): string {

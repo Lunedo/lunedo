@@ -1,4 +1,5 @@
 import { attrOf, defineModule, optional, required } from "../module.js";
+import { removedNode } from "../portable.js";
 import { element, inlineCode, markdownUrl, wrapDelimited } from "../text.js";
 import { type ContentColor, colorValue, hrefValue, uuidValue } from "../values.js";
 
@@ -10,6 +11,11 @@ export const linkModule = defineModule({
       spec: { inclusive: false },
       attrs: { href: required(hrefValue) },
       copy: (attrs, mapping) => ({ ...attrs, href: mapping.href(String(attrs.href)) }),
+      portable: (attrs, context) => {
+        if (!context.strips("pageLink") || !context.isInternalHref(String(attrs.href))) return attrs;
+        context.removed("pageLink");
+        return null;
+      },
       html: (mark, content, renderer) => {
         const href = renderer.safeHref(attrOf<string>(mark, "href"));
         if (!href) return content;
@@ -117,6 +123,7 @@ export const inlineCommentModule = defineModule({
       spec: { inclusive: false, excludes: "" },
       attrs: { threadId: required(uuidValue) },
       copy: () => null,
+      portable: removedNode("comment"),
       html: (mark, content) =>
         element("span", { class: "ph-comment", "data-thread-id": attrOf<string>(mark, "threadId") }, content),
       word: (_mark, style) => style,

@@ -245,7 +245,7 @@ function GalleryContent({
       )}
       {template ? (
         <div className="grid min-w-0 gap-4 md:grid-cols-2">
-          <TemplatePreview template={template} />
+          <TemplatePreview template={template} spaceId={space.id} />
           <div className="flex flex-col gap-3">
             {template.series ? (
               <p className="text-sm text-text-muted">{t("gallery.seriesTemplate")}</p>
@@ -326,19 +326,24 @@ function TemplateCard({
   );
 }
 
-function TemplatePreview({ template }: { template: PageTemplate }) {
+function TemplatePreview({ template, spaceId }: { template: PageTemplate; spaceId: string }) {
   const { t } = useTranslation();
   const format = useFormat();
   const html = useMemo(() => {
     try {
       return renderHtml(template.document, {
-        ...readViewContext({ people: {}, pages: {} }, t, format),
+        ...readViewContext(
+          { people: {}, pages: {} },
+          t,
+          format,
+          (fileId) => `/api/v1/spaces/${spaceId}/templates/${template.id}/files/${fileId}/content`,
+        ),
         showPlaceholders: true,
       });
     } catch {
       return null;
     }
-  }, [template.document, t, format]);
+  }, [template.document, template.id, spaceId, t, format]);
   return (
     <section aria-label={t("gallery.preview")} className="flex min-w-0 flex-col gap-2">
       <h3 className="text-sm font-semibold text-text-muted">{t("gallery.preview")}</h3>

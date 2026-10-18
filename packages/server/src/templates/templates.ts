@@ -1,16 +1,20 @@
 import {
   type DocumentJson,
+  documentAttachments,
   editorSchemaVersion,
   type NodeJson,
+  rewriteFileReferences,
   validateDocument,
 } from "@pagehall/editor-schema";
 import { isUuid, uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
-import type { Principal } from "../accounts/principal.js";
+import { accountPrincipal, type Principal } from "../accounts/principal.js";
 import { accountScopeChain } from "../accounts/scope.js";
 import type { AuditLog } from "../audit/audit-log.js";
-import type { Database, Executor } from "../database/database.js";
+import type { AuthorizationService } from "../authorization/service.js";
+import type { Database, Executor, Transaction } from "../database/database.js";
+import type { Logger } from "../logging/logger.js";
 import { rhythmSchema } from "../meetings/schedule.js";
 import { languageSetting } from "../settings/builtin.js";
 import type { SettingsService } from "../settings/service.js";
@@ -19,9 +23,12 @@ import { DocumentInvalidError, migrated, type PageDocumentService } from "../spa
 import type { Placement, TreeItem, TreeService } from "../spaces/items.js";
 import type { PeopleService } from "../spaces/people.js";
 import type { PageMode } from "../spaces/schema.js";
+import { visibleItem } from "../spaces/visibility.js";
+import type { StorageService } from "../storage/storage.js";
 import { builtInTemplates } from "./builtin/index.js";
 import { type SeriesDefaults, type TemplateLanguage, templateLanguages } from "./builtin/types.js";
 import { type TemplateField, templateFieldsSchema } from "./fields.js";
+import type { TemplateFileService } from "./files.js";
 import type { TemplateCategory, TemplateLevel } from "./schema.js";
 
 export const TEMPLATE_NAME_MAX_LENGTH = 100;
@@ -207,6 +214,9 @@ export class TemplateService {
   readonly #people: PeopleService;
   readonly #tree: TreeService;
   readonly #documents: PageDocumentService;
+  readonly #files: TemplateFileService;
+  readonly #authorization: AuthorizationService;
+  readonly #storage: StorageService;
 
   constructor(options: {
     database: Database;
@@ -215,6 +225,9 @@ export class TemplateService {
     people: PeopleService;
     tree: TreeService;
     documents: PageDocumentService;
+    files: TemplateFileService;
+    authorization: AuthorizationService;
+    storage: StorageService;
   }) {
     this.#database = options.database;
     this.#audit = options.audit;
@@ -222,6 +235,13 @@ export class TemplateService {
     this.#people = options.people;
     this.#tree = options.tree;
     this.#documents = options.documents;
+    this.#files = options.files;
+    this.#authorization = options.authorization;
+    this.#storage = options.storage;
+  }
+
+  get files(): TemplateFileService {
+    return this.#files;
   }
 
   async language(actor: Principal): Promise<TemplateLanguage> {
@@ -305,32 +325,57 @@ export class TemplateService {
     return template.spaceId ? { level: "space", spaceId: template.spaceId } : null;
   }
 
+  async insert(
+    tx: Transaction,
+    actor: Principal,
+    scope: TemplateScope,
+    clean: ReturnType<typeof cleanTemplate>,
+    id: string = uuidv7(),
+  ): Promise<string> {
+    await tx.execute(sql`
+      insert into page_templates (id, level, organization_id, space_id, name, description, category, title,
+        document, schema_version, fields, series, created_by, updated_by)
+      values (${id}, ${scope.level}, ${scope.level === "organization" ? scope.organizationId : null},
+        ${scope.level === "space" ? scope.spaceId : null}, ${clean.name}, ${clean.description}, ${clean.category},
+        ${clean.title}, ${JSON.stringify(clean.document)}::jsonb, ${editorSchemaVersion},
+        ${JSON.stringify(clean.fields)}::jsonb, ${clean.series === null ? null : JSON.stringify(clean.series)}::jsonb,
+        ${actorIdOf(actor)}, ${actorIdOf(actor)})`);
+    if (scope.level !== "space") {
+      const organizationId = scope.level === "organization" ? scope.organizationId : null;
+      await this.#audit.record(tx, {
+        name: "template.created",
+        actor,
+        targetId: id,
+        fields: { name: clean.name, level: scope.level, organizationId },
+        scope: auditScopeOf({ organizationId }),
+      });
+    }
+    return id;
+  }
+
   async create(actor: Principal, scope: TemplateScope, input: TemplateInput): Promise<PageTemplate> {
     const clean = cleanTemplate(input);
-    const id = uuidv7();
-    await this.#database.transaction(async (tx) => {
-      await tx.execute(sql`
-        insert into page_templates (id, level, organization_id, space_id, name, description, category, title,
-          document, schema_version, fields, series, created_by, updated_by)
-        values (${id}, ${scope.level}, ${scope.level === "organization" ? scope.organizationId : null},
-          ${scope.level === "space" ? scope.spaceId : null}, ${clean.name}, ${clean.description}, ${clean.category},
-          ${clean.title}, ${JSON.stringify(clean.document)}::jsonb, ${editorSchemaVersion},
-          ${JSON.stringify(clean.fields)}::jsonb, ${clean.series === null ? null : JSON.stringify(clean.series)}::jsonb,
-          ${actorIdOf(actor)}, ${actorIdOf(actor)})`);
-      if (scope.level !== "space") {
-        const organizationId = scope.level === "organization" ? scope.organizationId : null;
-        await this.#audit.record(tx, {
-          name: "template.created",
-          actor,
-          targetId: id,
-          fields: { name: clean.name, level: scope.level, organizationId },
-          scope: auditScopeOf({ organizationId }),
-        });
-      }
-    });
+    const document = rewriteFileReferences(clean.document, () => null).document;
+    const id = await this.#database.transaction((tx) =>
+      this.insert(tx, actor, scope, { ...clean, document }),
+    );
     const created = await this.get(id);
     if (!created) throw new SpaceError("templateNotFound", "The template does not exist");
     return created;
+  }
+
+  async pageFiles(spaceId: string, pageId: string): Promise<{ files: number; restricted: boolean }> {
+    const page = await this.#documents.snapshot(pageId);
+    const located = await this.#tree.spaceOf(pageId);
+    if (!page || located !== spaceId) throw new SpaceError("itemNotFound", "The page does not exist");
+    const ids = [...new Set(documentAttachments(page.document).map((reference) => reference.id))];
+    const result = await this.#database.execute<{ files: string | number; restricted: boolean }>(sql`
+      select (select count(*) from attachments a
+          where a.item_id = ${pageId} and a.deleted_at is null and a.id = any(${sql.param(ids)}::uuid[])) as files,
+        exists (select 1 from tree_items t join page_restrictions r on r.item_id = any(t.path) and r.kind = 'view'
+          where t.id = ${pageId}) as restricted`);
+    const row = result.rows[0];
+    return { files: Number(row?.files ?? 0), restricted: row?.restricted ?? false };
   }
 
   async saveFromPage(
@@ -343,11 +388,23 @@ export class TemplateService {
     const located = await this.#tree.spaceOf(pageId);
     if (!page || located !== spaceId) throw new SpaceError("itemNotFound", "The page does not exist");
     const title = input.title ?? (await this.#tree.get(actor, pageId))?.title ?? input.name;
-    return this.create(
-      actor,
-      { level: "space", spaceId },
-      { ...input, title, fields: [], document: page.document },
-    );
+    const clean = cleanTemplate({ ...input, title, fields: [], document: page.document });
+    if (documentAttachments(clean.document).length > 0) await this.#storage.requireUpload();
+    const id = await this.#database.transaction(async (tx) => {
+      const id = await this.insert(tx, actor, { level: "space", spaceId }, clean);
+      const adopted = await this.#files.adopt(tx, {
+        templateId: id,
+        actorId: actorIdOf(actor),
+        document: clean.document,
+        source: sql`a.item_id = ${pageId}`,
+      });
+      await tx.execute(sql`
+        update page_templates set document = ${JSON.stringify(adopted.document)}::jsonb where id = ${id}`);
+      return id;
+    });
+    const created = await this.get(id);
+    if (!created) throw new SpaceError("templateNotFound", "The template does not exist");
+    return created;
   }
 
   async update(actor: Principal, templateId: string, input: TemplateInput): Promise<PageTemplate> {
@@ -356,9 +413,11 @@ export class TemplateService {
     const current = await this.get(templateId);
     if (!scope || !current) throw new SpaceError("templateNotFound", "The template does not exist");
     await this.#database.transaction(async (tx) => {
+      await this.#adoptLocked(tx, templateId);
+      const document = await this.#files.keepOwn(tx, templateId, clean.document);
       await tx.execute(sql`
         update page_templates set name = ${clean.name}, description = ${clean.description},
-          category = ${clean.category}, title = ${clean.title}, document = ${JSON.stringify(clean.document)}::jsonb,
+          category = ${clean.category}, title = ${clean.title}, document = ${JSON.stringify(document)}::jsonb,
           schema_version = ${editorSchemaVersion}, fields = ${JSON.stringify(clean.fields)}::jsonb,
           series = ${clean.series === null ? null : JSON.stringify(clean.series)}::jsonb,
           updated_by = ${actorIdOf(actor)}, updated_at = now()
@@ -368,7 +427,7 @@ export class TemplateService {
           (key) => clean[key] !== current[key],
         ) as string[];
         if (JSON.stringify(clean.fields) !== JSON.stringify(current.fields)) changes.push("fields");
-        if (JSON.stringify(clean.document) !== JSON.stringify(current.document)) changes.push("content");
+        if (JSON.stringify(document) !== JSON.stringify(current.document)) changes.push("content");
         if (JSON.stringify(clean.series) !== JSON.stringify(current.series)) changes.push("series");
         await this.#audit.record(tx, {
           name: "template.updated",
@@ -389,6 +448,78 @@ export class TemplateService {
     const updated = await this.get(templateId);
     if (!updated) throw new SpaceError("templateNotFound", "The template does not exist");
     return updated;
+  }
+
+  async #adoptLocked(
+    tx: Transaction,
+    templateId: string,
+  ): Promise<{ adopted: number; missing: number } | null> {
+    const result = await tx.execute<{
+      level: TemplateLevel;
+      organization_id: string | null;
+      space_id: string | null;
+      document: unknown;
+      schema_version: number;
+      created_by: string | null;
+      updated_by: string | null;
+    }>(sql`
+      select level, organization_id, space_id, document, schema_version, created_by, updated_by
+      from page_templates where id = ${templateId} and not files_adopted for update`);
+    const row = result.rows[0];
+    if (!row) return null;
+    const unrestricted = sql`not exists (select 1 from page_restrictions r
+      where r.item_id = any(t.path) and r.kind = 'view')`;
+    const within =
+      row.level === "space"
+        ? sql`t.space_id = ${row.space_id}`
+        : row.level === "organization"
+          ? sql`s.organization_id = ${row.organization_id} and ${unrestricted}`
+          : unrestricted;
+    const authors = [...new Set([row.created_by, row.updated_by].filter((id): id is string => id !== null))];
+    const visible = authors.map(
+      (author) => sql`${visibleItem(this.#authorization, accountPrincipal(author), sql`t`, sql`s`)}`,
+    );
+    const source = authors.length > 0 ? sql`${within} and ${sql.join(visible, sql` and `)}` : sql`false`;
+    const adopted = await this.#files.adopt(tx, {
+      templateId,
+      actorId: row.created_by ?? row.updated_by,
+      document: migrated(row.document, row.schema_version),
+      source,
+    });
+    await tx.execute(sql`
+      update page_templates set document = ${JSON.stringify(adopted.document)}::jsonb,
+        schema_version = ${editorSchemaVersion}, files_adopted = true
+      where id = ${templateId}`);
+    return { adopted: adopted.adopted, missing: adopted.missing };
+  }
+
+  async ensureFiles(templateId: string): Promise<void> {
+    await this.#database.transaction((tx) => this.#adoptLocked(tx, templateId));
+  }
+
+  async hasPendingFiles(): Promise<boolean> {
+    const result = await this.#database.execute(
+      sql`select 1 from page_templates where not files_adopted limit 1`,
+    );
+    return result.rows.length > 0;
+  }
+
+  async adoptPendingFiles(logger: Logger, batch = 50): Promise<void> {
+    const totals = { templates: 0, files: 0, emptied: 0 };
+    for (;;) {
+      const pending = await this.#database.execute<{ id: string }>(
+        sql`select id from page_templates where not files_adopted order by id limit ${batch}`,
+      );
+      if (pending.rows.length === 0) break;
+      for (const { id } of pending.rows) {
+        const counts = await this.#database.transaction((tx) => this.#adoptLocked(tx, id));
+        if (!counts) continue;
+        totals.templates += 1;
+        totals.files += counts.adopted;
+        totals.emptied += counts.missing;
+      }
+    }
+    if (totals.templates > 0) logger.info(totals, "Templates took over the files they show");
   }
 
   async delete(actor: Principal, templateId: string): Promise<void> {
@@ -516,12 +647,20 @@ export class TemplateService {
     const title =
       input.title?.trim() || filled(input.titlePattern ?? "") || filled(template.title) || template.name;
     const document = { ...template.document, content: fill(template.document.content, values) ?? [] };
+    if (await this.#files.hasFiles(template.id)) await this.#storage.requireUpload();
     return this.#tree.create(actor, spaceId, {
       kind: "page",
       title,
       placement: input.placement,
       mode: input.mode,
-      document,
+      documentFor: (tx, itemId, mode) =>
+        this.#files.copyToPage(tx, {
+          templateId: template.id,
+          itemId,
+          live: mode === "live",
+          actorId: actorIdOf(actor),
+          document,
+        }),
     });
   }
 }

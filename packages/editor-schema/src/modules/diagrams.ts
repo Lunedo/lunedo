@@ -25,6 +25,7 @@ import {
   required,
   type WordRenderer,
 } from "../module.js";
+import { clearedAttributes, portableFiles } from "../portable.js";
 import { element, escapeHtml, fenceFor, htmlAttributes, markdownUrl } from "../text.js";
 import { uuidValue } from "../values.js";
 import { type WordContent, wordText } from "../word.js";
@@ -154,6 +155,13 @@ function diagramNode(
       text: optional(z.string().max(MAX_DRAWING_TEXT), ""),
     },
     copy: copyAttachmentAttributes([...attachments, ["previewId", "previewVersion"]]),
+    portable: portableFiles(
+      [
+        ...attachments.map(([id, version]) => [id, version, "diagramSource"] as const),
+        ["previewId", "previewVersion", "diagramPreview"],
+      ],
+      { localId: "id" },
+    ),
     validate: (node) => pair(node, "previewId", "previewVersion") ?? validate(node),
     html: (node, renderer) => diagramHtml(type, node, renderer, true),
     print: (node, renderer) => diagramHtml(type, node, renderer, false),
@@ -449,6 +457,11 @@ const drawioReference: NodeDefinition = {
     name: optional(z.string().max(255), ""),
   },
   validate: (node) => pair(node, "pageId", "diagramId"),
+  portable: clearedAttributes(
+    "diagramReference",
+    { pageId: null, diagramId: null, name: "" },
+    { localId: "id" },
+  ),
   html: referenceHtml,
   word: referenceWord,
   markdown: referenceMarkdown,

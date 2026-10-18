@@ -39,7 +39,19 @@ function model(key: string): SyntheticExport {
   return {
     space: { id: "50", key, name: "Projects", homePageId: SOURCE.home },
     users: [ALICE],
-    attachments: [],
+    attachments: [
+      {
+        pageId: SOURCE.other,
+        fileName: "logo.png",
+        versions: [
+          {
+            id: "4101",
+            version: 1,
+            data: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]),
+          },
+        ],
+      },
+    ],
     pages: [
       {
         id: SOURCE.home,
@@ -135,7 +147,12 @@ function model(key: string): SyntheticExport {
           ) +
           macro("roadmap", parameter("timeline", "true")),
       },
-      { id: TEMPLATE.followUp, name: "Follow-up", creatorKey: ALICE.key, body: "<p>Next steps</p>" },
+      {
+        id: TEMPLATE.followUp,
+        name: "Follow-up",
+        creatorKey: ALICE.key,
+        body: '<p>Next steps</p><ac:image><ri:attachment ri:filename="logo.png"><ri:page ri:content-title="Kick-off" /></ri:attachment></ac:image>',
+      },
       { id: TEMPLATE.foreign, name: "Elsewhere", creatorKey: ALICE.key, body: "<p>x</p>", spaceId: "51" },
       {
         id: TEMPLATE.older,
@@ -217,6 +234,11 @@ describe.skipIf(!baseUrl)("Confluence imports: space templates and reports", () 
     });
     expect(followUp?.fields).toEqual([{ key: "topic", label: "topic", type: "text", required: false }]);
     expect(await harness.target(result.id, "template", TEMPLATE.notes)).toBe(notes?.id);
+    const logo = followUp?.document.content?.find((block) => block.type === "image");
+    const owned = await test.database.execute<{ id: string; name: string }>(
+      sql`select id, name from template_files where template_id = ${followUp?.id ?? ""}`,
+    );
+    expect(owned.rows).toEqual([{ id: logo?.attrs?.attachmentId, name: "logo.png" }]);
 
     const project = await harness.target(result.id, "page", SOURCE.project);
     const kickOff = await harness.target(result.id, "page", SOURCE.other);
@@ -353,6 +375,7 @@ describe.skipIf(!baseUrl)("Confluence imports: space templates and reports", () 
         audit: services.audit,
         versions: services.versions,
         trash: services.trash,
+        templateFiles: services.templates.files,
       }),
       folder: services.imports.folder,
       jobs: undefined,

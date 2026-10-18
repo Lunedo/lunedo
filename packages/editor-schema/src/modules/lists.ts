@@ -9,6 +9,7 @@ import {
   type RenderContext,
   type WordRenderer,
 } from "../module.js";
+import { clearedAttributes } from "../portable.js";
 import { element, prefixLines } from "../text.js";
 import { isoDateValue, uuidValue } from "../values.js";
 import { type WordContent, type WordListItem, wordText } from "../word.js";
@@ -163,6 +164,11 @@ export const tasksModule = defineModule({
         assignee: optional(uuidValue.nullable(), null),
         dueDate: optional(isoDateValue.nullable(), null),
       },
+      portable: (attrs, context) =>
+        clearedAttributes("person", { assignee: null })(
+          context.renewsIds ? { ...attrs, id: null } : attrs,
+          context,
+        ),
       html: (node, renderer) => {
         const done = taskDone(node, renderer);
         return element(

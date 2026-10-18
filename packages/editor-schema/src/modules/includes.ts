@@ -23,6 +23,7 @@ import {
   optional,
   type WordRenderer,
 } from "../module.js";
+import { clearedAttributes } from "../portable.js";
 import { element, markdownUrl } from "../text.js";
 import { uuidValue } from "../values.js";
 import { type WordContent, wordText } from "../word.js";
@@ -44,6 +45,8 @@ const sourceAttrs = {
   sourceSpace: optional(z.string().min(1).max(MAX_SOURCE_SPACE).nullable(), null),
   sourceTitle: optional(z.string().min(1).max(MAX_SOURCE_TITLE).nullable(), null),
 };
+
+const clearedSource = clearedAttributes("include", { pageId: null, sourceSpace: null, sourceTitle: null });
 
 function sourceProblem(node: ValidNode): string | null {
   const pageId = attrOf<string | null>(node, "pageId");
@@ -392,6 +395,7 @@ export const includeModule = defineModule({
         panel: optional(z.boolean(), true),
       },
       validate: sourceProblem,
+      portable: clearedSource,
       html: includeHtml,
       word: includeWord,
       markdown: includeMarkdown,
@@ -402,6 +406,7 @@ export const includeModule = defineModule({
       spec: { group: "block", atom: true, selectable: true, draggable: true },
       attrs: sourceAttrs,
       validate: sourceProblem,
+      portable: clearedSource,
       html: includeHtml,
       word: includeWord,
       markdown: includeMarkdown,

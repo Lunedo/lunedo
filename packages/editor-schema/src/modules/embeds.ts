@@ -22,6 +22,7 @@ import {
   required,
   type WordRenderer,
 } from "../module.js";
+import { portableFiles } from "../portable.js";
 import { element, htmlAttributes, markdownUrl } from "../text.js";
 import { hrefValue, isAllowedHref, uuidValue } from "../values.js";
 import { type WordContent, wordText } from "../word.js";
@@ -370,6 +371,7 @@ export const embedModule = defineModule({
         thumbnailId: optional(uuidValue.nullable(), null),
       },
       copy: copyAttachmentAttributes([["thumbnailId", null]]),
+      portable: portableFiles([["thumbnailId", null, "image"]]),
       validate: (node) =>
         isEmbeddableUrl(attrOf<string>(node, "url")) ? null : "An embed needs an http or https address",
       html: embedHtml,

@@ -1,0 +1,309 @@
+{
+  "title": "Pagehall template file",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "format": {
+      "type": "string",
+      "const": "pagehall-template",
+      "description": "Always `pagehall-template`."
+    },
+    "formatVersion": {
+      "type": "number",
+      "const": 1,
+      "description": "Version of this file format."
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991,
+      "description": "Version of the editor format of the documents."
+    },
+    "pagehallVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Version of Pagehall that wrote the file."
+    },
+    "templates": {
+      "minItems": 1,
+      "maxItems": 50,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Name of the template."
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 300,
+            "description": "Short description."
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "meetings",
+              "decisions",
+              "projects",
+              "engineering",
+              "operations",
+              "knowledge",
+              "teams"
+            ],
+            "description": "Category in the gallery."
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "en",
+                  "de"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Language of the content, or null if unknown."
+          },
+          "titlePattern": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Title of new pages; `{key}` inserts the value of an input field."
+          },
+          "fields": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-zA-Z0-9]{0,39}$"
+                },
+                "label": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "text",
+                    "date",
+                    "person",
+                    "choice"
+                  ]
+                },
+                "required": {
+                  "type": "boolean"
+                },
+                "options": {
+                  "maxItems": 30,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  }
+                }
+              },
+              "required": [
+                "key",
+                "label",
+                "type",
+                "required"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Input fields asked for when a page is created."
+          },
+          "series": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "rhythm": {
+                    "type": "object",
+                    "properties": {
+                      "frequency": {
+                        "type": "string",
+                        "enum": [
+                          "none",
+                          "daily",
+                          "weekly",
+                          "monthly",
+                          "yearly"
+                        ]
+                      },
+                      "interval": {
+                        "default": 1,
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 52
+                      },
+                      "weekdays": {
+                        "maxItems": 7,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "MO",
+                            "TU",
+                            "WE",
+                            "TH",
+                            "FR",
+                            "SA",
+                            "SU"
+                          ]
+                        }
+                      },
+                      "monthDay": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 31
+                      },
+                      "weekOfMonth": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      "weekday": {
+                        "type": "string",
+                        "enum": [
+                          "MO",
+                          "TU",
+                          "WE",
+                          "TH",
+                          "FR",
+                          "SA",
+                          "SU"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "frequency"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "durationMinutes": {
+                    "type": "integer",
+                    "minimum": 5,
+                    "maximum": 1440
+                  }
+                },
+                "required": [
+                  "rhythm",
+                  "durationMinutes"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Defaults of a series template, or null."
+          },
+          "files": {
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "pattern": "^files\\/([0-9a-f]{64})\\.(png|jpg|gif|webp|svg|excalidraw|drawio)$",
+                  "description": "Path of the file in the archive: `files/<sha256>.<extension>`."
+                },
+                "mediaType": {
+                  "type": "string",
+                  "enum": [
+                    "image/png",
+                    "image/jpeg",
+                    "image/gif",
+                    "image/webp",
+                    "image/svg+xml",
+                    "application/vnd.excalidraw+json",
+                    "application/vnd.jgraph.mxfile"
+                  ],
+                  "description": "Media type of the file."
+                },
+                "size": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 5242880,
+                  "description": "Size in bytes."
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$",
+                  "description": "SHA-256 hash of the content, lowercase hexadecimal."
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 255,
+                  "pattern": "^[^/\\\\\\p{Cc}]+$",
+                  "description": "File name shown when the template is used."
+                }
+              },
+              "required": [
+                "path",
+                "mediaType",
+                "size",
+                "sha256",
+                "name"
+              ],
+              "additionalProperties": false,
+              "description": "A file the template uses."
+            },
+            "description": "Files the content uses."
+          },
+          "document": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "doc"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "additionalProperties": {},
+            "description": "Content in the editor format of the stated schema version."
+          }
+        },
+        "required": [
+          "name",
+          "description",
+          "category",
+          "language",
+          "titlePattern",
+          "fields",
+          "series",
+          "files",
+          "document"
+        ],
+        "additionalProperties": false,
+        "description": "A template."
+      },
+      "description": "The templates of the file."
+    }
+  },
+  "required": [
+    "format",
+    "formatVersion",
+    "schemaVersion",
+    "pagehallVersion",
+    "templates"
+  ],
+  "additionalProperties": false,
+  "description": "A Pagehall template file."
+}

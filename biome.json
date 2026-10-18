@@ -15,6 +15,7 @@
       "!**/*.svg",
       "!**/drizzle/meta",
       "!apps/api/openapi.json",
+      "!docs/template-format.schema.json",
       "!packages/server/src/imports/testing/confluence-cloud/fixtures"
     ]
   },

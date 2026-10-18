@@ -208,17 +208,22 @@ export class FileService {
     }
   }
 
-  async #row(executor: Executor, fileId: string): Promise<{ storage_key: string; size: number }> {
+  async #row(
+    executor: Executor,
+    fileId: string,
+    staged: boolean,
+  ): Promise<{ storage_key: string; size: number }> {
+    const states = staged ? sql`('ready', 'stored')` : sql`('ready')`;
     const result = await executor.execute<{ storage_key: string; size: string | number }>(
-      sql`select storage_key, size from stored_files where id = ${fileId} and state = 'ready'`,
+      sql`select storage_key, size from stored_files where id = ${fileId} and state in ${states}`,
     );
     const row = result.rows[0];
     if (!row) throw new Error("The stored file does not exist");
     return { storage_key: row.storage_key, size: Number(row.size) };
   }
 
-  async read(fileId: string, range?: ByteRange): Promise<Readable> {
-    const row = await this.#row(this.#database, fileId);
+  async read(fileId: string, range?: ByteRange, options: { staged?: boolean } = {}): Promise<Readable> {
+    const row = await this.#row(this.#database, fileId, options.staged ?? false);
     if (!range || row.size === 0) {
       const source = await this.#store.read(row.storage_key);
       return source.pipe(createDecryptStream(this.#keys(), { associatedData: associatedData(fileId) }));
@@ -264,10 +269,10 @@ export class FileService {
     return readStoredHead(this.#store, key);
   }
 
-  async readAll(fileId: string, maxBytes: number): Promise<Buffer> {
+  async readAll(fileId: string, maxBytes: number, options: { staged?: boolean } = {}): Promise<Buffer> {
     const parts: Buffer[] = [];
     let size = 0;
-    const source = await this.read(fileId);
+    const source = await this.read(fileId, undefined, options);
     for await (const chunk of source) {
       size += (chunk as Buffer).length;
       if (size > maxBytes) {
@@ -287,7 +292,8 @@ export class FileService {
     await this.#database.execute(sql`
       update stored_files f set state = 'ready', updated_at = now()
       where f.state = 'orphaned' and (exists (select 1 from attachment_versions v where v.file_id = f.id)
-        or exists (select 1 from whiteboard_previews p where p.file_id = f.id))`);
+        or exists (select 1 from whiteboard_previews p where p.file_id = f.id)
+        or exists (select 1 from template_files t where t.file_id = f.id))`);
     let removed = 0;
     for (const row of result.rows) {
       const claimed = await this.#database.execute(sql`
@@ -295,6 +301,7 @@ export class FileService {
           and (state = 'orphaned' or (state in ('pending', 'stored') and updated_at < now() - interval '1 day'))
           and not exists (select 1 from attachment_versions v where v.file_id = ${row.id})
           and not exists (select 1 from whiteboard_previews p where p.file_id = ${row.id})
+          and not exists (select 1 from template_files t where t.file_id = ${row.id})
         returning id`);
       if (claimed.rows.length === 0) continue;
       const stored = (await this.#store.size(row.storage_key)) ?? 0;

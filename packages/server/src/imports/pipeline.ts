@@ -34,6 +34,7 @@ import type { VersionService } from "../spaces/versions.js";
 import { refreshReaderVisibility } from "../spaces/visibility.js";
 import { type TemplateLanguage, templateLanguages } from "../templates/builtin/types.js";
 import type { TemplateField } from "../templates/fields.js";
+import type { TemplateFileService } from "../templates/files.js";
 import {
   TEMPLATE_DESCRIPTION_MAX_LENGTH,
   TEMPLATE_NAME_MAX_LENGTH,
@@ -274,6 +275,7 @@ export class ImportPipeline {
   readonly #audit: AuditLog;
   readonly #versions: VersionService;
   readonly #trash: TrashService;
+  readonly #templateFiles: TemplateFileService | undefined;
 
   constructor(options: {
     database: Database;
@@ -282,7 +284,9 @@ export class ImportPipeline {
     audit: AuditLog;
     versions: VersionService;
     trash: TrashService;
+    templateFiles?: TemplateFileService | undefined;
   }) {
+    this.#templateFiles = options.templateFiles;
     this.#database = options.database;
     this.#files = options.files;
     this.#settings = options.settings;
@@ -1159,8 +1163,20 @@ export class ImportPipeline {
             declared.get(template.sourceId)?.fields ?? [],
             current.rows[0]?.fields ?? [],
           );
+          await tx.execute(sql`delete from template_files where template_id = ${id}`);
+          const document = this.#templateFiles
+            ? (
+                await this.#templateFiles.adopt(tx, {
+                  templateId: id,
+                  actorId: run.importerId,
+                  document: converted.document,
+                  source: sql`t.space_id = ${space.spaceId} and not exists (select 1 from page_restrictions r
+                    where r.item_id = any(t.path) and r.kind = 'view')`,
+                })
+              ).document
+            : converted.document;
           await tx.execute(sql`
-            update page_templates set document = ${JSON.stringify(converted.document)}::jsonb,
+            update page_templates set document = ${JSON.stringify(document)}::jsonb,
               fields = ${JSON.stringify(fields)}::jsonb, schema_version = ${editorSchemaVersion}
             where id = ${id}`);
           await addButtonFields(tx, converted.document, language);

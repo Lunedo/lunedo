@@ -45,6 +45,7 @@ import { OwnershipController } from "../spaces/ownership.controller.js";
 import { PersonalSpacesController } from "../spaces/personal-spaces.controller.js";
 import { ShortcutsController } from "../spaces/shortcuts.controller.js";
 import { SpacesController } from "../spaces/spaces.controller.js";
+import { TemplateFilesController } from "../spaces/template-files.controller.js";
 import { TemplatesController } from "../spaces/templates.controller.js";
 import { TrashController } from "../spaces/trash.controller.js";
 import { VersionsController } from "../spaces/versions.controller.js";
@@ -88,6 +89,7 @@ export const apiControllers = (): Type[] => [
   EmbedsController,
   TrashController,
   TemplatesController,
+  TemplateFilesController,
   MeetingsController,
   OneOnOnesController,
   CommentsController,

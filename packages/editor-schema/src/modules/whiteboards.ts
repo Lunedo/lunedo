@@ -8,6 +8,7 @@ import {
   type ReferencedWhiteboard,
   type WordRenderer,
 } from "../module.js";
+import { clearedAttributes } from "../portable.js";
 import { element, htmlAttributes, markdownUrl } from "../text.js";
 import { uuidValue } from "../values.js";
 import { type WordContent, wordText } from "../word.js";
@@ -104,6 +105,7 @@ export const whiteboardModule = defineModule({
       name: "whiteboard",
       spec: { group: "block", atom: true, selectable: true, draggable: true },
       attrs: { whiteboardId: optional(uuidValue.nullable(), null) },
+      portable: clearedAttributes("whiteboard", { whiteboardId: null }),
       html: whiteboardHtml,
       word: whiteboardWord,
       markdown: whiteboardMarkdown,

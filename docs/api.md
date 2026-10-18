@@ -57,3 +57,31 @@ Managing tokens needs a signed-in session; a token cannot create, list or revoke
 | `GET, DELETE /api/v1/organizations/{id}/api-tokens` | `organization.integrations.view`, `organization.integrations.manage`, session only |
 
 The organization endpoints list and revoke the tokens of its service accounts, the tokens limited to it and the personal tokens of accounts whose home organization it is.
+
+## Templates
+
+Templates can be exported and imported as files ([templates.md](templates.md) describes the format and the checks). Every level has the same routes; the permission is the one that manages templates at that level: `space.manage` for `/api/v1/spaces/{spaceId}/…`, `organization.templates.manage` for `/api/v1/organizations/{organizationId}/…` and `instance.templates.manage` for `/api/v1/instance/…`.
+
+| Endpoint | What it does |
+|---|---|
+| `POST …/templates/export-summary` | Lists per template what an export removes, for the body `{ "templateIds": [...] }` or `null` for all. |
+| `POST …/templates/export` | Sends the template file: `application/json` without files, `application/zip` with files. |
+| `POST /api/v1/instance/templates/built-in/export` | Sends built-in templates in a language: `{ "language": "de", "templateIds": null }`. |
+| `POST …/template-imports?name=<file name>` | Uploads a template file as `application/octet-stream` and returns a preview with an `id`. Nothing is saved. |
+| `GET …/template-imports/{id}/files/{fileId}/content` | Sends a checked file of the preview, for showing its images. Only the person who uploaded it can read it. |
+| `POST …/template-imports/{id}/confirm` | Imports. `decisions` holds per template `{ "index": 0, "action": "create" \| "replace" \| "skip", "name": "…" }`; `skipInvalid: true` imports the valid templates when others are not valid. |
+| `DELETE …/template-imports/{id}` | Discards the preview. Previews are discarded after 12 hours anyway. |
+| `POST …/templates/{templateId}/files?name=<file name>` | Adds an image to a template; use the returned `id` as `attachmentId` in the content. |
+| `GET …/templates/{templateId}/files/{fileId}/content` | Sends a file of a template. In a space, templates of the instance and the organization need `space.edit`. |
+
+A template whose name exists at the level appears in the preview with `conflict: { templateId, suggestedName }`; confirming it without a decision is refused with `templateNameTaken`. `replace` keeps the ID of the existing template. Problems with the file as a whole come as Problem Details: `invalidTemplateFile`, `newerTemplateFormat` (with `fileVersion` and `supportedVersion`), `tooManyTemplates`, `tooManyTemplateFiles`, `templateArchiveTooLarge`, `templateArchiveCompression`, `unsafeTemplateArchive`, `nestedTemplateArchive`, `unexpectedTemplateEntry`, `fileTooLarge` and `storageFull`. Problems of single templates are listed in the preview under `problems` and, on a confirmation without `skipInvalid`, in `templateProblems` of `invalidTemplatesInFile`.
+
+```sh
+curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"templateIds": null}' -o templates.pagehall-template.zip \
+  https://wiki.example.org/api/v1/spaces/$SPACE/templates/export
+
+curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/octet-stream" \
+  --data-binary @templates.pagehall-template.zip \
+  "https://wiki.example.org/api/v1/spaces/$OTHER_SPACE/template-imports?name=templates.pagehall-template.zip"
+```

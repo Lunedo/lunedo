@@ -204,7 +204,10 @@ import {
 import { storageNotificationTypes } from "./storage/notifications.js";
 import { StorageService } from "./storage/storage.js";
 import { StorageUsage } from "./storage/usage.js";
+import { TemplateFileService } from "./templates/files.js";
+import { adoptTemplateFilesJob } from "./templates/jobs.js";
 import { TemplateService } from "./templates/templates.js";
+import { TemplateTransferService } from "./templates/transfer.js";
 import { API_TOKEN_EXPIRY_SCHEDULE, ApiTokenService, apiTokenExpiryJob } from "./tokens/api-tokens.js";
 import { ServiceAccountService } from "./tokens/service-accounts.js";
 import { DrawingService } from "./whiteboards/drawings.js";
@@ -275,6 +278,7 @@ export interface AccountServices {
   trash: TrashService;
   archive: ArchiveService;
   templates: TemplateService;
+  templateTransfers: TemplateTransferService;
   activity: ContentActivity;
   comments: CommentService;
   reactions: ReactionService;
@@ -618,7 +622,6 @@ export function createAccountServices(options: {
     signer,
     ownership,
   });
-  const templates = new TemplateService({ database, audit, settings, people, tree, documents });
   const reactions = new ReactionService({ database, settings, people });
   const comments = new CommentService({
     database,
@@ -704,6 +707,17 @@ export function createAccountServices(options: {
     logger,
   });
   const attachments = new AttachmentService({ database, files, settings, people, audit, storage });
+  const templates = new TemplateService({
+    database,
+    audit,
+    settings,
+    people,
+    tree,
+    documents,
+    files: new TemplateFileService({ database, files, storage }),
+    authorization,
+    storage,
+  });
   const whiteboards = new WhiteboardService({
     database,
     files,
@@ -767,6 +781,14 @@ export function createAccountServices(options: {
   const reports = new ReportService({ database, authorization, people, documents });
   const includes = new IncludeService({ database, authorization, documents });
   const embeds = new EmbedServices({ settings });
+  const templateTransfers = new TemplateTransferService({
+    database,
+    templates,
+    storage,
+    embeds,
+    audit,
+    instanceUrl: async () => (await instanceAddress.get()).url,
+  });
   const privateNotes = new PrivateNotesService({ database, authorization });
   const oneOnOnes = new OneOnOneService({
     database,
@@ -789,7 +811,15 @@ export function createAccountServices(options: {
     new MarkdownReader(),
     new WordReader(),
   );
-  const importPipeline = new ImportPipeline({ database, files, settings, audit, versions, trash });
+  const importPipeline = new ImportPipeline({
+    database,
+    files,
+    settings,
+    audit,
+    versions,
+    trash,
+    templateFiles: templates.files,
+  });
   const imports = new ImportService({
     database,
     authorization,
@@ -953,6 +983,7 @@ export function createAccountServices(options: {
     trash,
     archive,
     templates,
+    templateTransfers,
     activity,
     comments,
     reactions,
@@ -1085,6 +1116,10 @@ export async function workAccountJobs(
   });
   await jobs.work(exportBuildJob, services.exports.work, { concurrency: 2 });
   await jobs.work(copyItemsJob, services.copies.work, { concurrency: 2 });
+  await jobs.work(adoptTemplateFilesJob, (job) => services.templates.adoptPendingFiles(job.logger));
+  if (await services.templates.hasPendingFiles()) {
+    await jobs.enqueue(adoptTemplateFilesJob, {}, { idempotencyKey: "pending" });
+  }
   await jobs.work(copyWatchdogJob, async () => {
     await services.copies.watchdog();
   });
@@ -1108,6 +1143,7 @@ export async function workAccountJobs(
     await services.storage.reconcile();
   });
   await jobs.work(fileCleanupJob, async (job) => {
+    await services.templateTransfers.cleanup();
     let removed = 0;
     for (;;) {
       job.signal.throwIfAborted();

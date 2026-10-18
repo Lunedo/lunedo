@@ -1,0 +1,47 @@
+{
+  "type": "doc",
+  "content": [
+    {
+      "type": "image",
+      "attrs": {
+        "attachmentId": "01929b1e-0000-7000-8000-000000000001",
+        "alt": "Network diagram",
+        "width": 640,
+        "align": "left"
+      }
+    },
+    {
+      "type": "image",
+      "attrs": {
+        "attachmentId": null,
+        "alt": "",
+        "width": null,
+        "align": "center"
+      }
+    },
+    {
+      "type": "file",
+      "attrs": {
+        "attachmentId": "01929b1e-0000-7000-8000-000000000002",
+        "name": "handbook.pdf"
+      }
+    },
+    {
+      "type": "drawing",
+      "attrs": {
+        "id": "01929b1e-0000-7000-8000-000000000003",
+        "sceneId": "01929b1e-0000-7000-8000-000000000004",
+        "sceneVersion": 2,
+        "previewId": "01929b1e-0000-7000-8000-000000000005",
+        "previewVersion": 2,
+        "text": "Serverraum EG\nR1"
+      }
+    },
+    {
+      "type": "drawing",
+      "attrs": {
+        "id": "01929b1e-0000-7000-8000-000000000006"
+      }
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { type MacroConverter, type MacroImportContext, macroText, type SourceElement } from "../importing.js";
 import type { ValidNode } from "../json.js";
-import type { CopyMapping } from "../module.js";
+import type { CopyMapping, PortableContext } from "../module.js";
 import {
   attrOf,
   defineModule,
@@ -555,6 +555,23 @@ function copyRoadmap(attrs: Record<string, unknown>, mapping: CopyMapping): Reco
   };
 }
 
+function portableRoadmap(attrs: Record<string, unknown>, context: PortableContext): Record<string, unknown> {
+  const roadmap = attrs.roadmap as Roadmap;
+  if (!context.strips("roadmap")) return attrs;
+  const linked = roadmap.lanes.some((lane) => lane.bars.some((bar) => bar.pageId !== null));
+  if (linked) context.removed("roadmap");
+  return {
+    ...attrs,
+    roadmap: {
+      ...roadmap,
+      lanes: roadmap.lanes.map((lane) => ({
+        ...lane,
+        bars: lane.bars.map((bar) => ({ ...bar, pageId: null })),
+      })),
+    },
+  };
+}
+
 export const roadmapModule = defineModule({
   name: "roadmap",
   nodes: [
@@ -563,6 +580,7 @@ export const roadmapModule = defineModule({
       spec: { group: "block", atom: true, selectable: true, draggable: true },
       attrs: { roadmap: required(roadmapValue) },
       copy: copyRoadmap,
+      portable: portableRoadmap,
       html: roadmapHtml,
       word: (node, renderer) => {
         const roadmap = attrOf<Roadmap>(node, "roadmap");

@@ -31,6 +31,7 @@ import {
   taskReportStatuses,
   type WordRenderer,
 } from "../module.js";
+import { clearedAttributes } from "../portable.js";
 import { element, markdownUrl } from "../text.js";
 import {
   cleanLabel,
@@ -454,6 +455,7 @@ export const taskReportModule = defineModule({
         attrOf<string | null>(node, "assignee") !== null && attrOf<boolean>(node, "assignedToViewer")
           ? "A task report filters by one assignee or by the viewer, not both"
           : null,
+      portable: clearedAttributes("report", { spaceId: null, seriesId: null, pageIds: [], assignee: null }),
       html: (node, renderer) =>
         element(
           "div",
@@ -492,6 +494,7 @@ export const pageReportModule = defineModule({
         reverse: optional(z.boolean(), false),
         limit: optional(z.number().int().min(1).max(MAX_PAGE_REPORT_LIMIT), DEFAULT_PAGE_REPORT_LIMIT),
       },
+      portable: clearedAttributes("report", { spaceId: null }),
       html: (node, renderer) => {
         const request = pageReportRequest(node);
         const pages = renderer.context.pageReport?.(request) ?? null;
@@ -589,6 +592,7 @@ export const decisionReportModule = defineModule({
         parentId: optional(uuidValue.nullable(), null),
         order: optional(z.enum(decisionReportOrders), "newest"),
       },
+      portable: clearedAttributes("report", { spaceId: null, parentId: null }),
       html: (node, renderer) => {
         const request = decisionReportRequest(node);
         const decisions = renderer.context.decisionReport?.(request) ?? null;

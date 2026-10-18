@@ -3,10 +3,10 @@ import { Combobox, Menu } from "@pagehall/ui";
 import type { Editor } from "@tiptap/core";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { NodeViewContent, type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
-import { ChevronDown, ChevronRight, Columns2, Info, ListTree, Paperclip } from "lucide-react";
+import { ChevronDown, ChevronRight, Columns2, ImageOff, Info, ListTree, Paperclip } from "lucide-react";
 import { type CSSProperties, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { contentUrl } from "../../files/attachments-api.js";
+import { useAttachmentUrl } from "../../files/attachment-source.js";
 import { useAttachmentPreview } from "../../files/preview-host.js";
 import { translateKey } from "../../i18n/translate.js";
 import { useEditable } from "../context.js";
@@ -305,7 +305,8 @@ export function UnsupportedMacroView({ node, selected }: NodeViewProps) {
 export function AttachmentView({ node, selected }: NodeViewProps) {
   const { t } = useTranslation();
   const preview = useAttachmentPreview();
-  const id = String(node.attrs.attachmentId);
+  const attachmentUrl = useAttachmentUrl();
+  const id = typeof node.attrs.attachmentId === "string" ? node.attrs.attachmentId : null;
   const isImage = node.type.name === "image";
   const name = String((isImage ? node.attrs.alt : node.attrs.name) || "");
   return (
@@ -314,8 +315,13 @@ export function AttachmentView({ node, selected }: NodeViewProps) {
       data-align={isImage ? String(node.attrs.align) : undefined}
       contentEditable={false}
     >
-      {isImage ? (
-        <img src={contentUrl(id)} alt={name} loading="lazy" draggable={false} />
+      {isImage && id ? (
+        <img src={attachmentUrl(id)} alt={name} loading="lazy" draggable={false} />
+      ) : isImage || !id ? (
+        <p className="ph-image-empty flex min-h-hit items-center gap-2 rounded-md border border-dashed border-border px-3 text-sm text-text-muted">
+          <ImageOff aria-hidden="true" className="size-icon" />
+          {t("editor.attachment.missingImage")}
+        </p>
       ) : (
         <button
           type="button"

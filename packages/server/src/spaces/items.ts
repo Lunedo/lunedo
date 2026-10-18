@@ -598,6 +598,7 @@ export class TreeService {
       link?: { itemId?: string | null | undefined; url?: string | null | undefined } | undefined;
       mode?: PageMode | undefined;
       document?: unknown;
+      documentFor?: ((tx: Transaction, itemId: string, mode: PageMode) => Promise<unknown>) | undefined;
     },
   ): Promise<TreeItem> {
     if (input.kind === "blogPost") {
@@ -647,7 +648,10 @@ export class TreeService {
           mode, creator_id, owner_id)
         values (${itemId}, ${spaceId}, ${input.placement.parentId}, ${input.kind}, ${position}, ${title},
           ${description}, ${linkItemId}, ${linkUrl}, ${mode}, ${actorId}, ${actorId})`);
-      if (input.kind === "page") await insertInitialDocument(tx, itemId, actorId, input.document);
+      if (input.kind === "page") {
+        const document = input.documentFor ? await input.documentFor(tx, itemId, mode) : input.document;
+        await insertInitialDocument(tx, itemId, actorId, document);
+      }
       if (input.kind === "whiteboard") await insertInitialWhiteboard(tx, itemId, actorId);
       await refreshReaderVisibility(tx, [itemId]);
       if (input.kind === "page") await this.#documents.afterInsert(tx, itemId, actorId);
