@@ -93,6 +93,7 @@ export function HomeScreen() {
   return (
     <main
       id="main"
+      // biome-ignore lint/a11y/noNoninteractiveTabindex: the content area scrolls and must be reachable by keyboard
       tabIndex={0}
       className="min-w-0 flex-1 overflow-y-auto outline-none focus-visible:focus-ring"
     >

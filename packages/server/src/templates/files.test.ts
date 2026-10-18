@@ -268,7 +268,7 @@ describe.skipIf(!baseUrl)("template files", () => {
     const router = files.find((file) => file.name === "router.png");
     const sceneFile = await test.database.execute<{ file_id: string }>(sql`
       select tf.file_id from template_files tf where tf.template_id = ${template.id}
-        and tf.id = ${String((template.document.content?.[0]?.attrs ?? {}).sceneId)}`);
+        and tf.id = ${String(template.document.content?.[0]?.attrs?.sceneId)}`);
     const templateScene = JSON.parse(
       (await test.services.files.readAll(sceneFile.rows[0]?.file_id ?? "", 1024 * 1024)).toString("utf8"),
     ) as { files: Record<string, { attachmentId: string }> };
