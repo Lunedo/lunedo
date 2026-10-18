@@ -179418,13 +179418,21 @@
             }
           },
           "503": {
-            "description": "`renderUnavailable`: Server-side PDF needs the render container.",
+            "description": "`busy`: The server is busy. `renderUnavailable`: Server-side PDF needs the render container.",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 },
                 "examples": {
+                  "busy": {
+                    "value": {
+                      "type": "urn:pagehall:problem:busy",
+                      "title": "The server is busy",
+                      "status": 503,
+                      "code": "busy"
+                    }
+                  },
                   "renderUnavailable": {
                     "value": {
                       "type": "urn:pagehall:problem:renderUnavailable",

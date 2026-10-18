@@ -1,3 +1,4 @@
+import { Readable } from "node:stream";
 import { describe, expect, it } from "vitest";
 import { Secret } from "../config/secret.js";
 import { createLogger } from "../logging/logger.js";
@@ -66,14 +67,21 @@ describe("render service client", () => {
 
   it("sends the document with its assets and base address and returns the PDF", async () => {
     let sent: { html: string; baseUrl: string | null; assets: unknown[] } | null = null;
-    const { render } = service((url, init) => {
+    const { render } = service(async (url, init) => {
       if (url.endsWith("/v1/info")) return Response.json(INFO);
-      sent = JSON.parse(String(init?.body));
+      sent = JSON.parse(await new Response(init?.body).text());
       return new Response("%PDF-1.7 ok");
     });
     const pdf = await render.pdf(
       "<p>Hi</p>",
-      [{ path: "/api/v1/attachments/a/content", contentType: "image/png", data: Buffer.from("png") }],
+      [
+        {
+          path: "/api/v1/attachments/a/content",
+          contentType: "image/png",
+          size: 3,
+          open: async () => Readable.from([Buffer.from("p"), Buffer.from("ng")]),
+        },
+      ],
       "https://wiki.example.org/some/path",
     );
     expect(pdf.toString("latin1")).toBe("%PDF-1.7 ok");
@@ -87,7 +95,22 @@ describe("render service client", () => {
   it("refuses a document above the container's limit before sending it", async () => {
     const { render, requests } = service(() => Response.json(INFO));
     await expect(render.pdf("x".repeat(2000), [], "")).rejects.toMatchObject({ reason: "tooLarge" });
-    expect(requests.map((request) => request.url)).toEqual(["http://render:3000/v1/info"]);
+    let opened = false;
+    const image = {
+      path: "/api/v1/attachments/a/content",
+      contentType: "image/png",
+      size: INFO.maxBytes,
+      open: async () => {
+        opened = true;
+        return Readable.from([Buffer.alloc(1)]);
+      },
+    };
+    await expect(render.pdf("<p>Hi</p>", [image], "")).rejects.toMatchObject({ reason: "tooLarge" });
+    expect(opened).toBe(false);
+    expect(requests.map((request) => request.url)).toEqual([
+      "http://render:3000/v1/info",
+      "http://render:3000/v1/info",
+    ]);
   });
 
   it("maps the answers of the container to reasons", async () => {

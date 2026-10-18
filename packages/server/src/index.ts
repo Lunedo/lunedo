@@ -302,14 +302,18 @@ export { EmbedServices } from "./embeds/embeds.js";
 export { allowedEmbedServicesSetting, embedServicesSetting, embedSettings } from "./embeds/settings.js";
 export {
   EXPORT_RETENTION_DAYS,
+  ExportBusyError,
   ExportError,
   type ExportFile,
   type ExportRequest,
   ExportService,
   type ExportSummary,
   type ExportSummaryCounts,
+  MAX_PAGE_EXPORT_IMAGE_BYTES,
+  MAX_PARALLEL_PAGE_EXPORTS,
   type PageExportFormat,
   pageExportFormats,
+  pageExportSlots,
 } from "./exports/exports.js";
 export {
   defaultExportOptions,

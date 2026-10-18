@@ -89,4 +89,9 @@ export const exportCountsSchema = z
   })
   .describe("What an export of a space or of a page with its subpages contains.");
 
-export const exampleExportCounts = { pages: 412, blogPosts: 31, printLimit: 300, serverPdf: false };
+export const exampleExportCounts = {
+  pages: 412,
+  blogPosts: 31,
+  printLimit: 300,
+  serverPdf: false,
+};

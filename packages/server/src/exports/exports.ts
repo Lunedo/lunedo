@@ -6,6 +6,7 @@ import type { InstanceAddressService } from "../accounts/instance-address.js";
 import type { Principal, TokenGrant, TokenScopes } from "../accounts/principal.js";
 import { accountScopeChain } from "../accounts/scope.js";
 import type { AuditLog } from "../audit/audit-log.js";
+import { OwnerSlots } from "../auth/concurrency.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import { ForbiddenError } from "../authorization/service.js";
 import type { CommentService } from "../collaboration/comments.js";
@@ -134,6 +135,25 @@ export interface ExportSummaryCounts {
   printLimit: number;
   serverPdf: boolean;
 }
+
+export const MAX_PAGE_EXPORT_IMAGE_BYTES = 20 * 1024 * 1024;
+export const MAX_PARALLEL_PAGE_EXPORTS = 2;
+export const MAX_PARALLEL_PAGE_EXPORTS_PER_ACCOUNT = 1;
+
+export class ExportBusyError extends Error {
+  override name = "ExportBusyError";
+  readonly retryAfterSeconds = 5;
+
+  constructor() {
+    super("Too many Word and PDF files are being created at the moment; try again in a few seconds");
+  }
+}
+
+export const pageExportSlots = new OwnerSlots(
+  MAX_PARALLEL_PAGE_EXPORTS,
+  MAX_PARALLEL_PAGE_EXPORTS_PER_ACCOUNT,
+  () => new ExportBusyError(),
+);
 
 export class ExportError extends Error {
   override name = "ExportError";
@@ -378,7 +398,12 @@ export class ExportService {
     return { renderer, language, origin };
   }
 
-  #paged(viewer: Principal, renderer: PageExportRenderer, language: string): PagedExport {
+  #paged(
+    viewer: Principal,
+    renderer: PageExportRenderer,
+    language: string,
+    maxEmbeddedBytes?: number,
+  ): PagedExport {
     return new PagedExport({
       database: this.#database,
       authorization: this.#authorization,
@@ -389,6 +414,7 @@ export class ExportService {
       renderer,
       viewer,
       language,
+      ...(maxEmbeddedBytes === undefined ? {} : { maxEmbeddedBytes }),
     });
   }
 
@@ -401,16 +427,10 @@ export class ExportService {
     return name ? renderer.texts.exportedBy(date, name) : renderer.texts.exported(date);
   }
 
-  async #pdf(
-    paged: PagedExport,
-    html: string,
-    pages: readonly PreparedPage[],
-    origin: string,
-    signal?: AbortSignal,
-  ) {
+  async #pdf(paged: PagedExport, html: string, origin: string, signal?: AbortSignal) {
     if (!this.#render.configured) throw new ExportFailure("renderUnavailable");
     try {
-      return await this.#render.pdf(html, await paged.assets(pages), origin, signal);
+      return await this.#render.pdf(html, await paged.assets(), origin, signal);
     } catch (error) {
       if (error instanceof RenderError) throw new ExportFailure(renderFailure(error));
       throw error;
@@ -459,8 +479,13 @@ export class ExportService {
     const prepared = await renderer.prepare(pageId);
     if (!prepared) throw new ExportError("nothingToExport", "The page has no published content to export");
     const stem = safeName(renderer.title(prepared), renderer.texts.untitledPage);
-    if (format === "print" || format === "pdf" || format === "docx") {
+    if (format === "print") {
       return this.#pagedPage(actor, prepared, format, options, { renderer, language, origin, stem });
+    }
+    if (format === "pdf" || format === "docx") {
+      return pageExportSlots.run(actor, () =>
+        this.#pagedPage(actor, prepared, format, options, { renderer, language, origin, stem }),
+      );
     }
     if (format === "markdown") {
       return {
@@ -528,7 +553,7 @@ export class ExportService {
     context: { renderer: PageExportRenderer; language: string; origin: string; stem: string },
   ): Promise<ExportFile> {
     const { renderer, language, origin, stem } = context;
-    const paged = this.#paged(actor, renderer, language);
+    const paged = this.#paged(actor, renderer, language, MAX_PAGE_EXPORT_IMAGE_BYTES);
     const input = {
       entries: [{ id: prepared.id, depth: 0 }],
       title: renderer.title(prepared),
@@ -541,7 +566,7 @@ export class ExportService {
     if (format === "docx") {
       return { fileName: `${stem}.docx`, contentType: CONTENT_TYPES.docx, body: await paged.word(input) };
     }
-    const { html, pages } = await paged.print(input);
+    const html = await paged.print(input);
     if (format === "print") {
       return { fileName: `${stem}.html`, contentType: CONTENT_TYPES.print, body: Buffer.from(html, "utf8") };
     }
@@ -549,7 +574,7 @@ export class ExportService {
       return {
         fileName: `${stem}.pdf`,
         contentType: CONTENT_TYPES.pdf,
-        body: await this.#pdf(paged, html, pages, origin),
+        body: await this.#pdf(paged, html, origin),
       };
     } catch (error) {
       if (error instanceof ExportFailure && error.code === "renderUnavailable") {
@@ -1179,8 +1204,8 @@ export class ExportService {
         const printed = await pagedExport.print(input);
         file =
           row.format === "pdf"
-            ? await this.#pdf(pagedExport, printed.html, printed.pages, origin, signal)
-            : Buffer.from(printed.html, "utf8");
+            ? await this.#pdf(pagedExport, printed, origin, signal)
+            : Buffer.from(printed, "utf8");
       }
       await progress();
       archive = Readable.from([file]);

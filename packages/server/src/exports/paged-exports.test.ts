@@ -9,7 +9,13 @@ import { testDatabaseBaseUrl } from "../testing/database.js";
 import { testJobContext } from "../testing/jobs.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { spaceFixtures } from "../testing/spaces.js";
-import { ExportError, type ExportRequest } from "./exports.js";
+import {
+  ExportBusyError,
+  ExportError,
+  type ExportRequest,
+  MAX_PAGE_EXPORT_IMAGE_BYTES,
+  pageExportSlots,
+} from "./exports.js";
 import {
   bytesOf,
   doc,
@@ -55,7 +61,7 @@ function fakeRender(calls: RenderCall[]): typeof fetch {
         timeoutSeconds: 60,
       });
     }
-    const body = JSON.parse(String(init?.body)) as Omit<RenderCall, "authorization">;
+    const body = JSON.parse(await new Response(init?.body).text()) as Omit<RenderCall, "authorization">;
     calls.push({ authorization: headers.get("authorization"), ...body });
     return new Response(Buffer.from("%PDF-1.7 rendered"), { headers: { "content-type": "application/pdf" } });
   }) as typeof fetch;
@@ -393,6 +399,58 @@ describe.skipIf(!baseUrl)("print, PDF and Word exports", () => {
     });
   });
 
+  describe("single-page Word and PDF files", () => {
+    it("refuses more parallel files than a node and an account may build", async () => {
+      const releases: (() => void)[] = [];
+      const hold = (id: string) =>
+        pageExportSlots.run(
+          accountPrincipal(id),
+          () => new Promise<void>((resolve) => releases.push(resolve)),
+        );
+      const own = hold(context.readerId);
+      await expect(
+        test.services.exports.page(context.reader, context.pages.welcome.id, "docx"),
+      ).rejects.toBeInstanceOf(ExportBusyError);
+      const other = hold(context.stewardId);
+      await expect(
+        test.services.exports.page(context.admin, context.pages.welcome.id, "docx"),
+      ).rejects.toBeInstanceOf(ExportBusyError);
+      for (const release of releases) release();
+      await Promise.all([own, other]);
+      const file = await test.services.exports.page(context.reader, context.pages.welcome.id, "docx");
+      expect(file.fileName).toBe("Welcome.docx");
+    });
+
+    it("leaves out images above the smaller budget of files built while the request waits", async () => {
+      const { admin, space: handbook } = context;
+      const large = await test.services.tree.create(admin, handbook.id, {
+        kind: "page",
+        title: "Large images",
+        mode: "live",
+        placement: { parentId: null },
+      });
+      const half = Math.ceil(MAX_PAGE_EXPORT_IMAGE_BYTES / 2) + 1024;
+      const ids: string[] = [];
+      for (const name of ["one.png", "two.png"]) {
+        const data = Buffer.concat([PNG, Buffer.alloc(half - PNG.length)]);
+        const uploaded = await test.services.attachments.upload(admin, large.id, {
+          name,
+          body: Readable.from([data]),
+          contentLength: data.length,
+        });
+        ids.push(uploaded.id);
+      }
+      await test.services.documents.replace(
+        admin,
+        large.id,
+        doc(...ids.map((id) => ({ type: "image", attrs: { attachmentId: id, alt: id } }))),
+      );
+      const file = await test.services.exports.page(admin, large.id, "docx");
+      const output = await html(await bytesOf(file));
+      expect((output.match(/<img /g) ?? []).length).toBe(1);
+    });
+  });
+
   describe("embedded images", () => {
     it("reads each image once and stops embedding at the size budget of the document", async () => {
       const { admin, pages } = context;
@@ -416,10 +474,9 @@ describe.skipIf(!baseUrl)("print, PDF and Word exports", () => {
       const imageNode = (id: string) => ({ type: "image", attrs: { attachmentId: id, alt: "" } });
       const page = (document: unknown) =>
         ({ id: pages.welcome.id, document, images: new Set() }) as unknown as PreparedPage;
-      const assets = await paged.assets([
-        page(doc(imageNode(image), imageNode(image))),
-        page(doc(imageNode(second.id), imageNode(image))),
-      ]);
+      paged.noteAssets(page(doc(imageNode(image), imageNode(image))));
+      paged.noteAssets(page(doc(imageNode(second.id), imageNode(image))));
+      const assets = await paged.assets();
       expect(assets.map((asset) => asset.path)).toEqual([`/api/v1/attachments/${image}/content`]);
     });
   });

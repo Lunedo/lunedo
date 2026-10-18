@@ -7,6 +7,7 @@ import {
   DiagramRejectedError,
   DocumentInvalidError,
   EmailInUseError,
+  ExportBusyError,
   ExportError,
   FileTooLargeError,
   ForbiddenError,
@@ -185,6 +186,13 @@ function map(error: unknown): Mapped | null {
       code: "invalidStorageSettings",
       detail: error.message,
       extensions: { fields: error.fields.map((field) => `body.${field}`), problem: error.code },
+    };
+  }
+  if (error instanceof ExportBusyError) {
+    return {
+      code: "busy",
+      detail: error.message,
+      extensions: { retryAfterSeconds: error.retryAfterSeconds },
     };
   }
   if (error instanceof ExportError) {
