@@ -2,7 +2,7 @@ import type { HocuspocusProvider } from "@hocuspocus/provider";
 import { initialsOf, Tooltip } from "@pagehall/ui";
 import type { Editor } from "@tiptap/core";
 import { relativePositionToAbsolutePosition, ySyncPluginKey } from "@tiptap/y-tiptap";
-import { type RefObject, useEffect, useState } from "react";
+import { type CSSProperties, type RefObject, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as Y from "yjs";
 
@@ -19,6 +19,14 @@ export function presenceColor(accountId: string): PresenceColor {
   let hash = 0;
   for (const character of accountId) hash = (hash * 31 + (character.codePointAt(0) ?? 0)) >>> 0;
   return presenceColors[hash % presenceColors.length] ?? "petrol";
+}
+
+export function cursorColor(accountId: string): string {
+  let hash = 0;
+  for (let index = 0; index < accountId.length; index += 1) {
+    hash = ((hash << 5) - hash + accountId.charCodeAt(index)) | 0;
+  }
+  return `hsl(${(Math.abs(hash) % 37) * 10}, 100%, 83%)`;
 }
 
 export function selectionAttributes(user: Record<string, unknown>) {
@@ -72,7 +80,15 @@ export function usePresence(provider: HocuspocusProvider | null, self: PresenceU
 
 const VISIBLE_AVATARS = 3;
 
-export function AvatarStack({ self, others }: { self: PresenceUser | null; others: PresenceUser[] }) {
+export function AvatarStack({
+  self,
+  others,
+  colorFor,
+}: {
+  self: PresenceUser | null;
+  others: PresenceUser[];
+  colorFor?: (user: PresenceUser) => string;
+}) {
   const { t } = useTranslation();
   const everyone = self ? [self, ...others] : others;
   const visible = everyone.slice(0, VISIBLE_AVATARS);
@@ -86,8 +102,13 @@ export function AvatarStack({ self, others }: { self: PresenceUser | null; other
         <li key={user.id}>
           <Tooltip content={user.id === self?.id ? t("editor.presence.you", { name: user.name }) : user.name}>
             <span
-              data-color={user.color}
-              className="ph-presence-avatar inline-flex size-control-sm items-center justify-center rounded-full border-2 border-surface text-xs font-semibold"
+              {...(colorFor
+                ? {
+                    "data-theme": "light",
+                    style: { "--presence-color": colorFor(user) } as CSSProperties,
+                  }
+                : { "data-color": user.color })}
+              className={`ph-presence-avatar${colorFor ? " ph-presence-avatar-cursor" : ""} inline-flex size-control-sm items-center justify-center rounded-full border-2 border-surface text-xs font-semibold`}
             >
               <span aria-hidden="true">{initialsOf(user.name)}</span>
               <span className="sr-only">{user.name}</span>

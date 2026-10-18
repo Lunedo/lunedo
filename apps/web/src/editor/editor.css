@@ -538,6 +538,10 @@ details.ph-expand > summary {
   color: var(--ph-color-on-accent);
 }
 
+.ph-presence-avatar-cursor {
+  color: var(--ph-color-text);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ph-remote-caret {
     transition: none;

@@ -22,7 +22,7 @@ import type { Scene, SceneFile } from "@pagehall/editor-schema/scene";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type * as Y from "yjs";
-import type { PresenceColor, PresenceUser } from "../editor/presence.js";
+import type { PresenceUser } from "../editor/presence.js";
 import { nameUnlabeledControls } from "./controls.js";
 import {
   type FileStore,
@@ -73,10 +73,6 @@ function useDocumentTheme(): "light" | "dark" {
     return () => observer.disconnect();
   }, []);
   return theme;
-}
-
-function paletteColor(color: PresenceColor): string {
-  return getComputedStyle(document.documentElement).getPropertyValue(`--ph-palette-${color}`).trim();
 }
 
 function initialElements(scene: Scene): ExcalidrawElement[] {
@@ -231,11 +227,9 @@ export function ExcalidrawBoard({
         if (clientId === awareness.clientID) return;
         const presence = state as RemotePresence;
         if (!presence.user?.id) return;
-        const color = paletteColor(presence.user.color);
         collaborators.set(String(clientId) as SocketId, {
           id: presence.user.id,
           username: presence.user.name,
-          color: { background: color, stroke: color },
           ...(presence.pointer ? { pointer: presence.pointer } : {}),
           ...(presence.button ? { button: presence.button } : {}),
           selectedElementIds: Object.fromEntries((presence.selection ?? []).map((id) => [id, true])),
