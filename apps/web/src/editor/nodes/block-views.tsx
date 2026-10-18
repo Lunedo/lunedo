@@ -316,7 +316,7 @@ export function AttachmentView({ node, selected }: NodeViewProps) {
       contentEditable={false}
     >
       {isImage && id ? (
-        <img src={attachmentUrl(id)} alt={name} loading="lazy" draggable={false} />
+        <img src={attachmentUrl(id, undefined, "display")} alt={name} loading="lazy" draggable={false} />
       ) : isImage || !id ? (
         <p className="ph-image-empty flex min-h-hit items-center gap-2 rounded-md border border-dashed border-border px-3 text-sm text-text-muted">
           <ImageOff aria-hidden="true" className="size-icon" />

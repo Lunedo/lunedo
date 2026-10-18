@@ -4574,6 +4574,7 @@
       "unsupportedMacro": "This content from Confluence is not shown yet.",
       "file": "File",
       "image": "Image",
+      "openFullSize": "Open full size",
       "invalid": "This page cannot be shown because its stored content is damaged. Ask a space admin to restore an earlier version.",
       "taskDone": "Done",
       "taskOpen": "Open",

@@ -100,7 +100,7 @@ describe("the cover image of a blog post", () => {
       <CoverImage cover={{ attachmentId: RACK, focusX: 0.2, focusY: 0.4 }} alt="Cover" />,
     );
     const image = screen.getByRole("img", { name: "Cover" });
-    expect(image.getAttribute("src")).toBe(`/api/v1/attachments/${RACK}/content`);
+    expect(image.getAttribute("src")).toBe(`/api/v1/attachments/${RACK}/content?size=display`);
     expect(image.style.objectPosition).toBe("20% 40%");
   });
 });

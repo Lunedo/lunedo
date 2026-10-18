@@ -26,7 +26,7 @@ export function CoverImage({ cover, alt, className }: { cover: Cover; alt: strin
   if (failed === cover.attachmentId) return null;
   return (
     <img
-      src={contentUrl(cover.attachmentId)}
+      src={contentUrl(cover.attachmentId, { size: "display" })}
       onError={() => setFailed(cover.attachmentId)}
       alt={alt}
       className={`object-cover ${className ?? ""}`}
@@ -137,7 +137,7 @@ export function CoverEditor({
             onKeyDown={moveFocus}
             className="relative block w-full overflow-hidden rounded-md focus-visible:focus-ring"
           >
-            <img src={contentUrl(local.attachmentId)} alt="" className="block w-full" />
+            <img src={contentUrl(local.attachmentId, { size: "display" })} alt="" className="block w-full" />
             <span
               aria-hidden="true"
               className="pointer-events-none absolute flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-surface p-1 text-accent shadow-popover"

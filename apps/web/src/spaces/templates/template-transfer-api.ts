@@ -2,6 +2,7 @@ import { CSRF_HEADER } from "../../api/client.js";
 import type { paths } from "../../api/generated/schema.js";
 import { networkError, toApiError } from "../../api/request.js";
 import { downloadBlob } from "../../components/download.js";
+import type { ImageSize } from "../../files/attachments-api.js";
 
 type Json<T> = T extends { content: { "application/json": infer Body } } ? Body : never;
 
@@ -28,7 +29,7 @@ export interface ImportDecision {
 }
 
 export interface TemplateLevelApi {
-  fileUrl(templateId: string, fileId: string): string;
+  fileUrl(templateId: string, fileId: string, size?: ImageSize): string;
   uploadImage(templateId: string, file: File): Promise<TemplateFile>;
   exportSummary(templateIds: string[] | null): Promise<ExportSummary>;
   exportFile(templateIds: string[] | null): Promise<void>;
@@ -106,7 +107,8 @@ async function download(url: string, body: unknown): Promise<void> {
 
 export function templateLevelApi(base: string, options: { builtIn?: boolean } = {}): TemplateLevelApi {
   return {
-    fileUrl: (templateId, fileId) => `${base}/templates/${templateId}/files/${fileId}/content`,
+    fileUrl: (templateId, fileId, size) =>
+      `${base}/templates/${templateId}/files/${fileId}/content${size ? `?size=${size}` : ""}`,
     uploadImage: (templateId, file) => postFile(`${base}/templates/${templateId}/files`, file),
     exportSummary: (templateIds) => postJson(`${base}/templates/export-summary`, { templateIds }),
     exportFile: (templateIds) => download(`${base}/templates/export`, { templateIds }),

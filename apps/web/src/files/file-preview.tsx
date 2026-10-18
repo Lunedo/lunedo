@@ -34,12 +34,15 @@ const FRAME_LIMITS: Record<FramePreviewKind, number> = {
 
 export interface PreviewSource {
   url: (version?: number) => string;
+  displayUrl?: (version?: number) => string;
   downloadUrl: (version?: number) => string;
 }
 
 export function attachmentSource(attachmentId: string): PreviewSource {
   return {
     url: (version) => contentUrl(attachmentId, version === undefined ? {} : { version }),
+    displayUrl: (version) =>
+      contentUrl(attachmentId, { size: "display", ...(version === undefined ? {} : { version }) }),
     downloadUrl: (version) =>
       contentUrl(attachmentId, { download: true, ...(version === undefined ? {} : { version }) }),
   };
@@ -125,7 +128,7 @@ export function PreviewBody({
     case "image":
       return (
         <img
-          src={source.url(attachment.version)}
+          src={(source.displayUrl ?? source.url)(attachment.version)}
           alt={attachment.name}
           className="mx-auto max-h-card max-w-full rounded-md"
         />

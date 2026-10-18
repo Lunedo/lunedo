@@ -4574,6 +4574,7 @@
       "unsupportedMacro": "Dieser Inhalt aus Confluence wird noch nicht angezeigt.",
       "file": "Datei",
       "image": "Bild",
+      "openFullSize": "In voller Größe öffnen",
       "invalid": "Diese Seite kann nicht angezeigt werden, weil ihr gespeicherter Inhalt beschädigt ist. Bitte einen Space-Admin, eine frühere Version wiederherzustellen.",
       "taskDone": "Erledigt",
       "taskOpen": "Offen",

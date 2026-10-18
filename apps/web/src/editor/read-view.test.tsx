@@ -87,6 +87,31 @@ describe("page read view", () => {
     expect(column.style.getPropertyValue("--column-width")).toBe("30%");
   });
 
+  it("shows the display version of an image and opens the original in a new tab", async () => {
+    await renderWithProviders(
+      <PreferencesProvider>
+        <PageReadView
+          document={{
+            type: "doc",
+            content: [{ type: "image", attrs: { attachmentId: SECRET, alt: "Rack" } }],
+          }}
+          references={references}
+          pageId={PAGE}
+        />
+      </PreferencesProvider>,
+    );
+    const image = screen.getByRole("img", { name: "Rack" });
+    expect(image.getAttribute("src")).toBe(`/api/v1/attachments/${SECRET}/content?size=display`);
+    const full = screen.getByRole("link", { name: "Rack" });
+    expect(full.getAttribute("href")).toBe(`/api/v1/attachments/${SECRET}/content`);
+    expect(full.getAttribute("target")).toBe("_blank");
+    expect(full.getAttribute("title")).toBe("Open full size");
+    const opened = new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 });
+    full.dispatchEvent(opened);
+    expect(opened.defaultPrevented).toBe(false);
+    expect(window.location.pathname).not.toContain("/api/v1/attachments");
+  });
+
   it("keeps the checkbox and its focus when a task changes its status", async () => {
     const task = "01929b1e-0000-7000-8000-000000000005";
     const checklist = {

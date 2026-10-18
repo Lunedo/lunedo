@@ -5,7 +5,7 @@ import { Braces, ImagePlus, MessageSquareText } from "lucide-react";
 import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { problemMessage } from "../errors/problem-message.js";
-import { AttachmentSourceProvider } from "../files/attachment-source.js";
+import { AttachmentSourceProvider, type AttachmentUrl } from "../files/attachment-source.js";
 import { uploadQueue } from "../files/upload-queue.js";
 import { type EditorActions, registerEditorActions } from "./actions.js";
 import { EmbedDialog } from "./embed-dialog.js";
@@ -23,7 +23,7 @@ export interface TemplateFieldOption {
 }
 
 export interface TemplateImages {
-  url: (fileId: string) => string;
+  url: AttachmentUrl;
   upload: ((file: File) => Promise<{ id: string; name: string }>) | null;
 }
 

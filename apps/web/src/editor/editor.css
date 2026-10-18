@@ -58,6 +58,10 @@ details.ph-expand > div {
   text-align: justify;
 }
 
+.ph-content .ph-image-full {
+  @apply inline-block max-w-full cursor-zoom-in rounded-sm focus-visible:focus-ring;
+}
+
 .ph-content [data-indent="1"] {
   margin-left: calc(var(--ph-control-md) * 1);
 }
