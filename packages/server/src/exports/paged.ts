@@ -67,6 +67,7 @@ export class PagedExport {
   readonly #language: string;
   readonly #images = new Map<string, Promise<ReadImage>>();
   readonly #boards = new Map<string, BoardPreview>();
+  readonly #exported = new Set<string>();
   readonly #maxEmbedded: number;
   #embedded = 0;
 
@@ -192,6 +193,7 @@ export class PagedExport {
       const page = await input.prepare(entry.id);
       await input.progress();
       if (!page) continue;
+      this.#exported.add(page.id);
       if (page.board?.preview) this.#boards.set(page.id, page.board.preview);
       for (const [id, board] of page.whiteboards ?? []) {
         if (board.preview) this.#boards.set(id, board.preview);
@@ -281,6 +283,12 @@ export class PagedExport {
       id: attachmentId,
     });
     if (!allowed) return null;
+    const owner = await this.#database.execute<{ item_id: string }>(
+      sql`select item_id from attachments where id = ${attachmentId}`,
+    );
+    const itemId = owner.rows[0]?.item_id;
+    if (!itemId) return null;
+    if (!this.#exported.has(itemId) && !(await this.#renderer.exportable([itemId])).has(itemId)) return null;
     const content = await this.#attachments.content(attachmentId, "published");
     if (!content?.contentType.startsWith("image/")) return null;
     return this.#file(content.fileId, content.size, content.contentType);
@@ -311,6 +319,7 @@ export class PagedExport {
   async assets(pages: readonly PreparedPage[]): Promise<RenderAsset[]> {
     const ids = new Set<string>();
     const assets: RenderAsset[] = [];
+    for (const page of pages) this.#exported.add(page.id);
     for (const page of pages) {
       if (page.board?.preview) {
         const read = await this.#boardImage(page.id, page.board.preview);

@@ -4,6 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { accountPrincipal, type Principal } from "../accounts/principal.js";
 import { Secret } from "../config/secret.js";
 import { createLogger } from "../logging/logger.js";
+import { exportEnabledSetting } from "../spaces/settings.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { testJobContext } from "../testing/jobs.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
@@ -337,6 +338,61 @@ describe.skipIf(!baseUrl)("print, PDF and Word exports", () => {
     });
   });
 
+  describe("content of other pages", () => {
+    it("embeds diagrams and images of other pages only when the exporter may export those pages", async () => {
+      const own = await setup();
+      const upload = (name: string) =>
+        test.services.attachments.upload(own.admin, own.pages.remote.id, {
+          name,
+          body: Readable.from([PNG]),
+          contentLength: PNG.length,
+        });
+      const chart = await upload("chart.png");
+      const preview = await upload("topology.png");
+      const diagramId = "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5d01";
+      await test.services.documents.replace(
+        own.admin,
+        own.pages.remote.id,
+        doc({
+          type: "drawio",
+          attrs: {
+            id: diagramId,
+            sourceFormat: "drawio",
+            sourceId: null,
+            sourceVersion: null,
+            previewId: preview.id,
+            previewVersion: preview.version,
+            text: "",
+          },
+        }),
+      );
+      const borrowing = await test.services.tree.create(own.admin, own.space.id, {
+        kind: "page",
+        title: "Borrowing",
+        mode: "live",
+        placement: { parentId: null },
+      });
+      await test.services.documents.replace(
+        own.admin,
+        borrowing.id,
+        doc(
+          { type: "image", attrs: { attachmentId: chart.id, alt: "Borrowed chart" } },
+          {
+            type: "drawioReference",
+            attrs: { id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5d02", pageId: own.pages.remote.id, diagramId },
+          },
+        ),
+      );
+      const images = async () => {
+        const file = await test.services.exports.page(own.reader, borrowing.id, "docx");
+        return ((await html(await bytesOf(file))).match(/<img /g) ?? []).length;
+      };
+      expect(await images()).toBe(2);
+      await test.settings.set(exportEnabledSetting, { space: own.other.id }, "space", false);
+      expect(await images()).toBe(0);
+    });
+  });
+
   describe("embedded images", () => {
     it("reads each image once and stops embedding at the size budget of the document", async () => {
       const { admin, pages } = context;
@@ -358,7 +414,8 @@ describe.skipIf(!baseUrl)("print, PDF and Word exports", () => {
         maxEmbeddedBytes: PNG.length,
       });
       const imageNode = (id: string) => ({ type: "image", attrs: { attachmentId: id, alt: "" } });
-      const page = (document: unknown) => ({ document, images: new Set() }) as unknown as PreparedPage;
+      const page = (document: unknown) =>
+        ({ id: pages.welcome.id, document, images: new Set() }) as unknown as PreparedPage;
       const assets = await paged.assets([
         page(doc(imageNode(image), imageNode(image))),
         page(doc(imageNode(second.id), imageNode(image))),

@@ -375,7 +375,7 @@ export class PageExportRenderer {
         const statuses = await this.#tasks.statuses(this.#viewer, pageId);
         return new Map(statuses.map((status) => [status.id, status.done]));
       });
-      const diagrams = await this.#documents.referencedDiagrams(this.#viewer, document);
+      const diagrams = await this.#diagrams(document);
       const whiteboards = await this.#whiteboards(document);
       const images = await this.#previewImages(document);
       const meeting = await this.#meeting(pageId);
@@ -512,16 +512,26 @@ export class PageExportRenderer {
     }
   }
 
-  async #whiteboards(document: DocumentJson): Promise<Map<string, ReferencedBoard>> {
-    const found = await this.#documents.referencedWhiteboards(this.#viewer, document);
-    const visible = await this.#readerVisible(found.keys());
-    const result = new Map<string, ReferencedBoard>();
-    for (const [id, board] of found) {
-      if (!visible.has(id)) continue;
-      if (!(await this.#authorization.authorize(this.#viewer, "item.export", { type: "item", id }))) continue;
-      result.set(id, board);
+  async exportable(ids: Iterable<string>): Promise<Set<string>> {
+    const result = new Set<string>();
+    for (const id of await this.#readerVisible(ids)) {
+      if (await this.#authorization.authorize(this.#viewer, "item.export", { type: "item", id }))
+        result.add(id);
     }
     return result;
+  }
+
+  async #whiteboards(document: DocumentJson): Promise<Map<string, ReferencedBoard>> {
+    const found = await this.#documents.referencedWhiteboards(this.#viewer, document);
+    const exportable = await this.exportable(found.keys());
+    return new Map([...found].filter(([id]) => exportable.has(id)));
+  }
+
+  async #diagrams(document: DocumentJson): Promise<Map<string, ReferencedDiagram>> {
+    const found = await this.#documents.referencedDiagrams(this.#viewer, document);
+    const pageOf = (key: string) => key.slice(0, key.indexOf("/"));
+    const exportable = await this.exportable([...found.keys()].map(pageOf));
+    return new Map([...found].filter(([key]) => exportable.has(pageOf(key))));
   }
 
   async #previewImages(document: DocumentJson): Promise<Set<string>> {
