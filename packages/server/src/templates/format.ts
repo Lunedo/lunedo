@@ -67,7 +67,7 @@ export const templateFileEntrySchema = z
       .string()
       .min(1)
       .max(255)
-      .regex(/^[^/\\\u0000-\u001f\u007f]+$/, "Expected a file name without paths or control characters")
+      .regex(/^[^/\\\p{Cc}]+$/u, "Expected a file name without paths or control characters")
       .describe("File name shown when the template is used."),
   })
   .strict()

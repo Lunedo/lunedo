@@ -331,7 +331,10 @@ describe.skipIf(!baseUrl)("template files", () => {
     await test.services.templates.adoptPendingFiles(createLogger({ service: "test", level: "silent" }));
     expect(imageIds((await test.services.templates.get(changedByOutsider))?.document)).toEqual([null]);
     const files = await templateFiles(organizationLevel);
-    expect(imageIds((await test.services.templates.get(organizationLevel))?.document)).toEqual([files[0]?.id, null]);
+    expect(imageIds((await test.services.templates.get(organizationLevel))?.document)).toEqual([
+      files[0]?.id,
+      null,
+    ]);
   });
 
   it("refuses to add template files when the storage is almost full", async () => {

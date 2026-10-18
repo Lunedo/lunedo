@@ -108,7 +108,9 @@ const examples: { name: string; value: unknown; accepted: boolean }[] = [
   },
   {
     name: "a file name with a path",
-    value: changed((copy) => Object.assign(copy.templates[0]?.files[0] as object, { name: "../../etc/passwd" })),
+    value: changed((copy) =>
+      Object.assign(copy.templates[0]?.files[0] as object, { name: "../../etc/passwd" }),
+    ),
     accepted: false,
   },
   {
