@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { gunzipSync } from "node:zlib";
@@ -12,7 +12,9 @@ import {
   findProblems,
   parseExpected,
   prepare,
+  projectFolder,
   readZip,
+  TEST_DATA_FOLDER,
 } from "./prepare.js";
 
 const ACTORS: Actor[] = [
@@ -189,7 +191,7 @@ describe("preparing the fixtures", () => {
   function source(page: string, spaceKey = "AA", entry = "entities.xml"): string {
     const parent = mkdtempSync(path.join(tmpdir(), "confluence-fixtures-"));
     folders.push(parent);
-    const folder = path.join(parent, "confluence-cloud");
+    const folder = path.join(parent, TEST_DATA_FOLDER, "confluence-cloud");
     mkdirSync(path.join(folder, "api-recording", "requests"), { recursive: true });
     mkdirSync(path.join(folder, "xml"));
     const request = {
@@ -243,10 +245,12 @@ source=cloud
     return folder;
   }
 
+  const projectOf = (folder: string) => path.dirname(path.dirname(folder));
+
   it("writes compressed, anonymized bundles of the exports and the recording", () => {
     const folder = source("Notes of Rosa Lindqvist");
     const target = path.join(folder, "out");
-    const { files } = prepare(folder, target);
+    const { files } = prepare(folder, target, projectOf(folder));
     expect(files.map((file) => file.name)).toEqual([
       "AA.jsonl.gz",
       "api-recording.jsonl.gz",
@@ -264,28 +268,45 @@ source=cloud
     });
   });
 
-  it("reads only from the folder of the test site", () => {
+  it("reads only from the folder of the test site next to the repository", () => {
     const folder = source("Notes");
-    expect(() => prepare(path.join(folder, "..", "other"), path.join(folder, "out"))).toThrow(
-      "does not exist",
-    );
+    const project = projectOf(folder);
+    const out = path.join(project, "out");
+    expect(() => prepare(path.join(folder, "..", "other"), out, project)).toThrow("does not exist");
     mkdirSync(path.join(folder, "..", "confluence"));
-    expect(() => prepare(path.join(folder, "..", "confluence"), path.join(folder, "out"))).toThrow(
-      "only from the folder confluence-cloud",
+    expect(() => prepare(path.join(folder, "..", "confluence"), out, project)).toThrow(
+      `only from the folder ${TEST_DATA_FOLDER}/confluence-cloud`,
     );
+    const elsewhere = path.join(project, "copy", "confluence-cloud");
+    cpSync(folder, elsewhere, { recursive: true });
+    expect(() => prepare(elsewhere, out, project)).toThrow(
+      `only from the folder ${TEST_DATA_FOLDER}/confluence-cloud`,
+    );
+    expect(() => prepare(folder, out, path.join(project, "copy"))).toThrow(
+      `only from the folder ${TEST_DATA_FOLDER}/confluence-cloud`,
+    );
+    expect(() => prepare(path.join(folder, "xml", "..", "."), out, project)).not.toThrow();
+  });
+
+  it("looks for the test site next to the main checkout of the repository", () => {
+    const project = projectFolder();
+    expect(path.isAbsolute(project)).toBe(true);
+    expect(path.relative(project, import.meta.dirname).startsWith("..")).toBe(false);
   });
 
   it("refuses archives of other spaces and archive entries that leave the archive", () => {
-    expect(() => prepare(source("Notes", "RMA"), path.join(tmpdir(), "unused"))).toThrow(
+    const other = source("Notes", "RMA");
+    expect(() => prepare(other, path.join(tmpdir(), "unused"), projectOf(other))).toThrow(
       "AA.zip is not an export of the test site",
     );
-    expect(() => prepare(source("Notes", "AA", "../entities.xml"), path.join(tmpdir(), "unused"))).toThrow(
-      "unsafe entry",
-    );
+    const unsafe = source("Notes", "AA", "../entities.xml");
+    expect(() => prepare(unsafe, path.join(tmpdir(), "unused"), projectOf(unsafe))).toThrow("unsafe entry");
   });
 
   it("writes nothing when something looks like a secret", () => {
     const folder = source("Key ATATT3xFfGF0abcdefghijklmnopqrstuvwxyz");
-    expect(() => prepare(folder, path.join(folder, "out"))).toThrow("looks like a Atlassian API token");
+    expect(() => prepare(folder, path.join(folder, "out"), projectOf(folder))).toThrow(
+      "looks like a Atlassian API token",
+    );
   });
 });
