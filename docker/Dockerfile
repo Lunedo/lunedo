@@ -57,6 +57,10 @@ COPY --from=build --chown=root:root /out/collab ./collab
 COPY --from=build --chown=root:root /out/worker ./worker
 COPY --from=build --chown=root:root /repo/apps/web/dist ./web
 COPY --chmod=755 docker/start.sh /usr/local/bin/pagehall
+# sharp loads its prebuilt libvips for the architecture of this image; fail the build if it cannot.
+RUN for app in api worker; do \
+      (cd "/app/$app" && node -e "require('node:module').createRequire(require.resolve('@pagehall/server'))('sharp')") || exit 1; \
+    done
 USER node
 VOLUME /var/lib/pagehall
 EXPOSE 3000 3001 3002
