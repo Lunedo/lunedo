@@ -454,7 +454,7 @@ describe.skipIf(!baseUrl)("print, PDF and Word exports", () => {
       }
     });
 
-    it("leaves out images above the smaller budget of files built while the request waits", async () => {
+    it("shows a placeholder with a hint for images above the budget of files built while the request waits", async () => {
       const { admin, space: handbook } = context;
       const large = await test.services.tree.create(admin, handbook.id, {
         kind: "page",
@@ -481,6 +481,16 @@ describe.skipIf(!baseUrl)("print, PDF and Word exports", () => {
       const file = await test.services.exports.page(admin, large.id, "docx");
       const output = await html(await bytesOf(file));
       expect((output.match(/<img /g) ?? []).length).toBe(1);
+      expect(output).toContain(`${ids[1]}: Image left out because the file would otherwise be too large.`);
+      calls.length = 0;
+      await test.services.exports.page(admin, large.id, "pdf");
+      const sent = calls.at(-1);
+      expect(sent?.assets.map((asset) => asset.path)).toEqual([`/api/v1/attachments/${ids[0]}/content`]);
+      expect(sent?.html).toContain(`src="/api/v1/attachments/${ids[0]}/content"`);
+      expect(sent?.html).not.toContain(`src="/api/v1/attachments/${ids[1]}/content"`);
+      expect(sent?.html).toContain(
+        `<span class="ph-export-note">${ids[1]}: Image left out because the file would otherwise be too large.`,
+      );
     });
   });
 

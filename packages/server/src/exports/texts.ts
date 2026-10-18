@@ -17,6 +17,7 @@ export interface ExportTexts {
   unavailable: (what: string) => string;
   pageUnavailable: string;
   whiteboardWithoutImage: string;
+  imageLeftOut: string;
   someContent: string;
   nodeTitles: Readonly<Record<string, string>>;
   pageNumber: { before: string; between: string };
@@ -123,6 +124,8 @@ const english: ExportTexts = {
   pageUnavailable: "The content of this page could not be exported.",
   whiteboardWithoutImage:
     "This whiteboard has no saved image yet, for example because nothing was drawn on it. Open it in Pagehall to see it.",
+  imageLeftOut:
+    "Image left out because the file would otherwise be too large. Open the page in Pagehall, or export it as HTML or Markdown with attachments, to get every image.",
   someContent: "This content",
   nodeTitles: {},
   pageNumber: { before: "Page ", between: " of " },
@@ -232,6 +235,8 @@ const german: ExportTexts = {
   pageUnavailable: "Der Inhalt dieser Seite konnte nicht exportiert werden.",
   whiteboardWithoutImage:
     "Von diesem Whiteboard ist noch kein Bild gespeichert, zum Beispiel weil noch nichts darauf gezeichnet wurde. Öffnen Sie es in Pagehall, um es zu sehen.",
+  imageLeftOut:
+    "Bild ausgelassen, weil die Datei sonst zu groß würde. Öffnen Sie die Seite in Pagehall oder exportieren Sie sie als HTML oder Markdown mit Anhängen, um alle Bilder zu erhalten.",
   someContent: "Dieser Inhalt",
   nodeTitles: {},
   pageNumber: { before: "Seite ", between: " von " },

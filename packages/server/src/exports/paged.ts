@@ -2,6 +2,7 @@ import {
   commentKit,
   type DocumentJson,
   diagramTypes,
+  escapeHtml,
   formatBytes,
   type RenderContext,
 } from "@pagehall/editor-schema";
@@ -76,6 +77,7 @@ export class PagedExport {
   readonly #exported = new Set<string>();
   readonly #assetIds = new Set<string>();
   readonly #assetBoards = new Set<string>();
+  readonly #leftOut = new Set<string>();
   readonly #maxEmbedded: number;
   #embedded = 0;
 
@@ -216,17 +218,18 @@ export class PagedExport {
     const listed: ListedPage[] = [];
     for await (const { entry, page } of this.#pages(input)) {
       const title = this.#renderer.title(page);
+      this.noteAssets(page);
+      await this.#claim();
       printed.push({
         id: page.id,
         depth: entry.depth,
         title,
         path: page.path,
         meta: this.#renderer.meta(page),
-        body: this.#renderer.printBody(page, locator),
+        body: this.#withPlaceholders(this.#renderer.printBody(page, locator)),
         headings: this.#renderer.headings(page),
         comments: input.options.comments ? await this.#printComments(page.id) : [],
       });
-      this.noteAssets(page);
       listed.push({ id: page.id, title });
     }
     return printHtml({
@@ -266,6 +269,7 @@ export class PagedExport {
       pages: words,
       attachments: input.options.attachments ? await this.#appendix(listed) : [],
       image: (attachmentId) => this.#image(attachmentId),
+      leftOut: (attachmentId) => this.#leftOut.has(attachmentId),
     });
   }
 
@@ -283,7 +287,7 @@ export class PagedExport {
 
   #boardImage(itemId: string, preview: BoardPreview): Promise<ImageFile> {
     return this.#cached(`whiteboard:${itemId}`, async () =>
-      this.#within({ fileId: preview.fileId, size: preview.size, contentType: "image/svg+xml" }),
+      this.#within(itemId, { fileId: preview.fileId, size: preview.size, contentType: "image/svg+xml" }),
     );
   }
 
@@ -301,11 +305,18 @@ export class PagedExport {
     if (!this.#exported.has(itemId) && !(await this.#renderer.exportable([itemId])).has(itemId)) return null;
     const content = await this.#attachments.content(attachmentId, "published");
     if (!content?.contentType.startsWith("image/")) return null;
-    return this.#within({ fileId: content.fileId, size: content.size, contentType: content.contentType });
+    return this.#within(attachmentId, {
+      fileId: content.fileId,
+      size: content.size,
+      contentType: content.contentType,
+    });
   }
 
-  #within(file: NonNullable<ImageFile>): ImageFile {
-    if (file.size > MAX_EMBEDDED_IMAGE_BYTES || this.#embedded + file.size > this.#maxEmbedded) return null;
+  #within(id: string, file: NonNullable<ImageFile>): ImageFile {
+    if (file.size > MAX_EMBEDDED_IMAGE_BYTES || this.#embedded + file.size > this.#maxEmbedded) {
+      this.#leftOut.add(id);
+      return null;
+    }
     this.#embedded += file.size;
     return file;
   }
@@ -337,6 +348,27 @@ export class PagedExport {
     if (!data) return null;
     const info = imageInfo(data);
     return info ? { ...info, data } : null;
+  }
+
+  async #claim(): Promise<void> {
+    for (const id of this.#assetBoards) {
+      const board = this.#boards.get(id);
+      if (board) await this.#boardImage(id, board);
+    }
+    for (const id of this.#assetIds) await this.#readable(id);
+  }
+
+  #withPlaceholders(html: string): string {
+    if (this.#leftOut.size === 0) return html;
+    return html.replace(/<img\b[^>]*\bsrc="([^"]*)"[^>]*>/g, (image, source: string) => {
+      const id = /^\/api\/v1\/(?:attachments|whiteboards)\/([0-9a-f-]{36})\/(?:content|preview)$/.exec(
+        source,
+      )?.[1];
+      if (!id || !this.#leftOut.has(id)) return image;
+      const alt = /\balt="([^"]*)"/.exec(image)?.[1] ?? "";
+      const note = escapeHtml(this.#renderer.texts.imageLeftOut);
+      return `<span class="ph-export-note">${alt ? `${alt}: ` : ""}${note}</span>`;
+    });
   }
 
   noteAssets(page: PreparedPage): void {
