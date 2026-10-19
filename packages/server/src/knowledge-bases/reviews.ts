@@ -14,6 +14,12 @@ import { signalSpaceChange } from "../spaces/signals.js";
 import { visibleItem } from "../spaces/visibility.js";
 import type { ReviewInterval, ReviewLeadDays, ReviewRecipients, ReviewVia } from "./schema.js";
 
+export function lastReviewedAt(item: SQL): SQL {
+  return sql`(select r.reviewed_at from article_reviews r left join knowledge_bases kb on kb.space_id = ${item}.space_id
+    where r.item_id = ${item}.id
+      and (r.interval_months > 0 or (r.interval_months is null and kb.review_interval_months is not null)))`;
+}
+
 export const REVIEW_CHANGES_CHANNEL = "pagehall_review_changes";
 export const SOON_DAYS = 30;
 export const UNDO_SECONDS = 120;

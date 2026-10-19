@@ -158,11 +158,21 @@ export class PortalStatistics {
           ${spaceId ? sql`and space_id = ${spaceId}` : sql``}
         returning space_id, term, searched_at, zero_results
       ),
+      grouped as (
+        select space_id, term, date_trunc('month', searched_at at time zone 'UTC')::date as month,
+          count(*) as searches, count(*) filter (where zero_results) as zero_results
+        from moved group by 1, 2, 3
+      ),
       merged as (
         insert into portal_search_months (space_id, term, month, searches, zero_results)
-        select space_id, term, date_trunc('month', searched_at at time zone 'UTC')::date, count(*),
-          count(*) filter (where zero_results)
-        from moved group by 1, 2, 3
+        select g.space_id, g.term, g.month, g.searches, g.zero_results from grouped g
+        where coalesce((select m.searches from portal_search_months m
+            where m.space_id = g.space_id and m.month = g.month and m.term = g.term), 0)
+          + (select count(*) from portal_searches r
+            where r.space_id = g.space_id and r.term = g.term
+              and r.searched_at >= g.month::timestamp at time zone 'UTC'
+              and r.searched_at < (g.month + interval '1 month')::timestamp at time zone 'UTC')
+          >= ${MINIMUM_TERM_SEARCHES}
         on conflict (space_id, month, term) do update set
           searches = portal_search_months.searches + excluded.searches,
           zero_results = portal_search_months.zero_results + excluded.zero_results

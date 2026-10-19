@@ -9816,6 +9816,6 @@
       "deleted": "Note deleted",
       "deleteFailed": "The note could not be deleted"
     },
-    "privacy": "Counted anonymously: no names, accounts, sessions or IP addresses. Searches older than 12 months are kept only as counts per term and month."
+    "privacy": "Counted anonymously: no names, accounts, sessions or IP addresses. Searches older than 12 months are kept only as counts per term and month, for terms searched at least 3 times that month."
   }
 }

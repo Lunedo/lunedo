@@ -9816,6 +9816,6 @@
       "deleted": "Hinweis gelöscht",
       "deleteFailed": "Der Hinweis konnte nicht gelöscht werden"
     },
-    "privacy": "Anonym gezählt: keine Namen, Konten, Sitzungen oder IP-Adressen. Suchen, die älter als 12 Monate sind, bleiben nur als Anzahl je Begriff und Monat erhalten."
+    "privacy": "Anonym gezählt: keine Namen, Konten, Sitzungen oder IP-Adressen. Suchen, die älter als 12 Monate sind, bleiben nur als Anzahl je Begriff und Monat erhalten, und nur für Begriffe mit mindestens 3 Suchen in diesem Monat."
   }
 }

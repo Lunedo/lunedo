@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database } from "../database/database.js";
+import { lastReviewedAt } from "../knowledge-bases/reviews.js";
 import { CATEGORY_LEVELS } from "../knowledge-bases/service.js";
 import type { ArticleSort, ListedArticle } from "../search/adapter.js";
 import type { SearchCursor, SearchService } from "../search/service.js";
@@ -39,6 +40,7 @@ export interface PortalArticleSummary {
   categoryId: string | null;
   subcategoryId: string | null;
   updatedAt: Date;
+  reviewedAt: Date | null;
   views: number;
 }
 
@@ -181,14 +183,28 @@ export class PortalReader {
   async #addresses(
     spaceId: string,
     itemIds: string[],
-  ): Promise<Map<string, { number: number; slug: string }>> {
+  ): Promise<Map<string, { number: number; slug: string; reviewedAt: Date | null }>> {
     if (itemIds.length === 0) return new Map();
-    const result = await this.#database.execute<{ item_id: string; number: number; slug: string }>(sql`
-      select n.item_id, n.number, coalesce(article_slug(v.title), '') as slug
+    const result = await this.#database.execute<{
+      item_id: string;
+      number: number;
+      slug: string;
+      reviewed_at: Date | string | null;
+    }>(sql`
+      select n.item_id, n.number, coalesce(article_slug(v.title), '') as slug, ${lastReviewedAt(sql`t`)} as reviewed_at
       from article_numbers n join tree_items t on t.id = n.item_id
       left join page_versions v on v.id = t.published_version_id
       where n.space_id = ${spaceId} and n.item_id = any(${sql.param(itemIds)}::uuid[])`);
-    return new Map(result.rows.map((row) => [row.item_id, { number: Number(row.number), slug: row.slug }]));
+    return new Map(
+      result.rows.map((row) => [
+        row.item_id,
+        {
+          number: Number(row.number),
+          slug: row.slug,
+          reviewedAt: row.reviewed_at ? new Date(row.reviewed_at) : null,
+        },
+      ]),
+    );
   }
 
   async #summaries(config: PortalConfig, listed: ListedArticle[]): Promise<PortalArticleSummary[]> {
@@ -210,6 +226,7 @@ export class PortalReader {
           categoryId: ancestors[0] ?? null,
           subcategoryId: ancestors[1] ?? null,
           updatedAt: new Date(article.updatedAt),
+          reviewedAt: address.reviewedAt,
           views: article.views,
         },
       ];
@@ -233,12 +250,13 @@ export class PortalReader {
       path: string[];
       version_id: string;
       updated_at: Date;
+      reviewed_at: Date | string | null;
       slug: string;
       own_number: number | null;
       known_slug: boolean;
     }>(sql`
       select t.id, t.space_id, s.key as space_key, v.title, t.description, t.article_type, t.path,
-        v.id as version_id, v.created_at as updated_at, coalesce(article_slug(v.title), '') as slug,
+        v.id as version_id, v.created_at as updated_at, ${lastReviewedAt(sql`t`)} as reviewed_at, coalesce(article_slug(v.title), '') as slug,
         (select n2.number from article_numbers n2 where n2.item_id = t.id and n2.space_id = t.space_id) as own_number,
         (${slug} = '' or ${slug} = coalesce(article_slug(v.title), '')
           or exists (select 1 from article_slugs sl where sl.item_id = t.id and sl.slug = ${slug})) as known_slug
@@ -274,6 +292,7 @@ export class PortalReader {
         categoryId: ancestors[0] ?? null,
         subcategoryId: ancestors[1] ?? null,
         updatedAt: new Date(row.updated_at),
+        reviewedAt: row.reviewed_at ? new Date(row.reviewed_at) : null,
         views: 0,
         spaceKey: row.space_key,
         lead: row.description,

@@ -147,7 +147,7 @@ describe.skipIf(!baseUrl)("knowledge base statistics", () => {
     expect(JSON.stringify(audited.rows[0]?.fields)).not.toContain("0171");
   });
 
-  it("counts searches per term and month once they are older than 12 months", async () => {
+  it("counts searches older than 12 months per term and month, and drops terms searched fewer than 3 times", async () => {
     const context = await setup();
     const queued: { payload: unknown; options: EnqueueOptions | undefined }[] = [];
     const jobs = {
@@ -162,7 +162,9 @@ describe.skipIf(!baseUrl)("knowledge base statistics", () => {
       at(now).recordSearch(context.kb.id, { term, results, categoryId: null });
     await record("2025-09-03T10:20:00Z", "VPN", 3);
     await record("2025-09-03T11:40:00Z", "VPN", 0);
+    await record("2025-09-05T09:00:00Z", "Lea Hoffmann", 0);
     await record("2025-09-28T08:00:00Z", "vpn", 1);
+    await record("2025-09-29T08:00:00Z", "lea hoffmann", 0);
     await record("2025-10-19T13:00:00Z", "Drucker", 1);
     expect(queued[0]).toEqual({
       payload: { spaceId: context.kb.id },
@@ -173,7 +175,7 @@ describe.skipIf(!baseUrl)("knowledge base statistics", () => {
     });
 
     expect(await at("2026-09-04T00:05:00Z").aggregateSearches(context.kb.id)).toBe(2);
-    expect(await at("2026-10-19T12:00:00Z").aggregateSearches(context.kb.id)).toBe(1);
+    expect(await at("2026-10-19T12:00:00Z").aggregateSearches(context.kb.id)).toBe(3);
     expect(await at("2026-10-19T12:00:00Z").aggregateSearches(context.kb.id)).toBe(0);
     const months = await test.database.execute<{
       term: string;

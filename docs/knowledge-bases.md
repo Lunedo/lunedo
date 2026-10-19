@@ -149,7 +149,7 @@ In Pagehall, the link to a source page and its title are shown only to people wh
 
 `POST /api/v1/pages/{pageId}/publish` accepts `"reviewed": true` for articles. Reviews also appear in `GET /api/v1/items/{itemId}/activity` with the type `review`.
 
-`GET /api/v1/articles/{itemId}/review` gives the date readers see as "last reviewed": `reviewedAt`, or `publishedAt` when the article was never reviewed. Show it only while `effectiveIntervalMonths` is set; without reviews, show the date of the last change instead.
+The portal shows "Last reviewed on" with the date of the last review while a review interval applies to the article and it was reviewed at least once; otherwise it shows "Updated on" with the date of the published version. `GET /api/v1/articles/{itemId}/review` returns the same values (`reviewedAt`, `effectiveIntervalMonths`).
 
 ## The portal
 
@@ -228,7 +228,7 @@ The portal records what readers do, without any account, session or address. No 
 - Searches are recorded on the first page of results; each device counts at most 60 searches in ten minutes. Article views are counted when an article page is served.
 - "Was this helpful?" records yes or no; a note after "No" is stored separately. Double votes are prevented only in the browser.
 - A note is deleted when the retention of its knowledge base ends for it: each note gets a job that runs on its day of deletion and checks the current retention, so a longer retention moves the job and a shorter one deletes older notes at once. A daily sweep deletes notes whose job was lost.
-- Searches older than 12 months are kept only as counts per term and month in `portal_search_months`. The first search of a day schedules a job for the day the searches turn 12 months old, which moves them into the monthly counts; a daily sweep catches searches whose job was lost.
+- Searches older than 12 months are kept only as counts per term and month in `portal_search_months`, and only for terms searched at least 3 times in that month; rarer searches are deleted. The first search of a day schedules a job for the day the searches turn 12 months old, which moves them into the monthly counts; a daily sweep catches searches whose job was lost.
 - Rows of an article or knowledge base go when it is deleted permanently.
 
 The read interface is `PortalStatistics` in `@pagehall/server` (`services.portalStatistics`). Periods are `{ from, to }` with ISO dates, both included. It does not check permissions; the routes that use it decide who may read the statistics.
