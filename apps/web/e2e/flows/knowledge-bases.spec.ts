@@ -56,9 +56,10 @@ test("creates a knowledge base and publishes a how-to only once its required sec
   });
   await page.getByRole("button", { name: "Publish", exact: true }).click();
   await page.getByRole("button", { name: "Publish version 1" }).click();
-  await expect(page.getByText("Published as version 1. Readers see it now.")).toBeVisible();
+  await expect(page.getByText("Published as version 1. Readers see it now.", { exact: true })).toBeVisible();
 
   await page.goto(`/spaces/${spaceKey}`);
-  await expect(page.getByRole("link", { name: "How-to" })).toBeVisible();
-  await expect(page.getByText("Without category")).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Without category" }).getByRole("link", { name: "How-to" }),
+  ).toBeVisible();
 });

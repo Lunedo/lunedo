@@ -1,7 +1,7 @@
 import { Badge, Button, ConfirmDialog, Field, Notice, Popover, Textarea, useToast } from "@pagehall/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { Send } from "lucide-react";
-import { type RefObject, useState } from "react";
+import { type RefObject, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { ApiError, request } from "../api/request.js";
@@ -45,6 +45,7 @@ export function PublishButton({
   const [busy, setBusy] = useState(false);
   const next = (draft?.basedOn ?? 0) + 1;
   const hiddenBy = page.ancestors.filter((ancestor) => !ancestor.published);
+  const focusMovesToEditor = useRef(false);
 
   const publish = async () => {
     if (note.trim().length > NOTE_MAX) {
@@ -78,6 +79,7 @@ export function PublishButton({
       }
     } catch (failure) {
       if (failure instanceof ApiError && failure.code === "requiredSectionsEmpty") {
+        focusMovesToEditor.current = true;
         setOpen(false);
         onMissingSections?.(failure.problem.sections ?? []);
       }
@@ -97,6 +99,11 @@ export function PublishButton({
       onOpenChange={setOpen}
       align="end"
       label={t("versions.publishTitle")}
+      onCloseAutoFocus={(event) => {
+        if (!focusMovesToEditor.current) return;
+        focusMovesToEditor.current = false;
+        event.preventDefault();
+      }}
       trigger={
         <Button variant="primary" icon={Send}>
           {t("versions.publish")}

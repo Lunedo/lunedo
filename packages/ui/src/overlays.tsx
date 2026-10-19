@@ -20,6 +20,7 @@ export interface PopoverProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   label?: string;
+  onCloseAutoFocus?: (event: Event) => void;
 }
 
 export function Popover({
@@ -30,6 +31,7 @@ export function Popover({
   open,
   onOpenChange,
   label,
+  onCloseAutoFocus,
 }: PopoverProps) {
   return (
     <PopoverPrimitive.Root
@@ -44,6 +46,7 @@ export function Popover({
           sideOffset={6}
           collisionPadding={8}
           {...(label ? { "aria-label": label } : {})}
+          {...(onCloseAutoFocus ? { onCloseAutoFocus } : {})}
           className={classNames(SURFACE, "max-w-dialog-sm p-3 focus-visible:focus-ring")}
         >
           {children}

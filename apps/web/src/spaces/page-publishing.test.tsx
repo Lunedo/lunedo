@@ -1,8 +1,11 @@
-import { screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
-import { renderWithProviders } from "../testing/render.js";
+import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { MissingSection } from "../editor/extensions/required-sections.js";
+import { mockApi, renderWithProviders } from "../testing/render.js";
 import type { Draft } from "./content-queries.js";
-import { DraftBanner, DraftStatusLine } from "./page-publishing.js";
+import { DraftBanner, DraftStatusLine, PublishButton } from "./page-publishing.js";
+import type { ItemDetails } from "./space-queries.js";
 
 function draft(names: string[], overrides: Partial<Draft> = {}): Draft {
   return {
@@ -56,5 +59,45 @@ describe("the draft status line", () => {
     await renderWithProviders(<DraftStatusLine draft={draft(["Olivia Owner"])} />);
     const line = screen.getByRole("status");
     expect(line.textContent).toContain("since version 2 · Readers see version 2");
+  });
+});
+
+describe("publishing with an empty required section", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("closes and hands the empty required sections to the editor", async () => {
+    const pageId = "01929b1e-0000-7000-8000-0000000000e1";
+    mockApi({
+      [`POST /api/v1/pages/${pageId}/publish`]: () => ({
+        status: 409,
+        body: {
+          type: "urn:pagehall:problem:requiredSectionsEmpty",
+          title: "Required sections are empty",
+          status: 409,
+          code: "requiredSectionsEmpty",
+          sections: [{ key: "steps", title: "Steps" }],
+        },
+      }),
+    });
+    const reported: MissingSection[][] = [];
+    const page = {
+      id: pageId,
+      spaceId: "01929b1e-0000-7000-8000-0000000000a1",
+      ancestors: [],
+    } as unknown as ItemDetails;
+    await renderWithProviders(
+      <PublishButton
+        page={page}
+        draft={draft(["Olivia Owner"], { basedOn: null })}
+        saveState={{ current: "saved" }}
+        onMissingSections={(sections) => reported.push(sections)}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Publish" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Publish version 1" }));
+    await waitFor(() => expect(reported).toEqual([[{ key: "steps", title: "Steps" }]]));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Publish version 1" })).toBeNull());
   });
 });
