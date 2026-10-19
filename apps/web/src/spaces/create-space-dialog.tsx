@@ -6,6 +6,7 @@ import {
   focusFirstInvalidSoon,
   Input,
   Notice,
+  RadioGroup,
   Select,
   Textarea,
   useToast,
@@ -17,12 +18,21 @@ import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
 import { isApiError, request } from "../api/request.js";
 import { problemMessage } from "../errors/problem-message.js";
+import { translateKey } from "../i18n/translate.js";
+import type { Audience } from "../knowledge-bases/queries.js";
 import { useOrganizationState, useSession } from "../shell/shell-context.js";
 import type { Grant } from "./access/holders.js";
 import { GrantsField, VisibilityField, WhoGetsAccess } from "./access/space-access-fields.js";
 import { type SpaceVisibility, spaceDefaultsQuery, spaceKeys } from "./space-queries.js";
 
 const KEY_PATTERN = /^[A-Z0-9]{2,10}$/;
+const AUDIENCES: Audience[] = ["signedIn", "groups", "portal", "public"];
+
+type SpaceType = "standard" | "knowledgeBase";
+
+function audienceVisibility(audience: Audience): SpaceVisibility {
+  return audience === "public" || audience === "signedIn" ? "instance" : "private";
+}
 
 export function CreateSpaceDialog({
   open,
@@ -73,12 +83,16 @@ function CreateSpaceForm({
   const [keyEdited, setKeyEdited] = useState(false);
   const [description, setDescription] = useState("");
   const [visibility, setVisibility] = useState<SpaceVisibility>("organization");
-  const [confidential, setConfidential] = useState(false);
+  const [type, setType] = useState<SpaceType>("standard");
+  const [audience, setAudience] = useState<Audience>("signedIn");
+  const [confidentialChoice, setConfidential] = useState(false);
+  const knowledgeBase = type === "knowledgeBase";
+  const confidential = confidentialChoice && !knowledgeBase;
   const canCreateConfidential = state.can("organization.spaces.createConfidential");
   const [grants, setGrants] = useState<Grant[]>([]);
   const visibleGrants = confidential ? grants.filter((grant) => grant.principalKind === "account") : grants;
   const [initialized, setInitialized] = useState(false);
-  const [errors, setErrors] = useState<{ name?: string; key?: string }>({});
+  const [errors, setErrors] = useState<{ name?: string; key?: string; audience?: string }>({});
   const [failure, setFailure] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const suggestion = useRef(0);
@@ -109,8 +123,15 @@ function CreateSpaceForm({
   const ownId = session.account?.id ?? "";
 
   const validate = async (): Promise<boolean> => {
-    const next: { name?: string; key?: string } = {};
+    const next: { name?: string; key?: string; audience?: string } = {};
     if (name.trim() === "") next.name = t("spaces.create.nameRequired");
+    if (
+      knowledgeBase &&
+      audience === "groups" &&
+      !visibleGrants.some((grant) => grant.principalKind === "group")
+    ) {
+      next.audience = t("knowledgeBase.create.groupsRequired");
+    }
     const normalized = key.trim().toUpperCase();
     if (!KEY_PATTERN.test(normalized)) next.key = t("spaces.create.keyInvalid");
     else {
@@ -140,8 +161,9 @@ function CreateSpaceForm({
             name: name.trim(),
             key: key.trim().toUpperCase(),
             description: description.trim(),
-            visibility: confidential ? "private" : visibility,
-            confidential,
+            ...(knowledgeBase
+              ? { type, audience }
+              : { visibility: confidential ? "private" : visibility, confidential }),
             grants: visibleGrants
               .filter((grant) => !(grant.principalKind === "account" && grant.principalId === ownId))
               .map(({ principalKind, principalId, role }) => ({ principalKind, principalId, role })),
@@ -176,6 +198,25 @@ function CreateSpaceForm({
           {failure}
         </Notice>
       ) : null}
+      <RadioGroup
+        label={t("knowledgeBase.create.typeLabel")}
+        variant="card"
+        value={type}
+        onValueChange={(value) => setType(value as SpaceType)}
+        options={[
+          {
+            value: "standard",
+            label: t("knowledgeBase.create.standard"),
+            description: t("knowledgeBase.create.standardDescription"),
+          },
+          {
+            value: "knowledgeBase",
+            label: t("knowledgeBase.create.knowledgeBase"),
+            description: t("knowledgeBase.create.knowledgeBaseDescription"),
+          },
+        ]}
+      />
+      <p className="-mt-3 text-sm text-text-muted">{t("knowledgeBase.create.fixed")}</p>
       {state.multipleOrganizations ? (
         <Field label={t("spaces.create.organization")}>
           <Select
@@ -223,7 +264,7 @@ function CreateSpaceForm({
           onChange={(event) => setDescription(event.target.value)}
         />
       </Field>
-      {canCreateConfidential ? (
+      {canCreateConfidential && !knowledgeBase ? (
         <div className="flex flex-col gap-2">
           <Checkbox
             label={t("confidential.createLabel")}
@@ -238,7 +279,34 @@ function CreateSpaceForm({
           ) : null}
         </div>
       ) : null}
-      {confidential ? null : (
+      {knowledgeBase ? (
+        <fieldset
+          className="flex flex-col gap-2"
+          aria-describedby={errors.audience ? "audience-error" : undefined}
+          data-field-error={errors.audience ? "" : undefined}
+        >
+          <legend className="mb-1 font-semibold">{t("knowledgeBase.audience.label")}</legend>
+          <RadioGroup
+            label={t("knowledgeBase.audience.label")}
+            variant="card"
+            value={audience}
+            onValueChange={(value) => setAudience(value as Audience)}
+            options={AUDIENCES.map((value) => ({
+              value,
+              label: translateKey(t, `knowledgeBase.audience.${value}.title`),
+              description: translateKey(t, `knowledgeBase.audience.${value}.description`),
+            }))}
+          />
+          {audience === "groups" ? (
+            <p className="text-sm text-text-muted">{t("knowledgeBase.create.groupsHint")}</p>
+          ) : null}
+          {errors.audience ? (
+            <p id="audience-error" role="alert" className="text-sm text-danger">
+              {errors.audience}
+            </p>
+          ) : null}
+        </fieldset>
+      ) : confidential ? null : (
         <VisibilityField
           value={visibility}
           onChange={setVisibility}
@@ -254,7 +322,7 @@ function CreateSpaceForm({
         peopleOnly={confidential}
       />
       <WhoGetsAccess
-        visibility={confidential ? null : visibility}
+        visibility={knowledgeBase ? audienceVisibility(audience) : confidential ? null : visibility}
         grants={visibleGrants}
         ownId={ownId}
         organizationName={organization?.name ?? null}

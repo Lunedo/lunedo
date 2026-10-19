@@ -4,7 +4,8 @@ import { Send } from "lucide-react";
 import { type RefObject, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
-import { request } from "../api/request.js";
+import { ApiError, request } from "../api/request.js";
+import type { MissingSection } from "../editor/extensions/required-sections.js";
 import type { SaveState } from "../editor/save-state.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { changeMode, useContentRefresh } from "./content-actions.js";
@@ -28,10 +29,12 @@ export function PublishButton({
   page,
   draft,
   saveState,
+  onMissingSections,
 }: {
   page: ItemDetails;
   draft: Draft | undefined;
   saveState: RefObject<SaveState>;
+  onMissingSections?: (sections: MissingSection[]) => void;
 }) {
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -67,12 +70,17 @@ export function PublishButton({
       await refresh(page);
       setOpen(false);
       setNote("");
+      onMissingSections?.([]);
       if (result.created) {
         toast({ title: t("versions.published", { version: result.version }), variant: "success" });
       } else {
         toast({ title: t("versions.alreadyPublished", { version: result.version }) });
       }
     } catch (failure) {
+      if (failure instanceof ApiError && failure.code === "requiredSectionsEmpty") {
+        setOpen(false);
+        onMissingSections?.(failure.problem.sections ?? []);
+      }
       toast({
         title: t("versions.publishFailed"),
         description: problemMessage(t, failure),

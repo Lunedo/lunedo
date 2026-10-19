@@ -1,6 +1,6 @@
 import { Button, Field, Input, Notice, RadioGroup, Switch, useToast } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Settings } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -9,6 +9,7 @@ import { api } from "../../api/client.js";
 import { request } from "../../api/request.js";
 import { AutoSaveTextField, SaveIndicator, useSaveState } from "../../components/auto-save.js";
 import { problemMessage } from "../../errors/problem-message.js";
+import { isKnowledgeBase } from "../../knowledge-bases/queries.js";
 import { ImpactConfirmDialog } from "../access/impact.js";
 import { useSpace } from "../space-context.js";
 import { type SpaceVisibility, spaceKeys } from "../space-queries.js";
@@ -68,7 +69,24 @@ export function SpaceGeneralScreen() {
           </Panel>
         ) : null}
         <KeySection />
-        {space.confidential ? null : <VisibilitySection />}
+        {isKnowledgeBase(space) ? (
+          <Panel
+            title={t("knowledgeBase.settings.typeTitle")}
+            description={t("knowledgeBase.settings.typeDescription")}
+          >
+            <p className="text-sm">
+              <Link
+                to="/spaces/$spaceKey/settings/visibility"
+                params={{ spaceKey: space.key }}
+                className="font-medium text-accent underline focus-visible:focus-ring"
+              >
+                {t("knowledgeBase.settings.toVisibility")}
+              </Link>
+            </p>
+          </Panel>
+        ) : space.confidential ? null : (
+          <VisibilitySection />
+        )}
       </div>
     </SpaceSettingsPage>
   );

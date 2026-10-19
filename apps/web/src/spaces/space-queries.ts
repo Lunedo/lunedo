@@ -209,6 +209,9 @@ export function spacesChanged(queryClient: QueryClient, events: SpaceChangeEvent
       add(["home"]);
       if (event.itemId) add(["blogPosts", event.itemId]);
     }
+    if (["space", "tree", "page", "access"].includes(event.kind)) {
+      add(["spaces", event.spaceId, "knowledgeBase"]);
+    }
     if (event.kind === "meetings") add(["meetings"]);
     if (event.kind === "page" || event.kind === "tree" || event.kind === "tasks") add(["meetings"]);
     if (event.kind === "access") add(["items"]);
