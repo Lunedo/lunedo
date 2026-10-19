@@ -168,7 +168,11 @@ function CollaborativeEditor({
       extensions: createEditorExtensions({
         t,
         spaceId,
-        collaboration: self ? { doc: collaboration.doc, provider: collaboration.provider, user: self } : null,
+        collaboration: {
+          doc: collaboration.doc,
+          provider: collaboration.provider,
+          user: self ?? { id: "", name: "", color: presenceColor("") },
+        },
         onOpenFind: actions.openFind,
         onFocusToolbar: actions.focusToolbar,
         onOpenLinkDialog: actions.openLinkDialog,
@@ -187,12 +191,16 @@ function CollaborativeEditor({
       immediatelyRender: true,
       shouldRerenderOnTransaction: false,
     },
-    [collaboration, self?.id],
+    [collaboration],
   );
 
   useEffect(() => {
     editorRef.current = editor;
   }, [editor]);
+
+  useEffect(() => {
+    if (editor && self && !editor.isDestroyed) editor.commands.updateUser(self);
+  }, [editor, self]);
 
   useEffect(() => (editor ? registerEditorActions(editor, actions) : undefined), [editor, actions]);
 

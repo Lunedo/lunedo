@@ -38,4 +38,19 @@ describe("the page editor", () => {
     await waitFor(() => expect(content.getAttribute("contenteditable")).toBe("true"));
     closeCollaboration(collaboration);
   });
+
+  it("keeps its editor when the signed-in account arrives after loading", async () => {
+    mockApi({ "GET /api/v1/account/preferences": () => ({ body: [] }) });
+    const { queryClient } = await renderWithProviders(
+      <PreferencesProvider>
+        <PageEditor pageId={PAGE_ID} spaceId="01929b1e-0000-7000-8000-0000000000a1" spaceKey="ITOPS" />
+      </PreferencesProvider>,
+      "en",
+      (client) => client.setQueryData(sessionQuery.queryKey, { ...SESSION, account: null } as never),
+    );
+    const before = await screen.findByRole("textbox", { name: "Page content" });
+    act(() => queryClient.setQueryData(sessionQuery.queryKey, SESSION as never));
+    await waitFor(() => expect(screen.getByRole("textbox", { name: "Page content" })).toBe(before));
+    expect(before.isConnected).toBe(true);
+  });
 });
