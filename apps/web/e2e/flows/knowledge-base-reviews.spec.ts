@@ -34,12 +34,12 @@ test("an article becomes due, appears on For you, is marked as reviewed and leav
 
   await page.goto(`/spaces/${space.key}/reviews`);
   const table = page.getByRole("table", { name: "Review" });
-  await expect(table.getByRole("link", { name: title })).toBeVisible();
+  await expect(table.getByRole("link", { name: title, exact: true })).toBeVisible();
   await expectAccessible(page, "review list");
 
   await page.goto("/home");
   await due.getByRole("button", { name: "Mark as reviewed" }).click();
-  await expect(page.getByText(`“${title}” marked as reviewed.`, { exact: false })).toBeVisible();
+  await expect(page.getByText(`“${title}” marked as reviewed.`, { exact: false }).first()).toBeVisible();
   await expect(page.getByRole("region", { name: "Due for review" })).toHaveCount(0);
 
   await page.goto(`/spaces/${space.key}/reviews`);

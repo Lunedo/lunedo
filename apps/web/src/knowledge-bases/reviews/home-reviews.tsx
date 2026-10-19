@@ -49,7 +49,7 @@ export function DueForReview() {
                     {item.spaceName}
                   </span>
                 </span>
-                <ReviewStatus timing={{ ...item, reviewedAt: null, publishedAt: null }} now={now} />
+                <ReviewStatus timing={{ ...item, reviewedAt: null, publishedAt: null }} now={now} fixed />
                 <Button
                   size="sm"
                   variant="secondary"

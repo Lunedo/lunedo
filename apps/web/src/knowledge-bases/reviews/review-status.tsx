@@ -70,7 +70,7 @@ const TONES: Record<ReviewState, string> = {
 export function ReviewRing({ timing, now }: { timing: ReviewTiming; now: number }) {
   const progress = Math.max(0.04, reviewProgress(timing, now));
   return (
-    <svg viewBox="0 0 16 16" aria-hidden="true" className="size-icon shrink-0">
+    <svg viewBox="0 0 16 16" aria-hidden="true" className="size-icon-md shrink-0">
       <circle cx="8" cy="8" r={RADIUS} fill="none" stroke="var(--color-border)" strokeWidth="2" />
       {timing.state === "overdue" ? (
         <>
@@ -95,12 +95,26 @@ export function ReviewRing({ timing, now }: { timing: ReviewTiming; now: number 
   );
 }
 
-export function ReviewStatus({ timing, now = Date.now() }: { timing: ReviewTiming; now?: number }) {
+export function ReviewStatus({
+  timing,
+  now = Date.now(),
+  fixed = false,
+}: {
+  timing: ReviewTiming;
+  now?: number;
+  fixed?: boolean;
+}) {
   const { t } = useTranslation();
   const format = useFormat();
   const text = reviewStateText(t, format, timing, now);
   return (
-    <span className={classNames("inline-flex min-w-0 items-center gap-2 font-medium", TONES[timing.state])}>
+    <span
+      className={classNames(
+        "inline-flex items-center gap-2 font-medium",
+        fixed ? "shrink-0" : "min-w-0",
+        TONES[timing.state],
+      )}
+    >
       <ReviewRing timing={timing} now={now} />
       <span className="truncate" title={text}>
         {text}
