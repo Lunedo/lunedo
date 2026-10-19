@@ -93,13 +93,18 @@ describe.skipIf(!baseUrl)("Confluence imports", () => {
   const defaultReaders = () =>
     new ImportReaderRegistry().register(new ConfluenceXmlReader(), new ConfluenceCsvReader());
 
-  async function drive(importId: string, runner = worker(undefined, defaultReaders())): Promise<number> {
+  async function drive(
+    importId: string,
+    runner = worker(undefined, defaultReaders()),
+    phases: string[] = [],
+  ): Promise<number> {
     let runs = 0;
     for (; runs < 500; runs++) {
-      const state = await test.database.execute<{ state: string }>(
-        sql`select state from imports where id = ${importId}`,
+      const state = await test.database.execute<{ state: string; phase: string | null }>(
+        sql`select state, phase from imports where id = ${importId}`,
       );
       if (!["analyzing", "running", "stopping", "discarding"].includes(state.rows[0]?.state ?? "")) break;
+      phases.push(state.rows[0]?.phase ?? "");
       await runner.work(testJobContext("imports.work", { importId }));
     }
     return runs;
@@ -941,12 +946,18 @@ describe.skipIf(!baseUrl)("Confluence imports", () => {
   });
 
   it("resumes after an interruption in every phase without duplicates", async () => {
-    const id = await prepared(largeExport(120, 30), { key: "BIGR" });
+    const id = await prepared(largeExport(60, 3), { key: "BIGR" });
     await test.services.imports.start(as(admin), id);
-    const runs = await drive(id, worker(0, defaultReaders()));
+    const phases: string[] = [];
+    await drive(id, worker(0, defaultReaders()), phases);
     const result = await test.services.imports.get(as(admin), id);
     expect(result.state).toBe("review");
-    expect(runs).toBeGreaterThan(12);
+    const interrupted = (phase: string) => phases.filter((entry) => entry === phase).length;
+    expect(interrupted("people")).toBeGreaterThan(1);
+    expect(interrupted("pages")).toBeGreaterThan(1);
+    expect(interrupted("attachments")).toBeGreaterThan(1);
+    expect(interrupted("content")).toBeGreaterThan(1);
+    expect(interrupted("baseline")).toBeGreaterThan(1);
     const spaceId = result.quarantineSpace?.id ?? "";
     const counts = await test.database.execute<{
       pages: number;
@@ -959,11 +970,11 @@ describe.skipIf(!baseUrl)("Confluence imports", () => {
         (select count(*)::int from attachments a join tree_items t on t.id = a.item_id where t.space_id = ${spaceId}) as attachments,
         (select count(*)::int from attachment_versions v join attachments a on a.id = v.attachment_id
           join tree_items t on t.id = a.item_id where t.space_id = ${spaceId}) as versions`);
-    expect(counts.rows[0]).toEqual({ pages: 121, titles: 121, attachments: 30, versions: 60 });
+    expect(counts.rows[0]).toEqual({ pages: 61, titles: 61, attachments: 3, versions: 6 });
     const firstVersions = await test.database.execute<{ count: number }>(sql`
       select count(*)::int as count from page_versions v join tree_items t on t.id = v.item_id
       where t.space_id = ${spaceId}`);
-    expect(firstVersions.rows[0]?.count).toBe(121);
+    expect(firstVersions.rows[0]?.count).toBe(61);
   });
 
   it("continues after a crash in the middle of a phase", async () => {
