@@ -1,5 +1,5 @@
 import type { TestProject } from "vitest/node";
-import { createMigratedDatabase, testDatabaseBaseUrl } from "./database.js";
+import { createMigratedDatabase, startDatabaseRun, testDatabaseBaseUrl } from "./database.js";
 
 declare module "vitest" {
   export interface ProvidedContext {
@@ -8,14 +8,21 @@ declare module "vitest" {
   }
 }
 
-/** Creates one migrated database per test run and drops it afterwards. */
+/**
+ * Creates one migrated database per test run and removes it, and every other database the
+ * run created, afterwards.
+ */
 export default async function setup(project: TestProject) {
   const baseUrl = testDatabaseBaseUrl();
   if (!baseUrl) {
     project.provide("databaseUrl", "");
     return;
   }
+  const finishRun = startDatabaseRun(baseUrl);
   const database = await createMigratedDatabase(baseUrl);
   project.provide("databaseUrl", database.url);
-  return () => database.drop();
+  return async () => {
+    await database.drop();
+    await finishRun();
+  };
 }

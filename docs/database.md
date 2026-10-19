@@ -34,6 +34,6 @@ Integration tests run against a real PostgreSQL server. Set `PAGEHALL_TEST_DATAB
 PAGEHALL_TEST_DATABASE_URL=postgres://pagehall:pagehall@localhost:5432/pagehall pnpm test
 ```
 
-Each test run creates a fresh, migrated database and drops it afterwards. Tests that need an empty database, or an instance state of their own such as setup, create their own. Without the variable, database tests are skipped locally; in CI they are required.
+Each test run creates a fresh, migrated database and drops it afterwards. Tests that need an empty database, or an instance state of their own such as setup, create their own; copies of the migrated template take a few milliseconds. `DROP DATABASE` waits for a checkpoint of the whole server, which takes seconds while other tests write, so inside a test run `drop()` returns once no connection is left and PostgreSQL removes the database in the background. The global setup of the server, API, collaboration and worker tests tags every database of the run with a run ID and drops what is still left when the run ends. Without the variable, database tests are skipped locally; in CI they are required.
 
 End-to-end mail tests need Mailpit, which the development environment includes. Set `PAGEHALL_TEST_MAILPIT_URL=http://localhost:8025`; its SMTP server is expected on port 1025 of the same host. Without the variable these tests are skipped locally; in CI they are required.
