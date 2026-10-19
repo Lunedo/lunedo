@@ -226,6 +226,12 @@ export const problems = {
   requiredSectionsEmpty: { status: 409, title: "Required sections are empty" },
   sectionNotFound: { status: 404, title: "The section does not exist" },
   draftNotVisible: { status: 403, title: "Only editors see the draft" },
+  notArticle: { status: 409, title: "Only articles of a knowledge base are reviewed" },
+  articleNotPublished: { status: 409, title: "The article is not published yet" },
+  reviewNotUndoable: { status: 409, title: "The review can no longer be undone" },
+  sourceNotFound: { status: 404, title: "The source page does not exist" },
+  invalidSourcePage: { status: 400, title: "The page cannot be a source" },
+  tooManySources: { status: 409, title: "The article has too many source pages" },
   confidentialScope: { status: 400, title: "Links in a confidential space name specific people only" },
   confidentialSharing: {
     status: 409,

@@ -17,6 +17,7 @@ import { accountPrincipal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { ChatChannelService } from "../chat/channels.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
+import type { ReviewService } from "../knowledge-bases/reviews.js";
 import type { NotificationService } from "../notifications/service.js";
 import type { WatchService } from "../notifications/watches.js";
 import { syncReusableContent } from "../spaces/properties.js";
@@ -236,6 +237,7 @@ export class ContentActivity {
   readonly #authorization: AuthorizationService;
   readonly #watches: WatchService;
   #chat: ChatChannelService | undefined;
+  #reviews: ReviewService | undefined;
 
   constructor(options: {
     database: Database;
@@ -251,6 +253,10 @@ export class ContentActivity {
 
   useChat(chat: ChatChannelService): void {
     this.#chat = chat;
+  }
+
+  useReviews(reviews: ReviewService): void {
+    this.#reviews = reviews;
   }
 
   async revealed(tx: Transaction, itemIds: readonly string[]): Promise<void> {
@@ -336,6 +342,7 @@ export class ContentActivity {
     const actorId = row.created_by;
     const actors = [...new Set([...(actorId ? [actorId] : []), ...row.contributors])];
     await this.#watches.watchAutomatically(tx, actors, itemId);
+    await this.#reviews?.sourceChanged(tx, itemId);
     const item = await this.#readable(tx, itemId);
     if (!item) return;
     await this.#chat?.versionCreated(tx, itemId, version, actorId ?? actors[0] ?? null);

@@ -198,10 +198,23 @@ const activitySchema = z
             at: timestamp("When it changed."),
           })
           .describe("A change of owner."),
+        z
+          .object({
+            type: z.literal("review").describe("The article was marked as reviewed."),
+            id: uuid("ID of the review."),
+            via: z
+              .enum(["marked", "published"])
+              .describe(
+                "`marked` without a change, or `published` with a publication the author marked as reviewed.",
+              ),
+            actor: personSchema.nullable().describe("Who reviewed it."),
+            at: timestamp("When it was reviewed."),
+          })
+          .describe("A review of a knowledge base article."),
       ])
       .describe("An entry of the activity."),
   )
-  .describe("Status and owner changes of the item, newest first.");
+  .describe("Status and owner changes and reviews of the item, newest first.");
 
 @Controller("api/v1")
 export class OwnershipController {
@@ -438,8 +451,9 @@ export class OwnershipController {
   @Get("items/:itemId/activity")
   @Permission("item.view", item)
   @ApiRoute({
-    summary: "List status and owner changes of an item",
-    description: "Returns who changed the status or the owner of the item and when, newest first.",
+    summary: "List status and owner changes and reviews of an item",
+    description:
+      "Returns who changed the status or the owner of the item, or reviewed the article, and when, newest first.",
     tags: [TAG],
     params: itemParams,
     response: {
@@ -458,9 +472,10 @@ export class OwnershipController {
   })
   async activity(@Param("itemId") itemId: string, @Req() request: FastifyRequest) {
     const viewer = actorOf(request);
-    const [statuses, owners] = await Promise.all([
+    const [statuses, owners, reviews] = await Promise.all([
       this.#services.pageStatus.history(viewer, itemId),
       this.#services.ownership.history(viewer, itemId),
+      this.#services.reviews.history(viewer, itemId),
     ]);
     return [
       ...statuses.map((change) => ({
@@ -477,6 +492,13 @@ export class OwnershipController {
         owner: change.owner,
         actor: change.actor,
         at: change.changedAt,
+      })),
+      ...reviews.map((review) => ({
+        type: "review" as const,
+        id: review.id,
+        via: review.via,
+        actor: review.actor,
+        at: review.at,
       })),
     ].sort((left, right) => right.at.getTime() - left.at.getTime() || right.id.localeCompare(left.id));
   }

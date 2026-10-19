@@ -480,6 +480,21 @@ export {
 } from "./jobs/job-queue.js";
 export { PgBossQueue } from "./jobs/pg-boss-queue.js";
 export {
+  type ArticleReview,
+  type ArticleSource,
+  type HomeReview,
+  MAX_SOURCES,
+  type PersonReference,
+  type ReviewCounts,
+  type ReviewEvent,
+  type ReviewList,
+  type ReviewListItem,
+  type ReviewRecord,
+  ReviewService,
+  type ReviewSettings,
+} from "./knowledge-bases/reviews.js";
+export { reviewLeadDays, reviewRecipients } from "./knowledge-bases/schema.js";
+export {
   type Article,
   type ArticleSectionContent,
   type ArticleSummary,

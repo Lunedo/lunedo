@@ -113,10 +113,15 @@ export {
 export { jobProgress } from "../jobs/schema.js";
 export {
   articleNumbers,
+  articleReviewEvents,
+  articleReviews,
+  articleReviewVia,
   articleSlugs,
+  articleSources,
   knowledgeBaseCategories,
   knowledgeBases,
   requiredSections,
+  reviewRecipient,
 } from "../knowledge-bases/schema.js";
 export {
   instanceSecrets,

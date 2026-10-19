@@ -1571,7 +1571,13 @@
     "tooManyGroups": "Choose up to 100 groups. Combine people into fewer groups if you need more.",
     "requiredSectionsEmpty": "A required section is empty. Fill it in, then publish again.",
     "sectionNotFound": "The template has no such section. Reload the page and try again.",
-    "draftNotVisible": "Only editors of the article see its draft."
+    "draftNotVisible": "Only editors of the article see its draft.",
+    "notArticle": "Only articles of a knowledge base have reviews. Open the article in its knowledge base.",
+    "articleNotPublished": "The article is not published yet. Publish it first, then mark it as reviewed.",
+    "reviewNotUndoable": "The review can no longer be undone, because someone reviewed the article again or too much time has passed. Mark it as due again by changing its interval, if needed.",
+    "sourceNotFound": "The source page does not exist or you cannot read it. Choose another page.",
+    "invalidSourcePage": "A source page must be a page in an internal space, not another article. Choose an internal page.",
+    "tooManySources": "An article can link to at most 20 source pages. Remove one before you add another."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -2539,7 +2545,8 @@
       "importsAndExports": "Imports and exports",
       "storageLevelReached": "File store fills up",
       "storageLevelCleared": "File store usage falls",
-      "copies": "Copies I made"
+      "copies": "Copies I made",
+      "reviews": "Article reviews"
     },
     "types": {
       "identityProvider": {
@@ -2633,6 +2640,10 @@
       "copy": {
         "finished": "Your copy {itemTitle} is ready in the space {spaceKey}.",
         "failed": "Copying {itemTitle} failed and nothing was created. Copy again."
+      },
+      "article": {
+        "reviewDue": "{itemTitle} is due for review on {dueAt}.",
+        "sourceChanged": "A source page of {itemTitle} changed. Check whether the article needs an update."
       }
     },
     "channelFor": "{event}: {channel}",
@@ -3834,7 +3845,14 @@
         "removed": "Chat channel removed"
       },
       "knowledgeBase": {
-        "audienceChanged": "Readers of a knowledge base changed"
+        "audienceChanged": "Readers of a knowledge base changed",
+        "reviewSettingsChanged": "Review settings of a knowledge base changed"
+      },
+      "article": {
+        "reviewed": "Article marked as reviewed",
+        "reviewUndone": "Review of an article undone",
+        "sourceAdded": "Source page linked to an article",
+        "sourceRemoved": "Source page removed from an article"
       }
     },
     "action": "Action",
@@ -9452,5 +9470,9 @@
       "wrench": "Wrench",
       "triangle-alert": "Warning"
     }
+  },
+  "reviews": {
+    "activityMarked": "{actor} marked the article as reviewed",
+    "activityPublished": "{actor} published the article and marked the content as reviewed"
   }
 }

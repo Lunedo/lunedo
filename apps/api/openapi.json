@@ -77,6 +77,10 @@
       "description": "Organizations, accounts, roles and settings of the whole instance."
     },
     {
+      "name": "Knowledge base reviews",
+      "description": "Review intervals and reminders of knowledge base articles, the list of articles to review, marking them as reviewed, and the internal source pages they are based on."
+    },
+    {
       "name": "Knowledge bases",
       "description": "Who may read a knowledge base, its categories, contact addresses, article templates with required sections, and articles with their numbers and sections."
     },
@@ -10362,6 +10366,2007 @@
                       "title": "Not found",
                       "status": 404,
                       "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/articles/{itemId}/review": {
+      "get": {
+        "operationId": "reviews.article",
+        "summary": "Get the review state of an article",
+        "description": "Returns the interval, the last review and the next due date of an article.\n\nRequires the permission `item.view` on the item in `itemId`.",
+        "tags": [
+          "Knowledge base reviews"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.view",
+          "resource": "item",
+          "parameter": "itemId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the article.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The review state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "itemId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the article."
+                    },
+                    "intervalMonths": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "const": 0
+                            },
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                  "const": 3
+                                },
+                                {
+                                  "type": "number",
+                                  "const": 6
+                                },
+                                {
+                                  "type": "number",
+                                  "const": 12
+                                }
+                              ]
+                            }
+                          ],
+                          "description": "Review interval in months."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Interval set on the article itself: 0 for no reviews, or null when it uses the knowledge base's."
+                    },
+                    "effectiveIntervalMonths": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "const": 3
+                            },
+                            {
+                              "type": "number",
+                              "const": 6
+                            },
+                            {
+                              "type": "number",
+                              "const": 12
+                            }
+                          ],
+                          "description": "Review interval in months."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Interval that applies, or null when none."
+                    },
+                    "inherited": {
+                      "type": "boolean",
+                      "description": "Whether the interval comes from the knowledge base."
+                    },
+                    "publishedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the article was first published, or null. ISO 8601 timestamp in UTC."
+                    },
+                    "reviewedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the article was last marked as reviewed, or null. ISO 8601 timestamp in UTC."
+                    },
+                    "reviewedBy": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the person."
+                            },
+                            "name": {
+                              "description": "Name of the person, or null when the caller may not see the person.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false,
+                          "description": "A person."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Who reviewed it last, or null."
+                    },
+                    "dueAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the next review is due, or null when no interval applies. ISO 8601 timestamp in UTC."
+                    },
+                    "sourceChangedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When a source page changed after the last review, or null. ISO 8601 timestamp in UTC."
+                    },
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "overdue",
+                        "sourceChanged",
+                        "dueSoon",
+                        "current",
+                        "off"
+                      ],
+                      "description": "`overdue`: the interval has passed. `sourceChanged`: a source page changed since the last review. `dueSoon`: due within 30 days. `current`: reviewed within the interval. `off`: no interval applies."
+                    }
+                  },
+                  "required": [
+                    "itemId",
+                    "intervalMonths",
+                    "effectiveIntervalMonths",
+                    "inherited",
+                    "publishedAt",
+                    "reviewedAt",
+                    "reviewedBy",
+                    "dueAt",
+                    "sourceChangedAt",
+                    "state"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Review state of an article."
+                },
+                "example": {
+                  "itemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a50",
+                  "intervalMonths": null,
+                  "effectiveIntervalMonths": 6,
+                  "inherited": true,
+                  "publishedAt": "2026-03-02T09:00:00.000Z",
+                  "reviewedAt": "2026-10-02T09:00:00.000Z",
+                  "reviewedBy": {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                    "name": "Anna Weber"
+                  },
+                  "dueAt": "2027-04-02T09:00:00.000Z",
+                  "sourceChangedAt": null,
+                  "state": "current"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`notArticle`: Only articles of a knowledge base are reviewed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notArticle": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notArticle",
+                      "title": "Only articles of a knowledge base are reviewed",
+                      "status": 409,
+                      "code": "notArticle"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/articles/{itemId}/review/interval": {
+      "put": {
+        "operationId": "reviews.setInterval",
+        "summary": "Set the review interval of an article",
+        "description": "Sets an interval of the article's own, switches reviews off for it, or returns to the knowledge base's.\n\nRequires the permission `item.edit` on the item in `itemId`.",
+        "tags": [
+          "Knowledge base reviews"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.edit",
+          "resource": "item",
+          "parameter": "itemId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the article.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "intervalMonths": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "const": 0
+                          },
+                          {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "const": 3
+                              },
+                              {
+                                "type": "number",
+                                "const": 6
+                              },
+                              {
+                                "type": "number",
+                                "const": 12
+                              }
+                            ]
+                          }
+                        ],
+                        "description": "Review interval in months."
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "3, 6 or 12 months, 0 for no reviews, or null to use the interval of the knowledge base."
+                  }
+                },
+                "required": [
+                  "intervalMonths"
+                ],
+                "additionalProperties": false,
+                "description": "The interval of the article."
+              },
+              "example": {
+                "intervalMonths": 12
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The review state after the change.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "itemId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the article."
+                    },
+                    "intervalMonths": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "const": 0
+                            },
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                  "const": 3
+                                },
+                                {
+                                  "type": "number",
+                                  "const": 6
+                                },
+                                {
+                                  "type": "number",
+                                  "const": 12
+                                }
+                              ]
+                            }
+                          ],
+                          "description": "Review interval in months."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Interval set on the article itself: 0 for no reviews, or null when it uses the knowledge base's."
+                    },
+                    "effectiveIntervalMonths": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "const": 3
+                            },
+                            {
+                              "type": "number",
+                              "const": 6
+                            },
+                            {
+                              "type": "number",
+                              "const": 12
+                            }
+                          ],
+                          "description": "Review interval in months."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Interval that applies, or null when none."
+                    },
+                    "inherited": {
+                      "type": "boolean",
+                      "description": "Whether the interval comes from the knowledge base."
+                    },
+                    "publishedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the article was first published, or null. ISO 8601 timestamp in UTC."
+                    },
+                    "reviewedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the article was last marked as reviewed, or null. ISO 8601 timestamp in UTC."
+                    },
+                    "reviewedBy": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the person."
+                            },
+                            "name": {
+                              "description": "Name of the person, or null when the caller may not see the person.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false,
+                          "description": "A person."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Who reviewed it last, or null."
+                    },
+                    "dueAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the next review is due, or null when no interval applies. ISO 8601 timestamp in UTC."
+                    },
+                    "sourceChangedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When a source page changed after the last review, or null. ISO 8601 timestamp in UTC."
+                    },
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "overdue",
+                        "sourceChanged",
+                        "dueSoon",
+                        "current",
+                        "off"
+                      ],
+                      "description": "`overdue`: the interval has passed. `sourceChanged`: a source page changed since the last review. `dueSoon`: due within 30 days. `current`: reviewed within the interval. `off`: no interval applies."
+                    }
+                  },
+                  "required": [
+                    "itemId",
+                    "intervalMonths",
+                    "effectiveIntervalMonths",
+                    "inherited",
+                    "publishedAt",
+                    "reviewedAt",
+                    "reviewedBy",
+                    "dueAt",
+                    "sourceChangedAt",
+                    "state"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Review state of an article."
+                },
+                "example": {
+                  "itemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a50",
+                  "intervalMonths": null,
+                  "effectiveIntervalMonths": 6,
+                  "inherited": true,
+                  "publishedAt": "2026-03-02T09:00:00.000Z",
+                  "reviewedAt": "2026-10-02T09:00:00.000Z",
+                  "reviewedBy": {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                    "name": "Anna Weber"
+                  },
+                  "dueAt": "2027-04-02T09:00:00.000Z",
+                  "sourceChangedAt": null,
+                  "state": "current"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`notArticle`: Only articles of a knowledge base are reviewed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notArticle": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notArticle",
+                      "title": "Only articles of a knowledge base are reviewed",
+                      "status": 409,
+                      "code": "notArticle"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/articles/{itemId}/reviews": {
+      "post": {
+        "operationId": "reviews.markReviewed",
+        "summary": "Mark an article as reviewed",
+        "description": "Records who reviewed the article and when, without a new version. The next due date starts from now and changed source pages count as seen. Audited.\n\nRequires the permission `item.edit` on the item in `itemId`.",
+        "tags": [
+          "Knowledge base reviews"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.edit",
+          "resource": "item",
+          "parameter": "itemId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the article.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "The recorded review.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "reviewId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the review, used to undo it."
+                    },
+                    "reviewedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When it was recorded. ISO 8601 timestamp in UTC."
+                    },
+                    "dueAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the next review is due, or null. ISO 8601 timestamp in UTC."
+                    }
+                  },
+                  "required": [
+                    "reviewId",
+                    "reviewedAt",
+                    "dueAt"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The recorded review."
+                },
+                "example": {
+                  "reviewId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a80",
+                  "reviewedAt": "2026-10-18T09:00:00.000Z",
+                  "dueAt": "2027-04-18T09:00:00.000Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`articleNotPublished`: The article is not published yet. `notArticle`: Only articles of a knowledge base are reviewed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "articleNotPublished": {
+                    "value": {
+                      "type": "urn:pagehall:problem:articleNotPublished",
+                      "title": "The article is not published yet",
+                      "status": 409,
+                      "code": "articleNotPublished"
+                    }
+                  },
+                  "notArticle": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notArticle",
+                      "title": "Only articles of a knowledge base are reviewed",
+                      "status": 409,
+                      "code": "notArticle"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/articles/{itemId}/reviews/{reviewId}": {
+      "delete": {
+        "operationId": "reviews.undo",
+        "summary": "Undo a review",
+        "description": "Restores the state before the latest review. Only the person who recorded it can undo it, within two minutes. Audited.\n\nRequires the permission `item.edit` on the item in `itemId`.",
+        "tags": [
+          "Knowledge base reviews"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.edit",
+          "resource": "item",
+          "parameter": "itemId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the article.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "reviewId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the review.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Done. The response has no body."
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`notArticle`: Only articles of a knowledge base are reviewed. `reviewNotUndoable`: The review can no longer be undone.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notArticle": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notArticle",
+                      "title": "Only articles of a knowledge base are reviewed",
+                      "status": 409,
+                      "code": "notArticle"
+                    }
+                  },
+                  "reviewNotUndoable": {
+                    "value": {
+                      "type": "urn:pagehall:problem:reviewNotUndoable",
+                      "title": "The review can no longer be undone",
+                      "status": 409,
+                      "code": "reviewNotUndoable"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/articles/{itemId}/sources": {
+      "get": {
+        "operationId": "reviews.sources",
+        "summary": "List the source pages of an article",
+        "description": "Lists the internal pages the article is based on. Pages the caller cannot read are left out. Source pages never appear in what readers of a knowledge base see.\n\nRequires the permission `item.view` on the item in `itemId`.",
+        "tags": [
+          "Knowledge base reviews"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.view",
+          "resource": "item",
+          "parameter": "itemId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the article.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The source pages.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID of the source page."
+                      },
+                      "title": {
+                        "type": "string",
+                        "description": "Title of the source page."
+                      },
+                      "spaceKey": {
+                        "type": "string",
+                        "description": "Key of the space of the source page."
+                      },
+                      "spaceName": {
+                        "type": "string",
+                        "description": "Name of the space of the source page."
+                      },
+                      "changedAt": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "When the page changed after the last review of the article, or null. ISO 8601 timestamp in UTC."
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "title",
+                      "spaceKey",
+                      "spaceName",
+                      "changedAt"
+                    ],
+                    "additionalProperties": false,
+                    "description": "An internal page the article is based on."
+                  },
+                  "description": "Source pages the caller can read. Others are left out, as if they were not linked."
+                },
+                "example": [
+                  {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a70",
+                    "title": "VPN gateway",
+                    "spaceKey": "OPS",
+                    "spaceName": "IT operations",
+                    "changedAt": null
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "reviews.addSource",
+        "summary": "Link a source page to an article",
+        "description": "Links an internal page. When it is published with changes, the article's owner is reminded to review it. At most 20 per article. Audited.\n\nRequires the permission `item.edit` on the item in `itemId`.",
+        "tags": [
+          "Knowledge base reviews"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.edit",
+          "resource": "item",
+          "parameter": "itemId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the article.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sourceId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "ID of a page the caller can read, in a space that is not a knowledge base."
+                  }
+                },
+                "required": [
+                  "sourceId"
+                ],
+                "additionalProperties": false,
+                "description": "The source page to link."
+              },
+              "example": {
+                "sourceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a70"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The source pages after the change.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID of the source page."
+                      },
+                      "title": {
+                        "type": "string",
+                        "description": "Title of the source page."
+                      },
+                      "spaceKey": {
+                        "type": "string",
+                        "description": "Key of the space of the source page."
+                      },
+                      "spaceName": {
+                        "type": "string",
+                        "description": "Name of the space of the source page."
+                      },
+                      "changedAt": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "When the page changed after the last review of the article, or null. ISO 8601 timestamp in UTC."
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "title",
+                      "spaceKey",
+                      "spaceName",
+                      "changedAt"
+                    ],
+                    "additionalProperties": false,
+                    "description": "An internal page the article is based on."
+                  },
+                  "description": "Source pages the caller can read. Others are left out, as if they were not linked."
+                },
+                "example": [
+                  {
+                    "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a70",
+                    "title": "VPN gateway",
+                    "spaceKey": "OPS",
+                    "spaceName": "IT operations",
+                    "changedAt": null
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidSourcePage`: The page cannot be a source.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidSourcePage": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidSourcePage",
+                      "title": "The page cannot be a source",
+                      "status": 400,
+                      "code": "invalidSourcePage"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found. `sourceNotFound`: The source page does not exist.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  },
+                  "sourceNotFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sourceNotFound",
+                      "title": "The source page does not exist",
+                      "status": 404,
+                      "code": "sourceNotFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`notArticle`: Only articles of a knowledge base are reviewed. `tooManySources`: The article has too many source pages.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notArticle": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notArticle",
+                      "title": "Only articles of a knowledge base are reviewed",
+                      "status": 409,
+                      "code": "notArticle"
+                    }
+                  },
+                  "tooManySources": {
+                    "value": {
+                      "type": "urn:pagehall:problem:tooManySources",
+                      "title": "The article has too many source pages",
+                      "status": 409,
+                      "code": "tooManySources"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/articles/{itemId}/sources/{sourceId}": {
+      "delete": {
+        "operationId": "reviews.removeSource",
+        "summary": "Remove a source page from an article",
+        "description": "Removes the link to a source page the caller can read. Audited.\n\nRequires the permission `item.edit` on the item in `itemId`.",
+        "tags": [
+          "Knowledge base reviews"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.edit",
+          "resource": "item",
+          "parameter": "itemId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the article.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "sourceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the source page.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The source pages after the change.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID of the source page."
+                      },
+                      "title": {
+                        "type": "string",
+                        "description": "Title of the source page."
+                      },
+                      "spaceKey": {
+                        "type": "string",
+                        "description": "Key of the space of the source page."
+                      },
+                      "spaceName": {
+                        "type": "string",
+                        "description": "Name of the space of the source page."
+                      },
+                      "changedAt": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "When the page changed after the last review of the article, or null. ISO 8601 timestamp in UTC."
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "title",
+                      "spaceKey",
+                      "spaceName",
+                      "changedAt"
+                    ],
+                    "additionalProperties": false,
+                    "description": "An internal page the article is based on."
+                  },
+                  "description": "Source pages the caller can read. Others are left out, as if they were not linked."
+                },
+                "example": []
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found. `sourceNotFound`: The source page does not exist.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  },
+                  "sourceNotFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:sourceNotFound",
+                      "title": "The source page does not exist",
+                      "status": 404,
+                      "code": "sourceNotFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`notArticle`: Only articles of a knowledge base are reviewed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notArticle": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notArticle",
+                      "title": "Only articles of a knowledge base are reviewed",
+                      "status": 409,
+                      "code": "notArticle"
                     }
                   }
                 }
@@ -122285,8 +124290,8 @@
     "/api/v1/items/{itemId}/activity": {
       "get": {
         "operationId": "ownership.activity",
-        "summary": "List status and owner changes of an item",
-        "description": "Returns who changed the status or the owner of the item and when, newest first.\n\nRequires the permission `item.view` on the item in `itemId`.",
+        "summary": "List status and owner changes and reviews of an item",
+        "description": "Returns who changed the status or the owner of the item, or reviewed the article, and when, newest first.\n\nRequires the permission `item.view` on the item in `itemId`.",
         "tags": [
           "Ownership and status"
         ],
@@ -122574,11 +124579,79 @@
                         ],
                         "additionalProperties": false,
                         "description": "A change of owner."
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "const": "review",
+                            "description": "The article was marked as reviewed."
+                          },
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the review."
+                          },
+                          "via": {
+                            "type": "string",
+                            "enum": [
+                              "marked",
+                              "published"
+                            ],
+                            "description": "`marked` without a change, or `published` with a publication the author marked as reviewed."
+                          },
+                          "actor": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the person."
+                                  },
+                                  "name": {
+                                    "description": "Name of the person, or null when the caller may not see the person.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ],
+                                "additionalProperties": false,
+                                "description": "A person."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Who reviewed it."
+                          },
+                          "at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "When it was reviewed. ISO 8601 timestamp in UTC."
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "id",
+                          "via",
+                          "actor",
+                          "at"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A review of a knowledge base article."
                       }
                     ],
                     "description": "An entry of the activity."
                   },
-                  "description": "Status and owner changes of the item, newest first."
+                  "description": "Status and owner changes and reviews of the item, newest first."
                 },
                 "example": [
                   {
@@ -184539,6 +186612,10 @@
                     "description": "Short note on what changed, up to 500 characters.",
                     "type": "string",
                     "maxLength": 1000
+                  },
+                  "reviewed": {
+                    "description": "For knowledge base articles: the author checked the whole content, so the publication also counts as a review. Default false.",
+                    "type": "boolean"
                   }
                 },
                 "additionalProperties": false,
@@ -184696,13 +186773,21 @@
             }
           },
           "409": {
-            "description": "`notPublishMode`: The page is not in publish mode. `requiredSectionsEmpty`: Required sections are empty.",
+            "description": "`notArticle`: Only articles of a knowledge base are reviewed. `notPublishMode`: The page is not in publish mode. `requiredSectionsEmpty`: Required sections are empty.",
             "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
                 },
                 "examples": {
+                  "notArticle": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notArticle",
+                      "title": "Only articles of a knowledge base are reviewed",
+                      "status": 409,
+                      "code": "notArticle"
+                    }
+                  },
                   "notPublishMode": {
                     "value": {
                       "type": "urn:pagehall:problem:notPublishMode",
@@ -190719,6 +192804,245 @@
                       "title": "The request is not valid",
                       "status": 400,
                       "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reviews/mine": {
+      "get": {
+        "operationId": "reviews.mine",
+        "summary": "List the caller's articles to review",
+        "description": "Lists knowledge base articles the caller owns and may edit that need a review, for the personal home page.\n\nRequires the permission `instance.content.view` on the instance.",
+        "tags": [
+          "Knowledge base reviews"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.content.view",
+          "resource": "instance"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The articles.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the article."
+                          },
+                          "title": {
+                            "type": "string",
+                            "description": "Title of the article."
+                          },
+                          "type": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "x-extensible-enum": [
+                                  "howTo",
+                                  "troubleshooting"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values."
+                          },
+                          "spaceKey": {
+                            "type": "string",
+                            "description": "Key of the knowledge base."
+                          },
+                          "spaceName": {
+                            "type": "string",
+                            "description": "Name of the knowledge base."
+                          },
+                          "dueAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "When the review is due, or null. ISO 8601 timestamp in UTC."
+                          },
+                          "sourceChangedAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "When a source page changed after the last review, or null. ISO 8601 timestamp in UTC."
+                          },
+                          "state": {
+                            "type": "string",
+                            "enum": [
+                              "overdue",
+                              "sourceChanged",
+                              "dueSoon",
+                              "current",
+                              "off"
+                            ],
+                            "description": "`overdue`: the interval has passed. `sourceChanged`: a source page changed since the last review. `dueSoon`: due within 30 days. `current`: reviewed within the interval. `off`: no interval applies."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "title",
+                          "type",
+                          "spaceKey",
+                          "spaceName",
+                          "dueAt",
+                          "sourceChangedAt",
+                          "state"
+                        ],
+                        "additionalProperties": false,
+                        "description": "An article of the caller that needs a review."
+                      },
+                      "description": "Up to 20 articles, the most urgent first."
+                    },
+                    "total": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Number of all such articles."
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "total"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Articles the caller owns that are due, due within 30 days or whose source page changed."
+                },
+                "example": {
+                  "items": [
+                    {
+                      "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a50",
+                      "title": "Set up the VPN at home",
+                      "type": "howTo",
+                      "spaceKey": "ITOPS",
+                      "spaceName": "IT Operations",
+                      "dueAt": "2026-10-02T09:00:00.000Z",
+                      "sourceChangedAt": null,
+                      "state": "overdue"
+                    }
+                  ],
+                  "total": 1
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
                     }
                   }
                 }
@@ -209187,6 +211511,585 @@
         }
       }
     },
+    "/api/v1/spaces/{spaceId}/knowledge-base/reviews": {
+      "get": {
+        "operationId": "reviews.settings",
+        "summary": "Get the review settings of a knowledge base",
+        "description": "Returns the default review interval, the reminder lead time and who is reminded.\n\nRequires the permission `space.view` on the space in `spaceId`.",
+        "tags": [
+          "Knowledge base reviews"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.view",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the knowledge base.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The settings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "intervalMonths": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "const": 3
+                            },
+                            {
+                              "type": "number",
+                              "const": 6
+                            },
+                            {
+                              "type": "number",
+                              "const": 12
+                            }
+                          ],
+                          "description": "Review interval in months."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Interval for every article without its own, or null when reviews are off."
+                    },
+                    "leadDays": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "const": 0
+                        },
+                        {
+                          "type": "number",
+                          "const": 7
+                        },
+                        {
+                          "type": "number",
+                          "const": 14
+                        },
+                        {
+                          "type": "number",
+                          "const": 30
+                        }
+                      ],
+                      "description": "Days before the due date at which owners get a first reminder. 0 sends only the one on the due date."
+                    },
+                    "recipients": {
+                      "type": "string",
+                      "enum": [
+                        "owner",
+                        "ownerAndAdministrators"
+                      ],
+                      "description": "Who is reminded: `owner`, or `ownerAndAdministrators` for the owner and the space admins. Articles without an owner always go to the space admins."
+                    }
+                  },
+                  "required": [
+                    "intervalMonths",
+                    "leadDays",
+                    "recipients"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Review settings of a knowledge base."
+                },
+                "example": {
+                  "intervalMonths": 6,
+                  "leadDays": 14,
+                  "recipients": "owner"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`notKnowledgeBase`: The space is not a knowledge base.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notKnowledgeBase": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notKnowledgeBase",
+                      "title": "The space is not a knowledge base",
+                      "status": 409,
+                      "code": "notKnowledgeBase"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "reviews.updateSettings",
+        "summary": "Change the review settings of a knowledge base",
+        "description": "Changes the default interval, the lead time or who is reminded. Due dates and reminders of every article follow at once. Audited.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
+        "tags": [
+          "Knowledge base reviews"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.manage",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the knowledge base.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "intervalMonths": {
+                    "description": "New interval, or null to switch reviews off.",
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "const": 3
+                          },
+                          {
+                            "type": "number",
+                            "const": 6
+                          },
+                          {
+                            "type": "number",
+                            "const": 12
+                          }
+                        ],
+                        "description": "Review interval in months."
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "leadDays": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "const": 0
+                      },
+                      {
+                        "type": "number",
+                        "const": 7
+                      },
+                      {
+                        "type": "number",
+                        "const": 14
+                      },
+                      {
+                        "type": "number",
+                        "const": 30
+                      }
+                    ],
+                    "description": "Days before the due date at which owners get a first reminder. 0 sends only the one on the due date."
+                  },
+                  "recipients": {
+                    "type": "string",
+                    "enum": [
+                      "owner",
+                      "ownerAndAdministrators"
+                    ],
+                    "description": "Who is reminded: `owner`, or `ownerAndAdministrators` for the owner and the space admins. Articles without an owner always go to the space admins."
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Settings to change. Fields that are left out keep their value."
+              },
+              "example": {
+                "intervalMonths": 6
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The settings after the change.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "intervalMonths": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "const": 3
+                            },
+                            {
+                              "type": "number",
+                              "const": 6
+                            },
+                            {
+                              "type": "number",
+                              "const": 12
+                            }
+                          ],
+                          "description": "Review interval in months."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Interval for every article without its own, or null when reviews are off."
+                    },
+                    "leadDays": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "const": 0
+                        },
+                        {
+                          "type": "number",
+                          "const": 7
+                        },
+                        {
+                          "type": "number",
+                          "const": 14
+                        },
+                        {
+                          "type": "number",
+                          "const": 30
+                        }
+                      ],
+                      "description": "Days before the due date at which owners get a first reminder. 0 sends only the one on the due date."
+                    },
+                    "recipients": {
+                      "type": "string",
+                      "enum": [
+                        "owner",
+                        "ownerAndAdministrators"
+                      ],
+                      "description": "Who is reminded: `owner`, or `ownerAndAdministrators` for the owner and the space admins. Articles without an owner always go to the space admins."
+                    }
+                  },
+                  "required": [
+                    "intervalMonths",
+                    "leadDays",
+                    "recipients"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Review settings of a knowledge base."
+                },
+                "example": {
+                  "intervalMonths": 6,
+                  "leadDays": 14,
+                  "recipients": "owner"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`notKnowledgeBase`: The space is not a knowledge base.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notKnowledgeBase": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notKnowledgeBase",
+                      "title": "The space is not a knowledge base",
+                      "status": 409,
+                      "code": "notKnowledgeBase"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/spaces/{spaceId}/knowledge-base/templates": {
       "get": {
         "operationId": "knowledgeBases.templates",
@@ -214407,6 +217310,558 @@
                       "title": "The page is not restricted",
                       "status": 404,
                       "code": "restrictionNotFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/spaces/{spaceId}/reviews": {
+      "get": {
+        "operationId": "reviews.list",
+        "summary": "List the articles to review",
+        "description": "Lists articles that are overdue, due within 30 days, whose source page changed or that have no active owner. Only articles the caller may edit are listed.\n\nRequires the permission `space.view` on the space in `spaceId`.",
+        "tags": [
+          "Knowledge base reviews"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.view",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the knowledge base.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Opaque cursor from `nextCursor` of the previous page. Leave it out for the first page.",
+            "schema": {
+              "type": "string",
+              "maxLength": 2000
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of items in the page, from 1 to 200. Default 50.",
+            "schema": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "required": false,
+            "description": "`due`: overdue or with a changed source page. `soon`: due within 30 days. `unowned`: without an active owner. `all`: every article of these three.",
+            "schema": {
+              "default": "all",
+              "type": "string",
+              "enum": [
+                "all",
+                "due",
+                "soon",
+                "unowned"
+              ]
+            }
+          },
+          {
+            "name": "mine",
+            "in": "query",
+            "required": false,
+            "description": "Only articles the caller owns.",
+            "schema": {
+              "default": "false",
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The articles.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the article."
+                          },
+                          "title": {
+                            "type": "string",
+                            "description": "Title of the article."
+                          },
+                          "type": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "x-extensible-enum": [
+                                  "howTo",
+                                  "troubleshooting"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values."
+                          },
+                          "categoryPath": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "description": "ID of the category."
+                                },
+                                "title": {
+                                  "type": "string",
+                                  "description": "Title."
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "title"
+                              ],
+                              "additionalProperties": false,
+                              "description": "A category."
+                            },
+                            "description": "Category and subcategory the caller can read, top level first."
+                          },
+                          "owner": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the person."
+                                  },
+                                  "name": {
+                                    "description": "Name of the person, or null when the caller may not see the person.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ],
+                                "additionalProperties": false,
+                                "description": "A person."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The owner, or null when the article has no active owner."
+                          },
+                          "ownerActive": {
+                            "type": "boolean",
+                            "description": "Whether the article has an active owner."
+                          },
+                          "formerOwner": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the person."
+                                  },
+                                  "name": {
+                                    "description": "Name of the person, or null when the caller may not see the person.",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ],
+                                "additionalProperties": false,
+                                "description": "A person."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The owner who left, or null when the owner is active or the article never had one."
+                          },
+                          "intervalMonths": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "const": 3
+                                  },
+                                  {
+                                    "type": "number",
+                                    "const": 6
+                                  },
+                                  {
+                                    "type": "number",
+                                    "const": 12
+                                  }
+                                ],
+                                "description": "Review interval in months."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Interval that applies, or null."
+                          },
+                          "inherited": {
+                            "type": "boolean",
+                            "description": "Whether the interval comes from the knowledge base."
+                          },
+                          "publishedAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "When the article was first published, or null. ISO 8601 timestamp in UTC."
+                          },
+                          "reviewedAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "When it was last reviewed, or null. ISO 8601 timestamp in UTC."
+                          },
+                          "dueAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "When the review is due, or null. ISO 8601 timestamp in UTC."
+                          },
+                          "sourceChangedAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "When a source page changed after the last review, or null. ISO 8601 timestamp in UTC."
+                          },
+                          "state": {
+                            "type": "string",
+                            "enum": [
+                              "overdue",
+                              "sourceChanged",
+                              "dueSoon",
+                              "current",
+                              "off"
+                            ],
+                            "description": "`overdue`: the interval has passed. `sourceChanged`: a source page changed since the last review. `dueSoon`: due within 30 days. `current`: reviewed within the interval. `off`: no interval applies."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "title",
+                          "type",
+                          "categoryPath",
+                          "owner",
+                          "ownerActive",
+                          "formerOwner",
+                          "intervalMonths",
+                          "inherited",
+                          "publishedAt",
+                          "reviewedAt",
+                          "dueAt",
+                          "sourceChangedAt",
+                          "state"
+                        ],
+                        "additionalProperties": false,
+                        "description": "An article that needs a review or an owner."
+                      },
+                      "description": "Due and overdue articles first, then articles due soon."
+                    },
+                    "nextCursor": {
+                      "description": "Cursor for the next page, or null on the last page.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "counts": {
+                      "type": "object",
+                      "properties": {
+                        "all": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Articles in the list."
+                        },
+                        "due": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Overdue articles and articles with a changed source page."
+                        },
+                        "soon": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Articles due within 30 days."
+                        },
+                        "unowned": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Articles without an active owner."
+                        }
+                      },
+                      "required": [
+                        "all",
+                        "due",
+                        "soon",
+                        "unowned"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Number of articles per filter, with the `mine` choice applied."
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "nextCursor",
+                    "counts"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Articles to review that the caller may edit."
+                },
+                "example": {
+                  "items": [
+                    {
+                      "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a50",
+                      "title": "Set up the VPN at home",
+                      "type": "howTo",
+                      "categoryPath": [
+                        {
+                          "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
+                          "title": "IT"
+                        }
+                      ],
+                      "owner": {
+                        "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                        "name": "Anna Weber"
+                      },
+                      "ownerActive": true,
+                      "formerOwner": null,
+                      "intervalMonths": 6,
+                      "inherited": true,
+                      "publishedAt": "2026-03-02T09:00:00.000Z",
+                      "reviewedAt": "2026-04-02T09:00:00.000Z",
+                      "dueAt": "2026-10-02T09:00:00.000Z",
+                      "sourceChangedAt": null,
+                      "state": "overdue"
+                    }
+                  ],
+                  "nextCursor": null,
+                  "counts": {
+                    "all": 1,
+                    "due": 1,
+                    "soon": 0,
+                    "unowned": 0
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`notKnowledgeBase`: The space is not a knowledge base.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notKnowledgeBase": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notKnowledgeBase",
+                      "title": "The space is not a knowledge base",
+                      "status": 409,
+                      "code": "notKnowledgeBase"
                     }
                   }
                 }

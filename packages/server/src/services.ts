@@ -113,6 +113,8 @@ import { UploadService } from "./imports/uploads.js";
 import { WordReader } from "./imports/word/reader.js";
 import { ImportWorker } from "./imports/worker.js";
 import type { JobQueue } from "./jobs/job-queue.js";
+import { knowledgeBaseNotificationTypes } from "./knowledge-bases/notifications.js";
+import { ReviewService } from "./knowledge-bases/reviews.js";
 import { KnowledgeBaseService } from "./knowledge-bases/service.js";
 import type { Logger } from "./logging/logger.js";
 import {
@@ -281,6 +283,7 @@ export interface AccountServices {
   archive: ArchiveService;
   templates: TemplateService;
   knowledgeBases: KnowledgeBaseService;
+  reviews: ReviewService;
   templateTransfers: TemplateTransferService;
   activity: ContentActivity;
   comments: CommentService;
@@ -405,6 +408,7 @@ export function createAccountServices(options: {
       ...copyNotificationTypes,
       ...chatNotificationTypes,
       ...storageNotificationTypes,
+      ...knowledgeBaseNotificationTypes,
     ),
     unsubscribe,
   });
@@ -723,6 +727,16 @@ export function createAccountServices(options: {
     authorization,
     storage,
   });
+  const reviews = new ReviewService({
+    database,
+    authorization,
+    audit,
+    people,
+    notifications,
+    administrators: (executor, spaceId) => pageAccess.spaceAdministrators(executor, spaceId),
+  });
+  activity.useReviews(reviews);
+  versions.useReviews(reviews);
   const knowledgeBases = new KnowledgeBaseService({
     database,
     audit,
@@ -1000,6 +1014,7 @@ export function createAccountServices(options: {
     archive,
     templates,
     knowledgeBases,
+    reviews,
     templateTransfers,
     activity,
     comments,

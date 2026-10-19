@@ -2,6 +2,7 @@ import { chatChannelKinds, smtpOAuth2Providers } from "@pagehall/shared";
 import { z } from "zod";
 import type { PrincipalType } from "../accounts/principal.js";
 import { exportFormats } from "../exports/options.js";
+import { reviewRecipients, reviewVia } from "../knowledge-bases/schema.js";
 import { knowledgeBaseAudiences } from "../spaces/schema.js";
 
 export const auditTargetTypes = [
@@ -1035,6 +1036,20 @@ export const auditCatalog = {
     }),
     visibility: "organization",
   }),
+  "knowledgeBase.reviewSettingsChanged": event({
+    actor: ["account"],
+    target: "space",
+    fields: z.object({
+      name: z.string(),
+      intervalMonths: z.number().int().positive().nullable(),
+      previousIntervalMonths: z.number().int().positive().nullable(),
+      leadDays: z.number().int().min(0),
+      previousLeadDays: z.number().int().min(0),
+      recipients: z.enum(reviewRecipients),
+      previousRecipients: z.enum(reviewRecipients),
+    }),
+    visibility: "organization",
+  }),
   "space.updated": event({
     actor: ["account", "system"],
     target: "space",
@@ -1092,6 +1107,30 @@ export const auditCatalog = {
     actor: ["account", "system"],
     target: "page",
     fields: pageFields.extend({ version: z.number().int().positive(), note: z.string() }),
+    visibility: "organization",
+  }),
+  "article.reviewed": event({
+    actor: ["account"],
+    target: "page",
+    fields: pageFields.extend({ via: z.enum(reviewVia) }),
+    visibility: "organization",
+  }),
+  "article.reviewUndone": event({
+    actor: ["account"],
+    target: "page",
+    fields: pageFields,
+    visibility: "organization",
+  }),
+  "article.sourceAdded": event({
+    actor: ["account"],
+    target: "page",
+    fields: pageFields.extend({ sourceId: z.uuid() }),
+    visibility: "organization",
+  }),
+  "article.sourceRemoved": event({
+    actor: ["account"],
+    target: "page",
+    fields: pageFields.extend({ sourceId: z.uuid() }),
     visibility: "organization",
   }),
   "blogPost.publishedBySchedule": event({

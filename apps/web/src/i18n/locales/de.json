@@ -1571,7 +1571,13 @@
     "tooManyGroups": "Wähle höchstens 100 Gruppen. Fasse Personen in weniger Gruppen zusammen, wenn du mehr brauchst.",
     "requiredSectionsEmpty": "Ein Pflichtabschnitt ist leer. Fülle ihn aus und veröffentliche dann erneut.",
     "sectionNotFound": "Die Vorlage hat diesen Abschnitt nicht. Lade die Seite neu und versuche es noch einmal.",
-    "draftNotVisible": "Nur Bearbeitende des Artikels sehen seinen Entwurf."
+    "draftNotVisible": "Nur Bearbeitende des Artikels sehen seinen Entwurf.",
+    "notArticle": "Nur Artikel einer Wissensdatenbank werden überprüft. Öffne den Artikel in seiner Wissensdatenbank.",
+    "articleNotPublished": "Der Artikel ist noch nicht veröffentlicht. Veröffentliche ihn zuerst und markiere ihn dann als geprüft.",
+    "reviewNotUndoable": "Die Überprüfung lässt sich nicht mehr rückgängig machen, weil der Artikel erneut geprüft wurde oder zu viel Zeit vergangen ist. Ändere bei Bedarf das Intervall.",
+    "sourceNotFound": "Die Quellseite gibt es nicht oder du kannst sie nicht lesen. Wähle eine andere Seite.",
+    "invalidSourcePage": "Eine Quellseite muss eine Seite in einem internen Space sein, kein anderer Artikel. Wähle eine interne Seite.",
+    "tooManySources": "Ein Artikel kann höchstens 20 Quellseiten haben. Entferne eine, bevor du eine weitere hinzufügst."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -2539,7 +2545,8 @@
       "importsAndExports": "Importe und Exporte",
       "storageLevelReached": "Dateispeicher füllt sich",
       "storageLevelCleared": "Belegung des Dateispeichers sinkt",
-      "copies": "Meine Kopien"
+      "copies": "Meine Kopien",
+      "reviews": "Überprüfung von Artikeln"
     },
     "types": {
       "identityProvider": {
@@ -2633,6 +2640,10 @@
       "copy": {
         "finished": "Deine Kopie {itemTitle} ist im Space {spaceKey} fertig.",
         "failed": "Das Kopieren von {itemTitle} ist fehlgeschlagen, es wurde nichts angelegt. Kopiere erneut."
+      },
+      "article": {
+        "reviewDue": "{itemTitle} ist am {dueAt} zur Überprüfung fällig.",
+        "sourceChanged": "Eine Quellseite von {itemTitle} wurde geändert. Prüfe, ob der Artikel angepasst werden muss."
       }
     },
     "channelFor": "{event}: {channel}",
@@ -3834,7 +3845,14 @@
         "removed": "Chat-Kanal entfernt"
       },
       "knowledgeBase": {
-        "audienceChanged": "Lesende einer Wissensdatenbank geändert"
+        "audienceChanged": "Lesende einer Wissensdatenbank geändert",
+        "reviewSettingsChanged": "Überprüfungseinstellungen einer Wissensdatenbank geändert"
+      },
+      "article": {
+        "reviewed": "Artikel als geprüft markiert",
+        "reviewUndone": "Überprüfung eines Artikels rückgängig gemacht",
+        "sourceAdded": "Quellseite mit einem Artikel verknüpft",
+        "sourceRemoved": "Quellseite von einem Artikel entfernt"
       }
     },
     "action": "Aktion",
@@ -9452,5 +9470,9 @@
       "wrench": "Schraubenschlüssel",
       "triangle-alert": "Warnung"
     }
+  },
+  "reviews": {
+    "activityMarked": "{actor} hat den Artikel als geprüft markiert",
+    "activityPublished": "{actor} hat den Artikel veröffentlicht und den Inhalt als geprüft markiert"
   }
 }

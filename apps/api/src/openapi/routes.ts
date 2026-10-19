@@ -44,6 +44,7 @@ import { KnowledgeBasesController } from "../spaces/knowledge-bases.controller.j
 import { OrganizationSpacesController } from "../spaces/organization-spaces.controller.js";
 import { OwnershipController } from "../spaces/ownership.controller.js";
 import { PersonalSpacesController } from "../spaces/personal-spaces.controller.js";
+import { ReviewsController } from "../spaces/reviews.controller.js";
 import { ShortcutsController } from "../spaces/shortcuts.controller.js";
 import { SpacesController } from "../spaces/spaces.controller.js";
 import { TemplateFilesController } from "../spaces/template-files.controller.js";
@@ -81,6 +82,7 @@ export const apiControllers = (): Type[] => [
   ConfidentialSpacesController,
   ItemsController,
   KnowledgeBasesController,
+  ReviewsController,
   CopiesController,
   OwnershipController,
   ShortcutsController,

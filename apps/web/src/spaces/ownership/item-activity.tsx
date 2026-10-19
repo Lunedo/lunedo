@@ -21,6 +21,15 @@ function Entry({ entry }: { entry: ActivityEntry }) {
       <span>{t("pageStatus.activityRemoved", { actor })}</span>
     );
   }
+  if (entry.type === "review") {
+    return (
+      <span>
+        {entry.via === "published"
+          ? t("reviews.activityPublished", { actor })
+          : t("reviews.activityMarked", { actor })}
+      </span>
+    );
+  }
   return (
     <span>
       {t("ownership.activityTransferred", {
