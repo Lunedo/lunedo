@@ -4,6 +4,7 @@ import { accountPrincipal, type Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database, Transaction } from "../database/database.js";
+import { isKnowledgeBase, knowledgeBaseKindError } from "../knowledge-bases/rules.js";
 import type { NotificationService } from "../notifications/service.js";
 import { actorIdOf, auditScopeOf, SpaceError } from "../spaces/common.js";
 import { insertInitialDocument, normalizeLabel } from "../spaces/documents.js";
@@ -184,6 +185,7 @@ export class BlogService {
   }
 
   async create(actor: Principal, spaceId: string, input: { title: string; excerpt?: string | undefined }) {
+    if (await isKnowledgeBase(this.#database, spaceId)) throw knowledgeBaseKindError();
     const title = cleanTitle(input.title);
     const excerpt = cleanExcerpt(input.excerpt ?? "");
     const actorId = actorIdOf(actor);

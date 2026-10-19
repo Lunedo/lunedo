@@ -113,6 +113,7 @@ import { UploadService } from "./imports/uploads.js";
 import { WordReader } from "./imports/word/reader.js";
 import { ImportWorker } from "./imports/worker.js";
 import type { JobQueue } from "./jobs/job-queue.js";
+import { KnowledgeBaseService } from "./knowledge-bases/service.js";
 import type { Logger } from "./logging/logger.js";
 import {
   DISPATCH_PENDING_MAIL_SCHEDULE,
@@ -279,6 +280,7 @@ export interface AccountServices {
   trash: TrashService;
   archive: ArchiveService;
   templates: TemplateService;
+  knowledgeBases: KnowledgeBaseService;
   templateTransfers: TemplateTransferService;
   activity: ContentActivity;
   comments: CommentService;
@@ -721,6 +723,15 @@ export function createAccountServices(options: {
     authorization,
     storage,
   });
+  const knowledgeBases = new KnowledgeBaseService({
+    database,
+    audit,
+    authorization,
+    spaces,
+    permissions: spacePermissions,
+    people,
+    templates,
+  });
   const whiteboards = new WhiteboardService({
     database,
     files,
@@ -988,6 +999,7 @@ export function createAccountServices(options: {
     trash,
     archive,
     templates,
+    knowledgeBases,
     templateTransfers,
     activity,
     comments,

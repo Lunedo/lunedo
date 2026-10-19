@@ -90,6 +90,10 @@ export function section(key: string, title: string, ...content: NodeJson[]): Nod
   return { type: "section", attrs: { key, title }, content };
 }
 
+export function iconSection(key: string, title: string, icon: string, ...content: NodeJson[]): NodeJson {
+  return { type: "section", attrs: { key, title, icon }, content };
+}
+
 export function openTaskReport(): NodeJson {
   return { type: "taskReport", attrs: { status: "open" } };
 }

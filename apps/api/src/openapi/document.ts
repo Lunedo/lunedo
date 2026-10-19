@@ -66,6 +66,8 @@ const TAG_DESCRIPTIONS: Record<string, string> = {
   Templates:
     "Page templates of the instance, organizations and spaces, the template gallery, the images templates hold, and export and import of templates as files.",
   Pages: "The page tree with pages, folders and links, page content, labels and backlinks.",
+  "Knowledge bases":
+    "Who may read a knowledge base, its categories, contact addresses, article templates with required sections, and articles with their numbers and sections.",
   Search: "Searching pages, blog posts and comments the caller can read.",
   Watching: "Watching and muting pages, blog posts, meeting series and spaces.",
   Storage: "Usage of the file store, warning levels and operations contacts of the instance.",

@@ -1,3 +1,5 @@
+import { articleHowTo } from "./article-how-to.js";
+import { articleTroubleshooting } from "./article-troubleshooting.js";
 import { decision } from "./decision.js";
 import { howTo } from "./how-to.js";
 import { incidentPostmortem } from "./incident-postmortem.js";
@@ -25,4 +27,6 @@ export const builtInTemplates: readonly BuiltInTemplate[] = [
   teamHome,
   teamMeeting,
   oneOnOne,
+  articleHowTo,
+  articleTroubleshooting,
 ];

@@ -20,6 +20,8 @@ import {
   publishAttachments,
   restoreDiscardedAttachments,
 } from "../files/publication.js";
+import { requireSections } from "../knowledge-bases/required.js";
+import { isKnowledgeBase, knowledgeBaseModeError } from "../knowledge-bases/rules.js";
 import type { SettingsService } from "../settings/service.js";
 import { actorIdOf, auditScopeOf, SpaceError } from "./common.js";
 import {
@@ -356,6 +358,7 @@ export class VersionService {
       if (!hasDraftChanges(page) && page.publishedNumber !== null) {
         return { version: page.publishedNumber, created: false };
       }
+      await requireSections(tx, itemId, migrated(page.snapshot, page.schemaVersion));
       const version = await this.#publishLocked(tx, page, actorIdOf(actor), note);
       await this.#audit.record(tx, {
         name: "page.published",
@@ -560,6 +563,7 @@ export class VersionService {
         throw new SpaceError("blogPostMode", "Blog posts are always published with versions");
       }
       if (page.mode === mode) return;
+      if (await isKnowledgeBase(tx, page.spaceId)) throw knowledgeBaseModeError();
       const previousMode = page.mode;
       if (mode === "publish") {
         if (page.revision > page.versionedRevision || page.latest === null) {

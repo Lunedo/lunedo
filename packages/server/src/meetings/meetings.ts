@@ -6,6 +6,7 @@ import type { AuthorizationService } from "../authorization/service.js";
 import { organizationMembership } from "../authorization/space-access.js";
 import type { ContentActivity } from "../collaboration/content.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
+import { isKnowledgeBase, knowledgeBaseKindError } from "../knowledge-bases/rules.js";
 import type { NotificationService } from "../notifications/service.js";
 import { actorIdOf, SpaceError } from "../spaces/common.js";
 import { insertInitialDocument, type PageDocumentService } from "../spaces/documents.js";
@@ -440,6 +441,7 @@ export class MeetingService {
     const schedule = scheduleFrom(input);
     const run = async (tx: Transaction) => {
       await lockSpaces(tx, [spaceId]);
+      if (await isKnowledgeBase(tx, spaceId)) throw knowledgeBaseKindError();
       if (input.parentId) await this.#checkParent(tx, actor, spaceId, input.parentId);
       const members = await this.#validMembers(tx, actor, spaceId, input.members);
       const template = await this.#template(actor, spaceId, input.templateId);

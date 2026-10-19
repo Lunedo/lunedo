@@ -119,6 +119,7 @@ export const auditEventNames = [
   "apiToken.rejected",
   "audit.exported",
   "space.created",
+  "knowledgeBase.audienceChanged",
   "space.updated",
   "space.permissionGranted",
   "space.permissionChanged",

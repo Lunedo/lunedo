@@ -208,6 +208,24 @@ export const problems = {
   spaceHasAdministrator: { status: 409, title: "The space has a space admin" },
   spaceHasMembers: { status: 409, title: "The space still has active members" },
   confidentialVisibility: { status: 400, title: "A confidential space stays private" },
+  invalidVisibility: { status: 400, title: "The space needs a visibility" },
+  knowledgeBaseConfidential: { status: 400, title: "A knowledge base cannot be confidential" },
+  invalidAudience: { status: 400, title: "Only knowledge bases have an audience" },
+  knowledgeBaseVisibility: { status: 409, title: "A knowledge base is opened by its audience" },
+  knowledgeBaseContent: { status: 409, title: "A knowledge base holds only articles and categories" },
+  knowledgeBaseMode: { status: 409, title: "Articles always use publish mode" },
+  knowledgeBasePlacement: { status: 409, title: "Articles and categories are placed in categories" },
+  notKnowledgeBase: { status: 409, title: "The space is not a knowledge base" },
+  notCategory: { status: 409, title: "The folder is not a category" },
+  invalidIcon: { status: 400, title: "The icon is not valid" },
+  invalidArticleType: { status: 400, title: "Only articles have an article type" },
+  invalidContactEmail: { status: 400, title: "The contact address is not valid" },
+  audienceWidening: { status: 409, title: "The change lets more people read the knowledge base" },
+  audienceGroupsMissing: { status: 400, title: "Choose at least one group" },
+  tooManyGroups: { status: 400, title: "Too many groups" },
+  requiredSectionsEmpty: { status: 409, title: "Required sections are empty" },
+  sectionNotFound: { status: 404, title: "The section does not exist" },
+  draftNotVisible: { status: 403, title: "Only editors see the draft" },
   confidentialScope: { status: 400, title: "Links in a confidential space name specific people only" },
   confidentialSharing: {
     status: 409,
@@ -483,6 +501,22 @@ export const problemSchema = z
       .describe(
         "Number of pages that give access to groups or through broad links, for `confidentialSharing`; number of pages that would lose the status, for `statusInUse`.",
       ),
+    sections: z
+      .array(
+        z
+          .object({
+            key: z.string().describe("Key of the section."),
+            title: z.string().describe("Heading of the section."),
+          })
+          .describe("A required section."),
+      )
+      .optional()
+      .describe("Required sections that are empty or missing, for `requiredSectionsEmpty`."),
+    articles: z
+      .number()
+      .int()
+      .optional()
+      .describe("Number of articles more people could read, for `audienceWidening`."),
     impact: moveImpactSchema
       .optional()
       .describe("Who gains and who loses access, with the confirmation to send, for `moveChangesAccess`."),

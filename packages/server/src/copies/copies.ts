@@ -18,6 +18,7 @@ import type { ContentActivity } from "../collaboration/content.js";
 import type { Database, Transaction } from "../database/database.js";
 import type { FileService } from "../files/files.js";
 import type { JobContext, JobQueue } from "../jobs/job-queue.js";
+import { checkKnowledgeBaseSubtree, isKnowledgeBase } from "../knowledge-bases/rules.js";
 import type { NotificationService } from "../notifications/service.js";
 import type { ValueSigner } from "../sharing/signer.js";
 import { actorIdOf, auditScopeOf, isUniqueViolation, SpaceError } from "../spaces/common.js";
@@ -88,6 +89,15 @@ export interface CopyImpact extends AccessImpact {
   hidden: number;
   skipped: number;
   background: boolean;
+}
+
+async function checkKnowledgeBaseCopy(
+  tx: Transaction,
+  targetSpaceId: string,
+  itemId: string,
+  descendants: boolean,
+): Promise<void> {
+  if (await isKnowledgeBase(tx, targetSpaceId)) await checkKnowledgeBaseSubtree(tx, itemId, descendants);
 }
 
 export interface CopySummary {
@@ -300,6 +310,7 @@ export class CopyService {
       await this.#database.transaction(
         async (tx) => {
           await checkParent(tx, this.#authorization, actor, located.targetSpaceId, request.parentId);
+          await checkKnowledgeBaseCopy(tx, located.targetSpaceId, itemId, request.descendants);
           const plan = await this.#plan(tx, actor, itemId, request.descendants);
           const access = await this.#access(tx, actor, plan, located, request.parentId);
           throw new Preview(await this.#impact(actor, itemId, located, request, plan, access));
@@ -321,6 +332,7 @@ export class CopyService {
       async (tx) => {
         await lockSpaces(tx, [located.targetSpaceId]);
         await checkParent(tx, this.#authorization, actor, located.targetSpaceId, request.parentId);
+        await checkKnowledgeBaseCopy(tx, located.targetSpaceId, itemId, request.descendants);
         const plan = await this.#plan(tx, actor, itemId, request.descendants);
         const access = await this.#access(tx, actor, plan, located, request.parentId);
         await this.#requireConfirmation(actor, itemId, located, request, plan, access);
@@ -406,6 +418,7 @@ export class CopyService {
         async (tx) => {
           await tx.execute(sql`select set_config('pagehall.tree_settled_later', 'on', true)`);
           await checkParent(tx, this.#authorization, actor, located.targetSpaceId, request.parentId);
+          await checkKnowledgeBaseCopy(tx, located.targetSpaceId, sourceItemId, row.descendants);
           const plan = await this.#plan(tx, actor, sourceItemId, row.descendants);
           const access = await this.#access(tx, actor, plan, located, request.parentId);
           if (digest(access.gains) !== row.access) {

@@ -141,7 +141,7 @@ export class BlogController {
       schema: blogPostSchema,
       example: { ...exampleBlogPost, published: false },
     },
-    errors: ["invalidTitle", "invalidExcerpt"],
+    errors: ["invalidTitle", "invalidExcerpt", "knowledgeBaseContent"],
   })
   async create(
     @Param("spaceId") spaceId: string,

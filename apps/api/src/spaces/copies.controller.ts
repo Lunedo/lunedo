@@ -148,7 +148,15 @@ export class CopiesController {
       schema: copyImpactSchema,
       example: exampleCopyImpact,
     },
-    errors: ["invalidPlacement", "notCopyable", "neverPublished", "otherOrganization"],
+    errors: [
+      "invalidPlacement",
+      "notCopyable",
+      "neverPublished",
+      "otherOrganization",
+      "knowledgeBaseContent",
+      "knowledgeBaseMode",
+      "knowledgeBasePlacement",
+    ],
   })
   async preview(
     @Param("itemId") itemId: string,
@@ -170,6 +178,9 @@ export class CopiesController {
     bodyExample: { spaceId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10", parentId: null, descendants: true },
     response: { description: "The copy.", schema: copySchema, example: exampleCopy },
     errors: [
+      "knowledgeBaseContent",
+      "knowledgeBaseMode",
+      "knowledgeBasePlacement",
       "invalidPlacement",
       "notCopyable",
       "neverPublished",

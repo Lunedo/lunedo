@@ -216,7 +216,7 @@ export class VersionsController {
       schema: publishResultSchema,
       example: { version: 8, created: true },
     },
-    errors: ["notPublishMode", "invalidNote"],
+    errors: ["notPublishMode", "invalidNote", "requiredSectionsEmpty"],
   })
   async publish(
     @Param("pageId") pageId: string,
@@ -329,7 +329,7 @@ export class VersionsController {
     params: pageParams,
     body: modeChangeSchema,
     bodyExample: { mode: "live", confirmDraft: true },
-    errors: ["draftPending"],
+    errors: ["draftPending", "knowledgeBaseMode"],
   })
   async changeMode(
     @Param("pageId") pageId: string,

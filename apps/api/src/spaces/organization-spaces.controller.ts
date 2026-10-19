@@ -214,7 +214,7 @@ export class OrganizationSpacesController {
   @ApiRoute({
     summary: "Create a space",
     description:
-      "Creates a space with an overview page. The creator becomes space admin; the given holders get their roles. Members can create spaces when the organization allows it; guests and collaborators cannot.",
+      "Creates a space. A standard space starts with an overview page; a knowledge base starts empty and holds articles in categories. The creator becomes space admin; the given holders get their roles. Members can create spaces when the organization allows it; guests and collaborators cannot.",
     tags: [TAG],
     params: organizationIdParams,
     body: createSpaceSchema,
@@ -227,7 +227,17 @@ export class OrganizationSpacesController {
     },
     status: 201,
     response: { description: "The new space.", schema: spaceSchema, example: exampleSpace },
-    errors: ["invalidSpaceName", "invalidSpaceKey", "invalidSpaceDescription", "keyTaken", "invalidHolder"],
+    errors: [
+      "invalidSpaceName",
+      "invalidSpaceKey",
+      "invalidSpaceDescription",
+      "invalidVisibility",
+      "keyTaken",
+      "invalidHolder",
+      "knowledgeBaseConfidential",
+      "invalidAudience",
+      "audienceGroupsMissing",
+    ],
   })
   async create(
     @Param("organizationId") organizationId: string,
