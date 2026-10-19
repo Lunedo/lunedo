@@ -223,7 +223,13 @@ export class VersionsController {
     @Body() body: z.output<typeof publishSchema>,
     @Req() request: FastifyRequest,
   ) {
-    return this.#services.versions.publish(actorOf(request), pageId, { note: body.note });
+    const published = await this.#services.versions.publish(actorOf(request), pageId, { note: body.note });
+    if (published.created) {
+      await this.#services.articleRenderer
+        .queue(pageId)
+        .catch((error: unknown) => request.log.warn({ err: error }, "The article could not be queued for the portal"));
+    }
+    return published;
   }
 
   @Post(":pageId/draft/discard")

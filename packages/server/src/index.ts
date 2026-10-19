@@ -630,7 +630,7 @@ export type { CustomRole, RoleAssignment } from "./organizations/roles.js";
 export { roleNameSchema } from "./organizations/roles.js";
 export * from "./organizations/settings.js";
 export { calloutRules, colorRules, highlightRules, variables as colorVariables } from "./exports/style.js";
-export { ArticleRenderer, renderArticleJob } from "./portal/articles.js";
+export { ArticleRenderer, PORTAL_BASE_PLACEHOLDER, renderArticleJob } from "./portal/articles.js";
 export {
   type AppearanceInput,
   type BrandColor,

@@ -769,7 +769,7 @@ export function createAccountServices(options: {
   });
   const portals = new PortalService({ database, audit, settings });
   const portalSessions = new PortalSessionService({ database, sessions });
-  const articleRenderer = new ArticleRenderer({ database });
+  const articleRenderer = new ArticleRenderer({ database, jobs });
   const portalStatistics = new PortalStatistics({ database, jobs });
   const portalReader = new PortalReader({
     database,

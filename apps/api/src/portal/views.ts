@@ -1,12 +1,13 @@
-import type {
-  ArticlePage,
-  ArticleSort,
-  PortalArticle,
-  PortalArticleFilter,
-  PortalArticleSummary,
-  PortalCategory,
-  PortalConfig,
-  PortalSearchResult,
+import {
+  type ArticlePage,
+  type ArticleSort,
+  PORTAL_BASE_PLACEHOLDER,
+  type PortalArticle,
+  type PortalArticleFilter,
+  type PortalArticleSummary,
+  type PortalCategory,
+  type PortalConfig,
+  type PortalSearchResult,
 } from "@pagehall/server";
 import { type Html, html, raw, when } from "./html.js";
 import { hasIcon, icon } from "./icons.js";
@@ -396,12 +397,14 @@ export function categoryPage(
   );
 }
 
-export function decorateArticleHtml(markup: string): string {
-  return markup.replace(
-    /(<section class="ph-section"[^>]*?data-icon="([a-z0-9-]+)"[^>]*><h2 id="[^"]*">)/g,
-    (_match, opening: string, name: string) =>
-      hasIcon(name) ? `${opening}<span class="hb" aria-hidden="true">${icon(name).value}</span>` : opening,
-  );
+export function decorateArticleHtml(markup: string, base: string): string {
+  return markup
+    .replaceAll(`${PORTAL_BASE_PLACEHOLDER}/`, `${base}/`)
+    .replace(
+      /(<section class="ph-section"[^>]*?data-icon="([a-z0-9-]+)"[^>]*><h2 id="[^"]*">)/g,
+      (_match, opening: string, name: string) =>
+        hasIcon(name) ? `${opening}<span class="hb" aria-hidden="true">${icon(name).value}</span>` : opening,
+    );
 }
 
 export function articleUrl(view: PortalView, article: { number: number; slug: string }): string {
@@ -445,7 +448,7 @@ export function articlePage(
                 (heading) => html`<a href="#${heading.id}">${heading.title}</a>`,
               )}</nav></details>`,
           )}
-          <div class="body">${raw(decorateArticleHtml(article.html))}</div>
+          <div class="body">${raw(decorateArticleHtml(article.html, view.base))}</div>
           ${when(
             data.related.length > 0,
             () =>

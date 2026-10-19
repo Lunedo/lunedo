@@ -234655,6 +234655,80 @@
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
           },
+          "light": {
+            "description": "Check of the light mode color, for `brandContrast`.",
+            "type": "object",
+            "properties": {
+              "color": {
+                "type": "string",
+                "description": "The checked color."
+              },
+              "passes": {
+                "type": "boolean",
+                "description": "Whether it reaches the contrast WCAG AA asks for."
+              },
+              "onBackground": {
+                "type": "number",
+                "description": "Contrast of the color as text on the background."
+              },
+              "onBrand": {
+                "type": "number",
+                "description": "Contrast of text on the color."
+              },
+              "proposal": {
+                "description": "The nearest shade that passes, or null when none exists.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "color",
+              "passes",
+              "onBackground",
+              "onBrand",
+              "proposal"
+            ],
+            "additionalProperties": false
+          },
+          "dark": {
+            "description": "Check of the dark mode color, for `brandContrast`.",
+            "type": "object",
+            "properties": {
+              "color": {
+                "type": "string",
+                "description": "The checked color."
+              },
+              "passes": {
+                "type": "boolean",
+                "description": "Whether it reaches the contrast WCAG AA asks for."
+              },
+              "onBackground": {
+                "type": "number",
+                "description": "Contrast of the color as text on the background."
+              },
+              "onBrand": {
+                "type": "number",
+                "description": "Contrast of text on the color."
+              },
+              "proposal": {
+                "description": "The nearest shade that passes, or null when none exists.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "color",
+              "passes",
+              "onBackground",
+              "onBrand",
+              "proposal"
+            ],
+            "additionalProperties": false
+          },
           "impact": {
             "description": "Who gains and who loses access, with the confirmation to send, for `moveChangesAccess`.",
             "type": "object",

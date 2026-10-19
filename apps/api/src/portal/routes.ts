@@ -52,6 +52,8 @@ const FLOW_MAX_AGE_SECONDS = 10 * 60;
 const FEEDBACK_BODY_LIMIT = 16 * 1024;
 const FEEDBACK_LIMIT = 30;
 const FEEDBACK_WINDOW_SECONDS = 600;
+const SEARCH_COUNT_LIMIT = 60;
+const SEARCH_COUNT_WINDOW_SECONDS = 600;
 const ARTICLE = /^\/(\d{1,9})(?:-([a-z0-9-]{0,200}))?$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SORTS = ["views", "updated", "title"] as const;
@@ -420,7 +422,7 @@ async function start(
   const [mostRead, recent, frequent] = await Promise.all([
     reader.articles(viewer.principal, target.config, { sort: "views", limit: START_LIST_LIMIT }),
     reader.articles(viewer.principal, target.config, { sort: "updated", limit: START_LIST_LIMIT }),
-    reader.frequentSearches(target.config),
+    reader.frequentSearches(viewer.principal, target.config),
   ]);
   return sendPage(
     reply,
@@ -483,7 +485,16 @@ async function search(
     request.log.error({ err: error }, "A portal search failed");
     return sendPage(reply, view, searchFailedPage(view, text), 503);
   }
-  if (!cursor) {
+  const counted =
+    !cursor &&
+    (
+      await services.rateLimiter.consume(
+        `portal-search:client:${clientSubject(request.ip)}`,
+        SEARCH_COUNT_LIMIT,
+        SEARCH_COUNT_WINDOW_SECONDS,
+      )
+    ).allowed;
+  if (counted) {
     await services.portalStatistics
       .recordSearch(target.config.spaceId, {
         term: text,

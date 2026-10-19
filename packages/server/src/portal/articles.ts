@@ -8,13 +8,14 @@ import {
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Database } from "../database/database.js";
-import { defineJob } from "../jobs/job-queue.js";
 import { exportTexts } from "../exports/texts.js";
+import { defineJob, type JobQueue } from "../jobs/job-queue.js";
 import type { Language } from "../mail/templates.js";
 import { migrated } from "../spaces/documents.js";
 import type { RenderedHeading } from "./schema.js";
 
 export const ARTICLE_RENDERER = 1;
+export const PORTAL_BASE_PLACEHOLDER = "/__portal__";
 const TOC_LEVEL = 2;
 
 export const renderArticleJob = defineJob({
@@ -58,9 +59,19 @@ function references(document: DocumentJson): {
 
 export class ArticleRenderer {
   readonly #database: Database;
+  readonly #jobs: JobQueue | undefined;
 
-  constructor(options: { database: Database }) {
+  constructor(options: { database: Database; jobs?: JobQueue | undefined }) {
     this.#database = options.database;
+    this.#jobs = options.jobs;
+  }
+
+  async queue(itemId: string): Promise<void> {
+    const result = await this.#database.execute<{ version_id: string | null }>(sql`
+      select t.published_version_id as version_id from tree_items t join spaces s on s.id = t.space_id
+      where t.id = ${itemId} and s.type = 'knowledgeBase'`);
+    const versionId = result.rows[0]?.version_id;
+    if (versionId) await this.#jobs?.enqueue(renderArticleJob, { itemId }, { idempotencyKey: versionId });
   }
 
   async rendered(versionId: string, language: Language): Promise<RenderedArticle | null> {
@@ -92,7 +103,10 @@ export class ArticleRenderer {
     const row = found.rows[0];
     if (!row) return null;
     const document = migrated(row.document, row.schema_version);
-    const context = { ...(await this.#context(row.space_id, document)), labels: exportTexts(language).labels };
+    const context = {
+      ...(await this.#context(row.space_id, document)),
+      labels: exportTexts(language).labels,
+    };
     const html = renderHtml(document, context);
     const headings = extractHeadings(document)
       .filter((heading) => heading.level <= TOC_LEVEL)
@@ -118,7 +132,10 @@ export class ArticleRenderer {
     const names = new Map<string, string>();
     if (people.size > 0) {
       const result = await this.#database.execute<{ id: string; name: string }>(sql`
-        select id, name from accounts where id = any(${sql.param([...people])}::uuid[]) and state <> 'anonymized'`);
+        select a.id, a.name from accounts a join spaces s on s.id = ${spaceId}
+        where a.id = any(${sql.param([...people])}::uuid[]) and a.state <> 'anonymized'
+          and exists (select 1 from memberships m where m.organization_id = s.organization_id
+            and m.account_id = a.id)`);
       for (const entry of result.rows) names.set(entry.id, entry.name);
     }
     return {
@@ -128,12 +145,12 @@ export class ArticleRenderer {
       },
       pageLink: (link) => {
         const number = link.pageId ? numbers.get(link.pageId) : undefined;
-        if (number === undefined) return { href: "", title: link.title ?? "", accessible: false };
-        return { href: String(number), title: link.title ?? "", accessible: true };
+        if (number === undefined) return { href: "", title: "", accessible: false };
+        return { href: `${PORTAL_BASE_PLACEHOLDER}/${number}`, title: link.title ?? "", accessible: true };
       },
       attachment: (id) => ({
-        href: `files/${id}`,
-        display: `files/${id}?size=display`,
+        href: `${PORTAL_BASE_PLACEHOLDER}/files/${id}`,
+        display: `${PORTAL_BASE_PLACEHOLDER}/files/${id}?size=display`,
         image: images.has(id),
       }),
       include: () => ({ state: "hidden" }),
@@ -148,7 +165,7 @@ export class ArticleRenderer {
       embed: () => null,
       whiteboard: () => null,
       diagramReference: () => null,
-      href: (href) => (href.startsWith("/") ? "" : href),
+      href: (href) => (href.startsWith("/") && !href.startsWith(`${PORTAL_BASE_PLACEHOLDER}/`) ? "" : href),
     };
   }
 }

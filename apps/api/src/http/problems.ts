@@ -434,6 +434,16 @@ export function problemType(code: ProblemCode): string {
   return `${PROBLEM_TYPE_PREFIX}${code}`;
 }
 
+const brandCheckSchema = z
+  .object({
+    color: z.string().describe("The checked color."),
+    passes: z.boolean().describe("Whether it reaches the contrast WCAG AA asks for."),
+    onBackground: z.number().describe("Contrast of the color as text on the background."),
+    onBrand: z.number().describe("Contrast of text on the color."),
+    proposal: z.string().nullable().describe("The nearest shade that passes, or null when none exists."),
+  })
+  .describe("Contrast check of a brand color.");
+
 export const problemSchema = z
   .object({
     type: z.string().describe("Stable identifier of the error kind. Clients branch on this value."),
@@ -531,6 +541,8 @@ export const problemSchema = z
       .int()
       .optional()
       .describe("Number of articles more people could read, for `audienceWidening`."),
+    light: brandCheckSchema.optional().describe("Check of the light mode color, for `brandContrast`."),
+    dark: brandCheckSchema.optional().describe("Check of the dark mode color, for `brandContrast`."),
     impact: moveImpactSchema
       .optional()
       .describe("Who gains and who loses access, with the confirmation to send, for `moveChangesAccess`."),

@@ -207,6 +207,20 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
     await test.services.portals.setAddress(actor, second.id, { path: firstConfig.path, domain: null });
     const taken = await test.services.portals.byPath(firstConfig.path);
     expect(taken?.type === "found" && taken.config.spaceId).toBe(second.id);
+    const foreign = await knowledgeBase(other.id, other.owner, "public");
+    await expect(
+      test.services.portals.setAddress(accountPrincipal(other.owner), foreign.id, {
+        path: firstConfig.path,
+        domain: null,
+      }),
+    ).rejects.toMatchObject({ code: "portalPathTaken" });
+    await test.services.portals.setAddress(actor, second.id, { path: secondConfig.path, domain: null });
+    await expect(
+      test.services.portals.setAddress(accountPrincipal(other.owner), foreign.id, {
+        path: firstConfig.path,
+        domain: null,
+      }),
+    ).rejects.toMatchObject({ code: "portalPathTaken" });
     const domain = `kb-${randomUUID().slice(0, 6)}.example.org`;
     await expect(
       test.services.portals.setAddress(actor, first.id, { path: fresh, domain }),
@@ -317,6 +331,69 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
     await statistics.retentionChanged(kb.id);
     expect((await statistics.feedback(kb.id)).map((entry) => entry.text)).toEqual(["Neuer Hinweis"]);
     expect(await statistics.deleteFeedbackWhenDue(randomUUID())).toBe("gone");
+  });
+
+  it("pre-renders the published article with relative files, portal links and without included pages", async () => {
+    const org = await organization();
+    const kb = await knowledgeBase(org.id, org.owner, "public");
+    const other = await space(org.id, org.owner, { visibility: "organization" });
+    const internal = await publishedPage(org.owner, other.id, "Intern", "Interner Text");
+    const target = await publishedPage(org.owner, kb.id, "Ziel", "Ziel");
+    const attachmentId = randomUUID();
+    const colleague = await member(org.id, "member", "Kollegin Klara");
+    const stranger = await account({ name: "Fremder Franz" });
+    const actor = accountPrincipal(org.owner);
+    const page = await test.services.tree.create(actor, kb.id, {
+      kind: "page",
+      title: "Quelle",
+      placement: { parentId: null },
+    });
+    await test.services.documents.replace(actor, page.id, {
+      type: "doc",
+      content: [
+        {
+          type: "section",
+          attrs: { key: "steps", title: "Schritte", icon: "list-ordered" },
+          content: [
+            {
+              type: "paragraph",
+              content: [
+                { type: "pageLink", attrs: { pageId: target, spaceId: kb.id, title: "Zum Ziel" } },
+                { type: "text", text: " und " },
+                { type: "pageLink", attrs: { pageId: internal, spaceId: other.id, title: "Intern" } },
+              ],
+            },
+            { type: "image", attrs: { attachmentId, alt: "Bild" } },
+            { type: "includePage", attrs: { pageId: internal } },
+            {
+              type: "paragraph",
+              content: [
+                { type: "mention", attrs: { id: colleague } },
+                { type: "text", text: " " },
+                { type: "mention", attrs: { id: stranger } },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    await test.services.versions.publish(actor, page.id);
+    const rendered = await test.services.articleRenderer.renderPublished(page.id, "de");
+    if (!rendered) throw new Error("not rendered");
+    const number = await test.database.execute<{ number: number }>(
+      sql`select number from article_numbers where item_id = ${target}`,
+    );
+    expect(rendered.html).toContain(`href="/__portal__/${number.rows[0]?.number}"`);
+    expect(rendered.html).toContain(`src="/__portal__/files/${attachmentId}?size=display"`);
+    expect(rendered.html).not.toContain("Interner Text");
+    expect(rendered.html).not.toContain(internal);
+    expect(rendered.html).not.toContain(">Intern<");
+    expect(rendered.html).toContain('data-section="steps"');
+    expect(rendered.html).toContain("Kollegin Klara");
+    expect(rendered.html).not.toContain("Fremder Franz");
+    expect(rendered.headings).toEqual([expect.objectContaining({ title: "Schritte", level: 2 })]);
+    const again = await test.services.articleRenderer.renderPublished(page.id, "de");
+    expect(again?.html).toBe(rendered.html);
   });
 
   it("counts zero-result searches and offers only repeated terms with results as frequent searches", async () => {

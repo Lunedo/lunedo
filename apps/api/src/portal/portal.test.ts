@@ -17,6 +17,11 @@ import {
   TestClient,
 } from "../testing/auth-app.js";
 
+const PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+  "base64",
+);
+
 function paragraph(text: string) {
   return { type: "paragraph", content: [{ type: "text", text }] };
 }
@@ -57,7 +62,9 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     const account = await createAccount(test, `portal${counter}@pagehall.test`);
     if (options.portal) {
       await test.runtime.pool.query("update accounts set type = 'portal' where id = $1", [account.id]);
-      await test.runtime.pool.query("update memberships set kind = 'guest' where account_id = $1", [account.id]);
+      await test.runtime.pool.query("update memberships set kind = 'guest' where account_id = $1", [
+        account.id,
+      ]);
     }
     return { id: account.id, client: await signedInClient(test, account.email, account.password) };
   }
@@ -162,6 +169,94 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     const category = await reader.get(`${kb.path}/topics/${it}`);
     expect(category.statusCode).toBe(200);
     expect(category.body).toContain("VPN einrichten");
+  });
+
+  it("serves article images to readers who may read the article and to nobody else", async () => {
+    const kb = await knowledgeBase("public");
+    const entry = await article(kb.id, null, "Bild", "Mit Bild.");
+    const uploaded = await owner.post(
+      `/api/v1/pages/${entry.id}/attachments?name=${encodeURIComponent("bild.png")}`,
+      PNG,
+      { "content-type": "application/octet-stream" },
+    );
+    expect(uploaded.statusCode, uploaded.body).toBe(201);
+    const imageId = uploaded.json().id as string;
+    await owner.put(`/api/v1/pages/${entry.id}/content`, {
+      document: {
+        type: "doc",
+        content: [paragraph("Mit Bild."), { type: "image", attrs: { attachmentId: imageId, alt: "Bild" } }],
+      },
+    });
+    await owner.post(`/api/v1/pages/${entry.id}/publish`, {});
+    await index();
+    const visitor = anonymous();
+    const page = await visitor.get(`${kb.path}/${entry.number}-bild`);
+    expect(page.body).toContain(`src="${kb.path}/files/${imageId}?size=display"`);
+    const image = await visitor.get(`${kb.path}/files/${imageId}`);
+    expect(image.statusCode).toBe(200);
+    expect(image.headers["content-type"]).toBe("image/png");
+    const internal = await knowledgeBase("signedIn");
+    const hidden = await article(internal.id, null, "Intern", "Intern.");
+    const secret = await owner.post(
+      `/api/v1/pages/${hidden.id}/attachments?name=${encodeURIComponent("geheim.png")}`,
+      PNG,
+      { "content-type": "application/octet-stream" },
+    );
+    const secretId = secret.json().id as string;
+    expect((await visitor.get(`${kb.path}/files/${secretId}`)).statusCode).toBe(404);
+  });
+
+  it("saves a palette color, refuses an own color without contrast and saves the proposal on confirmation", async () => {
+    const kb = await knowledgeBase("public");
+    const palette = await owner.put(`/api/v1/spaces/${kb.id}/knowledge-base/portal/appearance`, {
+      brand: { color: "red", light: null, dark: null },
+      poweredBy: false,
+      topBarThreshold: 6,
+    });
+    expect(palette.statusCode, palette.body).toBe(200);
+    expect(palette.json()).toMatchObject({ brand: { color: "red" }, poweredBy: false, topBarThreshold: 6 });
+    const brand = { color: "custom", light: "#FFB000", dark: "#8AA8E6" };
+    const refused = await owner.put(`/api/v1/spaces/${kb.id}/knowledge-base/portal/appearance`, { brand });
+    expect(refused.statusCode).toBe(409);
+    expect(refused.json()).toMatchObject({
+      code: "brandContrast",
+      light: { passes: false },
+      dark: { passes: true },
+    });
+    const proposal = refused.json().light.proposal as string;
+    const confirmed = await owner.put(`/api/v1/spaces/${kb.id}/knowledge-base/portal/appearance`, {
+      brand,
+      confirmProposal: true,
+    });
+    expect(confirmed.json().colors).toEqual({ light: proposal, dark: "#8AA8E6" });
+    const page = await anonymous().get(`${kb.path}/`);
+    expect(page.body).toContain(`--kb:${proposal}`);
+    expect(page.body).not.toContain("Provided with Pagehall");
+    const reader = await person();
+    const denied = await reader.client.put(`/api/v1/spaces/${kb.id}/knowledge-base/portal/appearance`, {
+      poweredBy: true,
+    });
+    expect([403, 404]).toContain(denied.statusCode);
+  });
+
+  it("lets only instance administrators allow domains and points the help icon to a readable knowledge base", async () => {
+    const member = await person();
+    const denied = await member.client.post("/api/v1/instance/portal-domains", {
+      domain: "nope.example.org",
+      organizationId,
+    });
+    expect([403, 404]).toContain(denied.statusCode);
+    const groupsKb = await knowledgeBase("groups", [
+      (await services().groups.create(SYSTEM, organizationId, { name: `Help group ${counter}` })).id,
+    ]);
+    const refused = await owner.put(`/api/v1/organizations/${organizationId}/help`, { spaceId: groupsKb.id });
+    expect(refused.statusCode).toBe(400);
+    const kb = await knowledgeBase("signedIn");
+    const chosen = await owner.put(`/api/v1/organizations/${organizationId}/help`, { spaceId: kb.id });
+    expect(chosen.statusCode, chosen.body).toBe(200);
+    const seen = await member.client.get(`/api/v1/organizations/${organizationId}/help`);
+    expect(seen.json().current).toMatchObject({ spaceId: kb.id, url: `${TEST_ORIGIN}${kb.path}/` });
+    await owner.put(`/api/v1/organizations/${organizationId}/help`, { spaceId: null });
   });
 
   it("asks anonymous readers to sign in on every address of a knowledge base that is not public", async () => {
@@ -352,6 +447,22 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect(feedback.map((entry) => entry.text)).toEqual(["Schritt fehlt"]);
   });
 
+  it("shows a frequent search only to readers who find something with it", async () => {
+    const kb = await knowledgeBase("public");
+    await article(kb.id, null, "Offen", "Allgemeiner Text.");
+    const secret = await article(kb.id, null, "Vertraulich", "Kündigungsfrist im Vertrag.");
+    const restricted = await owner.post(`/api/v1/pages/${secret.id}/access`, {
+      changes: [{ action: "restrict", kind: "view" }],
+    });
+    expect(restricted.statusCode, restricted.body).toBe(200);
+    await index();
+    for (let index = 0; index < 3; index += 1) await owner.get(`${kb.path}/search?q=K%C3%BCndigungsfrist`);
+    const visitorStart = await anonymous().get(`${kb.path}/`);
+    expect(visitorStart.body).not.toContain("kündigungsfrist");
+    const ownerStart = await owner.get(`${kb.path}/`);
+    expect(ownerStart.body).toContain("kündigungsfrist");
+  });
+
   it("refuses portal posts from another origin", async () => {
     const kb = await knowledgeBase("public");
     const entry = await article(kb.id, null, "Fremd", "Text.");
@@ -403,7 +514,11 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     const read = await onDomain(`/${entry.number}-domain`);
     expect(read.statusCode).toBe(200);
     expect(read.body).toContain("Auf der eigenen Domain.");
-    const api = await test.app.inject({ method: "GET", url: "/api/v1/auth/session", headers: { host: domain } });
+    const api = await test.app.inject({
+      method: "GET",
+      url: "/api/v1/auth/session",
+      headers: { host: domain },
+    });
     expect(api.statusCode).not.toBe(200);
     expect(String(api.headers["content-type"] ?? "")).not.toContain("json");
     const signedOut = await browser.post("/sign-out", undefined, { host: domain });

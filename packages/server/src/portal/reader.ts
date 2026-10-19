@@ -14,6 +14,8 @@ import { FREQUENT_SEARCH_DAYS, type PortalStatistics } from "./statistics.js";
 export const PORTAL_PAGE_SIZE = 20;
 export const RELATED_LIMIT = 3;
 export const START_LIST_LIMIT = 5;
+const FREQUENT_CANDIDATES = 8;
+const FREQUENT_SHOWN = 4;
 export const portalArticleFilters = ["howTo", "troubleshooting"] as const;
 export type PortalArticleFilter = (typeof portalArticleFilters)[number];
 
@@ -349,8 +351,22 @@ export class PortalReader {
     };
   }
 
-  frequentSearches(config: PortalConfig): Promise<string[]> {
-    return this.#statistics.frequentSearches(config.spaceId);
+  async frequentSearches(principal: Principal, config: PortalConfig): Promise<string[]> {
+    const shown: string[] = [];
+    for (const term of await this.#statistics.frequentSearches(config.spaceId, FREQUENT_CANDIDATES)) {
+      const found = await this.#search.portalSearch(principal, {
+        organizationId: config.organizationId,
+        spaceId: config.spaceId,
+        query: term,
+        categoryId: null,
+        articleTypes: [],
+        limit: 1,
+        cursor: null,
+      });
+      if (found.total > 0) shown.push(term);
+      if (shown.length === FREQUENT_SHOWN) break;
+    }
+    return shown;
   }
 
   async readable(principal: Principal, config: PortalConfig, itemId: string): Promise<boolean> {

@@ -258,7 +258,10 @@ export class PortalService {
         if (!current) throw new SpaceError("notKnowledgeBase", "The space is not a knowledge base");
         const taken = await tx.execute<{ taken: boolean }>(sql`
           select exists (select 1 from knowledge_bases where portal_path = ${path} and space_id <> ${spaceId}) as taken`);
-        if (taken.rows[0]?.taken) {
+        const retired = await tx.execute<{ reserved: boolean }>(sql`
+          select exists (select 1 from knowledge_base_paths p join spaces s on s.id = p.space_id
+            where p.path = ${path} and s.organization_id <> ${current.organizationId}) as reserved`);
+        if (taken.rows[0]?.taken || retired.rows[0]?.reserved) {
           throw new SpaceError("portalPathTaken", "Another knowledge base already uses this path");
         }
         if (domain !== null && domain !== current.domain) {
@@ -454,12 +457,16 @@ export class PortalService {
   async helpTarget(organizationId: string): Promise<HelpCandidate | null> {
     const spaceId = await this.#settings.get(helpKnowledgeBaseSetting, { organization: organizationId });
     if (!spaceId) return null;
-    return (await this.helpCandidates(organizationId)).find((candidate) => candidate.spaceId === spaceId) ?? null;
+    return (
+      (await this.helpCandidates(organizationId)).find((candidate) => candidate.spaceId === spaceId) ?? null
+    );
   }
 
   async setHelpTarget(organizationId: string, spaceId: string | null): Promise<HelpCandidate | null> {
     if (spaceId !== null) {
-      const candidate = (await this.helpCandidates(organizationId)).find((entry) => entry.spaceId === spaceId);
+      const candidate = (await this.helpCandidates(organizationId)).find(
+        (entry) => entry.spaceId === spaceId,
+      );
       if (!candidate) {
         throw new SpaceError(
           "invalidHelpKnowledgeBase",
@@ -467,7 +474,12 @@ export class PortalService {
         );
       }
     }
-    await this.#settings.set(helpKnowledgeBaseSetting, { organization: organizationId }, "organization", spaceId ?? "");
+    await this.#settings.set(
+      helpKnowledgeBaseSetting,
+      { organization: organizationId },
+      "organization",
+      spaceId ?? "",
+    );
     return this.helpTarget(organizationId);
   }
 

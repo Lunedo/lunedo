@@ -350,7 +350,8 @@ export class PortalController {
   @Permission("instance.settings.manage")
   @ApiRoute({
     summary: "List the domains allowed for portals",
-    description: "Domains organizations may use for their knowledge base portals, and which portal uses each.",
+    description:
+      "Domains organizations may use for their knowledge base portals, and which portal uses each.",
     tags: [INSTANCE_TAG],
     response: { description: "The domains.", schema: z.array(domainSchema), example: [exampleDomain] },
   })
