@@ -70,6 +70,8 @@ const TAG_DESCRIPTIONS: Record<string, string> = {
     "Who may read a knowledge base, its categories, contact addresses, article templates with required sections, and articles with their numbers and sections.",
   "Knowledge base reviews":
     "Review intervals and reminders of knowledge base articles, the list of articles to review, marking them as reviewed, and the internal source pages they are based on.",
+  "Knowledge base statistics":
+    "What readers search and read in the portal of a knowledge base and how they rate its articles, without any reference to a person.",
   Search: "Searching pages, blog posts and comments the caller can read.",
   Watching: "Watching and muting pages, blog posts, meeting series and spaces.",
   Storage: "Usage of the file store, warning levels and operations contacts of the instance.",

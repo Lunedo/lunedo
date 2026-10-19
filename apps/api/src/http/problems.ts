@@ -246,6 +246,7 @@ export const problems = {
   sourceNotFound: { status: 404, title: "The source page does not exist" },
   invalidSourcePage: { status: 400, title: "The page cannot be a source" },
   tooManySources: { status: 409, title: "The article has too many source pages" },
+  feedbackNotFound: { status: 404, title: "The note does not exist" },
   confidentialScope: { status: 400, title: "Links in a confidential space name specific people only" },
   confidentialSharing: {
     status: 409,

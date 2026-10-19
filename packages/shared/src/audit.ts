@@ -160,6 +160,7 @@ export const auditEventNames = [
   "access.overviewExported",
   "page.published",
   "article.reviewed",
+  "article.feedbackDeleted",
   "article.reviewUndone",
   "article.sourceAdded",
   "article.sourceRemoved",

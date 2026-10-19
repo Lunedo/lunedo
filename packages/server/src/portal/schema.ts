@@ -96,6 +96,28 @@ export const portalSearches = pgTable(
   ],
 );
 
+export const portalSearchMonths = pgTable(
+  "portal_search_months",
+  {
+    spaceId: uuid()
+      .notNull()
+      .references(() => spaces.id, { onDelete: "cascade" }),
+    term: text().notNull(),
+    month: date({ mode: "string" }).notNull(),
+    searches: integer().notNull(),
+    zeroResults: integer().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.spaceId, table.month, table.term] }),
+    check("portal_search_months_term", sql`length(${table.term}) between 1 and 200`),
+    check("portal_search_months_month", sql`${table.month} = date_trunc('month', ${table.month})`),
+    check(
+      "portal_search_months_counts",
+      sql`${table.searches} > 0 and ${table.zeroResults} between 0 and ${table.searches}`,
+    ),
+  ],
+);
+
 export const portalArticleViews = pgTable(
   "portal_article_views",
   {

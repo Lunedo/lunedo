@@ -1139,6 +1139,12 @@ export const auditCatalog = {
     fields: pageFields.extend({ via: z.enum(reviewVia) }),
     visibility: "organization",
   }),
+  "article.feedbackDeleted": event({
+    actor: ["account"],
+    target: "page",
+    fields: pageFields.extend({ day: z.iso.date() }),
+    visibility: "organization",
+  }),
   "article.reviewUndone": event({
     actor: ["account"],
     target: "page",

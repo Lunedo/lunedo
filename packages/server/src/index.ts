@@ -509,6 +509,17 @@ export {
   MAX_AUDIENCE_GROUPS,
   type TemplateSections,
 } from "./knowledge-bases/service.js";
+export {
+  FEEDBACK_PAGE,
+  type FeedbackPage,
+  type KnowledgeBaseStatistics,
+  KnowledgeBaseStatisticsService,
+  type ReadArticle,
+  type StatisticsArticle,
+  type StatisticsPeriod,
+  statisticsPeriods,
+  type UnhelpfulArticle,
+} from "./knowledge-bases/statistics.js";
 export { createLogger, type Logger, type LogLevel, logLevels } from "./logging/logger.js";
 export { GraphMailError } from "./mail/graph.js";
 export {
@@ -690,9 +701,11 @@ export {
   type DailyCount,
   FEEDBACK_MAX_LENGTH,
   type FeedbackText,
+  MINIMUM_TERM_SEARCHES,
   normalizeTerm,
   type Period,
   PortalStatistics,
+  RAW_SEARCH_MONTHS,
   type RatingCount,
   type TermCount,
 } from "./portal/statistics.js";

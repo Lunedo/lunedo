@@ -81,6 +81,10 @@
       "description": "Review intervals and reminders of knowledge base articles, the list of articles to review, marking them as reviewed, and the internal source pages they are based on."
     },
     {
+      "name": "Knowledge base statistics",
+      "description": "What readers search and read in the portal of a knowledge base and how they rate its articles, without any reference to a person."
+    },
+    {
       "name": "Knowledge bases",
       "description": "Who may read a knowledge base, its categories, contact addresses, article templates with required sections, and articles with their numbers and sections."
     },
@@ -223583,6 +223587,1075 @@
                       "title": "Not found",
                       "status": 404,
                       "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/spaces/{spaceId}/statistics": {
+      "get": {
+        "operationId": "statistics.overview",
+        "summary": "Get the reader statistics of a knowledge base",
+        "description": "Returns searches, terms, ratings and views in the portal for a period. For editors and admins of the knowledge base.\n\nRequires the permission `space.edit` on the space in `spaceId`.",
+        "tags": [
+          "Knowledge base statistics"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.edit",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the knowledge base.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "description": "`7d`, `30d` or `90d` for the last 7, 30 or 90 days, `12m` for the last 12 months, each up to today.",
+            "schema": {
+              "default": "30d",
+              "type": "string",
+              "enum": [
+                "7d",
+                "30d",
+                "90d",
+                "12m"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The statistics.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "period": {
+                      "type": "object",
+                      "properties": {
+                        "from": {
+                          "type": "string",
+                          "format": "date",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                          "description": "First day, UTC."
+                        },
+                        "to": {
+                          "type": "string",
+                          "format": "date",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                          "description": "Last day, UTC."
+                        }
+                      },
+                      "required": [
+                        "from",
+                        "to"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The days counted, both included."
+                    },
+                    "searches": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Searches in the portal."
+                        },
+                        "zeroResults": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Searches without results."
+                        }
+                      },
+                      "required": [
+                        "total",
+                        "zeroResults"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Searches in the period."
+                    },
+                    "ratings": {
+                      "type": "object",
+                      "properties": {
+                        "helpful": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Answers “yes” to “Was this helpful?”."
+                        },
+                        "unhelpful": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Answers “no”."
+                        }
+                      },
+                      "required": [
+                        "helpful",
+                        "unhelpful"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Ratings of the articles the caller can read."
+                    },
+                    "views": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Views of the articles the caller can read."
+                    },
+                    "topTerms": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "term": {
+                            "type": "string",
+                            "description": "The search term, trimmed and in lowercase."
+                          },
+                          "searches": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Searches for the term in the period."
+                          },
+                          "zeroResults": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Of these, searches without results."
+                          },
+                          "lastSearchedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Hour of the last search for the term. ISO 8601 timestamp in UTC."
+                          }
+                        },
+                        "required": [
+                          "term",
+                          "searches",
+                          "zeroResults",
+                          "lastSearchedAt"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A search term."
+                      },
+                      "description": "Up to 20 most frequent terms, each searched at least 3 times."
+                    },
+                    "zeroResultTerms": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "term": {
+                            "type": "string",
+                            "description": "The search term, trimmed and in lowercase."
+                          },
+                          "searches": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Searches for the term in the period."
+                          },
+                          "zeroResults": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Of these, searches without results."
+                          },
+                          "lastSearchedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Hour of the last search for the term. ISO 8601 timestamp in UTC."
+                          }
+                        },
+                        "required": [
+                          "term",
+                          "searches",
+                          "zeroResults",
+                          "lastSearchedAt"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A search term."
+                      },
+                      "description": "Up to 20 terms most often searched without results, each at least 3 times."
+                    },
+                    "unhelpful": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "article": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "ID of the article."
+                              },
+                              "title": {
+                                "type": "string",
+                                "description": "Title of the article."
+                              },
+                              "categoryPath": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "description": "ID of the category."
+                                    },
+                                    "title": {
+                                      "type": "string",
+                                      "description": "Title."
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "title"
+                                  ],
+                                  "additionalProperties": false,
+                                  "description": "A category."
+                                },
+                                "description": "Category and subcategory the caller can read, top level first."
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "title",
+                              "categoryPath"
+                            ],
+                            "additionalProperties": false,
+                            "description": "An article the caller can read."
+                          },
+                          "helpful": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Answers “yes”."
+                          },
+                          "unhelpful": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Answers “no”."
+                          },
+                          "feedback": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Notes on what was missing, still kept."
+                          }
+                        },
+                        "required": [
+                          "article",
+                          "helpful",
+                          "unhelpful",
+                          "feedback"
+                        ],
+                        "additionalProperties": false,
+                        "description": "An article rated as not helpful."
+                      },
+                      "description": "Up to 10 articles with the most answers “no”."
+                    },
+                    "mostRead": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "article": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "ID of the article."
+                              },
+                              "title": {
+                                "type": "string",
+                                "description": "Title of the article."
+                              },
+                              "categoryPath": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "description": "ID of the category."
+                                    },
+                                    "title": {
+                                      "type": "string",
+                                      "description": "Title."
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "title"
+                                  ],
+                                  "additionalProperties": false,
+                                  "description": "A category."
+                                },
+                                "description": "Category and subcategory the caller can read, top level first."
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "title",
+                              "categoryPath"
+                            ],
+                            "additionalProperties": false,
+                            "description": "An article the caller can read."
+                          },
+                          "views": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Views in the period."
+                          }
+                        },
+                        "required": [
+                          "article",
+                          "views"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A read article."
+                      },
+                      "description": "Up to 10 articles with the most views."
+                    }
+                  },
+                  "required": [
+                    "period",
+                    "searches",
+                    "ratings",
+                    "views",
+                    "topTerms",
+                    "zeroResultTerms",
+                    "unhelpful",
+                    "mostRead"
+                  ],
+                  "additionalProperties": false,
+                  "description": "What readers searched and how they rated articles in the portal. Nothing refers to a person; articles the caller cannot read are left out."
+                },
+                "example": {
+                  "period": {
+                    "from": "2026-09-20",
+                    "to": "2026-10-19"
+                  },
+                  "searches": {
+                    "total": 4812,
+                    "zeroResults": 308
+                  },
+                  "ratings": {
+                    "helpful": 1047,
+                    "unhelpful": 157
+                  },
+                  "views": 9310,
+                  "topTerms": [
+                    {
+                      "term": "vpn",
+                      "searches": 412,
+                      "zeroResults": 0,
+                      "lastSearchedAt": "2026-10-19T08:00:00.000Z"
+                    }
+                  ],
+                  "zeroResultTerms": [
+                    {
+                      "term": "parking permit",
+                      "searches": 37,
+                      "zeroResults": 37,
+                      "lastSearchedAt": "2026-10-18T14:00:00.000Z"
+                    }
+                  ],
+                  "unhelpful": [
+                    {
+                      "article": {
+                        "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a50",
+                        "title": "Set up the VPN at home",
+                        "categoryPath": [
+                          {
+                            "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
+                            "title": "IT"
+                          }
+                        ]
+                      },
+                      "helpful": 23,
+                      "unhelpful": 18,
+                      "feedback": 3
+                    }
+                  ],
+                  "mostRead": [
+                    {
+                      "article": {
+                        "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a50",
+                        "title": "Set up the VPN at home",
+                        "categoryPath": [
+                          {
+                            "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
+                            "title": "IT"
+                          }
+                        ]
+                      },
+                      "views": 640
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`notKnowledgeBase`: The space is not a knowledge base.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notKnowledgeBase": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notKnowledgeBase",
+                      "title": "The space is not a knowledge base",
+                      "status": 409,
+                      "code": "notKnowledgeBase"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/spaces/{spaceId}/statistics/articles/{itemId}/feedback": {
+      "get": {
+        "operationId": "statistics.feedback",
+        "summary": "List the notes on an article",
+        "description": "Lists what readers wrote after answering “no” to “Was this helpful?” in the period. Notes are deleted when the retention of the knowledge base ends.\n\nRequires the permission `space.edit` on the space in `spaceId`.",
+        "tags": [
+          "Knowledge base statistics"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.edit",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the knowledge base.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the article.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Opaque cursor from `nextCursor` of the previous page. Leave it out for the first page.",
+            "schema": {
+              "type": "string",
+              "maxLength": 2000
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of items in the page, from 1 to 200. Default 50.",
+            "schema": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "description": "`7d`, `30d` or `90d` for the last 7, 30 or 90 days, `12m` for the last 12 months, each up to today.",
+            "schema": {
+              "default": "30d",
+              "type": "string",
+              "enum": [
+                "7d",
+                "30d",
+                "90d",
+                "12m"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The notes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the note."
+                          },
+                          "itemId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the article."
+                          },
+                          "day": {
+                            "type": "string",
+                            "format": "date",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                            "description": "Day the note was written, UTC."
+                          },
+                          "text": {
+                            "type": "string",
+                            "description": "What the reader wrote, without any reference to them."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "itemId",
+                          "day",
+                          "text"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A note on what was missing."
+                      },
+                      "description": "Notes, newest first."
+                    },
+                    "nextCursor": {
+                      "description": "Cursor for the next page, or null on the last page.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "nextCursor"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Notes readers left after answering “no”."
+                },
+                "example": {
+                  "items": [
+                    {
+                      "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a80",
+                      "itemId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a50",
+                      "day": "2026-10-17",
+                      "text": "Step 2 looks different on my laptop."
+                    }
+                  ],
+                  "nextCursor": null
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`notKnowledgeBase`: The space is not a knowledge base.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notKnowledgeBase": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notKnowledgeBase",
+                      "title": "The space is not a knowledge base",
+                      "status": 409,
+                      "code": "notKnowledgeBase"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/spaces/{spaceId}/statistics/feedback/{feedbackId}": {
+      "delete": {
+        "operationId": "statistics.deleteFeedback",
+        "summary": "Delete a note",
+        "description": "Deletes a note for good, for example when it contains personal data. Only space admins. Audited without the text.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
+        "tags": [
+          "Knowledge base statistics"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.manage",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the knowledge base.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "feedbackId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the note.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Done. The response has no body."
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`feedbackNotFound`: The note does not exist. `notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "feedbackNotFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:feedbackNotFound",
+                      "title": "The note does not exist",
+                      "status": 404,
+                      "code": "feedbackNotFound"
+                    }
+                  },
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`notKnowledgeBase`: The space is not a knowledge base.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notKnowledgeBase": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notKnowledgeBase",
+                      "title": "The space is not a knowledge base",
+                      "status": 409,
+                      "code": "notKnowledgeBase"
                     }
                   }
                 }

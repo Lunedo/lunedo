@@ -116,6 +116,7 @@ import type { JobQueue } from "./jobs/job-queue.js";
 import { knowledgeBaseNotificationTypes } from "./knowledge-bases/notifications.js";
 import { ReviewService } from "./knowledge-bases/reviews.js";
 import { KnowledgeBaseService } from "./knowledge-bases/service.js";
+import { KnowledgeBaseStatisticsService } from "./knowledge-bases/statistics.js";
 import type { Logger } from "./logging/logger.js";
 import {
   DISPATCH_PENDING_MAIL_SCHEDULE,
@@ -168,6 +169,8 @@ import {
   feedbackDeletionJob,
   feedbackRetentionJob,
   PortalStatistics,
+  SEARCH_AGGREGATION_SCHEDULE,
+  searchAggregationJob,
 } from "./portal/statistics.js";
 import { PushService } from "./push/push-service.js";
 import { SearchIndexer } from "./search/indexer.js";
@@ -294,6 +297,7 @@ export interface AccountServices {
   templates: TemplateService;
   knowledgeBases: KnowledgeBaseService;
   reviews: ReviewService;
+  knowledgeBaseStatistics: KnowledgeBaseStatisticsService;
   portals: PortalService;
   portalSessions: PortalSessionService;
   portalReader: PortalReader;
@@ -785,6 +789,12 @@ export function createAccountServices(options: {
   const portalSessions = new PortalSessionService({ database, sessions });
   const articleRenderer = new ArticleRenderer({ database, jobs });
   const portalStatistics = new PortalStatistics({ database, jobs });
+  const knowledgeBaseStatistics = new KnowledgeBaseStatisticsService({
+    database,
+    authorization,
+    audit,
+    statistics: portalStatistics,
+  });
   const portalReader = new PortalReader({
     database,
     authorization,
@@ -1041,6 +1051,7 @@ export function createAccountServices(options: {
     templates,
     knowledgeBases,
     reviews,
+    knowledgeBaseStatistics,
     portals,
     portalSessions,
     portalReader,
@@ -1259,7 +1270,12 @@ export async function workAccountJobs(
     const removed = await services.portalStatistics.applyRetention(job.payload.spaceId);
     if (removed > 0) job.logger.info({ removed }, "Reader feedback past its retention deleted");
   });
+  await jobs.work(searchAggregationJob, async (job) => {
+    const moved = await services.portalStatistics.aggregateSearches(job.payload.spaceId);
+    if (moved > 0) job.logger.info({ moved }, "Portal searches older than a year counted per month");
+  });
   await jobs.schedule(feedbackRetentionJob, FEEDBACK_SWEEP_SCHEDULE, {}, { key: "daily" });
+  await jobs.schedule(searchAggregationJob, SEARCH_AGGREGATION_SCHEDULE, {}, { key: "daily" });
   await jobs.schedule(scheduledBlogPostsJob, SCHEDULED_BLOG_POSTS_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(meetingRemindersJob, MEETING_REMINDERS_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(announcementStartsJob, ANNOUNCEMENT_STARTS_SCHEDULE, {}, { key: "minutely" });

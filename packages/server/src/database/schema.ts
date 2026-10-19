@@ -181,6 +181,7 @@ export {
   portalHandoffs,
   portalRatings,
   portalSearches,
+  portalSearchMonths,
   portalSessions,
 } from "../portal/schema.js";
 export { pushOutbox, pushSubscriptions } from "../push/schema.js";

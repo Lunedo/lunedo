@@ -550,12 +550,8 @@ export class ReviewService {
       ${base} and ${filter}) found
       where true ${page.after ? sql`and (found.sort_key, found.id) > (${page.after[0] ?? ""}, ${page.after[1] ?? ""}::uuid)` : sql``}
       order by found.sort_key, found.id
-      limit ${pageLimit(page)}`.append(sql``),
+      limit ${pageLimit(page)}`,
     );
-    const formerIds = result.rows
-      .filter((row) => !row.owner_active && row.owner_id)
-      .map((row) => row.owner_id);
-    void formerIds;
     const listed = toPage(
       result.rows,
       page,
