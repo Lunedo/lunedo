@@ -1594,7 +1594,8 @@
     "invalidTopBarThreshold": "Enter a whole number from 1 to 100.",
     "invalidRetention": "Enter a whole number of months from 1 to 60.",
     "invalidHelpKnowledgeBase": "This knowledge base cannot open from the help icon because not everyone signed in may read it. Choose another one or widen its audience.",
-    "organizationNotFound": "The organization does not exist anymore. Reload the page and choose another one."
+    "organizationNotFound": "The organization does not exist anymore. Reload the page and choose another one.",
+    "feedbackNotFound": "The note was deleted in the meantime. Reload the page to see the current notes."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -3872,7 +3873,8 @@
         "reviewed": "Article marked as reviewed",
         "reviewUndone": "Review of an article undone",
         "sourceAdded": "Source page linked to an article",
-        "sourceRemoved": "Source page removed from an article"
+        "sourceRemoved": "Source page removed from an article",
+        "feedbackDeleted": "Reader note on an article deleted"
       }
     },
     "action": "Action",
@@ -9740,5 +9742,80 @@
       "removed": "Source page “{title}” removed",
       "removeFailed": "Source page “{title}” was not removed"
     }
+  },
+  "statistics": {
+    "title": "Search statistics",
+    "description": "What readers search for in the portal and how they rate articles. Without names, accounts, sessions or IP addresses.",
+    "period": "Period",
+    "periods": {
+      "7d": "7 days",
+      "30d": "30 days",
+      "90d": "90 days",
+      "12m": "12 months"
+    },
+    "loadFailed": "The search statistics could not be loaded",
+    "emptyTitle": "No readers in this period",
+    "emptyDescription": "Searches, views and ratings from the portal appear here once readers use it.",
+    "showYear": "Show 12 months",
+    "tiles": {
+      "searches": "Searches",
+      "views": "{count, plural, one {# article view} other {# article views}}",
+      "zeroResults": "Searches without results",
+      "zeroResultsDetail": "{count, plural, one {# search} other {# searches}}",
+      "helpful": "Rated as helpful",
+      "ratings": "{count, plural, one {of # rating} other {of # ratings}}"
+    },
+    "terms": {
+      "term": "Search term",
+      "searches": "Searches",
+      "withoutResults": "Without results",
+      "last": "Last search",
+      "actions": "Actions",
+      "create": "Create article",
+      "createFor": "Create an article for “{term}”",
+      "threshold": "Terms appear from 3 searches on, so single searches for names stay hidden."
+    },
+    "zero": {
+      "title": "Searches without results",
+      "description": "An article is probably missing here, or readers use other words than the articles.",
+      "emptyTitle": "No frequent searches without results"
+    },
+    "top": {
+      "title": "Most frequent search terms",
+      "empty": "No term was searched 3 times or more in this period."
+    },
+    "unhelpful": {
+      "title": "Rated as not helpful",
+      "description": "Articles with the most answers “No” to “Was this helpful?”.",
+      "empty": "No article was rated as not helpful in this period."
+    },
+    "read": {
+      "title": "Most read",
+      "empty": "No article was read in the portal in this period."
+    },
+    "articles": {
+      "article": "Article",
+      "unhelpful": "“No”",
+      "ofRatings": "{no} of {count, plural, one {# rating} other {# ratings}}",
+      "feedback": "Notes",
+      "readFeedback": "{count, plural, one {Read # note} other {Read # notes}}",
+      "readFeedbackFor": "{count, plural, one {Read # note on “{title}”} other {Read # notes on “{title}”}}",
+      "noFeedback": "None",
+      "views": "Views"
+    },
+    "feedback": {
+      "title": "Notes on “{title}”",
+      "description": "What readers missed, in their own words and without their names. Notes are deleted when the retention of the knowledge base ends.",
+      "loadFailed": "The notes could not be loaded",
+      "none": "No notes in this period.",
+      "more": "Show more notes",
+      "delete": "Delete note",
+      "confirm": "Delete this note for good? Use this when it contains personal data. It cannot be restored.",
+      "deleteConfirm": "Delete note for good",
+      "keep": "Keep note",
+      "deleted": "Note deleted",
+      "deleteFailed": "The note could not be deleted"
+    },
+    "privacy": "Counted anonymously: no names, accounts, sessions or IP addresses. Searches older than 12 months are kept only as counts per term and month."
   }
 }

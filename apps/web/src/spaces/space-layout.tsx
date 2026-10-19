@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getRouteApi, Link, Outlet, useLocation, useNavigate, useParams } from "@tanstack/react-router";
 import {
   BookOpen,
+  ChartColumn,
   FileArchive,
   FileInput,
   FilePlus,
@@ -158,6 +159,7 @@ function SpaceFrame({ space }: { space: SpaceWithRole }) {
   const [creating, setCreating] = useState<{ kind: CreatedKind; parentId: string | null } | null>(null);
   const [treeOpen, setTreeOpen] = useState(false);
   const [galleryParent, setGalleryParent] = useState<string | null | undefined>(undefined);
+  const [galleryTitle, setGalleryTitle] = useState("");
   const [seriesTemplate, setSeriesTemplate] = useState<string | null>(null);
   const context = useMemo<SpaceContextValue>(
     () => ({
@@ -165,9 +167,11 @@ function SpaceFrame({ space }: { space: SpaceWithRole }) {
       canEdit,
       openMove: (item) => setMoving(item),
       openCopy: (item) => setCopying(item),
-      openCreate: (kind, parentId) => {
-        if (kind === "page") setGalleryParent(parentId);
-        else setCreating({ kind, parentId });
+      openCreate: (kind, parentId, title) => {
+        if (kind === "page") {
+          setGalleryTitle(title ?? "");
+          setGalleryParent(parentId);
+        } else setCreating({ kind, parentId });
       },
     }),
     [space, canEdit],
@@ -231,6 +235,7 @@ function SpaceFrame({ space }: { space: SpaceWithRole }) {
       <TemplateGallery
         space={space}
         parentId={galleryParent}
+        title={galleryTitle}
         onOpenChange={(open) => !open && setGalleryParent(undefined)}
         onSeriesTemplate={setSeriesTemplate}
       />
@@ -274,6 +279,7 @@ function SpaceNavigation({
   const knowledgeBase = isKnowledgeBase(space);
   const articlesActive = knowledgeBase && location.pathname.replace(/\/$/, "") === `/spaces/${space.key}`;
   const reviewsActive = location.pathname === `/spaces/${space.key}/reviews`;
+  const statisticsActive = location.pathname === `/spaces/${space.key}/statistics`;
   const series = useQuery({ ...spaceSeriesQuery(space.id), throwOnError: false, enabled: !knowledgeBase });
   const runningSeries = (series.data ?? []).filter((entry) => !entry.archived);
   const [exporting, setExporting] = useState(false);
@@ -415,7 +421,18 @@ function SpaceNavigation({
               {t("knowledgeBase.articles")}
             </Link>
             {canEdit ? (
-              <ReviewNavLink spaceId={space.id} spaceKey={space.key} active={reviewsActive} />
+              <>
+                <ReviewNavLink spaceId={space.id} spaceKey={space.key} active={reviewsActive} />
+                <Link
+                  to="/spaces/$spaceKey/statistics"
+                  params={{ spaceKey: space.key }}
+                  aria-current={statisticsActive ? "page" : undefined}
+                  className={`flex h-row items-center gap-2 rounded-sm px-2 focus-visible:focus-ring ${statisticsActive ? "bg-selected font-semibold text-selected-text" : "hover:bg-hover"}`}
+                >
+                  <ChartColumn aria-hidden="true" className="size-icon text-text-muted" />
+                  <span className="min-w-0 flex-1 truncate">{t("statistics.title")}</span>
+                </Link>
+              </>
             ) : null}
             <span className="px-2">
               <PortalLink compact />

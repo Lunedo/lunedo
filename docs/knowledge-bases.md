@@ -215,7 +215,7 @@ The content of an article is rendered to HTML once per published version and lan
 
 ## Reader statistics
 
-The portal records what readers do, without any account, session or address. No table below has a column for one, and nothing is derived from the reader. M9.3 builds the statistics screens on this data.
+The portal records what readers do, without any account, session or address. No table below has a column for one, and nothing is derived from the reader. The search statistics below are built on this data.
 
 | Table | One row per | Columns |
 |---|---|---|
@@ -223,10 +223,12 @@ The portal records what readers do, without any account, session or address. No 
 | `portal_article_views` | article and day | `item_id`, `space_id`, `day`, `views` |
 | `portal_ratings` | article and day | `item_id`, `space_id`, `day`, `helpful`, `unhelpful` |
 | `portal_feedback` | note after "No" | `id`, `item_id`, `space_id`, `day`, `text` (at most 2,000 characters) |
+| `portal_search_months` | term and month | `space_id`, `term`, `month` (first day), `searches`, `zero_results` |
 
 - Searches are recorded on the first page of results; each device counts at most 60 searches in ten minutes. Article views are counted when an article page is served.
 - "Was this helpful?" records yes or no; a note after "No" is stored separately. Double votes are prevented only in the browser.
 - A note is deleted when the retention of its knowledge base ends for it: each note gets a job that runs on its day of deletion and checks the current retention, so a longer retention moves the job and a shorter one deletes older notes at once. A daily sweep deletes notes whose job was lost.
+- Searches older than 12 months are kept only as counts per term and month in `portal_search_months`. The first search of a day schedules a job for the day the searches turn 12 months old, which moves them into the monthly counts; a daily sweep catches searches whose job was lost.
 - Rows of an article or knowledge base go when it is deleted permanently.
 
 The read interface is `PortalStatistics` in `@pagehall/server` (`services.portalStatistics`). Periods are `{ from, to }` with ISO dates, both included. It does not check permissions; the routes that use it decide who may read the statistics.
@@ -239,5 +241,22 @@ The read interface is `PortalStatistics` in `@pagehall/server` (`services.portal
 | `topTerms(spaceId, period, { limit, minimum })` | most frequent terms with searches, searches without results and the last search; only terms searched at least `minimum` times (default 3) |
 | `zeroResultTerms(spaceId, period, { limit, minimum })` | the same for searches without results |
 | `ratings(spaceId, period, itemId?)` | helpful and not helpful per article |
-| `feedback(spaceId, { itemId, limit, before })` | notes, newest first, without any personal reference |
+| `feedback(spaceId, { itemId, period, limit, before })` | notes, newest first, without any personal reference |
+| `feedbackCounts(spaceId, period)` | notes per article |
 | `frequentSearches(spaceId, limit?)` | terms for the start page |
+
+## Search statistics
+
+"Search statistics" in the knowledge base shows editors and space admins what readers do in the portal, for the last 7, 30 or 90 days or 12 months:
+
+- searches, the share without results, article views and the share of answers "Yes" to "Was this helpful?";
+- searches without results, with "Create article", which opens a new article with the term as its title;
+- the most frequent search terms;
+- articles rated as not helpful, with their notes;
+- the most read articles.
+
+A term appears only once it was searched at least 3 times in the period, so that a single search for a name stays hidden. Nothing names a person. Articles the person cannot read are left out with their ratings, views and notes.
+
+Space admins can delete a note for good, for example when it contains personal data. The deletion is audited as `article.feedbackDeleted`, without the text.
+
+API: `GET /api/v1/spaces/{spaceId}/statistics?period=30d`, `GET /api/v1/spaces/{spaceId}/statistics/articles/{itemId}/feedback` and `DELETE /api/v1/spaces/{spaceId}/statistics/feedback/{feedbackId}`.

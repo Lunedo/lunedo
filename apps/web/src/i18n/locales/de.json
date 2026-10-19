@@ -1594,7 +1594,8 @@
     "invalidTopBarThreshold": "Gib eine ganze Zahl von 1 bis 100 ein.",
     "invalidRetention": "Gib eine ganze Zahl an Monaten von 1 bis 60 ein.",
     "invalidHelpKnowledgeBase": "Diese Wissensdatenbank kann nicht über das Hilfe-Symbol geöffnet werden, weil nicht alle Angemeldeten sie lesen dürfen. Wähle eine andere oder erweitere ihre Zielgruppe.",
-    "organizationNotFound": "Die Organisation gibt es nicht mehr. Lade die Seite neu und wähle eine andere."
+    "organizationNotFound": "Die Organisation gibt es nicht mehr. Lade die Seite neu und wähle eine andere.",
+    "feedbackNotFound": "Der Hinweis wurde inzwischen gelöscht. Lade die Seite neu, um die aktuellen Hinweise zu sehen."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -3872,7 +3873,8 @@
         "reviewed": "Artikel als geprüft markiert",
         "reviewUndone": "Überprüfung eines Artikels rückgängig gemacht",
         "sourceAdded": "Quellseite mit einem Artikel verknüpft",
-        "sourceRemoved": "Quellseite von einem Artikel entfernt"
+        "sourceRemoved": "Quellseite von einem Artikel entfernt",
+        "feedbackDeleted": "Hinweis von Lesenden zu einem Artikel gelöscht"
       }
     },
     "action": "Aktion",
@@ -9740,5 +9742,80 @@
       "removed": "Quellseite „{title}“ entfernt",
       "removeFailed": "Quellseite „{title}“ wurde nicht entfernt"
     }
+  },
+  "statistics": {
+    "title": "Suchstatistik",
+    "description": "Was Lesende im Portal suchen und wie sie Artikel bewerten. Ohne Namen, Konten, Sitzungen oder IP-Adressen.",
+    "period": "Zeitraum",
+    "periods": {
+      "7d": "7 Tage",
+      "30d": "30 Tage",
+      "90d": "90 Tage",
+      "12m": "12 Monate"
+    },
+    "loadFailed": "Die Suchstatistik konnte nicht geladen werden",
+    "emptyTitle": "Keine Lesenden in diesem Zeitraum",
+    "emptyDescription": "Suchen, Aufrufe und Bewertungen aus dem Portal erscheinen hier, sobald Lesende es nutzen.",
+    "showYear": "12 Monate anzeigen",
+    "tiles": {
+      "searches": "Suchen",
+      "views": "{count, plural, one {# Artikelaufruf} other {# Artikelaufrufe}}",
+      "zeroResults": "Suchen ohne Treffer",
+      "zeroResultsDetail": "{count, plural, one {# Suche} other {# Suchen}}",
+      "helpful": "Als hilfreich bewertet",
+      "ratings": "{count, plural, one {von # Bewertung} other {von # Bewertungen}}"
+    },
+    "terms": {
+      "term": "Suchbegriff",
+      "searches": "Suchen",
+      "withoutResults": "Ohne Treffer",
+      "last": "Zuletzt gesucht",
+      "actions": "Aktionen",
+      "create": "Artikel anlegen",
+      "createFor": "Artikel für „{term}“ anlegen",
+      "threshold": "Begriffe erscheinen ab 3 Suchen, damit einzelne Suchen nach Namen verborgen bleiben."
+    },
+    "zero": {
+      "title": "Suchen ohne Treffer",
+      "description": "Hier fehlt vermutlich ein Artikel, oder Lesende verwenden andere Wörter als die Artikel.",
+      "emptyTitle": "Keine häufigen Suchen ohne Treffer"
+    },
+    "top": {
+      "title": "Häufigste Suchbegriffe",
+      "empty": "In diesem Zeitraum wurde kein Begriff 3-mal oder öfter gesucht."
+    },
+    "unhelpful": {
+      "title": "Als nicht hilfreich bewertet",
+      "description": "Artikel mit den meisten Antworten „Nein“ auf „War das hilfreich?“.",
+      "empty": "In diesem Zeitraum wurde kein Artikel als nicht hilfreich bewertet."
+    },
+    "read": {
+      "title": "Meistgelesen",
+      "empty": "In diesem Zeitraum wurde kein Artikel im Portal gelesen."
+    },
+    "articles": {
+      "article": "Artikel",
+      "unhelpful": "„Nein“",
+      "ofRatings": "{no} von {count, plural, one {# Bewertung} other {# Bewertungen}}",
+      "feedback": "Hinweise",
+      "readFeedback": "{count, plural, one {# Hinweis lesen} other {# Hinweise lesen}}",
+      "readFeedbackFor": "{count, plural, one {# Hinweis zu „{title}“ lesen} other {# Hinweise zu „{title}“ lesen}}",
+      "noFeedback": "Keine",
+      "views": "Aufrufe"
+    },
+    "feedback": {
+      "title": "Hinweise zu „{title}“",
+      "description": "Was Lesenden gefehlt hat, in ihren eigenen Worten und ohne ihre Namen. Hinweise werden gelöscht, wenn die Aufbewahrungsfrist der Wissensdatenbank endet.",
+      "loadFailed": "Die Hinweise konnten nicht geladen werden",
+      "none": "Keine Hinweise in diesem Zeitraum.",
+      "more": "Weitere Hinweise anzeigen",
+      "delete": "Hinweis löschen",
+      "confirm": "Diesen Hinweis endgültig löschen? Gedacht für Hinweise mit personenbezogenen Daten. Er lässt sich nicht wiederherstellen.",
+      "deleteConfirm": "Hinweis endgültig löschen",
+      "keep": "Hinweis behalten",
+      "deleted": "Hinweis gelöscht",
+      "deleteFailed": "Der Hinweis konnte nicht gelöscht werden"
+    },
+    "privacy": "Anonym gezählt: keine Namen, Konten, Sitzungen oder IP-Adressen. Suchen, die älter als 12 Monate sind, bleiben nur als Anzahl je Begriff und Monat erhalten."
   }
 }

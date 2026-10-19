@@ -12,6 +12,7 @@ import { instanceInfoQuery, sessionQuery } from "./api/queries.js";
 import { NotFoundScreen, RouteErrorScreen, ScreenErrorScreen } from "./errors/route-error.js";
 import { printRouteSearch } from "./exports/print-search.js";
 import { reviewSearch } from "./knowledge-bases/reviews/review-search.js";
+import { statisticsSearch } from "./knowledge-bases/statistics/statistics-search.js";
 import { RootLayout } from "./root-layout.js";
 import { searchPageSearch } from "./search/search-params.js";
 import { leavesApp, safeRedirect } from "./session/redirect.js";
@@ -390,6 +391,16 @@ const reviewsRoute = createRoute({
   path: "/reviews",
   validateSearch: reviewSearch,
   component: lazyRouteComponent(() => import("./knowledge-bases/reviews/review-screen.js"), "ReviewScreen"),
+});
+
+const statisticsRoute = createRoute({
+  getParentRoute: () => spaceRoute,
+  path: "/statistics",
+  validateSearch: statisticsSearch,
+  component: lazyRouteComponent(
+    () => import("./knowledge-bases/statistics/statistics-screen.js"),
+    "StatisticsScreen",
+  ),
 });
 
 const folderRoute = createRoute({
@@ -971,6 +982,7 @@ const routeTree = rootRoute.addChildren([
       labelRoute,
       trashRoute,
       reviewsRoute,
+      statisticsRoute,
       spaceSettingsRoute.addChildren([
         spaceSettingsIndexRoute,
         spaceGeneralRoute,
