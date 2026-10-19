@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { AtSign, Clock, Layers, ListChecks, Newspaper, Share2, Star, Sun } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { LoadError } from "../errors/failure.js";
+import { DueForReview } from "../knowledge-bases/reviews/home-reviews.js";
 import { OneOnOnes, UpcomingMeetings } from "../meetings/home-sections.js";
 import { oneOnOnesQuery, upcomingQuery } from "../meetings/queries.js";
 import { useFormat } from "../preferences/preferences-provider.js";
@@ -110,6 +111,7 @@ export function HomeScreen() {
         ) : null}
         {home.data ? (
           <div className="grid gap-6 md:grid-cols-2">
+            <DueForReview />
             <UpcomingMeetings />
             <OneOnOnes />
             <Section title={t("home.tasks")} icon={ListChecks}>

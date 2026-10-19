@@ -1,4 +1,14 @@
-import { Badge, Button, ConfirmDialog, Field, Notice, Popover, Textarea, useToast } from "@pagehall/ui";
+import {
+  Badge,
+  Button,
+  Checkbox,
+  ConfirmDialog,
+  Field,
+  Notice,
+  Popover,
+  Textarea,
+  useToast,
+} from "@pagehall/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { Send } from "lucide-react";
 import { type RefObject, useRef, useState } from "react";
@@ -30,17 +40,21 @@ export function PublishButton({
   draft,
   saveState,
   onMissingSections,
+  article = false,
 }: {
   page: ItemDetails;
   draft: Draft | undefined;
   saveState: RefObject<SaveState>;
   onMissingSections?: (sections: MissingSection[]) => void;
+  article?: boolean;
 }) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const refresh = useContentRefresh();
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState("");
+  const [reviewed, setReviewed] = useState(false);
+  const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const next = (draft?.basedOn ?? 0) + 1;
@@ -65,12 +79,20 @@ export function PublishButton({
       const result = await request(() =>
         api.POST("/api/v1/pages/{pageId}/publish", {
           params: { path: { pageId: page.id } },
-          body: note.trim() ? { note: note.trim() } : {},
+          body: {
+            ...(note.trim() ? { note: note.trim() } : {}),
+            ...(article && reviewed ? { reviewed } : {}),
+          },
         }),
       );
       await refresh(page);
+      if (article && reviewed && result.created) {
+        await queryClient.invalidateQueries({ queryKey: ["items", page.id] });
+        await queryClient.invalidateQueries({ predicate: (query) => query.queryKey.includes("reviews") });
+      }
       setOpen(false);
       setNote("");
+      setReviewed(false);
       onMissingSections?.([]);
       if (result.created) {
         toast({ title: t("versions.published", { version: result.version }), variant: "success" });
@@ -144,6 +166,14 @@ export function PublishButton({
             }}
           />
         </Field>
+        {article ? (
+          <Checkbox
+            checked={reviewed}
+            onCheckedChange={setReviewed}
+            label={t("reviews.publish.reviewed")}
+            description={t("reviews.publish.reviewedHint")}
+          />
+        ) : null}
         <div className="flex justify-end">
           <Button type="submit" variant="primary" loading={busy}>
             {t("versions.publishVersion", { version: next })}

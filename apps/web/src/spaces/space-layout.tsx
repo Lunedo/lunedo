@@ -32,6 +32,7 @@ import { SpaceExportDialog } from "../exports/space-export.js";
 import { KnowledgeBaseScreen } from "../knowledge-bases/knowledge-base-screen.js";
 import { PortalLink } from "../knowledge-bases/portal-link.js";
 import { isKnowledgeBase } from "../knowledge-bases/queries.js";
+import { ReviewNavLink } from "../knowledge-bases/reviews/home-reviews.js";
 import { CreateSeriesDialog } from "../meetings/create-series-dialog.js";
 import { seriesPath, spaceSeriesQuery } from "../meetings/queries.js";
 import { WatchMenu } from "../notifications/watch-menu.js";
@@ -272,6 +273,7 @@ function SpaceNavigation({
   const meetingsActive = location.pathname === `/spaces/${space.key}/meetings`;
   const knowledgeBase = isKnowledgeBase(space);
   const articlesActive = knowledgeBase && location.pathname.replace(/\/$/, "") === `/spaces/${space.key}`;
+  const reviewsActive = location.pathname === `/spaces/${space.key}/reviews`;
   const series = useQuery({ ...spaceSeriesQuery(space.id), throwOnError: false, enabled: !knowledgeBase });
   const runningSeries = (series.data ?? []).filter((entry) => !entry.archived);
   const [exporting, setExporting] = useState(false);
@@ -412,6 +414,9 @@ function SpaceNavigation({
               <BookOpen aria-hidden="true" className="size-icon text-text-muted" />
               {t("knowledgeBase.articles")}
             </Link>
+            {canEdit ? (
+              <ReviewNavLink spaceId={space.id} spaceKey={space.key} active={reviewsActive} />
+            ) : null}
             <span className="px-2">
               <PortalLink compact />
             </span>

@@ -383,6 +383,12 @@ const trashRoute = createRoute({
   component: lazyRouteComponent(() => import("./spaces/trash/trash-screen.js"), "TrashScreen"),
 });
 
+const reviewsRoute = createRoute({
+  getParentRoute: () => spaceRoute,
+  path: "/reviews",
+  component: lazyRouteComponent(() => import("./knowledge-bases/reviews/review-screen.js"), "ReviewScreen"),
+});
+
 const folderRoute = createRoute({
   getParentRoute: () => spaceRoute,
   path: "/folders/$itemId/{-$slug}",
@@ -531,6 +537,15 @@ const spaceArticleTemplatesRoute = createRoute({
   component: lazyRouteComponent(
     () => import("./knowledge-bases/settings/article-templates-screen.js"),
     "ArticleTemplatesScreen",
+  ),
+});
+
+const spaceReviewSettingsRoute = createRoute({
+  getParentRoute: () => spaceSettingsRoute,
+  path: "/reviews",
+  component: lazyRouteComponent(
+    () => import("./knowledge-bases/reviews/review-settings-screen.js"),
+    "ReviewSettingsScreen",
   ),
 });
 
@@ -929,6 +944,7 @@ const routeTree = rootRoute.addChildren([
       topicRoute,
       labelRoute,
       trashRoute,
+      reviewsRoute,
       spaceSettingsRoute.addChildren([
         spaceSettingsIndexRoute,
         spaceGeneralRoute,
@@ -942,6 +958,7 @@ const routeTree = rootRoute.addChildren([
         spaceVisibilityRoute,
         spaceCategoriesRoute,
         spaceArticleTemplatesRoute,
+        spaceReviewSettingsRoute,
         spaceExportRoute,
       ]),
     ]),
