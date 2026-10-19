@@ -10,6 +10,7 @@ import { request } from "../../api/request.js";
 import { SettingsList } from "../../components/settings-list.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { StorageUsage } from "../../files/storage-usage.js";
+import { isKnowledgeBase } from "../../knowledge-bases/queries.js";
 import type { SettingChange } from "../../settings/setting-mutations.js";
 import {
   COLLABORATION_KEYS,
@@ -64,16 +65,22 @@ export function SpaceContentScreen() {
             <UnownedItems scope={{ spaceId: space.id }} />
           </Panel>
         ) : null}
-        <Panel title={t("content.pagesSection")}>
-          <SettingsList
-            settings={entries}
-            keys={PAGE_MODE_KEYS}
-            level="space"
-            organizationName={space.organizationName ?? undefined}
-            canManage={() => space.role === "admin"}
-            onChange={onChange}
-          />
-        </Panel>
+        {isKnowledgeBase(space) ? (
+          <Panel title={t("content.pagesSection")}>
+            <p className="text-sm">{t("knowledgeBase.publishOnly")}</p>
+          </Panel>
+        ) : (
+          <Panel title={t("content.pagesSection")}>
+            <SettingsList
+              settings={entries}
+              keys={PAGE_MODE_KEYS}
+              level="space"
+              organizationName={space.organizationName ?? undefined}
+              canManage={() => space.role === "admin"}
+              onChange={onChange}
+            />
+          </Panel>
+        )}
         <Panel title={t("content.searchSection")}>
           <SettingsList
             settings={entries}

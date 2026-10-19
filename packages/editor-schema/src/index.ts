@@ -23,6 +23,7 @@ export {
   MAX_QUOTE_LENGTH,
   type TextAnchor,
 } from "./anchors.js";
+export { type ArticleSection, articleSections, emptySections, sectionEmpty } from "./articles.js";
 export {
   commentKit,
   commentModules,
@@ -201,10 +202,13 @@ export {
 } from "./modules/reports.js";
 export type { Roadmap } from "./modules/roadmap.js";
 export {
+  FRAMED_SECTIONS,
+  imageFramed,
   MAX_PREVIEW_HEIGHT,
   MAX_PREVIEW_ZOOM,
   MIN_PREVIEW_HEIGHT,
   MIN_PREVIEW_ZOOM,
+  sectionIconValue,
 } from "./modules/structure.js";
 export { cleanTabTitle, MAX_TAB_TITLE, MAX_TABS } from "./modules/tabs.js";
 export {

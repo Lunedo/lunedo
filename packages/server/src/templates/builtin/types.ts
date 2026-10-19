@@ -1,5 +1,6 @@
 import type { DocumentJson } from "@pagehall/editor-schema";
 import type { Rhythm } from "../../meetings/schedule.js";
+import type { ArticleType } from "../../spaces/schema.js";
 import type { TemplateField } from "../fields.js";
 import type { TemplateCategory } from "../schema.js";
 
@@ -24,4 +25,6 @@ export interface BuiltInTemplate {
   category: TemplateCategory;
   text: Record<TemplateLanguage, BuiltInTemplateText>;
   series?: SeriesDefaults;
+  knowledgeBase?: boolean;
+  articleType?: ArticleType;
 }

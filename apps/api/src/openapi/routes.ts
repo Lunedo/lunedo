@@ -40,6 +40,7 @@ import { AccessRequestsController } from "../sharing/requests.controller.js";
 import { ConfidentialSpacesController } from "../spaces/confidential-spaces.controller.js";
 import { CopiesController } from "../spaces/copies.controller.js";
 import { ItemsController } from "../spaces/items.controller.js";
+import { KnowledgeBasesController } from "../spaces/knowledge-bases.controller.js";
 import { OrganizationSpacesController } from "../spaces/organization-spaces.controller.js";
 import { OwnershipController } from "../spaces/ownership.controller.js";
 import { PersonalSpacesController } from "../spaces/personal-spaces.controller.js";
@@ -79,6 +80,7 @@ export const apiControllers = (): Type[] => [
   OrganizationSpacesController,
   ConfidentialSpacesController,
   ItemsController,
+  KnowledgeBasesController,
   CopiesController,
   OwnershipController,
   ShortcutsController,

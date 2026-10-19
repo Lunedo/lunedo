@@ -437,7 +437,10 @@ export function schemaExtensions(): AnyExtension[] {
     atomNode("includePage", "div"),
     atomNode("roadmap", "div", { roadmap: dataAttribute("roadmap", "json") }),
     atomNode("templateButton", "div"),
-    atomNode("image", "div", { width: dataAttribute("width", "number") }),
+    atomNode("image", "div", {
+      width: dataAttribute("width", "number"),
+      frame: dataAttribute("frame", "boolean"),
+    }),
     atomNode("file", "div", {
       preview: dataAttribute("preview", "boolean"),
       height: dataAttribute("height", "number"),

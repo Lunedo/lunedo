@@ -207,6 +207,10 @@ export class ItemsController {
       "invalidLinkTarget",
       "templateNotFound",
       "invalidTemplateValues",
+      "knowledgeBaseContent",
+      "knowledgeBaseMode",
+      "knowledgeBasePlacement",
+      "invalidArticleType",
     ],
   })
   async create(
@@ -228,6 +232,7 @@ export class ItemsController {
     return this.#services.tree.create(actorOf(request), spaceId, {
       mode: body.mode,
       kind: body.kind,
+      articleType: body.articleType,
       title: body.title,
       description: body.description,
       placement: { parentId: body.parentId, beforeId: body.beforeId, afterId: body.afterId },
@@ -323,7 +328,15 @@ export class ItemsController {
     body: previewMoveSchema,
     bodyExample: { spaceId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10", parentId: null },
     response: { description: "The change in access.", schema: moveImpactSchema, example: exampleMoveImpact },
-    errors: ["invalidPlacement", "moveIntoDescendant", "overviewPage", "confidentialSharing"],
+    errors: [
+      "invalidPlacement",
+      "moveIntoDescendant",
+      "overviewPage",
+      "confidentialSharing",
+      "knowledgeBaseContent",
+      "knowledgeBaseMode",
+      "knowledgeBasePlacement",
+    ],
   })
   async previewMove(
     @Param("itemId") itemId: string,
@@ -352,6 +365,9 @@ export class ItemsController {
       "overviewPage",
       "confidentialSharing",
       "moveChangesAccess",
+      "knowledgeBaseContent",
+      "knowledgeBaseMode",
+      "knowledgeBasePlacement",
     ],
   })
   async move(

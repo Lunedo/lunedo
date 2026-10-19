@@ -58,6 +58,7 @@ import { PageScope } from "./page-scope.js";
 import { CleanPaste } from "./paste.js";
 import { TemplatePlaceholders } from "./placeholders.js";
 import { PropertyNavigation } from "./property-navigation.js";
+import { RequiredSections } from "./required-sections.js";
 import { PageLinkSuggestion, SlashCommand, type SuggestionItem, suggestionRender } from "./suggestions.js";
 import { TaskIds } from "./task-ids.js";
 
@@ -217,6 +218,7 @@ export function createEditorExtensions(options: EditorExtensionOptions): AnyExte
     CleanPaste,
     TaskIds,
     HeadingNumbers,
+    RequiredSections,
     PropertyNavigation,
     PageScope.configure({ spaceId: options.spaceId }),
     SchemaGuard,

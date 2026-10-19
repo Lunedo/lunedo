@@ -1,10 +1,11 @@
 import { Badge, Button, ConfirmDialog, Field, Notice, Popover, Textarea, useToast } from "@pagehall/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { Send } from "lucide-react";
-import { type RefObject, useState } from "react";
+import { type RefObject, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client.js";
-import { request } from "../api/request.js";
+import { ApiError, request } from "../api/request.js";
+import type { MissingSection } from "../editor/extensions/required-sections.js";
 import type { SaveState } from "../editor/save-state.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { changeMode, useContentRefresh } from "./content-actions.js";
@@ -28,10 +29,12 @@ export function PublishButton({
   page,
   draft,
   saveState,
+  onMissingSections,
 }: {
   page: ItemDetails;
   draft: Draft | undefined;
   saveState: RefObject<SaveState>;
+  onMissingSections?: (sections: MissingSection[]) => void;
 }) {
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -42,6 +45,7 @@ export function PublishButton({
   const [busy, setBusy] = useState(false);
   const next = (draft?.basedOn ?? 0) + 1;
   const hiddenBy = page.ancestors.filter((ancestor) => !ancestor.published);
+  const focusMovesToEditor = useRef(false);
 
   const publish = async () => {
     if (note.trim().length > NOTE_MAX) {
@@ -67,12 +71,18 @@ export function PublishButton({
       await refresh(page);
       setOpen(false);
       setNote("");
+      onMissingSections?.([]);
       if (result.created) {
         toast({ title: t("versions.published", { version: result.version }), variant: "success" });
       } else {
         toast({ title: t("versions.alreadyPublished", { version: result.version }) });
       }
     } catch (failure) {
+      if (failure instanceof ApiError && failure.code === "requiredSectionsEmpty") {
+        focusMovesToEditor.current = true;
+        setOpen(false);
+        onMissingSections?.(failure.problem.sections ?? []);
+      }
       toast({
         title: t("versions.publishFailed"),
         description: problemMessage(t, failure),
@@ -89,6 +99,11 @@ export function PublishButton({
       onOpenChange={setOpen}
       align="end"
       label={t("versions.publishTitle")}
+      onCloseAutoFocus={(event) => {
+        if (!focusMovesToEditor.current) return;
+        focusMovesToEditor.current = false;
+        event.preventDefault();
+      }}
       trigger={
         <Button variant="primary" icon={Send}>
           {t("versions.publish")}

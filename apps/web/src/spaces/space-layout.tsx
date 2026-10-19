@@ -2,6 +2,7 @@ import { Button, Drawer, IconButton, Menu, Notice, Skeleton } from "@pagehall/ui
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi, Link, Outlet, useLocation, useNavigate, useParams } from "@tanstack/react-router";
 import {
+  BookOpen,
   FileArchive,
   FileInput,
   FilePlus,
@@ -28,6 +29,9 @@ import { isApiError } from "../api/request.js";
 import { StarButton } from "../collaboration/content-collaboration.js";
 import { LoadError } from "../errors/failure.js";
 import { SpaceExportDialog } from "../exports/space-export.js";
+import { KnowledgeBaseScreen } from "../knowledge-bases/knowledge-base-screen.js";
+import { PortalLink } from "../knowledge-bases/portal-link.js";
+import { isKnowledgeBase } from "../knowledge-bases/queries.js";
 import { CreateSeriesDialog } from "../meetings/create-series-dialog.js";
 import { seriesPath, spaceSeriesQuery } from "../meetings/queries.js";
 import { WatchMenu } from "../notifications/watch-menu.js";
@@ -40,6 +44,7 @@ import { SidebarShortcuts } from "./shortcuts/sidebar-shortcuts.js";
 import { SpaceBadge, spaceDisplayName } from "./space-badge.js";
 import { SpaceContext, type SpaceContextValue } from "./space-context.js";
 import { itemQuery, type SpaceWithRole, sharedPath, spaceByKeyQuery } from "./space-queries.js";
+import { type CreatableKind, creatableKinds } from "./space-types.js";
 import { TemplateGallery } from "./templates/template-gallery.js";
 import { CopyDialog } from "./tree/copy-dialog.js";
 import { type CreatedKind, CreateItemDialog } from "./tree/create-item-dialog.js";
@@ -265,9 +270,20 @@ function SpaceNavigation({
   const trashActive = location.pathname === `/spaces/${space.key}/trash`;
   const blogActive = location.pathname.startsWith(`/spaces/${space.key}/blog`);
   const meetingsActive = location.pathname === `/spaces/${space.key}/meetings`;
-  const series = useQuery({ ...spaceSeriesQuery(space.id), throwOnError: false });
+  const knowledgeBase = isKnowledgeBase(space);
+  const articlesActive = knowledgeBase && location.pathname.replace(/\/$/, "") === `/spaces/${space.key}`;
+  const series = useQuery({ ...spaceSeriesQuery(space.id), throwOnError: false, enabled: !knowledgeBase });
   const runningSeries = (series.data ?? []).filter((entry) => !entry.archived);
   const [exporting, setExporting] = useState(false);
+  const createItem = (kind: CreatableKind) => {
+    const entries = {
+      page: { label: knowledgeBase ? t("knowledgeBase.newArticle") : t("tree.newPage"), icon: FilePlus },
+      folder: { label: knowledgeBase ? t("knowledgeBase.newCategory") : t("tree.newFolder"), icon: Folder },
+      whiteboard: { label: t("tree.newWhiteboard"), icon: Presentation },
+      link: { label: t("tree.newLink"), icon: Link2 },
+    } as const;
+    return { ...entries[kind], onSelect: () => onCreate(kind, null) };
+  };
   return (
     <div
       className="flex flex-col gap-1 px-2 py-4"
@@ -385,48 +401,68 @@ function SpaceNavigation({
             </Link>
           </li>
         ) : null}
-        <li>
-          <Link
-            to="/spaces/$spaceKey/blog"
-            params={{ spaceKey: space.key }}
-            aria-current={blogActive ? "page" : undefined}
-            className={`flex h-row items-center gap-2 rounded-sm px-2 focus-visible:focus-ring ${blogActive ? "bg-selected font-semibold text-selected-text" : "hover:bg-hover"}`}
-          >
-            <Newspaper aria-hidden="true" className="size-icon text-text-muted" />
-            {t("blog.title")}
-          </Link>
-        </li>
-        <li>
-          <Link
-            to="/spaces/$spaceKey/meetings"
-            params={{ spaceKey: space.key }}
-            aria-current={meetingsActive ? "page" : undefined}
-            className={`flex h-row items-center gap-2 rounded-sm px-2 focus-visible:focus-ring ${meetingsActive ? "bg-selected font-semibold text-selected-text" : "hover:bg-hover"}`}
-          >
-            <Repeat aria-hidden="true" className="size-icon text-text-muted" />
-            {t("meetings.title")}
-          </Link>
-          {runningSeries.length > 0 ? (
-            <ul aria-label={t("meetings.sidebar.series")} className="flex flex-col gap-px pl-6">
-              {runningSeries.map((entry) => {
-                const href = seriesPath(space.key, entry.id);
-                const active = location.pathname === href;
-                return (
-                  <li key={entry.id}>
-                    <Link
-                      to={href}
-                      aria-current={active ? "page" : undefined}
-                      title={entry.title}
-                      className={`flex h-row items-center rounded-sm px-2 text-sm focus-visible:focus-ring ${active ? "bg-selected font-semibold text-selected-text" : "hover:bg-hover"}`}
-                    >
-                      <span className="truncate">{entry.title}</span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : null}
-        </li>
+        {knowledgeBase ? (
+          <li className="flex flex-col gap-2">
+            <Link
+              to="/spaces/$spaceKey"
+              params={{ spaceKey: space.key }}
+              aria-current={articlesActive ? "page" : undefined}
+              className={`flex h-row items-center gap-2 rounded-sm px-2 focus-visible:focus-ring ${articlesActive ? "bg-selected font-semibold text-selected-text" : "hover:bg-hover"}`}
+            >
+              <BookOpen aria-hidden="true" className="size-icon text-text-muted" />
+              {t("knowledgeBase.articles")}
+            </Link>
+            <span className="px-2">
+              <PortalLink compact />
+            </span>
+          </li>
+        ) : null}
+        {knowledgeBase ? null : (
+          <>
+            <li>
+              <Link
+                to="/spaces/$spaceKey/blog"
+                params={{ spaceKey: space.key }}
+                aria-current={blogActive ? "page" : undefined}
+                className={`flex h-row items-center gap-2 rounded-sm px-2 focus-visible:focus-ring ${blogActive ? "bg-selected font-semibold text-selected-text" : "hover:bg-hover"}`}
+              >
+                <Newspaper aria-hidden="true" className="size-icon text-text-muted" />
+                {t("blog.title")}
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/spaces/$spaceKey/meetings"
+                params={{ spaceKey: space.key }}
+                aria-current={meetingsActive ? "page" : undefined}
+                className={`flex h-row items-center gap-2 rounded-sm px-2 focus-visible:focus-ring ${meetingsActive ? "bg-selected font-semibold text-selected-text" : "hover:bg-hover"}`}
+              >
+                <Repeat aria-hidden="true" className="size-icon text-text-muted" />
+                {t("meetings.title")}
+              </Link>
+              {runningSeries.length > 0 ? (
+                <ul aria-label={t("meetings.sidebar.series")} className="flex flex-col gap-px pl-6">
+                  {runningSeries.map((entry) => {
+                    const href = seriesPath(space.key, entry.id);
+                    const active = location.pathname === href;
+                    return (
+                      <li key={entry.id}>
+                        <Link
+                          to={href}
+                          aria-current={active ? "page" : undefined}
+                          title={entry.title}
+                          className={`flex h-row items-center rounded-sm px-2 text-sm focus-visible:focus-ring ${active ? "bg-selected font-semibold text-selected-text" : "hover:bg-hover"}`}
+                        >
+                          <span className="truncate">{entry.title}</span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : null}
+            </li>
+          </>
+        )}
         {canEdit ? (
           <li>
             <Link
@@ -457,21 +493,12 @@ function SpaceNavigation({
       <SidebarShortcuts spaceId={space.id} />
       <div className="flex items-center gap-1 px-2 pt-4 pb-1">
         <h2 className="flex-1 text-xs font-semibold tracking-label text-text-muted uppercase">
-          {t("tree.title")}
+          {knowledgeBase ? t("knowledgeBase.treeTitle") : t("tree.title")}
         </h2>
         {canEdit ? (
           <Menu
             trigger={<IconButton label={t("tree.create")} icon={Plus} size="sm" />}
-            items={[
-              { label: t("tree.newPage"), icon: FilePlus, onSelect: () => onCreate("page", null) },
-              { label: t("tree.newFolder"), icon: Folder, onSelect: () => onCreate("folder", null) },
-              {
-                label: t("tree.newWhiteboard"),
-                icon: Presentation,
-                onSelect: () => onCreate("whiteboard", null),
-              },
-              { label: t("tree.newLink"), icon: Link2, onSelect: () => onCreate("link", null) },
-            ]}
+            items={creatableKinds(space).map((kind) => createItem(kind))}
           />
         ) : null}
       </div>
@@ -488,6 +515,7 @@ export function SpaceOverviewRedirect() {
   const resolved = useQuery(spaceByKeyQuery(spaceKey));
   const space = resolved.data?.space;
   if (!space) return <Skeleton className="m-6 h-field" />;
+  if (isKnowledgeBase(space)) return <KnowledgeBaseScreen />;
   if (space.overviewItemId) {
     const href = itemHref(
       { id: space.overviewItemId, kind: "page", title: space.name || t("spaces.overview"), link: null },

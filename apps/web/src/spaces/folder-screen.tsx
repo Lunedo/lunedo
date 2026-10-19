@@ -16,6 +16,7 @@ import { api } from "../api/client.js";
 import { request } from "../api/request.js";
 
 import { LoadError } from "../errors/failure.js";
+import { isKnowledgeBase } from "../knowledge-bases/queries.js";
 import { preferenceKeys, useUpdatePreference } from "../preferences/preferences.js";
 import { usePreferences } from "../preferences/preferences-provider.js";
 import { useDocumentTitle } from "../screens/settings/settings-page.js";
@@ -29,6 +30,7 @@ import { Redirect } from "./redirect.js";
 import { spaceDisplayName } from "./space-badge.js";
 import { useSpace } from "./space-context.js";
 import { itemQuery, spaceKeys, type TreeItem } from "./space-queries.js";
+import { creatableKinds } from "./space-types.js";
 import { useConvert } from "./tree/item-actions.js";
 import { useChildren } from "./tree/page-tree.js";
 
@@ -44,6 +46,7 @@ export function FolderScreen() {
   const preferences = usePreferences();
   const updatePreference = useUpdatePreference();
   const view = preferences.folderView;
+  const knowledgeBase = isKnowledgeBase(space);
   useDocumentTitle(item.data?.title ?? "");
 
   if (item.isPending) return <Skeleton className="m-6 h-field" />;
@@ -101,29 +104,37 @@ export function FolderScreen() {
             {canEdit ? (
               <>
                 <Button variant="secondary" icon={FilePlus} onClick={() => openCreate("page", folder.id)}>
-                  {t("folder.newPage")}
+                  {knowledgeBase ? t("knowledgeBase.newArticle") : t("folder.newPage")}
                 </Button>
                 <Menu
                   trigger={<IconButton label={t("folder.more")} icon={MoreHorizontal} />}
                   items={[
                     {
-                      label: t("tree.newFolderInside"),
+                      label: knowledgeBase ? t("knowledgeBase.newCategoryInside") : t("tree.newFolderInside"),
                       icon: Folder,
                       onSelect: () => openCreate("folder", folder.id),
                     },
-                    {
-                      label: t("tree.newLinkInside"),
-                      icon: Link2,
-                      onSelect: () => openCreate("link", folder.id),
-                    },
-                    { type: "separator" },
+                    ...(creatableKinds(space).includes("link")
+                      ? [
+                          {
+                            label: t("tree.newLinkInside"),
+                            icon: Link2,
+                            onSelect: () => openCreate("link", folder.id),
+                          },
+                        ]
+                      : []),
+                    { type: "separator" as const },
                     { label: t("tree.move"), icon: Move, onSelect: () => openMove(folder) },
                     { label: t("tree.copy"), icon: Copy, onSelect: () => openCopy(folder) },
-                    {
-                      label: t("tree.convertToPage"),
-                      icon: ArrowRightLeft,
-                      onSelect: () => void convert(folder, "page", space.key),
-                    },
+                    ...(knowledgeBase
+                      ? []
+                      : [
+                          {
+                            label: t("tree.convertToPage"),
+                            icon: ArrowRightLeft,
+                            onSelect: () => void convert(folder, "page", space.key),
+                          },
+                        ]),
                   ]}
                 />
               </>

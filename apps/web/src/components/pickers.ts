@@ -44,6 +44,24 @@ export function memberLoader(
   };
 }
 
+export function groupLoader(organizationId: string): ComboboxLoader {
+  return async (search, cursor) => {
+    const page = await request(() =>
+      api.GET("/api/v1/organizations/{organizationId}/groups", {
+        params: { path: { organizationId }, query: query(search, cursor) },
+      }),
+    );
+    return {
+      items: page.items.map((group) => ({
+        value: group.id,
+        label: group.name,
+        description: group.description ?? "",
+      })),
+      nextCursor: page.nextCursor,
+    };
+  };
+}
+
 export const GROUP_PREFIX = "group:";
 export const ACCOUNT_PREFIX = "account:";
 

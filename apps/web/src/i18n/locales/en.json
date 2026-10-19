@@ -1553,7 +1553,25 @@
     "templateFromRestrictedPage": "The page is restricted. Confirm that everyone who can use the templates of this space may see its content, then save again.",
     "notCopyable": "Only pages, folders and whiteboards can be copied. Copy a page or folder instead.",
     "neverPublished": "The page has never been published, so it has no content to copy. Publish it first, then copy it.",
-    "otherOrganization": "Content can only be copied within its organization. Choose a space of the same organization."
+    "otherOrganization": "Content can only be copied within its organization. Choose a space of the same organization.",
+    "invalidVisibility": "Choose who can read the space.",
+    "knowledgeBaseConfidential": "A knowledge base cannot be confidential. Create it without the confidential option.",
+    "invalidAudience": "Only knowledge bases have an audience. Choose a visibility for this space instead.",
+    "knowledgeBaseVisibility": "Who may read a knowledge base is set in its visibility settings.",
+    "knowledgeBaseContent": "A knowledge base holds only articles and categories. Put blog posts, meetings, whiteboards and links in another space.",
+    "knowledgeBaseMode": "Articles always use publish mode. Switch the page to publish mode before moving it into the knowledge base.",
+    "knowledgeBasePlacement": "Articles and categories are placed in categories or at the top level, not below other articles. Choose a category instead.",
+    "notKnowledgeBase": "The space is not a knowledge base.",
+    "notCategory": "Only folders on the first two levels of a knowledge base are categories with their own settings.",
+    "invalidIcon": "Choose an icon from the list.",
+    "invalidArticleType": "Only articles of a knowledge base have an article type.",
+    "invalidContactEmail": "Enter an e-mail address such as help@example.org.",
+    "audienceWidening": "More people would be able to read the knowledge base. Confirm the change to apply it.",
+    "audienceGroupsMissing": "Choose at least one group that may read the knowledge base.",
+    "tooManyGroups": "Choose up to 100 groups. Combine people into fewer groups if you need more.",
+    "requiredSectionsEmpty": "A required section is empty. Fill it in, then publish again.",
+    "sectionNotFound": "The template has no such section. Reload the page and try again.",
+    "draftNotVisible": "Only editors of the article see its draft."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -3814,6 +3832,9 @@
         "connected": "Chat channel connected",
         "changed": "Chat channel changed",
         "removed": "Chat channel removed"
+      },
+      "knowledgeBase": {
+        "audienceChanged": "Readers of a knowledge base changed"
       }
     },
     "action": "Action",
@@ -9244,5 +9265,192 @@
     },
     "failed": "The item could not be copied",
     "accessChanged": "Who can open the copy changed in the meantime. Check the list below and copy again."
+  },
+  "knowledgeBase": {
+    "articles": "Articles",
+    "treeTitle": "Categories and articles",
+    "newArticle": "New article",
+    "newCategory": "New category",
+    "newArticleInside": "New article in this category",
+    "newCategoryInside": "New subcategory",
+    "publishOnly": "Articles always use publish mode: readers see the last published version while authors work on a draft.",
+    "articleTypes": {
+      "howTo": "How-to",
+      "troubleshooting": "Troubleshooting",
+      "none": "No type",
+      "change": "Article type: {type}. Change it",
+      "changed": "Article type is now {type}",
+      "changeFailed": "The article type could not be changed",
+      "other": "Other type"
+    },
+    "portal": {
+      "view": "View in portal",
+      "notYet": "The portal for readers comes in a later version. Until then, readers open articles here."
+    },
+    "list": {
+      "title": "Title",
+      "subcategory": "Subcategory",
+      "owner": "Owner",
+      "updated": "Updated",
+      "unpublished": "Not published",
+      "noSubcategory": "None",
+      "noOwner": "Nobody",
+      "loadFailed": "The articles could not be loaded.",
+      "caption": "Articles in {category}",
+      "emptyCategory": "No articles in this category yet.",
+      "more": "Show more articles in {category}",
+      "description": "Articles of this knowledge base, grouped by category.",
+      "typeFilter": "Article type",
+      "allTypes": "All",
+      "types": {
+        "howTo": "How-tos",
+        "troubleshooting": "Troubleshooting"
+      },
+      "categoriesFailed": "The categories could not be loaded.",
+      "noCategoriesTitle": "No categories yet",
+      "noCategoriesEditor": "Create a category such as IT or HR, then write articles in it. Articles can also stay outside every category.",
+      "noCategoriesReader": "Nothing has been published in this knowledge base yet.",
+      "withoutCategory": "Without category",
+      "total": "{count, plural, one {# article} other {# articles}} in categories",
+      "emptyFiltered": "No articles of this type in this category."
+    },
+    "create": {
+      "typeLabel": "Type of space",
+      "standard": "Standard space",
+      "standardDescription": "Pages, folders, blog posts, meetings and whiteboards for a team or project.",
+      "knowledgeBase": "Knowledge base",
+      "knowledgeBaseDescription": "Articles such as how-tos and troubleshooting, sorted into categories. Articles are always published with versions.",
+      "fixed": "The type cannot be changed after the space is created.",
+      "groupsHint": "Add the groups that may read the knowledge base below, for example with the role Reader.",
+      "groupsRequired": "Give at least one group a role below, or choose a different audience."
+    },
+    "audience": {
+      "title": "Visibility",
+      "description": "Who may read the knowledge base.",
+      "label": "Who may read it",
+      "loadFailed": "The settings of the knowledge base could not be loaded.",
+      "narrowHint": "Categories and articles can restrict reading further with view restrictions, never widen it. Who may edit is set in the permissions of the space.",
+      "public": {
+        "title": "Public",
+        "description": "Everyone, also without signing in, once the portal is available. Until then all signed-in people of this instance read it here."
+      },
+      "signedIn": {
+        "title": "All signed-in people",
+        "description": "Everyone with an internal account of this instance. Guests only when the space is shared with them."
+      },
+      "groups": {
+        "title": "Specific groups",
+        "description": "Only members of the chosen groups, besides the holders of other roles."
+      },
+      "portal": {
+        "title": "Portal accounts",
+        "description": "External readers with a portal account, such as customers. Portal accounts never see internal spaces. In Pagehall itself only holders of a role read it."
+      },
+      "groupsField": "Groups",
+      "groupsPlaceholder": "Search groups by name",
+      "groupsRequired": "Choose at least one group that may read the knowledge base.",
+      "publicNoteTitle": "Before you make it public",
+      "publicNote": "Search engines may keep public articles for a while, even after you restrict the knowledge base again.",
+      "save": "Save visibility",
+      "unsaved": "Not saved",
+      "saved": "Visibility saved",
+      "saveFailed": "The visibility could not be saved",
+      "adminsOnly": "Only space admins can change the visibility.",
+      "confirmTitle": "Let more people read {name}?",
+      "confirmDescription": "{count, plural, =0 {No article is published without a restriction yet. Articles you publish later} one {# article} other {# articles}} will be readable for {audience}, unless categories or articles restrict them. The change is recorded in the audit log.",
+      "confirm": "Allow reading"
+    },
+    "settings": {
+      "visibility": "Visibility",
+      "categories": "Categories",
+      "articleTemplates": "Article templates",
+      "typeTitle": "Knowledge base",
+      "typeDescription": "This space is a knowledge base. Who may read it is set in its visibility, not in a general visibility of the space.",
+      "toVisibility": "Open the visibility settings"
+    },
+    "contact": {
+      "label": "Contact address",
+      "knowledgeBaseTitle": "Contact address of the knowledge base",
+      "hint": "Readers write to this address when an article did not help. Categories without their own address use it. Pagehall sends nothing itself and creates no tickets.",
+      "invalid": "Enter an e-mail address such as help@example.org.",
+      "setHere": "Set here",
+      "inherited": "Inherited from {source}",
+      "none": "No address yet",
+      "placeholder": "help@example.org",
+      "reset": "Use the address of {source}",
+      "knowledgeBase": "the knowledge base"
+    },
+    "categories": {
+      "title": "Categories",
+      "description": "Icon, introduction and contact address of the categories, and their order. Folders on the first level are categories, on the second level subcategories.",
+      "icon": "Icon",
+      "iconHint": "Without an icon the portal shows the first letter of the name.",
+      "noIcon": "No icon",
+      "intro": "Introduction",
+      "introHint": "One or two sentences that explain what readers find in the category.",
+      "inParent": "in {parent}",
+      "moveUp": "Move {title} up",
+      "moveDown": "Move {title} down",
+      "moved": "{title} moved",
+      "moveFailed": "The category could not be moved"
+    },
+    "templates": {
+      "title": "Article templates",
+      "description": "Templates give articles sections with a meaning. Writing without a template is always possible.",
+      "loadFailed": "The article templates could not be loaded.",
+      "builtIn": "Ships with Pagehall",
+      "noSections": "This template has no sections.",
+      "requiredOf": "{section} is required",
+      "adminsOnly": "Only space admins can change which sections are required.",
+      "hint": "Required sections are off by default. When one is on, an article from this template can only be published once the section has content. Published articles stay published.",
+      "manage": "Manage the templates of this space"
+    },
+    "required": {
+      "title": "Required sections are empty",
+      "description": "{count, plural, one {Fill in the section {sections}, then publish again.} other {Fill in the sections {sections}, then publish again.}}",
+      "atSection": "{title} is required. Add text or an image here before publishing."
+    },
+    "frame": {
+      "change": "Frame of the image",
+      "auto": "Frame as in the section",
+      "on": "Always framed",
+      "off": "No frame"
+    },
+    "icons": {
+      "monitor": "Monitor",
+      "laptop": "Laptop",
+      "smartphone": "Smartphone",
+      "printer": "Printer",
+      "wifi": "Wi-Fi",
+      "server": "Server",
+      "cloud": "Cloud",
+      "database": "Database",
+      "key-round": "Key",
+      "lock": "Lock",
+      "shield": "Shield",
+      "mail": "Mail",
+      "phone": "Phone",
+      "message-circle": "Chat",
+      "users": "People",
+      "graduation-cap": "Training",
+      "briefcase": "Briefcase",
+      "building-2": "Building",
+      "wallet": "Wallet",
+      "heart-pulse": "Health",
+      "calendar-days": "Calendar",
+      "file-text": "Document",
+      "book-open": "Book",
+      "globe": "Globe",
+      "settings": "Settings",
+      "circle-help": "Help",
+      "info": "Information",
+      "list-checks": "Checklist",
+      "list-ordered": "Steps",
+      "life-buoy": "Lifebuoy",
+      "eye": "Eye",
+      "search": "Magnifier",
+      "wrench": "Wrench",
+      "triangle-alert": "Warning"
+    }
   }
 }

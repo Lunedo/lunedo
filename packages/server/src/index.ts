@@ -479,6 +479,20 @@ export {
   type JobState,
 } from "./jobs/job-queue.js";
 export { PgBossQueue } from "./jobs/pg-boss-queue.js";
+export {
+  type Article,
+  type ArticleSectionContent,
+  type ArticleSummary,
+  type AudienceImpact,
+  audienceWidens,
+  type Category,
+  type CategoryReference,
+  type ContactSource,
+  KnowledgeBaseService,
+  type KnowledgeBaseSettings,
+  MAX_AUDIENCE_GROUPS,
+  type TemplateSections,
+} from "./knowledge-bases/service.js";
 export { createLogger, type Logger, type LogLevel, logLevels } from "./logging/logger.js";
 export { GraphMailError } from "./mail/graph.js";
 export {
@@ -793,8 +807,12 @@ export {
   ReportService,
 } from "./spaces/reports.js";
 export {
+  type ArticleType,
+  articleTypes,
   type BuiltInPageStatus,
   builtInPageStatuses,
+  type KnowledgeBaseAudience,
+  knowledgeBaseAudiences,
   type PageMode,
   type PageStatusColor,
   type PageWidth,
@@ -802,8 +820,10 @@ export {
   pageStatusColors,
   pageWidths,
   type SpaceRole,
+  type SpaceType,
   type SpaceVisibility,
   spaceRoles,
+  spaceTypes,
   spaceVisibilities,
   type TreeItemKind,
   treeItemKinds,

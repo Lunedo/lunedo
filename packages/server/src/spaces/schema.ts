@@ -30,6 +30,18 @@ export const spaceVisibilities = ["private", "organization", "instance"] as cons
 export type SpaceVisibility = (typeof spaceVisibilities)[number];
 export const spaceVisibility = pgEnum("space_visibility", spaceVisibilities);
 
+export const spaceTypes = ["standard", "knowledgeBase"] as const;
+export type SpaceType = (typeof spaceTypes)[number];
+export const spaceType = pgEnum("space_type", spaceTypes);
+
+export const knowledgeBaseAudiences = ["public", "signedIn", "groups", "portal"] as const;
+export type KnowledgeBaseAudience = (typeof knowledgeBaseAudiences)[number];
+export const knowledgeBaseAudience = pgEnum("knowledge_base_audience", knowledgeBaseAudiences);
+
+export const articleTypes = ["howTo", "troubleshooting"] as const;
+export type ArticleType = (typeof articleTypes)[number];
+export const articleType = pgEnum("article_type", articleTypes);
+
 export const spaceRoles = ["reader", "commenter", "editor", "admin"] as const;
 export type SpaceRole = (typeof spaceRoles)[number];
 export const spaceRole = pgEnum("space_role", spaceRoles);
@@ -89,6 +101,8 @@ export const spaces = pgTable(
     personalOf: uuid().references(() => accounts.id, { onDelete: "cascade" }),
     ownerAccountId: uuid().references(() => accounts.id, { onDelete: "set null" }),
     key: text().notNull(),
+    type: spaceType().notNull().default("standard"),
+    audience: knowledgeBaseAudience(),
     name: text().notNull(),
     description: text().notNull().default(""),
     visibility: spaceVisibility().notNull().default("private"),
@@ -122,6 +136,19 @@ export const spaces = pgTable(
       sql`not ${table.confidential} or (${table.visibility} = 'private' and not ${table.discoverable} and ${table.personalOf} is null)`,
     ),
     check("spaces_one_on_one_confidential", sql`not ${table.oneOnOne} or ${table.confidential}`),
+    check(
+      "spaces_knowledge_base_audience",
+      sql`(${table.type} = 'knowledgeBase') = (${table.audience} is not null)`,
+    ),
+    check(
+      "spaces_knowledge_base_visibility",
+      sql`${table.audience} is null or ${table.visibility} = (case when ${table.audience} in ('public', 'signedIn')
+        then 'instance' else 'private' end)::space_visibility`,
+    ),
+    check(
+      "spaces_knowledge_base_shared",
+      sql`${table.type} = 'standard' or (not ${table.confidential} and ${table.personalOf} is null)`,
+    ),
     check(
       "spaces_quarantine_private",
       sql`not ${table.quarantined} or (${table.visibility} = 'private' and not ${table.discoverable} and ${table.personalOf} is null and not ${table.confidential})`,
@@ -196,6 +223,8 @@ export const treeItems = pgTable(
     creatorId: uuid().references(() => accounts.id, { onDelete: "set null" }),
     ownerId: uuid().references(() => accounts.id, { onDelete: "set null" }),
     contentLanguage: text(),
+    articleType: articleType(),
+    templateId: text(),
     statusId: uuid().references((): AnyPgColumn => pageStatusValues.id, { onDelete: "set null" }),
     statusChangedAt: timestampColumn(),
     statusChangedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),

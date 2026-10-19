@@ -23,7 +23,7 @@ import {
 import { defaultPageMode, insertPage } from "./items.js";
 import { isValidSpaceKey, normalizeSpaceKey, spaceKeyCandidates, suggestSpaceKey } from "./keys.js";
 import type { PeopleService } from "./people.js";
-import type { SpaceRole, SpaceVisibility } from "./schema.js";
+import type { KnowledgeBaseAudience, SpaceRole, SpaceType, SpaceVisibility } from "./schema.js";
 import {
   type DefaultSpacePermissions,
   defaultSpacePermissionsSetting,
@@ -39,6 +39,8 @@ export const SPACE_DESCRIPTION_MAX_LENGTH = 1000;
 export interface Space {
   id: string;
   key: string;
+  type: SpaceType;
+  audience: KnowledgeBaseAudience | null;
   name: string;
   description: string;
   visibility: SpaceVisibility;
@@ -66,6 +68,8 @@ export interface SpaceWithRole extends Space {
 type SpaceRow = {
   id: string;
   key: string;
+  type: SpaceType;
+  audience: KnowledgeBaseAudience | null;
   name: string;
   description: string;
   visibility: SpaceVisibility;
@@ -85,7 +89,7 @@ type SpaceRow = {
   updated_at: Date | string;
 };
 
-const SPACE_COLUMNS = sql`s.id, s.key, s.name, s.description, s.visibility, s.discoverable,
+const SPACE_COLUMNS = sql`s.id, s.key, s.type, s.audience, s.name, s.description, s.visibility, s.discoverable,
   s.confidential, s.one_on_one, s.quarantined, s.organization_id,
   o.name as organization_name, s.personal_of, s.owner_account_id, owner.name as owner_name,
   s.overview_item_id, s.archived_at is not null as archived,
@@ -102,6 +106,8 @@ function toSpace(row: SpaceRow): Space {
   return {
     id: row.id,
     key: row.key,
+    type: row.type,
+    audience: row.audience,
     name: row.name,
     description: row.description,
     visibility: row.visibility,
@@ -153,9 +159,15 @@ export interface CreateSpaceInput {
   name: string;
   key: string;
   description?: string;
-  visibility: SpaceVisibility;
+  visibility?: SpaceVisibility | undefined;
   grants: SpaceGrant[];
   confidential?: boolean | undefined;
+  type?: SpaceType | undefined;
+  audience?: KnowledgeBaseAudience | undefined;
+}
+
+export function audienceVisibility(audience: KnowledgeBaseAudience): SpaceVisibility {
+  return audience === "public" || audience === "signedIn" ? "instance" : "private";
 }
 
 export interface HolderValidation {
@@ -319,12 +331,28 @@ export class SpaceService {
     const description = cleanDescription(input.description ?? "");
     const creatorId = actorIdOf(actor);
     const confidential = input.confidential === true || options.oneOnOne === true;
+    const type = input.type ?? "standard";
+    const audience = type === "knowledgeBase" ? (input.audience ?? "signedIn") : null;
+    if (type === "knowledgeBase" && confidential) {
+      throw new SpaceError("knowledgeBaseConfidential", "A knowledge base cannot be confidential");
+    }
+    if (type !== "knowledgeBase" && input.audience !== undefined) {
+      throw new SpaceError("invalidAudience", "Only knowledge bases have an audience");
+    }
+    if (audience === "groups" && !input.grants.some((grant) => grant.principalKind === "group")) {
+      throw new SpaceError(
+        "audienceGroupsMissing",
+        "Give at least one group a role to read the knowledge base",
+      );
+    }
+    const visibility = audience ? audienceVisibility(audience) : input.visibility;
+    if (!visibility) throw new SpaceError("invalidVisibility", "Choose who can read the space");
     if (confidential) {
       await this.#authorization.require(actor, "organization.spaces.createConfidential", {
         type: "organization",
         id: organizationId,
       });
-      if (input.visibility !== "private") {
+      if (visibility !== "private") {
         throw new SpaceError("confidentialVisibility", "A confidential space is always private");
       }
     }
@@ -332,9 +360,9 @@ export class SpaceService {
       await tx.execute(sql`delete from space_key_aliases where key = ${key}`);
       const [space] = (
         await tx.execute<{ id: string }>(sql`
-          insert into spaces (id, organization_id, key, name, description, visibility, confidential, one_on_one,
-            created_by)
-          values (${uuidv7()}, ${organizationId}, ${key}, ${name}, ${description}, ${input.visibility},
+          insert into spaces (id, organization_id, key, type, audience, name, description, visibility, confidential,
+            one_on_one, created_by)
+          values (${uuidv7()}, ${organizationId}, ${key}, ${type}, ${audience}, ${name}, ${description}, ${visibility},
             ${confidential}, ${options.oneOnOne === true}, ${creatorId})
           returning id`)
       ).rows;
@@ -354,24 +382,29 @@ export class SpaceService {
         fields: {
           name,
           key,
-          visibility: input.visibility,
+          visibility,
           personal: false,
           ownerId: null,
           ...(confidential ? { confidential: true } : {}),
+          ...(audience ? { type: "knowledgeBase" as const, audience } : {}),
         },
         scope,
       });
       await insertGrants(tx, this.#audit, actor, { ...target, name }, grants);
-      const mode = await defaultPageMode(this.#settings, { id: space.id, organizationId });
-      const overview = await insertPage(tx, {
-        spaceId: space.id,
-        parentId: null,
-        title: name,
-        actorId: creatorId,
-        mode,
-        published: mode === "publish",
-      });
-      await tx.execute(sql`update spaces set overview_item_id = ${overview} where id = ${space.id}`);
+      if (type === "knowledgeBase") {
+        await tx.execute(sql`insert into knowledge_bases (space_id) values (${space.id})`);
+      } else {
+        const mode = await defaultPageMode(this.#settings, { id: space.id, organizationId });
+        const overview = await insertPage(tx, {
+          spaceId: space.id,
+          parentId: null,
+          title: name,
+          actorId: creatorId,
+          mode,
+          published: mode === "publish",
+        });
+        await tx.execute(sql`update spaces set overview_item_id = ${overview} where id = ${space.id}`);
+      }
       await signalSpaceChange(tx, { spaceId: space.id, kind: "space", itemId: null });
       return this.require(space.id, tx);
     };
@@ -501,6 +534,12 @@ export class SpaceService {
       }
       if (space.confidential && visibility !== "private") {
         throw new SpaceError("confidentialVisibility", "A confidential space is always private");
+      }
+      if (space.type === "knowledgeBase") {
+        throw new SpaceError(
+          "knowledgeBaseVisibility",
+          "A knowledge base is opened by the audience set in its visibility settings",
+        );
       }
       if (space.visibility === visibility) return space;
       await tx.execute(

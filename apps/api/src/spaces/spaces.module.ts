@@ -7,6 +7,7 @@ import { WhiteboardsController } from "../whiteboards/whiteboards.controller.js"
 import { ConfidentialSpacesController } from "./confidential-spaces.controller.js";
 import { CopiesController } from "./copies.controller.js";
 import { ItemsController } from "./items.controller.js";
+import { KnowledgeBasesController } from "./knowledge-bases.controller.js";
 import { OrganizationSpacesController } from "./organization-spaces.controller.js";
 import { OwnershipController } from "./ownership.controller.js";
 import { PersonalSpacesController } from "./personal-spaces.controller.js";
@@ -23,6 +24,7 @@ import { VersionsController } from "./versions.controller.js";
     OrganizationSpacesController,
     ConfidentialSpacesController,
     ItemsController,
+    KnowledgeBasesController,
     CopiesController,
     OwnershipController,
     ShortcutsController,

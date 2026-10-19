@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { isKnowledgeBase } from "../../knowledge-bases/queries.js";
 import { useDocumentTitle } from "../../screens/settings/settings-page.js";
 import { spaceDisplayName } from "../space-badge.js";
 import { useSpace } from "../space-context.js";
@@ -16,7 +17,10 @@ export type SpaceSettingsTab =
   | "shortcuts"
   | "chat"
   | "templates"
-  | "export";
+  | "export"
+  | "visibility"
+  | "categories"
+  | "articleTemplates";
 
 const TAB_PATHS = {
   general: "/spaces/$spaceKey/settings/general",
@@ -28,6 +32,9 @@ const TAB_PATHS = {
   chat: "/spaces/$spaceKey/settings/chat",
   templates: "/spaces/$spaceKey/settings/templates",
   export: "/spaces/$spaceKey/settings/export",
+  visibility: "/spaces/$spaceKey/settings/visibility",
+  categories: "/spaces/$spaceKey/settings/categories",
+  articleTemplates: "/spaces/$spaceKey/settings/article-templates",
 } as const;
 
 export function SpaceSettingsPage({
@@ -62,17 +69,34 @@ export function SpaceSettingsPage({
         onValueChange={(value) =>
           void navigate({ to: TAB_PATHS[value as SpaceSettingsTab], params: { spaceKey: space.key } })
         }
-        tabs={[
-          { value: "general", label: t("spaces.settings.general") },
-          { value: "permissions", label: t("spaces.settings.permissions") },
-          { value: "access", label: t("spaces.access.tab") },
-          { value: "content", label: t("content.title") },
-          { value: "status", label: t("pageStatus.settingsTitle") },
-          { value: "shortcuts", label: t("spaceShortcuts.title") },
-          { value: "chat", label: t("chatChannels.title") },
-          { value: "templates", label: t("templates.title") },
-          { value: "export", label: t("exports.settings.tab") },
-        ]}
+        tabs={
+          isKnowledgeBase(space)
+            ? [
+                { value: "general", label: t("spaces.settings.general") },
+                { value: "visibility", label: t("knowledgeBase.settings.visibility") },
+                { value: "permissions", label: t("spaces.settings.permissions") },
+                { value: "access", label: t("spaces.access.tab") },
+                { value: "categories", label: t("knowledgeBase.settings.categories") },
+                { value: "articleTemplates", label: t("knowledgeBase.settings.articleTemplates") },
+                { value: "templates", label: t("templates.title") },
+                { value: "content", label: t("content.title") },
+                { value: "status", label: t("pageStatus.settingsTitle") },
+                { value: "shortcuts", label: t("spaceShortcuts.title") },
+                { value: "chat", label: t("chatChannels.title") },
+                { value: "export", label: t("exports.settings.tab") },
+              ]
+            : [
+                { value: "general", label: t("spaces.settings.general") },
+                { value: "permissions", label: t("spaces.settings.permissions") },
+                { value: "access", label: t("spaces.access.tab") },
+                { value: "content", label: t("content.title") },
+                { value: "status", label: t("pageStatus.settingsTitle") },
+                { value: "shortcuts", label: t("spaceShortcuts.title") },
+                { value: "chat", label: t("chatChannels.title") },
+                { value: "templates", label: t("templates.title") },
+                { value: "export", label: t("exports.settings.tab") },
+              ]
+        }
       >
         {children}
       </Tabs>

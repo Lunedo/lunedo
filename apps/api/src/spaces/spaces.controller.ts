@@ -272,13 +272,13 @@ export class SpacesController {
   @ApiRoute({
     summary: "Change the visibility of a space",
     description:
-      "Changes who can read the space besides its holders. Preview the change first and confirm it with the people it affects in view. The change is audited.",
+      "Changes who can read the space besides its holders. Preview the change first and confirm it with the people it affects in view. The change is audited. A knowledge base sets its readers through its audience instead.",
     tags: [TAG],
     params: spaceParams,
     body: visibilityBodySchema,
     bodyExample: { visibility: "organization" },
     response: { description: "The changed space.", schema: spaceSchema, example: exampleSpace },
-    errors: ["personalSpaceVisibility"],
+    errors: ["personalSpaceVisibility", "knowledgeBaseVisibility"],
   })
   async changeVisibility(
     @Param("spaceId") spaceId: string,

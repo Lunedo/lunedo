@@ -18,10 +18,12 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { request } from "../../api/request.js";
 import { problemMessage } from "../../errors/problem-message.js";
+import { isKnowledgeBase } from "../../knowledge-bases/queries.js";
 import { useArchiveItem, useDeleteItem } from "../content-actions.js";
 import { itemHref } from "../item-paths.js";
 import { useSpace } from "../space-context.js";
 import type { SpaceWithRole, TreeItem } from "../space-queries.js";
+import { canContain, creatableKinds } from "../space-types.js";
 
 export function useConvert() {
   const { t } = useTranslation();
@@ -64,26 +66,29 @@ export function useItemActions(
   const href = itemHref(item, space.key);
   const overview = space.overviewItemId === item.id;
   const items: MenuItem[] = [];
-  const container = item.kind === "page" || item.kind === "folder";
+  const knowledgeBase = isKnowledgeBase(space);
+  const container = canContain(space, item.kind);
   if (context.canEdit && container) {
-    items.push(
-      { label: t("tree.newPageInside"), icon: FilePlus, onSelect: () => context.openCreate("page", item.id) },
-      {
-        label: t("tree.newFolderInside"),
+    const inside = {
+      page: {
+        label: knowledgeBase ? t("knowledgeBase.newArticleInside") : t("tree.newPageInside"),
+        icon: FilePlus,
+      },
+      folder: {
+        label: knowledgeBase ? t("knowledgeBase.newCategoryInside") : t("tree.newFolderInside"),
         icon: Folder,
-        onSelect: () => context.openCreate("folder", item.id),
       },
-      {
-        label: t("tree.newWhiteboardInside"),
-        icon: Presentation,
-        onSelect: () => context.openCreate("whiteboard", item.id),
-      },
-      { type: "separator" },
-    );
+      whiteboard: { label: t("tree.newWhiteboardInside"), icon: Presentation },
+    } as const;
+    for (const kind of creatableKinds(space)) {
+      if (kind === "link") continue;
+      items.push({ ...inside[kind], onSelect: () => context.openCreate(kind, item.id) });
+    }
+    items.push({ type: "separator" });
   }
   if (context.canEdit) {
     items.push({ label: t("tree.move"), icon: Move, onSelect: () => context.openMove(item) });
-    if (container && !overview) {
+    if ((item.kind === "page" || item.kind === "folder") && !overview && !knowledgeBase) {
       items.push(
         item.kind === "page"
           ? {
