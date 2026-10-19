@@ -76,18 +76,10 @@ export async function createTemporaryDatabase(
   };
 }
 
-/**
- * Waits until every database this process dropped is gone. Inside a test run, `drop` returns
- * before PostgreSQL has removed the database, because DROP DATABASE waits for a checkpoint.
- */
 export async function settleDatabaseDrops(): Promise<void> {
   await Promise.all([...drops]);
 }
 
-/**
- * Tags the databases of this test run, so that `drop` need not wait for PostgreSQL, and returns
- * the cleanup that removes every database of the run that is still left.
- */
 export function startDatabaseRun(baseUrl: string): () => Promise<void> {
   const run = `run${randomBytes(4).toString("hex")}`;
   process.env[RUN_VARIABLE] = run;
