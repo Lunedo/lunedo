@@ -1571,7 +1571,21 @@
     "tooManyGroups": "Choose up to 100 groups. Combine people into fewer groups if you need more.",
     "requiredSectionsEmpty": "A required section is empty. Fill it in, then publish again.",
     "sectionNotFound": "The template has no such section. Reload the page and try again.",
-    "draftNotVisible": "Only editors of the article see its draft."
+    "draftNotVisible": "Only editors of the article see its draft.",
+    "invalidPortalPath": "The path may contain lowercase letters, digits and single hyphens, at most 60 characters. Change it and save again.",
+    "portalPathTaken": "Another knowledge base already uses this path. Choose a different path.",
+    "invalidPortalDomain": "The domain is not valid. Enter only the domain name, without https:// and without a path.",
+    "portalDomainNotAllowed": "Your instance administrator has not allowed this domain for the organization. Ask them to allow it first.",
+    "portalDomainTaken": "Another knowledge base already uses this domain. Choose a different domain or remove it there first.",
+    "portalDomainExists": "This domain is already allowed. Find it in the list below.",
+    "portalDomainNotFound": "The domain is no longer allowed. Reload the page to see the current list.",
+    "brandContrast": "The color does not reach the contrast WCAG AA asks for. Use the proposed shade or choose another color.",
+    "invalidBrandColor": "The color is not valid. Enter it as a hex value such as #0B6F78, or choose one from the palette.",
+    "invalidWelcome": "The text is too long. Shorten the heading to 120 and the text to 400 characters.",
+    "invalidTopBarThreshold": "Enter a whole number from 1 to 100.",
+    "invalidRetention": "Enter a whole number of months from 1 to 60.",
+    "invalidHelpKnowledgeBase": "This knowledge base cannot open from the help icon because not everyone signed in may read it. Choose another one or widen its audience.",
+    "organizationNotFound": "The organization does not exist anymore. Reload the page and choose another one."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -3656,7 +3670,9 @@
         "created": "Organization created",
         "updated": "Organization changed",
         "domainAdded": "Domain added",
-        "domainRemoved": "Domain removed"
+        "domainRemoved": "Domain removed",
+        "portalDomainAllowed": "Portal domain allowed",
+        "portalDomainRemoved": "Portal domain removed"
       },
       "membership": {
         "added": "Member added",
@@ -3834,7 +3850,8 @@
         "removed": "Chat channel removed"
       },
       "knowledgeBase": {
-        "audienceChanged": "Readers of a knowledge base changed"
+        "audienceChanged": "Readers of a knowledge base changed",
+        "portalAddressChanged": "Portal address of a knowledge base changed"
       }
     },
     "action": "Action",

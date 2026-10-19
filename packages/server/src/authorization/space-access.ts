@@ -68,7 +68,8 @@ export function spaceRoleConditionFor(account: SQL, space: SQL, minimum: SpaceRo
       ? sql` or (${space}.visibility = 'organization' and ${member})
           or (${space}.visibility = 'instance' and ${internal})`
       : sql``;
-  return sql`(exists (select 1 from accounts aa where aa.id = ${account} and aa.state = 'active') and (
+  return sql`(exists (select 1 from accounts aa where aa.id = ${account} and aa.state = 'active'
+    and (aa.type <> 'portal' or ${space}.type = 'knowledgeBase')) and (
     exists (select 1 from space_permissions sp
       where sp.space_id = ${space}.id and sp.role = any(${sql.param(roles)}::space_role[]) and (
         (sp.principal_kind = 'account' and sp.principal_id = ${account}

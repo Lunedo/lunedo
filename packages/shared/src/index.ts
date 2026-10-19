@@ -1,4 +1,5 @@
 export * from "./audit.js";
+export * from "./brand-colors.js";
 export * from "./chat.js";
 export {
   type HealthCheck,

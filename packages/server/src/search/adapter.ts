@@ -78,6 +78,8 @@ export interface SearchFilters {
   includeArchived: boolean;
   updatedAfter: Date | null;
   updatedBefore: Date | null;
+  categoryId?: string | null;
+  articleTypes?: string[];
 }
 
 export interface AdapterSearch {
@@ -92,6 +94,7 @@ export interface AdapterSearch {
   after: { score: number; updatedAt: string; sourceId: string } | null;
   firstSpaceId: string | null;
   facets: boolean;
+  articleFacets?: boolean;
   suggest: boolean;
 }
 
@@ -127,6 +130,8 @@ export interface AdapterFacets {
   statuses: FacetCount<string>[];
   languages: FacetCount<string>[];
   updated: FacetCount<SearchUpdatedRange>[];
+  categories: FacetCount<string>[];
+  articleTypes: FacetCount<string>[];
 }
 
 export interface AdapterResult {
@@ -147,4 +152,37 @@ export interface SearchAdapter {
   updateContextAccess(executor: Executor, contexts: ContextAccess[]): Promise<void>;
   indexedItemsOfSpace(executor: Executor, spaceId: string): Promise<string[]>;
   search(executor: Executor, request: AdapterSearch): Promise<AdapterResult>;
+  articles(executor: Executor, request: ArticleListRequest): Promise<ArticleList>;
+  articleCounts(executor: Executor, viewer: SearchViewer, spaceId: string): Promise<Map<string, number>>;
+}
+
+export const articleSorts = ["views", "updated", "title"] as const;
+export type ArticleSort = (typeof articleSorts)[number];
+
+export interface ArticleListRequest {
+  viewer: SearchViewer;
+  spaceId: string;
+  categoryId: string | null;
+  articleTypes: string[];
+  itemIds: string[] | null;
+  excludeItemIds: string[];
+  sort: ArticleSort;
+  viewsSince: string;
+  limit: number;
+  offset: number;
+}
+
+export interface ListedArticle {
+  itemId: string;
+  title: string;
+  path: string[];
+  articleType: string;
+  updatedAt: string;
+  views: number;
+}
+
+export interface ArticleList {
+  articles: ListedArticle[];
+  total: number;
+  articleTypes: FacetCount<string>[];
 }

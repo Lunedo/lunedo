@@ -297,7 +297,8 @@ export async function spaceFacts(
         organization_id: string | null;
         visibility: SpaceVisibility;
         personal_of: string | null;
-      }>(sql`select id, organization_id, visibility, personal_of from spaces where id = ${spaceId}`);
+        type: string;
+      }>(sql`select id, organization_id, visibility, personal_of, type from spaces where id = ${spaceId}`);
       const row = spaceRows.rows[0];
       const space = row
         ? {
@@ -316,6 +317,7 @@ export async function spaceFacts(
         role: null,
       };
       if (!account || !space || account.state !== "active") return empty;
+      if (account.type === "portal" && row?.type !== "knowledgeBase") return empty;
 
       let membership: MembershipKind | null = null;
       if (space.organizationId) {

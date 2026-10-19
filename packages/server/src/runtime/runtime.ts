@@ -45,6 +45,7 @@ import { NotificationHub } from "../notifications/hub.js";
 import { notificationSettings } from "../notifications/types.js";
 import { Metrics } from "../observability/metrics.js";
 import { organizationSettings } from "../organizations/settings.js";
+import { portalSettings } from "../portal/settings.js";
 import { startPushDelivery } from "../push/push-service.js";
 import { startSearchIndexing } from "../search/jobs.js";
 import { searchSettings } from "../search/languages.js";
@@ -167,6 +168,7 @@ export async function createServerRuntime(options: {
         ...preferenceSettings,
         ...notificationSettings,
         ...spaceSettings,
+        ...portalSettings,
         ...collaborationSettings,
         ...sharingSettings,
         ...fileSettings,

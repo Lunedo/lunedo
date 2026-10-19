@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, lt, ne, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, ne, or, type SQL, sql } from "drizzle-orm";
 import { UAParser } from "ua-parser-js";
 import { SYSTEM } from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";
@@ -161,11 +161,19 @@ export class SessionService {
 
   async resolve(token: string): Promise<Session | null> {
     if (!isWellFormedToken(token)) return null;
+    return this.#resolveWhere(eq(sessions.tokenHash, hashToken(token)));
+  }
+
+  resolveById(sessionId: string): Promise<Session | null> {
+    return this.#resolveWhere(eq(sessions.id, sessionId));
+  }
+
+  async #resolveWhere(condition: SQL): Promise<Session | null> {
     const [row] = await this.#database
       .select({ ...sessionColumns, accountState: accounts.state })
       .from(sessions)
       .innerJoin(accounts, eq(accounts.id, sessions.accountId))
-      .where(eq(sessions.tokenHash, hashToken(token)));
+      .where(condition);
     if (!row) return null;
     const { accountState, ...session } = row;
     const now = this.#clock();

@@ -1571,7 +1571,21 @@
     "tooManyGroups": "Wähle höchstens 100 Gruppen. Fasse Personen in weniger Gruppen zusammen, wenn du mehr brauchst.",
     "requiredSectionsEmpty": "Ein Pflichtabschnitt ist leer. Fülle ihn aus und veröffentliche dann erneut.",
     "sectionNotFound": "Die Vorlage hat diesen Abschnitt nicht. Lade die Seite neu und versuche es noch einmal.",
-    "draftNotVisible": "Nur Bearbeitende des Artikels sehen seinen Entwurf."
+    "draftNotVisible": "Nur Bearbeitende des Artikels sehen seinen Entwurf.",
+    "invalidPortalPath": "Der Pfad darf Kleinbuchstaben, Ziffern und einzelne Bindestriche enthalten, höchstens 60 Zeichen. Ändere ihn und speichere erneut.",
+    "portalPathTaken": "Eine andere Wissensdatenbank verwendet diesen Pfad schon. Wähle einen anderen Pfad.",
+    "invalidPortalDomain": "Die Domain ist ungültig. Gib nur den Domainnamen ein, ohne https:// und ohne Pfad.",
+    "portalDomainNotAllowed": "Die Instanz-Administration hat diese Domain für die Organisation nicht erlaubt. Bitte sie, die Domain zuerst zu erlauben.",
+    "portalDomainTaken": "Eine andere Wissensdatenbank verwendet diese Domain schon. Wähle eine andere Domain oder entferne sie dort zuerst.",
+    "portalDomainExists": "Diese Domain ist schon erlaubt. Du findest sie in der Liste unten.",
+    "portalDomainNotFound": "Die Domain ist nicht mehr erlaubt. Lade die Seite neu, um die aktuelle Liste zu sehen.",
+    "brandContrast": "Die Farbe erreicht nicht den Kontrast, den WCAG AA verlangt. Übernimm die vorgeschlagene Abstufung oder wähle eine andere Farbe.",
+    "invalidBrandColor": "Die Farbe ist ungültig. Gib sie als Hex-Wert wie #0B6F78 ein oder wähle eine aus der Palette.",
+    "invalidWelcome": "Der Text ist zu lang. Kürze die Überschrift auf 120 und den Text auf 400 Zeichen.",
+    "invalidTopBarThreshold": "Gib eine ganze Zahl von 1 bis 100 ein.",
+    "invalidRetention": "Gib eine ganze Zahl an Monaten von 1 bis 60 ein.",
+    "invalidHelpKnowledgeBase": "Diese Wissensdatenbank kann nicht über das Hilfe-Symbol geöffnet werden, weil nicht alle Angemeldeten sie lesen dürfen. Wähle eine andere oder erweitere ihre Zielgruppe.",
+    "organizationNotFound": "Die Organisation gibt es nicht mehr. Lade die Seite neu und wähle eine andere."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -3656,7 +3670,9 @@
         "created": "Organisation angelegt",
         "updated": "Organisation geändert",
         "domainAdded": "Domain hinzugefügt",
-        "domainRemoved": "Domain entfernt"
+        "domainRemoved": "Domain entfernt",
+        "portalDomainAllowed": "Portal-Domain erlaubt",
+        "portalDomainRemoved": "Portal-Domain entfernt"
       },
       "membership": {
         "added": "Mitglied hinzugefügt",
@@ -3834,7 +3850,8 @@
         "removed": "Chat-Kanal entfernt"
       },
       "knowledgeBase": {
-        "audienceChanged": "Lesende einer Wissensdatenbank geändert"
+        "audienceChanged": "Lesende einer Wissensdatenbank geändert",
+        "portalAddressChanged": "Portal-Adresse einer Wissensdatenbank geändert"
       }
     },
     "action": "Aktion",

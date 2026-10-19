@@ -7,12 +7,15 @@ import {
   type AdapterHit,
   type AdapterResult,
   type AdapterSearch,
+  type ArticleList,
+  type ArticleListRequest,
   type ContextAccess,
   EXCERPT_END,
   EXCERPT_START,
   type IndexedChunk,
   type IndexedItem,
   type ItemAccess,
+  type ListedArticle,
   type SearchAdapter,
   type SearchFilters,
   searchUpdatedRanges,
@@ -223,6 +226,13 @@ export class PostgresSearchAdapter implements SearchAdapter {
     if (filters.updatedBefore)
       updated.push(sql`c.content_updated_at < ${filters.updatedBefore.toISOString()}`);
     if (updated.length > 0) conditions.push(["updated", sql`(${sql.join(updated, sql` and `)})`]);
+    if (filters.categoryId) conditions.push(["categories", sql`${filters.categoryId}::uuid = any(t.path)`]);
+    if (filters.articleTypes && filters.articleTypes.length > 0) {
+      conditions.push([
+        "articleTypes",
+        sql`coalesce(t.article_type::text, 'none') = any(${sql.param(filters.articleTypes)}::text[])`,
+      ]);
+    }
     return conditions;
   }
 
@@ -279,7 +289,9 @@ export class PostgresSearchAdapter implements SearchAdapter {
           'authors', ${counted("authors", sql`select author_id as value, count(*) as n`, sql`and author_id is not null group by 1 order by 2 desc, 1 limit ${FACET_LIMIT}`)},
           'statuses', ${counted("statuses", sql`select status as value, count(*) as n`, sql`and status is not null group by 1`)},
           'languages', ${counted("languages", sql`select language as value, count(*) as n`, sql`group by 1`)},
-          'updated', (select jsonb_build_array(${updatedCounts}) from candidates where ${passing("updated")}))`
+          'updated', (select jsonb_build_array(${updatedCounts}) from candidates where ${passing("updated")}),
+          'categories', ${request.articleFacets ? counted("categories", sql`select top_category as value, count(*) as n`, sql`and top_category is not null group by 1`) : sql`'[]'::jsonb`},
+          'articleTypes', ${request.articleFacets ? counted("articleTypes", sql`select article_type as value, count(*) as n`, sql`group by 1`) : sql`'[]'::jsonb`})`
       : sql`null::jsonb`;
 
     const result = await executor.execute<{
@@ -290,13 +302,15 @@ export class PostgresSearchAdapter implements SearchAdapter {
       with matched as (
         select c.id, c.source, c.source_id, c.item_id, t.space_id, c.content_type, c.title, c.heading, c.anchor,
           c.labels, c.status, c.author_id, c.archived, c.attachment, c.content_updated_at, c.position, c.language,
-          (${request.usageBoost ? sql`(${parts.score}) * (1 + ${usageBoost(sql`rv`)})` : parts.score})::float8 as score
+          case when cardinality(t.path) > 1 then t.path[1] end as top_category,
+          coalesce(t.article_type::text, 'none') as article_type,
+          (${request.usageBoost && viewer.accountId ? sql`(${parts.score}) * (1 + ${usageBoost(sql`rv`)})` : parts.score})::float8 as score
           ${sql.join(flagColumns, sql``)}
         from search_chunks c
         join tree_items t on t.id = c.item_id
         join spaces s on s.id = t.space_id
         left join search_pending_spaces p on p.space_id = c.space_id
-        ${request.usageBoost ? sql`left join recent_views rv on rv.account_id = ${viewer.accountId}::uuid and rv.item_id = c.item_id` : sql``}
+        ${request.usageBoost && viewer.accountId ? sql`left join recent_views rv on rv.account_id = ${viewer.accountId}::uuid and rv.item_id = c.item_id` : sql``}
         where ${sql.join(conditions, sql` and `)}
       ),
       candidates as (
@@ -326,6 +340,74 @@ export class PostgresSearchAdapter implements SearchAdapter {
         : null,
       corrections: parts.corrections,
     };
+  }
+
+  #visibleArticles(viewer: SearchViewer, spaceId: string): SQL {
+    return sql`select distinct on (c.item_id) c.item_id, c.title, c.content_updated_at, t.path,
+        coalesce(t.article_type::text, 'none') as article_type
+      from search_chunks c
+      join tree_items t on t.id = c.item_id
+      join spaces s on s.id = t.space_id
+      left join search_pending_spaces p on p.space_id = c.space_id
+      where ${sql.join(visibleChunkConditions(viewer), sql` and `)}
+        and c.source = 'item' and c.content_type = 'page' and not c.archived and t.space_id = ${spaceId}::uuid
+      order by c.item_id, c.position`;
+  }
+
+  async articles(executor: Executor, request: ArticleListRequest): Promise<ArticleList> {
+    const scope: SQL[] = [sql`true`];
+    if (request.categoryId) scope.push(sql`${request.categoryId}::uuid = any(v.path)`);
+    if (request.itemIds) scope.push(sql`v.item_id = any(${sql.param(request.itemIds)}::uuid[])`);
+    if (request.excludeItemIds.length > 0) {
+      scope.push(sql`v.item_id <> all(${sql.param(request.excludeItemIds)}::uuid[])`);
+    }
+    const typed =
+      request.articleTypes.length > 0
+        ? sql`v.article_type = any(${sql.param(request.articleTypes)}::text[])`
+        : sql`true`;
+    const order =
+      request.sort === "views"
+        ? sql`views desc, lower(title), item_id`
+        : request.sort === "updated"
+          ? sql`content_updated_at desc, item_id`
+          : sql`lower(title), item_id`;
+    const result = await executor.execute<{
+      total: string;
+      types: { value: string; count: number }[] | null;
+      articles: (Omit<ListedArticle, "views"> & { views: string | number })[] | null;
+    }>(sql`
+      with visible as (${this.#visibleArticles(request.viewer, request.spaceId)}),
+      scoped as (select v.* from visible v where ${sql.join(scope, sql` and `)}),
+      listed as (
+        select v.*, coalesce((select sum(pv.views) from portal_article_views pv
+          where pv.item_id = v.item_id and pv.day >= ${request.viewsSince}::date), 0) as views
+        from scoped v where ${typed}
+      ),
+      page as (select * from listed order by ${order} limit ${request.limit} offset ${request.offset})
+      select (select count(*) from listed) as total,
+        (select jsonb_agg(jsonb_build_object('value', article_type, 'count', n) order by article_type)
+          from (select article_type, count(*) as n from scoped group by 1) t) as types,
+        (select jsonb_agg(jsonb_build_object('itemId', item_id, 'title', title, 'path', path,
+          'articleType', article_type, 'updatedAt', content_updated_at, 'views', views) order by ${order})
+          from page) as articles`);
+    const row = result.rows[0];
+    return {
+      total: Number(row?.total ?? 0),
+      articleTypes: (row?.types ?? []).map((type) => ({ value: type.value, count: Number(type.count) })),
+      articles: (row?.articles ?? []).map((article) => ({ ...article, views: Number(article.views) })),
+    };
+  }
+
+  async articleCounts(
+    executor: Executor,
+    viewer: SearchViewer,
+    spaceId: string,
+  ): Promise<Map<string, number>> {
+    const result = await executor.execute<{ category: string; n: string }>(sql`
+      with visible as (${this.#visibleArticles(viewer, spaceId)})
+      select category, count(*) as n from visible v, unnest(v.path) as category
+      where category <> v.item_id group by category`);
+    return new Map(result.rows.map((row) => [row.category, Number(row.n)]));
   }
 
   async #queryParts(executor: Executor, request: AdapterSearch): Promise<QueryParts | "nothing"> {
@@ -431,7 +513,7 @@ export class PostgresSearchAdapter implements SearchAdapter {
   }
 }
 
-function visibleChunkConditions(viewer: SearchViewer): SQL[] {
+export function visibleChunkConditions(viewer: SearchViewer): SQL[] {
   const organization = sql`${viewer.organizationId}::uuid`;
   const personal = viewer.personalTokens.length > 0;
   return [
@@ -443,6 +525,7 @@ function visibleChunkConditions(viewer: SearchViewer): SQL[] {
       : sql`s.organization_id = ${organization}`,
     sql`s.deleted_at is null`,
     sql`t.trash_entry_id is null`,
+    viewer.knowledgeBaseOnly ? sql`s.type = 'knowledgeBase'` : sql`true`,
     sql`((p.space_id is null and c.space_id = t.space_id and ${storedAccessCondition(viewer, sql`c`)})
       or ((p.space_id is not null or c.space_id <> t.space_id)
         and ${liveAccessCondition(viewer, sql`c`, sql`t`, sql`s`)}))`,
@@ -482,5 +565,15 @@ function tsquery(
 }
 
 function emptyFacets(): AdapterFacets {
-  return { contentTypes: [], spaces: [], labels: [], authors: [], statuses: [], languages: [], updated: [] };
+  return {
+    contentTypes: [],
+    spaces: [],
+    labels: [],
+    authors: [],
+    statuses: [],
+    languages: [],
+    updated: [],
+    categories: [],
+    articleTypes: [],
+  };
 }
