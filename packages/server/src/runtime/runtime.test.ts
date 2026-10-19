@@ -16,7 +16,7 @@ import { MasterKeyError } from "../crypto/key-usage.js";
 import { createDatabasePool } from "../database/pool.js";
 import { defineJob } from "../jobs/job-queue.js";
 import { createLogger } from "../logging/logger.js";
-import { createTemporaryDatabase, type TemporaryDatabase } from "../testing/database.js";
+import { createMigratedDatabase, type TemporaryDatabase } from "../testing/database.js";
 import { createServerRuntime, type ServerRuntime, startupWarnings } from "./runtime.js";
 import { registerShutdown } from "./shutdown.js";
 import { StartupError } from "./startup-error.js";
@@ -30,7 +30,7 @@ let databaseUrl = "";
 
 beforeAll(async () => {
   if (!testDatabaseUrl) return;
-  database = await createTemporaryDatabase(testDatabaseUrl, "pagehall_runtime");
+  database = await createMigratedDatabase(testDatabaseUrl, "pagehall_runtime_test");
   databaseUrl = database.url;
 });
 
@@ -179,10 +179,13 @@ describe.skipIf(!testDatabaseUrl)("shutting down the worker runtime", () => {
       payload: z.object({}),
       retryLimit: 2,
     });
-    let started = false;
+    let markStarted: () => void = () => {};
+    const started = new Promise<void>((resolve) => {
+      markStarted = resolve;
+    });
     let aborted = false;
     await worker.jobs?.work(job, async ({ signal }) => {
-      started = true;
+      markStarted();
       await new Promise<void>((resolve) => {
         const timer = setTimeout(resolve, 60_000);
         signal.addEventListener("abort", () => {
@@ -193,9 +196,7 @@ describe.skipIf(!testDatabaseUrl)("shutting down the worker runtime", () => {
       });
     });
     const id = (await worker.jobs?.enqueue(job, {})) ?? "";
-    const deadline = Date.now() + 15_000;
-    while (!started && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 100));
-    expect(started).toBe(true);
+    await started;
 
     const process = fakeProcess();
     registerShutdown(worker.logger, () => worker.close(), {
