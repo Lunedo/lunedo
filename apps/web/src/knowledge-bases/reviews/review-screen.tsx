@@ -1,6 +1,7 @@
 import {
   Avatar,
   Button,
+  buttonClassName,
   Checkbox,
   EmptyState,
   PageHeader,
@@ -9,8 +10,8 @@ import {
   Table,
   type TableColumn,
 } from "@pagehall/ui";
-import { useInfiniteQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { CalendarCheck, Check, FilePen, SquarePen, UserRoundX } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -23,7 +24,8 @@ import { TransferOwnerDialog } from "../../spaces/ownership/owner-line.js";
 import { spaceDisplayName } from "../../spaces/space-badge.js";
 import { useSpace } from "../../spaces/space-context.js";
 import { articleTypeIcon } from "../article-types.js";
-import { type ReviewFilter, type ReviewItem, reviewListQuery } from "./queries.js";
+import { type ReviewFilter, type ReviewItem, reviewListQuery, reviewSettingsQuery } from "./queries.js";
+import { reviewSearch } from "./review-search.js";
 import { ReviewStatus, useReviewAction } from "./review-status.js";
 
 const FILTERS: ReviewFilter[] = ["all", "due", "soon", "unowned"];
@@ -97,8 +99,22 @@ export function ReviewScreen() {
   const { space } = useSpace();
   const name = spaceDisplayName(t, space);
   useDocumentTitle(`${t("reviews.list.title")} · ${name}`);
-  const [filter, setFilter] = useState<ReviewFilter>("all");
-  const [mine, setMine] = useState(false);
+  const navigate = useNavigate();
+  const search = reviewSearch.parse(useSearch({ strict: false }));
+  const filter = search.filter ?? "all";
+  const mine = search.mine === true;
+  const setSearch = (next: { filter?: ReviewFilter; mine?: boolean }) => {
+    const merged = { filter, mine, ...next };
+    void navigate({
+      to: ".",
+      search: {
+        ...(merged.filter === "all" ? {} : { filter: merged.filter }),
+        ...(merged.mine ? { mine: true } : {}),
+      },
+      replace: true,
+    });
+  };
+  const settings = useQuery({ ...reviewSettingsQuery(space.id), throwOnError: false });
   const [assigning, setAssigning] = useState<ReviewItem | null>(null);
   const review = useReviewAction();
   const list = useInfiniteQuery({ ...reviewListQuery(space.id, filter, mine), throwOnError: false });
@@ -192,7 +208,7 @@ export function ReviewScreen() {
         <SegmentedControl
           label={t("reviews.list.filter")}
           value={filter}
-          onValueChange={(value) => setFilter(value as ReviewFilter)}
+          onValueChange={(value) => setSearch({ filter: value as ReviewFilter })}
           options={FILTERS.map((value) => ({
             value,
             label: counts
@@ -203,7 +219,11 @@ export function ReviewScreen() {
               : translateKey(t, `reviews.list.filters.${value}`),
           }))}
         />
-        <Checkbox checked={mine} onCheckedChange={setMine} label={t("reviews.list.mine")} />
+        <Checkbox
+          checked={mine}
+          onCheckedChange={(checked) => setSearch({ mine: checked })}
+          label={t("reviews.list.mine")}
+        />
       </div>
       {list.isPending ? (
         <div className="flex flex-col gap-3">
@@ -215,14 +235,54 @@ export function ReviewScreen() {
         <LoadError what={t("reviews.list.loadFailed")} error={list.error} onRetry={() => list.refetch()} />
       ) : null}
       {list.data && rows.length === 0 ? (
-        <EmptyState
-          icon={CalendarCheck}
-          title={t("reviews.list.emptyTitle")}
-          description={t("reviews.list.emptyDescription")}
-        />
+        filter !== "all" || mine ? (
+          <EmptyState
+            icon={CalendarCheck}
+            title={t("reviews.list.filteredTitle")}
+            description={t("reviews.list.filteredDescription")}
+            action={
+              <Button variant="secondary" onClick={() => setSearch({ filter: "all", mine: false })}>
+                {t("reviews.list.showAll")}
+              </Button>
+            }
+          />
+        ) : settings.data && settings.data.intervalMonths === null ? (
+          <EmptyState
+            icon={CalendarCheck}
+            title={t("reviews.list.offTitle")}
+            description={t("reviews.list.offDescription")}
+            action={
+              space.role === "admin" ? (
+                <Link
+                  to="/spaces/$spaceKey/settings/reviews"
+                  params={{ spaceKey: space.key }}
+                  className={buttonClassName({ variant: "primary" })}
+                >
+                  {t("reviews.list.openSettings")}
+                </Link>
+              ) : undefined
+            }
+          />
+        ) : (
+          <EmptyState
+            icon={CalendarCheck}
+            title={t("reviews.list.emptyTitle")}
+            description={t("reviews.list.emptyDescription")}
+          />
+        )
       ) : null}
       {rows.length > 0 ? (
-        <Table caption={t("reviews.list.title")} columns={columns} rows={rows} rowKey={(row) => row.id} />
+        <Table
+          caption={t("reviews.list.title")}
+          columns={columns}
+          rows={rows}
+          rowKey={(row) => row.id}
+          rowLabel={(row) => row.title}
+          onRowClick={(row) => {
+            const href = itemHref({ id: row.id, kind: "page", title: row.title, link: null }, space.key);
+            if (href) void navigate({ to: href });
+          }}
+        />
       ) : null}
       {list.hasNextPage ? (
         <Button

@@ -9548,7 +9548,13 @@
       "edit": "Bearbeiten",
       "editArticle": "„{title}“ bearbeiten",
       "more": "Weitere Artikel anzeigen",
-      "dueBadge": "{count} fällig"
+      "dueBadge": "{count} fällig",
+      "filteredTitle": "Keine Artikel in dieser Auswahl",
+      "filteredDescription": "Andere Artikel brauchen vielleicht trotzdem eine Überprüfung. Zeige alle Artikel an, um sie zu sehen.",
+      "showAll": "Alle Artikel anzeigen",
+      "offTitle": "Die Überprüfung ist aus",
+      "offDescription": "Artikel erscheinen hier, wenn sie ein Überprüfungsintervall haben und fällig werden, wenn sich eine Quellseite ändert oder wenn sie keine Verantwortlichen haben. Lege das Intervall in den Einstellungen der Wissensdatenbank fest.",
+      "openSettings": "Überprüfungsintervall festlegen"
     },
     "settings": {
       "tab": "Überprüfung",

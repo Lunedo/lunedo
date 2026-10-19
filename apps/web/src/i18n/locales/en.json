@@ -9548,7 +9548,13 @@
       "edit": "Edit",
       "editArticle": "Edit “{title}”",
       "more": "Show more articles",
-      "dueBadge": "{count} due"
+      "dueBadge": "{count} due",
+      "filteredTitle": "No articles in this selection",
+      "filteredDescription": "Other articles may still need a review. Show all articles to see them.",
+      "showAll": "Show all articles",
+      "offTitle": "Reviews are off",
+      "offDescription": "Articles appear here when they have a review interval and become due, when a source page changes or when they have no owner. Set an interval in the settings of the knowledge base.",
+      "openSettings": "Set review interval"
     },
     "settings": {
       "tab": "Review",

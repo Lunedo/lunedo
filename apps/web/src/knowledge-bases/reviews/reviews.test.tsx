@@ -145,6 +145,23 @@ describe("the review list", () => {
     await waitFor(() =>
       expect(api.requests.some((request) => request.path.includes("mine=true"))).toBe(true),
     );
+    expect(await screen.findByText("No articles in this selection")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Show all articles" }));
+    expect(await screen.findByText("Nothing due in this selection")).toBeTruthy();
+  });
+
+  it("explains that reviews are off and leads space admins to the settings", async () => {
+    mockApi({
+      [`GET /api/v1/spaces/${SPACE_ID}/reviews`]: () => ({
+        body: { items: [], nextCursor: null, counts: { all: 0, due: 0, soon: 0, unowned: 0 } },
+      }),
+      [`GET /api/v1/spaces/${SPACE_ID}/knowledge-base/reviews`]: () => ({
+        body: { intervalMonths: null, leadDays: 14, recipients: "owner" },
+      }),
+    });
+    await renderWithProviders(inSpace(<ReviewScreen />));
+    expect(await screen.findByText("Reviews are off")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Set review interval" })).toBeTruthy();
   });
 
   it("offers to set an owner only to space admins", async () => {
