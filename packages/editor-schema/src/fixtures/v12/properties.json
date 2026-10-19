@@ -1,0 +1,145 @@
+{
+  "type": "doc",
+  "content": [
+    {
+      "type": "pageProperties",
+      "attrs": { "setId": null, "hidden": false },
+      "content": [
+        {
+          "type": "pageProperty",
+          "content": [
+            { "type": "pagePropertyKey", "content": [{ "type": "text", "text": "Owner" }] },
+            {
+              "type": "pagePropertyValue",
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [
+                    { "type": "mention", "attrs": { "id": "01929b1e-0000-7000-8000-000000000010" } }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "pageProperty",
+          "content": [
+            { "type": "pagePropertyKey", "content": [{ "type": "text", "text": "Status" }] },
+            {
+              "type": "pagePropertyValue",
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [{ "type": "status", "attrs": { "text": "In progress", "color": "yellow" } }]
+                },
+                {
+                  "type": "bulletList",
+                  "content": [
+                    {
+                      "type": "listItem",
+                      "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Review" }] }]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "pageProperty",
+          "content": [
+            { "type": "pagePropertyKey" },
+            { "type": "pagePropertyValue", "content": [{ "type": "paragraph" }] }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "pageProperties",
+      "attrs": { "setId": "site", "hidden": true },
+      "content": [
+        {
+          "type": "pageProperty",
+          "content": [
+            { "type": "pagePropertyKey", "content": [{ "type": "text", "text": "Next maintenance" }] },
+            {
+              "type": "pagePropertyValue",
+              "content": [
+                { "type": "paragraph", "content": [{ "type": "date", "attrs": { "date": "2027-03-14" } }] }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "propertiesReport",
+      "attrs": {
+        "spaceIds": [],
+        "labels": [],
+        "setId": null,
+        "columns": [],
+        "firstColumn": "",
+        "sortBy": null,
+        "reverse": false,
+        "pageSize": 30,
+        "showCreator": false,
+        "showLabels": false,
+        "query": null
+      }
+    },
+    {
+      "type": "propertiesReport",
+      "attrs": {
+        "spaceIds": ["01929b1e-0000-7000-8000-000000000003", "01929b1e-0000-7000-8000-000000000005"],
+        "labels": ["site"],
+        "setId": "site",
+        "columns": ["Owner", "Status"],
+        "firstColumn": "Site",
+        "sortBy": "Status",
+        "reverse": true,
+        "pageSize": 100,
+        "showCreator": true,
+        "showLabels": true,
+        "query": "label = \"site\" and ancestor = 123"
+      }
+    },
+    {
+      "type": "contentByLabel",
+      "attrs": {
+        "labels": ["how-to"],
+        "matchAll": false,
+        "spaceIds": [],
+        "kinds": ["page", "blogPost"],
+        "sort": "modified",
+        "reverse": false,
+        "limit": 5,
+        "excerpts": false,
+        "showLabels": true,
+        "showSpace": true,
+        "title": "",
+        "query": null
+      }
+    },
+    {
+      "type": "contentByLabel",
+      "attrs": {
+        "labels": ["how-to", "network"],
+        "matchAll": true,
+        "spaceIds": ["01929b1e-0000-7000-8000-000000000003"],
+        "kinds": ["page"],
+        "sort": "title",
+        "reverse": true,
+        "limit": 100,
+        "excerpts": true,
+        "showLabels": false,
+        "showSpace": false,
+        "title": "Network guides",
+        "query": "label = \"how-to\" and creator = currentUser()"
+      }
+    },
+    { "type": "relatedLabels", "attrs": { "labels": [], "title": "" } },
+    { "type": "relatedLabels", "attrs": { "labels": ["network"], "title": "See also" } }
+  ]
+}

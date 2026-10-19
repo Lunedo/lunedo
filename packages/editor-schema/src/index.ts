@@ -74,6 +74,7 @@ export type {
   SourceContent,
   SourceElement,
 } from "./importing.js";
+export { type ArticleSection, articleSections, emptySections, sectionEmpty } from "./articles.js";
 export { defaultImportTexts, type ImportText, importTexts } from "./importing.js";
 export type { DocumentJson, MarkJson, NodeJson, ValidMark, ValidNode } from "./json.js";
 export { buildSchema, createEditorKit, type EditorKit, type Section } from "./kit.js";
@@ -201,10 +202,13 @@ export {
 } from "./modules/reports.js";
 export type { Roadmap } from "./modules/roadmap.js";
 export {
+  FRAMED_SECTIONS,
+  imageFramed,
   MAX_PREVIEW_HEIGHT,
   MAX_PREVIEW_ZOOM,
   MIN_PREVIEW_HEIGHT,
   MIN_PREVIEW_ZOOM,
+  sectionIconValue,
 } from "./modules/structure.js";
 export { cleanTabTitle, MAX_TAB_TITLE, MAX_TABS } from "./modules/tabs.js";
 export {

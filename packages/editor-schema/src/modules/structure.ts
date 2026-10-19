@@ -16,6 +16,17 @@ import { element, headingNumberHtml, htmlAttributes, markdownUrl } from "../text
 import { imageAlignments, uuidValue } from "../values.js";
 import { type WordContent, wordText } from "../word.js";
 
+export const FRAMED_SECTIONS: readonly string[] = ["steps", "symptom", "resolution"];
+
+export const sectionIconValue = z
+  .string()
+  .max(60)
+  .regex(/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/);
+
+export function imageFramed(frame: boolean | null, sectionKey: string | null): boolean {
+  return frame ?? (sectionKey !== null && FRAMED_SECTIONS.includes(sectionKey));
+}
+
 export const sectionModule = defineModule({
   name: "section",
   nodes: [
@@ -25,13 +36,19 @@ export const sectionModule = defineModule({
       attrs: {
         key: required(z.string().regex(/^[a-z][a-zA-Z0-9]{0,39}$/)),
         title: optional(z.string().max(255), ""),
+        icon: optional(sectionIconValue.nullable(), null),
       },
       html: (node, renderer) => {
         const id = renderer.nextHeadingId();
         const title = `${headingNumberHtml(renderer.headingNumber())}${renderer.escape(attrOf<string>(node, "title"))}`;
         return element(
           "section",
-          { class: "ph-section", "data-section": attrOf<string>(node, "key") },
+          {
+            class: "ph-section",
+            "data-section": attrOf<string>(node, "key"),
+            "data-icon": attrOf<string | null>(node, "icon"),
+            "data-framed": FRAMED_SECTIONS.includes(attrOf<string>(node, "key")) ? "true" : null,
+          },
           `${element("h2", { id }, title)}${renderer.children(node)}`,
         );
       },
@@ -83,6 +100,10 @@ function tooLargeImageHtml(node: ValidNode, renderer: HtmlRenderer, href: string
   );
 }
 
+function frameValue(frame: boolean | null): string | null {
+  return frame === null ? null : frame ? "on" : "off";
+}
+
 function imageHtml(node: ValidNode, renderer: HtmlRenderer, lazy: boolean): string {
   const id = attrOf<string | null>(node, "attachmentId");
   const resolved = id ? (renderer.context.attachment?.(id) ?? null) : null;
@@ -119,6 +140,7 @@ function imageHtml(node: ValidNode, renderer: HtmlRenderer, lazy: boolean): stri
       "data-attachment-id": id,
       "data-align": attrOf<string>(node, "align"),
       "data-width": width,
+      "data-frame": frameValue(attrOf<boolean | null>(node, "frame")),
     },
     full,
   );
@@ -135,6 +157,7 @@ export const imageModule = defineModule({
         alt: optional(z.string().max(1000), ""),
         width: optional(z.number().int().min(1).max(10_000).nullable(), null),
         align: optional(z.enum(imageAlignments), "center"),
+        frame: optional(z.boolean().nullable(), null),
       },
       copy: copyAttachmentAttributes([["attachmentId", null]]),
       portable: portableFiles([["attachmentId", null, "image"]]),
