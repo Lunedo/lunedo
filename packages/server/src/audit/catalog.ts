@@ -716,6 +716,18 @@ export const auditCatalog = {
     fields: z.object({ domain: z.string() }),
     visibility: "organization",
   }),
+  "organization.portalDomainAllowed": event({
+    actor: ["account", "system"],
+    target: "organization",
+    fields: z.object({ domain: z.string() }),
+    visibility: "organization",
+  }),
+  "organization.portalDomainRemoved": event({
+    actor: ["account", "system"],
+    target: "organization",
+    fields: z.object({ domain: z.string(), spaceId: z.uuid().nullable() }),
+    visibility: "organization",
+  }),
   "membership.added": event({
     actor: ["account", "anonymous", "system"],
     target: "account",
@@ -1047,6 +1059,18 @@ export const auditCatalog = {
       previousLeadDays: z.number().int().min(0),
       recipients: z.enum(reviewRecipients),
       previousRecipients: z.enum(reviewRecipients),
+    }),
+    visibility: "organization",
+  }),
+  "knowledgeBase.portalAddressChanged": event({
+    actor: ["account", "system"],
+    target: "space",
+    fields: z.object({
+      name: z.string(),
+      path: z.string(),
+      previousPath: z.string(),
+      domain: z.string().nullable(),
+      previousDomain: z.string().nullable(),
     }),
     visibility: "organization",
   }),

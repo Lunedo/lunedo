@@ -14,6 +14,10 @@ export function safeRedirect(target: string | undefined, origin = globalThis.loc
   }
 }
 
+export function leavesApp(path: string): boolean {
+  return path === "/help" || path.startsWith("/help/");
+}
+
 export function currentLocation(): string {
   const location = globalThis.location;
   if (!location) return AFTER_SIGN_IN;

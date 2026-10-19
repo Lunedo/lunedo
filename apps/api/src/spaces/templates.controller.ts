@@ -22,7 +22,7 @@ import { actorOf } from "../http/request.js";
 import { extensibleEnum, timestamp, uuid } from "../http/schemas.js";
 import { definitionFor, listSettings, settingUpdateSchema, updateSetting } from "../http/settings.js";
 import { rhythmSchema } from "../meetings/schemas.js";
-import { documentSchema, exampleDocument } from "./schemas.js";
+import { articleTypeSchema, documentSchema, exampleDocument } from "./schemas.js";
 
 const TAG = "Templates";
 const SETTINGS = "Settings";
@@ -112,6 +112,9 @@ export const templateSchema = z
       .describe(
         "For a series template: defaults for rhythm and duration of new meeting series; otherwise null.",
       ),
+    articleType: articleTypeSchema
+      .nullable()
+      .describe("Article type of articles created from a template of a knowledge base, or null."),
     updatedAt: timestamp("When the template last changed, or null for built-in templates.").nullable(),
   })
   .describe("A page template.");
@@ -128,6 +131,7 @@ export const exampleTemplate = {
   fields: [{ key: "name", label: "Name of the change", type: "text", required: true }],
   document: exampleDocument,
   series: null,
+  articleType: null,
   updatedAt: "2026-10-05T08:00:00.000Z",
 };
 
@@ -165,6 +169,12 @@ const templateInputSchema = z
       .optional()
       .describe(
         "Makes the template a series template with these defaults; null or left out for a page template.",
+      ),
+    articleType: articleTypeSchema
+      .nullable()
+      .optional()
+      .describe(
+        "Article type of articles created from the template. Only templates of a knowledge base have one; left out, a change keeps the current type.",
       ),
   })
   .strict()

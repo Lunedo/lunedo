@@ -159,6 +159,16 @@ import { MembershipService } from "./organizations/memberships.js";
 import { OrganizationService } from "./organizations/organizations.js";
 import { RoleService } from "./organizations/roles.js";
 import { type OutboundPolicy, outboundPolicy } from "./outbound/guarded-request.js";
+import { ArticleRenderer, renderArticleJob } from "./portal/articles.js";
+import { PortalService } from "./portal/portals.js";
+import { PortalReader } from "./portal/reader.js";
+import { PortalSessionService } from "./portal/sessions.js";
+import {
+  FEEDBACK_SWEEP_SCHEDULE,
+  feedbackDeletionJob,
+  feedbackRetentionJob,
+  PortalStatistics,
+} from "./portal/statistics.js";
 import { PushService } from "./push/push-service.js";
 import { SearchIndexer } from "./search/indexer.js";
 import { PostgresSearchAdapter } from "./search/postgres-adapter.js";
@@ -284,6 +294,11 @@ export interface AccountServices {
   templates: TemplateService;
   knowledgeBases: KnowledgeBaseService;
   reviews: ReviewService;
+  portals: PortalService;
+  portalSessions: PortalSessionService;
+  portalReader: PortalReader;
+  portalStatistics: PortalStatistics;
+  articleRenderer: ArticleRenderer;
   templateTransfers: TemplateTransferService;
   activity: ContentActivity;
   comments: CommentService;
@@ -766,6 +781,17 @@ export function createAccountServices(options: {
     adapter: searchAdapter,
     indexer: new SearchIndexer({ database, adapter: searchAdapter, files }),
   });
+  const portals = new PortalService({ database, audit, settings });
+  const portalSessions = new PortalSessionService({ database, sessions });
+  const articleRenderer = new ArticleRenderer({ database, jobs });
+  const portalStatistics = new PortalStatistics({ database, jobs });
+  const portalReader = new PortalReader({
+    database,
+    authorization,
+    search,
+    renderer: articleRenderer,
+    statistics: portalStatistics,
+  });
   const guestShares = new GuestShareService({
     database,
     authorization,
@@ -1015,6 +1041,11 @@ export function createAccountServices(options: {
     templates,
     knowledgeBases,
     reviews,
+    portals,
+    portalSessions,
+    portalReader,
+    portalStatistics,
+    articleRenderer,
     templateTransfers,
     activity,
     comments,
@@ -1097,6 +1128,7 @@ export async function workAccountJobs(
       failedMails: await services.mail.cleanup(),
       invitations: await services.invitations.cleanup(),
       providerFlows: await services.providerSignIn.cleanup(),
+      portalHandoffs: await services.portalSessions.cleanup(),
     };
     job.logger.debug(removed, "Authentication data cleaned up");
   });
@@ -1215,6 +1247,19 @@ export async function workAccountJobs(
     };
     job.logger.debug(removed, "Collaboration data cleaned up");
   });
+  await jobs.work(renderArticleJob, async (job) => {
+    const config = await services.portals.configOfItem(job.payload.itemId);
+    if (config) await services.articleRenderer.renderPublished(job.payload.itemId, config.language);
+  });
+  await jobs.work(feedbackDeletionJob, async (job) => {
+    const outcome = await services.portalStatistics.deleteFeedbackWhenDue(job.payload.feedbackId);
+    job.logger.debug({ outcome }, "Reader feedback retention checked");
+  });
+  await jobs.work(feedbackRetentionJob, async (job) => {
+    const removed = await services.portalStatistics.applyRetention(job.payload.spaceId);
+    if (removed > 0) job.logger.info({ removed }, "Reader feedback past its retention deleted");
+  });
+  await jobs.schedule(feedbackRetentionJob, FEEDBACK_SWEEP_SCHEDULE, {}, { key: "daily" });
   await jobs.schedule(scheduledBlogPostsJob, SCHEDULED_BLOG_POSTS_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(meetingRemindersJob, MEETING_REMINDERS_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(announcementStartsJob, ANNOUNCEMENT_STARTS_SCHEDULE, {}, { key: "minutely" });

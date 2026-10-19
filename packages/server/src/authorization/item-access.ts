@@ -113,16 +113,46 @@ export function accountItemCondition(
   minimum: SpaceRole,
   options: ItemAccessOptions = {},
 ): SQL {
-  const active = sql`exists (select 1 from accounts ia where ia.id = ${account} and ia.state = 'active' and ia.type <> 'portal')`;
+  const active = sql`exists (select 1 from accounts ia where ia.id = ${account} and ia.state = 'active'
+    and (ia.type <> 'portal' or ${space}.type = 'knowledgeBase'))`;
+  const internal = sql`exists (select 1 from accounts sa where sa.id = ${account} and sa.type <> 'portal')`;
+  const itemSources = [shareCondition(account, item, space, minimum)];
+  if (minimum === "reader") itemSources.push(linkCondition(account, item, space));
   const sources = [
     spaceRoleConditionFor(account, space, minimum),
-    shareCondition(account, item, space, minimum),
+    sql`(${internal} and (${sql.join(itemSources, sql` or `)}))`,
   ];
-  if (minimum === "reader") sources.push(linkCondition(account, item, space));
   const restrictions = [viewRestrictionCondition(account, item, space)];
   if (options.editRestriction) restrictions.push(editRestrictionCondition(account, item, space));
   return sql`(${space}.deleted_at is null and ${active}
     and (${sql.join(sources, sql` or `)}) and ${sql.join(restrictions, sql` and `)})`;
+}
+
+function unrestrictedCondition(item: SQL): SQL {
+  return sql`not exists (select 1 from page_restrictions r where r.item_id = any(${item}.path) and r.kind = 'view')`;
+}
+
+export function portalAudienceCondition(principal: Principal, item: SQL, space: SQL): SQL {
+  const knowledgeBase = sql`${space}.type = 'knowledgeBase' and ${space}.deleted_at is null`;
+  if (principal.type === "system") return sql`true`;
+  if (principal.type === "anonymous") {
+    return sql`(${knowledgeBase} and ${space}.audience = 'public' and ${unrestrictedCondition(item)})`;
+  }
+  if (principal.token) return sql`false`;
+  const account = sql`${principal.id}::uuid`;
+  const portalReader = sql`exists (select 1 from accounts pa where pa.id = ${account} and pa.type = 'portal'
+    and exists (select 1 from memberships pm where pm.organization_id = ${space}.organization_id
+      and pm.account_id = pa.id and (pm.expires_at is null or pm.expires_at > now())))`;
+  return sql`(${knowledgeBase}
+    and exists (select 1 from accounts aa where aa.id = ${account} and aa.state = 'active')
+    and (${space}.audience = 'public' or (${space}.audience = 'portal' and ${portalReader}))
+    and ${viewRestrictionCondition(account, item, space)})`;
+}
+
+export function portalReadableCondition(principal: Principal, item: SQL, space: SQL): SQL {
+  return sql`(${item}.trash_entry_id is null and ${item}.archived_root_id is null
+    and (${portalAudienceCondition(principal, item, space)}
+      or (${space}.type = 'knowledgeBase' and ${itemRoleCondition(principal, item, space, "reader")})))`;
 }
 
 export const LEVEL_ROLES: readonly (SpaceRole | null)[] = [null, "reader", "commenter", "editor"];

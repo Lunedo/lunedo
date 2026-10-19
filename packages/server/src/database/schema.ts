@@ -119,7 +119,10 @@ export {
   articleSlugs,
   articleSources,
   knowledgeBaseCategories,
+  knowledgeBaseLogos,
+  knowledgeBasePaths,
   knowledgeBases,
+  portalDomains,
   requiredSections,
   reviewRecipient,
 } from "../knowledge-bases/schema.js";
@@ -171,6 +174,15 @@ export {
   roleScope,
 } from "../organizations/access-schema.js";
 export { organizationDomains, organizationLogos, organizations } from "../organizations/schema.js";
+export {
+  articleRenders,
+  portalArticleViews,
+  portalFeedback,
+  portalHandoffs,
+  portalRatings,
+  portalSearches,
+  portalSessions,
+} from "../portal/schema.js";
 export { pushOutbox, pushSubscriptions } from "../push/schema.js";
 export {
   recentSearches,

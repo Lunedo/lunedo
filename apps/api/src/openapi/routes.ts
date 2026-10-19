@@ -31,6 +31,7 @@ import { AnnouncementsController } from "../organizations/announcements.controll
 import { GroupsController } from "../organizations/groups.controller.js";
 import { InstanceController } from "../organizations/instance.controller.js";
 import { OrganizationsController } from "../organizations/organizations.controller.js";
+import { PortalController } from "../portal/portal.controller.js";
 import { SavedSearchesController } from "../search/saved-searches.controller.js";
 import { SearchController } from "../search/search.controller.js";
 import { SetupController } from "../setup/setup.controller.js";
@@ -83,6 +84,7 @@ export const apiControllers = (): Type[] => [
   ItemsController,
   KnowledgeBasesController,
   ReviewsController,
+  PortalController,
   CopiesController,
   OwnershipController,
   ShortcutsController,

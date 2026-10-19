@@ -6,10 +6,12 @@ import type { Database } from "../database/database.js";
 import type { PeopleService } from "../spaces/people.js";
 import { type PageStatus, pageStatusEnabledCondition } from "../spaces/status.js";
 import { visibleItem } from "../spaces/visibility.js";
-import { loadViewer } from "./access.js";
+import { loadPortalViewer, loadViewer } from "./access.js";
 import {
   type AdapterFacets,
   type AdapterHit,
+  type ArticleList,
+  type ArticleListRequest,
   EXCERPT_END,
   EXCERPT_START,
   type FacetCount,
@@ -121,6 +123,33 @@ export interface SearchResponse {
   facets: SearchFacets | null;
   suggestion: string | null;
   index: { building: boolean };
+}
+
+export interface PortalSearchRequest {
+  organizationId: string;
+  spaceId: string;
+  query: string;
+  categoryId: string | null;
+  articleTypes: string[];
+  limit: number;
+  cursor: SearchCursor | null;
+}
+
+export interface PortalSearchHit {
+  itemId: string;
+  title: string;
+  excerpt: ExcerptPart[];
+  updatedAt: string;
+  cursor: SearchCursor;
+}
+
+export interface PortalSearchResponse {
+  results: PortalSearchHit[];
+  total: number;
+  nextCursor: SearchCursor | null;
+  categories: FacetCount<string>[];
+  articleTypes: FacetCount<string>[];
+  suggestion: string | null;
 }
 
 const TYPE_ALIASES: Record<string, SearchContentType> = {
@@ -257,6 +286,87 @@ export class SearchService {
       suggestion: correctedQuery(request.query, result.corrections),
       index,
     };
+  }
+
+  async portalSearch(principal: Principal, request: PortalSearchRequest): Promise<PortalSearchResponse> {
+    const empty: PortalSearchResponse = {
+      results: [],
+      total: 0,
+      nextCursor: null,
+      categories: [],
+      articleTypes: [],
+      suggestion: null,
+    };
+    const viewer = await loadPortalViewer(this.#database, principal, request.organizationId);
+    if (!viewer) return empty;
+    const query = parseQuery(request.query);
+    if (query.clauses.length === 0) return empty;
+    const limit = Math.min(Math.max(request.limit, 1), SEARCH_PAGE_LIMIT);
+    const result = await this.#adapter.search(this.#database, {
+      viewer,
+      query,
+      prefixLastTerm: false,
+      usageBoost: false,
+      filters: {
+        spaceIds: [request.spaceId],
+        contentTypes: ["page"],
+        labels: [],
+        authorIds: null,
+        statusIds: [],
+        languages: [],
+        includeArchived: false,
+        updatedAfter: null,
+        updatedBefore: null,
+        categoryId: request.categoryId,
+        articleTypes: request.articleTypes,
+      },
+      visibleSpaceIds: [request.spaceId],
+      sort: "relevance",
+      limit,
+      after: request.cursor,
+      firstSpaceId: null,
+      facets: true,
+      articleFacets: true,
+      suggest: true,
+    });
+    const last = result.hits[result.hits.length - 1];
+    return {
+      results: result.hits.map((hit) => ({
+        itemId: hit.itemId,
+        title: hit.title,
+        excerpt: excerptParts(hit.excerpt),
+        updatedAt: hit.contentUpdatedAt,
+        cursor: { score: hit.score, updatedAt: hit.contentUpdatedAt, sourceId: hit.sourceId },
+      })),
+      total: result.total,
+      nextCursor:
+        result.hasMore && last
+          ? { score: last.score, updatedAt: last.contentUpdatedAt, sourceId: last.sourceId }
+          : null,
+      categories: result.facets?.categories ?? [],
+      articleTypes: result.facets?.articleTypes ?? [],
+      suggestion: correctedQuery(request.query, result.corrections),
+    };
+  }
+
+  async portalArticles(
+    principal: Principal,
+    organizationId: string,
+    request: Omit<ArticleListRequest, "viewer">,
+  ): Promise<ArticleList> {
+    const viewer = await loadPortalViewer(this.#database, principal, organizationId);
+    if (!viewer) return { articles: [], total: 0, articleTypes: [] };
+    return this.#adapter.articles(this.#database, { ...request, viewer });
+  }
+
+  async portalArticleCounts(
+    principal: Principal,
+    organizationId: string,
+    spaceId: string,
+  ): Promise<Map<string, number>> {
+    const viewer = await loadPortalViewer(this.#database, principal, organizationId);
+    if (!viewer) return new Map();
+    return this.#adapter.articleCounts(this.#database, viewer, spaceId);
   }
 
   async #visibleSpaces(principal: Principal, organizationId: string): Promise<Map<string, SearchSpace>> {

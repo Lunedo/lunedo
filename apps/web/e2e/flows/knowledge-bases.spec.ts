@@ -17,8 +17,10 @@ test("creates a knowledge base and publishes a how-to only once its required sec
   await dialog.getByRole("button", { name: "Create space" }).click();
 
   await expect(page.getByRole("heading", { name, level: 1 })).toBeVisible();
-  await expect(page.getByRole("button", { name: "View in portal" }).first()).toBeDisabled();
-  await expect(page.getByText(/The portal for readers comes in a later version/).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "View in portal" }).first()).toHaveAttribute(
+    "href",
+    /\/help\/[a-z0-9-]+\/$/,
+  );
   await expectAccessible(page, "knowledge base articles");
   const spaceKey = new URL(page.url()).pathname.split("/")[2] ?? "";
   const lookup = await page.request.get(`/api/v1/space-keys/${spaceKey}`);

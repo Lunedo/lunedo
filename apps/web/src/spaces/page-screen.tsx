@@ -53,6 +53,7 @@ import { AttachmentPreviewProvider } from "../files/preview-host.js";
 import { UploadsProvider } from "../files/uploads.js";
 import { ArticleTypeControl } from "../knowledge-bases/article-type-control.js";
 import { articleTypeIcon } from "../knowledge-bases/article-types.js";
+import { ArticlePortalLink } from "../knowledge-bases/portal-link.js";
 import { isKnowledgeBase } from "../knowledge-bases/queries.js";
 import { ArticleReviewLine } from "../knowledge-bases/reviews/article-review.js";
 import { MeetingHeader } from "../meetings/meeting-header.js";
@@ -560,7 +561,15 @@ function PageMeta({ page, writable }: { page: ItemDetails; writable: boolean }) 
       transferable={page.ownershipTransferable}
     >
       {knowledgeBase ? (
-        <ArticleTypeControl itemId={page.id} spaceId={space.id} type={page.articleType} editable={writable} />
+        <>
+          <ArticleTypeControl
+            itemId={page.id}
+            spaceId={space.id}
+            type={page.articleType}
+            editable={writable}
+          />
+          <ArticlePortalLink itemId={page.id} />
+        </>
       ) : null}
       {editable || page.status ? (
         <PageStatusControl itemId={page.id} spaceId={space.id} status={page.status} editable={editable} />

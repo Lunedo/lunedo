@@ -111790,6 +111790,634 @@
         }
       }
     },
+    "/api/v1/instance/portal-domains": {
+      "get": {
+        "operationId": "portal.domains",
+        "summary": "List the domains allowed for portals",
+        "description": "Domains organizations may use for their knowledge base portals, and which portal uses each.\n\nRequires the permission `instance.settings.manage` on the instance.",
+        "tags": [
+          "Instance"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.settings.manage",
+          "resource": "instance"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The domains.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "domain": {
+                        "type": "string",
+                        "description": "The domain name."
+                      },
+                      "organizationId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID of the organization that may use the domain."
+                      },
+                      "organizationName": {
+                        "type": "string",
+                        "description": "Name of the organization."
+                      },
+                      "spaceId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "ID of the knowledge base that uses the domain."
+                      },
+                      "spaceName": {
+                        "description": "Name of the knowledge base that uses the domain.",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "When the domain was allowed. ISO 8601 timestamp in UTC."
+                      }
+                    },
+                    "required": [
+                      "domain",
+                      "organizationId",
+                      "organizationName",
+                      "spaceId",
+                      "spaceName",
+                      "createdAt"
+                    ],
+                    "additionalProperties": false,
+                    "description": "A domain allowed for knowledge base portals."
+                  }
+                },
+                "example": [
+                  {
+                    "domain": "help.example.org",
+                    "organizationId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a30",
+                    "organizationName": "Example",
+                    "spaceId": null,
+                    "spaceName": null,
+                    "createdAt": "2026-10-19T08:00:00.000Z"
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "portal.allowDomain",
+        "summary": "Allow a domain for portals",
+        "description": "Lets one organization use the domain for one of its knowledge base portals. The reverse proxy must send the domain to Pagehall and hold its certificate. The change is recorded in the audit log.\n\nRequires the permission `instance.settings.manage` on the instance.",
+        "tags": [
+          "Instance"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.settings.manage",
+          "resource": "instance"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "domain": {
+                    "type": "string",
+                    "maxLength": 253,
+                    "description": "Domain name without https:// and without a path."
+                  },
+                  "organizationId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "ID of the organization that may use it."
+                  }
+                },
+                "required": [
+                  "domain",
+                  "organizationId"
+                ],
+                "additionalProperties": false,
+                "description": "A domain to allow."
+              },
+              "example": {
+                "domain": "help.example.org",
+                "organizationId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a30"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The allowed domain.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "domain": {
+                      "type": "string",
+                      "description": "The domain name."
+                    },
+                    "organizationId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the organization that may use the domain."
+                    },
+                    "organizationName": {
+                      "type": "string",
+                      "description": "Name of the organization."
+                    },
+                    "spaceId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "ID of the knowledge base that uses the domain."
+                    },
+                    "spaceName": {
+                      "description": "Name of the knowledge base that uses the domain.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the domain was allowed. ISO 8601 timestamp in UTC."
+                    }
+                  },
+                  "required": [
+                    "domain",
+                    "organizationId",
+                    "organizationName",
+                    "spaceId",
+                    "spaceName",
+                    "createdAt"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A domain allowed for knowledge base portals."
+                },
+                "example": {
+                  "domain": "help.example.org",
+                  "organizationId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a30",
+                  "organizationName": "Example",
+                  "spaceId": null,
+                  "spaceName": null,
+                  "createdAt": "2026-10-19T08:00:00.000Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidPortalDomain`: The domain is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidPortalDomain": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidPortalDomain",
+                      "title": "The domain is not valid",
+                      "status": 400,
+                      "code": "invalidPortalDomain"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`organizationNotFound`: The organization does not exist.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "organizationNotFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:organizationNotFound",
+                      "title": "The organization does not exist",
+                      "status": 404,
+                      "code": "organizationNotFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`portalDomainExists`: The domain is already allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "portalDomainExists": {
+                    "value": {
+                      "type": "urn:pagehall:problem:portalDomainExists",
+                      "title": "The domain is already allowed",
+                      "status": 409,
+                      "code": "portalDomainExists"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/instance/portal-domains/{domain}": {
+      "delete": {
+        "operationId": "portal.removeDomain",
+        "summary": "Remove a domain for portals",
+        "description": "A knowledge base that used the domain keeps its path on the instance. Readers on the domain are signed out there. The change is recorded in the audit log.\n\nRequires the permission `instance.settings.manage` on the instance.",
+        "tags": [
+          "Instance"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.settings.manage",
+          "resource": "instance"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "domain",
+            "in": "path",
+            "required": true,
+            "description": "The domain name.",
+            "schema": {
+              "type": "string",
+              "maxLength": 253
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Done. The response has no body."
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found. `portalDomainNotFound`: The domain is not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  },
+                  "portalDomainNotFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:portalDomainNotFound",
+                      "title": "The domain is not allowed",
+                      "status": 404,
+                      "code": "portalDomainNotFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/instance/rendering": {
       "get": {
         "operationId": "rendering.status",
@@ -117571,6 +118199,22 @@
                             ],
                             "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
                           },
+                          "articleType": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "howTo",
+                                  "troubleshooting"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Article type of articles created from a template of a knowledge base, or null."
+                          },
                           "updatedAt": {
                             "anyOf": [
                               {
@@ -117596,6 +118240,7 @@
                           "fields",
                           "document",
                           "series",
+                          "articleType",
                           "updatedAt"
                         ],
                         "additionalProperties": false,
@@ -117801,6 +118446,22 @@
                             ],
                             "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
                           },
+                          "articleType": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "howTo",
+                                  "troubleshooting"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Article type of articles created from a template of a knowledge base, or null."
+                          },
                           "updatedAt": {
                             "anyOf": [
                               {
@@ -117826,6 +118487,7 @@
                           "fields",
                           "document",
                           "series",
+                          "articleType",
                           "updatedAt"
                         ],
                         "additionalProperties": false,
@@ -117882,6 +118544,7 @@
                         ]
                       },
                       "series": null,
+                      "articleType": null,
                       "updatedAt": "2026-10-05T08:00:00.000Z"
                     }
                   ],
@@ -118568,6 +119231,22 @@
                         ],
                         "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
                       },
+                      "articleType": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
+                              "howTo",
+                              "troubleshooting"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Article type of articles created from a template of a knowledge base, or null."
+                      },
                       "updatedAt": {
                         "anyOf": [
                           {
@@ -118593,6 +119272,7 @@
                       "fields",
                       "document",
                       "series",
+                      "articleType",
                       "updatedAt"
                     ],
                     "additionalProperties": false,
@@ -118633,6 +119313,7 @@
                       ]
                     },
                     "series": null,
+                    "articleType": null,
                     "updatedAt": "2026-10-05T08:00:00.000Z"
                   }
                 ]
@@ -118933,6 +119614,22 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "articleType": {
+                    "description": "Article type of articles created from the template. Only templates of a knowledge base have one; left out, a change keeps the current type.",
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                        "x-extensible-enum": [
+                          "howTo",
+                          "troubleshooting"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 },
                 "required": [
@@ -119177,6 +119874,22 @@
                       ],
                       "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
                     },
+                    "articleType": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                          "x-extensible-enum": [
+                            "howTo",
+                            "troubleshooting"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Article type of articles created from a template of a knowledge base, or null."
+                    },
                     "updatedAt": {
                       "anyOf": [
                         {
@@ -119202,6 +119915,7 @@
                     "fields",
                     "document",
                     "series",
+                    "articleType",
                     "updatedAt"
                   ],
                   "additionalProperties": false,
@@ -119239,6 +119953,7 @@
                     ]
                   },
                   "series": null,
+                  "articleType": null,
                   "updatedAt": "2026-10-05T08:00:00.000Z"
                 }
               }
@@ -119777,6 +120492,22 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "articleType": {
+                    "description": "Article type of articles created from the template. Only templates of a knowledge base have one; left out, a change keeps the current type.",
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                        "x-extensible-enum": [
+                          "howTo",
+                          "troubleshooting"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 },
                 "required": [
@@ -120021,6 +120752,22 @@
                       ],
                       "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
                     },
+                    "articleType": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                          "x-extensible-enum": [
+                            "howTo",
+                            "troubleshooting"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Article type of articles created from a template of a knowledge base, or null."
+                    },
                     "updatedAt": {
                       "anyOf": [
                         {
@@ -120046,6 +120793,7 @@
                     "fields",
                     "document",
                     "series",
+                    "articleType",
                     "updatedAt"
                   ],
                   "additionalProperties": false,
@@ -120083,6 +120831,7 @@
                     ]
                   },
                   "series": null,
+                  "articleType": null,
                   "updatedAt": "2026-10-05T08:00:00.000Z"
                 }
               }
@@ -148168,6 +148917,526 @@
         }
       }
     },
+    "/api/v1/organizations/{organizationId}/help": {
+      "get": {
+        "operationId": "portal.help",
+        "summary": "Where the help icon leads",
+        "description": "The knowledge base the help icon of the app opens, and the knowledge bases that can be chosen.\n\nRequires the permission `organization.view` on the organization in `organizationId`.",
+        "tags": [
+          "Knowledge bases"
+        ],
+        "x-pagehall-permission": {
+          "action": "organization.view",
+          "resource": "organization",
+          "parameter": "organizationId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the organization.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The help target.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "current": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "spaceId": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the knowledge base."
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "Name of the knowledge base."
+                            },
+                            "url": {
+                              "type": "string",
+                              "description": "Address of its portal."
+                            }
+                          },
+                          "required": [
+                            "spaceId",
+                            "name",
+                            "url"
+                          ],
+                          "additionalProperties": false,
+                          "description": "A knowledge base the help icon can open."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The chosen knowledge base, or null for the Pagehall documentation."
+                    },
+                    "candidates": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "spaceId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the knowledge base."
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Name of the knowledge base."
+                          },
+                          "url": {
+                            "type": "string",
+                            "description": "Address of its portal."
+                          }
+                        },
+                        "required": [
+                          "spaceId",
+                          "name",
+                          "url"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A knowledge base the help icon can open."
+                      },
+                      "description": "Knowledge bases everyone signed in may read."
+                    }
+                  },
+                  "required": [
+                    "current",
+                    "candidates"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Where the help icon of the app leads."
+                },
+                "example": {
+                  "current": null,
+                  "candidates": []
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "portal.setHelp",
+        "summary": "Choose where the help icon leads",
+        "description": "Points the help icon of the app to a knowledge base of the organization that everyone signed in may read, or back to the Pagehall documentation with null.\n\nRequires the permission `organization.settings.manage` on the organization in `organizationId`.",
+        "tags": [
+          "Knowledge bases"
+        ],
+        "x-pagehall-permission": {
+          "action": "organization.settings.manage",
+          "resource": "organization",
+          "parameter": "organizationId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "organizationId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the organization.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "spaceId": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "ID of the knowledge base."
+                  }
+                },
+                "required": [
+                  "spaceId"
+                ],
+                "additionalProperties": false,
+                "description": "The knowledge base, or null for the Pagehall documentation."
+              },
+              "example": {
+                "spaceId": null
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The help target.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "current": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "spaceId": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the knowledge base."
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "Name of the knowledge base."
+                            },
+                            "url": {
+                              "type": "string",
+                              "description": "Address of its portal."
+                            }
+                          },
+                          "required": [
+                            "spaceId",
+                            "name",
+                            "url"
+                          ],
+                          "additionalProperties": false,
+                          "description": "A knowledge base the help icon can open."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The chosen knowledge base, or null for the Pagehall documentation."
+                    },
+                    "candidates": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "spaceId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "ID of the knowledge base."
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "Name of the knowledge base."
+                          },
+                          "url": {
+                            "type": "string",
+                            "description": "Address of its portal."
+                          }
+                        },
+                        "required": [
+                          "spaceId",
+                          "name",
+                          "url"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A knowledge base the help icon can open."
+                      },
+                      "description": "Knowledge bases everyone signed in may read."
+                    }
+                  },
+                  "required": [
+                    "current",
+                    "candidates"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Where the help icon of the app leads."
+                },
+                "example": {
+                  "current": null,
+                  "candidates": []
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidHelpKnowledgeBase`: The knowledge base cannot be the help target. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidHelpKnowledgeBase": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidHelpKnowledgeBase",
+                      "title": "The knowledge base cannot be the help target",
+                      "status": 400,
+                      "code": "invalidHelpKnowledgeBase"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/organizations/{organizationId}/home-page": {
       "get": {
         "operationId": "home.organizationHomePage",
@@ -167114,6 +168383,22 @@
                             ],
                             "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
                           },
+                          "articleType": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "howTo",
+                                  "troubleshooting"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Article type of articles created from a template of a knowledge base, or null."
+                          },
                           "updatedAt": {
                             "anyOf": [
                               {
@@ -167139,6 +168424,7 @@
                           "fields",
                           "document",
                           "series",
+                          "articleType",
                           "updatedAt"
                         ],
                         "additionalProperties": false,
@@ -167344,6 +168630,22 @@
                             ],
                             "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
                           },
+                          "articleType": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "howTo",
+                                  "troubleshooting"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Article type of articles created from a template of a knowledge base, or null."
+                          },
                           "updatedAt": {
                             "anyOf": [
                               {
@@ -167369,6 +168671,7 @@
                           "fields",
                           "document",
                           "series",
+                          "articleType",
                           "updatedAt"
                         ],
                         "additionalProperties": false,
@@ -167426,6 +168729,7 @@
                         ]
                       },
                       "series": null,
+                      "articleType": null,
                       "updatedAt": "2026-10-05T08:00:00.000Z"
                     }
                   ],
@@ -168135,6 +169439,22 @@
                         ],
                         "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
                       },
+                      "articleType": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
+                              "howTo",
+                              "troubleshooting"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Article type of articles created from a template of a knowledge base, or null."
+                      },
                       "updatedAt": {
                         "anyOf": [
                           {
@@ -168160,6 +169480,7 @@
                       "fields",
                       "document",
                       "series",
+                      "articleType",
                       "updatedAt"
                     ],
                     "additionalProperties": false,
@@ -168200,6 +169521,7 @@
                       ]
                     },
                     "series": null,
+                    "articleType": null,
                     "updatedAt": "2026-10-05T08:00:00.000Z"
                   }
                 ]
@@ -168541,6 +169863,22 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "articleType": {
+                    "description": "Article type of articles created from the template. Only templates of a knowledge base have one; left out, a change keeps the current type.",
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                        "x-extensible-enum": [
+                          "howTo",
+                          "troubleshooting"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 },
                 "required": [
@@ -168785,6 +170123,22 @@
                       ],
                       "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
                     },
+                    "articleType": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                          "x-extensible-enum": [
+                            "howTo",
+                            "troubleshooting"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Article type of articles created from a template of a knowledge base, or null."
+                    },
                     "updatedAt": {
                       "anyOf": [
                         {
@@ -168810,6 +170164,7 @@
                     "fields",
                     "document",
                     "series",
+                    "articleType",
                     "updatedAt"
                   ],
                   "additionalProperties": false,
@@ -168847,6 +170202,7 @@
                     ]
                   },
                   "series": null,
+                  "articleType": null,
                   "updatedAt": "2026-10-05T08:00:00.000Z"
                 }
               }
@@ -169427,6 +170783,22 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "articleType": {
+                    "description": "Article type of articles created from the template. Only templates of a knowledge base have one; left out, a change keeps the current type.",
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                        "x-extensible-enum": [
+                          "howTo",
+                          "troubleshooting"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 },
                 "required": [
@@ -169671,6 +171043,22 @@
                       ],
                       "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
                     },
+                    "articleType": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                          "x-extensible-enum": [
+                            "howTo",
+                            "troubleshooting"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Article type of articles created from a template of a knowledge base, or null."
+                    },
                     "updatedAt": {
                       "anyOf": [
                         {
@@ -169696,6 +171084,7 @@
                     "fields",
                     "document",
                     "series",
+                    "articleType",
                     "updatedAt"
                   ],
                   "additionalProperties": false,
@@ -169733,6 +171122,7 @@
                     ]
                   },
                   "series": null,
+                  "articleType": null,
                   "updatedAt": "2026-10-05T08:00:00.000Z"
                 }
               }
@@ -211179,6 +212569,2174 @@
         }
       }
     },
+    "/api/v1/spaces/{spaceId}/knowledge-base/portal": {
+      "get": {
+        "operationId": "portal.portal",
+        "summary": "Get the portal of a knowledge base",
+        "description": "Returns the address and the appearance of the portal readers use.\n\nRequires the permission `space.view` on the space in `spaceId`.",
+        "tags": [
+          "Knowledge bases"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.view",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the knowledge base.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The portal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "spaceId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the knowledge base."
+                    },
+                    "path": {
+                      "type": "string",
+                      "description": "Path under `/help/` on the instance."
+                    },
+                    "domain": {
+                      "description": "Own domain of the portal, or null.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "url": {
+                      "type": "string",
+                      "description": "Address of the portal's start page."
+                    },
+                    "brand": {
+                      "type": "object",
+                      "properties": {
+                        "color": {
+                          "type": "string",
+                          "enum": [
+                            "petrol",
+                            "blue",
+                            "violet",
+                            "amber",
+                            "red",
+                            "green",
+                            "gray",
+                            "custom"
+                          ],
+                          "description": "A color of the fixed palette, or `custom` for own values."
+                        },
+                        "light": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "maxLength": 7,
+                              "description": "A color as a hex value such as `#0B6F78`."
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Own color for light mode, or null for a palette color."
+                        },
+                        "dark": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "maxLength": 7,
+                              "description": "A color as a hex value such as `#0B6F78`."
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Own color for dark mode, or null for a palette color."
+                        }
+                      },
+                      "required": [
+                        "color",
+                        "light",
+                        "dark"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The brand color of the portal."
+                    },
+                    "colors": {
+                      "type": "object",
+                      "properties": {
+                        "light": {
+                          "type": "string",
+                          "description": "Light mode."
+                        },
+                        "dark": {
+                          "type": "string",
+                          "description": "Dark mode."
+                        }
+                      },
+                      "required": [
+                        "light",
+                        "dark"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The brand colors the portal uses."
+                    },
+                    "welcomeHeading": {
+                      "type": "string",
+                      "description": "Heading of the start page; empty for the default heading."
+                    },
+                    "welcomeText": {
+                      "type": "string",
+                      "description": "Short text below the heading; may be empty."
+                    },
+                    "topBarThreshold": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "From this number of categories on, the top bar shows a single topics menu."
+                    },
+                    "poweredBy": {
+                      "type": "boolean",
+                      "description": "Whether the footer says that the portal is provided with Pagehall."
+                    },
+                    "feedbackRetentionMonths": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Months after which readers' notes on articles are deleted."
+                    },
+                    "logoRef": {
+                      "description": "Reference of the uploaded logo, or null.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "spaceId",
+                    "path",
+                    "domain",
+                    "url",
+                    "brand",
+                    "colors",
+                    "welcomeHeading",
+                    "welcomeText",
+                    "topBarThreshold",
+                    "poweredBy",
+                    "feedbackRetentionMonths",
+                    "logoRef"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Address and appearance of a knowledge base portal."
+                },
+                "example": {
+                  "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                  "path": "help",
+                  "domain": null,
+                  "url": "https://wiki.example.org/help/help/",
+                  "brand": {
+                    "color": "petrol",
+                    "light": null,
+                    "dark": null
+                  },
+                  "colors": {
+                    "light": "#0B6F78",
+                    "dark": "#5DB9C2"
+                  },
+                  "welcomeHeading": "",
+                  "welcomeText": "",
+                  "topBarThreshold": 10,
+                  "poweredBy": true,
+                  "feedbackRetentionMonths": 12,
+                  "logoRef": null
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/spaces/{spaceId}/knowledge-base/portal/address": {
+      "put": {
+        "operationId": "portal.setAddress",
+        "summary": "Change the address of a portal",
+        "description": "Sets the path under `/help/` and the own domain. Old paths keep redirecting until another knowledge base takes them. The change is recorded in the audit log.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
+        "tags": [
+          "Knowledge bases"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.manage",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the knowledge base.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "maxLength": 60,
+                    "description": "Lowercase letters, digits and single hyphens."
+                  },
+                  "domain": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 253
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "A domain the instance administrators allowed for the organization, or null."
+                  }
+                },
+                "required": [
+                  "path",
+                  "domain"
+                ],
+                "additionalProperties": false,
+                "description": "The new address."
+              },
+              "example": {
+                "path": "help",
+                "domain": "help.example.org"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The portal after the change.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "spaceId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the knowledge base."
+                    },
+                    "path": {
+                      "type": "string",
+                      "description": "Path under `/help/` on the instance."
+                    },
+                    "domain": {
+                      "description": "Own domain of the portal, or null.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "url": {
+                      "type": "string",
+                      "description": "Address of the portal's start page."
+                    },
+                    "brand": {
+                      "type": "object",
+                      "properties": {
+                        "color": {
+                          "type": "string",
+                          "enum": [
+                            "petrol",
+                            "blue",
+                            "violet",
+                            "amber",
+                            "red",
+                            "green",
+                            "gray",
+                            "custom"
+                          ],
+                          "description": "A color of the fixed palette, or `custom` for own values."
+                        },
+                        "light": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "maxLength": 7,
+                              "description": "A color as a hex value such as `#0B6F78`."
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Own color for light mode, or null for a palette color."
+                        },
+                        "dark": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "maxLength": 7,
+                              "description": "A color as a hex value such as `#0B6F78`."
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Own color for dark mode, or null for a palette color."
+                        }
+                      },
+                      "required": [
+                        "color",
+                        "light",
+                        "dark"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The brand color of the portal."
+                    },
+                    "colors": {
+                      "type": "object",
+                      "properties": {
+                        "light": {
+                          "type": "string",
+                          "description": "Light mode."
+                        },
+                        "dark": {
+                          "type": "string",
+                          "description": "Dark mode."
+                        }
+                      },
+                      "required": [
+                        "light",
+                        "dark"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The brand colors the portal uses."
+                    },
+                    "welcomeHeading": {
+                      "type": "string",
+                      "description": "Heading of the start page; empty for the default heading."
+                    },
+                    "welcomeText": {
+                      "type": "string",
+                      "description": "Short text below the heading; may be empty."
+                    },
+                    "topBarThreshold": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "From this number of categories on, the top bar shows a single topics menu."
+                    },
+                    "poweredBy": {
+                      "type": "boolean",
+                      "description": "Whether the footer says that the portal is provided with Pagehall."
+                    },
+                    "feedbackRetentionMonths": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Months after which readers' notes on articles are deleted."
+                    },
+                    "logoRef": {
+                      "description": "Reference of the uploaded logo, or null.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "spaceId",
+                    "path",
+                    "domain",
+                    "url",
+                    "brand",
+                    "colors",
+                    "welcomeHeading",
+                    "welcomeText",
+                    "topBarThreshold",
+                    "poweredBy",
+                    "feedbackRetentionMonths",
+                    "logoRef"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Address and appearance of a knowledge base portal."
+                },
+                "example": {
+                  "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                  "path": "help",
+                  "domain": null,
+                  "url": "https://wiki.example.org/help/help/",
+                  "brand": {
+                    "color": "petrol",
+                    "light": null,
+                    "dark": null
+                  },
+                  "colors": {
+                    "light": "#0B6F78",
+                    "dark": "#5DB9C2"
+                  },
+                  "welcomeHeading": "",
+                  "welcomeText": "",
+                  "topBarThreshold": 10,
+                  "poweredBy": true,
+                  "feedbackRetentionMonths": 12,
+                  "logoRef": null
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidPortalDomain`: The domain is not valid. `invalidPortalPath`: The portal path is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidPortalDomain": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidPortalDomain",
+                      "title": "The domain is not valid",
+                      "status": 400,
+                      "code": "invalidPortalDomain"
+                    }
+                  },
+                  "invalidPortalPath": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidPortalPath",
+                      "title": "The portal path is not valid",
+                      "status": 400,
+                      "code": "invalidPortalPath"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`portalDomainNotAllowed`: The domain is not allowed for this organization. `portalDomainTaken`: Another knowledge base uses this domain. `portalPathTaken`: Another knowledge base uses this path.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "portalDomainNotAllowed": {
+                    "value": {
+                      "type": "urn:pagehall:problem:portalDomainNotAllowed",
+                      "title": "The domain is not allowed for this organization",
+                      "status": 409,
+                      "code": "portalDomainNotAllowed"
+                    }
+                  },
+                  "portalDomainTaken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:portalDomainTaken",
+                      "title": "Another knowledge base uses this domain",
+                      "status": 409,
+                      "code": "portalDomainTaken"
+                    }
+                  },
+                  "portalPathTaken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:portalPathTaken",
+                      "title": "Another knowledge base uses this path",
+                      "status": 409,
+                      "code": "portalPathTaken"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/spaces/{spaceId}/knowledge-base/portal/appearance": {
+      "put": {
+        "operationId": "portal.setAppearance",
+        "summary": "Change the appearance of a portal",
+        "description": "Changes the brand color, the start page and the footer. An own color must reach the contrast WCAG AA asks for in light and dark mode; otherwise the answer `brandContrast` contains the nearest passing shades, which `confirmProposal` saves.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
+        "tags": [
+          "Knowledge bases"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.manage",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the knowledge base.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "brand": {
+                    "type": "object",
+                    "properties": {
+                      "color": {
+                        "type": "string",
+                        "enum": [
+                          "petrol",
+                          "blue",
+                          "violet",
+                          "amber",
+                          "red",
+                          "green",
+                          "gray",
+                          "custom"
+                        ],
+                        "description": "A color of the fixed palette, or `custom` for own values."
+                      },
+                      "light": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "maxLength": 7,
+                            "description": "A color as a hex value such as `#0B6F78`."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Own color for light mode, or null for a palette color."
+                      },
+                      "dark": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "maxLength": 7,
+                            "description": "A color as a hex value such as `#0B6F78`."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Own color for dark mode, or null for a palette color."
+                      }
+                    },
+                    "required": [
+                      "color",
+                      "light",
+                      "dark"
+                    ],
+                    "additionalProperties": false,
+                    "description": "The brand color of the portal."
+                  },
+                  "confirmProposal": {
+                    "description": "Saves the proposed shades when the own color does not reach the contrast WCAG AA asks for.",
+                    "type": "boolean"
+                  },
+                  "welcomeHeading": {
+                    "description": "Heading of the start page.",
+                    "type": "string",
+                    "maxLength": 120
+                  },
+                  "welcomeText": {
+                    "description": "Short text below the heading.",
+                    "type": "string",
+                    "maxLength": 400
+                  },
+                  "topBarThreshold": {
+                    "description": "See the portal.",
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100
+                  },
+                  "poweredBy": {
+                    "description": "Shows “Provided with Pagehall” in the footer.",
+                    "type": "boolean"
+                  },
+                  "feedbackRetentionMonths": {
+                    "description": "Months after which readers' notes are deleted.",
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 60
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Fields to change. Fields that are left out stay as they are."
+              },
+              "example": {
+                "brand": {
+                  "color": "custom",
+                  "light": "#1F4E99",
+                  "dark": "#8AA8E6"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The portal after the change.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "spaceId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the knowledge base."
+                    },
+                    "path": {
+                      "type": "string",
+                      "description": "Path under `/help/` on the instance."
+                    },
+                    "domain": {
+                      "description": "Own domain of the portal, or null.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "url": {
+                      "type": "string",
+                      "description": "Address of the portal's start page."
+                    },
+                    "brand": {
+                      "type": "object",
+                      "properties": {
+                        "color": {
+                          "type": "string",
+                          "enum": [
+                            "petrol",
+                            "blue",
+                            "violet",
+                            "amber",
+                            "red",
+                            "green",
+                            "gray",
+                            "custom"
+                          ],
+                          "description": "A color of the fixed palette, or `custom` for own values."
+                        },
+                        "light": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "maxLength": 7,
+                              "description": "A color as a hex value such as `#0B6F78`."
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Own color for light mode, or null for a palette color."
+                        },
+                        "dark": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "maxLength": 7,
+                              "description": "A color as a hex value such as `#0B6F78`."
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Own color for dark mode, or null for a palette color."
+                        }
+                      },
+                      "required": [
+                        "color",
+                        "light",
+                        "dark"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The brand color of the portal."
+                    },
+                    "colors": {
+                      "type": "object",
+                      "properties": {
+                        "light": {
+                          "type": "string",
+                          "description": "Light mode."
+                        },
+                        "dark": {
+                          "type": "string",
+                          "description": "Dark mode."
+                        }
+                      },
+                      "required": [
+                        "light",
+                        "dark"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The brand colors the portal uses."
+                    },
+                    "welcomeHeading": {
+                      "type": "string",
+                      "description": "Heading of the start page; empty for the default heading."
+                    },
+                    "welcomeText": {
+                      "type": "string",
+                      "description": "Short text below the heading; may be empty."
+                    },
+                    "topBarThreshold": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "From this number of categories on, the top bar shows a single topics menu."
+                    },
+                    "poweredBy": {
+                      "type": "boolean",
+                      "description": "Whether the footer says that the portal is provided with Pagehall."
+                    },
+                    "feedbackRetentionMonths": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Months after which readers' notes on articles are deleted."
+                    },
+                    "logoRef": {
+                      "description": "Reference of the uploaded logo, or null.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "spaceId",
+                    "path",
+                    "domain",
+                    "url",
+                    "brand",
+                    "colors",
+                    "welcomeHeading",
+                    "welcomeText",
+                    "topBarThreshold",
+                    "poweredBy",
+                    "feedbackRetentionMonths",
+                    "logoRef"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Address and appearance of a knowledge base portal."
+                },
+                "example": {
+                  "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                  "path": "help",
+                  "domain": null,
+                  "url": "https://wiki.example.org/help/help/",
+                  "brand": {
+                    "color": "petrol",
+                    "light": null,
+                    "dark": null
+                  },
+                  "colors": {
+                    "light": "#0B6F78",
+                    "dark": "#5DB9C2"
+                  },
+                  "welcomeHeading": "",
+                  "welcomeText": "",
+                  "topBarThreshold": 10,
+                  "poweredBy": true,
+                  "feedbackRetentionMonths": 12,
+                  "logoRef": null
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidBrandColor`: The brand color is not valid. `invalidInput`: The request is not valid. `invalidRetention`: The retention period is not valid. `invalidTopBarThreshold`: The number of categories is not valid. `invalidWelcome`: The start page text is too long.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidBrandColor": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidBrandColor",
+                      "title": "The brand color is not valid",
+                      "status": 400,
+                      "code": "invalidBrandColor"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidRetention": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidRetention",
+                      "title": "The retention period is not valid",
+                      "status": 400,
+                      "code": "invalidRetention"
+                    }
+                  },
+                  "invalidTopBarThreshold": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidTopBarThreshold",
+                      "title": "The number of categories is not valid",
+                      "status": 400,
+                      "code": "invalidTopBarThreshold"
+                    }
+                  },
+                  "invalidWelcome": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidWelcome",
+                      "title": "The start page text is too long",
+                      "status": 400,
+                      "code": "invalidWelcome"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`brandContrast`: The color does not reach the required contrast.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "brandContrast": {
+                    "value": {
+                      "type": "urn:pagehall:problem:brandContrast",
+                      "title": "The color does not reach the required contrast",
+                      "status": 409,
+                      "code": "brandContrast"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/spaces/{spaceId}/knowledge-base/portal/domains": {
+      "get": {
+        "operationId": "portal.spaceDomains",
+        "summary": "List the domains a portal can use",
+        "description": "Domains the instance administrators allowed for the organization of the knowledge base.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
+        "tags": [
+          "Knowledge bases"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.manage",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the knowledge base.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The domains.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "domain": {
+                        "type": "string",
+                        "description": "The domain name."
+                      },
+                      "organizationId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID of the organization that may use the domain."
+                      },
+                      "organizationName": {
+                        "type": "string",
+                        "description": "Name of the organization."
+                      },
+                      "spaceId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "ID of the knowledge base that uses the domain."
+                      },
+                      "spaceName": {
+                        "description": "Name of the knowledge base that uses the domain.",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "When the domain was allowed. ISO 8601 timestamp in UTC."
+                      }
+                    },
+                    "required": [
+                      "domain",
+                      "organizationId",
+                      "organizationName",
+                      "spaceId",
+                      "spaceName",
+                      "createdAt"
+                    ],
+                    "additionalProperties": false,
+                    "description": "A domain allowed for knowledge base portals."
+                  }
+                },
+                "example": [
+                  {
+                    "domain": "help.example.org",
+                    "organizationId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a30",
+                    "organizationName": "Example",
+                    "spaceId": null,
+                    "spaceName": null,
+                    "createdAt": "2026-10-19T08:00:00.000Z"
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/spaces/{spaceId}/knowledge-base/portal/logo": {
+      "delete": {
+        "operationId": "portal.removeLogo",
+        "summary": "Remove the logo of a portal",
+        "description": "The portal shows the organization's logo again, or the first letter of its name.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
+        "tags": [
+          "Knowledge bases"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.manage",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the knowledge base.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The portal after the change.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "spaceId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the knowledge base."
+                    },
+                    "path": {
+                      "type": "string",
+                      "description": "Path under `/help/` on the instance."
+                    },
+                    "domain": {
+                      "description": "Own domain of the portal, or null.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "url": {
+                      "type": "string",
+                      "description": "Address of the portal's start page."
+                    },
+                    "brand": {
+                      "type": "object",
+                      "properties": {
+                        "color": {
+                          "type": "string",
+                          "enum": [
+                            "petrol",
+                            "blue",
+                            "violet",
+                            "amber",
+                            "red",
+                            "green",
+                            "gray",
+                            "custom"
+                          ],
+                          "description": "A color of the fixed palette, or `custom` for own values."
+                        },
+                        "light": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "maxLength": 7,
+                              "description": "A color as a hex value such as `#0B6F78`."
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Own color for light mode, or null for a palette color."
+                        },
+                        "dark": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "maxLength": 7,
+                              "description": "A color as a hex value such as `#0B6F78`."
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Own color for dark mode, or null for a palette color."
+                        }
+                      },
+                      "required": [
+                        "color",
+                        "light",
+                        "dark"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The brand color of the portal."
+                    },
+                    "colors": {
+                      "type": "object",
+                      "properties": {
+                        "light": {
+                          "type": "string",
+                          "description": "Light mode."
+                        },
+                        "dark": {
+                          "type": "string",
+                          "description": "Dark mode."
+                        }
+                      },
+                      "required": [
+                        "light",
+                        "dark"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The brand colors the portal uses."
+                    },
+                    "welcomeHeading": {
+                      "type": "string",
+                      "description": "Heading of the start page; empty for the default heading."
+                    },
+                    "welcomeText": {
+                      "type": "string",
+                      "description": "Short text below the heading; may be empty."
+                    },
+                    "topBarThreshold": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "From this number of categories on, the top bar shows a single topics menu."
+                    },
+                    "poweredBy": {
+                      "type": "boolean",
+                      "description": "Whether the footer says that the portal is provided with Pagehall."
+                    },
+                    "feedbackRetentionMonths": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Months after which readers' notes on articles are deleted."
+                    },
+                    "logoRef": {
+                      "description": "Reference of the uploaded logo, or null.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "spaceId",
+                    "path",
+                    "domain",
+                    "url",
+                    "brand",
+                    "colors",
+                    "welcomeHeading",
+                    "welcomeText",
+                    "topBarThreshold",
+                    "poweredBy",
+                    "feedbackRetentionMonths",
+                    "logoRef"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Address and appearance of a knowledge base portal."
+                },
+                "example": {
+                  "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                  "path": "help",
+                  "domain": null,
+                  "url": "https://wiki.example.org/help/help/",
+                  "brand": {
+                    "color": "petrol",
+                    "light": null,
+                    "dark": null
+                  },
+                  "colors": {
+                    "light": "#0B6F78",
+                    "dark": "#5DB9C2"
+                  },
+                  "welcomeHeading": "",
+                  "welcomeText": "",
+                  "topBarThreshold": 10,
+                  "poweredBy": true,
+                  "feedbackRetentionMonths": 12,
+                  "logoRef": null
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "portal.uploadLogo",
+        "summary": "Upload the logo of a portal",
+        "description": "Sets the logo in the top bar and on the sign-in page of the portal. PNG, JPEG or WebP, at most 256 KiB.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
+        "tags": [
+          "Knowledge bases"
+        ],
+        "x-pagehall-permission": {
+          "action": "space.manage",
+          "resource": "space",
+          "parameter": "spaceId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "spaceId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the knowledge base.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "contentType": {
+                    "type": "string",
+                    "enum": [
+                      "image/png",
+                      "image/jpeg",
+                      "image/webp"
+                    ],
+                    "description": "Type of the image."
+                  },
+                  "data": {
+                    "type": "string",
+                    "maxLength": 349528,
+                    "format": "base64",
+                    "contentEncoding": "base64",
+                    "pattern": "^$|^(?:[0-9a-zA-Z+/]{4})*(?:(?:[0-9a-zA-Z+/]{2}==)|(?:[0-9a-zA-Z+/]{3}=))?$",
+                    "description": "The image, Base64-encoded."
+                  }
+                },
+                "required": [
+                  "contentType",
+                  "data"
+                ],
+                "additionalProperties": false,
+                "description": "A logo image."
+              },
+              "example": {
+                "contentType": "image/png",
+                "data": "iVBORw0KGgo="
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The portal after the change.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "spaceId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the knowledge base."
+                    },
+                    "path": {
+                      "type": "string",
+                      "description": "Path under `/help/` on the instance."
+                    },
+                    "domain": {
+                      "description": "Own domain of the portal, or null.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "url": {
+                      "type": "string",
+                      "description": "Address of the portal's start page."
+                    },
+                    "brand": {
+                      "type": "object",
+                      "properties": {
+                        "color": {
+                          "type": "string",
+                          "enum": [
+                            "petrol",
+                            "blue",
+                            "violet",
+                            "amber",
+                            "red",
+                            "green",
+                            "gray",
+                            "custom"
+                          ],
+                          "description": "A color of the fixed palette, or `custom` for own values."
+                        },
+                        "light": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "maxLength": 7,
+                              "description": "A color as a hex value such as `#0B6F78`."
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Own color for light mode, or null for a palette color."
+                        },
+                        "dark": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "maxLength": 7,
+                              "description": "A color as a hex value such as `#0B6F78`."
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Own color for dark mode, or null for a palette color."
+                        }
+                      },
+                      "required": [
+                        "color",
+                        "light",
+                        "dark"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The brand color of the portal."
+                    },
+                    "colors": {
+                      "type": "object",
+                      "properties": {
+                        "light": {
+                          "type": "string",
+                          "description": "Light mode."
+                        },
+                        "dark": {
+                          "type": "string",
+                          "description": "Dark mode."
+                        }
+                      },
+                      "required": [
+                        "light",
+                        "dark"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The brand colors the portal uses."
+                    },
+                    "welcomeHeading": {
+                      "type": "string",
+                      "description": "Heading of the start page; empty for the default heading."
+                    },
+                    "welcomeText": {
+                      "type": "string",
+                      "description": "Short text below the heading; may be empty."
+                    },
+                    "topBarThreshold": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "From this number of categories on, the top bar shows a single topics menu."
+                    },
+                    "poweredBy": {
+                      "type": "boolean",
+                      "description": "Whether the footer says that the portal is provided with Pagehall."
+                    },
+                    "feedbackRetentionMonths": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Months after which readers' notes on articles are deleted."
+                    },
+                    "logoRef": {
+                      "description": "Reference of the uploaded logo, or null.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "spaceId",
+                    "path",
+                    "domain",
+                    "url",
+                    "brand",
+                    "colors",
+                    "welcomeHeading",
+                    "welcomeText",
+                    "topBarThreshold",
+                    "poweredBy",
+                    "feedbackRetentionMonths",
+                    "logoRef"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Address and appearance of a knowledge base portal."
+                },
+                "example": {
+                  "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
+                  "path": "help",
+                  "domain": null,
+                  "url": "https://wiki.example.org/help/help/",
+                  "brand": {
+                    "color": "petrol",
+                    "light": null,
+                    "dark": null
+                  },
+                  "colors": {
+                    "light": "#0B6F78",
+                    "dark": "#5DB9C2"
+                  },
+                  "welcomeHeading": "",
+                  "welcomeText": "",
+                  "topBarThreshold": 10,
+                  "poweredBy": true,
+                  "feedbackRetentionMonths": 12,
+                  "logoRef": null
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid. `invalidLogo`: The logo is not a supported image.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  },
+                  "invalidLogo": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidLogo",
+                      "title": "The logo is not a supported image",
+                      "status": 400,
+                      "code": "invalidLogo"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/spaces/{spaceId}/knowledge-base/required-sections": {
       "put": {
         "operationId": "knowledgeBases.setRequired",
@@ -220488,6 +224046,22 @@
                         ],
                         "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
                       },
+                      "articleType": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
+                              "howTo",
+                              "troubleshooting"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Article type of articles created from a template of a knowledge base, or null."
+                      },
                       "updatedAt": {
                         "anyOf": [
                           {
@@ -220513,6 +224087,7 @@
                       "fields",
                       "document",
                       "series",
+                      "articleType",
                       "updatedAt"
                     ],
                     "additionalProperties": false,
@@ -220553,6 +224128,7 @@
                       ]
                     },
                     "series": null,
+                    "articleType": null,
                     "updatedAt": "2026-10-05T08:00:00.000Z"
                   }
                 ]
@@ -221965,6 +225541,22 @@
                             ],
                             "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
                           },
+                          "articleType": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "howTo",
+                                  "troubleshooting"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Article type of articles created from a template of a knowledge base, or null."
+                          },
                           "updatedAt": {
                             "anyOf": [
                               {
@@ -221990,6 +225582,7 @@
                           "fields",
                           "document",
                           "series",
+                          "articleType",
                           "updatedAt"
                         ],
                         "additionalProperties": false,
@@ -222195,6 +225788,22 @@
                             ],
                             "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
                           },
+                          "articleType": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "howTo",
+                                  "troubleshooting"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Article type of articles created from a template of a knowledge base, or null."
+                          },
                           "updatedAt": {
                             "anyOf": [
                               {
@@ -222220,6 +225829,7 @@
                           "fields",
                           "document",
                           "series",
+                          "articleType",
                           "updatedAt"
                         ],
                         "additionalProperties": false,
@@ -222276,6 +225886,7 @@
                         ]
                       },
                       "series": null,
+                      "articleType": null,
                       "updatedAt": "2026-10-05T08:00:00.000Z"
                     }
                   ],
@@ -222986,6 +226597,22 @@
                         ],
                         "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
                       },
+                      "articleType": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
+                              "howTo",
+                              "troubleshooting"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Article type of articles created from a template of a knowledge base, or null."
+                      },
                       "updatedAt": {
                         "anyOf": [
                           {
@@ -223011,6 +226638,7 @@
                       "fields",
                       "document",
                       "series",
+                      "articleType",
                       "updatedAt"
                     ],
                     "additionalProperties": false,
@@ -223051,6 +226679,7 @@
                       ]
                     },
                     "series": null,
+                    "articleType": null,
                     "updatedAt": "2026-10-05T08:00:00.000Z"
                   }
                 ]
@@ -223392,6 +227021,22 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "articleType": {
+                    "description": "Article type of articles created from the template. Only templates of a knowledge base have one; left out, a change keeps the current type.",
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                        "x-extensible-enum": [
+                          "howTo",
+                          "troubleshooting"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 },
                 "required": [
@@ -223636,6 +227281,22 @@
                       ],
                       "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
                     },
+                    "articleType": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                          "x-extensible-enum": [
+                            "howTo",
+                            "troubleshooting"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Article type of articles created from a template of a knowledge base, or null."
+                    },
                     "updatedAt": {
                       "anyOf": [
                         {
@@ -223661,6 +227322,7 @@
                     "fields",
                     "document",
                     "series",
+                    "articleType",
                     "updatedAt"
                   ],
                   "additionalProperties": false,
@@ -223698,6 +227360,7 @@
                     ]
                   },
                   "series": null,
+                  "articleType": null,
                   "updatedAt": "2026-10-05T08:00:00.000Z"
                 }
               }
@@ -224278,6 +227941,22 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "articleType": {
+                    "description": "Article type of articles created from the template. Only templates of a knowledge base have one; left out, a change keeps the current type.",
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                        "x-extensible-enum": [
+                          "howTo",
+                          "troubleshooting"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 },
                 "required": [
@@ -224522,6 +228201,22 @@
                       ],
                       "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
                     },
+                    "articleType": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                          "x-extensible-enum": [
+                            "howTo",
+                            "troubleshooting"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Article type of articles created from a template of a knowledge base, or null."
+                    },
                     "updatedAt": {
                       "anyOf": [
                         {
@@ -224547,6 +228242,7 @@
                     "fields",
                     "document",
                     "series",
+                    "articleType",
                     "updatedAt"
                   ],
                   "additionalProperties": false,
@@ -224584,6 +228280,7 @@
                     ]
                   },
                   "series": null,
+                  "articleType": null,
                   "updatedAt": "2026-10-05T08:00:00.000Z"
                 }
               }
@@ -226246,6 +229943,22 @@
                       ],
                       "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
                     },
+                    "articleType": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                          "x-extensible-enum": [
+                            "howTo",
+                            "troubleshooting"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Article type of articles created from a template of a knowledge base, or null."
+                    },
                     "updatedAt": {
                       "anyOf": [
                         {
@@ -226271,6 +229984,7 @@
                     "fields",
                     "document",
                     "series",
+                    "articleType",
                     "updatedAt"
                   ],
                   "additionalProperties": false,
@@ -226308,6 +230022,7 @@
                     ]
                   },
                   "series": null,
+                  "articleType": null,
                   "updatedAt": "2026-10-05T08:00:00.000Z"
                 }
               }
@@ -234793,6 +238508,80 @@
             "type": "integer",
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
+          },
+          "light": {
+            "description": "Check of the light mode color, for `brandContrast`.",
+            "type": "object",
+            "properties": {
+              "color": {
+                "type": "string",
+                "description": "The checked color."
+              },
+              "passes": {
+                "type": "boolean",
+                "description": "Whether it reaches the contrast WCAG AA asks for."
+              },
+              "onBackground": {
+                "type": "number",
+                "description": "Contrast of the color as text on the background."
+              },
+              "onBrand": {
+                "type": "number",
+                "description": "Contrast of text on the color."
+              },
+              "proposal": {
+                "description": "The nearest shade that passes, or null when none exists.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "color",
+              "passes",
+              "onBackground",
+              "onBrand",
+              "proposal"
+            ],
+            "additionalProperties": false
+          },
+          "dark": {
+            "description": "Check of the dark mode color, for `brandContrast`.",
+            "type": "object",
+            "properties": {
+              "color": {
+                "type": "string",
+                "description": "The checked color."
+              },
+              "passes": {
+                "type": "boolean",
+                "description": "Whether it reaches the contrast WCAG AA asks for."
+              },
+              "onBackground": {
+                "type": "number",
+                "description": "Contrast of the color as text on the background."
+              },
+              "onBrand": {
+                "type": "number",
+                "description": "Contrast of text on the color."
+              },
+              "proposal": {
+                "description": "The nearest shade that passes, or null when none exists.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "color",
+              "passes",
+              "onBackground",
+              "onBrand",
+              "proposal"
+            ],
+            "additionalProperties": false
           },
           "impact": {
             "description": "Who gains and who loses access, with the confirmation to send, for `moveChangesAccess`.",

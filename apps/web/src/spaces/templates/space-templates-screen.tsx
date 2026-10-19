@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { request } from "../../api/request.js";
+import { isKnowledgeBase } from "../../knowledge-bases/queries.js";
 import { contentKeys } from "../content-queries.js";
 import { SpaceSettingsPage } from "../settings/space-settings-page.js";
 import { useSpace } from "../space-context.js";
@@ -40,6 +41,7 @@ export function SpaceTemplatesScreen() {
         error={templates.error}
         onRetry={() => void templates.refetch()}
         canManage={space.role === "admin"}
+        articleTypes={isKnowledgeBase(space)}
         transfer={transfer}
         onImported={refresh}
         onCreate={async (input: TemplateInput) => {

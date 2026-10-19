@@ -193,6 +193,49 @@ describe.skipIf(!databaseBaseUrl)("knowledge bases through the API", () => {
     expect((await reader.client.get(`/api/v1/articles/${article.id}?draft=true`)).statusCode).toBe(403);
   });
 
+  it("keeps the article type of knowledge base templates and refuses it elsewhere", async () => {
+    const author = await person();
+    const kb = await knowledgeBase(author.client);
+    const body = {
+      name: "Störungsbild",
+      category: "operations",
+      title: "Störung",
+      fields: [],
+      document: { type: "doc", content: [{ type: "paragraph" }] },
+    };
+    const created = await author.client.post(`/api/v1/spaces/${kb.id}/templates`, {
+      ...body,
+      articleType: "troubleshooting",
+    });
+    expect(created.statusCode, created.body).toBe(201);
+    expect(created.json().articleType).toBe("troubleshooting");
+    const renamed = await author.client.put(`/api/v1/spaces/${kb.id}/templates/${created.json().id}`, {
+      ...body,
+      name: "Neues Störungsbild",
+    });
+    expect(renamed.statusCode, renamed.body).toBe(200);
+    expect(renamed.json().articleType).toBe("troubleshooting");
+    const cleared = await author.client.put(`/api/v1/spaces/${kb.id}/templates/${created.json().id}`, {
+      ...body,
+      articleType: null,
+    });
+    expect(cleared.json().articleType).toBeNull();
+    counter += 1;
+    const standard = await author.client.post(`/api/v1/organizations/${organizationId}/spaces`, {
+      name: `Team ${counter}`,
+      key: `TM${counter}X`,
+      visibility: "organization",
+      grants: [],
+    });
+    expect(standard.statusCode, standard.body).toBe(201);
+    const refused = await author.client.post(`/api/v1/spaces/${standard.json().id}/templates`, {
+      ...body,
+      articleType: "howTo",
+    });
+    expect(refused.statusCode).toBe(400);
+    expect(refused.json().code).toBe("invalidArticleType");
+  });
+
   it("blocks publishing with an empty required section and names the section", async () => {
     const author = await person();
     const kb = await knowledgeBase(author.client);

@@ -1038,7 +1038,9 @@
   },
   "help": {
     "shortcuts": "Tastenkürzel",
-    "apiReference": "API-Referenz"
+    "apiReference": "API-Referenz",
+    "documentation": "Pagehall-Dokumentation",
+    "knowledgeBase": "Hilfe"
   },
   "navigation": {
     "signInProviders": "Anmeldemethoden",
@@ -1076,7 +1078,8 @@
     "announcements": "Ankündigungen",
     "storage": "Speicher",
     "rendering": "Rendering",
-    "embeds": "Externe Einbettungen"
+    "embeds": "Externe Einbettungen",
+    "portals": "Wissensdatenbank-Portale"
   },
   "commands": {
     "label": "Befehlspalette",
@@ -1577,7 +1580,21 @@
     "reviewNotUndoable": "Die Überprüfung lässt sich nicht mehr rückgängig machen, weil der Artikel erneut geprüft wurde oder zu viel Zeit vergangen ist. Ändere bei Bedarf das Intervall.",
     "sourceNotFound": "Die Quellseite gibt es nicht oder du kannst sie nicht lesen. Wähle eine andere Seite.",
     "invalidSourcePage": "Eine Quellseite muss eine Seite in einem internen Space sein, kein anderer Artikel. Wähle eine interne Seite.",
-    "tooManySources": "Ein Artikel kann höchstens 20 Quellseiten haben. Entferne eine, bevor du eine weitere hinzufügst."
+    "tooManySources": "Ein Artikel kann höchstens 20 Quellseiten haben. Entferne eine, bevor du eine weitere hinzufügst.",
+    "invalidPortalPath": "Der Pfad darf Kleinbuchstaben, Ziffern und einzelne Bindestriche enthalten, höchstens 60 Zeichen. Ändere ihn und speichere erneut.",
+    "portalPathTaken": "Eine andere Wissensdatenbank verwendet diesen Pfad schon. Wähle einen anderen Pfad.",
+    "invalidPortalDomain": "Die Domain ist ungültig. Gib nur den Domainnamen ein, ohne https:// und ohne Pfad.",
+    "portalDomainNotAllowed": "Die Instanz-Administration hat diese Domain für die Organisation nicht erlaubt. Bitte sie, die Domain zuerst zu erlauben.",
+    "portalDomainTaken": "Eine andere Wissensdatenbank verwendet diese Domain schon. Wähle eine andere Domain oder entferne sie dort zuerst.",
+    "portalDomainExists": "Diese Domain ist schon erlaubt. Du findest sie in der Liste unten.",
+    "portalDomainNotFound": "Die Domain ist nicht mehr erlaubt. Lade die Seite neu, um die aktuelle Liste zu sehen.",
+    "brandContrast": "Die Farbe erreicht nicht den Kontrast, den WCAG AA verlangt. Übernimm die vorgeschlagene Abstufung oder wähle eine andere Farbe.",
+    "invalidBrandColor": "Die Farbe ist ungültig. Gib sie als Hex-Wert wie #0B6F78 ein oder wähle eine aus der Palette.",
+    "invalidWelcome": "Der Text ist zu lang. Kürze die Überschrift auf 120 und den Text auf 400 Zeichen.",
+    "invalidTopBarThreshold": "Gib eine ganze Zahl von 1 bis 100 ein.",
+    "invalidRetention": "Gib eine ganze Zahl an Monaten von 1 bis 60 ein.",
+    "invalidHelpKnowledgeBase": "Diese Wissensdatenbank kann nicht über das Hilfe-Symbol geöffnet werden, weil nicht alle Angemeldeten sie lesen dürfen. Wähle eine andere oder erweitere ihre Zielgruppe.",
+    "organizationNotFound": "Die Organisation gibt es nicht mehr. Lade die Seite neu und wähle eine andere."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -3667,7 +3684,9 @@
         "created": "Organisation angelegt",
         "updated": "Organisation geändert",
         "domainAdded": "Domain hinzugefügt",
-        "domainRemoved": "Domain entfernt"
+        "domainRemoved": "Domain entfernt",
+        "portalDomainAllowed": "Portal-Domain erlaubt",
+        "portalDomainRemoved": "Portal-Domain entfernt"
       },
       "membership": {
         "added": "Mitglied hinzugefügt",
@@ -3846,7 +3865,8 @@
       },
       "knowledgeBase": {
         "audienceChanged": "Lesende einer Wissensdatenbank geändert",
-        "reviewSettingsChanged": "Überprüfungseinstellungen einer Wissensdatenbank geändert"
+        "reviewSettingsChanged": "Überprüfungseinstellungen einer Wissensdatenbank geändert",
+        "portalAddressChanged": "Portal-Adresse einer Wissensdatenbank geändert"
       },
       "article": {
         "reviewed": "Artikel als geprüft markiert",
@@ -5769,7 +5789,9 @@
     "restrictedTitle": "Diese Seite ist eingeschränkt",
     "restrictedAudience": "Als Vorlage wird ihr Inhalt für alle sichtbar, die die Vorlagen von {space} verwenden können: alle Bearbeiter und Space-Admins, auch wenn sie die Seite jetzt nicht öffnen können.",
     "restrictedConfirm": "Alle, die die Vorlagen von {space} verwenden können, dürfen diesen Inhalt sehen",
-    "restrictedRequired": "Bestätige, dass alle, die die Vorlagen dieses Space verwenden können, den Inhalt sehen dürfen, oder brich ab."
+    "restrictedRequired": "Bestätige, dass alle, die die Vorlagen dieses Space verwenden können, den Inhalt sehen dürfen, oder brich ab.",
+    "articleType": "Artikelart",
+    "articleTypeHint": "Artikel aus dieser Vorlage bekommen diese Art. Lesende filtern im Portal danach."
   },
   "versions": {
     "history": "Versionsverlauf",
@@ -5906,7 +5928,9 @@
     "createFrom": "Mit {name} erstellen",
     "createBlank": "Leere Seite erstellen",
     "createSeriesFrom": "Serie mit {name} einrichten",
-    "seriesTemplate": "Das ist eine Vorlage für Besprechungsserien. Als Nächstes wählst du Name, Mitglieder und Rhythmus; jede Besprechungsseite beginnt dann mit ihr."
+    "seriesTemplate": "Das ist eine Vorlage für Besprechungsserien. Als Nächstes wählst du Name, Mitglieder und Rhythmus; jede Besprechungsseite beginnt dann mit ihr.",
+    "articleTitle": "Titel des Artikels",
+    "articleTitleHint": "Leer lassen, um den Titel der Vorlage zu verwenden und den Artikel später umzubenennen."
   },
   "home": {
     "title": "Für dich",
@@ -9302,8 +9326,7 @@
       "other": "Andere Art"
     },
     "portal": {
-      "view": "Im Portal ansehen",
-      "notYet": "Das Portal für Lesende kommt in einer späteren Version. Bis dahin öffnen Lesende die Artikel hier."
+      "view": "Im Portal ansehen"
     },
     "list": {
       "title": "Titel",
@@ -9384,7 +9407,9 @@
       "articleTemplates": "Artikelvorlagen",
       "typeTitle": "Wissensdatenbank",
       "typeDescription": "Dieser Space ist eine Wissensdatenbank. Wer sie lesen darf, legt ihre Sichtbarkeit fest, nicht eine allgemeine Sichtbarkeit des Space.",
-      "toVisibility": "Sichtbarkeit öffnen"
+      "toVisibility": "Sichtbarkeit öffnen",
+      "address": "Adresse",
+      "appearance": "Aussehen und Startseite"
     },
     "contact": {
       "label": "Kontaktadresse",
@@ -9469,6 +9494,124 @@
       "search": "Lupe",
       "wrench": "Schraubenschlüssel",
       "triangle-alert": "Warnung"
+    },
+    "address": {
+      "title": "Adresse",
+      "description": "Unter dieser Adresse öffnen Lesende die Wissensdatenbank. Wer sie öffnet, landet im Portal, nicht in der App.",
+      "loadFailed": "Die Adresse des Portals konnte nicht geladen werden",
+      "panel": "Adresse des Portals",
+      "change": "Ändern",
+      "path": "Pfad",
+      "pathHint": "Kleinbuchstaben, Ziffern und Bindestriche nach {prefix}. Links auf den bisherigen Pfad funktionieren weiter.",
+      "pathInvalid": "Verwende Kleinbuchstaben, Ziffern und einzelne Bindestriche, höchstens 60 Zeichen.",
+      "domain": "Eigene Domain",
+      "domainHint": "Optional. Zum Beispiel kann die alte Adresse einer Hilfe hierher zeigen.",
+      "noDomains": "Die Instanz-Administration hat für diese Organisation noch keine Domain erlaubt. Domains werden unter Instanz-Einstellungen, Portal-Domains erlaubt.",
+      "noDomain": "Keine eigene Domain",
+      "dnsTitle": "Trage zuerst diesen Eintrag beim DNS-Anbieter ein",
+      "dnsText": "Lass {domain} auf diese Instanz zeigen. Der Reverse Proxy muss die Domain an Pagehall weiterleiten und ihr Zertifikat bereitstellen.",
+      "copyDns": "DNS-Eintrag kopieren",
+      "saved": "Adresse gespeichert",
+      "footnote": "Eine Änderung der Adresse steht im Audit-Log. Lesende werden nie zwischen Portal und App umgeleitet; die Adresse, die sie öffnen, entscheidet.",
+      "adminsOnly": "Nur Space-Admins ändern die Adresse."
+    },
+    "appearance": {
+      "title": "Aussehen und Startseite",
+      "description": "Wie das Portal aussieht und was auf seiner Startseite steht. Änderungen gelten sofort im Portal.",
+      "loadFailed": "Das Aussehen des Portals konnte nicht geladen werden",
+      "open": "Portal öffnen",
+      "identity": "Logo und Farbe",
+      "logo": "Logo",
+      "logoHint": "Erscheint in der Kopfleiste und auf der Anmeldeseite. PNG, JPEG oder WebP, quadratisch, höchstens 256 KiB. Ohne Logo zeigt das Portal das Logo der Organisation oder den ersten Buchstaben seines Namens.",
+      "logoAlt": "Logo des Portals",
+      "noLogo": "Kein Logo",
+      "uploadLogo": "Logo hochladen",
+      "replaceLogo": "Logo ersetzen",
+      "logoUploaded": "Logo hochgeladen",
+      "logoFailed": "Das Logo konnte nicht hochgeladen werden",
+      "logoRemoveFailed": "Das Logo konnte nicht entfernt werden",
+      "removeLogoTitle": "Logo des Portals entfernen?",
+      "removeLogoDescription": "Das Portal zeigt wieder das Logo der Organisation oder den ersten Buchstaben seines Namens. Lade die Datei erneut hoch, um das Logo zurückzubringen.",
+      "color": "Markenfarbe",
+      "colorHint": "Für Links, die Hauptaktionen und Hervorhebungen. Die Farben der Palette erreichen den nötigen Kontrast in hell und dunkel.",
+      "customColor": "Eigene Farbe",
+      "lightValue": "Hell: {value}",
+      "darkValue": "Dunkel: {value}",
+      "light": "Heller Modus",
+      "dark": "Dunkler Modus",
+      "colorInvalid": "Gib die Farbe als Hex-Wert wie #0B6F78 ein.",
+      "checkAndSave": "Kontrast prüfen und speichern",
+      "contrastTitle": "Die Farbe erreicht nicht den nötigen Kontrast",
+      "contrastText": "WCAG AA verlangt mindestens 4,5 zu 1 für Text in dieser Farbe und für Text auf ihr. Pagehall schlägt die nächste Abstufung vor, die das erreicht.",
+      "noProposal": "Keine Abstufung dieser Farbe erreicht den Kontrast. Wähle eine andere Farbe.",
+      "useProposal": "Vorgeschlagene Abstufungen übernehmen",
+      "otherColor": "Andere Farbe wählen",
+      "startPage": "Startseite",
+      "heading": "Überschrift",
+      "headingHint": "Steht über der Suche. Leer lassen für „Wie können wir helfen?“ in der Sprache des Portals.",
+      "text": "Kurzer Text",
+      "textHint": "Ein oder zwei Sätze unter der Überschrift. Optional.",
+      "threshold": "Kategorien in der Kopfleiste",
+      "thresholdHint": "Die Kopfleiste zeigt bis zu fünf Kategorien und den Rest unter „Alle Themen“. Ab dieser Zahl an Kategorien zeigt sie nur noch „Themen“ mit einem Menü aller Kategorien.",
+      "numberInvalid": "Gib eine ganze Zahl von {min} bis {max} ein.",
+      "orderHint": "Die Kategorien erscheinen in der Reihenfolge der Kategorie-Einstellungen.",
+      "orderLink": "Reihenfolge der Kategorien ändern",
+      "footer": "Fußzeile",
+      "poweredBy": "„Bereitgestellt mit Pagehall“ anzeigen",
+      "poweredByHint": "Ein kleiner Hinweis in der Fußzeile jeder Portalseite.",
+      "feedback": "Hinweise von Lesenden",
+      "retention": "Hinweise aufbewahren (Monate)",
+      "retentionHint": "Lesende können nach „Nein“ bei „War das hilfreich?“ einen Hinweis hinterlassen. Hinweise werden ohne Namen gespeichert und nach dieser Zeit gelöscht.",
+      "shortenTitle": "Ältere Hinweise jetzt löschen?",
+      "shortenDescription": "{count, plural, one {Hinweise, die älter als # Monat sind, werden sofort gelöscht und lassen sich nicht wiederherstellen.} other {Hinweise, die älter als # Monate sind, werden sofort gelöscht und lassen sich nicht wiederherstellen.}}",
+      "shortenConfirm": "{count, plural, one {Hinweise # Monat aufbewahren} other {Hinweise # Monate aufbewahren}}"
+    }
+  },
+  "helpTarget": {
+    "title": "Hilfe",
+    "label": "Hilfe-Symbol öffnet",
+    "description": "Das Hilfe-Symbol in der Navigation öffnet diese Wissensdatenbank in ihrem Portal. Zur Auswahl stehen nur Wissensdatenbanken, die alle Angemeldeten lesen dürfen.",
+    "noCandidates": "Noch keine Wissensdatenbank dieser Organisation dürfen alle Angemeldeten lesen. Daher öffnet das Hilfe-Symbol die Pagehall-Dokumentation.",
+    "documentation": "Pagehall-Dokumentation",
+    "loadFailed": "Die Einstellungen zur Hilfe konnten nicht geladen werden"
+  },
+  "portals": {
+    "title": "Wissensdatenbank-Portale",
+    "description": "Einstellungen, die für die Portale aller Wissensdatenbanken dieser Instanz gelten.",
+    "appLink": {
+      "title": "Link zur App",
+      "label": "Name des Links zur App",
+      "hint": "Erscheint im Kontomenü des Portals bei Personen, die Spaces sehen, zum Beispiel „Zum Beispiel-Wiki“. Leer lassen für „Zum Wiki“.",
+      "loadFailed": "Der Name des Links konnte nicht geladen werden"
+    },
+    "domains": {
+      "title": "Portal-Domains",
+      "description": "Jede Domain gehört zu einer Organisation, die sie für eine ihrer Wissensdatenbanken verwenden kann. Der Reverse Proxy muss die Domain an Pagehall weiterleiten und ihr Zertifikat bereitstellen.",
+      "adminsOnly": "Nur die Instanz-Administration erlaubt Domains.",
+      "loadFailed": "Die Portal-Domains konnten nicht geladen werden",
+      "emptyTitle": "Keine Domain erlaubt",
+      "emptyDescription": "Wissensdatenbanken sind unter /help auf dieser Instanz erreichbar. Erlaube eine Domain, damit eine Organisation einer Wissensdatenbank eine eigene Adresse geben kann.",
+      "domain": "Domain",
+      "domainHint": "Nur der Domainname, ohne https:// und ohne Pfad.",
+      "domainInvalid": "Gib einen Domainnamen wie hilfe.example.org ein.",
+      "organization": "Organisation",
+      "organizationPlaceholder": "Organisation nach Namen suchen",
+      "organizationMissing": "Wähle die Organisation, die die Domain verwenden darf.",
+      "usedBy": "Verwendet von",
+      "unused": "Noch nicht verwendet",
+      "actions": "Aktionen",
+      "allow": "Domain erlauben",
+      "allowTitle": "Domain für ein Portal erlauben",
+      "allowDescription": "Die Organisation kann die Domain danach für eine ihrer Wissensdatenbanken wählen.",
+      "allowed": "{domain} ist erlaubt",
+      "remove": "Entfernen",
+      "removeTitle": "{domain} entfernen?",
+      "removeUsed": "{space} ist unter dieser Domain nicht mehr erreichbar, und alle dort Angemeldeten werden abgemeldet. Die Wissensdatenbank bleibt unter ihrem Pfad auf dieser Instanz erreichbar.",
+      "removeUnused": "Die Organisation kann diese Domain nicht mehr wählen.",
+      "removeConfirm": "{domain} entfernen",
+      "removed": "{domain} entfernt",
+      "removeFailed": "Die Domain konnte nicht entfernt werden",
+      "domainPlaceholder": "hilfe.example.org"
     }
   },
   "reviews": {

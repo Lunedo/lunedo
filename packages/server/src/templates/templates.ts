@@ -476,7 +476,8 @@ export class TemplateService {
     const scope = await this.scopeOf(templateId);
     const current = await this.get(templateId);
     if (!scope || !current) throw new SpaceError("templateNotFound", "The template does not exist");
-    await this.#checkArticleType(scope, clean.articleType);
+    const articleType = input.articleType === undefined ? current.articleType : clean.articleType;
+    await this.#checkArticleType(scope, articleType);
     await this.#database.transaction(async (tx) => {
       await this.#adoptLocked(tx, templateId, actor);
       const document = await this.#files.keepOwn(tx, templateId, clean.document);
@@ -485,7 +486,7 @@ export class TemplateService {
           category = ${clean.category}, title = ${clean.title}, document = ${JSON.stringify(document)}::jsonb,
           schema_version = ${editorSchemaVersion}, fields = ${JSON.stringify(clean.fields)}::jsonb,
           series = ${clean.series === null ? null : JSON.stringify(clean.series)}::jsonb,
-          article_type = ${clean.articleType},
+          article_type = ${articleType},
           updated_by = ${actorIdOf(actor)}, updated_at = now()
         where id = ${templateId}`);
       if (scope.level !== "space") {

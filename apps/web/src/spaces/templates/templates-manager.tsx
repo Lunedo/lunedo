@@ -21,6 +21,8 @@ import { lazy, Suspense, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
+import { ARTICLE_TYPES, articleTypeLabel } from "../../knowledge-bases/article-types.js";
+import type { ArticleType } from "../../knowledge-bases/queries.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import type { PageTemplate, TemplateField } from "../content-queries.js";
 import { TEMPLATE_CATEGORIES, type TemplateCategory } from "./template-categories.js";
@@ -36,6 +38,7 @@ const TemplateContentEditor = lazy(() =>
 const FIELD_TYPES = ["text", "date", "person", "choice"] as const;
 const KEY_PATTERN = /^[a-z][a-zA-Z0-9]{0,39}$/;
 const EMPTY_DOCUMENT = { type: "doc", content: [{ type: "paragraph" }] };
+const NO_ARTICLE_TYPE = "none";
 
 export interface TemplateInput {
   name: string;
@@ -44,6 +47,7 @@ export interface TemplateInput {
   title: string;
   fields: TemplateField[];
   document: unknown;
+  articleType?: ArticleType | null;
 }
 
 export function TemplatesManager({
@@ -57,7 +61,9 @@ export function TemplatesManager({
   onCreate,
   onUpdate,
   onDelete,
+  articleTypes = false,
 }: {
+  articleTypes?: boolean;
   templates: PageTemplate[] | undefined;
   loading: boolean;
   error: unknown;
@@ -227,6 +233,7 @@ export function TemplatesManager({
       <TemplateDialog
         template={editing}
         transfer={transfer}
+        articleTypes={articleTypes}
         onOpenChange={(open) => !open && setEditing(null)}
         onSave={async (input) => {
           if (editing === "new") await onCreate(input);
@@ -276,9 +283,11 @@ export function TemplatesManager({
 function TemplateDialog({
   template,
   transfer,
+  articleTypes,
   onOpenChange,
   onSave,
 }: {
+  articleTypes: boolean;
   template: PageTemplate | "new" | null;
   transfer: TemplateLevelApi;
   onOpenChange: (open: boolean) => void;
@@ -297,6 +306,7 @@ function TemplateDialog({
           key={template === "new" ? "new" : template.id}
           template={template === "new" ? null : template}
           transfer={transfer}
+          articleTypes={articleTypes}
           onCancel={() => onOpenChange(false)}
           onSave={onSave}
         />
@@ -326,9 +336,11 @@ function toDraft(field: TemplateField): FieldDraft {
 function TemplateForm({
   template,
   transfer,
+  articleTypes,
   onCancel,
   onSave,
 }: {
+  articleTypes: boolean;
   template: PageTemplate | null;
   transfer: TemplateLevelApi;
   onCancel: () => void;
@@ -342,6 +354,7 @@ function TemplateForm({
   const [title, setTitle] = useState(template?.title ?? "");
   const [fields, setFields] = useState<FieldDraft[]>(template?.fields.map(toDraft) ?? []);
   const [document, setDocument] = useState<unknown>(template?.document ?? EMPTY_DOCUMENT);
+  const [articleType, setArticleType] = useState<string>(template?.articleType ?? NO_ARTICLE_TYPE);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
@@ -397,6 +410,9 @@ function TemplateForm({
             : {}),
         })),
         document,
+        ...(articleTypes
+          ? { articleType: articleType === NO_ARTICLE_TYPE ? null : (articleType as ArticleType) }
+          : {}),
       });
     } catch (failure) {
       toast({ title: t("templates.saveFailed"), description: problemMessage(t, failure), variant: "error" });
@@ -438,6 +454,18 @@ function TemplateForm({
           />
         </Field>
       </div>
+      {articleTypes ? (
+        <Field label={t("templates.articleType")} hint={t("templates.articleTypeHint")}>
+          <Select
+            value={articleType}
+            onValueChange={setArticleType}
+            options={[
+              { value: NO_ARTICLE_TYPE, label: articleTypeLabel(t, null) },
+              ...ARTICLE_TYPES.map((value) => ({ value, label: articleTypeLabel(t, value) })),
+            ]}
+          />
+        </Field>
+      ) : null}
       <Field label={t("templates.description")} hint={t("templates.descriptionHint")}>
         <Textarea
           value={description}
