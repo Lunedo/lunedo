@@ -14,6 +14,7 @@ import {
   Languages,
   Layers,
   LayoutTemplate,
+  LibraryBig,
   LockKeyhole,
   Mail,
   Megaphone,
@@ -321,6 +322,15 @@ navigationItems.register(
     icon: AppWindow,
     labelKey: "navigation.embeds",
     to: `${INSTANCE}/embeds`,
+    permission: "instance.settings.view",
+  },
+  {
+    id: "instance.portals",
+    order: 68,
+    section: "instance",
+    icon: LibraryBig,
+    labelKey: "navigation.portals",
+    to: `${INSTANCE}/portals`,
     permission: "instance.settings.view",
   },
   {

@@ -13,7 +13,7 @@ import { NotFoundScreen, RouteErrorScreen, ScreenErrorScreen } from "./errors/ro
 import { printRouteSearch } from "./exports/print-search.js";
 import { RootLayout } from "./root-layout.js";
 import { searchPageSearch } from "./search/search-params.js";
-import { safeRedirect } from "./session/redirect.js";
+import { leavesApp, safeRedirect } from "./session/redirect.js";
 
 export interface RouterContext {
   queryClient: QueryClient;
@@ -77,7 +77,8 @@ const signInRoute = createRoute({
   }),
   beforeLoad: async ({ context, search }) => {
     const session = await context.queryClient.fetchQuery(sessionQuery);
-    if (session?.sessionKind === "full") throw redirect({ href: safeRedirect(search.redirect) });
+    const target = safeRedirect(search.redirect);
+    if (session?.sessionKind === "full") throw redirect({ href: target, reloadDocument: leavesApp(target) });
   },
   component: lazyRouteComponent(() => import("./screens/auth/sign-in-screen.js"), "SignInScreen"),
 });
@@ -516,6 +517,24 @@ const spaceVisibilityRoute = createRoute({
   ),
 });
 
+const spaceAddressRoute = createRoute({
+  getParentRoute: () => spaceSettingsRoute,
+  path: "/address",
+  component: lazyRouteComponent(
+    () => import("./knowledge-bases/settings/address-screen.js"),
+    "PortalAddressScreen",
+  ),
+});
+
+const spaceAppearanceRoute = createRoute({
+  getParentRoute: () => spaceSettingsRoute,
+  path: "/appearance",
+  component: lazyRouteComponent(
+    () => import("./knowledge-bases/settings/appearance-screen.js"),
+    "PortalAppearanceScreen",
+  ),
+});
+
 const spaceCategoriesRoute = createRoute({
   getParentRoute: () => spaceSettingsRoute,
   path: "/categories",
@@ -823,6 +842,11 @@ const instanceEmbedsRoute = instanceScreen(
   () => import("./screens/instance/embeds-screen.js"),
   "InstanceEmbedsScreen",
 );
+const instancePortalsRoute = instanceScreen(
+  "/portals",
+  () => import("./screens/instance/portals-screen.js"),
+  "InstancePortalsScreen",
+);
 const instanceRenderingRoute = instanceScreen(
   "/rendering",
   () => import("./screens/instance/rendering-screen.js"),
@@ -940,6 +964,8 @@ const routeTree = rootRoute.addChildren([
         spaceChatRoute,
         spaceTemplatesRoute,
         spaceVisibilityRoute,
+        spaceAddressRoute,
+        spaceAppearanceRoute,
         spaceCategoriesRoute,
         spaceArticleTemplatesRoute,
         spaceExportRoute,
@@ -990,6 +1016,7 @@ const routeTree = rootRoute.addChildren([
         instanceStorageRoute,
         instanceRenderingRoute,
         instanceEmbedsRoute,
+        instancePortalsRoute,
         breakGlassRoute,
         instanceNotificationsRoute,
         instanceAnnouncementsRoute,

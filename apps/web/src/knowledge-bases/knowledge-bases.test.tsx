@@ -7,9 +7,13 @@ import { schemaExtensions } from "../editor/schema/extensions.js";
 import { SpaceContext, type SpaceContextValue } from "../spaces/space-context.js";
 import type { SpaceWithRole } from "../spaces/space-queries.js";
 import { canContain, creatableKinds } from "../spaces/space-types.js";
-import { mockApi, renderWithProviders } from "../testing/render.js";
+import { mockApi, problem, renderWithProviders } from "../testing/render.js";
 import { articleTypeIcon, articleTypeLabel, knownArticleType } from "./article-types.js";
 import { NamedIcon } from "./icons.js";
+import { PortalLink } from "./portal-link.js";
+import type { PortalSettings } from "./queries.js";
+import { AddressPanel } from "./settings/address-screen.js";
+import { BrandRow } from "./settings/appearance-screen.js";
 import { AudienceForm } from "./settings/visibility-screen.js";
 
 const SPACE_ID = "01929b1e-0000-7000-8000-0000000000b1";
@@ -189,5 +193,135 @@ describe("the visibility of a knowledge base", () => {
       await screen.findByText("Choose at least one group that may read the knowledge base."),
     ).toBeTruthy();
     expect(api.requests.length).toBe(0);
+  });
+});
+
+const PORTAL: PortalSettings = {
+  spaceId: SPACE_ID,
+  path: "help",
+  domain: null,
+  url: "http://localhost/help/help/",
+  brand: { color: "petrol", light: null, dark: null },
+  colors: { light: "#0B6F78", dark: "#5DB9C2" },
+  welcomeHeading: "",
+  welcomeText: "",
+  topBarThreshold: 10,
+  poweredBy: true,
+  feedbackRetentionMonths: 12,
+  logoRef: null,
+};
+
+function spaceContext(): SpaceContextValue {
+  return {
+    space: knowledgeBase(),
+    canEdit: true,
+    openMove: () => undefined,
+    openCopy: () => undefined,
+    openCreate: () => undefined,
+  };
+}
+
+describe("the portal of a knowledge base", () => {
+  it("links to the portal and to an article in it", async () => {
+    mockApi({ [`GET /api/v1/spaces/${SPACE_ID}/knowledge-base/portal`]: () => ({ body: PORTAL }) });
+    await renderWithProviders(
+      <SpaceContext value={spaceContext()}>
+        <PortalLink />
+        <PortalLink article={{ number: 12, slug: "vpn-einrichten" }} />
+      </SpaceContext>,
+    );
+    const links = await screen.findAllByRole("link", { name: "View in portal" });
+    expect(links.map((link) => link.getAttribute("href"))).toEqual([
+      "http://localhost/help/help/",
+      "http://localhost/help/help/12-vpn-einrichten",
+    ]);
+  });
+
+  it("shows the DNS record before saving an own domain and checks the path without asking the server", async () => {
+    const api = mockApi({
+      [`GET /api/v1/spaces/${SPACE_ID}/knowledge-base/portal/domains`]: () => ({
+        body: [
+          {
+            domain: "hilfe.example.org",
+            organizationId: "01929b1e-6f2a-7c3d-8e9f-0a1b2c3d4e5f",
+            organizationName: "Example",
+            spaceId: null,
+            spaceName: null,
+            createdAt: "2026-10-19T08:00:00.000Z",
+          },
+        ],
+      }),
+      [`PUT /api/v1/spaces/${SPACE_ID}/knowledge-base/portal/address`]: (request) => ({
+        body: { ...PORTAL, ...(request.body as object) },
+      }),
+    });
+    await renderWithProviders(
+      <SpaceContext value={spaceContext()}>
+        <AddressPanel portal={PORTAL} />
+      </SpaceContext>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Change" }));
+    const path = screen.getByRole("textbox", { name: "Path" });
+    await userEvent.clear(path);
+    await userEvent.type(path, "Hilfe Neu");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByText(/Use lowercase letters, digits and single hyphens/)).toBeTruthy();
+    expect(api.requests.some((request) => request.method === "PUT")).toBe(false);
+    await userEvent.clear(path);
+    await userEvent.type(path, "hilfe-neu");
+    await userEvent.click(screen.getByRole("combobox", { name: "Own domain" }));
+    await userEvent.click(await screen.findByRole("option", { name: "hilfe.example.org" }));
+    expect(screen.getByText("hilfe.example.org CNAME localhost.")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(api.requests.find((request) => request.method === "PUT")?.body).toEqual({
+        path: "hilfe-neu",
+        domain: "hilfe.example.org",
+      }),
+    );
+  });
+
+  it("proposes a passing shade for an own color and saves it only after confirmation", async () => {
+    const api = mockApi({
+      [`PUT /api/v1/spaces/${SPACE_ID}/knowledge-base/portal/appearance`]: (request) => {
+        const body = request.body as { confirmProposal?: boolean };
+        if (!body.confirmProposal) {
+          return problem(409, "brandContrast", {
+            light: { color: "#FFB000", passes: false, onBackground: 1.9, onBrand: 1.9, proposal: "#8A5F00" },
+            dark: { color: "#8AA8E6", passes: true, onBackground: 7.4, onBrand: 7.8, proposal: "#8AA8E6" },
+          });
+        }
+        return {
+          body: {
+            ...PORTAL,
+            brand: { color: "custom", light: "#8A5F00", dark: "#8AA8E6" },
+            colors: { light: "#8A5F00", dark: "#8AA8E6" },
+          },
+        };
+      },
+    });
+    await renderWithProviders(
+      <SpaceContext value={spaceContext()}>
+        <BrandRow portal={PORTAL} editable />
+      </SpaceContext>,
+    );
+    await userEvent.click(screen.getByRole("combobox", { name: "Brand color" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Own color" }));
+    const light = screen.getByRole("textbox", { name: "Light mode" });
+    await userEvent.clear(light);
+    await userEvent.type(light, "#FFB000");
+    const dark = screen.getByRole("textbox", { name: "Dark mode" });
+    await userEvent.clear(dark);
+    await userEvent.type(dark, "#8AA8E6");
+    await userEvent.click(screen.getByRole("button", { name: "Check contrast and save" }));
+    expect(await screen.findByText("The color does not reach the required contrast")).toBeTruthy();
+    expect(screen.getByText("#8A5F00")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Use the proposed shades" }));
+    await waitFor(() =>
+      expect(api.requests.filter((request) => request.method === "PUT").at(-1)?.body).toEqual({
+        brand: { color: "custom", light: "#FFB000", dark: "#8AA8E6" },
+        confirmProposal: true,
+      }),
+    );
   });
 });

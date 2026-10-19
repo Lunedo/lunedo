@@ -13,7 +13,7 @@ import { CodeInput } from "../../components/code-input.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { submitWith, useSchemaForm } from "../../forms/use-schema-form.js";
 import { getPasskeyAssertion, isPasskeyCancelled, passkeysSupported } from "../../session/passkeys.js";
-import { safeRedirect } from "../../session/redirect.js";
+import { leavesApp, safeRedirect } from "../../session/redirect.js";
 import { AuthCard } from "./auth-layout.js";
 
 type Factor = "totp" | "passkey" | "recoveryCode";
@@ -54,7 +54,8 @@ export function SecondFactorScreen() {
   const finish = async () => {
     await queryClient.invalidateQueries({ queryKey: queryKeys.session });
     await queryClient.invalidateQueries({ queryKey: queryKeys.preferences });
-    await navigate({ href: safeRedirect(search.redirect) });
+    const target = safeRedirect(search.redirect);
+    await navigate({ href: target, reloadDocument: leavesApp(target) });
   };
 
   const fail = (failure: unknown) => {

@@ -16,6 +16,8 @@ export type Category = Ok<"/api/v1/spaces/{spaceId}/categories", "get">[number];
 export type ArticleSummary = Ok<"/api/v1/spaces/{spaceId}/articles", "get">["items"][number];
 export type ArticleType = "howTo" | "troubleshooting";
 export type TemplateSections = Ok<"/api/v1/spaces/{spaceId}/knowledge-base/templates", "get">[number];
+export type PortalSettings = Ok<"/api/v1/spaces/{spaceId}/knowledge-base/portal", "get">;
+export type PortalDomain = Ok<"/api/v1/spaces/{spaceId}/knowledge-base/portal/domains", "get">[number];
 export type ArticleTypeFilter = ArticleType | "all";
 
 export const ARTICLES_PAGE = 25;
@@ -25,6 +27,8 @@ export const knowledgeBaseKeys = {
   settings: (spaceId: string) => ["spaces", spaceId, "knowledgeBase", "settings"] as const,
   categories: (spaceId: string) => ["spaces", spaceId, "knowledgeBase", "categories"] as const,
   templates: (spaceId: string) => ["spaces", spaceId, "knowledgeBase", "templates"] as const,
+  portal: (spaceId: string) => ["spaces", spaceId, "knowledgeBase", "portal"] as const,
+  domains: (spaceId: string) => ["spaces", spaceId, "knowledgeBase", "portal", "domains"] as const,
   articles: (spaceId: string, categoryId: string | null, type: ArticleTypeFilter) =>
     ["spaces", spaceId, "knowledgeBase", "articles", categoryId, type] as const,
 };
@@ -35,6 +39,33 @@ export function knowledgeBaseSettingsQuery(spaceId: string) {
     queryFn: () =>
       request(() => api.GET("/api/v1/spaces/{spaceId}/knowledge-base", { params: { path: { spaceId } } })),
   });
+}
+
+export function portalQuery(spaceId: string) {
+  return queryOptions({
+    queryKey: knowledgeBaseKeys.portal(spaceId),
+    queryFn: () =>
+      request(() =>
+        api.GET("/api/v1/spaces/{spaceId}/knowledge-base/portal", { params: { path: { spaceId } } }),
+      ),
+  });
+}
+
+export function portalDomainsQuery(spaceId: string) {
+  return queryOptions({
+    queryKey: knowledgeBaseKeys.domains(spaceId),
+    queryFn: () =>
+      request(() =>
+        api.GET("/api/v1/spaces/{spaceId}/knowledge-base/portal/domains", { params: { path: { spaceId } } }),
+      ),
+  });
+}
+
+export function articlePortalUrl(
+  portal: Pick<PortalSettings, "url">,
+  article: { number: number; slug: string },
+) {
+  return `${portal.url}${article.number}${article.slug ? `-${article.slug}` : ""}`;
 }
 
 export function categoriesQuery(spaceId: string) {
