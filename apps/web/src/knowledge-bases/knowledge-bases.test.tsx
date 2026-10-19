@@ -9,6 +9,7 @@ import type { SpaceWithRole } from "../spaces/space-queries.js";
 import { canContain, creatableKinds } from "../spaces/space-types.js";
 import { mockApi, renderWithProviders } from "../testing/render.js";
 import { articleTypeIcon, articleTypeLabel, knownArticleType } from "./article-types.js";
+import { NamedIcon } from "./icons.js";
 import { AudienceForm } from "./settings/visibility-screen.js";
 
 const SPACE_ID = "01929b1e-0000-7000-8000-0000000000b1";
@@ -33,6 +34,19 @@ describe("content kinds by space type", () => {
     const t = ((key: string) => key) as unknown as Parameters<typeof articleTypeLabel>[0];
     expect(articleTypeLabel(t, "faq")).toBe("knowledgeBase.articleTypes.other");
     expect(articleTypeIcon("faq")).toBe(articleTypeIcon(null));
+  });
+});
+
+describe("icons of sections and categories", () => {
+  it("render only known icons and ignore names of object properties", async () => {
+    await renderWithProviders(
+      <div data-testid="icons">
+        <NamedIcon name="wrench" />
+        <NamedIcon name="constructor" />
+        <NamedIcon name="to-string" />
+      </div>,
+    );
+    expect(screen.getByTestId("icons").querySelectorAll("svg")).toHaveLength(1);
   });
 });
 
