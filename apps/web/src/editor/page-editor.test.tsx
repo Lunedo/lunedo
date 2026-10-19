@@ -49,7 +49,9 @@ describe("the page editor", () => {
       (client) => client.setQueryData(sessionQuery.queryKey, { ...SESSION, account: null } as never),
     );
     const before = await screen.findByRole("textbox", { name: "Page content" });
-    act(() => queryClient.setQueryData(sessionQuery.queryKey, SESSION as never));
+    act(() => {
+      queryClient.setQueryData(sessionQuery.queryKey, SESSION as never);
+    });
     await waitFor(() => expect(screen.getByRole("textbox", { name: "Page content" })).toBe(before));
     expect(before.isConnected).toBe(true);
   });
