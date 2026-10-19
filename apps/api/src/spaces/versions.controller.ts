@@ -227,7 +227,9 @@ export class VersionsController {
     if (published.created) {
       await this.#services.articleRenderer
         .queue(pageId)
-        .catch((error: unknown) => request.log.warn({ err: error }, "The article could not be queued for the portal"));
+        .catch((error: unknown) =>
+          request.log.warn({ err: error }, "The article could not be queued for the portal"),
+        );
     }
     return published;
   }

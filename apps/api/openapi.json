@@ -116194,6 +116194,22 @@
                             ],
                             "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
                           },
+                          "articleType": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "howTo",
+                                  "troubleshooting"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Article type of articles created from a template of a knowledge base, or null."
+                          },
                           "updatedAt": {
                             "anyOf": [
                               {
@@ -116219,6 +116235,7 @@
                           "fields",
                           "document",
                           "series",
+                          "articleType",
                           "updatedAt"
                         ],
                         "additionalProperties": false,
@@ -116424,6 +116441,22 @@
                             ],
                             "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
                           },
+                          "articleType": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "howTo",
+                                  "troubleshooting"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Article type of articles created from a template of a knowledge base, or null."
+                          },
                           "updatedAt": {
                             "anyOf": [
                               {
@@ -116449,6 +116482,7 @@
                           "fields",
                           "document",
                           "series",
+                          "articleType",
                           "updatedAt"
                         ],
                         "additionalProperties": false,
@@ -116505,6 +116539,7 @@
                         ]
                       },
                       "series": null,
+                      "articleType": null,
                       "updatedAt": "2026-10-05T08:00:00.000Z"
                     }
                   ],
@@ -117191,6 +117226,22 @@
                         ],
                         "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
                       },
+                      "articleType": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
+                              "howTo",
+                              "troubleshooting"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Article type of articles created from a template of a knowledge base, or null."
+                      },
                       "updatedAt": {
                         "anyOf": [
                           {
@@ -117216,6 +117267,7 @@
                       "fields",
                       "document",
                       "series",
+                      "articleType",
                       "updatedAt"
                     ],
                     "additionalProperties": false,
@@ -117256,6 +117308,7 @@
                       ]
                     },
                     "series": null,
+                    "articleType": null,
                     "updatedAt": "2026-10-05T08:00:00.000Z"
                   }
                 ]
@@ -117556,6 +117609,22 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "articleType": {
+                    "description": "Article type of articles created from the template. Only templates of a knowledge base have one; left out, a change keeps the current type.",
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                        "x-extensible-enum": [
+                          "howTo",
+                          "troubleshooting"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 },
                 "required": [
@@ -117800,6 +117869,22 @@
                       ],
                       "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
                     },
+                    "articleType": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                          "x-extensible-enum": [
+                            "howTo",
+                            "troubleshooting"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Article type of articles created from a template of a knowledge base, or null."
+                    },
                     "updatedAt": {
                       "anyOf": [
                         {
@@ -117825,6 +117910,7 @@
                     "fields",
                     "document",
                     "series",
+                    "articleType",
                     "updatedAt"
                   ],
                   "additionalProperties": false,
@@ -117862,6 +117948,7 @@
                     ]
                   },
                   "series": null,
+                  "articleType": null,
                   "updatedAt": "2026-10-05T08:00:00.000Z"
                 }
               }
@@ -118400,6 +118487,22 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "articleType": {
+                    "description": "Article type of articles created from the template. Only templates of a knowledge base have one; left out, a change keeps the current type.",
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                        "x-extensible-enum": [
+                          "howTo",
+                          "troubleshooting"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 },
                 "required": [
@@ -118644,6 +118747,22 @@
                       ],
                       "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
                     },
+                    "articleType": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                          "x-extensible-enum": [
+                            "howTo",
+                            "troubleshooting"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Article type of articles created from a template of a knowledge base, or null."
+                    },
                     "updatedAt": {
                       "anyOf": [
                         {
@@ -118669,6 +118788,7 @@
                     "fields",
                     "document",
                     "series",
+                    "articleType",
                     "updatedAt"
                   ],
                   "additionalProperties": false,
@@ -118706,6 +118826,7 @@
                     ]
                   },
                   "series": null,
+                  "articleType": null,
                   "updatedAt": "2026-10-05T08:00:00.000Z"
                 }
               }
@@ -166189,6 +166310,22 @@
                             ],
                             "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
                           },
+                          "articleType": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "howTo",
+                                  "troubleshooting"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Article type of articles created from a template of a knowledge base, or null."
+                          },
                           "updatedAt": {
                             "anyOf": [
                               {
@@ -166214,6 +166351,7 @@
                           "fields",
                           "document",
                           "series",
+                          "articleType",
                           "updatedAt"
                         ],
                         "additionalProperties": false,
@@ -166419,6 +166557,22 @@
                             ],
                             "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
                           },
+                          "articleType": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "howTo",
+                                  "troubleshooting"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Article type of articles created from a template of a knowledge base, or null."
+                          },
                           "updatedAt": {
                             "anyOf": [
                               {
@@ -166444,6 +166598,7 @@
                           "fields",
                           "document",
                           "series",
+                          "articleType",
                           "updatedAt"
                         ],
                         "additionalProperties": false,
@@ -166501,6 +166656,7 @@
                         ]
                       },
                       "series": null,
+                      "articleType": null,
                       "updatedAt": "2026-10-05T08:00:00.000Z"
                     }
                   ],
@@ -167210,6 +167366,22 @@
                         ],
                         "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
                       },
+                      "articleType": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
+                              "howTo",
+                              "troubleshooting"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Article type of articles created from a template of a knowledge base, or null."
+                      },
                       "updatedAt": {
                         "anyOf": [
                           {
@@ -167235,6 +167407,7 @@
                       "fields",
                       "document",
                       "series",
+                      "articleType",
                       "updatedAt"
                     ],
                     "additionalProperties": false,
@@ -167275,6 +167448,7 @@
                       ]
                     },
                     "series": null,
+                    "articleType": null,
                     "updatedAt": "2026-10-05T08:00:00.000Z"
                   }
                 ]
@@ -167616,6 +167790,22 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "articleType": {
+                    "description": "Article type of articles created from the template. Only templates of a knowledge base have one; left out, a change keeps the current type.",
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                        "x-extensible-enum": [
+                          "howTo",
+                          "troubleshooting"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 },
                 "required": [
@@ -167860,6 +168050,22 @@
                       ],
                       "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
                     },
+                    "articleType": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                          "x-extensible-enum": [
+                            "howTo",
+                            "troubleshooting"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Article type of articles created from a template of a knowledge base, or null."
+                    },
                     "updatedAt": {
                       "anyOf": [
                         {
@@ -167885,6 +168091,7 @@
                     "fields",
                     "document",
                     "series",
+                    "articleType",
                     "updatedAt"
                   ],
                   "additionalProperties": false,
@@ -167922,6 +168129,7 @@
                     ]
                   },
                   "series": null,
+                  "articleType": null,
                   "updatedAt": "2026-10-05T08:00:00.000Z"
                 }
               }
@@ -168502,6 +168710,22 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "articleType": {
+                    "description": "Article type of articles created from the template. Only templates of a knowledge base have one; left out, a change keeps the current type.",
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                        "x-extensible-enum": [
+                          "howTo",
+                          "troubleshooting"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 },
                 "required": [
@@ -168746,6 +168970,22 @@
                       ],
                       "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
                     },
+                    "articleType": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                          "x-extensible-enum": [
+                            "howTo",
+                            "troubleshooting"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Article type of articles created from a template of a knowledge base, or null."
+                    },
                     "updatedAt": {
                       "anyOf": [
                         {
@@ -168771,6 +169011,7 @@
                     "fields",
                     "document",
                     "series",
+                    "articleType",
                     "updatedAt"
                   ],
                   "additionalProperties": false,
@@ -168808,6 +169049,7 @@
                     ]
                   },
                   "series": null,
+                  "articleType": null,
                   "updatedAt": "2026-10-05T08:00:00.000Z"
                 }
               }
@@ -220349,6 +220591,22 @@
                         ],
                         "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
                       },
+                      "articleType": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
+                              "howTo",
+                              "troubleshooting"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Article type of articles created from a template of a knowledge base, or null."
+                      },
                       "updatedAt": {
                         "anyOf": [
                           {
@@ -220374,6 +220632,7 @@
                       "fields",
                       "document",
                       "series",
+                      "articleType",
                       "updatedAt"
                     ],
                     "additionalProperties": false,
@@ -220414,6 +220673,7 @@
                       ]
                     },
                     "series": null,
+                    "articleType": null,
                     "updatedAt": "2026-10-05T08:00:00.000Z"
                   }
                 ]
@@ -221826,6 +222086,22 @@
                             ],
                             "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
                           },
+                          "articleType": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "howTo",
+                                  "troubleshooting"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Article type of articles created from a template of a knowledge base, or null."
+                          },
                           "updatedAt": {
                             "anyOf": [
                               {
@@ -221851,6 +222127,7 @@
                           "fields",
                           "document",
                           "series",
+                          "articleType",
                           "updatedAt"
                         ],
                         "additionalProperties": false,
@@ -222056,6 +222333,22 @@
                             ],
                             "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
                           },
+                          "articleType": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                                "x-extensible-enum": [
+                                  "howTo",
+                                  "troubleshooting"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Article type of articles created from a template of a knowledge base, or null."
+                          },
                           "updatedAt": {
                             "anyOf": [
                               {
@@ -222081,6 +222374,7 @@
                           "fields",
                           "document",
                           "series",
+                          "articleType",
                           "updatedAt"
                         ],
                         "additionalProperties": false,
@@ -222137,6 +222431,7 @@
                         ]
                       },
                       "series": null,
+                      "articleType": null,
                       "updatedAt": "2026-10-05T08:00:00.000Z"
                     }
                   ],
@@ -222847,6 +223142,22 @@
                         ],
                         "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
                       },
+                      "articleType": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                            "x-extensible-enum": [
+                              "howTo",
+                              "troubleshooting"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Article type of articles created from a template of a knowledge base, or null."
+                      },
                       "updatedAt": {
                         "anyOf": [
                           {
@@ -222872,6 +223183,7 @@
                       "fields",
                       "document",
                       "series",
+                      "articleType",
                       "updatedAt"
                     ],
                     "additionalProperties": false,
@@ -222912,6 +223224,7 @@
                       ]
                     },
                     "series": null,
+                    "articleType": null,
                     "updatedAt": "2026-10-05T08:00:00.000Z"
                   }
                 ]
@@ -223253,6 +223566,22 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "articleType": {
+                    "description": "Article type of articles created from the template. Only templates of a knowledge base have one; left out, a change keeps the current type.",
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                        "x-extensible-enum": [
+                          "howTo",
+                          "troubleshooting"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 },
                 "required": [
@@ -223497,6 +223826,22 @@
                       ],
                       "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
                     },
+                    "articleType": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                          "x-extensible-enum": [
+                            "howTo",
+                            "troubleshooting"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Article type of articles created from a template of a knowledge base, or null."
+                    },
                     "updatedAt": {
                       "anyOf": [
                         {
@@ -223522,6 +223867,7 @@
                     "fields",
                     "document",
                     "series",
+                    "articleType",
                     "updatedAt"
                   ],
                   "additionalProperties": false,
@@ -223559,6 +223905,7 @@
                     ]
                   },
                   "series": null,
+                  "articleType": null,
                   "updatedAt": "2026-10-05T08:00:00.000Z"
                 }
               }
@@ -224139,6 +224486,22 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "articleType": {
+                    "description": "Article type of articles created from the template. Only templates of a knowledge base have one; left out, a change keeps the current type.",
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                        "x-extensible-enum": [
+                          "howTo",
+                          "troubleshooting"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 },
                 "required": [
@@ -224383,6 +224746,22 @@
                       ],
                       "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
                     },
+                    "articleType": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                          "x-extensible-enum": [
+                            "howTo",
+                            "troubleshooting"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Article type of articles created from a template of a knowledge base, or null."
+                    },
                     "updatedAt": {
                       "anyOf": [
                         {
@@ -224408,6 +224787,7 @@
                     "fields",
                     "document",
                     "series",
+                    "articleType",
                     "updatedAt"
                   ],
                   "additionalProperties": false,
@@ -224445,6 +224825,7 @@
                     ]
                   },
                   "series": null,
+                  "articleType": null,
                   "updatedAt": "2026-10-05T08:00:00.000Z"
                 }
               }
@@ -226107,6 +226488,22 @@
                       ],
                       "description": "For a series template: defaults for rhythm and duration of new meeting series; otherwise null."
                     },
+                    "articleType": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution). New values can be added in later versions; handle unknown values.",
+                          "x-extensible-enum": [
+                            "howTo",
+                            "troubleshooting"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Article type of articles created from a template of a knowledge base, or null."
+                    },
                     "updatedAt": {
                       "anyOf": [
                         {
@@ -226132,6 +226529,7 @@
                     "fields",
                     "document",
                     "series",
+                    "articleType",
                     "updatedAt"
                   ],
                   "additionalProperties": false,
@@ -226169,6 +226567,7 @@
                     ]
                   },
                   "series": null,
+                  "articleType": null,
                   "updatedAt": "2026-10-05T08:00:00.000Z"
                 }
               }

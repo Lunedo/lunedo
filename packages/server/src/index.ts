@@ -331,6 +331,7 @@ export {
 export { printHtml } from "./exports/print.js";
 export { type RenderConnection, RenderService, type RenderStatus } from "./exports/rendering.js";
 export { type ExportScope, type ExportState, exportScopes, exportStates } from "./exports/schema.js";
+export { calloutRules, colorRules, highlightRules, variables as colorVariables } from "./exports/style.js";
 export {
   type Attachment,
   type AttachmentContent,
@@ -629,17 +630,16 @@ export {
 export type { CustomRole, RoleAssignment } from "./organizations/roles.js";
 export { roleNameSchema } from "./organizations/roles.js";
 export * from "./organizations/settings.js";
-export { calloutRules, colorRules, highlightRules, variables as colorVariables } from "./exports/style.js";
 export { ArticleRenderer, PORTAL_BASE_PLACEHOLDER, renderArticleJob } from "./portal/articles.js";
 export {
   type AppearanceInput,
   type BrandColor,
   type BrandModeCheck,
-  type HelpCandidate,
   brandColors,
   brandValues,
   checkBrand,
   FEEDBACK_RETENTION_MAX,
+  type HelpCandidate,
   hostOf,
   normalizeDomain,
   type PathLookup,

@@ -34,6 +34,7 @@ const retro: PageTemplate = {
   fields: [],
   document: { type: "doc", content: [{ type: "paragraph" }] },
   series: null,
+  articleType: null,
   updatedAt: "2026-10-05T08:00:00.000Z",
 };
 
