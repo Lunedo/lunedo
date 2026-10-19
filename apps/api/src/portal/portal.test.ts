@@ -521,6 +521,8 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     });
     expect(api.statusCode).not.toBe(200);
     expect(String(api.headers["content-type"] ?? "")).not.toContain("json");
+    const foreign = await browser.post("/sign-out", undefined, { host: domain, origin: TEST_ORIGIN });
+    expect(foreign.statusCode).toBe(403);
     const signedOut = await browser.post("/sign-out", undefined, { host: domain });
     expect(signedOut.statusCode).toBe(303);
     expect((await member.client.get("/api/v1/auth/session")).statusCode).toBe(401);
