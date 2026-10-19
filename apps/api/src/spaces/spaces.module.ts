@@ -3,6 +3,7 @@ import { DiagramsController } from "../diagrams/diagrams.controller.js";
 import { EmbedsController } from "../embeds/embeds.controller.js";
 import { MeetingsController } from "../meetings/meetings.controller.js";
 import { OneOnOnesController } from "../meetings/one-on-ones.controller.js";
+import { PortalController } from "../portal/portal.controller.js";
 import { WhiteboardsController } from "../whiteboards/whiteboards.controller.js";
 import { ConfidentialSpacesController } from "./confidential-spaces.controller.js";
 import { CopiesController } from "./copies.controller.js";
@@ -25,6 +26,7 @@ import { VersionsController } from "./versions.controller.js";
     ConfidentialSpacesController,
     ItemsController,
     KnowledgeBasesController,
+    PortalController,
     CopiesController,
     OwnershipController,
     ShortcutsController,

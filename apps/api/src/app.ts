@@ -18,6 +18,7 @@ import { sendProblem } from "./http/error.filter.js";
 import { instanceUrlOf } from "./http/instance-url.js";
 import { bearerToken, carriesCookieCredentials } from "./http/request.js";
 import { NestLogger } from "./nest-logger.js";
+import { registerPortal } from "./portal/routes.js";
 import { registerWebClient } from "./web-client.js";
 
 export function createFastifyAdapter(logger: Logger, trustedProxies: string[] = []): FastifyAdapter {
@@ -105,6 +106,7 @@ export async function configureApp(app: NestFastifyApplication, context: ApiCont
     reply.header("x-request-id", request.id);
   });
   fastify.addHook("onRequestAbort", async (request) => endRequestCache(request));
+  registerPortal(fastify, context);
   fastify.addHook("onRequest", async (request, reply) => {
     if (bearerToken(request) !== undefined) {
       if (readCookie(request, COOKIES.session) !== undefined) {
