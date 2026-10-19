@@ -96,7 +96,7 @@ export interface PortalMessages {
   notFoundHeading: string;
   notFoundLead: string;
   notFoundBrowse: string;
-  notFoundLink: (email: string) => string;
+  notFoundLink: string;
   notFoundLinkNoContact: string;
   outdatedLinkSubject: string;
   signInHeading: string;
@@ -104,7 +104,7 @@ export interface PortalMessages {
   signInReturn: (title: string) => string;
   signInWith: (provider: string) => string;
   signInWithEmail: string;
-  signInProblems: (email: string) => string;
+  signInProblems: string;
   signInNoMethod: string;
   signInFailed: string;
   signedOutHeading: string;
@@ -224,8 +224,7 @@ const en: PortalMessages = {
   notFoundHeading: "We can't find this page",
   notFoundLead: "The link may be outdated, or the article was moved or removed. Search for the topic:",
   notFoundBrowse: "Or browse the topics",
-  notFoundLink: (email) =>
-    `Did the link come from an e-mail or a document? Write to us so we can fix it: ${email}`,
+  notFoundLink: "Did the link come from an e-mail or a document? Write to us so we can fix it:",
   notFoundLinkNoContact: "Did the link come from an e-mail or a document? Tell the people who sent it.",
   outdatedLinkSubject: "Outdated link in the help",
   signInHeading: "Sign in to read the help",
@@ -233,7 +232,7 @@ const en: PortalMessages = {
   signInReturn: (title) => `${title} Afterwards you continue right where you wanted to go.`,
   signInWith: (provider) => `Sign in with ${provider}`,
   signInWithEmail: "Sign in with an e-mail address",
-  signInProblems: (email) => `Problems signing in? Write to ${email}.`,
+  signInProblems: "Problems signing in? Write to",
   signInNoMethod:
     "No sign-in method is set up for this instance. Ask your instance administrator to set up sign-in.",
   signInFailed: "Sign-in could not be started because the server did not answer. Try again.",
@@ -357,8 +356,8 @@ const de: PortalMessages = {
   notFoundLead:
     "Der Link ist vielleicht veraltet, oder der Artikel wurde verschoben oder entfernt. Such nach dem Thema:",
   notFoundBrowse: "Oder stöbere in den Themen",
-  notFoundLink: (email) =>
-    `Du hast den Link aus einer E-Mail oder einem Dokument? Schreib uns, dann korrigieren wir ihn: ${email}`,
+  notFoundLink:
+    "Du hast den Link aus einer E-Mail oder einem Dokument? Schreib uns, dann korrigieren wir ihn:",
   notFoundLinkNoContact:
     "Du hast den Link aus einer E-Mail oder einem Dokument? Sag es den Personen, die ihn geschickt haben.",
   outdatedLinkSubject: "Veralteter Link in der Hilfe",
@@ -367,7 +366,7 @@ const de: PortalMessages = {
   signInReturn: (title) => `${title} Danach geht es direkt dort weiter, wohin du wolltest.`,
   signInWith: (provider) => `Mit ${provider} anmelden`,
   signInWithEmail: "Mit E-Mail-Adresse anmelden",
-  signInProblems: (email) => `Probleme bei der Anmeldung? Schreib an ${email}.`,
+  signInProblems: "Probleme bei der Anmeldung? Schreib an",
   signInNoMethod:
     "Für diese Instanz ist keine Anmeldung eingerichtet. Bitte die Instanz-Administration, die Anmeldung einzurichten.",
   signInFailed:

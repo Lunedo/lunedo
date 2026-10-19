@@ -36,7 +36,7 @@ const base = [
   "a{color:var(--kb);text-underline-offset:.2em;text-decoration-thickness:1px}",
   `:focus-visible{outline:${focusRing.width} solid var(--kb);outline-offset:${focusRing.offset};border-radius:${R.sm}}`,
   ".sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}",
-  `.skip{position:absolute;left:${S[4]};top:-${S[16]};z-index:90;background:var(--surface);color:var(--text);padding:${S[3]} ${S[4]};border-radius:${R.md};box-shadow:var(--shadow-pop)}.skip:focus{top:${S[4]}}`,
+  `.skip{position:absolute;left:${S[4]};top:-${S[16]};z-index:90;background:var(--surface);color:var(--text);padding:${S[3]} ${S[4]};border-radius:${R.md}}.skip:focus{top:${S[4]};box-shadow:var(--shadow-pop)}`,
   `svg.i{width:${I.md};height:${I.md};flex-shrink:0;fill:none;stroke:currentColor;stroke-width:${iconTokens.strokeWidth};stroke-linecap:round;stroke-linejoin:round}`,
   ".trunc{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}",
   "[hidden]{display:none!important}",

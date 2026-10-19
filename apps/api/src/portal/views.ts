@@ -179,9 +179,9 @@ function header(
                 <form method="post" action="${view.signOutUrl}"><button type="submit">${icon("log-out")}${view.t.signOut}</button></form>
               </div></details>`
             : when(
-                view.signInUrl,
+                navigation && view.signInUrl,
                 () =>
-                  html`<a class="btn ghost" href="${view.signInUrl ?? ""}">${icon("log-in")}<span class="wide">${view.t.signIn}</span></a>`,
+                  html`<a class="btn ghost" href="${view.signInUrl ?? ""}" aria-label="${view.t.signIn}">${icon("log-in")}<span class="wide">${view.t.signIn}</span></a>`,
               )
         }
       </div>
@@ -675,7 +675,7 @@ export function notFoundPage(view: PortalView): string {
       ${when(view.categories.length > 0, () => html`<section class="sec s14" aria-labelledby="topics-heading"><h2 class="h3" id="topics-heading">${t.notFoundBrowse}</h2>${topicTiles(view, true)}</section>`)}
       <p class="hint note">${
         contact
-          ? html`${t.notFoundLink("")}<a href="${mailto(contact, t.outdatedLinkSubject)}">${contact}</a>`
+          ? html`${t.notFoundLink} <a href="${mailto(contact, t.outdatedLinkSubject)}">${contact}</a>`
           : t.notFoundLinkNoContact
       }</p>
     </div></div>`,
@@ -707,7 +707,7 @@ export function signInPage(view: PortalView, data: { methods: SignInMethod[]; fa
                 : html`<a class="btn lg${index === 0 ? " primary" : ""}" href="${method.href ?? ""}">${icon("mail")}${method.label}</a>`,
             )}</div>`
       }
-      ${when(config.contactEmail, () => html`<p class="fine">${t.signInProblems("")}<a href="${mailto(config.contactEmail ?? "", t.signIn)}">${config.contactEmail ?? ""}</a></p>`)}
+      ${when(config.contactEmail, () => html`<p class="fine">${t.signInProblems} <a href="${mailto(config.contactEmail ?? "", t.signIn)}">${config.contactEmail ?? ""}</a></p>`)}
     </div></div>`,
   );
 }

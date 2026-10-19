@@ -182,20 +182,22 @@ export function AddressPanel({ portal }: { portal: PortalSettings }) {
           </div>
         </div>
       ) : (
-        <dl className="flex flex-col gap-3 text-sm">
-          <div className="flex flex-col gap-1">
-            <dt className="font-medium">{t("knowledgeBase.address.path")}</dt>
-            <dd className="font-mono break-all">{`${window.location.origin}/help/${portal.path}/`}</dd>
-          </div>
-          <div className="flex flex-col gap-1">
-            <dt className="font-medium">{t("knowledgeBase.address.domain")}</dt>
-            <dd className={portal.domain ? "font-mono break-all" : "text-text-muted"}>
-              {portal.domain ? `https://${portal.domain}/` : t("knowledgeBase.address.noDomain")}
-            </dd>
-          </div>
+        <div className="flex flex-col gap-3 text-sm">
+          <dl className="flex flex-col gap-3 text-sm">
+            <div className="flex flex-col gap-1">
+              <dt className="font-medium">{t("knowledgeBase.address.path")}</dt>
+              <dd className="font-mono break-all">{`${window.location.origin}/help/${portal.path}/`}</dd>
+            </div>
+            <div className="flex flex-col gap-1">
+              <dt className="font-medium">{t("knowledgeBase.address.domain")}</dt>
+              <dd className={portal.domain ? "font-mono break-all" : "text-text-muted"}>
+                {portal.domain ? `https://${portal.domain}/` : t("knowledgeBase.address.noDomain")}
+              </dd>
+            </div>
+          </dl>
           <p className="text-text-muted">{t("knowledgeBase.address.footnote")}</p>
           {editable ? null : <p className="text-text-muted">{t("knowledgeBase.address.adminsOnly")}</p>}
-        </dl>
+        </div>
       )}
     </Panel>
   );
