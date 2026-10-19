@@ -23,6 +23,7 @@ export {
   MAX_QUOTE_LENGTH,
   type TextAnchor,
 } from "./anchors.js";
+export { type ArticleSection, articleSections, emptySections, sectionEmpty } from "./articles.js";
 export {
   commentKit,
   commentModules,
@@ -74,7 +75,6 @@ export type {
   SourceContent,
   SourceElement,
 } from "./importing.js";
-export { type ArticleSection, articleSections, emptySections, sectionEmpty } from "./articles.js";
 export { defaultImportTexts, type ImportText, importTexts } from "./importing.js";
 export type { DocumentJson, MarkJson, NodeJson, ValidMark, ValidNode } from "./json.js";
 export { buildSchema, createEditorKit, type EditorKit, type Section } from "./kit.js";

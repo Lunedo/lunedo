@@ -3,12 +3,12 @@ import type { DocumentJson } from "@pagehall/editor-schema";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accountPrincipal } from "../accounts/principal.js";
+import type { KnowledgeBaseAudience } from "../spaces/schema.js";
+import type { SpaceGrant } from "../spaces/settings.js";
+import { defaultPageModeSetting } from "../spaces/settings.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { spaceFixtures } from "../testing/spaces.js";
-import { defaultPageModeSetting } from "../spaces/settings.js";
-import type { KnowledgeBaseAudience } from "../spaces/schema.js";
-import type { SpaceGrant } from "../spaces/settings.js";
 
 const baseUrl = testDatabaseBaseUrl();
 
@@ -424,7 +424,7 @@ describe.skipIf(!baseUrl)("knowledge bases", () => {
     });
 
     it("lets view restrictions of categories hide their articles from readers", async () => {
-      const { org, editorId, editor, kb } = await setup();
+      const { org, editor, kb } = await setup();
       const reader = accountPrincipal(await member(org.id));
       const hr = await create(editor, kb.id, { kind: "folder", title: "HR" });
       const salary = await create(editor, kb.id, { title: "Salary", parentId: hr.id });

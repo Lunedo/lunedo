@@ -340,7 +340,10 @@ export class SpaceService {
       throw new SpaceError("invalidAudience", "Only knowledge bases have an audience");
     }
     if (audience === "groups" && !input.grants.some((grant) => grant.principalKind === "group")) {
-      throw new SpaceError("audienceGroupsMissing", "Give at least one group a role to read the knowledge base");
+      throw new SpaceError(
+        "audienceGroupsMissing",
+        "Give at least one group a role to read the knowledge base",
+      );
     }
     const visibility = audience ? audienceVisibility(audience) : input.visibility;
     if (!visibility) throw new SpaceError("invalidVisibility", "Choose who can read the space");
