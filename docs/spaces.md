@@ -1,6 +1,6 @@
 # Spaces and pages
 
-Content lives in spaces. A space belongs to one organization and holds a tree of pages, folders and links. Every space has an overview page, created together with the space.
+Content lives in spaces. A space belongs to one organization and holds a tree of pages, folders and links. Every standard space has an overview page, created together with the space. A space can also be created as a knowledge base, which holds articles in categories; see [knowledge-bases.md](knowledge-bases.md).
 
 ## Spaces
 
