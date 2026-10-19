@@ -561,6 +561,13 @@
       "when": 1792342158663,
       "tag": "0079_display_versions",
       "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1792393182444,
+      "tag": "0080_knowledge_bases",
+      "breakpoints": true
     }
   ]
 }

@@ -1227,3 +1227,26 @@ details.ph-expand > summary {
     transparent
   );
 }
+
+.ph-section > h2 .ph-section-icon {
+  @apply mr-2 inline-block size-icon-md align-text-bottom text-text-muted;
+}
+
+.ph-section[data-framed] .ph-image:not([data-frame="off"]) img,
+.ph-content .ph-image[data-frame="on"] img {
+  @apply rounded-md border border-solid border-border bg-surface-sunken p-2 shadow-card;
+}
+
+.ph-image-controls {
+  @apply mb-1 flex justify-start;
+}
+
+.ph-section-missing {
+  @apply rounded-md;
+  outline: var(--ph-focus-width) solid var(--ph-color-warning);
+  outline-offset: var(--ph-focus-offset);
+}
+
+.ph-section-required {
+  @apply rounded-sm bg-warning-soft px-2 py-1 text-sm text-text;
+}

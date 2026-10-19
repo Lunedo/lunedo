@@ -121,6 +121,7 @@ export class MeetingsController {
       "tooManyMembers",
       "invalidPlacement",
       "templateNotFound",
+      "knowledgeBaseContent",
     ],
   })
   async createSeries(

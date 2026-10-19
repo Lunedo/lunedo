@@ -5,6 +5,15 @@ import { type AuthorizationService, ForbiddenError } from "../authorization/serv
 import type { AccessImpact } from "../authorization/space-access.js";
 import type { ContentActivity } from "../collaboration/content.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
+import {
+  checkKnowledgeBaseSubtree,
+  isKnowledgeBase,
+  KNOWLEDGE_BASE_KINDS,
+  knowledgeBaseKindError,
+  knowledgeBaseModeError,
+  knowledgeBasePlacementError,
+  rethrowKnowledgeBaseViolation,
+} from "../knowledge-bases/rules.js";
 import { contentLanguageOf, spaceContentLanguage } from "../search/languages.js";
 import type { SettingsService } from "../settings/service.js";
 import type { ValueSigner } from "../sharing/signer.js";
@@ -22,7 +31,14 @@ import {
 } from "./move-impact.js";
 import type { ItemOwner, OwnershipService } from "./ownership.js";
 import type { PeopleService } from "./people.js";
-import type { BuiltInPageStatus, PageMode, PageStatusColor, PageWidth, TreeItemKind } from "./schema.js";
+import type {
+  ArticleType,
+  BuiltInPageStatus,
+  PageMode,
+  PageStatusColor,
+  PageWidth,
+  TreeItemKind,
+} from "./schema.js";
 import { defaultPageModeSetting } from "./settings.js";
 import { signalSpaceChange } from "./signals.js";
 import { carryStatusesInto, type PageStatus, pageStatusEnabledCondition } from "./status.js";
@@ -64,6 +80,7 @@ export interface TreeItem {
   creatorId: string | null;
   ownerId: string | null;
   contentLanguage: ContentLanguage | null;
+  articleType: ArticleType | null;
   status: PageStatus | null;
   createdAt: Date;
   updatedAt: Date;
@@ -127,6 +144,7 @@ type ItemRow = {
   creator_id: string | null;
   owner_id: string | null;
   content_language: string | null;
+  article_type: ArticleType | null;
   status_id: string | null;
   status_built_in: BuiltInPageStatus | null;
   status_name: string | null;
@@ -213,6 +231,7 @@ function toItem(row: ItemRow): TreeItem {
     creatorId: row.creator_id,
     ownerId: row.owner_id,
     contentLanguage: contentLanguageOf(row.content_language),
+    articleType: row.article_type,
     status:
       row.status_id && row.status_color
         ? { id: row.status_id, builtIn: row.status_built_in, name: row.status_name, color: row.status_color }
@@ -343,6 +362,7 @@ export async function checkParent(
   parentId: string | null,
 ): Promise<void> {
   if (parentId === null) return;
+  const knowledgeBase = await isKnowledgeBase(tx, spaceId);
   const visible = await authorization.explain(
     actor,
     "item.view",
@@ -364,6 +384,7 @@ export async function checkParent(
   if (row.kind !== "page" && row.kind !== "folder") {
     throw new SpaceError("invalidPlacement", "Only pages and folders can contain items");
   }
+  if (knowledgeBase && row.kind !== "folder") throw knowledgeBasePlacementError();
   const meeting = await tx.execute<{ item_id: string }>(
     sql`select item_id from meetings where item_id = ${parentId}`,
   );
@@ -406,6 +427,10 @@ export class TreeService {
   }
 
   async #modeFor(spaceId: string, requested: PageMode | undefined): Promise<PageMode> {
+    if (await isKnowledgeBase(this.#database, spaceId)) {
+      if (requested === "live") throw knowledgeBaseModeError();
+      return "publish";
+    }
     if (requested) return requested;
     const space = await this.#database.execute<{ organization_id: string | null }>(
       sql`select organization_id from spaces where id = ${spaceId}`,
@@ -477,7 +502,7 @@ export class TreeService {
         (lt.trash_entry_id is not null and ${this.#authorization.itemFilter(viewer, sql`lt`, sql`ls`)}
           and ${publishedFor(this.#authorization, viewer, sql`lt`, sql`ls`)}) as link_in_trash,
         lt.space_id as link_space_id, ls.key as link_space_key, lt.kind as link_kind, lt.title as link_title,
-        t.creator_id, t.owner_id, t.content_language, sv.id as status_id, sv.built_in as status_built_in, sv.name as status_name,
+        t.creator_id, t.owner_id, t.content_language, t.article_type, sv.id as status_id, sv.built_in as status_built_in, sv.name as status_name,
         sv.color as status_color, t.created_at, t.updated_at, t.content_updated_at
       from tree_items t
       join spaces ts on ts.id = t.space_id
@@ -600,8 +625,15 @@ export class TreeService {
       mode?: PageMode | undefined;
       document?: unknown;
       documentFor?: ((tx: Transaction, itemId: string, mode: PageMode) => Promise<unknown>) | undefined;
+      articleType?: ArticleType | null | undefined;
+      templateId?: string | undefined;
     },
   ): Promise<TreeItem> {
+    const knowledgeBase = await isKnowledgeBase(this.#database, spaceId);
+    if (knowledgeBase && !KNOWLEDGE_BASE_KINDS.has(input.kind)) throw knowledgeBaseKindError();
+    if (input.articleType && !(knowledgeBase && input.kind === "page")) {
+      throw new SpaceError("invalidArticleType", "Only articles of a knowledge base have an article type");
+    }
     if (input.kind === "blogPost") {
       throw new SpaceError("invalidKind", "Blog posts are created in the blog of a space");
     }
@@ -639,28 +671,31 @@ export class TreeService {
     }
     const actorId = actorIdOf(actor);
     const mode = input.kind === "page" ? await this.#modeFor(spaceId, input.mode) : "live";
-    const id = await this.#database.transaction(async (tx) => {
-      await lockSpaces(tx, [spaceId]);
-      await checkParent(tx, this.#authorization, actor, spaceId, input.placement.parentId);
-      const position = await placementPosition(tx, spaceId, input.placement, null);
-      const itemId = uuidv7();
-      await tx.execute(sql`
+    const id = await this.#database
+      .transaction(async (tx) => {
+        await lockSpaces(tx, [spaceId]);
+        await checkParent(tx, this.#authorization, actor, spaceId, input.placement.parentId);
+        const position = await placementPosition(tx, spaceId, input.placement, null);
+        const itemId = uuidv7();
+        await tx.execute(sql`
         insert into tree_items (id, space_id, parent_id, kind, position, title, description, link_item_id, link_url,
-          mode, creator_id, owner_id)
+          mode, creator_id, owner_id, article_type, template_id)
         values (${itemId}, ${spaceId}, ${input.placement.parentId}, ${input.kind}, ${position}, ${title},
-          ${description}, ${linkItemId}, ${linkUrl}, ${mode}, ${actorId}, ${actorId})`);
-      if (input.kind === "page") {
-        const document = input.documentFor ? await input.documentFor(tx, itemId, mode) : input.document;
-        await insertInitialDocument(tx, itemId, actorId, document);
-      }
-      if (input.kind === "whiteboard") await insertInitialWhiteboard(tx, itemId, actorId);
-      await refreshReaderVisibility(tx, [itemId]);
-      if (input.kind === "page") await this.#documents.afterInsert(tx, itemId, actorId);
-      if (input.kind === "page" || input.kind === "whiteboard")
-        await this.#activity.created(tx, itemId, actorId);
-      await signalSpaceChange(tx, { spaceId, kind: "tree", itemId });
-      return itemId;
-    });
+          ${description}, ${linkItemId}, ${linkUrl}, ${mode}, ${actorId}, ${actorId}, ${input.articleType ?? null},
+          ${knowledgeBase && input.kind === "page" ? (input.templateId ?? null) : null})`);
+        if (input.kind === "page") {
+          const document = input.documentFor ? await input.documentFor(tx, itemId, mode) : input.document;
+          await insertInitialDocument(tx, itemId, actorId, document);
+        }
+        if (input.kind === "whiteboard") await insertInitialWhiteboard(tx, itemId, actorId);
+        await refreshReaderVisibility(tx, [itemId]);
+        if (input.kind === "page") await this.#documents.afterInsert(tx, itemId, actorId);
+        if (input.kind === "page" || input.kind === "whiteboard")
+          await this.#activity.created(tx, itemId, actorId);
+        await signalSpaceChange(tx, { spaceId, kind: "tree", itemId });
+        return itemId;
+      })
+      .catch(rethrowKnowledgeBaseViolation);
     const created = await this.get(actor, id);
     if (!created) throw new Error("The item was not created");
     return created;
@@ -763,48 +798,50 @@ export class TreeService {
     await this.#requireEdit(actor, sourceSpaceId);
     if (targetSpaceId !== sourceSpaceId) await this.#requireEdit(actor, targetSpaceId);
 
-    await this.#database.transaction(async (tx) => {
-      await lockSpaces(tx, [sourceSpaceId, targetSpaceId]);
-      const items = await representativeItems(tx, itemId);
-      const accounts = await candidateAccounts(
-        tx,
-        { itemId, parentId: target.parentId, spaceIds: [sourceSpaceId, targetSpaceId] },
-        items,
-      );
-      const before = await accessLevels(tx, items, accounts);
-      await this.#relocate(tx, actor, itemId, sourceSpaceId, targetSpaceId, target);
-      const changes = levelChanges(items, before, await accessLevels(tx, items, accounts));
-      const parts = [
-        actorIdOf(actor) ?? "",
-        itemId,
-        targetSpaceId,
-        target.parentId ?? "",
-        ...changeParts(changes),
-      ];
-      if (confirmation === null || changes.length > 0) {
-        const confidential = await tx.execute<{ leaves: boolean }>(sql`
+    await this.#database
+      .transaction(async (tx) => {
+        await lockSpaces(tx, [sourceSpaceId, targetSpaceId]);
+        const items = await representativeItems(tx, itemId);
+        const accounts = await candidateAccounts(
+          tx,
+          { itemId, parentId: target.parentId, spaceIds: [sourceSpaceId, targetSpaceId] },
+          items,
+        );
+        const before = await accessLevels(tx, items, accounts);
+        await this.#relocate(tx, actor, itemId, sourceSpaceId, targetSpaceId, target);
+        const changes = levelChanges(items, before, await accessLevels(tx, items, accounts));
+        const parts = [
+          actorIdOf(actor) ?? "",
+          itemId,
+          targetSpaceId,
+          target.parentId ?? "",
+          ...changeParts(changes),
+        ];
+        if (confirmation === null || changes.length > 0) {
+          const confidential = await tx.execute<{ leaves: boolean }>(sql`
           select (select confidential from spaces where id = ${sourceSpaceId})
             and not (select confidential from spaces where id = ${targetSpaceId}) as leaves`);
-        const impact: MoveImpact = {
-          ...(await summarizeChanges(tx, changes, (account) =>
-            this.#people.visibleCondition(actor, account),
-          )),
-          leavesConfidential: confidential.rows[0]?.leaves === true,
-          confirmation:
-            changes.length > 0
-              ? await this.#signer.sign(MOVE_CONFIRMATION, parts, new Date(Date.now() + CONFIRMATION_MS))
-              : null,
-        };
-        if (confirmation === null) throw new MovePreview(impact);
-        if (!(await this.#signer.verify(MOVE_CONFIRMATION, parts, confirmation))) {
-          throw new SpaceError(
-            "moveChangesAccess",
-            "The move changes who can open the content. Check who gains and who loses access, then confirm the move.",
-            { impact },
-          );
+          const impact: MoveImpact = {
+            ...(await summarizeChanges(tx, changes, (account) =>
+              this.#people.visibleCondition(actor, account),
+            )),
+            leavesConfidential: confidential.rows[0]?.leaves === true,
+            confirmation:
+              changes.length > 0
+                ? await this.#signer.sign(MOVE_CONFIRMATION, parts, new Date(Date.now() + CONFIRMATION_MS))
+                : null,
+          };
+          if (confirmation === null) throw new MovePreview(impact);
+          if (!(await this.#signer.verify(MOVE_CONFIRMATION, parts, confirmation))) {
+            throw new SpaceError(
+              "moveChangesAccess",
+              "The move changes who can open the content. Check who gains and who loses access, then confirm the move.",
+              { impact },
+            );
+          }
         }
-      }
-    });
+      })
+      .catch(rethrowKnowledgeBaseViolation);
   }
 
   async #relocate(
@@ -844,6 +881,7 @@ export class TreeService {
       throw new SpaceError("moveIntoDescendant", "An item cannot be moved below itself");
     }
     await checkParent(tx, this.#authorization, actor, targetSpaceId, target.parentId);
+    if (await isKnowledgeBase(tx, targetSpaceId)) await checkKnowledgeBaseSubtree(tx, itemId);
     if (target.parentId !== null) {
       const cycle = await tx.execute<{ found: boolean }>(sql`
         with recursive up as (
@@ -923,6 +961,12 @@ export class TreeService {
       );
       if ((row.kind !== "page" && row.kind !== "folder") || meeting.rows[0]) {
         throw new SpaceError("invalidConversion", "Only pages and folders can be converted");
+      }
+      if (row.kind !== kind && (await isKnowledgeBase(tx, spaceId))) {
+        throw new SpaceError(
+          "invalidConversion",
+          "Articles and categories of a knowledge base keep their kind; create a new article or category instead",
+        );
       }
       if (row.kind === kind) return;
       const overview = await tx.execute<{ id: string }>(

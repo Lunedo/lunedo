@@ -42,6 +42,7 @@ import { ApiError, request } from "../api/request.js";
 import { StarButton, useContentCollaboration } from "../collaboration/content-collaboration.js";
 import { PageReactions } from "../collaboration/reaction-bar.js";
 import { isEmptyDocument } from "../editor/empty-document.js";
+import type { MissingSection } from "../editor/extensions/required-sections.js";
 import { PageReadView, type ReadViewCollaboration } from "../editor/read-view.js";
 import { CollaborationProblemNotice } from "../editor/save-indicator.js";
 import type { SaveState } from "../editor/save-state.js";
@@ -50,6 +51,9 @@ import { ExportDialog } from "../exports/export-dialog.js";
 import { AttachmentsSection, PageDropZone } from "../files/attachments-section.js";
 import { AttachmentPreviewProvider } from "../files/preview-host.js";
 import { UploadsProvider } from "../files/uploads.js";
+import { ArticleTypeControl } from "../knowledge-bases/article-type-control.js";
+import { articleTypeIcon } from "../knowledge-bases/article-types.js";
+import { isKnowledgeBase } from "../knowledge-bases/queries.js";
 import { MeetingHeader } from "../meetings/meeting-header.js";
 import { PrivateNotesPanel } from "../meetings/private-notes-panel.js";
 import { WatchMenu } from "../notifications/watch-menu.js";
@@ -179,6 +183,8 @@ function PageArticle({
   const [notesOpen, setNotesOpen] = useState(meeting && search.notes === true);
   const notesToggle = useRef<HTMLButtonElement>(null);
   const publishMode = page.mode === "publish";
+  const knowledgeBase = isKnowledgeBase(space);
+  const [missingSections, setMissingSections] = useState<MissingSection[]>([]);
   const draft = useQuery({ ...draftQuery(page.id), enabled: writable && publishMode, throwOnError: false });
   const saveState = useRef<SaveState>("saved");
   const [confirmingLive, setConfirmingLive] = useState(false);
@@ -240,10 +246,18 @@ function PageArticle({
       ...(meeting
         ? []
         : [
-            { label: t("tree.newPageInside"), icon: FilePlus, onSelect: () => openCreate("page", page.id) },
+            ...(knowledgeBase
+              ? []
+              : [
+                  {
+                    label: t("tree.newPageInside"),
+                    icon: FilePlus,
+                    onSelect: () => openCreate("page", page.id),
+                  },
+                ]),
             { label: t("tree.move"), icon: Move, onSelect: () => openMove(page) },
           ]),
-      ...(overview || meeting
+      ...(overview || meeting || knowledgeBase
         ? []
         : [
             {
@@ -263,11 +277,15 @@ function PageArticle({
         onSelect: () => void save({ numberHeadings: !page.numberHeadings }),
       },
       { type: "separator" },
-      {
-        label: publishMode ? t("versions.switchToLive") : t("versions.switchToPublish"),
-        icon: publishMode ? Radio : FileCheck,
-        onSelect: () => void switchMode(),
-      },
+      ...(knowledgeBase
+        ? []
+        : [
+            {
+              label: publishMode ? t("versions.switchToLive") : t("versions.switchToPublish"),
+              icon: publishMode ? Radio : FileCheck,
+              onSelect: () => void switchMode(),
+            },
+          ]),
       ...(publishMode && draft.data?.hasChanges && draft.data.basedOn !== null
         ? [
             {
@@ -338,7 +356,7 @@ function PageArticle({
               title
             )
           }
-          icon={FileText}
+          icon={knowledgeBase ? articleTypeIcon(page.articleType) : FileText}
           breadcrumbs={breadcrumbs}
           actions={
             <>
@@ -349,7 +367,12 @@ function PageArticle({
                       <Button variant="secondary" icon={Check} onClick={() => setEditing(false)}>
                         {t("page.done")}
                       </Button>
-                      <PublishButton page={page} draft={draft.data} saveState={saveState} />
+                      <PublishButton
+                        page={page}
+                        draft={draft.data}
+                        saveState={saveState}
+                        onMissingSections={setMissingSections}
+                      />
                     </>
                   ) : (
                     <Button variant="primary" icon={Check} onClick={() => setEditing(false)}>
@@ -388,6 +411,14 @@ function PageArticle({
         />
         <PageMeta page={page} writable={writable} />
         {sharing.restrictionNote}
+        {editing && missingSections.length > 0 ? (
+          <Notice variant="warning" title={t("knowledgeBase.required.title")}>
+            {t("knowledgeBase.required.description", {
+              count: missingSections.length,
+              sections: missingSections.map((section) => section.title).join(", "),
+            })}
+          </Notice>
+        ) : null}
         {meeting ? (
           <MeetingHeader
             meetingId={page.id}
@@ -433,6 +464,7 @@ function PageArticle({
               spaceKey={space.key}
               draft={publishMode}
               numberHeadings={page.numberHeadings}
+              missingSections={missingSections}
               onSaveStateChange={(state) => {
                 saveState.current = state;
               }}
@@ -506,6 +538,7 @@ function PageArticle({
 
 function PageMeta({ page, writable }: { page: ItemDetails; writable: boolean }) {
   const { space } = useSpace();
+  const knowledgeBase = isKnowledgeBase(space);
   const statuses = useQuery({ ...pageStatusesQuery(space.id), enabled: writable, throwOnError: false });
   const editable = writable && statuses.data?.enabled === true;
   return (
@@ -516,6 +549,9 @@ function PageMeta({ page, writable }: { page: ItemDetails; writable: boolean }) 
       owner={page.owner}
       transferable={page.ownershipTransferable}
     >
+      {knowledgeBase ? (
+        <ArticleTypeControl itemId={page.id} spaceId={space.id} type={page.articleType} editable={writable} />
+      ) : null}
       {editable || page.status ? (
         <PageStatusControl itemId={page.id} spaceId={space.id} status={page.status} editable={editable} />
       ) : null}

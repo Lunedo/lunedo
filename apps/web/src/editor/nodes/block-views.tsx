@@ -1,14 +1,24 @@
-import { calloutVariants, codeLanguages, slugify } from "@pagehall/editor-schema";
+import { calloutVariants, codeLanguages, FRAMED_SECTIONS, slugify } from "@pagehall/editor-schema";
 import { Combobox, Menu } from "@pagehall/ui";
 import type { Editor } from "@tiptap/core";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { NodeViewContent, type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
-import { ChevronDown, ChevronRight, Columns2, ImageOff, Info, ListTree, Paperclip } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  Columns2,
+  Frame,
+  ImageOff,
+  Info,
+  ListTree,
+  Paperclip,
+} from "lucide-react";
 import { type CSSProperties, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAttachmentUrl } from "../../files/attachment-source.js";
 import { useAttachmentPreview } from "../../files/preview-host.js";
 import { translateKey } from "../../i18n/translate.js";
+import { NamedIcon } from "../../knowledge-bases/icons.js";
 import { useEditable } from "../context.js";
 import { useImageTooLarge } from "../references.js";
 
@@ -282,11 +292,49 @@ export function CodeBlockView({ node, editor, updateAttributes }: NodeViewProps)
 }
 
 export function SectionView({ node }: NodeViewProps) {
+  const key = String(node.attrs.key);
+  const icon = typeof node.attrs.icon === "string" ? node.attrs.icon : null;
   return (
-    <NodeViewWrapper as="section" className="ph-section" data-section={node.attrs.key}>
-      <h2 contentEditable={false}>{String(node.attrs.title)}</h2>
+    <NodeViewWrapper
+      as="section"
+      className="ph-section"
+      data-section={key}
+      data-icon={icon ?? undefined}
+      data-framed={FRAMED_SECTIONS.includes(key) ? "true" : undefined}
+    >
+      <h2 contentEditable={false}>
+        <NamedIcon name={icon} className="ph-section-icon" />
+        {String(node.attrs.title)}
+      </h2>
       <NodeViewContent />
     </NodeViewWrapper>
+  );
+}
+
+function frameValue(frame: unknown): "on" | "off" | undefined {
+  return frame === true ? "on" : frame === false ? "off" : undefined;
+}
+
+function FrameMenu({ frame, onChange }: { frame: unknown; onChange: (frame: boolean | null) => void }) {
+  const { t } = useTranslation();
+  const current = frame === true ? "on" : frame === false ? "off" : "auto";
+  return (
+    <div className="ph-image-controls">
+      <Menu
+        align="start"
+        trigger={
+          <button type="button" className="ph-inline-button" aria-label={t("knowledgeBase.frame.change")}>
+            <Frame aria-hidden="true" className="size-icon-sm" />
+            {translateKey(t, `knowledgeBase.frame.${current}`)}
+            <ChevronDown aria-hidden="true" className="size-icon-sm" />
+          </button>
+        }
+        items={(["auto", "on", "off"] as const).map((value) => ({
+          label: translateKey(t, `knowledgeBase.frame.${value}`),
+          onSelect: () => onChange(value === "auto" ? null : value === "on"),
+        }))}
+      />
+    </div>
   );
 }
 
@@ -303,7 +351,8 @@ export function UnsupportedMacroView({ node, selected }: NodeViewProps) {
   );
 }
 
-export function AttachmentView({ node, selected }: NodeViewProps) {
+export function AttachmentView({ node, selected, editor, updateAttributes }: NodeViewProps) {
+  const editable = useEditable(editor);
   const { t } = useTranslation();
   const preview = useAttachmentPreview();
   const attachmentUrl = useAttachmentUrl();
@@ -315,8 +364,12 @@ export function AttachmentView({ node, selected }: NodeViewProps) {
     <NodeViewWrapper
       className={`${isImage ? "ph-image" : "ph-file"}${selected ? " ph-node-selected" : ""}`}
       data-align={isImage ? String(node.attrs.align) : undefined}
+      data-frame={isImage ? frameValue(node.attrs.frame) : undefined}
       contentEditable={false}
     >
+      {isImage && editable && selected && id ? (
+        <FrameMenu frame={node.attrs.frame} onChange={(frame) => updateAttributes({ frame })} />
+      ) : null}
       {isImage && id && tooLarge ? (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-border px-3 py-2 text-sm">
           <span className="flex min-w-0 items-center gap-2 text-text-muted">

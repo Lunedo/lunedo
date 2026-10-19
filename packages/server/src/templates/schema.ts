@@ -4,7 +4,7 @@ import { accounts } from "../accounts/schema.js";
 import { primaryId, timestamps } from "../database/columns.js";
 import { storedFiles } from "../files/schema.js";
 import { organizations } from "../organizations/schema.js";
-import { spaces } from "../spaces/schema.js";
+import { articleType, spaces } from "../spaces/schema.js";
 
 export const templateLevels = ["instance", "organization", "space"] as const;
 export type TemplateLevel = (typeof templateLevels)[number];
@@ -37,6 +37,7 @@ export const pageTemplates = pgTable(
     schemaVersion: integer().notNull(),
     fields: jsonb().notNull(),
     series: jsonb(),
+    articleType: articleType(),
     filesAdopted: boolean().notNull().default(true),
     createdBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
     updatedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),

@@ -118,7 +118,7 @@ export class ChromiumRenderer implements Renderer {
     let abort = () => {};
     const stopped = new Promise<never>((_, reject) => {
       abort = () => {
-        void context.close();
+        context.close().catch(() => {});
         reject(signal.reason);
       };
     });

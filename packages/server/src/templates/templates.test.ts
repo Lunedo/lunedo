@@ -212,7 +212,9 @@ describe.skipIf(!baseUrl)("page templates", () => {
     expect(usable).toEqual(expect.arrayContaining([instance.id, own.id]));
     expect(usable).not.toContain(foreign.id);
     expect(usable).not.toContain(otherSpace.id);
-    expect(usable.filter((id) => id.startsWith("builtin:"))).toHaveLength(builtInTemplates.length);
+    expect(usable.filter((id) => id.startsWith("builtin:"))).toHaveLength(
+      builtInTemplates.filter((template) => !template.knowledgeBase).length,
+    );
     await expect(
       test.services.templates.instantiate(context.editor, context.space.id, {
         templateId: foreign.id,
@@ -229,6 +231,12 @@ describe.skipIf(!baseUrl)("page templates", () => {
 
   it("creates a page from every built-in template in English and German", async () => {
     const context = await setup();
+    const knowledgeBase = await test.services.spaces.create(
+      context.editor,
+      context.org.id,
+      { name: "Help", key: "TPLHELP", type: "knowledgeBase", grants: [] },
+      test.services.spacePermissions.holders,
+    );
     const chain = { user: context.editorId };
     for (const language of ["en", "de"] as const) {
       await test.settings.set(languageSetting, chain, "user", language);
@@ -240,7 +248,8 @@ describe.skipIf(!baseUrl)("page templates", () => {
           if (field.type === "person") values[field.key] = context.editorId;
           if (field.type === "choice") values[field.key] = field.options?.[0] ?? "";
         }
-        const page = await test.services.templates.instantiate(context.editor, context.space.id, {
+        const spaceId = template.knowledgeBase ? knowledgeBase.id : context.space.id;
+        const page = await test.services.templates.instantiate(context.editor, spaceId, {
           templateId: `builtin:${template.key}`,
           values,
           placement: { parentId: null },

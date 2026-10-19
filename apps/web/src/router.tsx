@@ -507,6 +507,33 @@ const spaceTemplatesRoute = createRoute({
   ),
 });
 
+const spaceVisibilityRoute = createRoute({
+  getParentRoute: () => spaceSettingsRoute,
+  path: "/visibility",
+  component: lazyRouteComponent(
+    () => import("./knowledge-bases/settings/visibility-screen.js"),
+    "KnowledgeBaseVisibilityScreen",
+  ),
+});
+
+const spaceCategoriesRoute = createRoute({
+  getParentRoute: () => spaceSettingsRoute,
+  path: "/categories",
+  component: lazyRouteComponent(
+    () => import("./knowledge-bases/settings/categories-screen.js"),
+    "CategoriesScreen",
+  ),
+});
+
+const spaceArticleTemplatesRoute = createRoute({
+  getParentRoute: () => spaceSettingsRoute,
+  path: "/article-templates",
+  component: lazyRouteComponent(
+    () => import("./knowledge-bases/settings/article-templates-screen.js"),
+    "ArticleTemplatesScreen",
+  ),
+});
+
 const settingsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/settings",
@@ -912,6 +939,9 @@ const routeTree = rootRoute.addChildren([
         spaceShortcutsRoute,
         spaceChatRoute,
         spaceTemplatesRoute,
+        spaceVisibilityRoute,
+        spaceCategoriesRoute,
+        spaceArticleTemplatesRoute,
         spaceExportRoute,
       ]),
     ]),

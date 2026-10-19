@@ -1553,7 +1553,25 @@
     "templateFromRestrictedPage": "Die Seite ist eingeschränkt. Bestätige, dass alle, die die Vorlagen dieses Space verwenden können, ihren Inhalt sehen dürfen, und speichere dann erneut.",
     "notCopyable": "Nur Seiten, Ordner und Whiteboards können kopiert werden. Kopiere stattdessen eine Seite oder einen Ordner.",
     "neverPublished": "Die Seite wurde nie veröffentlicht und hat daher keinen Inhalt zum Kopieren. Veröffentliche sie zuerst und kopiere sie dann.",
-    "otherOrganization": "Inhalte können nur innerhalb ihrer Organisation kopiert werden. Wähle einen Space derselben Organisation."
+    "otherOrganization": "Inhalte können nur innerhalb ihrer Organisation kopiert werden. Wähle einen Space derselben Organisation.",
+    "invalidVisibility": "Wähle, wer den Space lesen darf.",
+    "knowledgeBaseConfidential": "Eine Wissensdatenbank kann nicht vertraulich sein. Erstelle sie ohne die Option vertraulich.",
+    "invalidAudience": "Nur Wissensdatenbanken haben eine Zielgruppe. Wähle für diesen Space stattdessen eine Sichtbarkeit.",
+    "knowledgeBaseVisibility": "Wer eine Wissensdatenbank lesen darf, legst du in ihrer Sichtbarkeit fest.",
+    "knowledgeBaseContent": "Eine Wissensdatenbank enthält nur Artikel und Kategorien. Lege Blogbeiträge, Besprechungen, Whiteboards und Links in einem anderen Space an.",
+    "knowledgeBaseMode": "Artikel stehen immer im Veröffentlichen-Modus. Stelle die Seite auf Veröffentlichen um, bevor du sie in die Wissensdatenbank verschiebst.",
+    "knowledgeBasePlacement": "Artikel und Kategorien stehen in Kategorien oder ganz oben, nicht unter anderen Artikeln. Wähle stattdessen eine Kategorie.",
+    "notKnowledgeBase": "Der Space ist keine Wissensdatenbank.",
+    "notCategory": "Nur Ordner auf den ersten beiden Ebenen einer Wissensdatenbank sind Kategorien mit eigenen Einstellungen.",
+    "invalidIcon": "Wähle ein Icon aus der Liste.",
+    "invalidArticleType": "Nur Artikel einer Wissensdatenbank haben eine Artikelart.",
+    "invalidContactEmail": "Gib eine E-Mail-Adresse ein, zum Beispiel hilfe@example.org.",
+    "audienceWidening": "Mehr Personen könnten die Wissensdatenbank lesen. Bestätige die Änderung, um sie zu übernehmen.",
+    "audienceGroupsMissing": "Wähle mindestens eine Gruppe, die die Wissensdatenbank lesen darf.",
+    "tooManyGroups": "Wähle höchstens 100 Gruppen. Fasse Personen in weniger Gruppen zusammen, wenn du mehr brauchst.",
+    "requiredSectionsEmpty": "Ein Pflichtabschnitt ist leer. Fülle ihn aus und veröffentliche dann erneut.",
+    "sectionNotFound": "Die Vorlage hat diesen Abschnitt nicht. Lade die Seite neu und versuche es noch einmal.",
+    "draftNotVisible": "Nur Bearbeitende des Artikels sehen seinen Entwurf."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -3814,6 +3832,9 @@
         "connected": "Chat-Kanal verbunden",
         "changed": "Chat-Kanal geändert",
         "removed": "Chat-Kanal entfernt"
+      },
+      "knowledgeBase": {
+        "audienceChanged": "Lesende einer Wissensdatenbank geändert"
       }
     },
     "action": "Aktion",
@@ -9244,5 +9265,192 @@
     },
     "failed": "Der Eintrag konnte nicht kopiert werden",
     "accessChanged": "Wer die Kopie öffnen kann, hat sich inzwischen geändert. Prüfe die Liste unten und kopiere erneut."
+  },
+  "knowledgeBase": {
+    "articles": "Artikel",
+    "treeTitle": "Kategorien und Artikel",
+    "newArticle": "Neuer Artikel",
+    "newCategory": "Neue Kategorie",
+    "newArticleInside": "Neuer Artikel in dieser Kategorie",
+    "newCategoryInside": "Neue Unterkategorie",
+    "publishOnly": "Artikel stehen immer im Veröffentlichen-Modus: Lesende sehen die zuletzt veröffentlichte Version, während Autorinnen und Autoren an einem Entwurf arbeiten.",
+    "articleTypes": {
+      "howTo": "Anleitung",
+      "troubleshooting": "Störung",
+      "none": "Ohne Art",
+      "change": "Artikelart: {type}. Ändern",
+      "changed": "Artikelart ist jetzt {type}",
+      "changeFailed": "Die Artikelart konnte nicht geändert werden",
+      "other": "Andere Art"
+    },
+    "portal": {
+      "view": "Im Portal ansehen",
+      "notYet": "Das Portal für Lesende kommt in einer späteren Version. Bis dahin öffnen Lesende die Artikel hier."
+    },
+    "list": {
+      "title": "Titel",
+      "subcategory": "Unterkategorie",
+      "owner": "Verantwortlich",
+      "updated": "Aktualisiert",
+      "unpublished": "Nicht veröffentlicht",
+      "noSubcategory": "Keine",
+      "noOwner": "Niemand",
+      "loadFailed": "Die Artikel konnten nicht geladen werden.",
+      "caption": "Artikel in {category}",
+      "emptyCategory": "In dieser Kategorie gibt es noch keine Artikel.",
+      "more": "Weitere Artikel in {category} zeigen",
+      "description": "Artikel dieser Wissensdatenbank, nach Kategorie gruppiert.",
+      "typeFilter": "Artikelart",
+      "allTypes": "Alle",
+      "types": {
+        "howTo": "Anleitungen",
+        "troubleshooting": "Störungen"
+      },
+      "categoriesFailed": "Die Kategorien konnten nicht geladen werden.",
+      "noCategoriesTitle": "Noch keine Kategorien",
+      "noCategoriesEditor": "Lege eine Kategorie wie IT oder Personal an und schreib darin Artikel. Artikel können auch außerhalb jeder Kategorie stehen.",
+      "noCategoriesReader": "In dieser Wissensdatenbank ist noch nichts veröffentlicht.",
+      "withoutCategory": "Ohne Kategorie",
+      "total": "{count, plural, one {# Artikel} other {# Artikel}} in Kategorien",
+      "emptyFiltered": "In dieser Kategorie gibt es keine Artikel dieser Art."
+    },
+    "create": {
+      "typeLabel": "Art des Space",
+      "standard": "Standard-Space",
+      "standardDescription": "Seiten, Ordner, Blogbeiträge, Besprechungen und Whiteboards für ein Team oder Projekt.",
+      "knowledgeBase": "Wissensdatenbank",
+      "knowledgeBaseDescription": "Artikel wie Anleitungen und Störungen, nach Kategorien sortiert. Artikel werden immer mit Versionen veröffentlicht.",
+      "fixed": "Die Art lässt sich nach dem Erstellen nicht mehr ändern.",
+      "groupsHint": "Füge unten die Gruppen hinzu, die die Wissensdatenbank lesen dürfen, zum Beispiel mit der Rolle Lesen.",
+      "groupsRequired": "Gib unten mindestens einer Gruppe eine Rolle oder wähle eine andere Zielgruppe."
+    },
+    "audience": {
+      "title": "Sichtbarkeit",
+      "description": "Wer die Wissensdatenbank lesen darf.",
+      "label": "Wer darf lesen",
+      "loadFailed": "Die Einstellungen der Wissensdatenbank konnten nicht geladen werden.",
+      "narrowHint": "Kategorien und Artikel können das Lesen mit Einschränkungen weiter begrenzen, aber nie erweitern. Wer bearbeiten darf, regeln die Berechtigungen des Space.",
+      "public": {
+        "title": "Öffentlich",
+        "description": "Alle, auch ohne Anmeldung, sobald das Portal verfügbar ist. Bis dahin lesen alle angemeldeten Personen dieser Instanz sie hier."
+      },
+      "signedIn": {
+        "title": "Alle angemeldeten Personen",
+        "description": "Alle mit einem internen Konto dieser Instanz. Gäste nur, wenn ihnen der Space freigegeben ist."
+      },
+      "groups": {
+        "title": "Bestimmte Gruppen",
+        "description": "Nur Mitglieder der gewählten Gruppen, dazu alle mit einer anderen Rolle."
+      },
+      "portal": {
+        "title": "Portalkonten",
+        "description": "Externe Lesende mit einem Portalkonto, zum Beispiel Kunden. Portalkonten sehen nie interne Spaces. In Pagehall selbst lesen nur Personen mit einer Rolle."
+      },
+      "groupsField": "Gruppen",
+      "groupsPlaceholder": "Gruppe nach Namen suchen",
+      "groupsRequired": "Wähle mindestens eine Gruppe, die die Wissensdatenbank lesen darf.",
+      "publicNoteTitle": "Bevor du sie öffentlich machst",
+      "publicNote": "Suchmaschinen können öffentliche Artikel noch eine Zeit lang zeigen, auch wenn du die Wissensdatenbank später wieder einschränkst.",
+      "save": "Sichtbarkeit speichern",
+      "unsaved": "Nicht gespeichert",
+      "saved": "Sichtbarkeit gespeichert",
+      "saveFailed": "Die Sichtbarkeit konnte nicht gespeichert werden",
+      "adminsOnly": "Nur Space-Admins können die Sichtbarkeit ändern.",
+      "confirmTitle": "Mehr Personen {name} lesen lassen?",
+      "confirmDescription": "{count, plural, =0 {Noch ist kein Artikel ohne Einschränkung veröffentlicht. Artikel, die du später veröffentlichst, werden} one {# Artikel wird} other {# Artikel werden}} für {audience} lesbar, sofern Kategorien oder Artikel nichts anderes festlegen. Die Änderung wird im Audit-Log festgehalten.",
+      "confirm": "Lesen erlauben"
+    },
+    "settings": {
+      "visibility": "Sichtbarkeit",
+      "categories": "Kategorien",
+      "articleTemplates": "Artikelvorlagen",
+      "typeTitle": "Wissensdatenbank",
+      "typeDescription": "Dieser Space ist eine Wissensdatenbank. Wer sie lesen darf, legt ihre Sichtbarkeit fest, nicht eine allgemeine Sichtbarkeit des Space.",
+      "toVisibility": "Sichtbarkeit öffnen"
+    },
+    "contact": {
+      "label": "Kontaktadresse",
+      "knowledgeBaseTitle": "Kontaktadresse der Wissensdatenbank",
+      "hint": "An diese Adresse schreiben Lesende, wenn ein Artikel nicht geholfen hat. Kategorien ohne eigene Adresse verwenden sie. Pagehall verschickt nichts selbst und legt keine Tickets an.",
+      "invalid": "Gib eine E-Mail-Adresse ein, zum Beispiel hilfe@example.org.",
+      "setHere": "Hier festgelegt",
+      "inherited": "Geerbt von {source}",
+      "none": "Noch keine Adresse",
+      "placeholder": "hilfe@example.org",
+      "reset": "Adresse von {source} verwenden",
+      "knowledgeBase": "der Wissensdatenbank"
+    },
+    "categories": {
+      "title": "Kategorien",
+      "description": "Icon, Einleitung und Kontaktadresse der Kategorien und ihre Reihenfolge. Ordner auf der ersten Ebene sind Kategorien, auf der zweiten Unterkategorien.",
+      "icon": "Icon",
+      "iconHint": "Ohne Icon zeigt das Portal den Anfangsbuchstaben des Namens.",
+      "noIcon": "Kein Icon",
+      "intro": "Einleitung",
+      "introHint": "Ein, zwei Sätze, die erklären, was Lesende in der Kategorie finden.",
+      "inParent": "in {parent}",
+      "moveUp": "{title} nach oben verschieben",
+      "moveDown": "{title} nach unten verschieben",
+      "moved": "{title} verschoben",
+      "moveFailed": "Die Kategorie konnte nicht verschoben werden"
+    },
+    "templates": {
+      "title": "Artikelvorlagen",
+      "description": "Vorlagen geben Artikeln Abschnitte mit Bedeutung. Schreiben ohne Vorlage ist immer möglich.",
+      "loadFailed": "Die Artikelvorlagen konnten nicht geladen werden.",
+      "builtIn": "Mit Pagehall geliefert",
+      "noSections": "Diese Vorlage hat keine Abschnitte.",
+      "requiredOf": "{section} ist Pflicht",
+      "adminsOnly": "Nur Space-Admins können festlegen, welche Abschnitte Pflicht sind.",
+      "hint": "Pflichtabschnitte sind standardmäßig aus. Ist einer an, lässt sich ein Artikel aus dieser Vorlage erst veröffentlichen, wenn der Abschnitt Inhalt hat. Bereits veröffentlichte Artikel bleiben veröffentlicht.",
+      "manage": "Vorlagen dieses Space verwalten"
+    },
+    "required": {
+      "title": "Pflichtabschnitte sind leer",
+      "description": "{count, plural, one {Fülle den Abschnitt {sections} aus und veröffentliche dann erneut.} other {Fülle die Abschnitte {sections} aus und veröffentliche dann erneut.}}",
+      "atSection": "{title} ist Pflicht. Füge hier Text oder ein Bild ein, bevor du veröffentlichst."
+    },
+    "frame": {
+      "change": "Rahmen des Bilds",
+      "auto": "Rahmen wie im Abschnitt",
+      "on": "Immer mit Rahmen",
+      "off": "Ohne Rahmen"
+    },
+    "icons": {
+      "monitor": "Bildschirm",
+      "laptop": "Laptop",
+      "smartphone": "Smartphone",
+      "printer": "Drucker",
+      "wifi": "WLAN",
+      "server": "Server",
+      "cloud": "Cloud",
+      "database": "Datenbank",
+      "key-round": "Schlüssel",
+      "lock": "Schloss",
+      "shield": "Schild",
+      "mail": "E-Mail",
+      "phone": "Telefon",
+      "message-circle": "Chat",
+      "users": "Personen",
+      "graduation-cap": "Ausbildung",
+      "briefcase": "Aktentasche",
+      "building-2": "Gebäude",
+      "wallet": "Geldbörse",
+      "heart-pulse": "Gesundheit",
+      "calendar-days": "Kalender",
+      "file-text": "Dokument",
+      "book-open": "Buch",
+      "globe": "Globus",
+      "settings": "Einstellungen",
+      "circle-help": "Hilfe",
+      "info": "Information",
+      "list-checks": "Checkliste",
+      "list-ordered": "Schritte",
+      "life-buoy": "Rettungsring",
+      "eye": "Auge",
+      "search": "Lupe",
+      "wrench": "Schraubenschlüssel",
+      "triangle-alert": "Warnung"
+    }
   }
 }

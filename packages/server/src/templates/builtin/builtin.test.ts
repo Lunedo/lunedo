@@ -4,6 +4,8 @@ import { type NodeJson, validateDocument } from "@pagehall/editor-schema";
 import { describe, expect, it } from "vitest";
 import { templateFieldsSchema } from "../fields.js";
 import { templateCategories } from "../schema.js";
+import { articleHowTo } from "./article-how-to.js";
+import { articleTroubleshooting } from "./article-troubleshooting.js";
 import { builtInTemplates } from "./index.js";
 import { templateLanguages } from "./types.js";
 
@@ -20,6 +22,8 @@ const expectedOrder = [
   "team-home",
   "team-meeting",
   "one-on-one",
+  "article-how-to",
+  "article-troubleshooting",
 ];
 
 const supportFiles = new Set(["index.ts", "nodes.ts", "types.ts", "builtin.test.ts"]);
@@ -59,6 +63,30 @@ describe("built-in templates", () => {
     for (const template of builtInTemplates) {
       expect(templateCategories).toContain(template.category);
     }
+  });
+
+  it("give knowledge base articles their type and sections with icons", () => {
+    const articles = builtInTemplates.filter((template) => template.knowledgeBase);
+    expect(articles.map((template) => [template.key, template.articleType])).toEqual([
+      ["article-how-to", "howTo"],
+      ["article-troubleshooting", "troubleshooting"],
+    ]);
+    for (const template of articles) {
+      for (const language of templateLanguages) {
+        const sections = collect(template.text[language].document, "section");
+        expect(sections.length).toBeGreaterThan(0);
+        for (const node of sections) expect(node.attrs?.icon).toEqual(expect.any(String));
+      }
+    }
+    expect(collect(articleHowTo.text.de.document, "section").map((node) => node.attrs?.title)).toEqual([
+      "Worum geht es",
+      "Bevor du startest",
+      "Schritte",
+      "Hat es nicht geklappt?",
+    ]);
+    expect(
+      collect(articleTroubleshooting.text.de.document, "section").map((node) => node.attrs?.title),
+    ).toEqual(["Was du siehst", "Ursache", "Lösung"]);
   });
 
   it("define the same field keys and types in every language", () => {

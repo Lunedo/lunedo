@@ -112,6 +112,13 @@ export {
 } from "../imports/schema.js";
 export { jobProgress } from "../jobs/schema.js";
 export {
+  articleNumbers,
+  articleSlugs,
+  knowledgeBaseCategories,
+  knowledgeBases,
+  requiredSections,
+} from "../knowledge-bases/schema.js";
+export {
   instanceSecrets,
   mailCredentialKind,
   mailCredentials,
@@ -190,12 +197,14 @@ export {
   shareLinks,
 } from "../sharing/schema.js";
 export {
+  articleType,
   collaborationClients,
   collaborationPresence,
   deletedSpaceAdministrators,
   discardedDrafts,
   discardReason,
   itemOwnershipChanges,
+  knowledgeBaseAudience,
   pageDocuments,
   pageExcerpts,
   pageLabels,
@@ -212,6 +221,7 @@ export {
   spaceRole,
   spaceShortcuts,
   spaces,
+  spaceType,
   spaceVisibility,
   trashEntries,
   trashEntryKind,

@@ -1,7 +1,9 @@
 import {
+  articleTypes,
   builtInPageStatuses,
   ITEM_DESCRIPTION_MAX_LENGTH,
   ITEM_TITLE_MAX_LENGTH,
+  knowledgeBaseAudiences,
   LABEL_MAX_LENGTH,
   MAX_TEMPLATE_TITLE_PATTERN,
   pageModes,
@@ -10,6 +12,7 @@ import {
   SPACE_DESCRIPTION_MAX_LENGTH,
   SPACE_NAME_MAX_LENGTH,
   spaceRoles,
+  spaceTypes,
   spaceVisibilities,
   treeItemKinds,
 } from "@pagehall/server";
@@ -22,6 +25,21 @@ export const visibilitySchema = z
   .describe(
     "Who can read the space besides its holders: `private` (only holders), `organization` (every member of the organization) or `instance` (every internal user of the instance).",
   );
+
+export const spaceTypeSchema = extensibleEnum(
+  spaceTypes,
+  "Type of the space: `standard` for pages, blog posts, meetings and whiteboards, or `knowledgeBase` for articles in categories. Chosen at creation.",
+);
+
+export const audienceSchema = extensibleEnum(
+  knowledgeBaseAudiences,
+  "Who may read a knowledge base: `public` (everyone, also without signing in, once the portal exists; in Pagehall all internal users), `signedIn` (all internal users of the instance), `groups` (members of the groups that hold the reader role) or `portal` (portal accounts; in Pagehall only holders of a role). Categories and articles can narrow it with view restrictions, never widen it.",
+);
+
+export const articleTypeSchema = extensibleEnum(
+  articleTypes,
+  "Type of an article: `howTo` (step-by-step instructions) or `troubleshooting` (symptom, cause and solution).",
+);
 
 export const roleSchema = z
   .enum(spaceRoles)
@@ -39,6 +57,10 @@ export const spaceSchema = z
   .object({
     id: uuid("ID of the space."),
     key: z.string().describe("Key of the space, 2 to 10 letters or digits. It appears in addresses."),
+    type: spaceTypeSchema,
+    audience: audienceSchema
+      .nullable()
+      .describe("Who may read the knowledge base, or null for other spaces."),
     name: z.string().describe("Name of the space. Empty for a personal space that has no name of its own."),
     description: z.string().describe("Short description, up to 1000 characters."),
     visibility: visibilitySchema,
@@ -66,7 +88,7 @@ export const spaceSchema = z
     personal: z.boolean().describe("Whether this is a personal space."),
     ownerId: uuid("Owner of a personal space, or null.").nullable(),
     ownerName: z.string().nullable().describe("Name of the owner of a personal space, or null."),
-    overviewItemId: uuid("The overview page of the space.").nullable(),
+    overviewItemId: uuid("The overview page of the space, or null for a knowledge base.").nullable(),
     archived: z.boolean().describe("Whether the space is archived. Archived spaces are read-only."),
     exportEnabled: z
       .boolean()
@@ -92,6 +114,8 @@ export const spaceWithRoleSchema = spaceSchema
 export const exampleSpace = {
   id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
   key: "ITOPS",
+  type: "standard",
+  audience: null,
   name: "IT Operations",
   description: "Runbooks and how-tos of the IT team",
   visibility: "organization",
@@ -129,7 +153,15 @@ export const createSpaceSchema = z
       .max(SPACE_DESCRIPTION_MAX_LENGTH)
       .optional()
       .describe("Short description, up to 1000 characters."),
-    visibility: visibilitySchema,
+    visibility: visibilitySchema
+      .optional()
+      .describe(
+        "Who can read the space besides its holders. Required for standard spaces; a knowledge base takes it from `audience`.",
+      ),
+    type: spaceTypeSchema.default("standard"),
+    audience: audienceSchema
+      .optional()
+      .describe("Who may read a knowledge base. Default `signedIn`. Only for knowledge bases."),
     confidential: z
       .boolean()
       .default(false)
@@ -142,6 +174,10 @@ export const createSpaceSchema = z
       .describe("Roles for holders. The creator always becomes space admin in addition."),
   })
   .strict()
+  .refine((space) => space.type !== "standard" || space.visibility !== undefined, {
+    message: "A standard space needs a visibility",
+    path: ["visibility"],
+  })
   .describe("A new space.");
 
 export const impactSchema = z
@@ -414,6 +450,11 @@ export const treeItemSchema = z
     contentLanguage: contentLanguageSchema
       .nullable()
       .describe("Language of the page content for search, or null to use the language of the space."),
+    articleType: articleTypeSchema
+      .nullable()
+      .describe(
+        "Type of an article in a knowledge base, or null for other items and articles without a type.",
+      ),
     ownerId: uuid(
       "Owner of the item, or null. The owner stays set when the person leaves; `owner.active` in the item details says whether the item has an active owner.",
     ).nullable(),
@@ -446,6 +487,7 @@ export const exampleItem = {
   creatorId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
   ownerId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
   contentLanguage: null,
+  articleType: null,
   status: examplePageStatus,
   createdAt: "2026-10-05T08:00:00.000Z",
   updatedAt: "2026-10-05T08:00:00.000Z",
@@ -531,7 +573,13 @@ export const createItemSchema = z
     ...placementShape,
     mode: modeSchema
       .optional()
-      .describe("Editing mode of a new page. Without it, the default of the space applies."),
+      .describe(
+        "Editing mode of a new page. Without it, the default of the space applies. Articles of a knowledge base always use `publish`.",
+      ),
+    articleType: articleTypeSchema
+      .nullable()
+      .optional()
+      .describe("Type of a new article in a knowledge base. A template with a type sets it instead."),
     template: z
       .object({
         id: z

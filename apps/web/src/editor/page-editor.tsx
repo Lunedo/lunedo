@@ -3,6 +3,7 @@ import { IconButton, SkeletonText, useToast } from "@pagehall/ui";
 import { useQuery } from "@tanstack/react-query";
 import type { Editor } from "@tiptap/core";
 import { DragHandle } from "@tiptap/extension-drag-handle-react";
+import { TextSelection } from "@tiptap/pm/state";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import { GripVertical, PanelTopClose, PanelTopOpen } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
@@ -21,6 +22,7 @@ import { EmbedDialog } from "./embed-dialog.js";
 import { EmojiPicker } from "./emoji-picker.js";
 import { setHeadingNumbers } from "./extensions/heading-numbers.js";
 import { createEditorExtensions } from "./extensions/index.js";
+import { type MissingSection, setRequiredSections } from "./extensions/required-sections.js";
 import { FindBar } from "./find-bar.js";
 import { LinkDialog } from "./link-dialog.js";
 import { SelectionMenu, TableMenu } from "./menus.js";
@@ -48,6 +50,7 @@ export interface PageEditorProps {
   activeThread?: string | null;
   onThreadClick?: (threadId: string) => void;
   numberHeadings?: boolean;
+  missingSections?: readonly MissingSection[];
 }
 
 const READ_ONLY_PROBLEMS = new Set(["permissionRevoked", "noEditPermission", "pageNotFound"]);
@@ -76,6 +79,7 @@ function CollaborativeEditor({
   onThreadClick,
   collaboration,
   numberHeadings = false,
+  missingSections,
 }: PageEditorProps & { collaboration: PageCollaboration }) {
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -164,7 +168,11 @@ function CollaborativeEditor({
       extensions: createEditorExtensions({
         t,
         spaceId,
-        collaboration: self ? { doc: collaboration.doc, provider: collaboration.provider, user: self } : null,
+        collaboration: {
+          doc: collaboration.doc,
+          provider: collaboration.provider,
+          user: self ?? { id: "", name: "", color: presenceColor("") },
+        },
         onOpenFind: actions.openFind,
         onFocusToolbar: actions.focusToolbar,
         onOpenLinkDialog: actions.openLinkDialog,
@@ -183,18 +191,49 @@ function CollaborativeEditor({
       immediatelyRender: true,
       shouldRerenderOnTransaction: false,
     },
-    [collaboration, self?.id],
+    [collaboration],
   );
 
   useEffect(() => {
     editorRef.current = editor;
   }, [editor]);
 
+  useEffect(() => {
+    if (editor && self && !editor.isDestroyed) editor.commands.updateUser(self);
+  }, [editor, self]);
+
   useEffect(() => (editor ? registerEditorActions(editor, actions) : undefined), [editor, actions]);
 
   useEffect(() => {
     if (editor) setHeadingNumbers(editor, numberHeadings);
   }, [editor, numberHeadings]);
+
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return;
+    const missing = missingSections ?? [];
+    setRequiredSections(editor, missing, (section) =>
+      t("knowledgeBase.required.atSection", { title: section.title }),
+    );
+    const first = missing[0];
+    if (!first) return;
+    let target: number | null = null;
+    editor.state.doc.descendants((node, position) => {
+      if (target !== null) return false;
+      if (node.type.name === "section" && node.attrs.key === first.key) target = position;
+      return node.type.name !== "section";
+    });
+    const start: number | null = target;
+    if (start === null) return;
+    editor
+      .chain()
+      .focus()
+      .command(({ tr }) => {
+        tr.setSelection(TextSelection.near(tr.doc.resolve(start + 1)));
+        return true;
+      })
+      .scrollIntoView()
+      .run();
+  }, [editor, missingSections, t]);
 
   useEffect(() => {
     onSaveStateChange?.(snapshot.saveState);

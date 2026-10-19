@@ -159,6 +159,7 @@ describe("storage format conversion", () => {
       alt: "Diagram",
       width: 300,
       align: "left",
+      frame: null,
     });
     expect(marksOf(page, "report.pdf")).toEqual([`link:{"href":"/api/v1/attachments/${REPORT}/content"}`]);
     expect(ofType(page, "unsupportedMacro").some((node) => node.attrs?.name === "missing-attachment")).toBe(

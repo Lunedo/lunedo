@@ -14,6 +14,7 @@ import { accountScopeChain } from "../accounts/scope.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
+import { isKnowledgeBase } from "../knowledge-bases/rules.js";
 import type { Logger } from "../logging/logger.js";
 import { rhythmSchema } from "../meetings/schedule.js";
 import { languageSetting } from "../settings/builtin.js";
@@ -22,7 +23,7 @@ import { actorIdOf, auditScopeOf, SpaceError } from "../spaces/common.js";
 import { DocumentInvalidError, migrated, type PageDocumentService } from "../spaces/documents.js";
 import type { Placement, TreeItem, TreeService } from "../spaces/items.js";
 import type { PeopleService } from "../spaces/people.js";
-import type { PageMode } from "../spaces/schema.js";
+import type { ArticleType, PageMode } from "../spaces/schema.js";
 import { visibleItem } from "../spaces/visibility.js";
 import type { StorageService } from "../storage/storage.js";
 import { builtInTemplates } from "./builtin/index.js";
@@ -52,6 +53,8 @@ export interface PageTemplate {
   fields: TemplateField[];
   document: DocumentJson;
   series: SeriesDefaults | null;
+  articleType: ArticleType | null;
+  knowledgeBase: boolean;
   updatedAt: Date | null;
 }
 
@@ -63,6 +66,7 @@ export interface TemplateInput {
   fields: TemplateField[];
   document: unknown;
   series?: SeriesDefaults | null | undefined;
+  articleType?: ArticleType | null | undefined;
 }
 
 export const seriesDefaultsSchema = z
@@ -87,6 +91,8 @@ type TemplateRow = {
   document: unknown;
   schema_version: number;
   series: unknown;
+  article_type: ArticleType | null;
+  knowledge_base: boolean;
   updated_at: Date | string;
 };
 
@@ -103,6 +109,8 @@ function toTemplate(row: TemplateRow): PageTemplate {
     fields: templateFieldsSchema.parse(row.fields),
     document: migrated(row.document, row.schema_version),
     series: row.series === null ? null : (seriesDefaultsSchema.safeParse(row.series).data ?? null),
+    articleType: row.article_type,
+    knowledgeBase: row.knowledge_base,
     updatedAt: new Date(row.updated_at),
   };
 }
@@ -129,9 +137,14 @@ function cleanText(value: string, max: number, code: string, label: string, requ
   return cleaned;
 }
 
-export function cleanTemplate(
-  input: TemplateInput,
-): Omit<TemplateInput, "document" | "series"> & { document: DocumentJson; series: SeriesDefaults | null } {
+export function cleanTemplate(input: TemplateInput): Omit<
+  TemplateInput,
+  "document" | "series" | "articleType"
+> & {
+  document: DocumentJson;
+  series: SeriesDefaults | null;
+  articleType: ArticleType | null;
+} {
   const name = cleanText(input.name, TEMPLATE_NAME_MAX_LENGTH, "invalidTemplateName", "The name", true);
   const description = cleanText(
     input.description,
@@ -170,6 +183,7 @@ export function cleanTemplate(
     fields: fields.data,
     document: validation.document,
     series: series?.data ?? null,
+    articleType: input.articleType ?? null,
   };
 }
 
@@ -268,6 +282,8 @@ export class TemplateService {
         fields: text.fields,
         document: text.document,
         series: template.series ?? null,
+        articleType: template.articleType ?? null,
+        knowledgeBase: template.knowledgeBase === true,
         updatedAt: null,
       };
     });
@@ -279,7 +295,9 @@ export class TemplateService {
   ): Promise<PageTemplate[]> {
     const result = await executor.execute<TemplateRow>(sql`
       select id, level, organization_id, space_id, name, description, category, title, fields, document,
-        schema_version, series, updated_at
+        schema_version, series, article_type, updated_at,
+        exists (select 1 from spaces ts where ts.id = page_templates.space_id and ts.type = 'knowledgeBase')
+          as knowledge_base
       from page_templates where ${condition}
       order by lower(name), id limit 1000`);
     return result.rows.map(toTemplate);
@@ -297,14 +315,22 @@ export class TemplateService {
   }
 
   async usable(actor: Principal, spaceId: string): Promise<PageTemplate[]> {
-    const space = await this.#database.execute<{ organization_id: string | null }>(
-      sql`select organization_id from spaces where id = ${spaceId}`,
+    const space = await this.#database.execute<{ organization_id: string | null; knowledge_base: boolean }>(
+      sql`select organization_id, type = 'knowledgeBase' as knowledge_base from spaces where id = ${spaceId}`,
     );
     const organizationId = space.rows[0]?.organization_id ?? null;
-    const stored = await this.#rows(sql`level = 'instance'
+    const knowledgeBase = space.rows[0]?.knowledge_base === true;
+    const stored = await this.#rows(
+      knowledgeBase
+        ? sql`level = 'space' and space_id = ${spaceId}`
+        : sql`level = 'instance'
       or (level = 'organization' and organization_id = ${organizationId})
-      or (level = 'space' and space_id = ${spaceId})`);
-    return [...this.builtIn(await this.language(actor)), ...stored];
+      or (level = 'space' and space_id = ${spaceId})`,
+    );
+    const builtIn = this.builtIn(await this.language(actor)).filter(
+      (template) => template.knowledgeBase === knowledgeBase,
+    );
+    return [...builtIn, ...stored];
   }
 
   async get(templateId: string, language: TemplateLanguage = "en"): Promise<PageTemplate | null> {
@@ -334,12 +360,12 @@ export class TemplateService {
   ): Promise<string> {
     await tx.execute(sql`
       insert into page_templates (id, level, organization_id, space_id, name, description, category, title,
-        document, schema_version, fields, series, created_by, updated_by)
+        document, schema_version, fields, series, article_type, created_by, updated_by)
       values (${id}, ${scope.level}, ${scope.level === "organization" ? scope.organizationId : null},
         ${scope.level === "space" ? scope.spaceId : null}, ${clean.name}, ${clean.description}, ${clean.category},
         ${clean.title}, ${JSON.stringify(clean.document)}::jsonb, ${editorSchemaVersion},
         ${JSON.stringify(clean.fields)}::jsonb, ${clean.series === null ? null : JSON.stringify(clean.series)}::jsonb,
-        ${actorIdOf(actor)}, ${actorIdOf(actor)})`);
+        ${clean.articleType}, ${actorIdOf(actor)}, ${actorIdOf(actor)})`);
     if (scope.level !== "space") {
       const organizationId = scope.level === "organization" ? scope.organizationId : null;
       await this.#audit.record(tx, {
@@ -353,8 +379,15 @@ export class TemplateService {
     return id;
   }
 
+  async #checkArticleType(scope: TemplateScope, articleType: ArticleType | null): Promise<void> {
+    if (articleType === null) return;
+    if (scope.level === "space" && (await isKnowledgeBase(this.#database, scope.spaceId))) return;
+    throw new SpaceError("invalidArticleType", "Only templates of a knowledge base have an article type");
+  }
+
   async create(actor: Principal, scope: TemplateScope, input: TemplateInput): Promise<PageTemplate> {
     const clean = cleanTemplate(input);
+    await this.#checkArticleType(scope, clean.articleType);
     const document = rewriteFileReferences(clean.document, () => null).document;
     const id = await this.#database.transaction((tx) =>
       this.insert(tx, actor, scope, { ...clean, document }),
@@ -443,6 +476,7 @@ export class TemplateService {
     const scope = await this.scopeOf(templateId);
     const current = await this.get(templateId);
     if (!scope || !current) throw new SpaceError("templateNotFound", "The template does not exist");
+    await this.#checkArticleType(scope, clean.articleType);
     await this.#database.transaction(async (tx) => {
       await this.#adoptLocked(tx, templateId, actor);
       const document = await this.#files.keepOwn(tx, templateId, clean.document);
@@ -451,6 +485,7 @@ export class TemplateService {
           category = ${clean.category}, title = ${clean.title}, document = ${JSON.stringify(document)}::jsonb,
           schema_version = ${editorSchemaVersion}, fields = ${JSON.stringify(clean.fields)}::jsonb,
           series = ${clean.series === null ? null : JSON.stringify(clean.series)}::jsonb,
+          article_type = ${clean.articleType},
           updated_by = ${actorIdOf(actor)}, updated_at = now()
         where id = ${templateId}`);
       if (scope.level !== "space") {
@@ -701,6 +736,8 @@ export class TemplateService {
       title,
       placement: input.placement,
       mode: input.mode,
+      articleType: template.knowledgeBase ? template.articleType : null,
+      templateId: template.id,
       documentFor: (tx, itemId, mode) =>
         this.#files.copyToPage(tx, {
           templateId: template.id,

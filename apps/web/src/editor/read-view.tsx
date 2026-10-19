@@ -27,6 +27,7 @@ import type { AttachmentUrl } from "../files/attachment-source.js";
 import { contentUrl } from "../files/attachments-api.js";
 import { useAttachmentPreview } from "../files/preview-host.js";
 import type { Formatter } from "../format/format.js";
+import { NamedIcon } from "../knowledge-bases/icons.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { useOpenPath } from "./context.js";
 import { anchorFromSelection } from "./dom-anchor.js";
@@ -260,6 +261,7 @@ export function PageReadView({
   const [embeds, setEmbeds] = useState<HTMLElement[]>([]);
   const [whiteboards, setWhiteboards] = useState<HTMLElement[]>([]);
   const [filePreviews, setFilePreviews] = useState<HTMLElement[]>([]);
+  const [sectionIcons, setSectionIcons] = useState<HTMLElement[]>([]);
   const embedServices = useEmbedServices();
   const [selection, setSelection] = useState<{ anchor: TextAnchor; top: number; left: number } | null>(null);
   const { taskStatuses, canToggleTask, onToggleTask, openThreads = [], activeThread = null } = collaboration;
@@ -304,6 +306,14 @@ export function PageReadView({
     setDiagramReferences(placeholders(".ph-diagram-reference"));
     setEmbeds(placeholders(".ph-embed-frame[data-src]"));
     setWhiteboards(placeholders(".ph-whiteboard[data-whiteboard-id]"));
+    setSectionIcons(
+      Array.from(root.querySelectorAll<HTMLElement>(".ph-section[data-icon] > h2")).map((heading) => {
+        const slot = document.createElement("span");
+        slot.className = "ph-section-icon-slot";
+        heading.prepend(slot);
+        return slot;
+      }),
+    );
     setFilePreviews(
       Array.from(root.querySelectorAll<HTMLElement>(".ph-file[data-preview]")).map((file) => {
         const slot = document.createElement("div");
@@ -553,6 +563,15 @@ export function PageReadView({
       )}
       {whiteboards.map((element) =>
         createPortal(<WhiteboardBlock whiteboardId={element.dataset.whiteboardId ?? null} />, element),
+      )}
+      {sectionIcons.map((element) =>
+        createPortal(
+          <NamedIcon
+            name={(element.parentElement?.parentElement as HTMLElement | null)?.dataset.icon}
+            className="ph-section-icon"
+          />,
+          element,
+        ),
       )}
       {filePreviews.map((element) => {
         const file = element.parentElement as HTMLElement;

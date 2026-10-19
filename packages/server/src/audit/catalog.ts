@@ -2,6 +2,7 @@ import { chatChannelKinds, smtpOAuth2Providers } from "@pagehall/shared";
 import { z } from "zod";
 import type { PrincipalType } from "../accounts/principal.js";
 import { exportFormats } from "../exports/options.js";
+import { knowledgeBaseAudiences } from "../spaces/schema.js";
 
 export const auditTargetTypes = [
   "account",
@@ -1015,6 +1016,22 @@ export const auditCatalog = {
       personal: z.boolean(),
       ownerId: z.uuid().nullable(),
       confidential: z.literal(true).optional(),
+      type: z.literal("knowledgeBase").optional(),
+      audience: z.enum(knowledgeBaseAudiences).optional(),
+    }),
+    visibility: "organization",
+  }),
+  "knowledgeBase.audienceChanged": event({
+    actor: ["account", "system"],
+    target: "space",
+    fields: z.object({
+      name: z.string(),
+      audience: z.enum(knowledgeBaseAudiences),
+      previousAudience: z.enum(knowledgeBaseAudiences),
+      groupIds: z.array(z.uuid()).max(100),
+      previousGroupIds: z.array(z.uuid()).max(500),
+      widened: z.boolean(),
+      articles: z.number().int().min(0),
     }),
     visibility: "organization",
   }),
