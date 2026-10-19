@@ -55,7 +55,7 @@ import {
   Wrench,
   X,
 } from "lucide";
-import { escape, type Html, raw } from "./html.js";
+import { escapeHtml, type Html, raw } from "./html.js";
 
 const ICONS: Readonly<Record<string, IconNode>> = {
   "arrow-right": ArrowRight,
@@ -125,11 +125,11 @@ export function icon(name: string, className = ""): Html {
     .map(
       ([tag, attributes]) =>
         `<${tag} ${Object.entries(attributes)
-          .map(([key, value]) => `${key}="${escape(String(value))}"`)
+          .map(([key, value]) => `${key}="${escapeHtml(String(value))}"`)
           .join(" ")}/>`,
     )
     .join("");
-  const classes = className ? `i ${escape(className)}` : "i";
+  const classes = className ? `i ${escapeHtml(className)}` : "i";
   return raw(
     `<svg class="${classes}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${children}</svg>`,
   );

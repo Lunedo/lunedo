@@ -285,7 +285,14 @@
         "popover": "0 10px 30px rgba(0, 0, 0, 0.45)"
       }
     },
-    "radius": { "sm": "0.375rem", "md": "0.625rem", "lg": "0.75rem", "xl": "1rem", "2xl": "1.5rem", "full": "9999px" },
+    "radius": {
+      "sm": "0.375rem",
+      "md": "0.625rem",
+      "lg": "0.75rem",
+      "xl": "1rem",
+      "2xl": "1.5rem",
+      "full": "9999px"
+    },
     "font": {
       "size": {
         "xs": "0.8125rem",

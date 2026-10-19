@@ -14,7 +14,7 @@ const ESCAPES: Record<string, string> = {
   "'": "&#39;",
 };
 
-export function escape(value: string): string {
+export function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => ESCAPES[character] ?? character);
 }
 
@@ -26,7 +26,7 @@ function part(value: unknown): string {
   if (value instanceof Html) return value.value;
   if (Array.isArray(value)) return value.map(part).join("");
   if (value === null || value === undefined || value === false) return "";
-  return escape(String(value));
+  return escapeHtml(String(value));
 }
 
 export function html(strings: TemplateStringsArray, ...values: unknown[]): Html {
