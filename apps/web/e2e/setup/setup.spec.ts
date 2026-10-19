@@ -11,6 +11,7 @@ import {
   writeState,
 } from "../support/environment.js";
 import { expectAccessible, freshTotp, signInWithPassword, waitForMail } from "../support/helpers.js";
+import { unique } from "../support/people.js";
 
 test.describe.configure({ mode: "serial" });
 
@@ -204,10 +205,11 @@ test.describe("e-mail", () => {
       await page.getByLabel("Port").fill(String(SMTP_PORT));
       await page.getByRole("radiogroup", { name: "Security" }).getByRole("radio", { name: /None/ }).click();
       await page.getByLabel("Sender address").fill("wiki@pagehall.test");
-      await page.getByLabel("Send a test mail to").fill(OWNER.email);
+      const recipient = `test.mail.${unique().toLowerCase()}@pagehall.test`;
+      await page.getByLabel("Send a test mail to").fill(recipient);
       await page.getByRole("button", { name: "Send test mail" }).click();
       await expect(page.getByText("The mail server accepted the test mail.")).toBeVisible();
-      await waitForMail(OWNER.email, /test/i);
+      await waitForMail(recipient, /test/i);
       await page.getByRole("button", { name: "Save", exact: true }).click();
       await expect(page.getByText("SMTP settings saved. Pagehall sends through SMTP.").first()).toBeVisible();
       await page.goto("/settings/instance/general");

@@ -28,6 +28,7 @@ describe("the page editor", () => {
     );
     const content = await screen.findByRole("textbox", { name: "Page content" });
     expect(content.getAttribute("contenteditable")).toBe("false");
+    expect(content.getAttribute("aria-readonly")).toBe("true");
 
     const collaboration = openCollaboration(PAGE_ID);
     act(() => {
@@ -36,6 +37,42 @@ describe("the page editor", () => {
       });
     });
     await waitFor(() => expect(content.getAttribute("contenteditable")).toBe("true"));
+    expect(content.getAttribute("aria-readonly")).toBe("false");
+    closeCollaboration(collaboration);
+  });
+
+  it("keeps the editor and its focus when the signed-in account arrives after it", async () => {
+    mockApi({ "GET /api/v1/account/preferences": () => ({ body: [] }) });
+    const { queryClient } = await renderWithProviders(
+      <PreferencesProvider>
+        <PageEditor pageId={PAGE_ID} spaceId="01929b1e-0000-7000-8000-0000000000a1" spaceKey="ITOPS" />
+      </PreferencesProvider>,
+      "en",
+      (client) => client.setQueryData(sessionQuery.queryKey, { ...SESSION, account: null } as never),
+    );
+    const content = await screen.findByRole("textbox", { name: "Page content" });
+    const collaboration = openCollaboration(PAGE_ID);
+    act(() => {
+      (collaboration.provider as unknown as { emit(event: string, payload: unknown): void }).emit("synced", {
+        state: true,
+      });
+    });
+    await waitFor(() => expect(content.getAttribute("contenteditable")).toBe("true"));
+    act(() => content.focus());
+    expect(document.activeElement).toBe(content);
+
+    act(() => {
+      queryClient.setQueryData(sessionQuery.queryKey, SESSION as never);
+    });
+
+    await waitFor(() =>
+      expect(collaboration.provider.awareness?.getLocalState()?.user).toMatchObject({
+        id: SESSION.account.id,
+        name: SESSION.account.name,
+      }),
+    );
+    expect(screen.getByRole("textbox", { name: "Page content" })).toBe(content);
+    expect(document.activeElement).toBe(content);
     closeCollaboration(collaboration);
   });
 

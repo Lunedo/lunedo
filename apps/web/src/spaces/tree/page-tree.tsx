@@ -18,6 +18,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -67,6 +68,7 @@ interface TreeState {
   setDropTarget: (target: DropTarget | null) => void;
   dragged: React.RefObject<Dragged | null>;
   drop: (target: TreeItem, zone: Zone) => void;
+  loading: () => () => void;
 }
 
 const TreeContext = createContext<TreeState | null>(null);
@@ -133,6 +135,11 @@ export function PageTree({
   const dragged = useRef<Dragged | null>(null);
   const container = useRef<HTMLDivElement>(null);
   const root = useChildren(space.id, null);
+  const [loadingLevels, setLoadingLevels] = useState(0);
+  const loading = useCallback(() => {
+    setLoadingLevels((count) => count + 1);
+    return () => setLoadingLevels((count) => count - 1);
+  }, []);
 
   useEffect(() => {
     setExpanded((current) => {
@@ -229,8 +236,9 @@ export function PageTree({
       setDropTarget,
       dragged,
       drop,
+      loading,
     }),
-    [space, canEdit, currentId, expanded, toggle, focusedId, dropTarget, drop],
+    [space, canEdit, currentId, expanded, toggle, focusedId, dropTarget, drop, loading],
   );
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -286,7 +294,7 @@ export function PageTree({
         ref={container}
         role="tree"
         aria-label={t("tree.label")}
-        aria-busy={root.isPending || undefined}
+        aria-busy={root.isPending || loadingLevels > 0 || undefined}
         onKeyDown={onKeyDown}
         className="flex flex-col"
       >
@@ -297,10 +305,15 @@ export function PageTree({
   );
 }
 
-function LevelLoading({ depth }: { depth: number }) {
+function LevelLoading({ depth, hidden = false }: { depth: number; hidden?: boolean }) {
   const { t } = useTranslation();
   return (
-    <div role="none" className="flex h-row items-center" style={{ paddingInlineStart: indent(depth + 1) }}>
+    <div
+      role="none"
+      aria-hidden={hidden || undefined}
+      className="flex h-row items-center"
+      style={{ paddingInlineStart: indent(depth + 1) }}
+    >
       <Spinner label={t("tree.loading")} />
     </div>
   );
@@ -323,7 +336,9 @@ function TreeLevel({ parentId, depth }: { parentId: string | null; depth: number
   const tree = useTree();
   const children = useChildren(tree.space.id, parentId);
   const items = children.data?.pages.flatMap((page) => page.items) ?? [];
-  if (children.isPending) return <LevelLoading depth={depth} />;
+  const { loading } = tree;
+  useLayoutEffect(() => (children.isPending ? loading() : undefined), [children.isPending, loading]);
+  if (children.isPending) return <LevelLoading depth={depth} hidden />;
   if (children.isError) return <LevelLoadFailed onRetry={() => void children.refetch()} />;
   return (
     <>

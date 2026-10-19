@@ -25,13 +25,17 @@ export interface TemporaryDatabase {
   drop(): Promise<void>;
 }
 
+const RUN_VARIABLE = "PAGEHALL_TEST_DATABASE_RUN";
+const drops = new Set<Promise<void>>();
+
 /** Creates an empty database on the test server, or a copy of a template, and returns its URL. */
 export async function createTemporaryDatabase(
   baseUrl: string,
   prefix = "pagehall_test",
   template?: string,
 ): Promise<TemporaryDatabase> {
-  const name = `${prefix}_${Date.now()}_${randomBytes(4).toString("hex")}`;
+  const run = process.env[RUN_VARIABLE];
+  const name = `${prefix}_${run ? `${run}_` : ""}${Date.now()}_${randomBytes(4).toString("hex")}`;
   const admin = new pg.Client({ connectionString: baseUrl });
   await admin.connect();
   try {
@@ -56,11 +60,43 @@ export async function createTemporaryDatabase(
           if ((open.rows[0]?.count ?? 0) === 0) break;
           await new Promise((resolve) => setTimeout(resolve, CLOSE_INTERVAL_MS));
         }
-        await client.query(`drop database if exists "${name}" with (force)`);
-      } finally {
+      } catch (error) {
         await client.end();
+        throw error;
       }
+      const removal = client
+        .query(`drop database if exists "${name}" with (force)`)
+        .then(() => undefined)
+        .finally(() => client.end());
+      if (!run) return removal;
+      const pending = removal.catch(() => undefined);
+      drops.add(pending);
+      void pending.finally(() => drops.delete(pending));
     },
+  };
+}
+
+export async function settleDatabaseDrops(): Promise<void> {
+  await Promise.all([...drops]);
+}
+
+export function startDatabaseRun(baseUrl: string): () => Promise<void> {
+  const run = `run${randomBytes(4).toString("hex")}`;
+  process.env[RUN_VARIABLE] = run;
+  return async () => {
+    await settleDatabaseDrops();
+    const client = new pg.Client({ connectionString: baseUrl });
+    await client.connect();
+    try {
+      const left = await client.query<{ datname: string }>(
+        "select datname from pg_database where position($1 in datname) > 0",
+        [`_${run}_`],
+      );
+      for (const row of left.rows)
+        await client.query(`drop database if exists "${row.datname}" with (force)`);
+    } finally {
+      await client.end();
+    }
   };
 }
 
@@ -91,9 +127,11 @@ async function buildTemplate(baseUrl: string): Promise<string> {
   const admin = new pg.Client({ connectionString: baseUrl });
   await admin.connect();
   try {
-    await admin.query("select pg_advisory_lock(hashtext($1))", [TEMPLATE_LOCK]);
-    const existing = await admin.query("select 1 from pg_database where datname = $1", [name]);
-    if (existing.rowCount === 0) {
+    const exists = async () =>
+      (await admin.query("select 1 from pg_database where datname = $1", [name])).rowCount === 1;
+    if (await exists()) return name;
+    await admin.query("select pg_advisory_lock(hashtext($1))", [`${TEMPLATE_LOCK}:${name}`]);
+    if (!(await exists())) {
       await admin.query(`drop database if exists "${building}" with (force)`);
       await admin.query(`create database "${building}"`);
       const pool = createDatabasePool({

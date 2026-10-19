@@ -199,6 +199,17 @@ Adding or removing the label `breaking-api-change` runs CI again in its own conc
 
 Dependabot opens one pull request per ecosystem every Monday (`.github/dependabot.yml`).
 
+### Stable tests
+
+These patterns made tests fail now and then, mostly under load:
+
+- Waiting for a fixed time or for a duration measured on a fast machine. Wait for the condition itself: a promise resolved by the event, `expect.poll` or a Playwright assertion on the state the test needs next. A test that does much more work than its assertions need (hundreds of import runs, all migrations on an empty database) runs into its timeout on a loaded runner; make the work as small as the assertion allows.
+- Slow cleanup inside the test body. `DROP DATABASE` waits for a server-wide checkpoint; test databases are therefore dropped in the background (see [database.md](database.md)). Create what a test needs from the migrated template, not from an empty database.
+- Reading a result that the server records after the response, such as the first complete download of an export. Wait until the recorded state appears.
+- State shared between runs: a fixed mail address, or clearing Mailpit for everyone while another run or the development instance waits for its mail. Give each test its own addresses and organization.
+- Acting during a transition: clicking the next button while the step changes, or typing before the editor is ready. Assert the state that the next action needs (the next step's heading, the editor's save state) before acting.
+- Accessibility checks that run while a screen loads. A component must be valid in each of its loading states, not only once it has loaded; a loading row inside a `tree` is hidden from assistive technology while the tree is `aria-busy`, because accessibility checks reject a status element there even in a busy tree or a group.
+
 ### Caches on self-hosted runners
 
 On self-hosted runners no job uploads or downloads the pnpm store or the Turborepo cache through `actions/cache`; that took about two minutes per end-to-end job. The jobs use directories on the host instead, below the repository variable `CI_CACHE_DIR` (default `/srv/ci-cache`). `scripts/prepare-ci-cache.ts` checks the directory, creates the job's subdirectories and points pnpm and Turborepo at them:

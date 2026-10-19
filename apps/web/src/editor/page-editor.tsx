@@ -163,6 +163,8 @@ function CollaborativeEditor({
     [pageId, toast, t],
   );
 
+  const writable = snapshot.loaded && !(snapshot.problem && READ_ONLY_PROBLEMS.has(snapshot.problem));
+  const readOnly = useRef(!writable);
   const editor = useEditor(
     {
       extensions: createEditorExtensions({
@@ -180,12 +182,13 @@ function CollaborativeEditor({
         ...(uploads ? { onFiles: insertFiles } : {}),
       }),
       editorProps: {
-        attributes: {
+        attributes: () => ({
           class: "ph-content ph-editor-content",
           "aria-label": t("editor.contentLabel"),
           "aria-multiline": "true",
+          "aria-readonly": String(readOnly.current),
           role: "textbox",
-        },
+        }),
       },
       editable: collaboration.getSnapshot().loaded,
       immediatelyRender: true,
@@ -241,8 +244,9 @@ function CollaborativeEditor({
 
   useEffect(() => {
     if (!editor) return;
-    editor.setEditable(snapshot.loaded && !(snapshot.problem && READ_ONLY_PROBLEMS.has(snapshot.problem)));
-  }, [editor, snapshot.loaded, snapshot.problem]);
+    readOnly.current = !writable;
+    editor.setEditable(writable);
+  }, [editor, writable]);
 
   useEffect(() => {
     if (!editor) return;

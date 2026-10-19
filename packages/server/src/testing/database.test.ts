@@ -1,7 +1,13 @@
 import pg from "pg";
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 import { knownSchemaVersions } from "../database/migrate.js";
-import { createMigratedDatabase, testDatabaseBaseUrl } from "./database.js";
+import {
+  createMigratedDatabase,
+  createTemporaryDatabase,
+  settleDatabaseDrops,
+  startDatabaseRun,
+  testDatabaseBaseUrl,
+} from "./database.js";
 
 const baseUrl = testDatabaseBaseUrl();
 
@@ -28,7 +34,21 @@ async function exists(name: string): Promise<boolean> {
   }
 }
 
+function restoreRun(previous: string | undefined) {
+  if (previous === undefined) delete process.env.PAGEHALL_TEST_DATABASE_RUN;
+  else process.env.PAGEHALL_TEST_DATABASE_RUN = previous;
+}
+
 describe.skipIf(!baseUrl)("createMigratedDatabase", () => {
+  const dropped: string[] = [];
+  const left: { name: string; finishRun: () => Promise<void> }[] = [];
+
+  afterAll(async () => {
+    await settleDatabaseDrops();
+    for (const run of left) await run.finishRun();
+    for (const name of [...dropped, ...left.map((run) => run.name)]) expect(await exists(name)).toBe(false);
+  });
+
   it("gives every caller its own database with all migrations, also when they start at once", async () => {
     const databases = await Promise.all(
       Array.from({ length: 4 }, () => createMigratedDatabase(baseUrl ?? "", "pagehall_migrated_test")),
@@ -39,8 +59,21 @@ describe.skipIf(!baseUrl)("createMigratedDatabase", () => {
         expect(await appliedMigrations(database.url)).toBe(knownSchemaVersions().length);
       }
     } finally {
-      for (const database of databases) await database.drop();
+      await Promise.all(databases.map((database) => database.drop()));
+      dropped.push(...databases.map((database) => database.name));
     }
-    for (const database of databases) expect(await exists(database.name)).toBe(false);
+  });
+
+  it("tags the databases of a run so that the end of the run removes those still left", async () => {
+    const previous = process.env.PAGEHALL_TEST_DATABASE_RUN;
+    const finishRun = startDatabaseRun(baseUrl ?? "");
+    const run = process.env.PAGEHALL_TEST_DATABASE_RUN ?? "";
+    try {
+      const database = await createTemporaryDatabase(baseUrl ?? "", "pagehall_left_test");
+      expect(database.name).toContain(`_${run}_`);
+      left.push({ name: database.name, finishRun });
+    } finally {
+      restoreRun(previous);
+    }
   });
 });

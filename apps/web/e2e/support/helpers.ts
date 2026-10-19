@@ -37,10 +37,12 @@ export async function waitForMail(
   timeoutMs = 30_000,
 ): Promise<{ text: string }> {
   const deadline = Date.now() + timeoutMs;
+  let subjects: string[] = [];
   while (Date.now() < deadline) {
     const response = await fetch(`${MAILPIT_URL}/api/v1/search?query=${encodeURIComponent(`to:"${to}"`)}`);
     if (response.ok) {
       const result = (await response.json()) as { messages: MailpitMessage[] };
+      subjects = result.messages.map((candidate) => candidate.Subject);
       const message = result.messages.find((candidate) => subject.test(candidate.Subject));
       if (message) {
         const detail = (await (await fetch(`${MAILPIT_URL}/api/v1/message/${message.ID}`)).json()) as {
@@ -51,7 +53,12 @@ export async function waitForMail(
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
-  throw new Error(`No mail to ${to} matching ${subject}`);
+  throw new Error(
+    `No mail to ${to} matching ${subject} arrived in Mailpit (${MAILPIT_URL}) within ${timeoutMs / 1000} s. ` +
+      (subjects.length > 0
+        ? `Mails to this address have other subjects: ${subjects.join(" | ")}`
+        : "No mail to this address arrived at all; check that the worker delivers mail."),
+  );
 }
 
 export function linkFrom(text: string): string {

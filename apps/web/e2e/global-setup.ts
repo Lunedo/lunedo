@@ -3,14 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
-import {
-  BASE_URL,
-  DATABASE_BASE_URL,
-  E2E_PORT,
-  MAILPIT_URL,
-  STATE_DIR,
-  writeState,
-} from "./support/environment.js";
+import { BASE_URL, DATABASE_BASE_URL, E2E_PORT, STATE_DIR, writeState } from "./support/environment.js";
 import {
   FOLDER_EXPORT_TEMPLATE,
   IMPORT_DIR,
@@ -82,7 +75,6 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     }
   }
   rmSync(STATE_DIR, { recursive: true, force: true });
-  await fetch(`${MAILPIT_URL}/api/v1/messages`, { method: "DELETE" });
   mkdirSync(STATE_DIR, { recursive: true });
   const database = `pagehall_e2e_${Date.now()}`;
   const admin = new pg.Client({ connectionString: DATABASE_BASE_URL });

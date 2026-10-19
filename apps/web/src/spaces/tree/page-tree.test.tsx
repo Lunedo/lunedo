@@ -1,11 +1,30 @@
+import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from "@tanstack/react-router";
 import { screen, waitFor, within } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { mockApi, problem, renderWithProviders } from "../../testing/render.js";
+import { SpaceContext } from "../space-context.js";
 import type { SpaceWithRole } from "../space-queries.js";
 import { PageTree } from "./page-tree.js";
 
 const space = { id: "0192f0c4-7c3a-7d2e-9f4b-3c2d1e0f5a40", key: "IT", role: "editor" } as SpaceWithRole;
 const items = `GET /api/v1/spaces/${space.id}/items`;
+const folder = {
+  id: "0192f0c4-7c3a-7d2e-9f4b-3c2d1e0f5a41",
+  kind: "folder",
+  title: "Runbooks",
+  parentId: null,
+  hasChildren: true,
+  link: null,
+};
+const child = "0192f0c4-7c3a-7d2e-9f4b-3c2d1e0f5a42";
+
+function inSpace(ui: ReactNode) {
+  const context = { space, canEdit: true, openMove: () => {}, openCopy: () => {}, openCreate: () => {} };
+  const root = createRootRoute({ component: () => <SpaceContext value={context}>{ui}</SpaceContext> });
+  const router = createRouter({ routeTree: root, history: createMemoryHistory({ initialEntries: ["/"] }) });
+  return <RouterProvider router={router} />;
+}
 
 describe("PageTree", () => {
   it("shows the loading first level next to a busy, empty tree", async () => {
@@ -27,6 +46,33 @@ describe("PageTree", () => {
     const tree = screen.getByRole("tree", { name: "Page tree" });
     expect(within(tree).queryByRole("button")).toBeNull();
     expect(tree.contains(retry)).toBe(false);
+    expect(tree.hasAttribute("aria-busy")).toBe(false);
+  });
+
+  it("is busy while a level below an open item loads, without a status inside the tree, and no longer once it has loaded", async () => {
+    let release: (value: { body: unknown }) => void = () => {};
+    mockApi({
+      [items]: ({ path }) =>
+        path.includes("parentId=")
+          ? new Promise((resolve) => {
+              release = resolve;
+            })
+          : { body: { items: [folder], nextCursor: null } },
+    });
+    await renderWithProviders(inSpace(<PageTree space={space} currentId={null} ancestors={[folder.id]} />));
+    const tree = await screen.findByRole("tree", { name: "Page tree" });
+    const loading = await within(tree).findByText("Loading pages");
+    expect(loading.closest('[aria-hidden="true"]')).not.toBeNull();
+    expect(within(tree).queryByRole("status")).toBeNull();
+    expect(tree.getAttribute("aria-busy")).toBe("true");
+
+    release({
+      body: {
+        items: [{ ...folder, id: child, title: "Restart", parentId: folder.id, hasChildren: false }],
+        nextCursor: null,
+      },
+    });
+    await within(tree).findByRole("treeitem", { name: "Restart" });
     expect(tree.hasAttribute("aria-busy")).toBe(false);
   });
 

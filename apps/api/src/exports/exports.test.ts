@@ -350,9 +350,8 @@ describe.skipIf(!databaseBaseUrl)("exports through the API", () => {
     const rest = await context.exporter.client.get(`/api/v1/exports/${id}/content`, { range: "bytes=10-" });
     expect(rest.statusCode).toBe(206);
     expect(rest.rawPayload.length).toBe(size - 10);
-    const after = (await hoursLeft()).hours;
-    expect(after).toBeGreaterThan(23.9);
-    expect(after).toBeLessThanOrEqual(24);
+    await expect.poll(async () => (await hoursLeft()).hours, { timeout: 15_000 }).toBeLessThanOrEqual(24);
+    expect((await hoursLeft()).hours).toBeGreaterThan(23.9);
 
     const outside = await context.exporter.client.get(`/api/v1/exports/${id}/content`, {
       range: `bytes=${size}-`,
