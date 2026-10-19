@@ -16,6 +16,7 @@ import { request } from "../../api/request.js";
 import { AutoSaveTextField } from "../../components/auto-save.js";
 import { SettingsList } from "../../components/settings-list.js";
 import { useFailureToast } from "../../errors/failure.js";
+import { HelpTargetSection } from "../../knowledge-bases/help-target.js";
 import { useOrganizationSettingMutation } from "../../settings/setting-mutations.js";
 import { LOCALE_DEFAULT_KEYS } from "../../settings/settings-index.js";
 import { organizationLogoUrl } from "../../shell/brand.js";
@@ -85,6 +86,7 @@ export function OrganizationGeneralScreen() {
           }}
         />
       </Section>
+      <HelpTargetSection organizationId={organizationId} editable={canManageSettings} />
       {membership && membership.membershipKind !== "member" && state.can("organization.leave") ? (
         <LeaveSection organizationId={organizationId} name={membership.name} />
       ) : null}

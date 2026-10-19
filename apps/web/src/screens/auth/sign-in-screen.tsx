@@ -17,7 +17,7 @@ import { submitWith, useSchemaForm } from "../../forms/use-schema-form.js";
 import { translateKey } from "../../i18n/translate.js";
 import { getPasskeyAssertion, isPasskeyCancelled, passkeysSupported } from "../../session/passkeys.js";
 import { startProviderSignIn } from "../../session/provider-sign-in.js";
-import { safeRedirect } from "../../session/redirect.js";
+import { leavesApp, safeRedirect } from "../../session/redirect.js";
 import { AuthCard } from "./auth-layout.js";
 import { DirectorySignInForm, type DirectoryTarget, secondFactors } from "./directory-sign-in.js";
 
@@ -62,7 +62,8 @@ export function SignInScreen() {
   const signedIn = async () => {
     await queryClient.invalidateQueries({ queryKey: queryKeys.session });
     await queryClient.invalidateQueries({ queryKey: queryKeys.preferences });
-    await navigate({ href: safeRedirect(search.redirect) });
+    const target = safeRedirect(search.redirect);
+    await navigate({ href: target, reloadDocument: leavesApp(target) });
   };
 
   const signInWithPassword = async (email: string, password: string) => {

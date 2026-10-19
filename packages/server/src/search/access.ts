@@ -14,9 +14,10 @@ import { type SpaceRole, spaceRoles } from "../spaces/schema.js";
 export type ReadLevel = Extract<SpaceRole, "reader" | "editor">;
 
 export interface SearchViewer {
-  accountId: string;
+  accountId: string | null;
   organizationId: string;
   portal: boolean;
+  knowledgeBaseOnly: boolean;
   tokens: string[];
   personalTokens: string[];
   listedRestrictions: string[];
@@ -31,7 +32,10 @@ export function readerTokens(item: SQL, space: SQL, minimum: ReadLevel): SQL {
   const floors =
     minimum === "reader"
       ? sql`union all select 'members:' || ${space}.organization_id where ${space}.visibility = 'organization'
-        union all select 'internal' where ${space}.visibility = 'instance'`
+        union all select 'internal' where ${space}.visibility = 'instance'
+        union all select '${sql.raw(PUBLIC_TOKEN)}' where ${space}.type = 'knowledgeBase' and ${space}.audience = 'public'
+        union all select 'portal:' || ${space}.organization_id
+          where ${space}.type = 'knowledgeBase' and ${space}.audience = 'portal'`
       : sql``;
   return sql`array(select distinct token from (
       select case sp.principal_kind
@@ -48,6 +52,8 @@ export function readerTokens(item: SQL, space: SQL, minimum: ReadLevel): SQL {
           and ps.role = any(${roles}::space_role[])
     ) granted where token is not null order by token)`;
 }
+
+export const PUBLIC_TOKEN = "public";
 
 export function restrictionIds(item: SQL): SQL {
   return sql`array(select r.item_id from page_restrictions r
@@ -103,10 +109,49 @@ export async function loadViewer(
     accountId: principal.id,
     organizationId,
     portal,
+    knowledgeBaseOnly: portal,
     tokens,
     personalTokens,
     listedRestrictions: row.listed,
   };
+}
+
+export async function loadPortalViewer(
+  executor: Executor,
+  principal: Principal,
+  organizationId: string,
+): Promise<SearchViewer | null> {
+  if (principal.type === "anonymous") {
+    return {
+      accountId: null,
+      organizationId,
+      portal: false,
+      knowledgeBaseOnly: true,
+      tokens: [PUBLIC_TOKEN],
+      personalTokens: [],
+      listedRestrictions: [],
+    };
+  }
+  if (principal.type !== "account" || principal.token) return null;
+  const viewer = await loadViewer(executor, principal, organizationId);
+  if (!viewer) return null;
+  const tokens = [...viewer.tokens, PUBLIC_TOKEN];
+  if (viewer.portal && viewer.tokens.includes(`account:${principal.id}`))
+    tokens.push(`portal:${organizationId}`);
+  return { ...viewer, knowledgeBaseOnly: true, tokens, personalTokens: [] };
+}
+
+function audienceFloor(viewer: SearchViewer, target: SQL, targetSpace: SQL): SQL {
+  const audiences = [sql`${targetSpace}.audience = 'public'`];
+  if (viewer.tokens.includes(`portal:${viewer.organizationId}`))
+    audiences.push(sql`${targetSpace}.audience = 'portal'`);
+  if (!viewer.tokens.includes(PUBLIC_TOKEN)) return sql`false`;
+  const unrestricted =
+    viewer.accountId === null
+      ? sql`not exists (select 1 from page_restrictions r where r.item_id = any(${target}.path) and r.kind = 'view')`
+      : viewRestrictionCondition(sql`${viewer.accountId}::uuid`, target, targetSpace);
+  return sql`(${target}.reader_visible and ${targetSpace}.type = 'knowledgeBase'
+    and (${sql.join(audiences, sql` or `)}) and ${unrestricted})`;
 }
 
 export function storedAccessCondition(viewer: SearchViewer, chunk: SQL): SQL {
@@ -121,14 +166,17 @@ export function storedAccessCondition(viewer: SearchViewer, chunk: SQL): SQL {
 }
 
 export function liveAccessCondition(viewer: SearchViewer, chunk: SQL, item: SQL, space: SQL): SQL {
-  const account = sql`${viewer.accountId}::uuid`;
+  const { accountId } = viewer;
+  const account = sql`${accountId}::uuid`;
   const readable = (target: SQL, targetSpace: SQL) => {
+    if (accountId === null) return audienceFloor(viewer, target, targetSpace);
     const granted = (minimum: ReadLevel) => {
       const sources = [spaceRoleConditionFor(account, targetSpace, minimum)];
       if (!viewer.portal) sources.push(shareCondition(account, target, targetSpace, minimum));
       return sql`((${sql.join(sources, sql` or `)}) and ${viewRestrictionCondition(account, target, targetSpace)})`;
     };
-    return sql`((${target}.reader_visible and ${granted("reader")}) or ${granted("editor")})`;
+    return sql`((${target}.reader_visible and ${granted("reader")}) or ${granted("editor")}
+      or ${audienceFloor(viewer, target, targetSpace)})`;
   };
   const commentVisible = sql`(${chunk}.source <> 'comment' or exists (select 1 from comments cm
     join comments cr on cr.id = coalesce(cm.parent_id, cm.id)

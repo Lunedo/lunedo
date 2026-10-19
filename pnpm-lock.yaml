@@ -207,6 +207,12 @@ importers:
       '@fastify/static':
         specifier: ^10.1.6
         version: 10.1.6
+      '@fontsource/geist':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/geist-mono':
+        specifier: ^5.3.0
+        version: 5.3.0
       '@nestjs/common':
         specifier: ^12.1.2
         version: 12.1.2(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@10.2.2)
@@ -222,9 +228,15 @@ importers:
       '@pagehall/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@pagehall/tokens':
+        specifier: workspace:*
+        version: link:../../packages/tokens
       fastify:
         specifier: ^5.12.5
         version: 5.12.5
+      lucide:
+        specifier: ^1.55.0
+        version: 1.55.0
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -6002,6 +6014,9 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+
+  lucide@1.55.0:
+    resolution: {integrity: sha512-FA0GSqTWkdwtvY4KqOFcMXvurex3exkX9FMtfSwUdo8rVsYGx56fBB3TLfc5Iroi4YtgXHUl+2EMJ/uqd30F+Q==}
 
   luxon@3.7.2:
     resolution: {integrity: sha512-vtEhXh/gNjI9Yg1u4jX/0YVPMvxzHuGgCm6tC5kZyb08yjGWGnqAjGJvcXbqQR2P3MyMEFnRbpcdFS6PBcLqew==}
@@ -12586,6 +12601,8 @@ snapshots:
       react: 19.3.0
     optionalDependencies:
       '@types/react': 19.3.0
+
+  lucide@1.55.0: {}
 
   luxon@3.7.2: {}
 

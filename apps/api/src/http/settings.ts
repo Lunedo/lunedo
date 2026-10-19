@@ -26,6 +26,7 @@ const MANAGED_ELSEWHERE = new Set([
   "mail.graph",
   "auth.emergencySignInRecipients",
   "instance.url",
+  "help.knowledgeBase",
   "storage.warningPercent",
   "storage.largeWritesPercent",
   "storage.criticalPercent",

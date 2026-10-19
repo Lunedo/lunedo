@@ -224,6 +224,20 @@ export const problems = {
   audienceGroupsMissing: { status: 400, title: "Choose at least one group" },
   tooManyGroups: { status: 400, title: "Too many groups" },
   requiredSectionsEmpty: { status: 409, title: "Required sections are empty" },
+  invalidPortalPath: { status: 400, title: "The portal path is not valid" },
+  portalPathTaken: { status: 409, title: "Another knowledge base uses this path" },
+  invalidPortalDomain: { status: 400, title: "The domain is not valid" },
+  portalDomainNotAllowed: { status: 409, title: "The domain is not allowed for this organization" },
+  portalDomainTaken: { status: 409, title: "Another knowledge base uses this domain" },
+  portalDomainExists: { status: 409, title: "The domain is already allowed" },
+  portalDomainNotFound: { status: 404, title: "The domain is not allowed" },
+  brandContrast: { status: 409, title: "The color does not reach the required contrast" },
+  invalidBrandColor: { status: 400, title: "The brand color is not valid" },
+  invalidWelcome: { status: 400, title: "The start page text is too long" },
+  invalidTopBarThreshold: { status: 400, title: "The number of categories is not valid" },
+  invalidRetention: { status: 400, title: "The retention period is not valid" },
+  invalidHelpKnowledgeBase: { status: 400, title: "The knowledge base cannot be the help target" },
+  organizationNotFound: { status: 404, title: "The organization does not exist" },
   sectionNotFound: { status: 404, title: "The section does not exist" },
   draftNotVisible: { status: 403, title: "Only editors see the draft" },
   confidentialScope: { status: 400, title: "Links in a confidential space name specific people only" },
@@ -420,6 +434,16 @@ export function problemType(code: ProblemCode): string {
   return `${PROBLEM_TYPE_PREFIX}${code}`;
 }
 
+const brandCheckSchema = z
+  .object({
+    color: z.string().describe("The checked color."),
+    passes: z.boolean().describe("Whether it reaches the contrast WCAG AA asks for."),
+    onBackground: z.number().describe("Contrast of the color as text on the background."),
+    onBrand: z.number().describe("Contrast of text on the color."),
+    proposal: z.string().nullable().describe("The nearest shade that passes, or null when none exists."),
+  })
+  .describe("Contrast check of a brand color.");
+
 export const problemSchema = z
   .object({
     type: z.string().describe("Stable identifier of the error kind. Clients branch on this value."),
@@ -517,6 +541,8 @@ export const problemSchema = z
       .int()
       .optional()
       .describe("Number of articles more people could read, for `audienceWidening`."),
+    light: brandCheckSchema.optional().describe("Check of the light mode color, for `brandContrast`."),
+    dark: brandCheckSchema.optional().describe("Check of the dark mode color, for `brandContrast`."),
     impact: moveImpactSchema
       .optional()
       .describe("Who gains and who loses access, with the confirmation to send, for `moveChangesAccess`."),

@@ -2,7 +2,7 @@ import path from "node:path";
 import fastifyStatic from "@fastify/static";
 import type { FastifyInstance } from "fastify";
 
-const SERVER_PREFIXES = ["/api/", "/health/", "/drawio/"];
+const SERVER_PREFIXES = ["/api/", "/health/", "/drawio/", "/help/"];
 
 export const PREVIEW_CONTENT_SECURITY_POLICY = [
   "sandbox allow-scripts",

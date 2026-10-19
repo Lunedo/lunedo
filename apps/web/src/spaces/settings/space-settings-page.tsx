@@ -20,7 +20,9 @@ export type SpaceSettingsTab =
   | "export"
   | "visibility"
   | "categories"
-  | "articleTemplates";
+  | "articleTemplates"
+  | "address"
+  | "appearance";
 
 const TAB_PATHS = {
   general: "/spaces/$spaceKey/settings/general",
@@ -35,6 +37,8 @@ const TAB_PATHS = {
   visibility: "/spaces/$spaceKey/settings/visibility",
   categories: "/spaces/$spaceKey/settings/categories",
   articleTemplates: "/spaces/$spaceKey/settings/article-templates",
+  address: "/spaces/$spaceKey/settings/address",
+  appearance: "/spaces/$spaceKey/settings/appearance",
 } as const;
 
 export function SpaceSettingsPage({
@@ -73,6 +77,8 @@ export function SpaceSettingsPage({
           isKnowledgeBase(space)
             ? [
                 { value: "general", label: t("spaces.settings.general") },
+                { value: "address", label: t("knowledgeBase.settings.address") },
+                { value: "appearance", label: t("knowledgeBase.settings.appearance") },
                 { value: "visibility", label: t("knowledgeBase.settings.visibility") },
                 { value: "permissions", label: t("spaces.settings.permissions") },
                 { value: "access", label: t("spaces.access.tab") },

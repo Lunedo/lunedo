@@ -34,6 +34,7 @@ const retro: PageTemplate = {
   fields: [],
   document: { type: "doc", content: [{ type: "paragraph" }] },
   series: null,
+  articleType: null,
   updatedAt: "2026-10-05T08:00:00.000Z",
 };
 
@@ -427,5 +428,46 @@ describe("the template editor", () => {
       }),
     ]);
     expect(JSON.stringify(onUpdate.mock.calls[0]?.[1])).toContain('"text":"Went well"');
+  });
+
+  it("offers the article type only for templates of a knowledge base and saves it", async () => {
+    const onUpdate = vi.fn(async (_id: string, _input: unknown) => undefined);
+    mockApi({ "GET /api/v1/auth/session": () => problem(401, "notSignedIn") });
+    await renderWithProviders(
+      inRouter(
+        <TemplatesManager
+          templates={[{ ...retro, articleType: "howTo" }]}
+          loading={false}
+          error={null}
+          onRetry={() => undefined}
+          canManage
+          articleTypes
+          transfer={fakeApi()}
+          onImported={async () => undefined}
+          onCreate={async () => undefined}
+          onUpdate={onUpdate}
+          onDelete={async () => undefined}
+        />,
+      ),
+    );
+    await userEvent.click(await screen.findByRole("button", { name: "Actions for Retro" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Edit template" }));
+    const dialog = await screen.findByRole("dialog", { name: "Edit template" });
+    await userEvent.click(within(dialog).getByRole("combobox", { name: "Article type" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Troubleshooting" }));
+    const title = within(dialog).getByRole("textbox", { name: /^Title of new pages/ });
+    await userEvent.clear(title);
+    await userEvent.type(title, "Retro");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save template" }));
+    await waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
+    expect(onUpdate.mock.calls[0]?.[1]).toEqual(expect.objectContaining({ articleType: "troubleshooting" }));
+  });
+
+  it("leaves the article type out for other templates", async () => {
+    const onCreate = vi.fn(async (_input: unknown) => undefined);
+    await renderManager(fakeApi(), { onCreate });
+    await userEvent.click(await screen.findByRole("button", { name: "Create template" }));
+    const dialog = await screen.findByRole("dialog", { name: "New template" });
+    expect(within(dialog).queryByRole("combobox", { name: "Article type" })).toBeNull();
   });
 });

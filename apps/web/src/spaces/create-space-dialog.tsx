@@ -202,7 +202,13 @@ function CreateSpaceForm({
         label={t("knowledgeBase.create.typeLabel")}
         variant="card"
         value={type}
-        onValueChange={(value) => setType(value as SpaceType)}
+        onValueChange={(value) => {
+          const next = value as SpaceType;
+          setType(next);
+          setGrants(
+            next === "knowledgeBase" ? [] : (defaults.data?.grants ?? []).map((grant) => ({ ...grant })),
+          );
+        }}
         options={[
           {
             value: "standard",

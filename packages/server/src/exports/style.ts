@@ -10,7 +10,7 @@ function kebab(name: string): string {
   return name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
 }
 
-function variables(mode: ModeColors, content: ContentColors): string {
+export function variables(mode: ModeColors, content: ContentColors): string {
   const base = Object.entries(mode).map(([name, value]) => `--${kebab(name)}:${value};`);
   const palette = Object.entries(content).flatMap(([name, value]) => [
     `--${name}-text:${value.text};`,
@@ -21,7 +21,7 @@ function variables(mode: ModeColors, content: ContentColors): string {
 
 const contentNames = Object.keys(color.content.light);
 
-const colorRules = contentNames
+export const colorRules = contentNames
   .map(
     (name) =>
       `.ph-text-color[data-color="${name}"]{color:var(--${name}-text)}` +
@@ -29,7 +29,7 @@ const colorRules = contentNames
   )
   .join("");
 
-const calloutRules = (
+export const calloutRules = (
   [
     ["info", "info"],
     ["tip", "success"],
@@ -44,7 +44,7 @@ const calloutRules = (
   )
   .join("");
 
-const highlightRules = [
+export const highlightRules = [
   [".hljs-comment,.hljs-quote", "color:var(--text-muted);font-style:italic"],
   [".hljs-keyword,.hljs-selector-tag,.hljs-built_in,.hljs-doctag", "color:var(--purple-text)"],
   [".hljs-string,.hljs-regexp,.hljs-addition,.hljs-attribute", "color:var(--green-text)"],

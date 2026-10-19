@@ -1038,7 +1038,9 @@
   },
   "help": {
     "shortcuts": "Keyboard shortcuts",
-    "apiReference": "API reference"
+    "apiReference": "API reference",
+    "documentation": "Pagehall documentation",
+    "knowledgeBase": "Help"
   },
   "navigation": {
     "signInProviders": "Sign-in methods",
@@ -1076,7 +1078,8 @@
     "announcements": "Announcements",
     "storage": "Storage",
     "rendering": "Rendering",
-    "embeds": "External embeds"
+    "embeds": "External embeds",
+    "portals": "Knowledge base portals"
   },
   "commands": {
     "label": "Command palette",
@@ -1571,7 +1574,21 @@
     "tooManyGroups": "Choose up to 100 groups. Combine people into fewer groups if you need more.",
     "requiredSectionsEmpty": "A required section is empty. Fill it in, then publish again.",
     "sectionNotFound": "The template has no such section. Reload the page and try again.",
-    "draftNotVisible": "Only editors of the article see its draft."
+    "draftNotVisible": "Only editors of the article see its draft.",
+    "invalidPortalPath": "The path may contain lowercase letters, digits and single hyphens, at most 60 characters. Change it and save again.",
+    "portalPathTaken": "Another knowledge base already uses this path. Choose a different path.",
+    "invalidPortalDomain": "The domain is not valid. Enter only the domain name, without https:// and without a path.",
+    "portalDomainNotAllowed": "Your instance administrator has not allowed this domain for the organization. Ask them to allow it first.",
+    "portalDomainTaken": "Another knowledge base already uses this domain. Choose a different domain or remove it there first.",
+    "portalDomainExists": "This domain is already allowed. Find it in the list below.",
+    "portalDomainNotFound": "The domain is no longer allowed. Reload the page to see the current list.",
+    "brandContrast": "The color does not reach the contrast WCAG AA asks for. Use the proposed shade or choose another color.",
+    "invalidBrandColor": "The color is not valid. Enter it as a hex value such as #0B6F78, or choose one from the palette.",
+    "invalidWelcome": "The text is too long. Shorten the heading to 120 and the text to 400 characters.",
+    "invalidTopBarThreshold": "Enter a whole number from 1 to 100.",
+    "invalidRetention": "Enter a whole number of months from 1 to 60.",
+    "invalidHelpKnowledgeBase": "This knowledge base cannot open from the help icon because not everyone signed in may read it. Choose another one or widen its audience.",
+    "organizationNotFound": "The organization does not exist anymore. Reload the page and choose another one."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -3656,7 +3673,9 @@
         "created": "Organization created",
         "updated": "Organization changed",
         "domainAdded": "Domain added",
-        "domainRemoved": "Domain removed"
+        "domainRemoved": "Domain removed",
+        "portalDomainAllowed": "Portal domain allowed",
+        "portalDomainRemoved": "Portal domain removed"
       },
       "membership": {
         "added": "Member added",
@@ -3834,7 +3853,8 @@
         "removed": "Chat channel removed"
       },
       "knowledgeBase": {
-        "audienceChanged": "Readers of a knowledge base changed"
+        "audienceChanged": "Readers of a knowledge base changed",
+        "portalAddressChanged": "Portal address of a knowledge base changed"
       }
     },
     "action": "Action",
@@ -5751,7 +5771,9 @@
     "restrictedTitle": "This page is restricted",
     "restrictedAudience": "As a template, its content becomes visible to everyone who can use the templates of {space}: all its editors and space admins, also those who cannot open the page now.",
     "restrictedConfirm": "Everyone who can use the templates of {space} may see this content",
-    "restrictedRequired": "Confirm that everyone who can use the templates of this space may see the content, or cancel."
+    "restrictedRequired": "Confirm that everyone who can use the templates of this space may see the content, or cancel.",
+    "articleType": "Article type",
+    "articleTypeHint": "Articles created from this template get this type. Readers filter by it in the portal."
   },
   "versions": {
     "history": "Version history",
@@ -5888,7 +5910,9 @@
     "createFrom": "Create from {name}",
     "createBlank": "Create blank page",
     "createSeriesFrom": "Set up series with {name}",
-    "seriesTemplate": "This is a template for meeting series. Next you choose the name, members and rhythm; each meeting page then starts from it."
+    "seriesTemplate": "This is a template for meeting series. Next you choose the name, members and rhythm; each meeting page then starts from it.",
+    "articleTitle": "Title of the article",
+    "articleTitleHint": "Leave it empty to use the title of the template and rename the article later."
   },
   "home": {
     "title": "For you",
@@ -9284,8 +9308,7 @@
       "other": "Other type"
     },
     "portal": {
-      "view": "View in portal",
-      "notYet": "The portal for readers comes in a later version. Until then, readers open articles here."
+      "view": "View in portal"
     },
     "list": {
       "title": "Title",
@@ -9366,7 +9389,9 @@
       "articleTemplates": "Article templates",
       "typeTitle": "Knowledge base",
       "typeDescription": "This space is a knowledge base. Who may read it is set in its visibility, not in a general visibility of the space.",
-      "toVisibility": "Open the visibility settings"
+      "toVisibility": "Open the visibility settings",
+      "address": "Address",
+      "appearance": "Appearance and start page"
     },
     "contact": {
       "label": "Contact address",
@@ -9451,6 +9476,124 @@
       "search": "Magnifier",
       "wrench": "Wrench",
       "triangle-alert": "Warning"
+    },
+    "address": {
+      "title": "Address",
+      "description": "Readers open the knowledge base at this address. Whoever opens it lands in the portal, not in the app.",
+      "loadFailed": "The address of the portal could not be loaded",
+      "panel": "Address of the portal",
+      "change": "Change",
+      "path": "Path",
+      "pathHint": "Lowercase letters, digits and hyphens after {prefix}. Links to the old path keep working.",
+      "pathInvalid": "Use lowercase letters, digits and single hyphens, at most 60 characters.",
+      "domain": "Own domain",
+      "domainHint": "Optional. For example the old address of a help center can point here.",
+      "noDomains": "Your instance administrator has not allowed a domain for this organization yet. Domains are allowed under Instance settings, Portal domains.",
+      "noDomain": "No own domain",
+      "dnsTitle": "First add this record at your DNS provider",
+      "dnsText": "Point {domain} to this instance. Your reverse proxy must send the domain to Pagehall and hold its certificate.",
+      "copyDns": "Copy DNS record",
+      "saved": "Address saved",
+      "footnote": "A change of the address is recorded in the audit log. Readers are never redirected between the portal and the app; the address they open decides.",
+      "adminsOnly": "Only space admins change the address."
+    },
+    "appearance": {
+      "title": "Appearance and start page",
+      "description": "How the portal looks and what its start page shows. Changes apply in the portal at once.",
+      "loadFailed": "The appearance of the portal could not be loaded",
+      "open": "Open the portal",
+      "identity": "Logo and color",
+      "logo": "Logo",
+      "logoHint": "Shown in the top bar and on the sign-in page. PNG, JPEG or WebP, square, at most 256 KiB. Without a logo the portal shows the organization's logo or the first letter of its name.",
+      "logoAlt": "Logo of the portal",
+      "noLogo": "No logo",
+      "uploadLogo": "Upload logo",
+      "replaceLogo": "Replace logo",
+      "logoUploaded": "Logo uploaded",
+      "logoFailed": "The logo could not be uploaded",
+      "logoRemoveFailed": "The logo could not be removed",
+      "removeLogoTitle": "Remove the logo of the portal?",
+      "removeLogoDescription": "The portal shows the organization's logo again, or the first letter of its name. Upload the file again to bring the logo back.",
+      "color": "Brand color",
+      "colorHint": "Used for links, the main actions and highlights. Palette colors reach the required contrast in light and dark mode.",
+      "customColor": "Own color",
+      "lightValue": "Light: {value}",
+      "darkValue": "Dark: {value}",
+      "light": "Light mode",
+      "dark": "Dark mode",
+      "colorInvalid": "Enter the color as a hex value such as #0B6F78.",
+      "checkAndSave": "Check contrast and save",
+      "contrastTitle": "The color does not reach the required contrast",
+      "contrastText": "WCAG AA asks for a contrast of at least 4.5 to 1 for text in this color and for text on it. Pagehall proposes the nearest shade that passes.",
+      "noProposal": "No shade of this color passes. Choose another color.",
+      "useProposal": "Use the proposed shades",
+      "otherColor": "Choose another color",
+      "startPage": "Start page",
+      "heading": "Heading",
+      "headingHint": "Shown above the search. Leave it empty for “How can we help?” in the language of the portal.",
+      "text": "Short text",
+      "textHint": "One or two sentences below the heading. Optional.",
+      "threshold": "Categories in the top bar",
+      "thresholdHint": "The top bar shows up to five categories and the rest under “All topics”. From this number of categories on, it shows only “Topics” with a menu of all categories.",
+      "numberInvalid": "Enter a whole number from {min} to {max}.",
+      "orderHint": "The categories appear in the order of the category settings.",
+      "orderLink": "Change the order of the categories",
+      "footer": "Footer",
+      "poweredBy": "Show “Provided with Pagehall”",
+      "poweredByHint": "A small note in the footer of every portal page.",
+      "feedback": "Readers' notes",
+      "retention": "Keep notes for (months)",
+      "retentionHint": "Readers can leave a note after “No” on “Was this helpful?”. Notes are stored without names and deleted after this period.",
+      "shortenTitle": "Delete older notes now?",
+      "shortenDescription": "{count, plural, one {Notes older than # month are deleted at once and cannot be restored.} other {Notes older than # months are deleted at once and cannot be restored.}}",
+      "shortenConfirm": "{count, plural, one {Keep notes for # month} other {Keep notes for # months}}"
+    }
+  },
+  "helpTarget": {
+    "title": "Help",
+    "label": "Help icon opens",
+    "description": "The help icon in the navigation opens this knowledge base in its portal. Only knowledge bases that everyone signed in may read can be chosen.",
+    "noCandidates": "No knowledge base of this organization can be read by everyone signed in yet, so the help icon opens the Pagehall documentation.",
+    "documentation": "Pagehall documentation",
+    "loadFailed": "The help settings could not be loaded"
+  },
+  "portals": {
+    "title": "Knowledge base portals",
+    "description": "Settings that apply to the portals of all knowledge bases on this instance.",
+    "appLink": {
+      "title": "Link to the app",
+      "label": "Name of the link to the app",
+      "hint": "Shown in the account menu of the portal for people who can see spaces, for example “Go to the Example wiki”. Leave it empty for “Go to the wiki”.",
+      "loadFailed": "The name of the link could not be loaded"
+    },
+    "domains": {
+      "title": "Portal domains",
+      "description": "Each domain belongs to one organization, which can use it for one of its knowledge bases. Your reverse proxy must send the domain to Pagehall and hold its certificate.",
+      "adminsOnly": "Only instance administrators allow domains.",
+      "loadFailed": "The portal domains could not be loaded",
+      "emptyTitle": "No domains allowed",
+      "emptyDescription": "Knowledge bases are reachable under /help on this instance. Allow a domain so an organization can give a knowledge base its own address.",
+      "domain": "Domain",
+      "domainHint": "Only the domain name, without https:// and without a path.",
+      "domainInvalid": "Enter a domain name such as help.example.org.",
+      "organization": "Organization",
+      "organizationPlaceholder": "Search an organization by name",
+      "organizationMissing": "Choose the organization that may use the domain.",
+      "usedBy": "Used by",
+      "unused": "Not used yet",
+      "actions": "Actions",
+      "allow": "Allow domain",
+      "allowTitle": "Allow a domain for a portal",
+      "allowDescription": "The organization can then choose the domain for one of its knowledge bases.",
+      "allowed": "{domain} is allowed",
+      "remove": "Remove",
+      "removeTitle": "Remove {domain}?",
+      "removeUsed": "{space} can no longer be reached on this domain and everyone signed in there is signed out. The knowledge base stays reachable under its path on this instance.",
+      "removeUnused": "The organization can no longer choose this domain.",
+      "removeConfirm": "Remove {domain}",
+      "removed": "{domain} removed",
+      "removeFailed": "The domain could not be removed",
+      "domainPlaceholder": "help.example.org"
     }
   }
 }

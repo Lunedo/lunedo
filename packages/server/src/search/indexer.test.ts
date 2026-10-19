@@ -150,6 +150,8 @@ describe.skipIf(!baseUrl)("search indexer", () => {
       adapter: {
         ...adapter,
         search: adapter.search.bind(adapter),
+        articles: adapter.articles.bind(adapter),
+        articleCounts: adapter.articleCounts.bind(adapter),
         replaceItem: adapter.replaceItem.bind(adapter),
         removeItem: adapter.removeItem.bind(adapter),
         updateContextAccess: adapter.updateContextAccess.bind(adapter),
@@ -196,6 +198,8 @@ describe.skipIf(!baseUrl)("search indexer", () => {
       adapter: {
         ...adapter,
         search: adapter.search.bind(adapter),
+        articles: adapter.articles.bind(adapter),
+        articleCounts: adapter.articleCounts.bind(adapter),
         removeItem: adapter.removeItem.bind(adapter),
         updateAccess: adapter.updateAccess.bind(adapter),
         updateContextAccess: adapter.updateContextAccess.bind(adapter),
@@ -302,6 +306,8 @@ describe.skipIf(!baseUrl)("search indexer", () => {
       adapter: {
         ...adapter,
         search: adapter.search.bind(adapter),
+        articles: adapter.articles.bind(adapter),
+        articleCounts: adapter.articleCounts.bind(adapter),
         removeItem: adapter.removeItem.bind(adapter),
         updateAccess: adapter.updateAccess.bind(adapter),
         updateContextAccess: adapter.updateContextAccess.bind(adapter),

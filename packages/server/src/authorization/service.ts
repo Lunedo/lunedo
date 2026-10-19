@@ -31,6 +31,7 @@ import {
   type ItemFacts,
   itemFacts,
   itemRoleCondition,
+  portalReadableCondition,
   type ShareVia,
 } from "./item-access.js";
 import type { AuthorizationRegistry, RegisteredAction, Resource, RestrictionDenial } from "./registry.js";
@@ -536,6 +537,10 @@ export class AuthorizationService {
     options: ItemAccessOptions = {},
   ): SQL {
     return itemRoleCondition(principal, item, space, minimum, options);
+  }
+
+  portalFilter(principal: Principal, item: SQL, space: SQL): SQL {
+    return portalReadableCondition(principal, item, space);
   }
 
   #spaceGrants(action: RegisteredAction, facts: SpaceFacts): Grant[] {

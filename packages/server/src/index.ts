@@ -331,6 +331,7 @@ export {
 export { printHtml } from "./exports/print.js";
 export { type RenderConnection, RenderService, type RenderStatus } from "./exports/rendering.js";
 export { type ExportScope, type ExportState, exportScopes, exportStates } from "./exports/schema.js";
+export { calloutRules, colorRules, highlightRules, variables as colorVariables } from "./exports/style.js";
 export {
   type Attachment,
   type AttachmentContent,
@@ -629,6 +630,57 @@ export {
 export type { CustomRole, RoleAssignment } from "./organizations/roles.js";
 export { roleNameSchema } from "./organizations/roles.js";
 export * from "./organizations/settings.js";
+export { ArticleRenderer, PORTAL_BASE_PLACEHOLDER, renderArticleJob } from "./portal/articles.js";
+export {
+  type AppearanceInput,
+  type BrandColor,
+  type BrandModeCheck,
+  brandColors,
+  brandValues,
+  checkBrand,
+  FEEDBACK_RETENTION_MAX,
+  type HelpCandidate,
+  hostOf,
+  normalizeDomain,
+  type PathLookup,
+  PORTAL_PATH,
+  PORTAL_PATH_MAX,
+  type PortalBrand,
+  type PortalConfig,
+  type PortalDomain,
+  type PortalLanguage,
+  PortalService,
+  TOP_BAR_THRESHOLD_MAX,
+} from "./portal/portals.js";
+export {
+  type ArticleLookup,
+  type ArticlePage,
+  PORTAL_PAGE_SIZE,
+  type PortalArticle,
+  type PortalArticleFilter,
+  type PortalArticleSummary,
+  type PortalCategory,
+  PortalReader,
+  type PortalSearchResult,
+  portalArticleFilters,
+  RELATED_LIMIT,
+  START_LIST_LIMIT,
+} from "./portal/reader.js";
+export type { RenderedHeading } from "./portal/schema.js";
+export { HANDOFF_SECONDS, PortalSessionService } from "./portal/sessions.js";
+export { helpKnowledgeBaseSetting, portalAppLinkNameSetting } from "./portal/settings.js";
+export {
+  type ArticleCount,
+  cleanFeedback,
+  type DailyCount,
+  FEEDBACK_MAX_LENGTH,
+  type FeedbackText,
+  normalizeTerm,
+  type Period,
+  PortalStatistics,
+  type RatingCount,
+  type TermCount,
+} from "./portal/statistics.js";
 export { type PushDevice, PushService, PushSubscriptionError } from "./push/push-service.js";
 export {
   createServerRuntime,
@@ -639,6 +691,8 @@ export {
 export { registerShutdown, SHUTDOWN_MARGIN_SECONDS } from "./runtime/shutdown.js";
 export { StartupError } from "./runtime/startup-error.js";
 export {
+  type ArticleSort,
+  articleSorts,
   type SearchContentType,
   type SearchSort,
   type SearchUpdatedRange,

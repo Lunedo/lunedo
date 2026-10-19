@@ -22,6 +22,7 @@ import { readViewContext } from "../../editor/read-view.js";
 import { searchPeople } from "../../editor/references.js";
 import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
+import { isKnowledgeBase } from "../../knowledge-bases/queries.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { galleryQuery, type PageTemplate, type TemplateField } from "../content-queries.js";
 import { itemHref } from "../item-paths.js";
@@ -92,6 +93,8 @@ function GalleryContent({
   const [values, setValues] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [creating, setCreating] = useState(false);
+  const [articleTitle, setArticleTitle] = useState("");
+  const knowledgeBase = isKnowledgeBase(space);
 
   const templates = gallery.data ?? [];
   const term = query.trim().toLowerCase();
@@ -142,14 +145,14 @@ function GalleryContent({
           body: template
             ? {
                 kind: "page",
-                title: "",
+                title: articleTitle.trim(),
                 parentId,
                 template: {
                   id: template.id,
                   values: Object.fromEntries(Object.entries(values).filter(([, value]) => value.trim())),
                 },
               }
-            : { kind: "page", title: t("tree.untitledPage"), parentId },
+            : { kind: "page", title: articleTitle.trim() || t("tree.untitledPage"), parentId },
         }),
       );
       await queryClient.invalidateQueries({ queryKey: ["spaces", space.id, "children"] });
@@ -273,6 +276,16 @@ function GalleryContent({
             )}
           </div>
         </div>
+      ) : null}
+      {knowledgeBase ? (
+        <Field label={t("gallery.articleTitle")} hint={t("gallery.articleTitleHint")}>
+          <Input
+            value={articleTitle}
+            maxLength={255}
+            placeholder={template?.title ?? t("tree.untitledPage")}
+            onChange={(event) => setArticleTitle(event.target.value)}
+          />
+        </Field>
       ) : null}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="secondary" onClick={onDone}>

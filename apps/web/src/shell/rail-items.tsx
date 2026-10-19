@@ -8,14 +8,17 @@ import {
   Home,
   Keyboard,
   Layers,
+  LifeBuoy,
   ListChecks,
   type LucideIcon,
   Search,
   Settings,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useHelpUrl } from "../knowledge-bases/help-target.js";
 import { useUnreadCount } from "../notifications/notifications-api.js";
 import { useShell } from "./shell.js";
+import { useOrganizationState } from "./shell-context.js";
 
 export function RailIcon({ icon: Icon }: { icon: LucideIcon }) {
   return <Icon aria-hidden="true" className="size-icon-lg" strokeWidth={tokens.icon.strokeWidth} />;
@@ -99,11 +102,20 @@ export function NotificationsRailItem() {
 export function HelpRailItem() {
   const { t } = useTranslation();
   const shell = useShell();
+  const { organizationId } = useOrganizationState();
+  const help = useHelpUrl(organizationId);
   return (
     <Menu
       trigger={<RailButton label={t("rail.help")} icon={<RailIcon icon={CircleHelp} />} />}
       align="start"
       items={[
+        {
+          label: help.custom ? t("help.knowledgeBase") : t("help.documentation"),
+          icon: LifeBuoy,
+          onSelect: () => {
+            globalThis.open(help.url, "_blank", "noopener");
+          },
+        },
         { label: t("help.shortcuts"), icon: Keyboard, shortcut: "?", onSelect: shell.openShortcuts },
         {
           label: t("help.apiReference"),
