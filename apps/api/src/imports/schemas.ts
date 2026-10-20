@@ -140,6 +140,10 @@ export const importSchema = z
           ["file", "heading"],
           "`file` makes each Word document one page, `heading` adds a subpage per top-level heading.",
         ).optional(),
+        knowledgeBase: z
+          .boolean()
+          .optional()
+          .describe("For a `markdown` import: whether the new space is a knowledge base."),
       })
       .describe("Options of the source."),
     throttledUntil: timestamp(
@@ -376,6 +380,12 @@ export const updateImportSchema = z
           .enum(["file", "heading"])
           .optional()
           .describe("For a `word` import: one page per document, or a subpage per top-level heading."),
+        knowledgeBase: z
+          .boolean()
+          .optional()
+          .describe(
+            "For a `markdown` import: `true` makes the new space a knowledge base. Folders become categories, files become articles, and article types, languages, translations and sections written by a Pagehall export are kept. The knowledge base opens for the people given a role when it is accepted; choose its audience afterwards in its settings.",
+          ),
       })
       .strict()
       .optional()

@@ -68,7 +68,9 @@ export const sectionModule = defineModule({
       markdown: (node, renderer) => {
         renderer.nextHeadingId();
         const number = renderer.headingNumber();
-        return `## ${number ? `${number} ` : ""}${renderer.escape(attrOf<string>(node, "title"))}\n\n${renderer.blocks(node)}`;
+        const icon = attrOf<string | null>(node, "icon");
+        const marker = `<!-- pagehall:section key="${attrOf<string>(node, "key")}"${icon ? ` icon="${icon}"` : ""} -->`;
+        return `${marker}\n\n## ${number ? `${number} ` : ""}${renderer.escape(attrOf<string>(node, "title"))}\n\n${renderer.blocks(node)}\n\n<!-- /pagehall:section -->`;
       },
       text: (node) => attrOf<string>(node, "title"),
       heading: (node) => ({ level: 2, text: attrOf<string>(node, "title") }),

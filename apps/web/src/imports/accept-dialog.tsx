@@ -75,6 +75,7 @@ function AcceptForm({
   const [initialized, setInitialized] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const knowledgeBase = entry.options.knowledgeBase === true;
 
   if (defaults.data && !initialized) {
     setInitialized(true);
@@ -112,7 +113,7 @@ function AcceptForm({
     setSubmitting(true);
     try {
       const accepted = await acceptImport(entry.id, {
-        visibility,
+        visibility: knowledgeBase ? "private" : visibility,
         grants: grants
           .filter((grant) => !(grant.principalKind === "account" && grant.principalId === ownId))
           .map(({ principalKind, principalId, role }) => ({ principalKind, principalId, role })),
@@ -144,11 +145,17 @@ function AcceptForm({
       <p>
         {t("imports.accept.intro", { name: importTitle(t, entry), organization: organization?.name ?? "" })}
       </p>
-      <VisibilityField
-        value={visibility}
-        onChange={setVisibility}
-        organizationName={organization?.name ?? ""}
-      />
+      {knowledgeBase ? (
+        <Notice variant="info" title={t("imports.accept.knowledgeBaseTitle")}>
+          {t("imports.accept.knowledgeBase")}
+        </Notice>
+      ) : (
+        <VisibilityField
+          value={visibility}
+          onChange={setVisibility}
+          organizationName={organization?.name ?? ""}
+        />
+      )}
       <GrantsField
         organizationId={organizationId}
         organizationName={organization?.name ?? null}
@@ -158,7 +165,7 @@ function AcceptForm({
         hint={t(imported === false ? "imports.accept.defaultsHint" : "imports.accept.importedHint")}
       />
       <WhoGetsAccess
-        visibility={visibility}
+        visibility={knowledgeBase ? "private" : visibility}
         grants={grants}
         ownId={ownId}
         organizationName={organization?.name ?? null}

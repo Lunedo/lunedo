@@ -833,6 +833,37 @@ export function DocumentsField({
   );
 }
 
+export function KnowledgeBaseField({
+  entry,
+  patch,
+}: {
+  entry: ImportView;
+  patch: (body: ImportUpdate) => Promise<ImportView>;
+}) {
+  const { t } = useTranslation();
+  const failed = useFailureToast();
+  return (
+    <Section title={t("imports.markdown.spaceType")}>
+      <div className="flex flex-wrap items-center gap-3 p-4">
+        <div className="flex min-w-0 flex-1 basis-field flex-col">
+          <span className="font-medium">{t("imports.markdown.knowledgeBase")}</span>
+          <span className="text-sm text-text-muted">{t("imports.markdown.knowledgeBaseHint")}</span>
+        </div>
+        <Switch
+          label={t("imports.markdown.knowledgeBase")}
+          labelHidden
+          checked={entry.options.knowledgeBase === true}
+          onCheckedChange={(knowledgeBase) =>
+            void patch({ options: { knowledgeBase } }).catch((error: unknown) =>
+              failed(t("imports.wizard.saveFailed"), error),
+            )
+          }
+        />
+      </div>
+    </Section>
+  );
+}
+
 export function SplitField({
   entry,
   patch,

@@ -765,6 +765,36 @@ describe("people and permissions in the report", () => {
       expect(body.grants).toContainEqual({ principalKind: "group", principalId: GROUP, role: "editor" });
     });
   });
+
+  it("accepts a knowledge base import without a visibility choice", async () => {
+    const api = setup(
+      reportRoutes({
+        [`GET /api/v1/imports/${IMPORT_ID}`]: () => ({
+          body: importView({ source: "markdown", options: { knowledgeBase: true } }),
+        }),
+        [`GET /api/v1/imports/${IMPORT_ID}/proposed-access`]: () => ({
+          body: { visibility: "private", grants: [], pending: 0 },
+        }),
+        [`GET /api/v1/organizations/${ORGANIZATION.id}/space-defaults`]: () => ({
+          body: { visibility: "organization", grants: [] },
+        }),
+        [`POST /api/v1/imports/${IMPORT_ID}/accept`]: () => ({ body: importView({ state: "accepted" }) }),
+      }),
+      ["organization.imports.manage"],
+    );
+    await open(`/settings/organizations/${ORGANIZATION.id}/imports/${IMPORT_ID}`);
+    await userEvent.click(await screen.findByRole("button", { name: "Accept import" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(await within(dialog).findByText("The import becomes a knowledge base")).toBeTruthy();
+    expect(within(dialog).queryByRole("radiogroup")).toBeNull();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Accept import" }));
+    await waitFor(() => {
+      const body = api.requests.find((request) => request.path.endsWith("/accept"))?.body as {
+        visibility: string;
+      };
+      expect(body.visibility).toBe("private");
+    });
+  });
 });
 
 describe("new import sources in the wizard", () => {
@@ -974,6 +1004,30 @@ describe("new import sources in the wizard", () => {
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     release();
     expect(await screen.findByRole("heading", { name: "Upload", level: 1 })).toBeTruthy();
+  });
+
+  it("imports a Markdown folder as a knowledge base when asked", async () => {
+    let current = draft({ source: "markdown", draftStep: 1 });
+    const api = setup(
+      {
+        [`GET /api/v1/imports/${IMPORT_ID}`]: () => ({ body: current }),
+        [`PATCH /api/v1/imports/${IMPORT_ID}`]: () => {
+          const body = (api.requests.at(-1)?.body ?? {}) as { options?: Record<string, unknown> };
+          current = { ...current, options: { ...current.options, ...body.options } };
+          return { body: current };
+        },
+      },
+      ["organization.imports.manage"],
+    );
+    await open(`/settings/organizations/${ORGANIZATION.id}/imports/${IMPORT_ID}/setup?step=1`);
+    const toggle = await screen.findByRole("switch", { name: "Import as a knowledge base" });
+    expect(toggle.getAttribute("aria-checked")).toBe("false");
+    await userEvent.click(toggle);
+    await waitFor(() => expect(api.requests.some((request) => request.method === "PATCH")).toBe(true));
+    expect(api.requests.find((request) => request.method === "PATCH")?.body).toEqual({
+      options: { knowledgeBase: true },
+    });
+    await waitFor(() => expect(toggle.getAttribute("aria-checked")).toBe("true"));
   });
 
   it("refuses Word documents with macros before uploading anything", async () => {

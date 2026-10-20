@@ -15,15 +15,24 @@ export async function createQuarantineSpace(
     key: string;
     importerId: string;
     readers: readonly string[];
+    knowledgeBase?: boolean;
   },
-): Promise<{ spaceId: string; overviewId: string }> {
+): Promise<{ spaceId: string; overviewId: string | null }> {
   const spaceId = uuidv7();
   await tx.execute(sql`delete from space_key_aliases where key = ${input.key}`);
   await tx.execute(sql`
-    insert into spaces (id, organization_id, key, name, visibility, discoverable, quarantined, created_by)
-    values (${spaceId}, ${input.organizationId}, ${input.key}, ${input.name}, 'private', false, true, ${input.importerId})`);
+    insert into spaces (id, organization_id, key, type, audience, name, visibility, discoverable, quarantined,
+      created_by)
+    values (${spaceId}, ${input.organizationId}, ${input.key},
+      ${input.knowledgeBase ? "knowledgeBase" : "standard"}, ${input.knowledgeBase ? "groups" : null},
+      ${input.name}, 'private', false, true, ${input.importerId})`);
   await insertDefaultPageStatuses(tx, spaceId);
   await setQuarantineReaders(tx, spaceId, input.importerId, [input.importerId, ...input.readers]);
+  if (input.knowledgeBase) {
+    await tx.execute(sql`insert into knowledge_bases (space_id) values (${spaceId})`);
+    await signalSpaceChange(tx, { spaceId, kind: "space", itemId: null });
+    return { spaceId, overviewId: null };
+  }
   const overviewId = await insertPage(tx, {
     spaceId,
     parentId: null,

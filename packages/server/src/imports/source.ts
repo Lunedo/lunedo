@@ -36,6 +36,7 @@ export interface ImportOptions {
   readonly pageIds?: readonly string[] | undefined;
   readonly blogPosts?: boolean | undefined;
   readonly split?: "file" | "heading" | undefined;
+  readonly knowledgeBase?: boolean | undefined;
 }
 
 export interface SourceSpace {
@@ -64,7 +65,14 @@ export interface SourcePageStatus {
   readonly color: string | null;
 }
 
+export interface SourceArticle {
+  readonly articleType: "howTo" | "troubleshooting" | null;
+  readonly language: string | null;
+  readonly translation: boolean;
+}
+
 export interface SourcePage {
+  readonly article?: SourceArticle | undefined;
   readonly sourceId: string;
   readonly type: SourceContentType;
   readonly parentId: string | null;

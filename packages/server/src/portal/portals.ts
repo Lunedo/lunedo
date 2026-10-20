@@ -179,7 +179,7 @@ export class PortalService {
         kb.welcome_text, kb.top_bar_threshold, kb.powered_by, kb.feedback_retention_months, kb.logo_ref,
         o.logo_ref as organization_logo_ref, kb.default_language, kb.languages
       from knowledge_bases kb join spaces s on s.id = kb.space_id join organizations o on o.id = s.organization_id
-      where s.deleted_at is null and s.archived_at is null and s.type = 'knowledgeBase' and ${condition}`);
+      where s.deleted_at is null and s.archived_at is null and not s.quarantined and s.type = 'knowledgeBase' and ${condition}`);
     const row = result.rows[0];
     if (!row) return null;
     const chain = { organization: row.organization_id };

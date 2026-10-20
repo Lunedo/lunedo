@@ -15,6 +15,7 @@ import {
   modules,
   type NodeJson,
   schema,
+  sectionIconValue,
   validateDocument,
 } from "@pagehall/editor-schema";
 import { escapeXml } from "../formats/escape.js";
@@ -671,10 +672,11 @@ class Converter {
       case "ac:image":
       case "img":
         return this.image(node);
+      case "section":
+        return this.section(node);
       case "ac:layout":
       case "ac:layout-cell":
       case "div":
-      case "section":
       case "article":
         return this.blocks(node.children);
       case "ac:layout-section":
@@ -683,6 +685,24 @@ class Converter {
         if (isMacro(name)) return this.macro(node);
         return this.blocks(node.children);
     }
+  }
+
+  section(node: XmlNode): NodeJson[] {
+    const key = node.attributes["data-pagehall-section"] ?? "";
+    const content = this.blocks(node.children);
+    if (!/^[a-z][a-zA-Z0-9]{0,39}$/.test(key)) return content;
+    const icon = node.attributes["data-pagehall-icon"] ?? "";
+    return [
+      {
+        type: "section",
+        attrs: {
+          key,
+          title: (node.attributes["data-pagehall-title"] ?? "").slice(0, 255),
+          icon: sectionIconValue.safeParse(icon).success ? icon : null,
+        },
+        content: content.length > 0 ? content : [{ type: "paragraph" }],
+      },
+    ];
   }
 
   list(node: XmlNode, ordered: boolean): NodeJson[] {

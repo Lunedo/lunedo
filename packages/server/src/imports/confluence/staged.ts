@@ -9,6 +9,7 @@ import type {
   PersonReference,
   ReadContext,
   ScanContext,
+  SourceArticle,
   SourceAttachment,
   SourceAttachmentVersion,
   SourceBody,
@@ -53,6 +54,7 @@ export async function spaceDescription(
 
 export interface StagedPage {
   type?: SourceContentType;
+  article?: SourceArticle;
   sourceType?: string;
   archived?: boolean;
   title: string;
@@ -509,6 +511,7 @@ export abstract class StagedConfluenceReader implements ImportReader {
           status: pageStatus(statuses.get(page.sourceId)?.get(PAGE_STATUS_PROPERTY)),
           sourceType: page.data.sourceType ?? null,
           archived: page.data.archived === true,
+          ...(page.data.article ? { article: page.data.article } : {}),
         } satisfies SourcePage;
       }
       batch = [];
