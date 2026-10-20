@@ -189,7 +189,7 @@ export class StaticSiteBuilder {
     return articles;
   }
 
-  async #fileNames(articles: SiteArticle[]): Promise<Map<string, FileInfo>> {
+  async #fileNames(config: PortalConfig, articles: SiteArticle[]): Promise<Map<string, FileInfo>> {
     const ids = new Set<string>();
     for (const article of articles) {
       walk(article.document as NodeJson, (node) => {
@@ -202,16 +202,15 @@ export class StaticSiteBuilder {
       });
     }
     if (ids.size === 0) return new Map();
-    const result = await this.#database.execute<{ id: string; name: string }>(sql`
-      select a.id, v.name from attachments a join attachment_versions v on v.id = a.published_version_id
-      where a.id = any(${sql.param([...ids])}::uuid[]) and a.deleted_at is null`);
     const info = new Map<string, FileInfo>();
-    for (const row of result.rows) {
-      const content = await this.#attachments.content(row.id, "published");
+    for (const id of ids) {
+      const found = await this.#attachments.get(ANONYMOUS, id.toLowerCase(), "published");
+      if (!found || !(await this.#reader.readable(ANONYMOUS, config, found.itemId))) continue;
+      const content = await this.#attachments.content(found.id, "published");
       const shown = content ? await this.#displayVersions.apply(content, "display") : null;
-      info.set(row.id, {
-        name: row.name,
-        displayExtension: (shown && TYPE_EXTENSIONS[shown.contentType]) || extensionOf(row.name),
+      info.set(id, {
+        name: found.name,
+        displayExtension: (shown && TYPE_EXTENSIONS[shown.contentType]) || extensionOf(found.name),
       });
     }
     return info;
@@ -220,7 +219,7 @@ export class StaticSiteBuilder {
   async entries(spaceId: string, options: StaticSiteOptions): Promise<ArchiveEntry[]> {
     const config = await this.config(spaceId);
     const articles = await this.#articles(config);
-    const names = await this.#fileNames(articles);
+    const names = await this.#fileNames(config, articles);
     const files = new Map<string, SiteFile>();
     const entries: ArchiveEntry[] = [];
     const mtime = options.now;
@@ -254,6 +253,7 @@ export class StaticSiteBuilder {
       `${folder(article.language)}${article.number}${article.slug ? `-${article.slug}` : ""}.html`;
     const fileOf = (attachmentId: string, display: boolean) => {
       const info = names.get(attachmentId);
+      if (!info) return null;
       const extension = display ? (info?.displayExtension ?? "") : extensionOf(info?.name ?? "");
       const key = `${attachmentId}${display ? "-display" : ""}`;
       files.set(key, { attachmentId, extension, display });
@@ -457,7 +457,10 @@ export class StaticSiteBuilder {
           const target = versions?.get(article.language) ?? versions?.get(config.defaultLanguage);
           return target ? `${root}/${articleFile(target)}` : "";
         },
-        file: (attachmentId, display) => `${root}/${fileOf(attachmentId, display)}`,
+        file: (attachmentId, display) => {
+          const path = fileOf(attachmentId, display);
+          return path ? `${root}/${path}` : "";
+        },
       };
       const content = await this.#renderer.renderDocument(
         {

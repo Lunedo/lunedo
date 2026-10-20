@@ -4,6 +4,7 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, extname, join, normalize, resolve, sep } from "node:path";
+import { Readable } from "node:stream";
 import { fileURLToPath } from "node:url";
 import { sql } from "drizzle-orm";
 import MiniSearch from "minisearch";
@@ -20,6 +21,10 @@ import { spaceFixtures } from "../../testing/spaces.js";
 import { STATIC_SEARCH_OPTIONS } from "./static-site.js";
 
 const baseUrl = testDatabaseBaseUrl();
+const PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+  "base64",
+);
 const DOCS = resolve(dirname(fileURLToPath(import.meta.url)), "../../../../../docs");
 const CATEGORIES: Record<string, string> = {
   setup: "Operations",
@@ -289,5 +294,60 @@ describe.skipIf(!baseUrl)("static website of a knowledge base", () => {
       state: "failed",
       errorCode: "notPublic",
     });
+  }, 120_000);
+
+  it("leaves out files of other spaces that an article points to", async () => {
+    const organization = await fixtures.organization();
+    const owner = accountPrincipal(organization.owner);
+    const name = `Help ${randomUUID().slice(0, 8)}`;
+    const kb = await test.services.spaces.create(
+      owner,
+      organization.id,
+      {
+        name,
+        key: await test.services.spaces.suggestKey(name),
+        type: "knowledgeBase",
+        audience: "public",
+        grants: [],
+      },
+      test.services.spacePermissions.holders,
+    );
+    const secret = await fixtures.space(organization.id, organization.owner);
+    const hidden = await test.services.tree.create(owner, secret.id, {
+      kind: "page",
+      title: "Salaries",
+      placement: { parentId: null },
+    });
+    const leaked = await test.services.attachments.upload(owner, hidden.id, {
+      name: "salaries.png",
+      body: Readable.from([PNG]),
+      contentLength: PNG.length,
+    });
+    const article = await test.services.tree.create(owner, kb.id, {
+      kind: "page",
+      title: "Printer",
+      placement: { parentId: null },
+    });
+    const own = await test.services.attachments.upload(owner, article.id, {
+      name: "printer.png",
+      body: Readable.from([PNG]),
+      contentLength: PNG.length,
+    });
+    await test.services.documents.replace(owner, article.id, {
+      type: "doc",
+      content: [
+        { type: "image", attrs: { attachmentId: own.id, alt: "Printer" } },
+        { type: "image", attrs: { attachmentId: leaked.id, alt: "Chart" } },
+      ],
+    });
+    await test.services.versions.publish(owner, article.id);
+    await test.services.versions.publish(owner, hidden.id);
+
+    const files = await site(owner, kb.id, null);
+    const paths = [...files.keys()];
+    expect(paths.some((path) => path.includes(own.id))).toBe(true);
+    expect(paths.some((path) => path.includes(leaked.id))).toBe(false);
+    const everything = [...files.values()].map((content) => content.toString("latin1")).join("\n");
+    expect(everything).not.toMatch(new RegExp(`(src|href)="[^"]*${leaked.id}`));
   }, 120_000);
 });
