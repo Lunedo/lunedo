@@ -1575,6 +1575,12 @@
     "requiredSectionsEmpty": "A required section is empty. Fill it in, then publish again.",
     "sectionNotFound": "The template has no such section. Reload the page and try again.",
     "draftNotVisible": "Only editors of the article see its draft.",
+    "notArticle": "Only articles of a knowledge base have reviews. Open the article in its knowledge base.",
+    "articleNotPublished": "The article is not published yet. Publish it first, then mark it as reviewed.",
+    "reviewNotUndoable": "The review can no longer be undone, because someone reviewed the article again or too much time has passed. Mark it as due again by changing its interval, if needed.",
+    "sourceNotFound": "The source page does not exist or you cannot read it. Choose another page.",
+    "invalidSourcePage": "A source page must be a page in an internal space, not another article. Choose an internal page.",
+    "tooManySources": "An article can link to at most 20 source pages. Remove one before you add another.",
     "invalidPortalPath": "The path may contain lowercase letters, digits and single hyphens, at most 60 characters. Change it and save again.",
     "portalPathTaken": "Another knowledge base already uses this path. Choose a different path.",
     "invalidPortalDomain": "The domain is not valid. Enter only the domain name, without https:// and without a path.",
@@ -1588,7 +1594,8 @@
     "invalidTopBarThreshold": "Enter a whole number from 1 to 100.",
     "invalidRetention": "Enter a whole number of months from 1 to 60.",
     "invalidHelpKnowledgeBase": "This knowledge base cannot open from the help icon because not everyone signed in may read it. Choose another one or widen its audience.",
-    "organizationNotFound": "The organization does not exist anymore. Reload the page and choose another one."
+    "organizationNotFound": "The organization does not exist anymore. Reload the page and choose another one.",
+    "feedbackNotFound": "The note was deleted in the meantime. Reload the page to see the current notes."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -2556,7 +2563,8 @@
       "importsAndExports": "Imports and exports",
       "storageLevelReached": "File store fills up",
       "storageLevelCleared": "File store usage falls",
-      "copies": "Copies I made"
+      "copies": "Copies I made",
+      "reviews": "Article reviews"
     },
     "types": {
       "identityProvider": {
@@ -2650,6 +2658,10 @@
       "copy": {
         "finished": "Your copy {itemTitle} is ready in the space {spaceKey}.",
         "failed": "Copying {itemTitle} failed and nothing was created. Copy again."
+      },
+      "article": {
+        "reviewDue": "{itemTitle} is due for review on {dueAt}.",
+        "sourceChanged": "A source page of {itemTitle} changed. Check whether the article needs an update."
       }
     },
     "channelFor": "{event}: {channel}",
@@ -3854,7 +3866,15 @@
       },
       "knowledgeBase": {
         "audienceChanged": "Readers of a knowledge base changed",
+        "reviewSettingsChanged": "Review settings of a knowledge base changed",
         "portalAddressChanged": "Portal address of a knowledge base changed"
+      },
+      "article": {
+        "reviewed": "Article marked as reviewed",
+        "reviewUndone": "Review of an article undone",
+        "sourceAdded": "Source page linked to an article",
+        "sourceRemoved": "Source page removed from an article",
+        "feedbackDeleted": "Reader note on an article deleted"
       }
     },
     "action": "Action",
@@ -9595,5 +9615,207 @@
       "removeFailed": "The domain could not be removed",
       "domainPlaceholder": "help.example.org"
     }
+  },
+  "reviews": {
+    "activityMarked": "{actor} marked the article as reviewed",
+    "activityPublished": "{actor} published the article and marked the content as reviewed",
+    "activityTitle": "Status, owner and reviews",
+    "activityEmpty": "The status and the owner have not changed and the article has not been reviewed yet.",
+    "article": {
+      "label": "Review:",
+      "loadFailed": "The review state could not be loaded. Reload the page to try again.",
+      "inherited": "from the knowledge base",
+      "setHere": "set for this article",
+      "changeInterval": "Review interval: {interval}. Change it",
+      "inherit": "Same as the knowledge base",
+      "intervalSaved": "Review interval saved",
+      "intervalFailed": "The review interval was not saved",
+      "reviewed": "last reviewed on {date}",
+      "reviewedBy": "last reviewed on {date} by {name}",
+      "next": "next review on {date}"
+    },
+    "interval": {
+      "months": "{count, plural, one {Every month} other {Every # months}}",
+      "off": "No review",
+      "none": "No review for this article"
+    },
+    "state": {
+      "overdue": "{count, plural, one {Overdue for # day} other {Overdue for # days}}",
+      "dueToday": "Due today",
+      "dueSoon": "{count, plural, one {Due in # day} other {Due in # days}}",
+      "sourceChanged": "Source page changed",
+      "current": "Next review on {date}",
+      "off": "No review"
+    },
+    "markReviewed": "Mark as reviewed",
+    "marked": "“{title}” marked as reviewed. Next review on {date}.",
+    "markedWithoutDue": "“{title}” marked as reviewed.",
+    "markFailed": "“{title}” was not marked as reviewed",
+    "undone": "The review of “{title}” was undone.",
+    "undoFailed": "The review of “{title}” could not be undone",
+    "publish": {
+      "reviewed": "Content reviewed",
+      "reviewedHint": "You checked the whole article. The publication then also counts as a review, and the next review is due one interval from now."
+    },
+    "home": {
+      "title": "Due for review",
+      "description": "Articles you are responsible for that are due within 30 days or whose source page changed.",
+      "more": "{count, plural, one {# more article in the review lists of the knowledge bases} other {# more articles in the review lists of the knowledge bases}}"
+    },
+    "list": {
+      "title": "Review",
+      "description": "Articles whose interval has passed or ends within 30 days, whose source page changed, or that have no owner. Owners are reminded before and on the due date.",
+      "filter": "Show",
+      "filterCount": "{label} ({count})",
+      "filters": {
+        "all": "All",
+        "due": "Due",
+        "soon": "Within 30 days",
+        "unowned": "Without owner"
+      },
+      "mine": "Only my articles",
+      "loadFailed": "The articles to review",
+      "emptyTitle": "Nothing due in this selection",
+      "emptyDescription": "New due dates appear here and on “For you”.",
+      "hint": "Only articles you may edit are listed. “Mark as reviewed” sets the last review to today without creating a version.",
+      "article": "Article",
+      "owner": "Owner",
+      "interval": "Interval",
+      "lastReviewed": "Last reviewed",
+      "state": "Due",
+      "actions": "Actions",
+      "publishedOn": "Published {date}",
+      "never": "Never",
+      "noOwner": "Nobody",
+      "ownerLeft": "Nobody ({name} left)",
+      "assignOwner": "Set owner",
+      "sourceChangedHint": "A source page changed since the last review",
+      "edit": "Edit",
+      "editArticle": "Edit “{title}”",
+      "more": "Show more articles",
+      "dueBadge": "{count} due",
+      "filteredTitle": "No articles in this selection",
+      "filteredDescription": "Other articles may still need a review. Show all articles to see them.",
+      "showAll": "Show all articles",
+      "offTitle": "Reviews are off",
+      "offDescription": "Articles appear here when they have a review interval and become due, when a source page changes or when they have no owner. Set an interval in the settings of the knowledge base.",
+      "openSettings": "Set review interval"
+    },
+    "settings": {
+      "tab": "Review",
+      "title": "Review",
+      "description": "Articles get outdated. With an interval, owners are reminded and due articles are listed under Review and on “For you”.",
+      "loadFailed": "The review settings",
+      "section": "Review and reminders",
+      "interval": "Review interval",
+      "intervalDescription": "Applies to every article without an interval of its own. Default: no review.",
+      "lead": "First reminder",
+      "leadDescription": "In addition to the reminder on the due date.",
+      "leadNone": "Only on the due date",
+      "leadDays": "{count, plural, one {# day before} other {# days before}}",
+      "recipients": "Who is reminded",
+      "recipientsDescription": "Articles without an owner always go to the space admins.",
+      "recipientsOwner": "The owner",
+      "recipientsOwnerAndAdministrators": "The owner and the space admins",
+      "sources": "Changed source page",
+      "sourcesDescription": "When an internal source page of an article is published with changes, the article is listed under Review and its owner is notified.",
+      "sourcesAlways": "Always on",
+      "adminsOnly": "Only space admins change these settings."
+    },
+    "sources": {
+      "label": "Source pages:",
+      "loadFailed": "could not be loaded",
+      "none": "none",
+      "changed": "changed",
+      "internal": "Internal only, never shown to readers of the knowledge base. When a source page changes, the owner is reminded to review the article.",
+      "add": "Add source page",
+      "addTitle": "Add a source page",
+      "addDescription": "Choose the internal page this article is based on. Readers of the knowledge base never see it.",
+      "addFailed": "The source page was not added",
+      "page": "Page",
+      "pageHint": "A page in an internal space of this organization that you can read.",
+      "choosePage": "Choose a page.",
+      "search": "Search pages by title",
+      "noPages": "No matching pages you can read.",
+      "addConfirm": "Add source page",
+      "remove": "Remove source page “{title}”",
+      "removed": "Source page “{title}” removed",
+      "removeFailed": "Source page “{title}” was not removed"
+    }
+  },
+  "statistics": {
+    "title": "Search statistics",
+    "description": "What readers search for in the portal and how they rate articles. Without names, accounts, sessions or IP addresses.",
+    "period": "Period",
+    "periods": {
+      "7d": "7 days",
+      "30d": "30 days",
+      "90d": "90 days",
+      "12m": "12 months"
+    },
+    "loadFailed": "The search statistics could not be loaded",
+    "emptyTitle": "No readers in this period",
+    "emptyDescription": "Searches, views and ratings from the portal appear here once readers use it.",
+    "showYear": "Show 12 months",
+    "tiles": {
+      "searches": "Searches",
+      "views": "{count, plural, one {# article view} other {# article views}}",
+      "zeroResults": "Searches without results",
+      "zeroResultsDetail": "{count, plural, one {# search} other {# searches}}",
+      "helpful": "Rated as helpful",
+      "ratings": "{count, plural, one {of # rating} other {of # ratings}}"
+    },
+    "terms": {
+      "term": "Search term",
+      "searches": "Searches",
+      "withoutResults": "Without results",
+      "last": "Last search",
+      "actions": "Actions",
+      "create": "Create article",
+      "createFor": "Create an article for “{term}”",
+      "threshold": "Terms appear from 3 searches on, so single searches for names stay hidden."
+    },
+    "zero": {
+      "title": "Searches without results",
+      "description": "An article is probably missing here, or readers use other words than the articles.",
+      "emptyTitle": "No frequent searches without results"
+    },
+    "top": {
+      "title": "Most frequent search terms",
+      "empty": "No term was searched 3 times or more in this period."
+    },
+    "unhelpful": {
+      "title": "Rated as not helpful",
+      "description": "Articles with the most answers “No” to “Was this helpful?”.",
+      "empty": "No article was rated as not helpful in this period."
+    },
+    "read": {
+      "title": "Most read",
+      "empty": "No article was read in the portal in this period."
+    },
+    "articles": {
+      "article": "Article",
+      "unhelpful": "“No”",
+      "ofRatings": "{no} of {count, plural, one {# rating} other {# ratings}}",
+      "feedback": "Notes",
+      "readFeedback": "{count, plural, one {Read # note} other {Read # notes}}",
+      "readFeedbackFor": "{count, plural, one {Read # note on “{title}”} other {Read # notes on “{title}”}}",
+      "noFeedback": "None",
+      "views": "Views"
+    },
+    "feedback": {
+      "title": "Notes on “{title}”",
+      "description": "What readers missed, in their own words and without their names. Notes are deleted when the retention of the knowledge base ends.",
+      "loadFailed": "The notes could not be loaded",
+      "none": "No notes in this period.",
+      "more": "Show more notes",
+      "delete": "Delete note",
+      "confirm": "Delete this note for good? Use this when it contains personal data. It cannot be restored.",
+      "deleteConfirm": "Delete note for good",
+      "keep": "Keep note",
+      "deleted": "Note deleted",
+      "deleteFailed": "The note could not be deleted"
+    },
+    "privacy": "Counted anonymously: no names, accounts, sessions or IP addresses. Searches older than 12 months are kept only as counts per term and month, for terms searched at least 3 times that month."
   }
 }

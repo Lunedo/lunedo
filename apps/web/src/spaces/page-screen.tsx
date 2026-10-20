@@ -55,6 +55,7 @@ import { ArticleTypeControl } from "../knowledge-bases/article-type-control.js";
 import { articleTypeIcon } from "../knowledge-bases/article-types.js";
 import { ArticlePortalLink } from "../knowledge-bases/portal-link.js";
 import { isKnowledgeBase } from "../knowledge-bases/queries.js";
+import { ArticleReviewLine } from "../knowledge-bases/reviews/article-review.js";
 import { MeetingHeader } from "../meetings/meeting-header.js";
 import { PrivateNotesPanel } from "../meetings/private-notes-panel.js";
 import { WatchMenu } from "../notifications/watch-menu.js";
@@ -373,6 +374,7 @@ function PageArticle({
                         draft={draft.data}
                         saveState={saveState}
                         onMissingSections={setMissingSections}
+                        article={knowledgeBase}
                       />
                     </>
                   ) : (
@@ -411,6 +413,14 @@ function PageArticle({
           }
         />
         <PageMeta page={page} writable={writable} />
+        {knowledgeBase ? (
+          <ArticleReviewLine
+            itemId={page.id}
+            title={page.title}
+            editable={writable}
+            published={page.published}
+          />
+        ) : null}
         {sharing.restrictionNote}
         {editing && missingSections.length > 0 ? (
           <Notice variant="warning" title={t("knowledgeBase.required.title")}>

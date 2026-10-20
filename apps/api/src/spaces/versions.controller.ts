@@ -108,6 +108,12 @@ const publishSchema = z
       .max(VERSION_NOTE_MAX_LENGTH * 2)
       .optional()
       .describe(`Short note on what changed, up to ${VERSION_NOTE_MAX_LENGTH} characters.`),
+    reviewed: z
+      .boolean()
+      .optional()
+      .describe(
+        "For knowledge base articles: the author checked the whole content, so the publication also counts as a review. Default false.",
+      ),
   })
   .strict()
   .describe("Publication of the draft.");
@@ -216,14 +222,17 @@ export class VersionsController {
       schema: publishResultSchema,
       example: { version: 8, created: true },
     },
-    errors: ["notPublishMode", "invalidNote", "requiredSectionsEmpty"],
+    errors: ["notPublishMode", "invalidNote", "requiredSectionsEmpty", "notArticle"],
   })
   async publish(
     @Param("pageId") pageId: string,
     @Body() body: z.output<typeof publishSchema>,
     @Req() request: FastifyRequest,
   ) {
-    const published = await this.#services.versions.publish(actorOf(request), pageId, { note: body.note });
+    const published = await this.#services.versions.publish(actorOf(request), pageId, {
+      note: body.note,
+      reviewed: body.reviewed,
+    });
     if (published.created) {
       await this.#services.articleRenderer
         .queue(pageId)

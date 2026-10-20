@@ -43,6 +43,7 @@ describe("notification events", () => {
       copies: { inApp: true, email: "off", push: false },
       blogPosts: { inApp: true, email: "digest", push: false },
       meetings: { inApp: true, email: "off", push: false },
+      reviews: { inApp: true, email: "digest", push: false },
       ownershipAndStatus: { inApp: true, email: "off", push: false },
     });
   });

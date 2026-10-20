@@ -21,6 +21,7 @@ export type SpaceSettingsTab =
   | "visibility"
   | "categories"
   | "articleTemplates"
+  | "reviews"
   | "address"
   | "appearance";
 
@@ -37,6 +38,7 @@ const TAB_PATHS = {
   visibility: "/spaces/$spaceKey/settings/visibility",
   categories: "/spaces/$spaceKey/settings/categories",
   articleTemplates: "/spaces/$spaceKey/settings/article-templates",
+  reviews: "/spaces/$spaceKey/settings/reviews",
   address: "/spaces/$spaceKey/settings/address",
   appearance: "/spaces/$spaceKey/settings/appearance",
 } as const;
@@ -84,6 +86,7 @@ export function SpaceSettingsPage({
                 { value: "access", label: t("spaces.access.tab") },
                 { value: "categories", label: t("knowledgeBase.settings.categories") },
                 { value: "articleTemplates", label: t("knowledgeBase.settings.articleTemplates") },
+                { value: "reviews", label: t("reviews.settings.tab") },
                 { value: "templates", label: t("templates.title") },
                 { value: "content", label: t("content.title") },
                 { value: "status", label: t("pageStatus.settingsTitle") },

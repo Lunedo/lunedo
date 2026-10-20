@@ -12,8 +12,10 @@ import { KnowledgeBasesController } from "./knowledge-bases.controller.js";
 import { OrganizationSpacesController } from "./organization-spaces.controller.js";
 import { OwnershipController } from "./ownership.controller.js";
 import { PersonalSpacesController } from "./personal-spaces.controller.js";
+import { ReviewsController } from "./reviews.controller.js";
 import { ShortcutsController } from "./shortcuts.controller.js";
 import { SpacesController } from "./spaces.controller.js";
+import { StatisticsController } from "./statistics.controller.js";
 import { TemplateFilesController } from "./template-files.controller.js";
 import { TemplatesController } from "./templates.controller.js";
 import { TrashController } from "./trash.controller.js";
@@ -26,6 +28,8 @@ import { VersionsController } from "./versions.controller.js";
     ConfidentialSpacesController,
     ItemsController,
     KnowledgeBasesController,
+    ReviewsController,
+    StatisticsController,
     PortalController,
     CopiesController,
     OwnershipController,

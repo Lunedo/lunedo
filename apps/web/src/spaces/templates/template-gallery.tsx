@@ -42,11 +42,13 @@ export function today(): string {
 export function TemplateGallery({
   space,
   parentId,
+  title = "",
   onOpenChange,
   onSeriesTemplate,
 }: {
   space: SpaceWithRole;
   parentId: string | null | undefined;
+  title?: string;
   onOpenChange: (open: boolean) => void;
   onSeriesTemplate?: (templateId: string) => void;
 }) {
@@ -63,6 +65,7 @@ export function TemplateGallery({
         <GalleryContent
           space={space}
           parentId={parentId}
+          initialTitle={title}
           onDone={() => onOpenChange(false)}
           {...(onSeriesTemplate ? { onSeriesTemplate } : {})}
         />
@@ -74,11 +77,13 @@ export function TemplateGallery({
 function GalleryContent({
   space,
   parentId,
+  initialTitle,
   onDone,
   onSeriesTemplate,
 }: {
   space: SpaceWithRole;
   parentId: string | null;
+  initialTitle: string;
   onDone: () => void;
   onSeriesTemplate?: (templateId: string) => void;
 }) {
@@ -93,7 +98,7 @@ function GalleryContent({
   const [values, setValues] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [creating, setCreating] = useState(false);
-  const [articleTitle, setArticleTitle] = useState("");
+  const [articleTitle, setArticleTitle] = useState(initialTitle);
   const knowledgeBase = isKnowledgeBase(space);
 
   const templates = gallery.data ?? [];

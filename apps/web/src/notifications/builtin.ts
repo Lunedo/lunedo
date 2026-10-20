@@ -3,6 +3,7 @@ import {
   AtSign,
   Bot,
   Building2,
+  CalendarCheck,
   CalendarClock,
   CalendarPlus,
   CircleDot,
@@ -153,6 +154,8 @@ notificationTypes.register(
       return spaceKey ? { to: `/spaces/${encodeURIComponent(spaceKey)}/settings/access` } : null;
     },
   },
+  { id: "article.reviewDue", icon: CalendarCheck, link: contentLink },
+  { id: "article.sourceChanged", icon: FilePen, link: contentLink },
   { id: "meeting.notesAvailable", icon: NotebookPen, link: contentLink },
   { id: "meeting.reminder", icon: CalendarPlus, link: contentLink, dateTimeParams: ["startsAt"] },
   {

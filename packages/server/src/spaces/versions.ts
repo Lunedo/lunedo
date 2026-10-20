@@ -21,6 +21,7 @@ import {
   restoreDiscardedAttachments,
 } from "../files/publication.js";
 import { requireSections } from "../knowledge-bases/required.js";
+import type { ReviewService } from "../knowledge-bases/reviews.js";
 import { isKnowledgeBase, knowledgeBaseModeError } from "../knowledge-bases/rules.js";
 import type { SettingsService } from "../settings/service.js";
 import { actorIdOf, auditScopeOf, SpaceError } from "./common.js";
@@ -131,6 +132,7 @@ export class VersionService {
   readonly #people: PeopleService;
   readonly #settings: SettingsService;
   readonly #activity: ContentActivity;
+  #reviews: ReviewService | undefined;
 
   constructor(options: {
     database: Database;
@@ -146,6 +148,10 @@ export class VersionService {
     this.#people = options.people;
     this.#settings = options.settings;
     this.#activity = options.activity;
+  }
+
+  useReviews(reviews: ReviewService): void {
+    this.#reviews = reviews;
   }
 
   async #lock(tx: Transaction, itemId: string): Promise<LockedPage> {
@@ -346,7 +352,7 @@ export class VersionService {
   async publish(
     actor: Principal,
     itemId: string,
-    input: { note?: string | undefined } = {},
+    input: { note?: string | undefined; reviewed?: boolean | undefined } = {},
   ): Promise<{ version: number; created: boolean }> {
     const note = cleanNote(input.note ?? "");
     return this.#database.transaction(async (tx) => {
@@ -367,6 +373,7 @@ export class VersionService {
         fields: { spaceId: page.spaceId, title: page.title, version, note },
         scope: auditScopeOf(page),
       });
+      if (input.reviewed) await this.#reviews?.reviewedOnPublish(tx, actor, itemId);
       return { version, created: true };
     });
   }

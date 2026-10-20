@@ -39,3 +39,28 @@ export async function publishScheduledPostNow(postId: string): Promise<void> {
     },
   );
 }
+
+const MAKE_DUE = `
+const { createDatabasePool } = await import("@pagehall/server");
+const [connectionString, itemId] = process.argv.slice(1);
+const pool = createDatabasePool({ connectionString, applicationName: "pagehall-e2e", max: 1 });
+try {
+  await pool.query(
+    "update article_reviews set published_at = now() - interval '4 months', reviewed_at = null where item_id = $1",
+    [itemId],
+  );
+} finally {
+  await pool.end();
+}
+`;
+
+export async function makeArticleDue(itemId: string): Promise<void> {
+  await run(
+    process.execPath,
+    ["--input-type=module", "-e", MAKE_DUE, readState().databaseUrl ?? "", itemId],
+    {
+      cwd: serverRoot,
+      timeout: 30_000,
+    },
+  );
+}

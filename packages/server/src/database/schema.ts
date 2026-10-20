@@ -113,13 +113,18 @@ export {
 export { jobProgress } from "../jobs/schema.js";
 export {
   articleNumbers,
+  articleReviewEvents,
+  articleReviews,
+  articleReviewVia,
   articleSlugs,
+  articleSources,
   knowledgeBaseCategories,
   knowledgeBaseLogos,
   knowledgeBasePaths,
   knowledgeBases,
   portalDomains,
   requiredSections,
+  reviewRecipient,
 } from "../knowledge-bases/schema.js";
 export {
   instanceSecrets,
@@ -176,6 +181,7 @@ export {
   portalHandoffs,
   portalRatings,
   portalSearches,
+  portalSearchMonths,
   portalSessions,
 } from "../portal/schema.js";
 export { pushOutbox, pushSubscriptions } from "../push/schema.js";

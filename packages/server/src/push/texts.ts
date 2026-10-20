@@ -87,6 +87,14 @@ const en: Texts = {
     title: "A confidential space has no space admin",
     body: text(params.spaceKey),
   }),
+  "article.reviewDue": ({ params }) => ({
+    title: "An article is due for review",
+    body: text(params.itemTitle),
+  }),
+  "article.sourceChanged": ({ params }) => ({
+    title: "A source page of an article changed",
+    body: text(params.itemTitle),
+  }),
   "meeting.reminder": ({ params }) => ({
     title: "Add your topics before the meeting",
     body: text(params.seriesTitle),
@@ -230,6 +238,14 @@ const de: Texts = {
   "space.confidentialWithoutAdministrator": ({ params }) => ({
     title: "Ein vertraulicher Space hat keinen Space-Admin",
     body: text(params.spaceKey),
+  }),
+  "article.reviewDue": ({ params }) => ({
+    title: "Ein Artikel ist zur Überprüfung fällig",
+    body: text(params.itemTitle),
+  }),
+  "article.sourceChanged": ({ params }) => ({
+    title: "Eine Quellseite eines Artikels wurde geändert",
+    body: text(params.itemTitle),
   }),
   "meeting.reminder": ({ params }) => ({
     title: "Trag deine Themen vor der Besprechung ein",

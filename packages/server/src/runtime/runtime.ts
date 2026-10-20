@@ -38,6 +38,7 @@ import {
   cleanupJobProgress,
   cleanupJobProgressJob,
 } from "../jobs/progress-cleanup.js";
+import { startReviewReminders } from "../knowledge-bases/jobs.js";
 import { createLogger, type Logger } from "../logging/logger.js";
 import { graphMailSetting, mailMethodSetting, smtpSetting } from "../mail/mail-service.js";
 import type { MailTransport, SmtpOptions } from "../mail/transport.js";
@@ -239,6 +240,7 @@ export async function createServerRuntime(options: {
         await startPushDelivery({ jobs, listener, push: services.push, logger });
         await startChatDelivery({ jobs, listener, channels: services.chatChannels, logger });
         await startDisplayVersions({ jobs, listener, displayVersions: services.displayVersions, logger });
+        await startReviewReminders({ jobs, listener, reviews: services.reviews, logger });
         metrics.observeJobQueue(jobs);
         await jobs.work(rotateDataKeysJob, keyRotation.run);
         await jobs.work(cleanupJobProgressJob, async () => {

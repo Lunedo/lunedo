@@ -23,6 +23,7 @@ import { PageReadView } from "../../editor/read-view.js";
 import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { translateKey } from "../../i18n/translate.js";
+import { isKnowledgeBase } from "../../knowledge-bases/queries.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { useDocumentTitle } from "../../screens/settings/settings-page.js";
 import { useContentRefresh } from "../content-actions.js";
@@ -210,7 +211,7 @@ function VersionHistory({ page }: { page: ItemDetails }) {
           />
         </div>
       )}
-      <ItemActivity itemId={page.id} />
+      <ItemActivity itemId={page.id} article={isKnowledgeBase(space)} />
       {restoring !== null ? (
         <RestoreDialog
           page={page}

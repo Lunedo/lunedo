@@ -9,6 +9,8 @@ export const FEEDBACK_MAX_LENGTH = 2000;
 export const MINIMUM_TERM_SEARCHES = 3;
 export const FREQUENT_SEARCH_DAYS = 90;
 export const FEEDBACK_SWEEP_SCHEDULE = "41 3 * * *";
+export const RAW_SEARCH_MONTHS = 12;
+export const SEARCH_AGGREGATION_SCHEDULE = "47 3 * * *";
 
 export const feedbackDeletionJob = defineJob({
   name: "portal.delete-feedback",
@@ -19,6 +21,13 @@ export const feedbackDeletionJob = defineJob({
 
 export const feedbackRetentionJob = defineJob({
   name: "portal.feedback-retention",
+  payload: z.object({ spaceId: z.uuid().optional() }),
+  retryLimit: 3,
+  retryDelaySeconds: 300,
+});
+
+export const searchAggregationJob = defineJob({
+  name: "portal.aggregate-searches",
   payload: z.object({ spaceId: z.uuid().optional() }),
   retryLimit: 3,
   retryDelaySeconds: 300,
@@ -91,6 +100,13 @@ function day(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+function aggregationStart(searchDay: string): Date {
+  const start = new Date(`${searchDay}T00:05:00Z`);
+  start.setUTCDate(start.getUTCDate() + 1);
+  start.setUTCMonth(start.getUTCMonth() + RAW_SEARCH_MONTHS);
+  return start;
+}
+
 function hour(date: Date): Date {
   const truncated = new Date(date);
   truncated.setUTCMinutes(0, 0, 0);
@@ -101,6 +117,7 @@ export class PortalStatistics {
   readonly #database: Database;
   readonly #jobs: JobQueue | undefined;
   readonly #clock: () => Date;
+  readonly #aggregationQueued = new Map<string, string>();
 
   constructor(options: { database: Database; jobs?: JobQueue | undefined; clock?: () => Date }) {
     this.#database = options.database;
@@ -119,6 +136,50 @@ export class PortalStatistics {
       select ${uuidv7()}, ${spaceId}, ${term}, ${Math.max(0, input.results)},
         (select id from tree_items where id = ${input.categoryId} and space_id = ${spaceId}),
         ${hour(this.#clock())}`);
+    await this.#scheduleAggregation(spaceId);
+  }
+
+  async #scheduleAggregation(spaceId: string): Promise<void> {
+    const today = day(this.#clock());
+    if (!this.#jobs || this.#aggregationQueued.get(spaceId) === today) return;
+    await this.#jobs.enqueue(
+      searchAggregationJob,
+      { spaceId },
+      { idempotencyKey: `${spaceId}:${today}`, startAfter: aggregationStart(today) },
+    );
+    this.#aggregationQueued.set(spaceId, today);
+  }
+
+  async aggregateSearches(spaceId?: string): Promise<number> {
+    const result = await this.#database.execute<{ moved: string }>(sql`
+      with moved as (
+        delete from portal_searches
+        where searched_at < ${this.#clock()}::timestamptz - make_interval(months => ${RAW_SEARCH_MONTHS})
+          ${spaceId ? sql`and space_id = ${spaceId}` : sql``}
+        returning space_id, term, searched_at, zero_results
+      ),
+      grouped as (
+        select space_id, term, date_trunc('month', searched_at at time zone 'UTC')::date as month,
+          count(*) as searches, count(*) filter (where zero_results) as zero_results
+        from moved group by 1, 2, 3
+      ),
+      merged as (
+        insert into portal_search_months (space_id, term, month, searches, zero_results)
+        select g.space_id, g.term, g.month, g.searches, g.zero_results from grouped g
+        where coalesce((select m.searches from portal_search_months m
+            where m.space_id = g.space_id and m.month = g.month and m.term = g.term), 0)
+          + (select count(*) from portal_searches r
+            where r.space_id = g.space_id and r.term = g.term
+              and r.searched_at >= g.month::timestamp at time zone 'UTC'
+              and r.searched_at < (g.month + interval '1 month')::timestamp at time zone 'UTC')
+          >= ${MINIMUM_TERM_SEARCHES}
+        on conflict (space_id, month, term) do update set
+          searches = portal_search_months.searches + excluded.searches,
+          zero_results = portal_search_months.zero_results + excluded.zero_results
+        returning 1
+      )
+      select count(*) as moved from moved`);
+    return Number(result.rows[0]?.moved ?? 0);
   }
 
   async recordView(spaceId: string, itemId: string): Promise<void> {
@@ -284,9 +345,17 @@ export class PortalStatistics {
     }));
   }
 
+  async feedbackCounts(spaceId: string, period: Period): Promise<ArticleCount[]> {
+    const result = await this.#database.execute<{ item_id: string; count: string }>(sql`
+      select item_id, count(*) as count from portal_feedback
+      where space_id = ${spaceId} and day between ${period.from}::date and ${period.to}::date
+      group by item_id order by item_id`);
+    return result.rows.map((row) => ({ itemId: row.item_id, count: Number(row.count) }));
+  }
+
   async feedback(
     spaceId: string,
-    options: { itemId?: string; limit?: number; before?: string } = {},
+    options: { itemId?: string; period?: Period; limit?: number; before?: string } = {},
   ): Promise<FeedbackText[]> {
     const result = await this.#database.execute<{
       id: string;
@@ -296,6 +365,7 @@ export class PortalStatistics {
     }>(sql`
       select id, item_id, day::text as day, text from portal_feedback
       where space_id = ${spaceId} ${options.itemId ? sql`and item_id = ${options.itemId}` : sql``}
+        ${options.period ? sql`and day between ${options.period.from}::date and ${options.period.to}::date` : sql``}
         ${options.before ? sql`and id < ${options.before}::uuid` : sql``}
       order by id desc limit ${options.limit ?? 50}`);
     return result.rows.map((row) => ({ id: row.id, itemId: row.item_id, day: row.day, text: row.text }));

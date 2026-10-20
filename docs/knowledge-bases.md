@@ -90,6 +90,67 @@ Scripts can migrate existing articles. With an API token of a person or service 
 
 `GET /api/v1/spaces/{spaceId}/articles` lists the articles a caller can read, newest change first, optionally of one category (`categoryId`), outside every category (`topLevel=true`) or of one type. `GET /api/v1/articles/{itemId}` returns the published version of an article with its number, short form, category path, contact address and its sections, each with key, title, icon, plain text and ProseMirror content; editors get the draft with `draft=true`.
 
+## Review
+
+Articles get outdated. A knowledge base can ask for regular reviews, so that someone checks each article from time to time.
+
+### Intervals
+
+Space admins set the review interval under **Space settings → Review**: no review (default), every 3, 6 or 12 months. It applies to every article without an interval of its own. Editors give an article its own interval, or switch reviews off for it, at the top of the article next to **Review**; choosing **Same as the knowledge base** returns to the interval of the knowledge base. There is no interval per category.
+
+An article is due when its interval has passed since its last review, or since it was first published when it was never reviewed. Unpublished articles are never due. Changing an interval, reviewing an article, moving it into or out of a knowledge base and publishing it for the first time update the due date at once.
+
+### Reminders
+
+The owner of an article is reminded when it becomes due, and once before, by default 14 days earlier. The reminders arrive through the notification channels as **Article reviews** and can be changed there like every other notification. Under **Space settings → Review**, space admins choose:
+
+- **First reminder**: only on the due date, or 7, 14 or 30 days before.
+- **Who is reminded**: the owner, or the owner and the space admins. Articles without an owner, for example because the owner's account was deactivated, are always reminded to the space admins.
+
+Each reminder is scheduled for the moment it is due when the due date is set, and moved when the due date changes. A reminder is sent at most once per due date. An hourly check only catches up reminders whose job was lost, for example after an outage.
+
+### Review list
+
+**Review** in the sidebar of the knowledge base lists the articles that are due or overdue, due within 30 days, whose source page changed, or that have no owner. Everyone with edit rights in the knowledge base sees it, each person only with the articles they may edit. The list shows title, category, owner, interval, last review and the state, both as text and as a ring that fills up as the interval passes. Filters show due articles, articles due within 30 days or articles without an owner, and **Only my articles** shows the articles you own.
+
+Articles without an owner show **Set owner** to space admins, who choose a person with edit rights by name. When an owner's account is deactivated, the space admins are notified, as for every space.
+
+### Marking as reviewed
+
+Anyone with edit rights marks an article as reviewed, in the review list, on **For you** or at the top of the article. The review is recorded in the article's history with who and when, without a new version, and the next due date starts from now. For a few seconds the review can be undone. Every review and every undo is recorded in the audit log as `article.reviewed` and `article.reviewUndone`.
+
+When an author publishes a changed article and ticks **Content reviewed** in the publish dialog, the publication also counts as a review. The box is not ticked by default.
+
+### For you
+
+**For you** shows **Due for review** with the articles you own that are due within 30 days or whose source page changed, with **Mark as reviewed** for each. The section appears only when something is due.
+
+## Source pages
+
+An article can be based on internal pages, for example the operating documentation of a service. Editors link them at the top of the article under **Source pages** by searching for a page by title. A source page must be a page in a space of the same organization that is neither a knowledge base nor confidential, and the editor must be able to read it. An article has at most 20 source pages.
+
+When a source page is published with changes, the article shows **Source page changed** in the review list until it is marked as reviewed, and its owner is notified once. Live pages count each saved version as a change. The notification and the review list name the article, never the source page.
+
+In Pagehall, the link to a source page and its title are shown only to people who can read the source page; for everyone else the source does not exist. The portal for readers never shows source pages, and they are not part of the article's content or its machine-readable form. Linking and removing a source page is audited as `article.sourceAdded` and `article.sourceRemoved`.
+
+## Reviews through the API
+
+| Route | Permission | Purpose |
+|---|---|---|
+| `GET /api/v1/spaces/{spaceId}/knowledge-base/reviews` | read the knowledge base | interval, lead time and recipients |
+| `PUT /api/v1/spaces/{spaceId}/knowledge-base/reviews` | space admin | change them |
+| `GET /api/v1/spaces/{spaceId}/reviews` | read the knowledge base | review list with `filter` and `mine`, only editable articles |
+| `GET /api/v1/reviews/mine` | signed in | the caller's due articles |
+| `GET /api/v1/articles/{itemId}/review` | read the article | interval, last review and due date |
+| `PUT /api/v1/articles/{itemId}/review/interval` | edit the article | own interval, `0` for none or `null` to inherit |
+| `POST /api/v1/articles/{itemId}/reviews` | edit the article | mark as reviewed |
+| `DELETE /api/v1/articles/{itemId}/reviews/{reviewId}` | edit the article | undo the latest own review within two minutes |
+| `GET`, `POST /api/v1/articles/{itemId}/sources`, `DELETE …/sources/{sourceId}` | read, edit the article | source pages the caller can read |
+
+`POST /api/v1/pages/{pageId}/publish` accepts `"reviewed": true` for articles. Reviews also appear in `GET /api/v1/items/{itemId}/activity` with the type `review`.
+
+The portal shows "Last reviewed on" with the date of the last review while a review interval applies to the article and it was reviewed at least once; otherwise it shows "Updated on" with the date of the published version. `GET /api/v1/articles/{itemId}/review` returns the same values (`reviewedAt`, `effectiveIntervalMonths`).
+
 ## The portal
 
 Readers open a knowledge base in its portal: a start page with the search and the categories, a page per category, the articles, the search and a contact page. The portal has no navigation, page tree, editor, notifications or settings of the app, and follows the light or dark mode of the reader's system. Which one people see depends only on the address they open; nobody is redirected between portal and app.
@@ -154,7 +215,7 @@ The content of an article is rendered to HTML once per published version and lan
 
 ## Reader statistics
 
-The portal records what readers do, without any account, session or address. No table below has a column for one, and nothing is derived from the reader. M9.3 builds the statistics screens on this data.
+The portal records what readers do, without any account, session or address. No table below has a column for one, and nothing is derived from the reader. The search statistics below are built on this data.
 
 | Table | One row per | Columns |
 |---|---|---|
@@ -162,10 +223,12 @@ The portal records what readers do, without any account, session or address. No 
 | `portal_article_views` | article and day | `item_id`, `space_id`, `day`, `views` |
 | `portal_ratings` | article and day | `item_id`, `space_id`, `day`, `helpful`, `unhelpful` |
 | `portal_feedback` | note after "No" | `id`, `item_id`, `space_id`, `day`, `text` (at most 2,000 characters) |
+| `portal_search_months` | term and month | `space_id`, `term`, `month` (first day), `searches`, `zero_results` |
 
 - Searches are recorded on the first page of results; each device counts at most 60 searches in ten minutes. Article views are counted when an article page is served.
 - "Was this helpful?" records yes or no; a note after "No" is stored separately. Double votes are prevented only in the browser.
 - A note is deleted when the retention of its knowledge base ends for it: each note gets a job that runs on its day of deletion and checks the current retention, so a longer retention moves the job and a shorter one deletes older notes at once. A daily sweep deletes notes whose job was lost.
+- Searches older than 12 months are kept only as counts per term and month in `portal_search_months`, and only for terms searched at least 3 times in that month; rarer searches are deleted. The first search of a day schedules a job for the day the searches turn 12 months old, which moves them into the monthly counts; a daily sweep catches searches whose job was lost.
 - Rows of an article or knowledge base go when it is deleted permanently.
 
 The read interface is `PortalStatistics` in `@pagehall/server` (`services.portalStatistics`). Periods are `{ from, to }` with ISO dates, both included. It does not check permissions; the routes that use it decide who may read the statistics.
@@ -178,5 +241,22 @@ The read interface is `PortalStatistics` in `@pagehall/server` (`services.portal
 | `topTerms(spaceId, period, { limit, minimum })` | most frequent terms with searches, searches without results and the last search; only terms searched at least `minimum` times (default 3) |
 | `zeroResultTerms(spaceId, period, { limit, minimum })` | the same for searches without results |
 | `ratings(spaceId, period, itemId?)` | helpful and not helpful per article |
-| `feedback(spaceId, { itemId, limit, before })` | notes, newest first, without any personal reference |
+| `feedback(spaceId, { itemId, period, limit, before })` | notes, newest first, without any personal reference |
+| `feedbackCounts(spaceId, period)` | notes per article |
 | `frequentSearches(spaceId, limit?)` | terms for the start page |
+
+## Search statistics
+
+"Search statistics" in the knowledge base shows editors and space admins what readers do in the portal, for the last 7, 30 or 90 days or 12 months:
+
+- searches, the share without results, article views and the share of answers "Yes" to "Was this helpful?";
+- searches without results, with "Create article", which opens a new article with the term as its title;
+- the most frequent search terms;
+- articles rated as not helpful, with their notes;
+- the most read articles.
+
+A term appears only once it was searched at least 3 times in the period, so that a single search for a name stays hidden. Nothing names a person. Articles the person cannot read are left out with their ratings, views and notes.
+
+Space admins can delete a note for good, for example when it contains personal data. The deletion is audited as `article.feedbackDeleted`, without the text.
+
+API: `GET /api/v1/spaces/{spaceId}/statistics?period=30d`, `GET /api/v1/spaces/{spaceId}/statistics/articles/{itemId}/feedback` and `DELETE /api/v1/spaces/{spaceId}/statistics/feedback/{feedbackId}`.

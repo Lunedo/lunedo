@@ -76,7 +76,7 @@ export interface PortalMessages {
   notRightHeading: string;
   notRightText: string;
   contactByArea: string;
-  checkedOn: (date: string) => string;
+  reviewedOnLong: (date: string) => string;
   didYouMean: string;
   noResultsHeading: (query: string) => string;
   noResultsLead: string;
@@ -201,7 +201,7 @@ const en: PortalMessages = {
   notRightHeading: "Not what you need?",
   notRightText: "Write to us. Choose the area, and your question goes to the team in charge.",
   contactByArea: "Contact by area",
-  checkedOn: (date) => `Updated on ${date}`,
+  reviewedOnLong: (date) => `Last reviewed on ${date}`,
   didYouMean: "Did you mean:",
   noResultsHeading: (query) => `No articles for “${query}”`,
   noResultsLead: "We searched all categories. Another word may help, otherwise write to us.",
@@ -331,7 +331,7 @@ const de: PortalMessages = {
   notRightHeading: "Nicht das Richtige dabei?",
   notRightText: "Schreib uns. Wähle den Bereich, dann geht deine Frage an das zuständige Team.",
   contactByArea: "Kontakt nach Bereich",
-  checkedOn: (date) => `Aktualisiert am ${date}`,
+  reviewedOnLong: (date) => `Zuletzt geprüft am ${date}`,
   didYouMean: "Meintest du:",
   noResultsHeading: (query) => `Keine Artikel zu „${query}“`,
   noResultsLead:

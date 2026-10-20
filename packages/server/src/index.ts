@@ -481,6 +481,21 @@ export {
 } from "./jobs/job-queue.js";
 export { PgBossQueue } from "./jobs/pg-boss-queue.js";
 export {
+  type ArticleReview,
+  type ArticleSource,
+  type HomeReview,
+  MAX_SOURCES,
+  type PersonReference,
+  type ReviewCounts,
+  type ReviewEvent,
+  type ReviewList,
+  type ReviewListItem,
+  type ReviewRecord,
+  ReviewService,
+  type ReviewSettings,
+} from "./knowledge-bases/reviews.js";
+export { reviewLeadDays, reviewRecipients } from "./knowledge-bases/schema.js";
+export {
   type Article,
   type ArticleSectionContent,
   type ArticleSummary,
@@ -494,6 +509,17 @@ export {
   MAX_AUDIENCE_GROUPS,
   type TemplateSections,
 } from "./knowledge-bases/service.js";
+export {
+  FEEDBACK_PAGE,
+  type FeedbackPage,
+  type KnowledgeBaseStatistics,
+  KnowledgeBaseStatisticsService,
+  type ReadArticle,
+  type StatisticsArticle,
+  type StatisticsPeriod,
+  statisticsPeriods,
+  type UnhelpfulArticle,
+} from "./knowledge-bases/statistics.js";
 export { createLogger, type Logger, type LogLevel, logLevels } from "./logging/logger.js";
 export { GraphMailError } from "./mail/graph.js";
 export {
@@ -675,9 +701,11 @@ export {
   type DailyCount,
   FEEDBACK_MAX_LENGTH,
   type FeedbackText,
+  MINIMUM_TERM_SEARCHES,
   normalizeTerm,
   type Period,
   PortalStatistics,
+  RAW_SEARCH_MONTHS,
   type RatingCount,
   type TermCount,
 } from "./portal/statistics.js";

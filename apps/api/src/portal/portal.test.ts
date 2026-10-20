@@ -16,6 +16,7 @@ import {
   TEST_ORIGIN,
   TestClient,
 } from "../testing/auth-app.js";
+import { messagesFor } from "./messages.js";
 
 const PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
@@ -332,6 +333,33 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect((await visitor.get(`${kb.path}/topics/${closed}`)).statusCode).toBe(404);
     const search = await visitor.get(`${kb.path}/search?q=wenige`);
     expect(search.body).not.toContain("Versteckt");
+  });
+
+  it("shows when an article was last reviewed while reviews apply, and otherwise when it changed", async () => {
+    const kb = await knowledgeBase("public");
+    const reviewed = await article(kb.id, null, "Drucker einrichten", "Drucker im dritten Stock.");
+    const unreviewed = await article(kb.id, null, "Drucker tauschen", "Toner wechseln.");
+    const settings = `/api/v1/spaces/${kb.id}/knowledge-base/reviews`;
+    expect((await owner.put(settings, { intervalMonths: 6 })).statusCode).toBe(200);
+    expect((await owner.post(`/api/v1/articles/${reviewed.id}/reviews`, {})).statusCode).toBe(201);
+    await index();
+    const t = messagesFor((await services().portals.config(kb.id))?.language ?? "en");
+    const reviewedLabel = t.reviewedOnLong("").trim();
+    const updatedLabel = t.updatedOnLong("").trim();
+    const reader = anonymous();
+    const page = await reader.get(`${kb.path}/${reviewed.number}-drucker-einrichten`);
+    expect(page.body).toContain(reviewedLabel);
+    expect(page.body).not.toContain(updatedLabel);
+    const other = await reader.get(`${kb.path}/${unreviewed.number}-drucker-tauschen`);
+    expect(other.body).toContain(updatedLabel);
+    expect(other.body).not.toContain(reviewedLabel);
+    const found = await reader.get(`${kb.path}/search?q=Drucker`);
+    expect(found.body).toContain(reviewedLabel);
+    expect(found.body).toContain(updatedLabel);
+    expect((await owner.put(settings, { intervalMonths: null })).statusCode).toBe(200);
+    const off = await reader.get(`${kb.path}/${reviewed.number}-drucker-einrichten`);
+    expect(off.body).toContain(updatedLabel);
+    expect(off.body).not.toContain(reviewedLabel);
   });
 
   it("serves only the published version", async () => {

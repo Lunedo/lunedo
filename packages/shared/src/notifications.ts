@@ -176,6 +176,7 @@ export const notificationEvents: readonly NotificationEvent[] = [
   contentEvent("copies", ["copy.finished", "copy.failed"], "off"),
   contentEvent("blogPosts", ["blogPost.published"], "digest"),
   contentEvent("meetings", ["meeting.reminder", "meeting.notesAvailable", "oneOnOne.started"], "off"),
+  contentEvent("reviews", ["article.reviewDue", "article.sourceChanged"], "digest"),
   contentEvent(
     "ownershipAndStatus",
     ["ownership.transferred", "page.statusChanged", "ownership.orphaned"],
@@ -318,6 +319,15 @@ export const contentNotificationParamSchemas = {
     itemKind: contentKind,
     spaceKey: z.string(),
     spaceName: z.string(),
+  }),
+  "article.reviewDue": z.object({
+    itemTitle: z.string(),
+    spaceKey: z.string(),
+    dueAt: z.iso.datetime(),
+  }),
+  "article.sourceChanged": z.object({
+    itemTitle: z.string(),
+    spaceKey: z.string(),
   }),
   "meeting.reminder": z.object({
     itemTitle: z.string(),

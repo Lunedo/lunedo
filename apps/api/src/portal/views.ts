@@ -83,6 +83,12 @@ function longDate(view: PortalView, date: Date): string {
   }).format(date);
 }
 
+function changedOn(view: PortalView, article: { updatedAt: Date; reviewedAt: Date | null }): string {
+  return article.reviewedAt
+    ? view.t.reviewedOnLong(longDate(view, article.reviewedAt))
+    : view.t.updatedOnLong(longDate(view, article.updatedAt));
+}
+
 function shortDate(view: PortalView, date: Date): string {
   return new Intl.DateTimeFormat(view.t.locale, {
     day: "2-digit",
@@ -439,7 +445,7 @@ export function articlePage(
               ${when(data.editUrl, () => html`<span class="editbox"><span class="hint wide">${t.editHint}</span><a class="btn" href="${data.editUrl ?? ""}">${icon("square-pen")}${t.edit}</a></span>`)}</div>
             <h1>${article.title}</h1>
             ${when(article.lead, () => html`<p class="lead">${article.lead}</p>`)}
-            <div class="meta"><span>${icon("history")}${t.updatedOnLong(longDate(view, article.updatedAt))}</span></div>
+            <div class="meta"><span>${icon("history")}${changedOn(view, article)}</span></div>
           </header>
           ${when(
             toc.length > 1,
@@ -585,7 +591,7 @@ export function searchPage(
                   return html`<li><span class="path">${kindText(view, hit.type)}${when(hit.type && category, () => html`<span class="dot"></span>`)}${category?.title ?? ""}${when(sub, () => html` › ${sub?.title ?? ""}`)}</span>
                     <a class="t" href="${articlePath(view.base, hit)}">${hit.title}</a>
                     ${when(hit.excerpt.length > 0, () => html`<p>${excerpt(hit.excerpt)}</p>`)}
-                    <span class="path">${icon("history")}${t.checkedOn(longDate(view, hit.updatedAt))}</span></li>`;
+                    <span class="path">${icon("history")}${changedOn(view, hit)}</span></li>`;
                 })}</ul>`
           }
           ${when(more, () => html`<div class="more"><a class="btn" href="${more ?? ""}">${t.moreArticles}</a></div>`)}

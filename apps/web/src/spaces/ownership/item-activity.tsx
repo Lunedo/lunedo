@@ -21,6 +21,15 @@ function Entry({ entry }: { entry: ActivityEntry }) {
       <span>{t("pageStatus.activityRemoved", { actor })}</span>
     );
   }
+  if (entry.type === "review") {
+    return (
+      <span>
+        {entry.via === "published"
+          ? t("reviews.activityPublished", { actor })
+          : t("reviews.activityMarked", { actor })}
+      </span>
+    );
+  }
   return (
     <span>
       {t("ownership.activityTransferred", {
@@ -32,12 +41,12 @@ function Entry({ entry }: { entry: ActivityEntry }) {
   );
 }
 
-export function ItemActivity({ itemId }: { itemId: string }) {
+export function ItemActivity({ itemId, article = false }: { itemId: string; article?: boolean }) {
   const { t } = useTranslation();
   const format = useFormat();
   const activity = useQuery({ ...activityQuery(itemId), throwOnError: false });
   return (
-    <Section title={t("ownership.activityTitle")} icon={Activity}>
+    <Section title={article ? t("reviews.activityTitle") : t("ownership.activityTitle")} icon={Activity}>
       <div className="flex flex-col gap-2 p-4">
         {activity.isPending ? <Skeleton className="h-12 w-full" /> : null}
         {activity.isError ? (
@@ -48,7 +57,9 @@ export function ItemActivity({ itemId }: { itemId: string }) {
           />
         ) : null}
         {activity.data?.length === 0 ? (
-          <p className="text-sm text-text-muted">{t("ownership.activityEmpty")}</p>
+          <p className="text-sm text-text-muted">
+            {article ? t("reviews.activityEmpty") : t("ownership.activityEmpty")}
+          </p>
         ) : null}
         {activity.data && activity.data.length > 0 ? (
           <ul className="flex flex-col divide-y divide-border">

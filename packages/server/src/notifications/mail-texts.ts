@@ -104,6 +104,10 @@ const english: Record<ContentNotificationType, Line> = {
   "space.confidentialWithoutAdministrator": (p) =>
     `The confidential space ${text(p.spaceKey)} has no space admin anymore. You can appoint one of its remaining members.`,
   "blogPost.published": (p) => `New post in ${text(p.spaceName)}: ${text(p.itemTitle)}`,
+  "article.reviewDue": (p, c) =>
+    `The article ${text(p.itemTitle)} is due for review on ${c.date(text(p.dueAt))}. Check that it is still correct and mark it as reviewed.`,
+  "article.sourceChanged": (p) =>
+    `A source page of the article ${text(p.itemTitle)} was changed. Check whether the article needs an update and mark it as reviewed.`,
   "meeting.reminder": (p, c) =>
     `${text(p.seriesTitle)} on ${c.dateTime(text(p.startsAt))}: add your topics before the meeting so others can prepare.`,
   "meeting.notesAvailable": (p, c) =>
@@ -194,6 +198,10 @@ const german: Record<ContentNotificationType, Line> = {
   "space.confidentialWithoutAdministrator": (p) =>
     `Der vertrauliche Space ${text(p.spaceKey)} hat keinen Space-Admin mehr. Sie können eines der verbliebenen Mitglieder ernennen.`,
   "blogPost.published": (p) => `Neuer Beitrag in ${text(p.spaceName)}: ${text(p.itemTitle)}`,
+  "article.reviewDue": (p, c) =>
+    `Der Artikel ${text(p.itemTitle)} ist am ${c.date(text(p.dueAt))} zur Überprüfung fällig. Prüfen Sie, ob er noch stimmt, und markieren Sie ihn als geprüft.`,
+  "article.sourceChanged": (p) =>
+    `Eine Quellseite des Artikels ${text(p.itemTitle)} wurde geändert. Prüfen Sie, ob der Artikel angepasst werden muss, und markieren Sie ihn als geprüft.`,
   "meeting.reminder": (p, c) =>
     `${text(p.seriesTitle)} am ${c.dateTime(text(p.startsAt))}: Tragen Sie Ihre Themen vor der Besprechung ein, damit sich alle vorbereiten können.`,
   "meeting.notesAvailable": (p, c) =>

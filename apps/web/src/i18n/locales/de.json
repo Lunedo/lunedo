@@ -1575,6 +1575,12 @@
     "requiredSectionsEmpty": "Ein Pflichtabschnitt ist leer. Fülle ihn aus und veröffentliche dann erneut.",
     "sectionNotFound": "Die Vorlage hat diesen Abschnitt nicht. Lade die Seite neu und versuche es noch einmal.",
     "draftNotVisible": "Nur Bearbeitende des Artikels sehen seinen Entwurf.",
+    "notArticle": "Nur Artikel einer Wissensdatenbank werden überprüft. Öffne den Artikel in seiner Wissensdatenbank.",
+    "articleNotPublished": "Der Artikel ist noch nicht veröffentlicht. Veröffentliche ihn zuerst und markiere ihn dann als geprüft.",
+    "reviewNotUndoable": "Die Überprüfung lässt sich nicht mehr rückgängig machen, weil der Artikel erneut geprüft wurde oder zu viel Zeit vergangen ist. Ändere bei Bedarf das Intervall.",
+    "sourceNotFound": "Die Quellseite gibt es nicht oder du kannst sie nicht lesen. Wähle eine andere Seite.",
+    "invalidSourcePage": "Eine Quellseite muss eine Seite in einem internen Space sein, kein anderer Artikel. Wähle eine interne Seite.",
+    "tooManySources": "Ein Artikel kann höchstens 20 Quellseiten haben. Entferne eine, bevor du eine weitere hinzufügst.",
     "invalidPortalPath": "Der Pfad darf Kleinbuchstaben, Ziffern und einzelne Bindestriche enthalten, höchstens 60 Zeichen. Ändere ihn und speichere erneut.",
     "portalPathTaken": "Eine andere Wissensdatenbank verwendet diesen Pfad schon. Wähle einen anderen Pfad.",
     "invalidPortalDomain": "Die Domain ist ungültig. Gib nur den Domainnamen ein, ohne https:// und ohne Pfad.",
@@ -1588,7 +1594,8 @@
     "invalidTopBarThreshold": "Gib eine ganze Zahl von 1 bis 100 ein.",
     "invalidRetention": "Gib eine ganze Zahl an Monaten von 1 bis 60 ein.",
     "invalidHelpKnowledgeBase": "Diese Wissensdatenbank kann nicht über das Hilfe-Symbol geöffnet werden, weil nicht alle Angemeldeten sie lesen dürfen. Wähle eine andere oder erweitere ihre Zielgruppe.",
-    "organizationNotFound": "Die Organisation gibt es nicht mehr. Lade die Seite neu und wähle eine andere."
+    "organizationNotFound": "Die Organisation gibt es nicht mehr. Lade die Seite neu und wähle eine andere.",
+    "feedbackNotFound": "Der Hinweis wurde inzwischen gelöscht. Lade die Seite neu, um die aktuellen Hinweise zu sehen."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -2556,7 +2563,8 @@
       "importsAndExports": "Importe und Exporte",
       "storageLevelReached": "Dateispeicher füllt sich",
       "storageLevelCleared": "Belegung des Dateispeichers sinkt",
-      "copies": "Meine Kopien"
+      "copies": "Meine Kopien",
+      "reviews": "Überprüfung von Artikeln"
     },
     "types": {
       "identityProvider": {
@@ -2650,6 +2658,10 @@
       "copy": {
         "finished": "Deine Kopie {itemTitle} ist im Space {spaceKey} fertig.",
         "failed": "Das Kopieren von {itemTitle} ist fehlgeschlagen, es wurde nichts angelegt. Kopiere erneut."
+      },
+      "article": {
+        "reviewDue": "{itemTitle} ist am {dueAt} zur Überprüfung fällig.",
+        "sourceChanged": "Eine Quellseite von {itemTitle} wurde geändert. Prüfe, ob der Artikel angepasst werden muss."
       }
     },
     "channelFor": "{event}: {channel}",
@@ -3854,7 +3866,15 @@
       },
       "knowledgeBase": {
         "audienceChanged": "Lesende einer Wissensdatenbank geändert",
+        "reviewSettingsChanged": "Überprüfungseinstellungen einer Wissensdatenbank geändert",
         "portalAddressChanged": "Portal-Adresse einer Wissensdatenbank geändert"
+      },
+      "article": {
+        "reviewed": "Artikel als geprüft markiert",
+        "reviewUndone": "Überprüfung eines Artikels rückgängig gemacht",
+        "sourceAdded": "Quellseite mit einem Artikel verknüpft",
+        "sourceRemoved": "Quellseite von einem Artikel entfernt",
+        "feedbackDeleted": "Hinweis von Lesenden zu einem Artikel gelöscht"
       }
     },
     "action": "Aktion",
@@ -9595,5 +9615,207 @@
       "removeFailed": "Die Domain konnte nicht entfernt werden",
       "domainPlaceholder": "hilfe.example.org"
     }
+  },
+  "reviews": {
+    "activityMarked": "{actor} hat den Artikel als geprüft markiert",
+    "activityPublished": "{actor} hat den Artikel veröffentlicht und den Inhalt als geprüft markiert",
+    "activityTitle": "Status, Verantwortliche und Überprüfungen",
+    "activityEmpty": "Status und Verantwortliche haben sich noch nicht geändert, und der Artikel wurde noch nicht geprüft.",
+    "article": {
+      "label": "Überprüfung:",
+      "loadFailed": "Der Stand der Überprüfung konnte nicht geladen werden. Lade die Seite neu, um es erneut zu versuchen.",
+      "inherited": "von der Wissensdatenbank",
+      "setHere": "für diesen Artikel festgelegt",
+      "changeInterval": "Überprüfungsintervall: {interval}. Ändern",
+      "inherit": "Wie die Wissensdatenbank",
+      "intervalSaved": "Überprüfungsintervall gespeichert",
+      "intervalFailed": "Das Überprüfungsintervall wurde nicht gespeichert",
+      "reviewed": "zuletzt geprüft am {date}",
+      "reviewedBy": "zuletzt geprüft am {date} von {name}",
+      "next": "nächste Überprüfung am {date}"
+    },
+    "interval": {
+      "months": "{count, plural, one {Jeden Monat} other {Alle # Monate}}",
+      "off": "Keine Überprüfung",
+      "none": "Keine Überprüfung für diesen Artikel"
+    },
+    "state": {
+      "overdue": "{count, plural, one {Seit # Tag überfällig} other {Seit # Tagen überfällig}}",
+      "dueToday": "Heute fällig",
+      "dueSoon": "{count, plural, one {Fällig in # Tag} other {Fällig in # Tagen}}",
+      "sourceChanged": "Quellseite geändert",
+      "current": "Nächste Überprüfung am {date}",
+      "off": "Keine Überprüfung"
+    },
+    "markReviewed": "Als geprüft markieren",
+    "marked": "„{title}“ als geprüft markiert. Nächste Überprüfung am {date}.",
+    "markedWithoutDue": "„{title}“ als geprüft markiert.",
+    "markFailed": "„{title}“ wurde nicht als geprüft markiert",
+    "undone": "Die Überprüfung von „{title}“ wurde rückgängig gemacht.",
+    "undoFailed": "Die Überprüfung von „{title}“ ließ sich nicht rückgängig machen",
+    "publish": {
+      "reviewed": "Inhalt geprüft",
+      "reviewedHint": "Du hast den ganzen Artikel geprüft. Die Veröffentlichung zählt dann auch als Überprüfung, und die nächste ist ein Intervall später fällig."
+    },
+    "home": {
+      "title": "Zur Überprüfung fällig",
+      "description": "Artikel, für die du verantwortlich bist, die in den nächsten 30 Tagen fällig sind oder deren Quellseite sich geändert hat.",
+      "more": "{count, plural, one {# weiterer Artikel in den Überprüfungslisten der Wissensdatenbanken} other {# weitere Artikel in den Überprüfungslisten der Wissensdatenbanken}}"
+    },
+    "list": {
+      "title": "Überprüfung",
+      "description": "Artikel, deren Intervall abgelaufen ist oder in den nächsten 30 Tagen abläuft, deren Quellseite sich geändert hat oder die keine Verantwortlichen haben. Verantwortliche werden vorher und am Fälligkeitstag erinnert.",
+      "filter": "Anzeigen",
+      "filterCount": "{label} ({count})",
+      "filters": {
+        "all": "Alle",
+        "due": "Fällig",
+        "soon": "In 30 Tagen",
+        "unowned": "Ohne Verantwortliche"
+      },
+      "mine": "Nur meine Artikel",
+      "loadFailed": "Die Artikel zur Überprüfung",
+      "emptyTitle": "In dieser Auswahl ist nichts fällig",
+      "emptyDescription": "Neue Fälligkeiten erscheinen hier und auf „Für dich“.",
+      "hint": "Hier stehen nur Artikel, die du bearbeiten darfst. „Als geprüft markieren“ setzt die letzte Überprüfung auf heute, ohne eine Version anzulegen.",
+      "article": "Artikel",
+      "owner": "Verantwortlich",
+      "interval": "Intervall",
+      "lastReviewed": "Zuletzt geprüft",
+      "state": "Fälligkeit",
+      "actions": "Aktionen",
+      "publishedOn": "Veröffentlicht {date}",
+      "never": "Nie",
+      "noOwner": "Niemand",
+      "ownerLeft": "Niemand ({name} ist nicht mehr dabei)",
+      "assignOwner": "Verantwortlich festlegen",
+      "sourceChangedHint": "Eine Quellseite hat sich seit der letzten Überprüfung geändert",
+      "edit": "Bearbeiten",
+      "editArticle": "„{title}“ bearbeiten",
+      "more": "Weitere Artikel anzeigen",
+      "dueBadge": "{count} fällig",
+      "filteredTitle": "Keine Artikel in dieser Auswahl",
+      "filteredDescription": "Andere Artikel brauchen vielleicht trotzdem eine Überprüfung. Zeige alle Artikel an, um sie zu sehen.",
+      "showAll": "Alle Artikel anzeigen",
+      "offTitle": "Die Überprüfung ist aus",
+      "offDescription": "Artikel erscheinen hier, wenn sie ein Überprüfungsintervall haben und fällig werden, wenn sich eine Quellseite ändert oder wenn sie keine Verantwortlichen haben. Lege das Intervall in den Einstellungen der Wissensdatenbank fest.",
+      "openSettings": "Überprüfungsintervall festlegen"
+    },
+    "settings": {
+      "tab": "Überprüfung",
+      "title": "Überprüfung",
+      "description": "Artikel veralten. Mit einem Intervall werden Verantwortliche erinnert und fällige Artikel unter „Überprüfung“ und auf „Für dich“ gelistet.",
+      "loadFailed": "Die Einstellungen zur Überprüfung",
+      "section": "Überprüfung und Erinnerungen",
+      "interval": "Überprüfungsintervall",
+      "intervalDescription": "Gilt für alle Artikel ohne eigenes Intervall. Standard: keine Überprüfung.",
+      "lead": "Erste Erinnerung",
+      "leadDescription": "Zusätzlich zur Erinnerung am Fälligkeitstag.",
+      "leadNone": "Nur am Fälligkeitstag",
+      "leadDays": "{count, plural, one {# Tag vorher} other {# Tage vorher}}",
+      "recipients": "Wer erinnert wird",
+      "recipientsDescription": "Artikel ohne Verantwortliche gehen immer an die Space-Admins.",
+      "recipientsOwner": "Die verantwortliche Person",
+      "recipientsOwnerAndAdministrators": "Verantwortliche Person und Space-Admins",
+      "sources": "Geänderte Quellseite",
+      "sourcesDescription": "Wird eine interne Quellseite eines Artikels mit Änderungen veröffentlicht, erscheint der Artikel unter „Überprüfung“ und die verantwortliche Person wird benachrichtigt.",
+      "sourcesAlways": "Immer an",
+      "adminsOnly": "Nur Space-Admins ändern diese Einstellungen."
+    },
+    "sources": {
+      "label": "Quellseiten:",
+      "loadFailed": "konnten nicht geladen werden",
+      "none": "keine",
+      "changed": "geändert",
+      "internal": "Nur intern, Lesende der Wissensdatenbank sehen sie nie. Ändert sich eine Quellseite, wird die verantwortliche Person zur Überprüfung erinnert.",
+      "add": "Quellseite hinzufügen",
+      "addTitle": "Quellseite hinzufügen",
+      "addDescription": "Wähle die interne Seite, auf der dieser Artikel beruht. Lesende der Wissensdatenbank sehen sie nie.",
+      "addFailed": "Die Quellseite wurde nicht hinzugefügt",
+      "page": "Seite",
+      "pageHint": "Eine Seite in einem internen Space dieser Organisation, die du lesen kannst.",
+      "choosePage": "Wähle eine Seite.",
+      "search": "Seiten nach Titel suchen",
+      "noPages": "Keine passenden Seiten, die du lesen kannst.",
+      "addConfirm": "Quellseite hinzufügen",
+      "remove": "Quellseite „{title}“ entfernen",
+      "removed": "Quellseite „{title}“ entfernt",
+      "removeFailed": "Quellseite „{title}“ wurde nicht entfernt"
+    }
+  },
+  "statistics": {
+    "title": "Suchstatistik",
+    "description": "Was Lesende im Portal suchen und wie sie Artikel bewerten. Ohne Namen, Konten, Sitzungen oder IP-Adressen.",
+    "period": "Zeitraum",
+    "periods": {
+      "7d": "7 Tage",
+      "30d": "30 Tage",
+      "90d": "90 Tage",
+      "12m": "12 Monate"
+    },
+    "loadFailed": "Die Suchstatistik konnte nicht geladen werden",
+    "emptyTitle": "Keine Lesenden in diesem Zeitraum",
+    "emptyDescription": "Suchen, Aufrufe und Bewertungen aus dem Portal erscheinen hier, sobald Lesende es nutzen.",
+    "showYear": "12 Monate anzeigen",
+    "tiles": {
+      "searches": "Suchen",
+      "views": "{count, plural, one {# Artikelaufruf} other {# Artikelaufrufe}}",
+      "zeroResults": "Suchen ohne Treffer",
+      "zeroResultsDetail": "{count, plural, one {# Suche} other {# Suchen}}",
+      "helpful": "Als hilfreich bewertet",
+      "ratings": "{count, plural, one {von # Bewertung} other {von # Bewertungen}}"
+    },
+    "terms": {
+      "term": "Suchbegriff",
+      "searches": "Suchen",
+      "withoutResults": "Ohne Treffer",
+      "last": "Zuletzt gesucht",
+      "actions": "Aktionen",
+      "create": "Artikel anlegen",
+      "createFor": "Artikel für „{term}“ anlegen",
+      "threshold": "Begriffe erscheinen ab 3 Suchen, damit einzelne Suchen nach Namen verborgen bleiben."
+    },
+    "zero": {
+      "title": "Suchen ohne Treffer",
+      "description": "Hier fehlt vermutlich ein Artikel, oder Lesende verwenden andere Wörter als die Artikel.",
+      "emptyTitle": "Keine häufigen Suchen ohne Treffer"
+    },
+    "top": {
+      "title": "Häufigste Suchbegriffe",
+      "empty": "In diesem Zeitraum wurde kein Begriff 3-mal oder öfter gesucht."
+    },
+    "unhelpful": {
+      "title": "Als nicht hilfreich bewertet",
+      "description": "Artikel mit den meisten Antworten „Nein“ auf „War das hilfreich?“.",
+      "empty": "In diesem Zeitraum wurde kein Artikel als nicht hilfreich bewertet."
+    },
+    "read": {
+      "title": "Meistgelesen",
+      "empty": "In diesem Zeitraum wurde kein Artikel im Portal gelesen."
+    },
+    "articles": {
+      "article": "Artikel",
+      "unhelpful": "„Nein“",
+      "ofRatings": "{no} von {count, plural, one {# Bewertung} other {# Bewertungen}}",
+      "feedback": "Hinweise",
+      "readFeedback": "{count, plural, one {# Hinweis lesen} other {# Hinweise lesen}}",
+      "readFeedbackFor": "{count, plural, one {# Hinweis zu „{title}“ lesen} other {# Hinweise zu „{title}“ lesen}}",
+      "noFeedback": "Keine",
+      "views": "Aufrufe"
+    },
+    "feedback": {
+      "title": "Hinweise zu „{title}“",
+      "description": "Was Lesenden gefehlt hat, in ihren eigenen Worten und ohne ihre Namen. Hinweise werden gelöscht, wenn die Aufbewahrungsfrist der Wissensdatenbank endet.",
+      "loadFailed": "Die Hinweise konnten nicht geladen werden",
+      "none": "Keine Hinweise in diesem Zeitraum.",
+      "more": "Weitere Hinweise anzeigen",
+      "delete": "Hinweis löschen",
+      "confirm": "Diesen Hinweis endgültig löschen? Gedacht für Hinweise mit personenbezogenen Daten. Er lässt sich nicht wiederherstellen.",
+      "deleteConfirm": "Hinweis endgültig löschen",
+      "keep": "Hinweis behalten",
+      "deleted": "Hinweis gelöscht",
+      "deleteFailed": "Der Hinweis konnte nicht gelöscht werden"
+    },
+    "privacy": "Anonym gezählt: keine Namen, Konten, Sitzungen oder IP-Adressen. Suchen, die älter als 12 Monate sind, bleiben nur als Anzahl je Begriff und Monat erhalten, und nur für Begriffe mit mindestens 3 Suchen in diesem Monat."
   }
 }
