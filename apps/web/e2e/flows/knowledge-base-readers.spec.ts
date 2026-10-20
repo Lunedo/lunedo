@@ -123,6 +123,8 @@ test("enables a second language and lets readers switch the language in the port
   if (!untranslated) throw new Error("no second article");
   await reader.goto(`${portal.path}/de/${untranslated.address}`);
   await expect(reader.getByRole("heading", { name: untranslated.title, level: 1 })).toBeVisible();
-  await expect(reader.getByRole("note")).toContainText(/Deutsch/);
+  await expect(
+    reader.getByRole("note").filter({ hasText: "Diesen Artikel gibt es noch nicht auf Deutsch" }),
+  ).toBeVisible();
   await context.close();
 });
