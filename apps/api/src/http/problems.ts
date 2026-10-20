@@ -216,6 +216,7 @@ export const problems = {
   knowledgeBaseMode: { status: 409, title: "Articles always use publish mode" },
   knowledgeBasePlacement: { status: 409, title: "Articles and categories are placed in categories" },
   notKnowledgeBase: { status: 409, title: "The space is not a knowledge base" },
+  staticSiteNotPublic: { status: 409, title: "Only public knowledge bases become a static website" },
   notCategory: { status: 409, title: "The folder is not a category" },
   invalidIcon: { status: 400, title: "The icon is not valid" },
   invalidArticleType: { status: 400, title: "Only articles have an article type" },
@@ -240,7 +241,26 @@ export const problems = {
   organizationNotFound: { status: 404, title: "The organization does not exist" },
   sectionNotFound: { status: 404, title: "The section does not exist" },
   draftNotVisible: { status: 403, title: "Only editors see the draft" },
-  notArticle: { status: 409, title: "Only articles of a knowledge base are reviewed" },
+  notArticle: { status: 409, title: "The item is not an article of a knowledge base" },
+  changedSinceTooOld: { status: 400, title: "Changes are known only for a limited time" },
+  invalidCursor: { status: 400, title: "The cursor is not valid" },
+  publishNotAllowed: { status: 403, title: "Publishing is not allowed" },
+  portalAccountOnly: { status: 403, title: "The account reads only the portal" },
+  invitationNotFound: { status: 404, title: "The invitation does not exist" },
+  portalAudienceRequired: { status: 409, title: "The knowledge base is not for portal accounts" },
+  portalAccountNotFound: { status: 404, title: "The portal account does not exist" },
+  portalAccountShared: { status: 409, title: "The portal account belongs to other organizations too" },
+  portalInvitationAccountExists: { status: 409, title: "The address belongs to an existing account" },
+  tooManySections: { status: 400, title: "Too many sections" },
+  invalidLanguage: { status: 400, title: "The language is not supported" },
+  invalidKnowledgeBases: { status: 400, title: "The knowledge bases are not valid for this token" },
+  tooManyLanguages: { status: 400, title: "Too many languages" },
+  defaultLanguageTranslated: { status: 409, title: "Articles already have translations into this language" },
+  languageNotEnabled: { status: 409, title: "The language is not enabled for the knowledge base" },
+  translationExists: { status: 409, title: "The article already has a translation into this language" },
+  translationSource: { status: 409, title: "Only original articles can be translated" },
+  translationPlacement: { status: 409, title: "A translation stays with the article it translates" },
+  knowledgeBaseLanguage: { status: 409, title: "Articles use the languages of their knowledge base" },
   articleNotPublished: { status: 409, title: "The article is not published yet" },
   reviewNotUndoable: { status: 409, title: "The review can no longer be undone" },
   sourceNotFound: { status: 404, title: "The source page does not exist" },
@@ -548,6 +568,12 @@ export const problemSchema = z
       .int()
       .optional()
       .describe("Number of articles more people could read, for `audienceWidening`."),
+    translations: z
+      .number()
+      .int()
+      .optional()
+      .describe("Number of translations into the language, for `defaultLanguageTranslated`."),
+    translationId: uuid("The existing translation, for `translationExists`.").optional(),
     light: brandCheckSchema.optional().describe("Check of the light mode color, for `brandContrast`."),
     dark: brandCheckSchema.optional().describe("Check of the dark mode color, for `brandContrast`."),
     impact: moveImpactSchema

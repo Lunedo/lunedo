@@ -21,6 +21,7 @@ export interface SearchViewer {
   tokens: string[];
   personalTokens: string[];
   listedRestrictions: string[];
+  spaceIds?: readonly string[] | null;
 }
 
 function rolesFrom(minimum: ReadLevel): SpaceRole[] {
@@ -113,6 +114,7 @@ export async function loadViewer(
     tokens,
     personalTokens,
     listedRestrictions: row.listed,
+    spaceIds: token?.knowledgeBaseIds ?? null,
   };
 }
 

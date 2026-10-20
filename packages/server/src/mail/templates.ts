@@ -20,6 +20,13 @@ export interface MailTemplates {
     link: string;
     days: number;
   };
+  portalInvitation: {
+    instanceName: string;
+    knowledgeBaseName: string;
+    inviterName: string;
+    link: string;
+    days: number;
+  };
   registration: { instanceName: string; organizationName: string; link: string; hours: number };
   breakGlassStarted: {
     instanceName: string;
@@ -185,6 +192,15 @@ const catalogs: Record<Language, Catalog> = {
       subject: `${inviterName} invited you to ${organizationName} on ${instanceName}`,
       paragraphs: [
         `${inviterName} invited you to join ${organizationName} on ${instanceName}.`,
+        `The link works once and expires in ${days} days.`,
+        IGNORE_EN,
+      ],
+      action: { label: "Accept invitation", url: link },
+    }),
+    portalInvitation: ({ knowledgeBaseName, inviterName, link, days }) => ({
+      subject: `${inviterName} invited you to read ${knowledgeBaseName}`,
+      paragraphs: [
+        `${inviterName} invited you to read the help ${knowledgeBaseName}. Choose a password to create your reader account; afterwards you can also add a passkey.`,
         `The link works once and expires in ${days} days.`,
         IGNORE_EN,
       ],
@@ -366,6 +382,15 @@ const catalogs: Record<Language, Catalog> = {
       subject: `${inviterName} hat Sie zu ${organizationName} auf ${instanceName} eingeladen`,
       paragraphs: [
         `${inviterName} hat Sie eingeladen, ${organizationName} auf ${instanceName} beizutreten.`,
+        `Der Link funktioniert einmal und läuft in ${days} Tagen ab.`,
+        IGNORE_DE,
+      ],
+      action: { label: "Einladung annehmen", url: link },
+    }),
+    portalInvitation: ({ knowledgeBaseName, inviterName, link, days }) => ({
+      subject: `${inviterName} hat Sie eingeladen, ${knowledgeBaseName} zu lesen`,
+      paragraphs: [
+        `${inviterName} hat Sie eingeladen, die Hilfe ${knowledgeBaseName} zu lesen. Wählen Sie ein Passwort, um Ihr Lesekonto anzulegen; danach können Sie auch einen Passkey hinzufügen.`,
         `Der Link funktioniert einmal und läuft in ${days} Tagen ab.`,
         IGNORE_DE,
       ],

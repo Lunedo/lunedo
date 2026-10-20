@@ -497,6 +497,7 @@ export class ImportWorker {
           file,
           staging,
           reimport,
+          knowledgeBase: reimport === null && row.options?.knowledgeBase === true,
           beat,
           progress: async (done, total) => {
             if (Date.now() - lastProgress < PROGRESS_MS && done < total) return;

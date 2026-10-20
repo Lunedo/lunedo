@@ -161,7 +161,7 @@ export class AccountService {
   async create(
     tx: Transaction,
     input: {
-      type: "standard" | "guest";
+      type: "standard" | "guest" | "portal";
       email: string;
       name: string;
       password: string | null;

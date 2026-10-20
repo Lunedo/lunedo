@@ -60,3 +60,60 @@ describe("token expiry", () => {
     expect(date.getAttribute("max")).toBe(latest);
   });
 });
+
+describe("content access of a token", () => {
+  const organizationId = "01929b1e-6f2a-7c3d-8e9f-0a1b2c3d4e5f";
+  const knowledgeBase = { id: "01929b1e-0000-7000-8000-0000000000b1", name: "Hilfe", key: "HELP" };
+
+  async function open(onCreate = vi.fn(async (_: TokenRequest) => ({ token: "ph_secret" }))) {
+    mockApi({
+      "GET /api/v1/auth/session": () => problem(401, "notSignedIn"),
+      "GET /api/v1/spaces": () => ({ body: { items: [knowledgeBase], nextCursor: null } }),
+    });
+    await renderWithProviders(
+      <CreateTokenDialog
+        open
+        onOpenChange={() => {}}
+        allowInstance={false}
+        allowOrganization
+        organizationId={organizationId}
+        maxLifetimeDays={null}
+        onCreate={onCreate}
+      />,
+    );
+    await userEvent.type(screen.getByLabelText("Name"), "Help assistant");
+    return onCreate;
+  }
+
+  it("turns the write level into the spaces area and the content level", async () => {
+    const onCreate = await open();
+    const content = screen.getByRole("radiogroup", { name: "Content" });
+    await userEvent.click(within(content).getByRole("radio", { name: /Write drafts/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Create token" }));
+    await waitFor(() => expect(onCreate).toHaveBeenCalled());
+    expect(onCreate.mock.calls[0]?.[0]).toMatchObject({
+      scopes: { organization: { spaces: "manage" } },
+      contentLevel: "draft",
+    });
+    expect(onCreate.mock.calls[0]?.[0].knowledgeBaseIds).toBeUndefined();
+  });
+
+  it("limits the token to chosen knowledge bases and asks for at least one", async () => {
+    const onCreate = await open();
+    const content = screen.getByRole("radiogroup", { name: "Content" });
+    await userEvent.click(within(content).getByRole("radio", { name: /^Read/ }));
+    await userEvent.click(screen.getByRole("radio", { name: "Only selected knowledge bases" }));
+    await userEvent.click(screen.getByRole("button", { name: "Create token" }));
+    expect(await screen.findByText(/Choose at least one knowledge base/)).toBeTruthy();
+    expect(onCreate).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("combobox", { name: "Knowledge bases" }));
+    await userEvent.click(await screen.findByRole("option", { name: /Hilfe/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Create token" }));
+    await waitFor(() => expect(onCreate).toHaveBeenCalled());
+    expect(onCreate.mock.calls[0]?.[0]).toMatchObject({
+      scopes: { organization: { spaces: "view" } },
+      contentLevel: "read",
+      knowledgeBaseIds: [knowledgeBase.id],
+    });
+  });
+});

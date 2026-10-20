@@ -1,4 +1,5 @@
 import {
+  Badge,
   Button,
   EmptyState,
   PageHeader,
@@ -16,6 +17,7 @@ import { LoadError } from "../errors/failure.js";
 import { translateKey } from "../i18n/translate.js";
 import { useFormat } from "../preferences/preferences-provider.js";
 import { useDocumentTitle } from "../screens/settings/settings-page.js";
+import { contentLanguageLabel } from "../search/content-language.js";
 import { itemHref } from "../spaces/item-paths.js";
 import { spaceDisplayName } from "../spaces/space-badge.js";
 import { useSpace } from "../spaces/space-context.js";
@@ -28,6 +30,7 @@ import {
   articlesQuery,
   type Category,
   categoriesQuery,
+  languagesQuery,
 } from "./queries.js";
 
 function ArticleGroup({
@@ -43,11 +46,15 @@ function ArticleGroup({
   categoryId: string | null;
   type: ArticleTypeFilter;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const format = useFormat();
   const { space } = useSpace();
   const navigate = useNavigate();
   const articles = useInfiniteQuery({ ...articlesQuery(space.id, categoryId, type), throwOnError: false });
+  const languages = useQuery({ ...languagesQuery(space.id), throwOnError: false });
+  const translated = (languages.data?.languages ?? []).filter(
+    (language) => language !== languages.data?.defaultLanguage,
+  );
   const rows = articles.data?.pages.flatMap((page) => page.items) ?? [];
   if (categoryId === null && articles.data && rows.length === 0) return null;
   const columns: TableColumn<ArticleSummary>[] = [
@@ -109,6 +116,36 @@ function ArticleGroup({
           <span className="text-text-muted">{t("knowledgeBase.list.noOwner")}</span>
         ),
     },
+    ...(translated.length > 0
+      ? [
+          {
+            key: "languages",
+            header: t("knowledgeBase.list.languages"),
+            hideBelow: "md" as const,
+            cell: (article: ArticleSummary) => (
+              <span className="flex flex-wrap gap-1">
+                {translated.map((language) => {
+                  const state =
+                    article.translations.find((entry) => entry.language === language)?.state ?? "missing";
+                  const text = t("knowledgeBase.translations.badge", {
+                    language: language.toUpperCase(),
+                    state: translateKey(t, `knowledgeBase.translations.states.${state}`),
+                  });
+                  return (
+                    <Badge key={language} variant={state === "current" ? "neutral" : "warning"}>
+                      <span
+                        title={`${contentLanguageLabel(t, language, i18n.language)}: ${translateKey(t, `knowledgeBase.translations.states.${state}`)}`}
+                      >
+                        {text}
+                      </span>
+                    </Badge>
+                  );
+                })}
+              </span>
+            ),
+          },
+        ]
+      : []),
     {
       key: "updated",
       header: t("knowledgeBase.list.updated"),

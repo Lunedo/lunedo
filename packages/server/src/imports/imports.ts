@@ -170,6 +170,7 @@ export interface OptionsInput {
   readonly pageIds?: readonly string[] | undefined;
   readonly blogPosts?: boolean | undefined;
   readonly split?: "file" | "heading" | undefined;
+  readonly knowledgeBase?: boolean | undefined;
 }
 
 export interface PeopleSourceView {
@@ -379,6 +380,11 @@ export function cleanOptions(
   if (input.split !== undefined) {
     if (kind !== "documents") throw invalid();
     next = { ...next, split: input.split };
+  }
+  if (input.knowledgeBase !== undefined) {
+    if (kind !== "archive") throw invalid();
+    const { knowledgeBase: _knowledgeBase, ...rest } = next;
+    next = input.knowledgeBase ? { ...rest, knowledgeBase: true } : rest;
   }
   return next;
 }
@@ -1460,6 +1466,7 @@ export class ImportService {
         key,
         importerId: row.importer_id,
         readers: reviewers,
+        knowledgeBase: row.options?.knowledgeBase === true,
       });
       await tx.execute(sql`
         update imports set state = 'running', phase = 'space', quarantine_space_id = ${space.spaceId},
@@ -1593,8 +1600,8 @@ export class ImportService {
         throw new ImportError("importNotInReview", "Only a finished import can be accepted.");
       const spaceId = row.quarantine_space_id;
       if (!spaceId) throw new ImportError("importNotInReview", "The quarantine space is missing.");
-      const space = await tx.execute<{ name: string; key: string }>(
-        sql`select name, key from spaces where id = ${spaceId} and quarantined for update`,
+      const space = await tx.execute<{ name: string; key: string; audience: string | null }>(
+        sql`select name, key, audience from spaces where id = ${spaceId} and quarantined for update`,
       );
       const current = space.rows[0];
       if (!current) throw new ImportError("importNotInReview", "The quarantine space is missing.");
@@ -1605,8 +1612,10 @@ export class ImportService {
       );
       for (const grant of grants) await this.#holders.validate(tx, target, grant, actor);
       await tx.execute(sql`delete from space_permissions where space_id = ${spaceId}`);
+      const knowledgeBase = current.audience !== null;
+      const visibility = knowledgeBase ? "private" : input.visibility;
       await tx.execute(sql`
-        update spaces set quarantined = false, visibility = ${input.visibility}, updated_at = now(),
+        update spaces set quarantined = false, visibility = ${visibility}, updated_at = now(),
           archived_at = ${row.archived ? sql`now()` : sql`null`}, archived_by = ${row.archived ? row.importer_id : null}
         where id = ${spaceId}`);
       const scope = auditScopeOf({ organizationId: row.organization_id });
@@ -1617,9 +1626,10 @@ export class ImportService {
         fields: {
           name: current.name,
           key: current.key,
-          visibility: input.visibility,
+          visibility,
           personal: false,
           ownerId: null,
+          ...(knowledgeBase ? { type: "knowledgeBase" as const, audience: "groups" as const } : {}),
         },
         scope,
       });

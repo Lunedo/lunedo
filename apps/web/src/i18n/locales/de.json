@@ -1595,7 +1595,27 @@
     "invalidRetention": "Gib eine ganze Zahl an Monaten von 1 bis 60 ein.",
     "invalidHelpKnowledgeBase": "Diese Wissensdatenbank kann nicht über das Hilfe-Symbol geöffnet werden, weil nicht alle Angemeldeten sie lesen dürfen. Wähle eine andere oder erweitere ihre Zielgruppe.",
     "organizationNotFound": "Die Organisation gibt es nicht mehr. Lade die Seite neu und wähle eine andere.",
-    "feedbackNotFound": "Der Hinweis wurde inzwischen gelöscht. Lade die Seite neu, um die aktuellen Hinweise zu sehen."
+    "feedbackNotFound": "Der Hinweis wurde inzwischen gelöscht. Lade die Seite neu, um die aktuellen Hinweise zu sehen.",
+    "invalidLanguage": "Diese Sprache wird nicht unterstützt. Wähle eine aus der Liste.",
+    "tooManyLanguages": "Eine Wissensdatenbank kann bis zu 30 Sprachen haben. Deaktiviere zuerst eine Sprache, die du nicht mehr brauchst.",
+    "defaultLanguageTranslated": "Artikel haben schon Übersetzungen in diese Sprache, deshalb kann sie nicht Standardsprache werden. Lösche zuerst diese Übersetzungen oder wähle eine andere Sprache.",
+    "languageNotEnabled": "Die Sprache ist für diese Wissensdatenbank nicht aktiviert. Space-Admins aktivieren sie unter Space-Einstellungen → Sprachen.",
+    "translationExists": "Der Artikel hat schon eine Übersetzung in diese Sprache. Öffne sie über die Sprachen des Artikels.",
+    "translationSource": "Nur Original-Artikel einer Wissensdatenbank lassen sich übersetzen. Öffne das Original und lege die Übersetzung dort an.",
+    "translationPlacement": "Eine Übersetzung bleibt beim übersetzten Artikel. Verschiebe den Original-Artikel, um seine Übersetzungen mitzunehmen.",
+    "knowledgeBaseLanguage": "Artikel einer Wissensdatenbank sind in ihrer Standardsprache. Lege für eine andere Sprache stattdessen eine Übersetzung an.",
+    "invalidKnowledgeBases": "Das Token lässt sich nur auf Wissensdatenbanken seiner Organisation beschränken. Wähle sie erneut aus der Liste.",
+    "publishNotAllowed": "Dieses Token oder Konto darf nur Entwürfe speichern. Veröffentlicht wird von einer Person in Pagehall.",
+    "changedSinceTooOld": "Änderungen sind nur 90 Tage bekannt. Hole alle Artikel erneut ohne Startdatum.",
+    "invalidCursor": "Der Seitenzeiger ist ungültig. Beginne erneut bei der ersten Seite.",
+    "tooManySections": "Ein Artikel kann bis zu 50 Abschnitte haben. Fasse Abschnitte zusammen und versuche es erneut.",
+    "portalAccountOnly": "Dieses Konto liest Wissensdatenbanken in ihrem Portal und hat keinen Zugang zum Wiki. Öffne stattdessen das Portal aus der Liste.",
+    "invitationNotFound": "Die Einladung gibt es nicht mehr. Vielleicht wurde sie schon angenommen oder zurückgezogen; lade die Liste neu.",
+    "portalAudienceRequired": "Portalkonten lesen nur Wissensdatenbanken für Portalkonten. Ändere zuerst die Zielgruppe unter Sichtbarkeit.",
+    "portalAccountNotFound": "Das Portalkonto gehört nicht mehr zu dieser Organisation. Lade die Liste neu.",
+    "portalAccountShared": "Das Konto liest auch Wissensdatenbanken anderer Organisationen und lässt sich deshalb hier nicht deaktivieren. Entferne es stattdessen aus dieser Organisation.",
+    "portalInvitationAccountExists": "Diese E-Mail-Adresse gehört schon zu einem Pagehall-Konto. Melde dich damit an und bitte die Einladenden, diesem Konto Zugriff zu geben.",
+    "staticSiteNotPublic": "Nur öffentliche Wissensdatenbanken lassen sich als statische Website herunterladen, weil eine statische Website keine Anmeldung hat. Mach die Wissensdatenbank zuerst in der Sichtbarkeit öffentlich."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -1800,7 +1820,11 @@
         "uid": "Dein Benutzername im Verzeichnis, zum Beispiel lhofer.",
         "unknown": "Der Name, mit dem du dich in der Arbeit am Computer anmeldest."
       }
-    }
+    },
+    "portalInvitationFor": "{knowledgeBase} lesen",
+    "portalInvitationDescription": "{inviter} hat {email} eingeladen, die Hilfe {knowledgeBase} zu lesen. Lege ein Lesekonto mit Passwort an; einen Passkey kannst du danach hinzufügen.",
+    "portalAccountCreated": "Dein Lesekonto ist bereit. Melde dich im Portal von {knowledgeBase} an.",
+    "openPortal": "{knowledgeBase} öffnen"
   },
   "reauthentication": {
     "withProvider": "Weiter mit {name}",
@@ -2500,7 +2524,35 @@
     "customDate": "Läuft ab am",
     "customDateFuture": "Wähle ein Datum in der Zukunft.",
     "customDateWithin": "Wähle ein Datum in den nächsten {days, plural, one {# Tag} other {# Tagen}}.",
-    "maximumApplies": "Tokens dürfen hier höchstens {days, plural, one {# Tag} other {# Tage}} gültig sein."
+    "maximumApplies": "Tokens dürfen hier höchstens {days, plural, one {# Tag} other {# Tage}} gültig sein.",
+    "content": {
+      "title": "Inhalte",
+      "levels": {
+        "none": "Kein Zugriff auf Inhalte",
+        "read": "Lesen",
+        "draft": "Entwürfe schreiben",
+        "publish": "Schreiben und veröffentlichen"
+      },
+      "descriptions": {
+        "none": "Das Token liest keine Spaces, Seiten oder Artikel.",
+        "read": "Liest alles, was das Konto lesen kann.",
+        "draft": "Legt zusätzlich Artikel an und speichert Entwürfe von Artikeln in Wissensdatenbanken. Veröffentlicht werden sie von einer Person in Pagehall.",
+        "publish": "Schreibt und veröffentlicht wie das Konto, ohne dass eine Person vorher prüft."
+      },
+      "reach": "Reichweite",
+      "allContent": "Alles, was das Konto nutzen darf",
+      "selectedKnowledgeBases": "Nur ausgewählte Wissensdatenbanken",
+      "knowledgeBases": "Wissensdatenbanken",
+      "searchKnowledgeBases": "Wissensdatenbanken nach Namen suchen",
+      "knowledgeBasesRequired": "Wähle mindestens eine Wissensdatenbank, oder lass das Token alle Inhalte erreichen.",
+      "summaryLimited": "{level} in {count, plural, one {# Wissensdatenbank} other {# Wissensdatenbanken}}",
+      "change": "Zugriff auf Inhalte ändern",
+      "changeTitle": "Zugriff von {name} auf Inhalte",
+      "changeFailed": "Der Zugriff auf Inhalte konnte nicht geändert werden",
+      "readOnlyScope": "Dieses Token wurde mit Lesezugriff auf Spaces angelegt und kann deshalb nur lesen. Lege für Schreibzugriff ein neues Token an.",
+      "save": "Zugriff speichern",
+      "saved": "Zugriff auf Inhalte geändert"
+    }
   },
   "notifications": {
     "title": "Benachrichtigungen",
@@ -3740,7 +3792,8 @@
         "updated": "API-Token geändert",
         "revoked": "API-Token widerrufen",
         "expired": "API-Token abgelaufen",
-        "rejected": "API-Token abgewiesen"
+        "rejected": "API-Token abgewiesen",
+        "levelChanged": "Schreibstufe eines API-Tokens geändert"
       },
       "audit": {
         "exported": "Audit-Log exportiert"
@@ -3785,7 +3838,8 @@
         "restrictionHolderAdded": "Person oder Gruppe zu einer Seitenbeschränkung hinzugefügt",
         "restrictionHolderRemoved": "Person oder Gruppe aus einer Seitenbeschränkung entfernt",
         "subtreeExported": "Seite mit Unterseiten exportiert",
-        "copied": "Seite kopiert"
+        "copied": "Seite kopiert",
+        "publishedWithToken": "Seite mit einem API-Token veröffentlicht"
       },
       "whiteboard": {
         "updateRejected": "Änderung am Whiteboard abgelehnt",
@@ -3867,7 +3921,8 @@
       "knowledgeBase": {
         "audienceChanged": "Lesende einer Wissensdatenbank geändert",
         "reviewSettingsChanged": "Überprüfungseinstellungen einer Wissensdatenbank geändert",
-        "portalAddressChanged": "Portal-Adresse einer Wissensdatenbank geändert"
+        "portalAddressChanged": "Portal-Adresse einer Wissensdatenbank geändert",
+        "languagesChanged": "Sprachen einer Wissensdatenbank geändert"
       },
       "article": {
         "reviewed": "Artikel als geprüft markiert",
@@ -3875,6 +3930,9 @@
         "sourceAdded": "Quellseite mit einem Artikel verknüpft",
         "sourceRemoved": "Quellseite von einem Artikel entfernt",
         "feedbackDeleted": "Hinweis von Lesenden zu einem Artikel gelöscht"
+      },
+      "portalAccount": {
+        "invited": "Portalkonto eingeladen"
       }
     },
     "action": "Aktion",
@@ -7671,7 +7729,9 @@
       "pending": "{count, plural, one {# importierte Rolle wartet darauf, dass eine Person oder Gruppe zugeordnet wird, und gilt dann.} other {# importierte Rollen warten darauf, dass Personen oder Gruppen zugeordnet werden, und gelten dann.}}",
       "defaultsUsed": "Der Export enthält keine Space-Berechtigungen, deshalb sind die Standards der Organisation für neue Spaces eingetragen.",
       "importedHint": "Aus Confluence übernommene Rollen. Ändere sie bei Bedarf.",
-      "defaultsHint": "Deine Organisation schlägt diese Rollen für neue Spaces vor. Ändere sie bei Bedarf."
+      "defaultsHint": "Deine Organisation schlägt diese Rollen für neue Spaces vor. Ändere sie bei Bedarf.",
+      "knowledgeBaseTitle": "Der Import wird eine Wissensdatenbank",
+      "knowledgeBase": "Zuerst lesen nur die Personen und Gruppen unten mit. Wer sie liest, zum Beispiel alle im Internet, wählst du danach in den Sichtbarkeitseinstellungen der Wissensdatenbank."
     },
     "errors": {
       "unknown": {
@@ -8312,7 +8372,10 @@
     },
     "markdown": {
       "title": "Markdown-Ordner als ZIP",
-      "description": "Ordner werden zum Seitenbaum; index.md oder README.md wird die Seite ihres Ordners. Front Matter liefert Titel, Labels und Daten, weitere Schlüssel werden Seiteneigenschaften. Links zwischen Dateien werden Seitenlinks, [[Wiki-Links]] eingeschlossen, Bilder und andere Dateien werden Anhänge. Mermaid-Codeblöcke werden Diagramme."
+      "description": "Ordner werden zum Seitenbaum; index.md oder README.md wird die Seite ihres Ordners. Front Matter liefert Titel, Labels und Daten, weitere Schlüssel werden Seiteneigenschaften. Links zwischen Dateien werden Seitenlinks, [[Wiki-Links]] eingeschlossen, Bilder und andere Dateien werden Anhänge. Mermaid-Codeblöcke werden Diagramme.",
+      "spaceType": "Art des Bereichs",
+      "knowledgeBase": "Als Wissensdatenbank importieren",
+      "knowledgeBaseHint": "Ordner werden Kategorien, Dateien werden Artikel. Artikeltypen, Sprachen, Übersetzungen und Abschnitte aus einem Pagehall-Export bleiben erhalten. Nach dem Übernehmen lesen nur die Personen mit einer Rolle mit, bis du in den Einstellungen ein Publikum wählst."
     },
     "documents": {
       "title": "Word-Dokumente",
@@ -8503,7 +8566,8 @@
       "renderFailed": "Der Render-Container konnte das PDF nicht erstellen. Starten Sie den Export erneut; schlägt er wieder fehl, informieren Sie Ihre Instanz-Administration.",
       "renderTooLarge": "Das Dokument mit seinen Bildern ist größer, als der Render-Container annimmt. Exportieren Sie weniger Seiten oder als Word bzw. HTML.",
       "tooManyPagesForFile": "Die Word- oder PDF-Datei hätte mehr Seiten, als sie aufnimmt. Exportieren Sie stattdessen als HTML- oder Markdown-Archiv oder einen kleineren Teil.",
-      "tooLargeToBuild": "Für die Datei hätte der Server mehr Speicher gebraucht, als er hat. Exportieren Sie einen kleineren Teil oder als HTML- oder Markdown-Archiv."
+      "tooLargeToBuild": "Für die Datei hätte der Server mehr Speicher gebraucht, als er hat. Exportieren Sie einen kleineren Teil oder als HTML- oder Markdown-Archiv.",
+      "notPublic": "Die Wissensdatenbank ist nicht mehr öffentlich und kann deshalb keine statische Website werden. Mach sie wieder öffentlich und starte den Download erneut."
     },
     "screen": {
       "title": "Exporte",
@@ -8627,7 +8691,23 @@
       "markdown": "Markdown",
       "print": "Druckansicht",
       "pdf": "PDF",
-      "docx": "Word"
+      "docx": "Word",
+      "site": "Statische Website"
+    },
+    "site": {
+      "title": "Statische Website",
+      "description": "Lade die Wissensdatenbank als ZIP mit einer statischen Website herunter: alle veröffentlichten Artikel, Start-, Kategorie-, Such- und Kontaktseite, Bilder und Weiterleitungen für alte Adressen. Lade die entpackten Dateien zu Cloudflare Pages, GitHub Pages oder auf einen beliebigen Webserver hoch. Rückmeldungen, Statistiken und Anmeldung fehlen, weil sie Pagehall brauchen.",
+      "address": "Adresse der Website (optional)",
+      "addressHint": "Wo die Website erreichbar sein wird. Damit bekommt der Download eine Sitemap und Sprachlinks für Suchmaschinen; die Website selbst funktioniert unter jeder Adresse.",
+      "invalidUrl": "Gib eine vollständige Adresse ein, die mit https:// beginnt, zum Beispiel https://hilfe.example.org/, oder lass das Feld leer.",
+      "start": "Als statische Website herunterladen",
+      "started": "Die Website wird erstellt. Du bekommst eine Benachrichtigung, sobald der Download bereitsteht; er erscheint auch in der Liste unten.",
+      "failed": "Die Website konnte nicht gestartet werden",
+      "notPublicTitle": "Nur für öffentliche Wissensdatenbanken",
+      "notPublic": "Eine statische Website hat keine Anmeldung, alle mit der Adresse können sie lesen. Mach die Wissensdatenbank zuerst öffentlich, wenn alle ihre Artikel für jeden lesbar sein dürfen.",
+      "toVisibility": "Sichtbarkeit öffnen",
+      "exportOff": "Der Export ist für diese Wissensdatenbank ausgeschaltet. Schalte ihn oben ein, um die Website herunterzuladen.",
+      "addressPlaceholder": "https://hilfe.example.org/"
     }
   },
   "search": {
@@ -9355,7 +9435,8 @@
       "noCategoriesReader": "In dieser Wissensdatenbank ist noch nichts veröffentlicht.",
       "withoutCategory": "Ohne Kategorie",
       "total": "{count, plural, one {# Artikel} other {# Artikel}} in Kategorien",
-      "emptyFiltered": "In dieser Kategorie gibt es keine Artikel dieser Art."
+      "emptyFiltered": "In dieser Kategorie gibt es keine Artikel dieser Art.",
+      "languages": "Übersetzungen"
     },
     "create": {
       "typeLabel": "Art des Space",
@@ -9567,6 +9648,47 @@
       "shortenTitle": "Ältere Hinweise jetzt löschen?",
       "shortenDescription": "{count, plural, one {Hinweise, die älter als # Monat sind, werden sofort gelöscht und lassen sich nicht wiederherstellen.} other {Hinweise, die älter als # Monate sind, werden sofort gelöscht und lassen sich nicht wiederherstellen.}}",
       "shortenConfirm": "{count, plural, one {Hinweise # Monat aufbewahren} other {Hinweise # Monate aufbewahren}}"
+    },
+    "languages": {
+      "tab": "Sprachen",
+      "title": "Sprachen",
+      "description": "Artikel können übersetzt werden. Übersetzungen sind mit ihrem Original verknüpft; fehlt eine, sehen Lesende die Standardsprache mit einem Hinweis.",
+      "loadFailed": "Die Sprachen konnten nicht geladen werden",
+      "section": "Sprachen",
+      "default": "Standardsprache",
+      "defaultDescription": "Sprache neuer Artikel und Rückfall für fehlende Übersetzungen.",
+      "enabled": "Aktivierte Sprachen",
+      "enabledDescription": "Ab zwei Sprachen zeigt das Portal eine Sprachauswahl. {language} als Standardsprache bleibt immer aktiviert. Eine deaktivierte Sprache blendet ihre Übersetzungen für Lesende aus, behält sie aber.",
+      "add": "Sprache hinzufügen",
+      "progress": "Stand der Übersetzungen",
+      "translated": "{count, plural, one {# von {total} Artikeln übersetzt} other {# von {total} Artikeln übersetzt}}",
+      "missing": "{count, plural, one {# fehlt} other {# fehlen}}",
+      "outdated": "{count, plural, one {# veraltet} other {# veraltet}}",
+      "single": "Nur eine Sprache ist aktiviert, deshalb sehen Lesende nichts von Sprachen.",
+      "adminsOnly": "Nur Bereichsadmins ändern die Sprachen. Frag eine von ihnen, wenn eine Sprache fehlt.",
+      "archived": "Die Wissensdatenbank ist archiviert, ihre Sprachen lassen sich deshalb nicht ändern. Hol sie aus dem Archiv zurück, um sie zu ändern."
+    },
+    "translations": {
+      "button": "Sprachen",
+      "buttonLabel": "Sprachen des Artikels: {language}",
+      "heading": "Sprachen dieses Artikels",
+      "loadFailed": "Die Übersetzungen konnten nicht geladen werden",
+      "states": {
+        "original": "Original",
+        "current": "Aktuell",
+        "outdated": "Veraltet",
+        "unpublished": "Nicht veröffentlicht",
+        "missing": "Fehlt"
+      },
+      "disabled": "Sprache deaktiviert",
+      "outdatedHint": "Das Original wurde nach dieser Übersetzung veröffentlicht. Vergleiche sie mit dem Original und veröffentliche die Übersetzung erneut.",
+      "create": "Übersetzen ins {language}",
+      "open": "Öffnen",
+      "created": "Übersetzung angelegt",
+      "createdDescription": "Sie beginnt als Kopie des Originals. Übersetze den Text und veröffentliche sie.",
+      "createFailed": "Die Übersetzung konnte nicht angelegt werden",
+      "translationOf": "Übersetzung von {title}",
+      "badge": "{language}: {state}"
     }
   },
   "helpTarget": {
@@ -9671,7 +9793,8 @@
         "all": "Alle",
         "due": "Fällig",
         "soon": "In 30 Tagen",
-        "unowned": "Ohne Verantwortliche"
+        "unowned": "Ohne Verantwortliche",
+        "translations": "Übersetzungen"
       },
       "mine": "Nur meine Artikel",
       "loadFailed": "Die Artikel zur Überprüfung",
@@ -9699,7 +9822,8 @@
       "showAll": "Alle Artikel anzeigen",
       "offTitle": "Die Überprüfung ist aus",
       "offDescription": "Artikel erscheinen hier, wenn sie ein Überprüfungsintervall haben und fällig werden, wenn sich eine Quellseite ändert oder wenn sie keine Verantwortlichen haben. Lege das Intervall in den Einstellungen der Wissensdatenbank fest.",
-      "openSettings": "Überprüfungsintervall festlegen"
+      "openSettings": "Überprüfungsintervall festlegen",
+      "translationOutdatedHint": "Übersetzung ({language}) veraltet"
     },
     "settings": {
       "tab": "Überprüfung",
@@ -9817,5 +9941,64 @@
       "deleteFailed": "Der Hinweis konnte nicht gelöscht werden"
     },
     "privacy": "Anonym gezählt: keine Namen, Konten, Sitzungen oder IP-Adressen. Suchen, die älter als 12 Monate sind, bleiben nur als Anzahl je Begriff und Monat erhalten, und nur für Begriffe mit mindestens 3 Suchen in diesem Monat."
+  },
+  "portalAccounts": {
+    "tab": "Portalkonten",
+    "title": "Portalkonten",
+    "description": "Lesende ohne Firmenkonto melden sich mit E-Mail-Adresse und Passwort oder Passkey an. Sie sehen nur das Portal der Wissensdatenbanken der Organisation für Portalkonten, nie das Wiki.",
+    "notForPortalTitle": "Diese Wissensdatenbank ist nicht für Portalkonten",
+    "notForPortal": "Portalkonten lesen nur Wissensdatenbanken mit der Zielgruppe Portalkonten. Ändere die Zielgruppe, um hier Lesende einzuladen.",
+    "toVisibility": "Sichtbarkeit öffnen",
+    "adminsOnly": "Nur Space-Admins verwalten Portalkonten.",
+    "loadFailed": "Die Portalkonten konnten nicht geladen werden",
+    "accounts": "Lesende",
+    "invitations": "Offene Einladungen",
+    "emptyTitle": "Noch keine Portalkonten",
+    "emptyDescription": "Lade Lesende per E-Mail ein. Sie bekommen einen Link, um ihr Konto anzulegen.",
+    "deactivated": "Deaktiviert",
+    "expiresOn": "Zugang bis {date}",
+    "noExpiry": "Zugang ohne Ende",
+    "lastSignIn": "Zuletzt angemeldet {when}",
+    "neverSignedIn": "Noch nie angemeldet",
+    "linkExpires": "Link gültig bis {date}",
+    "deactivate": "Deaktivieren",
+    "remove": "Aus Organisation entfernen",
+    "withdraw": "Einladung zurückziehen",
+    "deactivateTitle": "{name} deaktivieren?",
+    "deactivateDescription": "Alle Sitzungen enden sofort, und das Konto kann sich nicht mehr anmelden. Instanz-Admins können es wieder aktivieren.",
+    "deactivateConfirm": "Konto deaktivieren",
+    "deactivateFailed": "Das Konto konnte nicht deaktiviert werden",
+    "removeTitle": "{name} aus der Organisation entfernen?",
+    "removeDescription": "Das Konto liest die Wissensdatenbanken dieser Organisation nicht mehr. Lade es erneut ein, um ihm wieder Zugang zu geben.",
+    "removeConfirm": "Aus Organisation entfernen",
+    "removed": "Portalkonto entfernt",
+    "removeFailed": "Das Konto konnte nicht entfernt werden",
+    "withdrawTitle": "Einladung an {email} zurückziehen?",
+    "withdrawDescription": "Der Link in der E-Mail funktioniert dann nicht mehr. Du kannst die Adresse später erneut einladen.",
+    "withdrawConfirm": "Einladung zurückziehen",
+    "withdrawFailed": "Die Einladung konnte nicht zurückgezogen werden",
+    "invite": {
+      "open": "Lesende einladen",
+      "title": "Lesende Person einladen",
+      "description": "Die Person bekommt eine E-Mail mit einem Link, der 7 Tage gilt. Du bist für das Konto verantwortlich und wirst erinnert, bevor der Zugang endet.",
+      "email": "E-Mail-Adresse",
+      "emailInvalid": "Gib eine E-Mail-Adresse wie leser@example.org ein.",
+      "expiry": "Zugang bis (optional)",
+      "expiryDescription": "Leer lassen für einen Zugang ohne Ende.",
+      "expiryFuture": "Wähle ein Datum in der Zukunft.",
+      "send": "Einladung senden",
+      "sent": "Einladung an {email} gesendet",
+      "failed": "Die Einladung konnte nicht gesendet werden"
+    },
+    "home": {
+      "title": "Deine Hilfe-Portale",
+      "description": "Angemeldet als {name}. Dieses Konto liest Hilfe-Portale und hat keinen Zugang zum Wiki.",
+      "signOut": "Abmelden",
+      "portals": "Portale",
+      "open": "Portal öffnen",
+      "loadFailed": "Die Portale konnten nicht geladen werden",
+      "emptyTitle": "Kein Portal zum Lesen",
+      "emptyDescription": "Dein Zugang ist vielleicht abgelaufen. Frag die Personen, die dich eingeladen haben."
+    }
   }
 }

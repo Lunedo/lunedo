@@ -5,6 +5,7 @@ import { MeetingsController } from "../meetings/meetings.controller.js";
 import { OneOnOnesController } from "../meetings/one-on-ones.controller.js";
 import { PortalController } from "../portal/portal.controller.js";
 import { WhiteboardsController } from "../whiteboards/whiteboards.controller.js";
+import { ArticleApiController } from "./article-api.controller.js";
 import { ConfidentialSpacesController } from "./confidential-spaces.controller.js";
 import { CopiesController } from "./copies.controller.js";
 import { ItemsController } from "./items.controller.js";
@@ -12,6 +13,7 @@ import { KnowledgeBasesController } from "./knowledge-bases.controller.js";
 import { OrganizationSpacesController } from "./organization-spaces.controller.js";
 import { OwnershipController } from "./ownership.controller.js";
 import { PersonalSpacesController } from "./personal-spaces.controller.js";
+import { PortalAccountsController } from "./portal-accounts.controller.js";
 import { ReviewsController } from "./reviews.controller.js";
 import { ShortcutsController } from "./shortcuts.controller.js";
 import { SpacesController } from "./spaces.controller.js";
@@ -28,6 +30,8 @@ import { VersionsController } from "./versions.controller.js";
     ConfidentialSpacesController,
     ItemsController,
     KnowledgeBasesController,
+    ArticleApiController,
+    PortalAccountsController,
     ReviewsController,
     StatisticsController,
     PortalController,

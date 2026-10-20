@@ -153,7 +153,7 @@ export function MembersScreen() {
       danger: true,
       onSelect: () => setAction({ kind: "remove", member }),
     },
-    ...(state.can("instance.accounts.manage") || member.kind === "member"
+    ...(state.can("instance.accounts.manage") || member.kind === "member" || member.accountType === "portal"
       ? [
           {
             label: t("members.actions.deactivate"),

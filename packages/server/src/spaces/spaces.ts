@@ -214,6 +214,12 @@ export class SpaceService {
     return this.#find(executor, sql`s.id = ${spaceId}`);
   }
 
+  async organizationOfItem(itemId: string): Promise<string | null> {
+    const result = await this.#database.execute<{ organization_id: string | null }>(sql`
+      select s.organization_id from tree_items t join spaces s on s.id = t.space_id where t.id = ${itemId}`);
+    return result.rows[0]?.organization_id ?? null;
+  }
+
   async require(spaceId: string, executor: Executor = this.#database): Promise<Space> {
     const space = await this.get(spaceId, executor);
     if (!space) throw new SpaceError("spaceNotFound", "The space does not exist");
@@ -260,6 +266,7 @@ export class SpaceService {
       archived?: boolean | undefined;
       oneOnOne?: boolean | undefined;
       minimum?: SpaceRole | undefined;
+      type?: SpaceType | undefined;
     } = {},
   ): Promise<Page<Space>> {
     const page = options.page ?? FIRST_PAGE;
@@ -272,6 +279,7 @@ export class SpaceService {
         ${options.organizationId ? sql`and s.organization_id = ${options.organizationId}` : sql``}
         and (s.archived_at is not null) = ${options.archived ?? false}
         and s.one_on_one = ${options.oneOnOne ?? false}
+        ${options.type ? sql`and s.type = ${options.type}` : sql``}
         ${term ? sql`and (s.name ilike ${pattern} or s.key ilike ${pattern} or s.description ilike ${pattern})` : sql``}
         ${page.after ? sql`and ${afterKey([sortName, sql`s.id`], page.after)}` : sql``}
       order by ${sortName}, s.id

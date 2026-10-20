@@ -7,7 +7,11 @@ import { downloadBlob } from "../components/download.js";
 export type ExportEntry =
   paths["/api/v1/exports/{exportId}"]["get"]["responses"][200]["content"]["application/json"];
 export type PageExportFormat = "markdown" | "html" | "zip" | "print" | "pdf" | "docx";
-export type ExportFormat = ExportEntry["format"];
+export type ExportFormat = NonNullable<
+  NonNullable<
+    paths["/api/v1/spaces/{spaceId}/exports"]["post"]["requestBody"]
+  >["content"]["application/json"]["format"]
+>;
 export type ExportOptions = ExportEntry["options"];
 export type ExportCounts =
   paths["/api/v1/spaces/{spaceId}/exports/summary"]["get"]["responses"][200]["content"]["application/json"];
@@ -19,6 +23,7 @@ export const defaultExportOptions: ExportOptions = {
   contents: true,
   paper: "a4",
   orientation: "portrait",
+  siteUrl: null,
 };
 
 export const exportKeys = {
@@ -142,14 +147,18 @@ export async function printExportHtml(exportId: string): Promise<string> {
 }
 
 export function startExport(target: ExportTarget, format: ExportFormat, options: ExportOptions) {
-  const body = { format, ...options };
-  return "spaceId" in target
-    ? request(() =>
-        api.POST("/api/v1/spaces/{spaceId}/exports", { params: { path: { spaceId: target.spaceId } }, body }),
-      )
-    : request(() =>
-        api.POST("/api/v1/pages/{pageId}/exports", { params: { path: { pageId: target.pageId } }, body }),
-      );
+  const { siteUrl, ...rest } = options;
+  if ("spaceId" in target) {
+    const body = { format, ...rest, ...(format === "site" ? { siteUrl } : {}) };
+    return request(() =>
+      api.POST("/api/v1/spaces/{spaceId}/exports", { params: { path: { spaceId: target.spaceId } }, body }),
+    );
+  }
+  if (format === "site") throw new Error("A static website is built from a whole knowledge base");
+  const body = { format, ...rest };
+  return request(() =>
+    api.POST("/api/v1/pages/{pageId}/exports", { params: { path: { pageId: target.pageId } }, body }),
+  );
 }
 
 export function startPagesExport(pageId: string) {

@@ -57,6 +57,7 @@ const OPEN = {
   expiresAt: "2030-01-01T00:00:00.000Z",
   organizationName: "Engineering",
   invitedByName: "Olivia Owner",
+  knowledgeBaseName: null,
 };
 
 describe("accepting an invitation", () => {
@@ -104,5 +105,44 @@ describe("accepting an invitation", () => {
     await open(`/accept-invitation#token=${TOKEN}`);
     expect(await screen.findByText(/This invitation link is not valid/)).toBeTruthy();
     expect(screen.getByRole("link", { name: "Sign in" })).toBeTruthy();
+  });
+
+  it("invites a reader to a help portal and leads to it after the account is created", async () => {
+    mockApi({
+      "GET /api/v1/instance/info": () => ({
+        body: {
+          name: "Pagehall",
+          setupComplete: true,
+          language: "en",
+          accentColor: "petrol",
+          passwordMinLength: 12,
+          selfRegistration: false,
+          organization: null,
+        },
+      }),
+      "GET /api/v1/auth/session": () => ({
+        status: 401,
+        body: {
+          type: "urn:pagehall:problem:notSignedIn",
+          title: "Not signed in",
+          status: 401,
+          code: "notSignedIn",
+        },
+      }),
+      "POST /api/v1/invitations/preview": () => ({ body: { ...OPEN, knowledgeBaseName: "Kundenhilfe" } }),
+      "POST /api/v1/invitations/accept": () => ({
+        body: {
+          accountId: "01929b1e-0000-7000-8000-0000000000a1",
+          organizationId: "01929b1e-0000-7000-8000-0000000000a2",
+          accountCreated: true,
+          portalUrl: "https://help.example.org/",
+        },
+      }),
+    });
+    await open(`/accept-invitation#token=${TOKEN}`);
+    expect(await screen.findByRole("heading", { name: "Read Kundenhilfe" })).toBeTruthy();
+    screen.getByRole("button", { name: "Accept invitation" }).click();
+    const link = await screen.findByRole("link", { name: "Open Kundenhilfe" });
+    expect(link.getAttribute("href")).toBe("https://help.example.org/");
   });
 });

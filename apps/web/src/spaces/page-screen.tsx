@@ -56,6 +56,7 @@ import { articleTypeIcon } from "../knowledge-bases/article-types.js";
 import { ArticlePortalLink } from "../knowledge-bases/portal-link.js";
 import { isKnowledgeBase } from "../knowledge-bases/queries.js";
 import { ArticleReviewLine } from "../knowledge-bases/reviews/article-review.js";
+import { TranslationsControl } from "../knowledge-bases/translations-control.js";
 import { MeetingHeader } from "../meetings/meeting-header.js";
 import { PrivateNotesPanel } from "../meetings/private-notes-panel.js";
 import { WatchMenu } from "../notifications/watch-menu.js";
@@ -297,11 +298,15 @@ function PageArticle({
             },
           ]
         : []),
-      {
-        label: t("contentLanguage.menu"),
-        icon: Languages,
-        onSelect: () => setChoosingLanguage(true),
-      },
+      ...(knowledgeBase
+        ? []
+        : [
+            {
+              label: t("contentLanguage.menu"),
+              icon: Languages,
+              onSelect: () => setChoosingLanguage(true),
+            },
+          ]),
       {
         label: t("templates.saveAsTemplate"),
         icon: LayoutTemplate,
@@ -568,6 +573,7 @@ function PageMeta({ page, writable }: { page: ItemDetails; writable: boolean }) 
             type={page.articleType}
             editable={writable}
           />
+          <TranslationsControl itemId={page.id} spaceId={space.id} spaceKey={space.key} editable={writable} />
           <ArticlePortalLink itemId={page.id} />
         </>
       ) : null}

@@ -189,7 +189,7 @@ export class AuthController {
   }
 
   @Get("session")
-  @SessionRoute({ secondFactorSetup: true })
+  @SessionRoute({ portalAccounts: true, secondFactorSetup: true })
   @ApiRoute({
     summary: "Get the current session",
     tags: ["Authentication"],
@@ -205,7 +205,7 @@ export class AuthController {
   }
 
   @Post("sign-out")
-  @SessionRoute({ secondFactorSetup: true })
+  @SessionRoute({ portalAccounts: true, secondFactorSetup: true })
   @ApiRoute({ summary: "Sign out", tags: ["Authentication"] })
   async signOut(@Req() request: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply) {
     const session = sessionOf(request);
@@ -214,7 +214,7 @@ export class AuthController {
   }
 
   @Post("reauthenticate/passkey-options")
-  @SessionRoute({ secondFactorSetup: true })
+  @SessionRoute({ portalAccounts: true, secondFactorSetup: true })
   @ApiRoute({
     summary: "Start passkey reauthentication",
     tags: ["Authentication"],
@@ -226,7 +226,7 @@ export class AuthController {
   }
 
   @Post("reauthenticate")
-  @SessionRoute({ secondFactorSetup: true })
+  @SessionRoute({ portalAccounts: true, secondFactorSetup: true })
   @ApiRoute({
     summary: "Confirm the identity",
     tags: ["Authentication"],

@@ -4,7 +4,13 @@ import { ImportFormatError } from "../errors.js";
 import type { ByteSource } from "../formats/bytes.js";
 import { DEFAULT_ZIP_LIMITS, ZipArchive, type ZipEntryLocation, type ZipLimits } from "../formats/zip.js";
 import type { ScanContext } from "../source.js";
-import { convertMarkdown, type MarkdownLookup, parseFrontMatter, splitFrontMatter } from "./convert.js";
+import {
+  convertMarkdown,
+  type FrontMatter,
+  type MarkdownLookup,
+  parseFrontMatter,
+  splitFrontMatter,
+} from "./convert.js";
 
 export const MARKDOWN_ZIP_LIMITS: ZipLimits = { ...DEFAULT_ZIP_LIMITS, maxEntries: 100_000 };
 export const MAX_MARKDOWN_BYTES = 5 * 1024 * 1024;
@@ -129,7 +135,14 @@ export class MarkdownTree {
           (path) => [posix.basename(path).toLocaleLowerCase("en"), path] as const,
         ),
       );
-      const index = INDEX_NAMES.map((name) => names.get(name)).find((path) => path !== undefined) ?? null;
+      const own = posix
+        .basename(directory)
+        .replace(/ \(\d+\)$/, "")
+        .toLocaleLowerCase("en");
+      const index =
+        INDEX_NAMES.map((name) => names.get(name)).find((path) => path !== undefined) ??
+        (directory === "" ? undefined : (names.get(`${own}.md`) ?? names.get(`${own}.markdown`))) ??
+        null;
       const pageId = index ? pageIdOf(index) : directory === "" ? null : `md:${directory}/`;
       this.folders.set(directory, { path: directory, pageId, index });
     }
@@ -140,6 +153,16 @@ export class MarkdownTree {
       const key = posix.basename(folder.path).toLocaleLowerCase("en");
       if (folder.pageId && key && !this.#folderByName.has(key)) this.#folderByName.set(key, folder.pageId);
     }
+  }
+
+  separateIndex(directory: string): void {
+    const folder = this.folders.get(directory);
+    if (!folder?.index) return;
+    this.folders.set(directory, {
+      path: directory,
+      pageId: directory === "" ? null : `md:${directory}/`,
+      index: null,
+    });
   }
 
   isIndex(path: string): boolean {
@@ -258,6 +281,24 @@ export class MarkdownReader extends StagedConfluenceReader {
     if (tree.markdown.length === 0) {
       throw new ImportFormatError("noMarkdown", "The ZIP file contains no Markdown files.");
     }
+    const knowledgeBase = context.options.knowledgeBase === true;
+    const spaceTitle = tree.folders.get("")?.index
+      ? await this.#frontMatterTitle(archive, tree, tree.folders.get("")?.index ?? "")
+      : null;
+    const articles = new Set<string>();
+    if (knowledgeBase) {
+      for (const folder of [...tree.folders.values()]) {
+        if (!folder.index) continue;
+        const facts = (await this.#frontMatter(archive, tree, folder.index))?.pagehall;
+        if (folder.path !== "" && facts?.kind === "page") articles.add(folder.pageId ?? "");
+        else tree.separateIndex(folder.path);
+      }
+    }
+    const placement = (parentId: string | null, translation: boolean): string | null => {
+      if (!parentId || !articles.has(parentId) || translation) return parentId;
+      const directory = parentId.slice(3).replace(/\/[^/]*$/, "");
+      return tree.parentOfFolder(directory);
+    };
     for (const entry of tree.files.values()) {
       if (isMarkdown(entry.path) && entry.size > MAX_MARKDOWN_BYTES) {
         await context.problem("unsupportedMarkdown", { file: entry.path, construct: "tooLarge" });
@@ -265,9 +306,7 @@ export class MarkdownReader extends StagedConfluenceReader {
     }
     const folderName = displayName(tree.root || "Markdown");
     const rootIndex = tree.folders.get("")?.index ?? null;
-    const spaceName = rootIndex
-      ? ((await this.#frontMatterTitle(archive, tree, rootIndex)) ?? folderName)
-      : folderName;
+    const spaceName = spaceTitle ?? folderName;
     await context.staging.put({
       kind: kinds.space,
       sourceId: `md:${tree.root || "markdown"}`,
@@ -276,7 +315,7 @@ export class MarkdownReader extends StagedConfluenceReader {
     const skip = typeof context.checkpoint.files === "number" ? context.checkpoint.files : 0;
     for (const [index, path] of tree.markdown.entries()) {
       if (index < skip) continue;
-      await this.#page(archive, tree, path, context);
+      await this.#page(archive, tree, path, context, knowledgeBase ? { articles, placement } : null);
       if ((index + 1) % BATCH === 0) {
         await context.staging.flush();
         await context.saveCheckpoint({ files: index + 1 });
@@ -290,9 +329,19 @@ export class MarkdownReader extends StagedConfluenceReader {
         kind: kinds.page,
         sourceId: folder.pageId,
         ref: titleKey(title),
-        parentId: tree.parentOfFolder(folder.path),
+        parentId: knowledgeBase
+          ? placement(tree.parentOfFolder(folder.path), false)
+          : tree.parentOfFolder(folder.path),
         sort: naturalSort(posix.basename(folder.path)),
-        data: { title, version: 1, creatorKey: null, created: null, modified: null, modifierKey: null },
+        data: {
+          ...(knowledgeBase ? { type: "folder" as const } : {}),
+          title,
+          version: 1,
+          creatorKey: null,
+          created: null,
+          modified: null,
+          modifierKey: null,
+        },
       });
       await context.staging.put({
         kind: kinds.body,
@@ -308,15 +357,28 @@ export class MarkdownReader extends StagedConfluenceReader {
     await context.saveCheckpoint({ files: tree.markdown.length });
   }
 
-  async #frontMatterTitle(archive: ZipArchive, tree: MarkdownTree, path: string): Promise<string | null> {
+  async #frontMatter(archive: ZipArchive, tree: MarkdownTree, path: string): Promise<FrontMatter | null> {
     const entry = tree.files.get(path);
     if (!entry || entry.size > MAX_MARKDOWN_BYTES) return null;
     const { yaml } = splitFrontMatter(await readText(archive, entry));
-    const title = parseFrontMatter(yaml, () => undefined).title?.trim();
+    return parseFrontMatter(yaml, () => undefined);
+  }
+
+  async #frontMatterTitle(archive: ZipArchive, tree: MarkdownTree, path: string): Promise<string | null> {
+    const title = (await this.#frontMatter(archive, tree, path))?.title?.trim();
     return title ? title.slice(0, 100) : null;
   }
 
-  async #page(archive: ZipArchive, tree: MarkdownTree, path: string, context: ScanContext): Promise<void> {
+  async #page(
+    archive: ZipArchive,
+    tree: MarkdownTree,
+    path: string,
+    context: ScanContext,
+    knowledgeBase: {
+      articles: ReadonlySet<string>;
+      placement: (parentId: string | null, translation: boolean) => string | null;
+    } | null,
+  ): Promise<void> {
     const source = await readText(archive, tree.files.get(path) as Entry);
     const pageId = pageIdOf(path);
     const attachments = new AttachmentNames();
@@ -337,13 +399,30 @@ export class MarkdownReader extends StagedConfluenceReader {
     const directory = directoryOf(path);
     const fallback = index ? posix.basename(directory) || tree.root || stem(path) : stem(path);
     const title = (converted.frontMatter.title ?? converted.heading ?? displayName(fallback)).slice(0, 255);
+    const facts = converted.frontMatter.pagehall;
+    const parentId = tree.parentOfFile(path);
+    const translation =
+      knowledgeBase !== null &&
+      facts?.translation === true &&
+      facts.language !== null &&
+      parentId !== null &&
+      knowledgeBase.articles.has(parentId);
     await context.staging.put({
       kind: kinds.page,
       sourceId: pageId,
       ref: titleKey(title),
-      parentId: tree.parentOfFile(path),
+      parentId: knowledgeBase ? knowledgeBase.placement(parentId, translation) : parentId,
       sort: naturalSort(index ? posix.basename(directory) : posix.basename(path)),
       data: {
+        ...(knowledgeBase
+          ? {
+              article: {
+                articleType: facts?.articleType ?? null,
+                language: facts?.language ?? null,
+                translation,
+              },
+            }
+          : {}),
         title,
         version: 1,
         creatorKey: null,

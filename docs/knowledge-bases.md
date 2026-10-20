@@ -23,7 +23,20 @@ The audience of a knowledge base decides who reads it:
 | Specific groups | members of the groups that hold the reader role, and holders of other roles | the same |
 | Portal accounts | only holders of a role | portal accounts with a membership in the organization, and holders of a role |
 
-Guests read a knowledge base only when they hold a role. Portal accounts read only knowledge bases: through a role in the space or the audience "Portal accounts", never through shares or links, and never in other spaces, whatever their roles say.
+Guests read a knowledge base only when they hold a role. Portal accounts (see below) read only knowledge bases: through a role in the space or the audience "Portal accounts", never through shares or links, and never in other spaces, whatever their roles say.
+
+### Portal accounts
+
+Portal accounts are for readers without an account of the organization, for example customers. Space admins of a knowledge base whose audience is "Portal accounts" invite them under **Space settings → Portal accounts** by e-mail address, optionally with a date when the access ends.
+
+- The invitation e-mail links to a page where the reader chooses a name and a password; afterwards the link leads to the portal. The link works once and for 7 days. Space admins can withdraw an open invitation.
+- A portal account signs in with its e-mail address and password, and can add a passkey and an authenticator app on its own page. It reads the portals of every knowledge base of the organization whose audience is "Portal accounts". It never sees the wiki: the API answers every other request of a portal account with `portalAccountOnly`, and opening the wiki shows only the list of its portals and its sign-in settings.
+- An address that already belongs to another Pagehall account cannot accept the invitation (`portalInvitationAccountExists`); give that account a role instead.
+- The person who invites is responsible for the account and is reminded before its access ends, like for guests. When the date is reached, the access ends and the account no longer reads the organization's knowledge bases.
+- Space admins can **deactivate** a portal account, which ends its sessions and blocks its sign-in, or **remove** it from the organization. Organization administrators can do the same in the member list. An account that also reads knowledge bases of other organizations can only be removed, not deactivated, from one organization.
+- Invitations are recorded in the audit log as `invitation.created` and `portalAccount.invited`, acceptances as `invitation.accepted` and `account.created`, the end of access as `membership.removed` with the reason `expired` or `removed`, and deactivation as `account.deactivated`.
+
+API: `GET` and `POST /api/v1/spaces/{spaceId}/portal-accounts`, `DELETE /api/v1/spaces/{spaceId}/portal-invitations/{invitationId}`, `POST /api/v1/spaces/{spaceId}/portal-accounts/{accountId}/deactivate` and `DELETE /api/v1/spaces/{spaceId}/portal-accounts/{accountId}`, all for space admins; `GET /api/v1/account/portals` for the portal account itself.
 
 Categories and articles can narrow the audience with view restrictions, as pages can in every space. They can never widen it. Shares of single articles and share links work as in every other space.
 
@@ -78,17 +91,33 @@ Each category can have a contact address, which readers use when an article did 
 
 API: `GET /api/v1/spaces/{spaceId}/categories`, `PUT /api/v1/categories/{itemId}` for the icon, `PUT /api/v1/categories/{itemId}/contact` and `PUT /api/v1/spaces/{spaceId}/knowledge-base/contact`. Title, introduction and order change like for every folder.
 
+## Languages
+
+A knowledge base has a default language and can enable further languages under **Space settings → Languages**. While only one language is enabled, nothing about languages is visible to readers. The default language is chosen from the organization's language when the knowledge base is created.
+
+- **Translations** are articles of their own, linked to their original. Open an article, choose its language next to the article type and **Translate into …** for an enabled language. The translation starts as a copy of the original, sits below it in the page tree, shares its number and category and gets its own address from its own title, for example `/help/help/en/12-change-the-password`. It has its own versions, owner and review. Moving the original moves its translations; a translation cannot be moved on its own.
+- Articles in the default language always have the default language. The page language of the page menu is not offered in knowledge bases.
+- A translation is **outdated** when its original was published after it. Outdated translations are marked at the article and in the article list, and the review list has the filter **Translations**. **Space settings → Languages** shows per language how many articles are translated, outdated or missing.
+- Turning a language off keeps its translations but hides them from readers. A language that already has translations cannot become the default language.
+- Changing the languages is recorded in the audit log as `knowledgeBase.languagesChanged`.
+
+In the portal:
+
+- The default language has the addresses without prefix; every other language is under `/<language>/`, for example `/help/help/en/`. From two enabled languages on, the top bar shows a language choice that leads to the same page in the other language.
+- A reader who opens an article in a language without a published translation sees the article in the default language with a short note in the reader's language.
+- The texts of the portal (buttons, headings, dates) follow the language of the shown article, so that a page is never mixed. Pagehall has portal texts in English and German; other languages use the English texts.
+- The search looks in the reader's language first. When it finds nothing there, it shows the results in the default language with a note. Category pages and lists show the translation where one exists and the original otherwise.
+- Public knowledge bases name the other languages of a page with `hreflang` links for search engines, plus `x-default` for the default language.
+
+API: `GET` and `PUT /api/v1/spaces/{spaceId}/knowledge-base/languages`, `GET /api/v1/articles/{itemId}/translations` and `POST /api/v1/articles/{itemId}/translations` with `{ "language": "en" }`. Article lists and articles carry `language`, `translationOf` and the state of their translations.
+
 ## Articles through the API
 
-Scripts can migrate existing articles. With an API token of a person or service account that may edit the knowledge base:
+Programs read and write articles with an API token of a service account that has a role in the knowledge base. The token's write level decides what it may do: read, write drafts that a person publishes in Pagehall, or write and publish. A token can be limited to selected knowledge bases. [api.md](api.md#knowledge-base-articles) describes the endpoints, the daily sync with `changedSince` and the numbers of removed articles, and writing reviewed articles back, with examples.
 
-1. Create categories: `POST /api/v1/spaces/{spaceId}/items` with `"kind": "folder"`.
-2. Create the article in its category: `POST /api/v1/spaces/{spaceId}/items` with `"kind": "page"`, `"parentId"` of the category and `"articleType"`.
-3. Upload images: `POST /api/v1/pages/{pageId}/attachments?name=…`.
-4. Store the content with sections and images: `PUT /api/v1/pages/{pageId}/content`, with `section` blocks (`key`, `title`, optional `icon`) and `image` blocks that reference the uploaded attachments.
-5. Publish: `POST /api/v1/pages/{pageId}/publish`.
+Scripts that migrate an existing FAQ create categories with `POST /api/v1/spaces/{spaceId}/items` and `"kind": "folder"`, then each article with `POST /api/v1/spaces/{spaceId}/articles` with its category, type and sections in Markdown, upload its images with `POST /api/v1/articles/{itemId}/images?name=…`, save the sections that reference them with `PUT /api/v1/articles/{itemId}/draft` and publish with `POST /api/v1/articles/{itemId}/publish`.
 
-`GET /api/v1/spaces/{spaceId}/articles` lists the articles a caller can read, newest change first, optionally of one category (`categoryId`), outside every category (`topLevel=true`) or of one type. `GET /api/v1/articles/{itemId}` returns the published version of an article with its number, short form, category path, contact address and its sections, each with key, title, icon, plain text and ProseMirror content; editors get the draft with `draft=true`.
+`GET /api/v1/spaces/{spaceId}/articles` lists the original articles a caller can read, newest change first, optionally of one category (`categoryId`), outside every category (`topLevel=true`) or of one type, with the state of their translations. `GET /api/v1/articles/{itemId}` returns the published version of an article with its number, short form, language, category path, lead, contact address, its sections with key, title, icon, plain text, HTML and ProseMirror content, its images, dates and portal address; editors and tokens that may write drafts get the draft with `draft=true`.
 
 ## Review
 
@@ -211,7 +240,65 @@ API: `GET /api/v1/spaces/{spaceId}/knowledge-base/portal`, `PUT …/portal/addre
 
 ### Pre-rendered articles
 
-The content of an article is rendered to HTML once per published version and language and stored; publishing queues the rendering, and a missing rendering is made on first read. Permissions are checked on every request before the stored HTML is served. Content that depends on the reader is left out of the portal: included pages, child page lists and reports are not shown, links to pages outside the knowledge base show "No access" without their title, and mentions name only members of the organization.
+The content of an article is rendered to HTML once per published version and stored; publishing queues the rendering, and a missing rendering is made on first read. Articles with included content or embeds are rendered on every request instead, so that a changed article, restriction or embed setting shows at once. Permissions are checked on every request before the HTML is served.
+
+- **Includes and excerpts** from published articles of the same knowledge base are shown, because they have the same readers. An article that a view restriction hides from some readers of the including article, an article of another space and every other page stay hidden. Translations include the translation of the included article in their language where one is published.
+- **Embeds** follow the embed services the organization allows (see [embeds-and-blocks.md](embeds-and-blocks.md)). The portal loads frames only from the addresses of these services; other embeds appear as a link.
+- Child page lists and reports are not shown, links to pages outside the knowledge base show "No access" without their title, and mentions name only members of the organization.
+
+## Static website
+
+A public knowledge base can be downloaded as a static website: a ZIP file with plain HTML, CSS and JavaScript files that any web server can serve. The editing source stays the Pagehall instance; download a new ZIP after changes and upload it again, by hand or with your own script.
+
+Space admins start the download on the export page of the knowledge base settings (`POST /api/v1/spaces/{spaceId}/exports` with `"format": "site"`). It is built in the background like other exports, with the same notification, download lifetime and audit entry. Knowledge bases whose audience is not "public" are refused with `staticSiteNotPublic`, because a static website has no sign-in; if the audience changes while the website waits to be built, it fails with the reason `notPublic`.
+
+The ZIP contains:
+
+- every published article that anonymous readers can read, in each enabled language (`<number>-<slug>.html`, translations in a folder per language such as `de/`), rendered like in the portal, with includes from the same knowledge base and allowed embeds;
+- the start page (`index.html`), a page per category (`topics/<id>.html`), the contact page and a search page per language;
+- a search index per language (`search-index.json`), built with [MiniSearch](https://github.com/lucaong/minisearch); the search page loads it in the browser, searches the reader's language first and falls back to the default language with a note;
+- images in their display versions (`files/`), fonts, styles and scripts (`_assets/`);
+- redirects from earlier addresses of an article: a small HTML page per old address and a `_redirects` file that Cloudflare Pages and Netlify understand;
+- `404.html`, and with an address of the website (`siteUrl`, for example `https://help.example.org/`) also `sitemap.xml`, `robots.txt` and language links for search engines.
+
+All links are relative, so the website works under any domain and in a subfolder. Things that need Pagehall are left out: the "Was this helpful?" question, reader statistics, the most-read list, sign-in and the account menu. The contact links stay, because they open the reader's e-mail program. The search needs JavaScript and a web server; opened from a local folder, browsers do not let the page read the index, and the search page says so.
+
+### Publishing on Cloudflare Pages
+
+In the dashboard: **Workers & Pages → Create → Pages → Upload assets**, name the project, drag the unpacked folder (not the ZIP file) into the upload area and deploy. Each new upload replaces the website.
+
+With Wrangler:
+
+```sh
+unzip "Help 2026-10-20.zip" -d site
+npx wrangler pages deploy site --project-name=help
+```
+
+Cloudflare Pages reads `_redirects` and `404.html` by itself and serves `/12-vpn` for `12-vpn.html`.
+
+### Any web server
+
+Copy the unpacked folder to the web server's document root (or a subfolder). Without further settings, the website works with its `.html` addresses and the HTML redirect pages. To serve addresses without `.html` and the `404.html` page with nginx:
+
+```nginx
+location /help/ {
+    try_files $uri $uri.html $uri/index.html =404;
+    error_page 404 /help/404.html;
+}
+```
+
+GitHub Pages serves the files as they are; old addresses work through the HTML redirect pages.
+
+## Moving a knowledge base to another instance
+
+The Markdown and HTML archives of the export keep what a knowledge base needs:
+
+- Every Markdown file starts with front matter: `title`, `created`, `updated`, `labels` and a `pagehall` block with the kind, version, author, `articleType`, `language` and `translation: true` for translations.
+- Sections are marked with comments around their heading and content, such as `<!-- pagehall:section key="steps" icon="list-ordered" -->` … `<!-- /pagehall:section -->`. Markdown viewers do not show them.
+- Each article sits in its own folder with its images; translations sit in folders below their article, and categories are folders.
+- HTML files carry `<html lang>` and a `pagehall:article-type` meta element; sections keep their `data-section` and `data-icon` attributes.
+
+To move a knowledge base, export it as Markdown, start a Markdown import on the other instance and turn on **Import as a knowledge base**. Folders become categories, files become articles with their type, sections and images, and translations are linked to their article again. Numbers are assigned anew in the order of the import. The new knowledge base opens only for the people and groups given a role when the import is accepted; choose its audience in the visibility settings afterwards.
 
 ## Reader statistics
 

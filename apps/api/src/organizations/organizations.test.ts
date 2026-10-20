@@ -139,6 +139,7 @@ describe.skipIf(!databaseBaseUrl)("organizations through the API", () => {
       expiresAt: expect.any(String),
       organizationName: "Engineering Team",
       invitedByName: "Olivia Owner",
+      knowledgeBaseName: null,
     });
     const accepted = await new TestClient(test.app).post("/api/v1/invitations/accept", {
       token: linkToken(mail?.text),

@@ -143,10 +143,10 @@ const listQuery = z
   .object({
     ...pageQuery,
     filter: z
-      .enum(["all", "due", "soon", "unowned"])
+      .enum(["all", "due", "soon", "unowned", "translations"])
       .default("all")
       .describe(
-        "`due`: overdue or with a changed source page. `soon`: due within 30 days. `unowned`: without an active owner. `all`: every article of these three.",
+        "`due`: overdue or with a changed source page. `soon`: due within 30 days. `unowned`: without an active owner. `translations`: translations whose original was published after them. `all`: every article of these four.",
       ),
     mine: z.enum(["true", "false"]).default("false").describe("Only articles the caller owns."),
   })
@@ -176,8 +176,15 @@ const reviewItemSchema = z
     dueAt: timestamp("When the review is due, or null.").nullable(),
     sourceChangedAt: timestamp("When a source page changed after the last review, or null.").nullable(),
     state: stateSchema,
+    language: z
+      .string()
+      .nullable()
+      .describe("Language of a translation, or null for an article in the default language."),
+    translationOutdated: z
+      .boolean()
+      .describe("Whether this is a translation and its original was published after it."),
   })
-  .describe("An article that needs a review or an owner.");
+  .describe("An article that needs a review, an owner or an updated translation.");
 
 const reviewListSchema = z
   .object({
@@ -189,6 +196,7 @@ const reviewListSchema = z
         due: z.number().int().describe("Overdue articles and articles with a changed source page."),
         soon: z.number().int().describe("Articles due within 30 days."),
         unowned: z.number().int().describe("Articles without an active owner."),
+        translations: z.number().int().describe("Translations whose original was published after them."),
       })
       .describe("Number of articles per filter, with the `mine` choice applied."),
   })
@@ -209,6 +217,8 @@ const exampleReviewItem = {
   dueAt: "2026-10-02T09:00:00.000Z",
   sourceChangedAt: null,
   state: "overdue" as const,
+  language: null,
+  translationOutdated: false,
 };
 
 const homeSchema = z
@@ -332,7 +342,7 @@ export class ReviewsController {
       example: {
         items: [exampleReviewItem],
         nextCursor: null,
-        counts: { all: 1, due: 1, soon: 0, unowned: 0 },
+        counts: { all: 1, due: 1, soon: 0, unowned: 0, translations: 0 },
       },
     },
     errors: ["notKnowledgeBase"],

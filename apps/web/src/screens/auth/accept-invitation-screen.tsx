@@ -26,6 +26,7 @@ export function AcceptInvitationScreen() {
   const token = useLinkToken();
   const info = useQuery(instanceInfoQuery);
   const [state, setState] = useState<State>("start");
+  const [portalUrl, setPortalUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const form = useSchemaForm(detailsForm, {
@@ -71,7 +72,9 @@ export function AcceptInvitationScreen() {
     organization: invitation.organizationName,
     inviter: invitation.invitedByName ?? "",
     email: invitation.email,
+    knowledgeBase: invitation.knowledgeBaseName ?? "",
   };
+  const portal = Boolean(invitation.knowledgeBaseName);
   if (invitation.state !== "open" && state === "start") {
     const unknown = invitation.invitedByName === null ? "Unknown" : "";
     const message =
@@ -92,6 +95,7 @@ export function AcceptInvitationScreen() {
         { sessionHandling: false },
       );
       forgetLinkToken();
+      setPortalUrl(result.portalUrl);
       setState(result.accountCreated ? "created" : "joined");
     } catch (failure) {
       if (isApiError(failure, "accountDetailsRequired")) setState("details");
@@ -103,11 +107,13 @@ export function AcceptInvitationScreen() {
 
   return (
     <AuthCard
-      title={t("auth.invitationFor", names)}
+      title={portal ? t("auth.portalInvitationFor", names) : t("auth.invitationFor", names)}
       description={
-        invitation.invitedByName === null
-          ? t("auth.invitationFromUnknown", names)
-          : t("auth.invitationFrom", names)
+        portal
+          ? t("auth.portalInvitationDescription", names)
+          : invitation.invitedByName === null
+            ? t("auth.invitationFromUnknown", names)
+            : t("auth.invitationFrom", names)
       }
     >
       {error ? (
@@ -150,11 +156,21 @@ export function AcceptInvitationScreen() {
       {state === "joined" || state === "created" ? (
         <>
           <Notice variant="success">
-            {state === "created" ? t("auth.invitationAccountCreated") : t("auth.invitationJoined")}
+            {portalUrl
+              ? t("auth.portalAccountCreated", names)
+              : state === "created"
+                ? t("auth.invitationAccountCreated")
+                : t("auth.invitationJoined")}
           </Notice>
-          <Button variant="primary" block asChild>
-            <Link to="/sign-in">{t("auth.signIn")}</Link>
-          </Button>
+          {portalUrl ? (
+            <Button variant="primary" block asChild>
+              <a href={portalUrl}>{t("auth.openPortal", names)}</a>
+            </Button>
+          ) : (
+            <Button variant="primary" block asChild>
+              <Link to="/sign-in">{t("auth.signIn")}</Link>
+            </Button>
+          )}
         </>
       ) : null}
     </AuthCard>

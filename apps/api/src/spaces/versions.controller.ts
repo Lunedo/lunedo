@@ -207,7 +207,7 @@ export class VersionsController {
   }
 
   @Post(":pageId/publish")
-  @Permission("item.edit", page)
+  @Permission("item.publish", page)
   @ApiRoute({
     summary: "Publish the draft",
     description:
@@ -337,7 +337,7 @@ export class VersionsController {
   }
 
   @Put(":pageId/mode")
-  @Permission("item.edit", page)
+  @Permission("item.publish", page)
   @ApiRoute({
     summary: "Change the editing mode",
     description:
@@ -409,7 +409,7 @@ export class VersionsController {
   }
 
   @Post(":pageId/versions/:number/restore")
-  @Permission("item.edit", page)
+  @Permission("item.publish", page)
   @ApiRoute({
     summary: "Restore a version",
     description:

@@ -118,11 +118,13 @@ export {
   articleReviewVia,
   articleSlugs,
   articleSources,
+  articleSync,
   knowledgeBaseCategories,
   knowledgeBaseLogos,
   knowledgeBasePaths,
   knowledgeBases,
   portalDomains,
+  portalInvitations,
   requiredSections,
   reviewRecipient,
 } from "../knowledge-bases/schema.js";

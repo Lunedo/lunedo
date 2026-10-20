@@ -36,6 +36,7 @@ import {
   type WordBlock,
 } from "@pagehall/editor-schema";
 import { sql } from "drizzle-orm";
+import { dump } from "js-yaml";
 import type { Principal } from "../accounts/principal.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { TaskService } from "../collaboration/tasks.js";
@@ -118,8 +119,17 @@ export interface ExportFormatter {
   dateTime(date: Date): string;
 }
 
+export interface PageFacts {
+  createdAt: Date | null;
+  labels: readonly string[];
+  articleType: string | null;
+  language: string | null;
+  translation: boolean;
+}
+
 export interface PreparedPage {
   id: string;
+  facts?: PageFacts;
   title: string;
   author: string | null;
   path: readonly string[];
@@ -482,6 +492,7 @@ export class PageExportRenderer {
         unavailable,
         failed: false,
         board: null,
+        facts: await this.#facts(pageId),
       };
     } catch (error) {
       this.#logger.warn({ err: error }, "A page could not be prepared for an export");
@@ -651,6 +662,48 @@ export class PageExportRenderer {
       );
     }
     return result;
+  }
+
+  async #facts(pageId: string): Promise<PageFacts> {
+    const result = await this.#database.execute<{
+      created_at: Date | string | null;
+      labels: string[] | null;
+      article_type: string | null;
+      language: string | null;
+      translation: boolean;
+    }>(sql`
+      select t.created_at, t.article_type, t.translation_of is not null as translation,
+        (select array_agg(l.label order by l.label) from page_labels l where l.item_id = t.id) as labels,
+        case when s.type <> 'knowledgeBase' then null
+          when t.translation_of is null then kb.default_language::text
+          else t.content_language end as language
+      from tree_items t join spaces s on s.id = t.space_id
+      left join knowledge_bases kb on kb.space_id = s.id
+      where t.id = ${pageId}`);
+    const row = result.rows[0];
+    return {
+      createdAt: row?.created_at ? new Date(row.created_at) : null,
+      labels: row?.labels ?? [],
+      articleType: row?.article_type ?? null,
+      language: row?.language ?? null,
+      translation: row?.translation === true,
+    };
+  }
+
+  #frontMatter(page: PreparedPage): string {
+    const facts = page.facts;
+    const pagehall: Record<string, unknown> = { kind: page.board ? "whiteboard" : "page" };
+    if (page.version !== null) pagehall.version = page.version;
+    if (page.author) pagehall.author = page.author;
+    if (facts?.articleType) pagehall.articleType = facts.articleType;
+    if (facts?.language) pagehall.language = facts.language;
+    if (facts?.translation) pagehall.translation = true;
+    const data: Record<string, unknown> = { title: this.title(page) };
+    if (facts?.createdAt) data.created = facts.createdAt.toISOString();
+    data.updated = page.updatedAt.toISOString();
+    if (facts && facts.labels.length > 0) data.labels = [...facts.labels];
+    data.pagehall = pagehall;
+    return `---\n${dump(data, { lineWidth: -1, noRefs: true })}---\n`;
   }
 
   async #meeting(pageId: string): Promise<PreparedPage["meeting"]> {
@@ -875,13 +928,12 @@ export class PageExportRenderer {
   }
 
   markdown(page: PreparedPage, locator: Locator): string {
-    const index = locator.index("markdown");
+    const meeting = page.meeting ? this.#meta(page).slice(1) : [];
     const head = [
-      ...(index ? [`[${markdownText(this.#texts.contents)}](${index})`, ""] : []),
+      this.#frontMatter(page),
       `# ${markdownText(this.title(page))}`,
       "",
-      ...this.#meta(page).map((line) => `*${markdownText(line)}*`),
-      "",
+      ...(meeting.length > 0 ? [...meeting.map((line) => `*${markdownText(line)}*`), ""] : []),
     ];
     return `${head.join("\n")}\n${this.#body(page, "markdown", locator)}`;
   }
@@ -895,10 +947,18 @@ export class PageExportRenderer {
     const navigation = index
       ? `<nav><a href="${escapeHtml(index)}">${escapeHtml(this.#texts.contents)}</a></nav>`
       : "";
+    const facts = page.facts;
+    const head = [
+      facts?.articleType
+        ? `<meta name="pagehall:article-type" content="${escapeHtml(facts.articleType)}">`
+        : "",
+      facts?.translation ? '<meta name="pagehall:translation" content="true">' : "",
+    ].join("");
     return htmlDocument(
-      language,
+      facts?.language ?? language,
       title,
       `${navigation}<header><h1>${title}</h1>${meta}</header><article>${this.#body(page, "html", locator)}</article>`,
+      head,
     );
   }
 }
@@ -911,6 +971,6 @@ export function markdownText(text: string): string {
   return text.replace(/[\\`*_[\]<>|~$&#]/g, "\\$&").replace(/\s*[\r\n]+\s*/g, " ");
 }
 
-export function htmlDocument(language: string, title: string, body: string): string {
-  return `<!doctype html>\n<html lang="${escapeHtml(language)}">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<title>${title}</title>\n<style>\n${exportStyle}\n</style>\n</head>\n<body>\n<main>${body}</main>\n</body>\n</html>\n`;
+export function htmlDocument(language: string, title: string, body: string, head = ""): string {
+  return `<!doctype html>\n<html lang="${escapeHtml(language)}">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n${head ? `${head}\n` : ""}<title>${title}</title>\n<style>\n${exportStyle}\n</style>\n</head>\n<body>\n<main>${body}</main>\n</body>\n</html>\n`;
 }

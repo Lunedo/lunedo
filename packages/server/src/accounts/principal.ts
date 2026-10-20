@@ -5,10 +5,15 @@ export interface TokenScopes {
   organization?: Areas;
 }
 
+export const contentLevels = ["read", "draft", "publish"] as const;
+export type ContentLevel = (typeof contentLevels)[number];
+
 export interface TokenGrant {
   id: string;
   organizationId: string | null;
   scopes: TokenScopes;
+  contentLevel?: ContentLevel;
+  knowledgeBaseIds?: readonly string[] | null;
 }
 
 export type Principal =

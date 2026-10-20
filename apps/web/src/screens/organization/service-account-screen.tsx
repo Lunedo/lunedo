@@ -33,6 +33,7 @@ import { request } from "../../api/request.js";
 import { AccessImpact } from "../../components/access-impact.js";
 import { AutoSaveTextField } from "../../components/auto-save.js";
 import { memberLoader } from "../../components/pickers.js";
+import { ContentAccessDialog } from "../../components/token-content-access.js";
 import { CreateTokenDialog, RevokeTokenDialog, scopeSummary } from "../../components/token-dialogs.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
@@ -64,6 +65,7 @@ export function ServiceAccountScreen() {
   const members = useQuery(membersQuery(organizationId));
   const manage = state.can("organization.integrations.manage");
   const [revoking, setRevoking] = useState<ApiToken | null>(null);
+  const [changing, setChanging] = useState<ApiToken | null>(null);
   const [deactivating, setDeactivating] = useState(false);
   const [adding, setAdding] = useState<ComboboxItem | null>(null);
   const [addingError, setAddingError] = useState(false);
@@ -217,7 +219,7 @@ export function ServiceAccountScreen() {
               icon={KeyRound}
               title={token.name}
               description={[
-                scopeSummary(t, token.scopes),
+                scopeSummary(t, token),
                 token.expiresAt
                   ? t("tokens.expiresOn", { date: format.date(token.expiresAt) })
                   : t("tokens.noExpiry"),
@@ -227,9 +229,16 @@ export function ServiceAccountScreen() {
               ].join(" · ")}
               actions={
                 manage ? (
-                  <Button variant="danger" size="sm" onClick={() => setRevoking(token)}>
-                    {t("tokens.revoke")}
-                  </Button>
+                  <>
+                    {token.scopes.organization?.spaces ? (
+                      <Button variant="secondary" size="sm" onClick={() => setChanging(token)}>
+                        {t("tokens.content.change")}
+                      </Button>
+                    ) : null}
+                    <Button variant="danger" size="sm" onClick={() => setRevoking(token)}>
+                      {t("tokens.revoke")}
+                    </Button>
+                  </>
                 ) : null
               }
             />
@@ -249,12 +258,31 @@ export function ServiceAccountScreen() {
           />
         </DangerZone>
       ) : null}
+      <ContentAccessDialog
+        token={changing}
+        organizationId={organizationId}
+        onOpenChange={(open) => {
+          if (!open) setChanging(null);
+        }}
+        onSave={async (change) => {
+          if (!changing) return;
+          await request(() =>
+            api.PUT("/api/v1/service-accounts/{serviceAccountId}/tokens/{tokenId}/content-access", {
+              params: { path: { serviceAccountId, tokenId: changing.id } },
+              body: change,
+            }),
+          );
+          await queryClient.invalidateQueries();
+          toast({ title: t("tokens.content.saved"), variant: "success" });
+        }}
+      />
       <CreateTokenDialog
         open={creating}
         onOpenChange={setCreating}
         maxLifetimeDays={lifetime.data ?? null}
         allowInstance={false}
         allowOrganization
+        organizationId={organizationId}
         hint={t("serviceAccounts.tokenHint")}
         onCreate={async (input) => {
           const created = await request(() =>

@@ -68,7 +68,7 @@ export function OrganizationTokensScreen() {
             cell: (token) => (
               <div className="flex flex-col">
                 <span className="font-medium">{token.name}</span>
-                <span className="text-sm text-text-muted">{scopeSummary(t, token.scopes)}</span>
+                <span className="text-sm text-text-muted">{scopeSummary(t, token)}</span>
               </div>
             ),
           },

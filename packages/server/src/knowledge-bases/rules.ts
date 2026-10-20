@@ -44,21 +44,37 @@ export async function checkKnowledgeBaseSubtree(
 ): Promise<void> {
   const result = await executor.execute<{ wrong_kind: boolean; live: boolean; nested: boolean }>(sql`
     with subtree as (
-      select d.id, d.kind, d.mode, d.parent_id from tree_items d
+      select d.id, d.kind, d.mode, d.parent_id, d.translation_of from tree_items d
       where d.id = ${itemId} or (${descendants} and ${itemId}::uuid = any(d.path) and d.trash_entry_id is null)
     )
     select
       exists (select 1 from subtree where kind not in ('page', 'folder')) as wrong_kind,
       exists (select 1 from subtree where kind = 'page' and mode <> 'publish') as live,
       exists (select 1 from subtree c join tree_items p on p.id = c.parent_id
-        where c.id <> ${itemId} and p.kind <> 'folder') as nested`);
+        where c.id <> ${itemId} and p.kind <> 'folder' and c.translation_of is distinct from p.id) as nested`);
   const row = result.rows[0];
   if (row?.wrong_kind) throw knowledgeBaseKindError();
   if (row?.live) throw knowledgeBaseModeError();
   if (row?.nested) throw knowledgeBasePlacementError();
 }
 
+export function translationPlacementError(): SpaceError {
+  return new SpaceError(
+    "translationPlacement",
+    "A translation stays with the article it translates. Move the article to move its translations.",
+  );
+}
+
+export function translationSourceError(): SpaceError {
+  return new SpaceError(
+    "translationSource",
+    "Only articles of the same knowledge base that are not translations themselves can be translated.",
+  );
+}
+
 const TRIGGER_ERRORS: Record<string, () => SpaceError> = {
+  tree_items_translation_placement: translationPlacementError,
+  tree_items_translation_source: translationSourceError,
   tree_items_knowledge_base_kind: knowledgeBaseKindError,
   tree_items_knowledge_base_mode: knowledgeBaseModeError,
   tree_items_knowledge_base_parent: knowledgeBasePlacementError,

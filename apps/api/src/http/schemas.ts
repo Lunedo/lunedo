@@ -377,6 +377,12 @@ export const tokenScopesSchema = z
     "What the token may do. At every request, the token gets the intersection of these scopes and the current permissions of its owner.",
   );
 
+export const contentLevelSchema = z
+  .enum(["read", "draft", "publish"])
+  .describe(
+    "What the token may do with content: `read` only reads; `draft` also creates articles and saves drafts of knowledge base articles without publishing them; `publish` writes and publishes like its account. The token never does more than its account may.",
+  );
+
 export const apiTokenSchema = z
   .object({
     id: uuid("ID of the token."),
@@ -385,6 +391,13 @@ export const apiTokenSchema = z
     name: z.string().describe("Name chosen by the owner, 1 to 100 characters."),
     prefix: z.string().describe("First characters of the token, to recognize it."),
     scopes: tokenScopesSchema,
+    contentLevel: contentLevelSchema,
+    knowledgeBaseIds: z
+      .array(uuid("ID of a knowledge base."))
+      .nullable()
+      .describe(
+        "Knowledge bases the token is limited to, or null when it reaches all content of its account.",
+      ),
     expiresAt: timestamp("When the token stops working, or null if it never expires.").nullable(),
     createdBy: uuid("Account that created the token, or null.").nullable(),
     createdAt: timestamp("When the token was created."),
@@ -400,6 +413,8 @@ export const exampleApiToken = {
   name: "CI pipeline",
   prefix: "ph_4fT9xQ",
   scopes: { organization: { spaces: "manage" } },
+  contentLevel: "draft" as const,
+  knowledgeBaseIds: ["01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10"],
   expiresAt: "2026-12-30T08:00:00.000Z",
   createdBy: exampleMember.accountId,
   createdAt: "2026-10-01T08:00:00.000Z",

@@ -261,6 +261,15 @@ export class RouteAccessGuard implements CanActivate {
     if (access.recentAuthentication && !(await services.sessions.isRecentlyAuthenticated(session))) {
       throw new ProblemException("reauthenticationRequired", "Confirm your identity first");
     }
+    if (
+      !access.portalAccounts &&
+      (await services.portalReader.account(session.accountId))?.type === "portal"
+    ) {
+      throw new ProblemException(
+        "portalAccountOnly",
+        "This account reads knowledge bases in their portal and has no access to the wiki",
+      );
+    }
     return principal;
   }
 }

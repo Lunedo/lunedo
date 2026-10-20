@@ -50,6 +50,7 @@ import {
   ConnectionStep,
   DocumentsField,
   inputOf,
+  KnowledgeBaseField,
   MAX_DOCUMENT_BYTES,
   ownSpaceOf,
   type Selection,
@@ -734,6 +735,7 @@ function UploadStep({
           {t("imports.markdown.description")}
         </Notice>
         <FileSection organizationId={organizationId} entry={entry} patch={patch} fileError={fileError} />
+        {entry.targetSpace ? null : <KnowledgeBaseField entry={entry} patch={patch} />}
       </>
     );
   }

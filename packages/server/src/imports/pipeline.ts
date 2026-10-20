@@ -160,6 +160,7 @@ export interface PipelineRun {
   readonly file: ByteSource;
   readonly staging: StagingStore;
   readonly reimport: ReimportRun | null;
+  readonly knowledgeBase?: boolean;
   beat(): Promise<void>;
   progress(done: number, total: number): Promise<void>;
 }
@@ -453,16 +454,16 @@ export class ImportPipeline {
     return (await this.#mappedIn(tx, importId, kind, [sourceId])).get(sourceId) ?? null;
   }
 
-  async quarantineSpace(importId: string): Promise<{ spaceId: string; overviewId: string } | null> {
+  async quarantineSpace(importId: string): Promise<{ spaceId: string; overviewId: string | null } | null> {
     const result = await this.#database.execute<{ space_id: string; overview_item_id: string | null }>(sql`
       select s.id as space_id, s.overview_item_id from imports i
       join spaces s on s.id = coalesce(i.target_space_id, i.quarantine_space_id)
       where i.id = ${importId}`);
     const row = result.rows[0];
-    return row?.overview_item_id ? { spaceId: row.space_id, overviewId: row.overview_item_id } : null;
+    return row ? { spaceId: row.space_id, overviewId: row.overview_item_id } : null;
   }
 
-  async #requireSpace(importId: string): Promise<{ spaceId: string; overviewId: string }> {
+  async #requireSpace(importId: string): Promise<{ spaceId: string; overviewId: string | null }> {
     const space = await this.quarantineSpace(importId);
     if (!space) throw new Error("The quarantine space is missing");
     return space;
@@ -499,6 +500,7 @@ export class ImportPipeline {
           key: run.spaceKey,
           importerId: run.importerId,
           readers: run.reviewerIds,
+          knowledgeBase: run.knowledgeBase === true,
         });
         spaceId = space.spaceId;
         await tx.execute(sql`update imports set quarantine_space_id = ${spaceId} where id = ${run.importId}`);
@@ -587,7 +589,7 @@ export class ImportPipeline {
         for (const page of open) {
           let id: string;
           const ownerId = (page.creatorId ? people.get(page.creatorId) : undefined) ?? null;
-          if (page.sourceId === home) {
+          if (page.sourceId === home && space.overviewId) {
             id = space.overviewId;
             if (!run.reimport) {
               await tx.execute(sql`update tree_items set owner_id = ${ownerId} where id = ${id}`);
@@ -614,12 +616,15 @@ export class ImportPipeline {
             const position = await endPosition(tx, space.spaceId, parentId);
             const linkUrl = links.get(page.sourceId) ?? null;
             const kind = treeKindOf(page, linkUrl);
+            const article = kind === "page" && run.knowledgeBase ? page.article : undefined;
+            const translationOf = article?.translation && article.language && parentId ? parentId : null;
             await tx.execute(sql`
               insert into tree_items (id, space_id, parent_id, kind, position, title, link_url, mode, creator_id,
-                owner_id, created_at, content_updated_at)
+                owner_id, created_at, content_updated_at, article_type, translation_of, content_language)
               values (${id}, ${space.spaceId}, ${parentId}, ${kind}, ${position}, ${pageTitle(page)}, ${linkUrl},
                 ${kind === "page" || kind === "blogPost" ? "publish" : "live"}, ${creatorId}, ${ownerId},
-                coalesce(${page.createdAt}::timestamptz, now()), coalesce(${page.modifiedAt}::timestamptz, now()))`);
+                coalesce(${page.createdAt}::timestamptz, now()), coalesce(${page.modifiedAt}::timestamptz, now()),
+                ${article?.articleType ?? null}, ${translationOf}, ${translationOf ? (article?.language ?? null) : null})`);
             if (kind === "page" || kind === "blogPost") {
               await tx.execute(sql`
                 insert into page_documents (item_id, state, snapshot, schema_version, updated_by)
@@ -2506,16 +2511,19 @@ export class ImportPipeline {
   async #finish(run: PipelineRun): Promise<void> {
     const space = await this.#requireSpace(run.importId);
     await this.#database.transaction(async (tx) => {
-      const overview = await tx.execute<{ published_version_id: string | null }>(
-        sql`select published_version_id from tree_items where id = ${space.overviewId}`,
-      );
-      if (!overview.rows[0]?.published_version_id) {
-        await insertCurrentVersion(tx, space.overviewId, {
+      const overviewId = space.overviewId;
+      const overview = overviewId
+        ? await tx.execute<{ published_version_id: string | null }>(
+            sql`select published_version_id from tree_items where id = ${overviewId}`,
+          )
+        : null;
+      if (overviewId && !overview?.rows[0]?.published_version_id) {
+        await insertCurrentVersion(tx, overviewId, {
           number: 1,
           actorId: run.importerId,
           createdAt: null,
         });
-        await refreshReaderVisibility(tx, [space.overviewId]);
+        await refreshReaderVisibility(tx, [overviewId]);
       }
       const counts = await tx.execute<Record<string, number>>(sql`
         select

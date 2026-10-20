@@ -1,4 +1,4 @@
-import { accountAttemptLimitSetting, clientAttemptLimitSetting, SYSTEM } from "@pagehall/server";
+import { accountAttemptLimitSetting, clientAttemptLimitSetting, messagesFor, SYSTEM } from "@pagehall/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -16,7 +16,6 @@ import {
   TEST_ORIGIN,
   TestClient,
 } from "../testing/auth-app.js";
-import { messagesFor } from "./messages.js";
 
 const PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
@@ -343,7 +342,7 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect((await owner.put(settings, { intervalMonths: 6 })).statusCode).toBe(200);
     expect((await owner.post(`/api/v1/articles/${reviewed.id}/reviews`, {})).statusCode).toBe(201);
     await index();
-    const t = messagesFor((await services().portals.config(kb.id))?.language ?? "en");
+    const t = messagesFor((await services().portals.config(kb.id))?.defaultLanguage ?? "en");
     const reviewedLabel = t.reviewedOnLong("").trim();
     const updatedLabel = t.updatedOnLong("").trim();
     const reader = anonymous();
@@ -554,5 +553,90 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     const signedOut = await browser.post("/sign-out", undefined, { host: domain });
     expect(signedOut.statusCode).toBe(303);
     expect((await member.client.get("/api/v1/auth/session")).statusCode).toBe(401);
+  });
+  it("shows nothing about languages while only one language is enabled", async () => {
+    const kb = await knowledgeBase("public");
+    const single = await article(kb.id, null, "Drucker", "Drucker im Flur.");
+    await index();
+    const page = await anonymous().get(`${kb.path}/${single.number}-drucker`);
+    expect(page.statusCode).toBe(200);
+    expect(page.body).not.toContain('class="dd lang"');
+    expect(page.body).not.toContain("hreflang");
+    expect((await anonymous().get(`${kb.path}/en/`)).statusCode).toBe(404);
+  });
+
+  it("serves translations under the language prefix, with a switch, hreflang links and a fallback note", async () => {
+    const kb = await knowledgeBase("public");
+    const languages = await owner.put(`/api/v1/spaces/${kb.id}/knowledge-base/languages`, {
+      defaultLanguage: "de",
+      languages: ["de", "en"],
+    });
+    expect(languages.statusCode, languages.body).toBe(200);
+    const original = await article(kb.id, null, "Passwort ändern", "Wähle ein neues Passwort.");
+    const created = await owner.post(`/api/v1/articles/${original.id}/translations`, { language: "en" });
+    expect(created.statusCode, created.body).toBe(201);
+    const translationId = created.json().id as string;
+    expect(
+      (await owner.patch(`/api/v1/items/${translationId}`, { title: "Change the password" })).statusCode,
+    ).toBe(200);
+    const content = await owner.put(`/api/v1/pages/${translationId}/content`, {
+      document: { type: "doc", content: [paragraph("Choose a new password.")] },
+    });
+    expect(content.statusCode, content.body).toBe(200);
+    expect((await owner.post(`/api/v1/pages/${translationId}/publish`, {})).statusCode).toBe(200);
+    const untranslated = await article(kb.id, null, "Drucker", "Drucker im Flur.");
+    await index();
+    const reader = anonymous();
+    const english = await reader.get(`${kb.path}/en/${original.number}-change-the-password`);
+    expect(english.statusCode, english.body).toBe(200);
+    expect(english.body).toContain('<html lang="en"');
+    expect(english.body).toContain("Choose a new password.");
+    expect(english.body).toContain(messagesFor("en").onThisPage);
+    expect(english.body).toContain('class="dd lang"');
+    expect(english.body).toContain(
+      `<link rel="alternate" hreflang="de" href="${TEST_ORIGIN}${kb.path}/${original.number}-passwort-aendern">`,
+    );
+    expect(english.body).toContain(
+      `<link rel="alternate" hreflang="en" href="${TEST_ORIGIN}${kb.path}/en/${original.number}-change-the-password">`,
+    );
+    expect(english.body).toContain('hreflang="x-default"');
+    const german = await reader.get(`${kb.path}/${original.number}-passwort-aendern`);
+    expect(german.body).toContain('<html lang="de"');
+    expect(german.body).toContain(messagesFor("de").onThisPage);
+    const wrongSlug = await reader.get(`${kb.path}/en/${original.number}-passwort-aendern`);
+    expect(wrongSlug.statusCode).toBe(301);
+    expect(wrongSlug.headers.location).toBe(`${kb.path}/en/${original.number}-change-the-password`);
+    const fallback = await reader.get(`${kb.path}/en/${untranslated.number}-drucker`);
+    expect(fallback.statusCode, fallback.body).toBe(200);
+    expect(fallback.body).toContain('<html lang="de"');
+    expect(fallback.body).toContain("Drucker im Flur.");
+    expect(fallback.body).toContain('class="langnote" role="note" lang="en"');
+    expect(fallback.body).toContain(messagesFor("de").onThisPage);
+    const prefixed = await reader.get(`${kb.path}/de/${original.number}-passwort-aendern`);
+    expect(prefixed.statusCode).toBe(301);
+    expect(prefixed.headers.location).toBe(`${kb.path}/${original.number}-passwort-aendern`);
+    const doubled = await reader.get(`${kb.path}/de//evil.example/x`);
+    expect(doubled.statusCode).toBe(301);
+    expect(doubled.headers.location).toBe(`${kb.path}/evil.example/x`);
+    const start = await reader.get(`${kb.path}/en/`);
+    expect(start.statusCode).toBe(200);
+    expect(start.body).toContain('<html lang="en"');
+    expect(start.body).toContain("Change the password");
+    expect(start.body).toContain(`href="${kb.path}/en/${original.number}-change-the-password"`);
+    const search = await reader.get(`${kb.path}/en/search?q=Drucker`);
+    expect(search.statusCode).toBe(200);
+    expect(search.body).toContain('class="langnote"');
+    expect(search.body).toContain(`/${untranslated.number}-drucker`);
+  });
+
+  it("leaves out hreflang links for knowledge bases that are not public", async () => {
+    const kb = await knowledgeBase("signedIn");
+    await owner.put(`/api/v1/spaces/${kb.id}/knowledge-base/languages`, { languages: ["de", "en"] });
+    const original = await article(kb.id, null, "Zugang", "Zugang beantragen.");
+    await index();
+    const page = await owner.get(`${kb.path}/${original.number}-zugang`);
+    expect(page.statusCode).toBe(200);
+    expect(page.body).toContain('class="dd lang"');
+    expect(page.body).not.toContain('hreflang="x-default"');
   });
 });

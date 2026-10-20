@@ -1,5 +1,5 @@
-import type { PortalCategory } from "@pagehall/server";
 import { describe, expect, it } from "vitest";
+import type { PortalCategory } from "../reader.js";
 import { html, raw } from "./html.js";
 import { decorateArticleHtml, initialOf, mailto, topBar } from "./views.js";
 

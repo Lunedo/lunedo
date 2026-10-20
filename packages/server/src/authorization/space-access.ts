@@ -82,11 +82,17 @@ export function spaceRoleConditionFor(account: SQL, space: SQL, minimum: SpaceRo
 
 export function tokenSpaceCondition(principal: Principal, space: SQL, minimum: SpaceRole): SQL {
   if (principal.type !== "account" || !principal.token) return sql`true`;
-  const level = spaceRoleRank(minimum) >= spaceRoleRank("editor") ? "manage" : "view";
-  if (!grantsLevel(principal.token.scopes.organization?.spaces, level)) return sql`false`;
-  return principal.token.organizationId
-    ? sql`${space}.organization_id = ${principal.token.organizationId}::uuid`
-    : sql`true`;
+  const { token } = principal;
+  const writing = spaceRoleRank(minimum) >= spaceRoleRank("editor");
+  if (!grantsLevel(token.scopes.organization?.spaces, writing ? "manage" : "view")) return sql`false`;
+  if (writing && token.contentLevel === "read") return sql`false`;
+  const conditions = [
+    token.organizationId ? sql`${space}.organization_id = ${token.organizationId}::uuid` : sql`true`,
+    token.knowledgeBaseIds
+      ? sql`${space}.id = any(${sql.param([...token.knowledgeBaseIds])}::uuid[])`
+      : sql`true`,
+  ];
+  return sql`(${sql.join(conditions, sql` and `)})`;
 }
 
 function grantsTable(grants: SpaceGrantRow[]): SQL {

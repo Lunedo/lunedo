@@ -354,7 +354,7 @@ describe.skipIf(!baseUrl)("knowledge base reviews", () => {
         ["Overdue", "overdue"],
         ["Soon", "dueSoon"],
       ]);
-      expect(all.counts).toEqual({ all: 2, due: 1, soon: 1, unowned: 0 });
+      expect(all.counts).toEqual({ all: 2, due: 1, soon: 1, unowned: 0, translations: 0 });
       const due = await reviews.list(context.admin, context.kb.id, { filter: "due", page: { limit: 50 } });
       expect(due.items.map((item) => item.id)).toEqual([overdue]);
       const mine = await reviews.list(context.admin, context.kb.id, { mine: true, page: { limit: 50 } });

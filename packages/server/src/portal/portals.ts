@@ -13,8 +13,9 @@ import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { Database, Executor } from "../database/database.js";
+import type { ArticleLanguage } from "../knowledge-bases/translations.js";
 import { logoContentType } from "../organizations/organizations.js";
-import { languageSetting, supportedLanguages, timeZoneSetting } from "../settings/builtin.js";
+import { supportedLanguages, timeZoneSetting } from "../settings/builtin.js";
 import type { SettingsService } from "../settings/service.js";
 import { auditScopeOf, isUniqueViolation, SpaceError } from "../spaces/common.js";
 import type { KnowledgeBaseAudience } from "../spaces/schema.js";
@@ -57,8 +58,13 @@ export interface PortalConfig {
   feedbackRetentionMonths: number;
   logoRef: string | null;
   organizationLogoRef: string | null;
-  language: PortalLanguage;
+  defaultLanguage: ArticleLanguage;
+  languages: ArticleLanguage[];
   timeZone: string;
+}
+
+export function interfaceLanguage(language: string): PortalLanguage {
+  return (supportedLanguages as readonly string[]).includes(language) ? (language as PortalLanguage) : "en";
 }
 
 export type PathLookup = { type: "found"; config: PortalConfig } | { type: "moved"; path: string };
@@ -151,6 +157,8 @@ interface ConfigRow extends Record<string, unknown> {
   feedback_retention_months: number;
   logo_ref: string | null;
   organization_logo_ref: string | null;
+  default_language: ArticleLanguage;
+  languages: ArticleLanguage[];
 }
 
 export class PortalService {
@@ -169,13 +177,12 @@ export class PortalService {
       select kb.space_id, s.organization_id, s.key, s.name, s.description, s.audience, kb.portal_path,
         kb.portal_domain, kb.contact_email, kb.brand_color, kb.brand_light, kb.brand_dark, kb.welcome_heading,
         kb.welcome_text, kb.top_bar_threshold, kb.powered_by, kb.feedback_retention_months, kb.logo_ref,
-        o.logo_ref as organization_logo_ref
+        o.logo_ref as organization_logo_ref, kb.default_language, kb.languages
       from knowledge_bases kb join spaces s on s.id = kb.space_id join organizations o on o.id = s.organization_id
-      where s.deleted_at is null and s.archived_at is null and s.type = 'knowledgeBase' and ${condition}`);
+      where s.deleted_at is null and s.archived_at is null and not s.quarantined and s.type = 'knowledgeBase' and ${condition}`);
     const row = result.rows[0];
     if (!row) return null;
     const chain = { organization: row.organization_id };
-    const language = await this.#settings.get(languageSetting, chain);
     const timeZone = await this.#settings.get(timeZoneSetting, chain);
     return {
       spaceId: row.space_id,
@@ -195,7 +202,8 @@ export class PortalService {
       feedbackRetentionMonths: row.feedback_retention_months,
       logoRef: row.logo_ref,
       organizationLogoRef: row.organization_logo_ref,
-      language: supportedLanguages.includes(language) ? language : "en",
+      defaultLanguage: row.default_language,
+      languages: row.languages,
       timeZone,
     };
   }

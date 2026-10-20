@@ -11,7 +11,7 @@ export const exportSchema = z
     format: z
       .enum(exportFormats)
       .describe(
-        "What the file contains: `archive` a ZIP with every page as Markdown and HTML, `html` or `markdown` a ZIP with one of them, `print` one print-ready HTML file, `pdf` one PDF file, `docx` one Word document.",
+        "What the file contains: `archive` a ZIP with every page as Markdown and HTML, `html` or `markdown` a ZIP with one of them, `print` one print-ready HTML file, `pdf` one PDF file, `docx` one Word document, `site` a ZIP with a static website of a public knowledge base.",
       ),
     options: z
       .object({
@@ -20,6 +20,10 @@ export const exportSchema = z
         contents: z.boolean().describe("Whether a table of contents is included."),
         paper: z.enum(paperSizes).describe("Paper size of `print`, `pdf` and `docx`."),
         orientation: z.enum(orientations).describe("Orientation of `print`, `pdf` and `docx`."),
+        siteUrl: z
+          .string()
+          .nullable()
+          .describe("Address the static website of `site` is served from, or null when none was given."),
       })
       .describe("The options the export was started with."),
     spaceId: uuid("The exported space, or null when it was deleted since.").nullable(),
@@ -49,10 +53,11 @@ export const exportSchema = z
         "renderTooLarge",
         "tooManyPagesForFile",
         "tooLargeToBuild",
+        "notPublic",
         "interrupted",
         "internalError",
       ],
-      "Why a failed export stopped: export was turned off for the space, the permission to export the space or page was lost, the API token that started it was revoked, the file store ran short of free space while it was written, the render container for PDF is not set up or cannot be reached, it could not create the PDF, the document was larger than the render container accepts, the Word or PDF file would have more pages than the limit, building the file ran out of memory, the worker was interrupted too often, or an unexpected error.",
+      "Why a failed export stopped: export was turned off for the space, the permission to export the space or page was lost, the API token that started it was revoked, the file store ran short of free space while it was written, the render container for PDF is not set up or cannot be reached, it could not create the PDF, the document was larger than the render container accepts, the Word or PDF file would have more pages than the limit, building the file ran out of memory, the knowledge base of a static website is no longer public, the worker was interrupted too often, or an unexpected error.",
     ).nullable(),
     createdAt: timestamp("When the export was started."),
     finishedAt: timestamp("When the export finished or failed.").nullable(),
@@ -66,7 +71,14 @@ export const exampleExport = {
   id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a90",
   scope: "space",
   format: "archive",
-  options: { attachments: true, comments: false, contents: true, paper: "a4", orientation: "portrait" },
+  options: {
+    attachments: true,
+    comments: false,
+    contents: true,
+    paper: "a4",
+    orientation: "portrait",
+    siteUrl: null,
+  },
   spaceId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
   rootItemId: null,
   name: "IT Operations",

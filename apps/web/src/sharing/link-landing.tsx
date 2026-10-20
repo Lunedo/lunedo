@@ -191,6 +191,7 @@ function AnonymousPage({ token, unlock }: { token: string; unlock: string | null
         }}
         pageId={data.itemId}
         attachments={{ url: urlOf, onOpen: () => undefined }}
+        embedServices={data.embedServices}
       />
       {data.attachments.length > 0 ? (
         <section

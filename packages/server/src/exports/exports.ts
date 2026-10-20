@@ -23,7 +23,7 @@ import type { MailService } from "../mail/mail-service.js";
 import type { NotificationService } from "../notifications/service.js";
 import { timeFormatSetting } from "../settings/preferences.js";
 import type { SettingsService } from "../settings/service.js";
-import { auditScopeOf } from "../spaces/common.js";
+import { auditScopeOf, SpaceError } from "../spaces/common.js";
 import type { PageDocumentService } from "../spaces/documents.js";
 import type { IncludeService } from "../spaces/includes.js";
 import type { PeopleService } from "../spaces/people.js";
@@ -76,6 +76,11 @@ const HEARTBEAT_MS = 5_000;
 const MAX_LISTED_EXPORTS = 50;
 export const MAX_KEPT_EXPORTS = 5;
 
+export interface StaticSite {
+  config(spaceId: string): Promise<unknown>;
+  entries(spaceId: string, options: { siteUrl: string | null; now: Date }): Promise<ArchiveEntry[]>;
+}
+
 export const pageExportFormats = ["markdown", "html", "zip", "print", "pdf", "docx"] as const;
 export type PageExportFormat = (typeof pageExportFormats)[number];
 
@@ -100,6 +105,7 @@ export type ExportFailureCode =
   | "renderTooLarge"
   | "tooManyPagesForFile"
   | "tooLargeToBuild"
+  | "notPublic"
   | "interrupted"
   | "internalError";
 
@@ -112,6 +118,7 @@ const CONTENT_TYPES: Record<ExportFormat, string> = {
   print: "text/html; charset=utf-8",
   pdf: "application/pdf",
   docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  site: "application/zip",
 };
 
 const EXTENSIONS: Record<ExportFormat, string> = {
@@ -121,6 +128,7 @@ const EXTENSIONS: Record<ExportFormat, string> = {
   print: "html",
   pdf: "pdf",
   docx: "docx",
+  site: "zip",
 };
 
 function tooManyForFile(total: number): string {
@@ -328,6 +336,7 @@ export class ExportService {
   readonly #render: RenderService;
   readonly #jobs: JobQueue | undefined;
   readonly #logger: Logger;
+  readonly #site: StaticSite | null;
 
   constructor(options: {
     database: Database;
@@ -351,6 +360,7 @@ export class ExportService {
     render: RenderService;
     jobs: JobQueue | undefined;
     logger: Logger;
+    site?: StaticSite;
   }) {
     this.#database = options.database;
     this.#pool = options.pool;
@@ -373,6 +383,7 @@ export class ExportService {
     this.#render = options.render;
     this.#jobs = options.jobs;
     this.#logger = options.logger;
+    this.#site = options.site ?? null;
   }
 
   async #renderer(
@@ -667,6 +678,15 @@ export class ExportService {
     await this.#requireTarget(actor, target);
     if (request.format === "pdf" && !this.#render.configured) {
       throw new ExportError("renderUnavailable", RENDER_UNAVAILABLE);
+    }
+    if (request.format === "site") {
+      if (!this.#site || !("spaceId" in target)) {
+        throw new ExportError(
+          "nothingToExport",
+          "A static website is built from a whole knowledge base. Start it in the settings of the knowledge base.",
+        );
+      }
+      await this.#site.config(target.spaceId);
     }
     const subject = await this.#subject(target);
     if (!subject) throw new ExportError("nothingToExport", "There is nothing to export");
@@ -1161,6 +1181,7 @@ export class ExportService {
   async #build(row: ExportRow, signal: AbortSignal): Promise<void> {
     const viewer = await this.#viewer(row);
     await this.#requireRoot(viewer, row);
+    if (row.format === "site") return this.#buildSite(row, viewer, signal);
     const { renderer, language, origin } = await this.#renderer(viewer, row.account_id);
     const options = readExportOptions(row.options);
     const items = [
@@ -1315,6 +1336,57 @@ export class ExportService {
       archive = zipArchive(entries);
     }
     const fileName = `${safeName(row.name, renderer.texts.untitledPage)} ${now.toISOString().slice(0, 10)}.${EXTENSIONS[row.format]}`;
+    await this.#store(row, archive, fileName, total, signal);
+  }
+
+  async #buildSite(row: ExportRow, viewer: Principal, signal: AbortSignal): Promise<void> {
+    if (!this.#site || row.scope !== "space" || !row.space_id) throw new ExportFailure("noAccess");
+    const { renderer } = await this.#renderer(viewer, row.account_id);
+    const options = readExportOptions(row.options);
+    const now = new Date();
+    let entries: ArchiveEntry[];
+    try {
+      entries = await this.#site.entries(row.space_id, { siteUrl: options.siteUrl, now });
+    } catch (error) {
+      if (error instanceof SpaceError) {
+        throw new ExportFailure(error.code === "staticSiteNotPublic" ? "notPublic" : "noAccess");
+      }
+      throw error;
+    }
+    const total = entries.length;
+    let done = 0;
+    let beat = 0;
+    const progress = async () => {
+      done += 1;
+      signal.throwIfAborted();
+      if (Date.now() - beat < HEARTBEAT_MS && done < total) return;
+      beat = Date.now();
+      const alive = await this.#database.execute(sql`
+        update exports set heartbeat_at = now(), progress_done = ${done}, progress_total = ${total}
+        where id = ${row.id} and state = 'running' returning id`);
+      if (alive.rows.length === 0) throw new ExportRemoved();
+    };
+    const archive = zipArchive(
+      entries.map((entry) => ({
+        ...entry,
+        content: async () => {
+          const content = await entry.content();
+          await progress();
+          return content;
+        },
+      })),
+    );
+    const fileName = `${safeName(row.name, renderer.texts.untitledPage)} ${now.toISOString().slice(0, 10)}.${EXTENSIONS[row.format]}`;
+    await this.#store(row, archive, fileName, total, signal);
+  }
+
+  async #store(
+    row: ExportRow,
+    archive: Readable,
+    fileName: string,
+    total: number,
+    signal: AbortSignal,
+  ): Promise<void> {
     const watch = this.#watchFreeSpace();
     archive.once("error", (error) => watch.stream.destroy(error));
     watch.stream.once("error", (error) => archive.destroy(error));

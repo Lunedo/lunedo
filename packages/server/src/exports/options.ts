@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const exportFormats = ["archive", "html", "markdown", "print", "pdf", "docx"] as const;
+export const exportFormats = ["archive", "html", "markdown", "print", "pdf", "docx", "site"] as const;
 export type ExportFormat = (typeof exportFormats)[number];
 
 export const paperSizes = ["a4", "letter"] as const;
@@ -16,6 +16,13 @@ export const exportOptionsSchema = z
     contents: z.boolean().default(true),
     paper: z.enum(paperSizes).default("a4"),
     orientation: z.enum(orientations).default("portrait"),
+    siteUrl: z
+      .string()
+      .max(500)
+      .url()
+      .refine((value) => /^https?:\/\//i.test(value), "Use an http or https address")
+      .nullable()
+      .default(null),
   })
   .strict();
 

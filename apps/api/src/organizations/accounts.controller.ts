@@ -12,6 +12,7 @@ import { InternalRoute, Permission, PublicRoute } from "../access/route-access.j
 import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
+import { originOf } from "../http/instance-url.js";
 import { actorOf } from "../http/request.js";
 
 const acceptSchema = z
@@ -41,6 +42,12 @@ const invitationPreviewSchema = z.object({
     .string()
     .nullable()
     .describe("The person who sent the invitation, when the account still exists."),
+  knowledgeBaseName: z
+    .string()
+    .nullable()
+    .describe(
+      "The knowledge base whose portal the invited reader account reads, or null for other invitations.",
+    ),
 });
 const secondFactorResetSchema = z
   .object({
@@ -182,13 +189,39 @@ export class AccountsController {
     body: acceptSchema,
     response: {
       description: "The joined organization.",
-      schema: joinedSchema.extend({ accountCreated: z.boolean() }),
+      schema: joinedSchema.extend({
+        accountCreated: z.boolean().describe("Whether a new account was created."),
+        portalUrl: z
+          .string()
+          .nullable()
+          .describe("Address of the portal for a reader account of a knowledge base, or null."),
+      }),
     },
-    errors: ["invalidToken", "invalidInvitation", "accountDetailsRequired", "passwordPolicy", "rateLimited"],
+    errors: [
+      "invalidToken",
+      "invalidInvitation",
+      "accountDetailsRequired",
+      "passwordPolicy",
+      "portalInvitationAccountExists",
+      "rateLimited",
+    ],
   })
   async accept(@Body() body: z.output<typeof acceptSchema>, @Req() request: FastifyRequest) {
     const { token, ...details } = body;
-    return this.#services.invitations.accept(token, details, request.ip);
+    const accepted = await this.#services.invitations.accept(token, details, request.ip);
+    const config = accepted.portalSpaceId
+      ? await this.#services.portals.config(accepted.portalSpaceId)
+      : null;
+    return {
+      accountId: accepted.accountId,
+      organizationId: accepted.organizationId,
+      accountCreated: accepted.accountCreated,
+      portalUrl: config
+        ? config.domain
+          ? `https://${config.domain}/`
+          : `${await originOf(this.context, request)}/help/${config.path}/`
+        : null,
+    };
   }
 
   @Post("registrations")

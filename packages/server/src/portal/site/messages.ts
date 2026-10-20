@@ -91,6 +91,8 @@ export interface PortalMessages {
   zeroResultsCounted: string;
   searchSubject: (query: string) => string;
   searchFailedHeading: string;
+  staticSearchFailed: string;
+  staticSearchNeedsScript: string;
   searchFailedText: (query: string) => string;
   searchAgain: string;
   notFoundHeading: string;
@@ -117,6 +119,10 @@ export interface PortalMessages {
   previous: string;
   next: string;
   pageOf: (page: number, pages: number) => string;
+  languageMenu: string;
+  languageCurrent: (language: string) => string;
+  fallbackNote: (requested: string, shown: string) => string;
+  searchFallbackNote: (requested: string, shown: string) => string;
 }
 
 const en: PortalMessages = {
@@ -218,6 +224,10 @@ const en: PortalMessages = {
     "Searches without results are counted without your name, so the team can see which articles are missing.",
   searchSubject: (query) => `Question from the help search: ${query}`,
   searchFailedHeading: "Search is not available right now",
+  staticSearchFailed:
+    "The search index of this help site could not be loaded. The site may be opened from a local folder, which browsers do not allow, or a file is missing on the web server. Open the site through its web address, or find the article through the topics.",
+  staticSearchNeedsScript:
+    "The search of this help site needs JavaScript. Turn it on in your browser, or find the article through the topics.",
   searchFailedText: (query) =>
     `The search for “${query}” could not run because the search service did not answer. This is not caused by your input. Try again in a minute, or find the article through the topics.`,
   searchAgain: "Search again",
@@ -247,6 +257,12 @@ const en: PortalMessages = {
   previous: "Previous",
   next: "Next",
   pageOf: (page, pages) => `Page ${page} of ${pages}`,
+  languageMenu: "Language",
+  languageCurrent: (language) => `Language: ${language}`,
+  fallbackNote: (requested, shown) =>
+    `This article is not available in ${requested} yet, so it is shown in ${shown}.`,
+  searchFallbackNote: (requested, shown) =>
+    `Nothing was found in ${requested}. These results are in ${shown}.`,
 };
 
 const de: PortalMessages = {
@@ -349,6 +365,10 @@ const de: PortalMessages = {
     "Suchen ohne Treffer werden ohne deinen Namen gezählt, damit das Team fehlende Artikel erkennt.",
   searchSubject: (query) => `Frage aus der Hilfe-Suche: ${query}`,
   searchFailedHeading: "Die Suche ist gerade nicht erreichbar",
+  staticSearchFailed:
+    "Der Suchindex dieser Hilfeseite konnte nicht geladen werden. Vielleicht ist die Seite aus einem lokalen Ordner geöffnet, was Browser nicht erlauben, oder eine Datei fehlt auf dem Webserver. Öffne die Seite über ihre Webadresse oder finde den Artikel über die Themen.",
+  staticSearchNeedsScript:
+    "Die Suche dieser Hilfeseite braucht JavaScript. Schalte es im Browser ein oder finde den Artikel über die Themen.",
   searchFailedText: (query) =>
     `Die Suche nach „${query}“ konnte nicht ausgeführt werden, weil der Suchdienst nicht antwortet. Das liegt nicht an deiner Eingabe. Versuche es in einer Minute noch einmal oder finde den Artikel über die Themen.`,
   searchAgain: "Erneut suchen",
@@ -382,8 +402,22 @@ const de: PortalMessages = {
   previous: "Zurück",
   next: "Weiter",
   pageOf: (page, pages) => `Seite ${page} von ${pages}`,
+  languageMenu: "Sprache",
+  languageCurrent: (language) => `Sprache: ${language}`,
+  fallbackNote: (requested, shown) =>
+    `Diesen Artikel gibt es noch nicht auf ${requested}. Er wird auf ${shown} angezeigt.`,
+  searchFallbackNote: (requested, shown) =>
+    `Auf ${requested} wurde nichts gefunden. Diese Treffer sind auf ${shown}.`,
 };
 
 export function messagesFor(language: string): PortalMessages {
   return language === "de" ? de : en;
+}
+
+export function languageName(language: string, inLanguage: string): string {
+  try {
+    return new Intl.DisplayNames([inLanguage, "en"], { type: "language" }).of(language) ?? language;
+  } catch {
+    return language;
+  }
 }

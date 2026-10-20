@@ -354,7 +354,7 @@ export class VersionService {
     itemId: string,
     input: { note?: string | undefined; reviewed?: boolean | undefined } = {},
   ): Promise<{ version: number; created: boolean }> {
-    const note = cleanNote(input.note ?? "");
+    const given = cleanNote(input.note ?? "");
     return this.#database.transaction(async (tx) => {
       await this.#lockSpaceOf(tx, itemId);
       const page = await this.#lock(tx, itemId);
@@ -365,7 +365,12 @@ export class VersionService {
         return { version: page.publishedNumber, created: false };
       }
       await requireSections(tx, itemId, migrated(page.snapshot, page.schemaVersion));
+      const pending = await tx.execute<{ draft_note: string | null }>(
+        sql`select draft_note from page_documents where item_id = ${itemId}`,
+      );
+      const note = given || cleanNote(pending.rows[0]?.draft_note ?? "");
       const version = await this.#publishLocked(tx, page, actorIdOf(actor), note);
+      await tx.execute(sql`update page_documents set draft_note = null where item_id = ${itemId}`);
       await this.#audit.record(tx, {
         name: "page.published",
         actor,
@@ -373,6 +378,15 @@ export class VersionService {
         fields: { spaceId: page.spaceId, title: page.title, version, note },
         scope: auditScopeOf(page),
       });
+      if (actor.type === "account" && actor.token) {
+        await this.#audit.record(tx, {
+          name: "page.publishedWithToken",
+          actor,
+          targetId: itemId,
+          fields: { spaceId: page.spaceId, title: page.title, version, note, credentialId: actor.token.id },
+          scope: auditScopeOf(page),
+        });
+      }
       if (input.reviewed) await this.#reviews?.reviewedOnPublish(tx, actor, itemId);
       return { version, created: true };
     });

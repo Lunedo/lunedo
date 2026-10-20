@@ -286,6 +286,7 @@ describe.skipIf(!databaseBaseUrl)("exports through the API", () => {
       contents: true,
       paper: "letter",
       orientation: "portrait",
+      siteUrl: null,
     });
     await run(exported.id);
     const download = await context.exporter.client.get(`/api/v1/exports/${exported.id}/content`);
@@ -385,5 +386,66 @@ describe.skipIf(!databaseBaseUrl)("exports through the API", () => {
       expect(refused.headers["content-range"], range).toBe(`bytes */${size}`);
     }
     expect((await details()).expiresAt).toBe(expiresAt);
+  });
+
+  it("builds a static website only of a public knowledge base and checks its address", async () => {
+    const admin = await person();
+    counter += 1;
+    const created = await admin.client.post(`/api/v1/organizations/${organizationId}/spaces`, {
+      name: `Help ${counter}`,
+      key: `HW${counter}X`,
+      type: "knowledgeBase",
+      audience: "signedIn",
+      grants: [],
+    });
+    expect(created.statusCode, created.body).toBe(201);
+    const spaceId = (created.json() as { id: string }).id;
+    const refused = await admin.client.post(`/api/v1/spaces/${spaceId}/exports`, { format: "site" });
+    expect(refused.statusCode).toBe(409);
+    expect(refused.json()).toMatchObject({ code: "staticSiteNotPublic" });
+    const audience = await admin.client.put(`/api/v1/spaces/${spaceId}/knowledge-base/audience`, {
+      audience: "public",
+      groupIds: [],
+      confirmWidening: true,
+    });
+    expect(audience.statusCode, audience.body).toBe(200);
+    for (const siteUrl of ["help.example.org", "javascript:alert(1)", "ftp://help.example.org/"]) {
+      const invalid = await admin.client.post(`/api/v1/spaces/${spaceId}/exports`, {
+        format: "site",
+        siteUrl,
+      });
+      expect(invalid.statusCode, siteUrl).toBe(400);
+    }
+    const started = await admin.client.post(`/api/v1/spaces/${spaceId}/exports`, {
+      format: "site",
+      siteUrl: "https://help.example.org/",
+    });
+    expect(started.statusCode, started.body).toBe(202);
+    const exported = started.json() as { id: string; options: { siteUrl: string | null } };
+    expect(exported.options.siteUrl).toBe("https://help.example.org/");
+    await run(exported.id);
+    const download = await admin.client.get(`/api/v1/exports/${exported.id}/content`);
+    expect(download.statusCode).toBe(200);
+    expect(download.headers["content-type"]).toBe("application/zip");
+
+    const standard = await setup();
+    const notKnowledgeBase = await standard.exporter.client.post(
+      `/api/v1/spaces/${standard.space.id}/exports`,
+      {
+        format: "site",
+      },
+    );
+    expect(notKnowledgeBase.statusCode).toBe(409);
+    expect(notKnowledgeBase.json()).toMatchObject({ code: "notKnowledgeBase" });
+    const page = await standard.exporter.client.post(`/api/v1/pages/${standard.pageId}/exports`, {
+      format: "site",
+    });
+    expect(page.statusCode).toBe(400);
+    const archive = await standard.exporter.client.post(`/api/v1/spaces/${standard.space.id}/exports`, {
+      format: "archive",
+      siteUrl: "https://help.example.org/",
+    });
+    expect(archive.statusCode, archive.body).toBe(202);
+    expect((archive.json() as { options: { siteUrl: string | null } }).options.siteUrl).toBeNull();
   });
 });

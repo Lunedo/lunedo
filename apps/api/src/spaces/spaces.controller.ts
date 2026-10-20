@@ -57,6 +57,7 @@ const listQuery = z
       .describe(
         "Only spaces where the caller holds at least this role, for example `editor` for the spaces the caller can create content in.",
       ),
+    type: z.enum(["standard", "knowledgeBase"]).optional().describe("Only spaces of this type."),
   })
   .strict();
 
@@ -125,6 +126,7 @@ export class SpacesController {
         archived: query.archived === "true",
         oneOnOne: query.oneOnOne === "true",
         minimum: query.role,
+        type: query.type,
         page: pageRequest(query, nameCursor),
       }),
     );

@@ -1,5 +1,10 @@
-import { calloutRules, colorRules, colorVariables, highlightRules } from "@pagehall/server";
 import { tokens } from "@pagehall/tokens";
+import {
+  calloutRules,
+  colorRules,
+  variables as colorVariables,
+  highlightRules,
+} from "../../exports/style.js";
 
 const { color, font, focusRing, icon: iconTokens } = tokens;
 const P = tokens.portal;
@@ -208,6 +213,9 @@ const article = [
   `.fb .contact h3{font-size:${F.lg};font-weight:600}`,
   `.alert{display:flex;gap:${S[4]};padding:${S[5]} ${S[6]};border-radius:${R.xl};background:var(--danger-soft);margin-top:${S[8]}}.alert>svg.i{width:${I.lg};height:${I.lg};color:var(--danger);margin-top:2px}.alert b{display:block;font-weight:600;color:var(--danger);font-size:${F.base}}.alert p{margin-top:${S[1]};line-height:1.55}`,
   `.alert.inline{margin-top:0}`,
+  `.langnote{display:flex;gap:${S[3]};align-items:flex-start;margin-top:${S[6]};padding:${S[4]} ${S[5]};border-radius:${R.xl};background:var(--info-soft);font-size:${F.base};line-height:1.55}.langnote>svg.i{width:${I.lg};height:${I.lg};color:var(--info);flex-shrink:0;margin-top:2px}`,
+  ".dd.lang .menu{left:auto;right:0}",
+  `.body .ph-embed{margin:${S[6]} 0}.body .ph-embed-frame iframe{display:block;width:100%;height:28rem;border:0;border-radius:${R.lg};background:var(--tile)}.body .ph-embed figcaption{margin-top:${S[2]};font-size:${F.sm};color:var(--text-muted)}`,
   `.related{margin-top:${S[16]}}`,
   `.relgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:${S[4]}}`,
   `.relgrid a{display:flex;flex-direction:column;gap:${S[2]};padding:${S[5]};border-radius:${R.xl};border:1px solid var(--line);text-decoration:none;color:var(--text);font-size:${F.base};line-height:1.4;font-weight:500;min-height:8rem}.relgrid a:hover{border-color:var(--kb)}`,

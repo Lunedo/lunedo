@@ -212,7 +212,7 @@ export class OrganizationLifecycle {
       const inactive = await this.#database.execute<{ key: string }>(sql`
         select a.id as key
         from accounts a join memberships m on m.account_id = a.id
-        where m.organization_id = ${organizationId} and m.kind = 'guest' and a.state = 'active'
+        where m.organization_id = ${organizationId} and m.kind = 'guest' and a.state = 'active' and a.type <> 'portal'
           and coalesce(a.last_active_at, a.created_at) <= now() - make_interval(days => ${inactivityDays})
           and (a.inactivity_notified_at is null
             or a.inactivity_notified_at < coalesce(a.last_active_at, a.created_at))`);
@@ -221,7 +221,7 @@ export class OrganizationLifecycle {
           update accounts a set inactivity_notified_at = now()
           from memberships m
           where a.id = ${key} and m.account_id = a.id and m.organization_id = ${organizationId}
-            and m.kind = 'guest' and a.state = 'active'
+            and m.kind = 'guest' and a.state = 'active' and a.type <> 'portal'
             and coalesce(a.last_active_at, a.created_at) <= now() - make_interval(days => ${inactivityDays})
             and (a.inactivity_notified_at is null
               or a.inactivity_notified_at < coalesce(a.last_active_at, a.created_at))

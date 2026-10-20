@@ -1,4 +1,15 @@
-import { index, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import {
+  check,
+  index,
+  jsonb,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { accounts } from "../accounts/schema.js";
 import { bytes, primaryId, timestamps } from "../database/columns.js";
 import { organizations } from "../organizations/schema.js";
@@ -51,6 +62,8 @@ export const apiTokens = pgTable(
     tokenHash: bytes().notNull(),
     tokenPrefix: text().notNull(),
     scopes: jsonb().notNull(),
+    contentLevel: text().notNull().default("read"),
+    knowledgeBaseIds: uuid().array(),
     expiresAt: timestampColumn(),
     createdBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
     lastUsedAt: timestampColumn(),
@@ -65,5 +78,10 @@ export const apiTokens = pgTable(
     uniqueIndex().on(table.tokenHash),
     index().on(table.accountId, table.id),
     index().on(table.organizationId, table.id),
+    check("api_tokens_content_level", sql`${table.contentLevel} in ('read', 'draft', 'publish')`),
+    check(
+      "api_tokens_knowledge_bases",
+      sql`${table.knowledgeBaseIds} is null or cardinality(${table.knowledgeBaseIds}) between 1 and 100`,
+    ),
   ],
 );

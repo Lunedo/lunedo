@@ -378,7 +378,7 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
       ],
     });
     await test.services.versions.publish(actor, page.id);
-    const rendered = await test.services.articleRenderer.renderPublished(page.id, "de");
+    const rendered = await test.services.articleRenderer.renderPublished(page.id);
     if (!rendered) throw new Error("not rendered");
     const number = await test.database.execute<{ number: number }>(
       sql`select number from article_numbers where item_id = ${target}`,
@@ -392,7 +392,7 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
     expect(rendered.html).toContain("Kollegin Klara");
     expect(rendered.html).not.toContain("Fremder Franz");
     expect(rendered.headings).toEqual([expect.objectContaining({ title: "Schritte", level: 2 })]);
-    const again = await test.services.articleRenderer.renderPublished(page.id, "de");
+    const again = await test.services.articleRenderer.renderPublished(page.id);
     expect(again?.html).toBe(rendered.html);
   });
 

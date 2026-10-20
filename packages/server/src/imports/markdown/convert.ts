@@ -25,12 +25,20 @@ export interface MarkdownLookup {
   problem(code: "unsupportedMarkdown" | "unresolvedFileLink", details: Record<string, string>): void;
 }
 
+export interface PagehallFacts {
+  readonly kind: "page" | "folder" | null;
+  readonly articleType: "howTo" | "troubleshooting" | null;
+  readonly language: string | null;
+  readonly translation: boolean;
+}
+
 export interface FrontMatter {
   readonly title: string | null;
   readonly labels: readonly string[];
   readonly created: string | null;
   readonly modified: string | null;
   readonly properties: readonly (readonly [string, string])[];
+  readonly pagehall: PagehallFacts | null;
 }
 
 export interface ConvertedMarkdown {
@@ -75,7 +83,26 @@ const EMPTY_FRONT_MATTER: FrontMatter = {
   created: null,
   modified: null,
   properties: [],
+  pagehall: null,
 };
+const PAGEHALL_KEY = "pagehall";
+const ARTICLE_TYPES = new Set(["howTo", "troubleshooting"]);
+const SECTION_OPEN =
+  /^<!--\s*pagehall:section\s+key="([a-z][a-zA-Z0-9]{0,39})"(?:\s+icon="([a-z][a-z0-9]*(?:-[a-z0-9]+)*)")?\s*-->\s*$/;
+const SECTION_CLOSE = /^<!--\s*\/pagehall:section\s*-->\s*$/;
+
+function pagehallFacts(value: unknown): PagehallFacts | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  const kind = record.kind === "page" || record.kind === "folder" ? record.kind : null;
+  const articleType =
+    typeof record.articleType === "string" && ARTICLE_TYPES.has(record.articleType)
+      ? (record.articleType as "howTo" | "troubleshooting")
+      : null;
+  const language =
+    typeof record.language === "string" && /^[a-z]{2}$/.test(record.language) ? record.language : null;
+  return { kind, articleType, language, translation: record.translation === true };
+}
 
 function isoDate(value: unknown): string | null {
   if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value.toISOString();
@@ -131,7 +158,7 @@ export function parseFrontMatter(yaml: string | null, problem: MarkdownLookup["p
   const title = scalar(first(TITLE_KEYS));
   const labels = LABEL_KEYS.flatMap((key) => labelsOf(record[key]));
   const properties: [string, string][] = [];
-  const used = new Set([...TITLE_KEYS, ...LABEL_KEYS, ...CREATED_KEYS, ...MODIFIED_KEYS]);
+  const used = new Set([...TITLE_KEYS, ...LABEL_KEYS, ...CREATED_KEYS, ...MODIFIED_KEYS, PAGEHALL_KEY]);
   for (const [key, value] of Object.entries(record)) {
     if (used.has(key) || IGNORED_KEYS.has(key) || properties.length >= MAX_PROPERTIES) continue;
     const single = scalar(value);
@@ -152,6 +179,7 @@ export function parseFrontMatter(yaml: string | null, problem: MarkdownLookup["p
     created: isoDate(first(CREATED_KEYS)),
     modified: isoDate(first(MODIFIED_KEYS)),
     properties,
+    pagehall: pagehallFacts(record[PAGEHALL_KEY]),
   };
 }
 
@@ -474,5 +502,47 @@ export function convertMarkdown(source: string, lookup: MarkdownLookup): Convert
   }
   const renderer = new Renderer(lookup);
   const properties = frontMatter.properties.length > 0 ? propertiesMacro(frontMatter.properties) : "";
-  return { frontMatter, heading, body: properties + blocks(rest, renderer, lookup) };
+  return { frontMatter, heading, body: properties + sections(rest, renderer, lookup) };
+}
+
+function sections(tokens: readonly Token[], renderer: Renderer, lookup: MarkdownLookup): string {
+  let output = "";
+  let start = 0;
+  let open: { key: string; icon: string | null; from: number } | null = null;
+  const flush = (end: number) => {
+    if (!open) return blocks(tokens.slice(start, end), renderer, lookup);
+    let from = open.from;
+    let title = "";
+    const first = tokens[from];
+    if (first?.type === "heading_open" && first.tag === "h2") {
+      title = (tokens[from + 1]?.children ?? [])
+        .map((child: Token) => (child.type === "text" || child.type === "code_inline" ? child.content : ""))
+        .join("")
+        .trim()
+        .slice(0, 255);
+      from += 3;
+    }
+    return element(
+      "section",
+      { "data-pagehall-section": open.key, "data-pagehall-icon": open.icon, "data-pagehall-title": title },
+      blocks(tokens.slice(from, end), renderer, lookup),
+    );
+  };
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index] as Token;
+    if (token.type !== "html_block" || token.level !== 0) continue;
+    const opening = SECTION_OPEN.exec(token.content.trim());
+    if (opening?.[1]) {
+      output += flush(index);
+      open = { key: opening[1], icon: opening[2] ?? null, from: index + 1 };
+      start = index + 1;
+      continue;
+    }
+    if (SECTION_CLOSE.test(token.content.trim())) {
+      output += flush(index);
+      open = null;
+      start = index + 1;
+    }
+  }
+  return output + flush(tokens.length);
 }
