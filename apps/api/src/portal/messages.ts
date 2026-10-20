@@ -117,6 +117,10 @@ export interface PortalMessages {
   previous: string;
   next: string;
   pageOf: (page: number, pages: number) => string;
+  languageMenu: string;
+  languageCurrent: (language: string) => string;
+  fallbackNote: (requested: string, shown: string) => string;
+  searchFallbackNote: (requested: string, shown: string) => string;
 }
 
 const en: PortalMessages = {
@@ -247,6 +251,12 @@ const en: PortalMessages = {
   previous: "Previous",
   next: "Next",
   pageOf: (page, pages) => `Page ${page} of ${pages}`,
+  languageMenu: "Language",
+  languageCurrent: (language) => `Language: ${language}`,
+  fallbackNote: (requested, shown) =>
+    `This article is not available in ${requested} yet, so it is shown in ${shown}.`,
+  searchFallbackNote: (requested, shown) =>
+    `Nothing was found in ${requested}. These results are in ${shown}.`,
 };
 
 const de: PortalMessages = {
@@ -382,8 +392,22 @@ const de: PortalMessages = {
   previous: "Zurück",
   next: "Weiter",
   pageOf: (page, pages) => `Seite ${page} von ${pages}`,
+  languageMenu: "Sprache",
+  languageCurrent: (language) => `Sprache: ${language}`,
+  fallbackNote: (requested, shown) =>
+    `Diesen Artikel gibt es noch nicht auf ${requested}. Er wird auf ${shown} angezeigt.`,
+  searchFallbackNote: (requested, shown) =>
+    `Auf ${requested} wurde nichts gefunden. Diese Treffer sind auf ${shown}.`,
 };
 
 export function messagesFor(language: string): PortalMessages {
   return language === "de" ? de : en;
+}
+
+export function languageName(language: string, inLanguage: string): string {
+  try {
+    return new Intl.DisplayNames([inLanguage, "en"], { type: "language" }).of(language) ?? language;
+  } catch {
+    return language;
+  }
 }

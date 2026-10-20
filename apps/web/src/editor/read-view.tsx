@@ -231,6 +231,7 @@ export function PageReadView({
   collaboration = NO_COLLABORATION,
   attachments,
   numberHeadings = false,
+  embedServices: givenEmbedServices,
 }: {
   document: unknown;
   references: References;
@@ -238,6 +239,7 @@ export function PageReadView({
   collaboration?: ReadViewCollaboration;
   attachments?: ReadViewAttachments;
   numberHeadings?: boolean;
+  embedServices?: readonly EmbedService[];
 }) {
   const preview = useAttachmentPreview();
   const openAttachment = attachments?.onOpen ?? preview?.open;
@@ -262,7 +264,8 @@ export function PageReadView({
   const [whiteboards, setWhiteboards] = useState<HTMLElement[]>([]);
   const [filePreviews, setFilePreviews] = useState<HTMLElement[]>([]);
   const [sectionIcons, setSectionIcons] = useState<HTMLElement[]>([]);
-  const embedServices = useEmbedServices();
+  const organizationEmbedServices = useEmbedServices();
+  const embedServices = givenEmbedServices ?? organizationEmbedServices;
   const [selection, setSelection] = useState<{ anchor: TextAnchor; top: number; left: number } | null>(null);
   const { taskStatuses, canToggleTask, onToggleTask, openThreads = [], activeThread = null } = collaboration;
   const html = useMemo(() => {

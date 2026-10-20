@@ -46,6 +46,20 @@ There are personal tokens, which act as their owner, and tokens of service accou
 - Last use, time and client address, is recorded at most once per minute.
 - Creating, changing, revoking and expiring tokens and rejected tokens are recorded in the audit log, rejected tokens at most ten times per minute per client address. Successful use is not.
 
+### Content access and write levels
+
+What a token may do with content (spaces, pages, articles) is set when it is created and shown in every token list:
+
+| Level | In the interface | What the token may do |
+|---|---|---|
+| `read` | Read | Read everything its account can read. Nothing is changed, not even reactions. |
+| `draft` | Write drafts | Also create articles and save drafts of knowledge base articles through the article API. A person publishes them in Pagehall. It changes nothing readers see: no publishing, no moving, deleting, sharing or restricting, and no saving of pages in live mode. |
+| `publish` | Write and publish | Write and publish like its account. |
+
+`draft` and `publish` need the organization area `spaces` with `manage`; `read` needs `view`. Left out, the level is `publish` for `manage` and `read` otherwise. A token can also be limited to selected knowledge bases with `knowledgeBaseIds`; it then reaches no other space, also not in search. A token never does more than its account may: an account that only reads a knowledge base cannot write to it, whatever the token's level.
+
+The level and the knowledge bases can be changed later with `PUT /api/v1/account/tokens/{id}/content-access` or `PUT /api/v1/service-accounts/{id}/tokens/{tokenId}/content-access`. Creating a token is recorded in the audit log as `apiToken.created` with its level, every change as `apiToken.levelChanged`, and every publication with a token as `page.publishedWithToken`, besides `page.published`.
+
 Managing tokens needs a signed-in session; a token cannot create, list or revoke tokens. Routes that require recent authentication refuse tokens as well.
 
 | Endpoint | Access |
@@ -84,4 +98,77 @@ curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/jso
 curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/octet-stream" \
   --data-binary @templates.pagehall-template.zip \
   "https://wiki.example.org/api/v1/spaces/$OTHER_SPACE/template-imports?name=templates.pagehall-template.zip"
+```
+
+## Knowledge base articles
+
+Programs such as a helpdesk chatbot read the articles of a knowledge base and can write reviewed articles back. They use an API token of a service account that has a role in the knowledge base: reader for reading, editor for writing. See [knowledge-bases.md](knowledge-bases.md) for articles, categories, sections and languages.
+
+| Endpoint | Permission | What it does |
+|---|---|---|
+| `GET /api/v1/spaces/{spaceId}/article-changes` | read the knowledge base | New, changed and removed articles since `changedSince`, paged with `cursor` |
+| `GET /api/v1/articles/{itemId}` | read the article | One article; `draft=true` returns the draft to editors and draft tokens |
+| `POST /api/v1/spaces/{spaceId}/articles` | write drafts | Create an article or, with `translationOf` and `language`, a translation; `publish: true` publishes at once with a publishing token |
+| `POST /api/v1/articles/{itemId}/images?name=…` | write drafts | Upload an image, sent as `application/octet-stream` |
+| `PUT /api/v1/articles/{itemId}/draft` | write drafts | Save title and sections as the draft; type, category and lead of a published article need permission to publish |
+| `POST /api/v1/articles/{itemId}/publish` | publish | Publish the draft |
+
+Every article in a response has its number, short form (`slug`), language, type, category path, title, lead, its sections with key, title, HTML and plain text, the images with alternative text and the address of their display version, the dates of first publication, of the returned version and of the last review, and its address in the portal. Images and links inside the HTML point to the API and the portal. Only published versions are returned, unless a token that may write drafts asks for `draft=true`. Articles the token's account cannot read are never returned.
+
+Sections are written as Markdown or as ProseMirror JSON nodes. Markdown references uploaded images by their file name. Every change is a version or a draft with the token's service account as its author, like a change in the interface, and old versions can be restored in the history. `versionNote`, for example "Checked by Anna Huber in the help assistant", is stored with the draft and appears in the history of the version that publishes it.
+
+### Changes and removed articles
+
+`article-changes` returns the articles, oldest change first, that changed after `changedSince`: new, republished, renamed, moved, retyped, reviewed, restricted or unrestricted articles, articles in renamed categories and new or changed translations. `removed` lists the number and language of articles that were deleted, unpublished or moved to another space since then. Removed articles are known for 90 days; an older `changedSince` is refused with `changedSinceTooOld`, and the program fetches everything again. Without `changedSince` the endpoint lists every published article and no removed ones.
+
+Store `nextChangedSince` of the last page and send it as `changedSince` next time. It lies a few minutes in the past, so that changes saved at the same moment are not missed; articles can therefore appear twice and are best stored by ID. An article that becomes hidden from the token's account through a view restriction is not listed as removed; programs that must forget such articles fetch everything again from time to time.
+
+### Example: daily read sync
+
+```sh
+SINCE=$(cat last-sync 2>/dev/null)
+CURSOR=""
+while :; do
+  PAGE=$(curl -s -H "Authorization: Bearer $TOKEN" \
+    "https://wiki.example.org/api/v1/spaces/$SPACE/article-changes?limit=200${SINCE:+&changedSince=$SINCE}${CURSOR:+&cursor=$CURSOR}")
+  echo "$PAGE" | jq -c '.items[]' | while read -r article; do store "$article"; done
+  echo "$PAGE" | jq -c '.removed[]' | while read -r gone; do forget "$gone"; done
+  CURSOR=$(echo "$PAGE" | jq -r '.nextCursor // empty')
+  [ -z "$CURSOR" ] && break
+done
+echo "$PAGE" | jq -r '.nextChangedSince' > last-sync
+```
+
+`store` keeps an article by `id` (or by `number` and `language`) with its `sections[].text` for the search index and `portalUrl` for the answer; `forget` removes the article with that `itemId`.
+
+### Example: write a reviewed article back
+
+As a draft, with a token of the level `draft`:
+
+```sh
+curl -X PUT -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"sections": [{"key": "steps", "title": "Steps", "markdown": "1. Open the VPN client.\n2. Sign in with your new code."}],
+       "versionNote": "Checked by Anna Huber in the help assistant"}' \
+  https://wiki.example.org/api/v1/articles/$ARTICLE/draft
+```
+
+The draft waits in Pagehall until a person publishes it; the publish dialog takes over the note. With a token of the level `publish`, publish it directly:
+
+```sh
+curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"versionNote": "Checked by Anna Huber in the help assistant"}' \
+  https://wiki.example.org/api/v1/articles/$ARTICLE/publish
+```
+
+A new article with an image is created as a draft, the image uploaded and the sections saved with a reference to it:
+
+```sh
+ARTICLE=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"title": "Set up the VPN connection", "type": "howTo", "categoryId": "'"$CATEGORY"'"}' \
+  https://wiki.example.org/api/v1/spaces/$SPACE/articles | jq -r .id)
+curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/octet-stream" \
+  --data-binary @client.png "https://wiki.example.org/api/v1/articles/$ARTICLE/images?name=client.png"
+curl -X PUT -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"sections": [{"key": "steps", "title": "Steps", "markdown": "![Sign-in window](client.png)"}]}' \
+  https://wiki.example.org/api/v1/articles/$ARTICLE/draft
 ```

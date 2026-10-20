@@ -23,7 +23,9 @@ export type SpaceSettingsTab =
   | "articleTemplates"
   | "reviews"
   | "address"
-  | "appearance";
+  | "appearance"
+  | "languages"
+  | "portalAccounts";
 
 const TAB_PATHS = {
   general: "/spaces/$spaceKey/settings/general",
@@ -41,6 +43,8 @@ const TAB_PATHS = {
   reviews: "/spaces/$spaceKey/settings/reviews",
   address: "/spaces/$spaceKey/settings/address",
   appearance: "/spaces/$spaceKey/settings/appearance",
+  languages: "/spaces/$spaceKey/settings/languages",
+  portalAccounts: "/spaces/$spaceKey/settings/portal-accounts",
 } as const;
 
 export function SpaceSettingsPage({
@@ -82,6 +86,8 @@ export function SpaceSettingsPage({
                 { value: "address", label: t("knowledgeBase.settings.address") },
                 { value: "appearance", label: t("knowledgeBase.settings.appearance") },
                 { value: "visibility", label: t("knowledgeBase.settings.visibility") },
+                { value: "portalAccounts", label: t("portalAccounts.tab") },
+                { value: "languages", label: t("knowledgeBase.languages.tab") },
                 { value: "permissions", label: t("spaces.settings.permissions") },
                 { value: "access", label: t("spaces.access.tab") },
                 { value: "categories", label: t("knowledgeBase.settings.categories") },

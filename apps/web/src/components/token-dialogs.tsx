@@ -25,6 +25,14 @@ import type { ApiToken } from "../api/account-queries.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { applyServerFieldErrors, submitWith, useSchemaForm } from "../forms/use-schema-form.js";
 import { translateKey } from "../i18n/translate.js";
+import {
+  type ContentAccess,
+  ContentAccessFields,
+  type ContentLevel,
+  contentRequest,
+  contentSummary,
+  NO_CONTENT_ACCESS,
+} from "./token-content-access.js";
 
 const NONE = "none";
 const EXPIRY_OPTIONS = ["never", "30", "90", "365", "custom"] as const;
@@ -58,23 +66,35 @@ export interface TokenRequest {
   name: string;
   scopes: { instance?: Areas; organization?: Areas };
   expiresAt: string | null;
+  contentLevel?: ContentLevel;
+  knowledgeBaseIds?: string[];
 }
+
+const CONTENT_AREA = "spaces";
 
 function pickAreas(values: Record<string, string>): Areas | undefined {
   const entries = Object.entries(values).filter(([, level]) => level !== NONE) as [string, AccessLevel][];
   return entries.length > 0 ? (Object.fromEntries(entries) as Areas) : undefined;
 }
 
-export function scopeSummary(t: Parameters<typeof translateKey>[0], scopes: ApiToken["scopes"]): string {
+export function scopeSummary(
+  t: Parameters<typeof translateKey>[0],
+  token: Pick<ApiToken, "scopes" | "contentLevel" | "knowledgeBaseIds">,
+): string {
+  const { scopes } = token;
+  const content = contentSummary(t, token);
   const parts = [
     ...Object.entries(scopes.instance ?? {}).map(
       ([area, level]) =>
         `${translateKey(t, `areas.instance.${area}`)} (${translateKey(t, `areas.levels.${String(level)}`)})`,
     ),
-    ...Object.entries(scopes.organization ?? {}).map(
-      ([area, level]) =>
-        `${translateKey(t, `areas.organization.${area}`)} (${translateKey(t, `areas.levels.${String(level)}`)})`,
-    ),
+    ...Object.entries(scopes.organization ?? {})
+      .filter(([area]) => area !== CONTENT_AREA)
+      .map(
+        ([area, level]) =>
+          `${translateKey(t, `areas.organization.${area}`)} (${translateKey(t, `areas.levels.${String(level)}`)})`,
+      ),
+    ...(content ? [`${t("tokens.content.title")}: ${content}`] : []),
   ];
   return parts.join(", ");
 }
@@ -87,7 +107,9 @@ export function CreateTokenDialog({
   onCreate,
   hint,
   maxLifetimeDays,
+  organizationId = null,
 }: {
+  organizationId?: string | null;
   maxLifetimeDays: number | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -100,6 +122,8 @@ export function CreateTokenDialog({
   const { toast } = useToast();
   const [secret, setSecret] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [content, setContent] = useState<ContentAccess>(NO_CONTENT_ACCESS);
+  const [contentError, setContentError] = useState<string | undefined>();
   const form = useSchemaForm(tokenForm, {
     defaultValues: {
       name: "",
@@ -122,6 +146,8 @@ export function CreateTokenDialog({
     if (!next) {
       setSecret(null);
       setError(null);
+      setContent(NO_CONTENT_ACCESS);
+      setContentError(undefined);
       form.reset();
     }
     onOpenChange(next);
@@ -129,8 +155,16 @@ export function CreateTokenDialog({
 
   const submit = form.handleSubmit(async (values) => {
     setError(null);
+    setContentError(undefined);
+    const access = allowOrganization ? contentRequest(content) : { spaces: null };
     const instance = allowInstance ? pickAreas(values.instance) : undefined;
-    const organization = allowOrganization ? pickAreas(values.organization) : undefined;
+    const picked = allowOrganization ? pickAreas(values.organization) : undefined;
+    const organization =
+      access.spaces === null ? picked : ({ ...(picked ?? {}), [CONTENT_AREA]: access.spaces } as Areas);
+    if (access.knowledgeBaseIds && access.knowledgeBaseIds.length === 0) {
+      setContentError(t("tokens.content.knowledgeBasesRequired"));
+      return;
+    }
     if (!instance && !organization) {
       setError(t("tokens.scopeRequired"));
       return;
@@ -161,6 +195,8 @@ export function CreateTokenDialog({
         name: values.name,
         scopes: { ...(instance ? { instance } : {}), ...(organization ? { organization } : {}) },
         expiresAt,
+        ...(access.contentLevel ? { contentLevel: access.contentLevel } : {}),
+        ...(access.knowledgeBaseIds ? { knowledgeBaseIds: access.knowledgeBaseIds } : {}),
       });
       setSecret(created.token);
     } catch (failure) {
@@ -216,24 +252,34 @@ export function CreateTokenDialog({
             <Input autoComplete="off" autoFocus {...form.register("name")} />
           </Field>
           {allowOrganization ? (
+            <ContentAccessFields
+              value={content}
+              onChange={setContent}
+              organizationId={organizationId}
+              error={contentError}
+            />
+          ) : null}
+          {allowOrganization ? (
             <fieldset className="flex flex-col gap-2">
               <legend className="mb-1 font-medium">{t("tokens.organizationAccess")}</legend>
-              {organizationAreas.map((area) => (
-                <AreaRow key={area} label={translateKey(t, `areas.organization.${area}`)}>
-                  <Controller
-                    control={form.control}
-                    name={`organization.${area}`}
-                    render={({ field }) => (
-                      <SegmentedControl
-                        label={translateKey(t, `areas.organization.${area}`)}
-                        value={field.value}
-                        onValueChange={field.onChange}
-                        options={levelOptions}
-                      />
-                    )}
-                  />
-                </AreaRow>
-              ))}
+              {organizationAreas
+                .filter((area) => area !== CONTENT_AREA)
+                .map((area) => (
+                  <AreaRow key={area} label={translateKey(t, `areas.organization.${area}`)}>
+                    <Controller
+                      control={form.control}
+                      name={`organization.${area}`}
+                      render={({ field }) => (
+                        <SegmentedControl
+                          label={translateKey(t, `areas.organization.${area}`)}
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          options={levelOptions}
+                        />
+                      )}
+                    />
+                  </AreaRow>
+                ))}
             </fieldset>
           ) : null}
           {allowInstance ? (

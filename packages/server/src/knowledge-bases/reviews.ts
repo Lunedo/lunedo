@@ -13,6 +13,7 @@ import type { ArticleType } from "../spaces/schema.js";
 import { signalSpaceChange } from "../spaces/signals.js";
 import { visibleItem } from "../spaces/visibility.js";
 import type { ReviewInterval, ReviewLeadDays, ReviewRecipients, ReviewVia } from "./schema.js";
+import { translationState } from "./translations.js";
 
 export function lastReviewedAt(item: SQL): SQL {
   return sql`(select r.reviewed_at from article_reviews r left join knowledge_bases kb on kb.space_id = ${item}.space_id
@@ -31,7 +32,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 export type ReviewReminderKind = "lead" | "due";
 export type ReviewState = "overdue" | "sourceChanged" | "dueSoon" | "current" | "off";
-export type ReviewFilter = "all" | "due" | "soon" | "unowned";
+export type ReviewFilter = "all" | "due" | "soon" | "unowned" | "translations";
 export type ArticleInterval = ReviewInterval | 0 | null;
 
 export interface ReviewSettings {
@@ -73,6 +74,8 @@ export interface ReviewListItem {
   dueAt: Date | null;
   sourceChangedAt: Date | null;
   state: ReviewState;
+  language: string | null;
+  translationOutdated: boolean;
 }
 
 export interface ReviewCounts {
@@ -80,6 +83,7 @@ export interface ReviewCounts {
   due: number;
   soon: number;
   unowned: number;
+  translations: number;
 }
 
 export interface ReviewList extends Page<ReviewListItem> {
@@ -501,19 +505,24 @@ export class ReviewService {
     const due = sql`(r.due_at <= ${now}::timestamptz or r.source_changed_at is not null)`;
     const upcoming = sql`(r.due_at > ${now}::timestamptz and r.due_at <= ${soon}::timestamptz and r.source_changed_at is null)`;
     const unowned = sql`(${managedItemCondition(sql`t`, sql`s`)} and not ${ownerActive})`;
+    const outdated = sql`(src.id is not null and t.content_language = any(kb.languages)
+      and ${translationState(sql`src`, sql`t`)} = 'outdated')`;
     const mine = options.mine && viewer.type === "account" ? sql`and t.owner_id = ${viewer.id}` : sql``;
     const base = sql`from article_reviews r join tree_items t on t.id = r.item_id join spaces s on s.id = t.space_id
       left join knowledge_bases kb on kb.space_id = s.id left join accounts o on o.id = t.owner_id
+      left join tree_items src on src.id = t.translation_of
       where t.space_id = ${spaceId} and t.kind = 'page' and ${this.#editable(viewer)}
-        and (${due} or ${upcoming} or ${unowned}) ${mine}`;
+        and (${due} or ${upcoming} or ${unowned} or ${outdated}) ${mine}`;
     const counted = await this.#database.execute<{
       all: number;
       due: number;
       soon: number;
       unowned: number;
+      translations: number;
     }>(sql`
       select count(*)::int as all, count(*) filter (where ${due})::int as due,
-        count(*) filter (where ${upcoming})::int as soon, count(*) filter (where ${unowned})::int as unowned
+        count(*) filter (where ${upcoming})::int as soon, count(*) filter (where ${unowned})::int as unowned,
+        count(*) filter (where ${outdated})::int as translations
       ${base}`);
     const filter =
       options.filter === "due"
@@ -522,7 +531,9 @@ export class ReviewService {
           ? upcoming
           : options.filter === "unowned"
             ? unowned
-            : sql`true`;
+            : options.filter === "translations"
+              ? outdated
+              : sql`true`;
     const page = options.page;
     const result = await this.#database.execute<{
       id: string;
@@ -539,6 +550,8 @@ export class ReviewService {
       reviewed_at: Date | string | null;
       due_at: Date | string | null;
       source_changed_at: Date | string | null;
+      language: string | null;
+      translation_outdated: boolean;
       sort_key: string;
     }>(
       sql`
@@ -549,7 +562,8 @@ export class ReviewService {
           order by cardinality(c.path)) as category_titles,
         t.owner_id, ${this.#people.visibleName(viewer, sql`o`)} as owner_name, ${ownerActive} as owner_active,
         r.interval_months, kb.review_interval_months as inherited_months, r.published_at, r.reviewed_at, r.due_at,
-        r.source_changed_at,
+        r.source_changed_at, case when src.id is null then null else t.content_language end as language,
+        ${outdated} as translation_outdated,
         (case when ${due} then '0' when ${upcoming} then '1' else '2' end) || '|' ||
           coalesce(to_char(least(r.due_at, r.source_changed_at) at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US'),
             '9999') || '|' || lower(t.title) as sort_key
@@ -583,6 +597,8 @@ export class ReviewService {
           reviewedAt: date(row.reviewed_at),
           ...review,
           state: reviewState(review, interval, now),
+          language: row.language,
+          translationOutdated: row.translation_outdated,
         };
       },
     );
@@ -594,6 +610,7 @@ export class ReviewService {
         due: Number(counts?.due ?? 0),
         soon: Number(counts?.soon ?? 0),
         unowned: Number(counts?.unowned ?? 0),
+        translations: Number(counts?.translations ?? 0),
       },
     };
   }

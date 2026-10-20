@@ -223,6 +223,7 @@ export const treeItems = pgTable(
     creatorId: uuid().references(() => accounts.id, { onDelete: "set null" }),
     ownerId: uuid().references(() => accounts.id, { onDelete: "set null" }),
     contentLanguage: text(),
+    translationOf: uuid().references((): AnyPgColumn => treeItems.id, { onDelete: "set null" }),
     articleType: articleType(),
     templateId: text(),
     statusId: uuid().references((): AnyPgColumn => pageStatusValues.id, { onDelete: "set null" }),
@@ -250,6 +251,14 @@ export const treeItems = pgTable(
     index().on(table.trashEntryId),
     index().on(table.archivedRootId),
     index().on(table.archivedBy),
+    index().on(table.translationOf),
+    uniqueIndex("tree_items_translation_unique")
+      .on(table.translationOf, table.contentLanguage)
+      .where(sql`${table.translationOf} is not null`),
+    check(
+      "tree_items_translation",
+      sql`${table.translationOf} is null or (${table.kind} = 'page' and ${table.contentLanguage} is not null)`,
+    ),
     check(
       "tree_items_link_target",
       sql`(${table.kind} = 'link') = (${table.linkItemId} is not null or ${table.linkUrl} is not null)`,
@@ -337,6 +346,7 @@ export const pageDocuments = pgTable("page_documents", {
   schemaVersion: integer().notNull(),
   revision: bigint({ mode: "number" }).notNull().default(1),
   draftTitle: text(),
+  draftNote: text(),
   versionedRevision: bigint({ mode: "number" }).notNull().default(0),
   changedAt: timestampColumn().notNull().defaultNow(),
   updatedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),

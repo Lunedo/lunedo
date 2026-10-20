@@ -79,7 +79,7 @@ export class AccountController {
   }
 
   @Get("preferences")
-  @SessionRoute({ secondFactorSetup: true })
+  @SessionRoute({ portalAccounts: true, secondFactorSetup: true })
   @ApiRoute({
     summary: "List own preferences",
     tags: ["Account"],
@@ -91,7 +91,7 @@ export class AccountController {
   }
 
   @Put("preferences/:key")
-  @SessionRoute({ secondFactorSetup: true })
+  @SessionRoute({ portalAccounts: true, secondFactorSetup: true })
   @ApiRoute({
     summary: "Change an own preference",
     tags: ["Account"],
@@ -166,7 +166,7 @@ export class AccountController {
   }
 
   @Get("security")
-  @SessionRoute({ secondFactorSetup: true })
+  @SessionRoute({ portalAccounts: true, secondFactorSetup: true })
   @ApiRoute({
     summary: "Get the security overview",
     tags: ["Account"],
@@ -177,7 +177,7 @@ export class AccountController {
   }
 
   @Post("password")
-  @SessionRoute({ recentAuthentication: true })
+  @SessionRoute({ portalAccounts: true, recentAuthentication: true })
   @ApiRoute({
     summary: "Change the password",
     tags: ["Account"],
@@ -194,7 +194,7 @@ export class AccountController {
   }
 
   @Post("email")
-  @SessionRoute({ recentAuthentication: true })
+  @SessionRoute({ portalAccounts: true, recentAuthentication: true })
   @ApiRoute({
     summary: "Change the e-mail address",
     tags: ["Account"],
@@ -207,7 +207,7 @@ export class AccountController {
   }
 
   @Post("totp")
-  @SessionRoute({ secondFactorSetup: true, recentAuthentication: true })
+  @SessionRoute({ portalAccounts: true, secondFactorSetup: true, recentAuthentication: true })
   @ApiRoute({
     summary: "Start authenticator setup",
     tags: ["Account"],
@@ -220,7 +220,7 @@ export class AccountController {
   }
 
   @Post("totp/confirm")
-  @SessionRoute({ secondFactorSetup: true, recentAuthentication: true })
+  @SessionRoute({ portalAccounts: true, secondFactorSetup: true, recentAuthentication: true })
   @ApiRoute({
     summary: "Confirm authenticator setup",
     tags: ["Account"],
@@ -238,14 +238,14 @@ export class AccountController {
   }
 
   @Delete("totp")
-  @SessionRoute({ recentAuthentication: true })
+  @SessionRoute({ portalAccounts: true, recentAuthentication: true })
   @ApiRoute({ summary: "Remove the authenticator app", tags: ["Account"], errors: ["lastSecondFactor"] })
   async removeTotp(@Req() request: FastifyRequest) {
     if (!(await this.#services.security.removeTotp(sessionOf(request)))) throw notFound();
   }
 
   @Post("passkeys/registration-options")
-  @SessionRoute({ secondFactorSetup: true, recentAuthentication: true })
+  @SessionRoute({ portalAccounts: true, secondFactorSetup: true, recentAuthentication: true })
   @ApiRoute({
     summary: "Start passkey registration",
     tags: ["Account"],
@@ -258,7 +258,7 @@ export class AccountController {
   }
 
   @Post("passkeys")
-  @SessionRoute({ secondFactorSetup: true, recentAuthentication: true })
+  @SessionRoute({ portalAccounts: true, secondFactorSetup: true, recentAuthentication: true })
   @ApiRoute({
     summary: "Register a passkey",
     tags: ["Account"],
@@ -281,7 +281,7 @@ export class AccountController {
   }
 
   @Delete("passkeys/:id")
-  @SessionRoute({ recentAuthentication: true })
+  @SessionRoute({ portalAccounts: true, recentAuthentication: true })
   @ApiRoute({
     summary: "Remove a passkey",
     tags: ["Account"],
@@ -293,7 +293,7 @@ export class AccountController {
   }
 
   @Post("recovery-codes")
-  @SessionRoute({ recentAuthentication: true })
+  @SessionRoute({ portalAccounts: true, recentAuthentication: true })
   @ApiRoute({
     summary: "Generate recovery codes",
     tags: ["Account"],
@@ -305,7 +305,7 @@ export class AccountController {
   }
 
   @Get("sessions")
-  @SessionRoute()
+  @SessionRoute({ portalAccounts: true })
   @ApiRoute({
     summary: "List sessions",
     tags: ["Account"],
@@ -332,7 +332,7 @@ export class AccountController {
   }
 
   @Delete("sessions/:id")
-  @SessionRoute()
+  @SessionRoute({ portalAccounts: true })
   @ApiRoute({ summary: "End a session", tags: ["Account"], params: idParams })
   async endSession(
     @Param("id") id: string,
@@ -345,7 +345,7 @@ export class AccountController {
   }
 
   @Post("sessions/end-others")
-  @SessionRoute()
+  @SessionRoute({ portalAccounts: true })
   @ApiRoute({
     summary: "End all other sessions",
     tags: ["Account"],

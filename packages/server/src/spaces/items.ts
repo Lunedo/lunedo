@@ -360,6 +360,7 @@ export async function checkParent(
   actor: Principal,
   spaceId: string,
   parentId: string | null,
+  translationOf: string | null = null,
 ): Promise<void> {
   if (parentId === null) return;
   const knowledgeBase = await isKnowledgeBase(tx, spaceId);
@@ -384,7 +385,8 @@ export async function checkParent(
   if (row.kind !== "page" && row.kind !== "folder") {
     throw new SpaceError("invalidPlacement", "Only pages and folders can contain items");
   }
-  if (knowledgeBase && row.kind !== "folder") throw knowledgeBasePlacementError();
+  if (knowledgeBase && row.kind !== "folder" && parentId !== translationOf)
+    throw knowledgeBasePlacementError();
   const meeting = await tx.execute<{ item_id: string }>(
     sql`select item_id from meetings where item_id = ${parentId}`,
   );
@@ -627,6 +629,7 @@ export class TreeService {
       documentFor?: ((tx: Transaction, itemId: string, mode: PageMode) => Promise<unknown>) | undefined;
       articleType?: ArticleType | null | undefined;
       templateId?: string | undefined;
+      translation?: { of: string; language: ContentLanguage } | undefined;
     },
   ): Promise<TreeItem> {
     const knowledgeBase = await isKnowledgeBase(this.#database, spaceId);
@@ -674,15 +677,23 @@ export class TreeService {
     const id = await this.#database
       .transaction(async (tx) => {
         await lockSpaces(tx, [spaceId]);
-        await checkParent(tx, this.#authorization, actor, spaceId, input.placement.parentId);
+        await checkParent(
+          tx,
+          this.#authorization,
+          actor,
+          spaceId,
+          input.placement.parentId,
+          input.translation?.of ?? null,
+        );
         const position = await placementPosition(tx, spaceId, input.placement, null);
         const itemId = uuidv7();
         await tx.execute(sql`
         insert into tree_items (id, space_id, parent_id, kind, position, title, description, link_item_id, link_url,
-          mode, creator_id, owner_id, article_type, template_id)
+          mode, creator_id, owner_id, article_type, template_id, translation_of, content_language)
         values (${itemId}, ${spaceId}, ${input.placement.parentId}, ${input.kind}, ${position}, ${title},
           ${description}, ${linkItemId}, ${linkUrl}, ${mode}, ${actorId}, ${actorId}, ${input.articleType ?? null},
-          ${knowledgeBase && input.kind === "page" ? (input.templateId ?? null) : null})`);
+          ${knowledgeBase && input.kind === "page" ? (input.templateId ?? null) : null},
+          ${input.translation?.of ?? null}, ${input.translation?.language ?? null})`);
         if (input.kind === "page") {
           const document = input.documentFor ? await input.documentFor(tx, itemId, mode) : input.document;
           await insertInitialDocument(tx, itemId, actorId, document);
@@ -745,6 +756,12 @@ export class TreeService {
     language: ContentLanguage | null,
   ): Promise<TreeItem> {
     await this.#database.transaction(async (tx) => {
+      if (await isKnowledgeBase(tx, (await this.#spaceOfItem(tx, itemId)) ?? "")) {
+        throw new SpaceError(
+          "knowledgeBaseLanguage",
+          "Articles of a knowledge base are in its default language. Add a translation for another language.",
+        );
+      }
       const updated = await tx.execute<{ space_id: string }>(sql`
         update tree_items set content_language = ${language}, updated_at = now()
         where id = ${itemId} and kind in ('page', 'blogPost')
@@ -756,6 +773,13 @@ export class TreeService {
     const item = await this.get(actor, itemId);
     if (!item) throw new SpaceError("itemNotFound", "The page does not exist");
     return item;
+  }
+
+  async #spaceOfItem(executor: Executor, itemId: string): Promise<string | null> {
+    const result = await executor.execute<{ space_id: string }>(
+      sql`select space_id from tree_items where id = ${itemId}`,
+    );
+    return result.rows[0]?.space_id ?? null;
   }
 
   async moveImpact(

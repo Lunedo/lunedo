@@ -572,6 +572,24 @@ const spaceArticleTemplatesRoute = createRoute({
   ),
 });
 
+const spacePortalAccountsRoute = createRoute({
+  getParentRoute: () => spaceSettingsRoute,
+  path: "/portal-accounts",
+  component: lazyRouteComponent(
+    () => import("./knowledge-bases/settings/portal-accounts-screen.js"),
+    "PortalAccountsScreen",
+  ),
+});
+
+const spaceLanguagesRoute = createRoute({
+  getParentRoute: () => spaceSettingsRoute,
+  path: "/languages",
+  component: lazyRouteComponent(
+    () => import("./knowledge-bases/settings/languages-screen.js"),
+    "LanguagesScreen",
+  ),
+});
+
 const spaceReviewSettingsRoute = createRoute({
   getParentRoute: () => spaceSettingsRoute,
   path: "/reviews",
@@ -999,6 +1017,8 @@ const routeTree = rootRoute.addChildren([
         spaceCategoriesRoute,
         spaceArticleTemplatesRoute,
         spaceReviewSettingsRoute,
+        spaceLanguagesRoute,
+        spacePortalAccountsRoute,
         spaceExportRoute,
       ]),
     ]),

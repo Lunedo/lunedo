@@ -129,3 +129,17 @@ export function languageItems(t: TFunction, defaultLanguage?: string): ComboboxI
     ...(language === defaultLanguage ? { marker: t("ui.defaultMarker") } : {}),
   }));
 }
+
+export function knowledgeBaseLoader(organizationId: string): ComboboxLoader {
+  return async (search, cursor) => {
+    const page = await request(() =>
+      api.GET("/api/v1/spaces", {
+        params: { query: { ...query(search, cursor), organizationId, type: "knowledgeBase" } },
+      }),
+    );
+    return {
+      items: page.items.map((space) => ({ value: space.id, label: space.name, description: space.key })),
+      nextCursor: page.nextCursor,
+    };
+  };
+}

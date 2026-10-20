@@ -113,10 +113,13 @@ import { UploadService } from "./imports/uploads.js";
 import { WordReader } from "./imports/word/reader.js";
 import { ImportWorker } from "./imports/worker.js";
 import type { JobQueue } from "./jobs/job-queue.js";
+import { ArticleApiService } from "./knowledge-bases/article-api.js";
 import { knowledgeBaseNotificationTypes } from "./knowledge-bases/notifications.js";
+import { PortalAccountService } from "./knowledge-bases/portal-accounts.js";
 import { ReviewService } from "./knowledge-bases/reviews.js";
 import { KnowledgeBaseService } from "./knowledge-bases/service.js";
 import { KnowledgeBaseStatisticsService } from "./knowledge-bases/statistics.js";
+import { ArticleTranslationService } from "./knowledge-bases/translations.js";
 import type { Logger } from "./logging/logger.js";
 import {
   DISPATCH_PENDING_MAIL_SCHEDULE,
@@ -296,6 +299,9 @@ export interface AccountServices {
   archive: ArchiveService;
   templates: TemplateService;
   knowledgeBases: KnowledgeBaseService;
+  translations: ArticleTranslationService;
+  articleApi: ArticleApiService;
+  portalAccounts: PortalAccountService;
   reviews: ReviewService;
   knowledgeBaseStatistics: KnowledgeBaseStatisticsService;
   portals: PortalService;
@@ -765,6 +771,8 @@ export function createAccountServices(options: {
     people,
     templates,
   });
+  const translations = new ArticleTranslationService({ database, authorization, audit, spaces, tree });
+  const portalAccounts = new PortalAccountService({ database, audit, spaces, invitations, memberships });
   const whiteboards = new WhiteboardService({
     database,
     files,
@@ -787,7 +795,19 @@ export function createAccountServices(options: {
   });
   const portals = new PortalService({ database, audit, settings });
   const portalSessions = new PortalSessionService({ database, sessions });
-  const articleRenderer = new ArticleRenderer({ database, jobs });
+  const embeds = new EmbedServices({ settings });
+  const articleRenderer = new ArticleRenderer({ database, jobs, embeds });
+  const articleApi = new ArticleApiService({
+    database,
+    authorization,
+    knowledgeBases,
+    tree,
+    documents,
+    versions,
+    attachments,
+    renderer: articleRenderer,
+    portals,
+  });
   const portalStatistics = new PortalStatistics({ database, jobs });
   const knowledgeBaseStatistics = new KnowledgeBaseStatisticsService({
     database,
@@ -844,7 +864,6 @@ export function createAccountServices(options: {
   const decisions = new DecisionService({ database, authorization });
   const reports = new ReportService({ database, authorization, people, documents });
   const includes = new IncludeService({ database, authorization, documents });
-  const embeds = new EmbedServices({ settings });
   const templateTransfers = new TemplateTransferService({
     database,
     templates,
@@ -1050,6 +1069,9 @@ export function createAccountServices(options: {
     archive,
     templates,
     knowledgeBases,
+    translations,
+    articleApi,
+    portalAccounts,
     reviews,
     knowledgeBaseStatistics,
     portals,
@@ -1259,8 +1281,7 @@ export async function workAccountJobs(
     job.logger.debug(removed, "Collaboration data cleaned up");
   });
   await jobs.work(renderArticleJob, async (job) => {
-    const config = await services.portals.configOfItem(job.payload.itemId);
-    if (config) await services.articleRenderer.renderPublished(job.payload.itemId, config.language);
+    await services.articleRenderer.renderPublished(job.payload.itemId);
   });
   await jobs.work(feedbackDeletionJob, async (job) => {
     const outcome = await services.portalStatistics.deleteFeedbackWhenDue(job.payload.feedbackId);

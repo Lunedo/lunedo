@@ -13,6 +13,7 @@ import { useFormat, usePreferences } from "../preferences/preferences-provider.j
 import "../notifications/browser-push.js";
 import "../notifications/builtin.js";
 import "./builtin.js";
+import { PortalAccountHome } from "../knowledge-bases/portal-account-home.js";
 import { QuickSearchHost } from "../search/quick-search.js";
 import { signedOut } from "../session/sign-out.js";
 import { AnnouncementBanners } from "./announcement-banners.js";
@@ -30,6 +31,7 @@ const route = getRouteApi("/app");
 
 export function AppShell() {
   const { session } = route.useRouteContext();
+  if (session.account?.type === "portal") return <PortalAccountHome />;
   return (
     <OrganizationProvider session={session}>
       <ShellFrame />

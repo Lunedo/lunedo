@@ -6,13 +6,105 @@ import { Permission } from "../access/route-access.js";
 import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
+import { originOf } from "../http/instance-url.js";
 import { nameCursor, pageQuery, pageRequest, pageSchema, toApiPage } from "../http/pagination.js";
 import { notFound } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
 import { timestamp, uuid } from "../http/schemas.js";
-import { articleTypeSchema, audienceSchema, documentSchema, exampleSpace } from "./schemas.js";
+import {
+  articleTypeSchema,
+  audienceSchema,
+  documentSchema,
+  exampleItem,
+  exampleSpace,
+  treeItemSchema,
+} from "./schemas.js";
 
 const TAG = "Knowledge bases";
+
+const languageSchema = z.string().describe("Language as a two-letter code such as `de` or `en`.");
+
+const translationStateSchema = z
+  .enum(["original", "current", "outdated", "unpublished", "missing"])
+  .describe(
+    "`original`: the article in the default language. `current`: published after its original. `outdated`: the original was published after it. `unpublished`: never published. `missing`: no translation yet.",
+  );
+
+const languagesSchema = z
+  .object({
+    spaceId: uuid("ID of the knowledge base."),
+    defaultLanguage: languageSchema.describe(
+      "Language of new articles and fallback for readers whose language has no translation.",
+    ),
+    languages: z
+      .array(languageSchema)
+      .describe("Enabled languages, including the default language. The portal offers a choice from two on."),
+    articles: z.number().int().describe("Published articles in the default language."),
+    progress: z
+      .array(
+        z
+          .object({
+            language: languageSchema,
+            translated: z.number().int().describe("Articles with a published translation."),
+            outdated: z.number().int().describe("Translations whose original was published after them."),
+            missing: z.number().int().describe("Articles without a published translation."),
+          })
+          .describe("State of the translations into one language."),
+      )
+      .describe("State of the translations per enabled language other than the default."),
+  })
+  .describe("Languages of a knowledge base.");
+
+const exampleLanguages = {
+  spaceId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
+  defaultLanguage: "de",
+  languages: ["de", "en"],
+  articles: 140,
+  progress: [{ language: "en", translated: 12, outdated: 2, missing: 128 }],
+};
+
+const languagesBodySchema = z
+  .object({
+    defaultLanguage: languageSchema.optional(),
+    languages: z
+      .array(languageSchema)
+      .max(30)
+      .optional()
+      .describe("Enabled languages. The default language is always enabled."),
+  })
+  .strict()
+  .describe("The changed languages.");
+
+const translationsSchema = z
+  .object({
+    sourceId: uuid("ID of the original article."),
+    spaceId: uuid("ID of the knowledge base."),
+    defaultLanguage: languageSchema,
+    language: languageSchema.describe("Language of the article that was asked for."),
+    translations: z
+      .array(
+        z
+          .object({
+            language: languageSchema,
+            itemId: uuid("ID of the article in this language, or null.").nullable(),
+            title: z.string().nullable().describe("Title in this language, or null."),
+            state: translationStateSchema,
+            enabled: z
+              .boolean()
+              .describe(
+                "Whether the language is enabled; translations of other languages are not shown to readers.",
+              ),
+          })
+          .describe("The article in one language."),
+      )
+      .describe("The original first, then one entry per language."),
+  })
+  .describe("An article with its translations.");
+
+const translationBodySchema = z
+  .object({ language: languageSchema })
+  .strict()
+  .describe("Language of the new translation.");
 const space = { type: "space", param: "spaceId" } as const;
 const item = { type: "item", param: "itemId" } as const;
 const spaceParams = z.object({ spaceId: uuid("ID of the knowledge base.") }).strict();
@@ -168,11 +260,24 @@ const articleSummaryShape = {
     .boolean()
     .describe("Whether the article was published. Only editors see unpublished articles."),
   contentUpdatedAt: timestamp("When the content last changed."),
+  language: languageSchema.describe("Language of the article."),
+  translationOf: uuid("The original article when this is a translation, or null.").nullable(),
+  translations: z
+    .array(
+      z
+        .object({
+          language: languageSchema,
+          itemId: uuid("ID of the translation."),
+          state: translationStateSchema,
+        })
+        .describe("A translation of the article."),
+    )
+    .describe("Translations of an original article the caller can read. Empty for translations."),
 };
 
 const articleSummarySchema = z.object(articleSummaryShape).describe("An article.");
 
-const exampleArticle = {
+export const exampleArticle = {
   id: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a61",
   spaceId: exampleSpace.id,
   title: "Set up the VPN connection",
@@ -184,12 +289,18 @@ const exampleArticle = {
   ownerName: "Anna Weber",
   published: true,
   contentUpdatedAt: "2026-10-05T08:00:00.000Z",
+  language: "de",
+  translationOf: null,
+  translations: [
+    { language: "en", itemId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a62", state: "outdated" as const },
+  ],
 };
 
-const articleSchema = z
+export const articleSchema = z
   .object({
     ...articleSummaryShape,
     spaceKey: z.string().describe("Key of the knowledge base."),
+    lead: z.string().describe("Short introduction below the title."),
     templateId: z.string().nullable().describe("Template the article was created from, or null."),
     contactEmail: contactSchema.describe("Contact address that applies to the article, or null."),
     version: z
@@ -211,6 +322,11 @@ const articleSchema = z
             title: z.string().describe("Heading of the section."),
             icon: z.string().nullable().describe("Name of a Lucide icon, or null."),
             text: z.string().describe("Plain text of the section."),
+            html: z
+              .string()
+              .describe(
+                "Content of the section as HTML. Images point to their display version in the API, links to other articles to the portal.",
+              ),
             content: z.array(z.json()).describe("Content of the section as ProseMirror JSON nodes."),
           })
           .describe("A section of the article."),
@@ -221,8 +337,58 @@ const articleSchema = z
     document: documentSchema
       .nullable()
       .describe("Whole content as ProseMirror JSON, or null for an article that was never published."),
+    images: z
+      .array(
+        z
+          .object({
+            attachmentId: uuid("ID of the image file."),
+            name: z.string().describe("File name."),
+            alt: z.string().describe("Alternative text, empty when the author gave none."),
+            url: z
+              .string()
+              .describe("Address of the display version in the API; send the same token to fetch it."),
+          })
+          .describe("An image of the article."),
+      )
+      .describe("Images in the content, in document order."),
+    draft: z.boolean().describe("Whether this is the current draft instead of the published version."),
+    publishedAt: timestamp("When the article was published for the first time, or null.").nullable(),
+    versionPublishedAt: timestamp("When the returned version was published, or null for a draft.").nullable(),
+    lastReviewedAt: timestamp(
+      "When the article was last reviewed while a review interval applies, or null.",
+    ).nullable(),
+    portalUrl: z
+      .string()
+      .nullable()
+      .describe("Address of the article in the portal, in its language, or null when it is not published."),
   })
   .describe("An article with its sections, readable by programs.");
+
+export const exampleArticleRecord = {
+  ...exampleArticle,
+  spaceKey: "HELP",
+  lead: "Work from home with the company network.",
+  templateId: "builtin:article-how-to",
+  contactEmail: "it@example.org",
+  version: 3,
+  sections: [
+    {
+      key: "steps",
+      title: "Steps",
+      icon: "list-ordered",
+      text: "Open the VPN client.",
+      html: "<p>Open the VPN client.</p>",
+      content: [{ type: "paragraph", content: [{ type: "text", text: "Open the VPN client." }] }],
+    },
+  ],
+  document: null,
+  images: [],
+  draft: false,
+  publishedAt: "2026-09-01T08:00:00.000Z",
+  versionPublishedAt: "2026-10-05T08:00:00.000Z",
+  lastReviewedAt: null,
+  portalUrl: "https://wiki.example.org/help/help/123-set-up-the-vpn-connection",
+};
 
 const articlesQuery = z
   .object({
@@ -503,27 +669,7 @@ export class KnowledgeBasesController {
     tags: [TAG],
     params: articleParams,
     query: articleQuery,
-    response: {
-      description: "The article.",
-      schema: articleSchema,
-      example: {
-        ...exampleArticle,
-        spaceKey: "HELP",
-        templateId: "builtin:article-how-to",
-        contactEmail: "it@example.org",
-        version: 3,
-        sections: [
-          {
-            key: "steps",
-            title: "Steps",
-            icon: "list-ordered",
-            text: "Open the VPN client.",
-            content: [{ type: "paragraph", content: [{ type: "text", text: "Open the VPN client." }] }],
-          },
-        ],
-        document: null,
-      },
-    },
+    response: { description: "The article.", schema: articleSchema, example: exampleArticleRecord },
     errors: ["draftNotVisible"],
   })
   async article(
@@ -531,8 +677,9 @@ export class KnowledgeBasesController {
     @Query() query: z.output<typeof articleQuery>,
     @Req() request: FastifyRequest,
   ) {
-    const found = await this.#services.knowledgeBases.article(actorOf(request), itemId, {
+    const found = await this.#services.articleApi.record(actorOf(request), itemId, {
       draft: query.draft === "true",
+      origin: await originOf(this.context, request),
     });
     if (!found) throw notFound();
     return found;
@@ -552,6 +699,103 @@ export class KnowledgeBasesController {
   })
   async setType(@Param("itemId") itemId: string, @Body() body: z.output<typeof typeBodySchema>) {
     await this.#services.knowledgeBases.setArticleType(itemId, body.type);
+  }
+
+  @Get("spaces/:spaceId/knowledge-base/languages")
+  @Permission("space.view", space)
+  @ApiRoute({
+    summary: "Get the languages of a knowledge base",
+    description: "Returns the default language, the enabled languages and how far the translations are.",
+    tags: [TAG],
+    params: spaceParams,
+    response: { description: "The languages.", schema: languagesSchema, example: exampleLanguages },
+    errors: ["notKnowledgeBase"],
+  })
+  async languages(@Param("spaceId") spaceId: string) {
+    return this.#services.translations.settings(spaceId);
+  }
+
+  @Put("spaces/:spaceId/knowledge-base/languages")
+  @Permission("space.manage", space)
+  @ApiRoute({
+    summary: "Change the languages of a knowledge base",
+    description:
+      "Sets the default language and the enabled languages. Turning a language off keeps its translations but hides them from readers. A language that already has translations cannot become the default language. Audited.",
+    tags: [TAG],
+    params: spaceParams,
+    body: languagesBodySchema,
+    bodyExample: { languages: ["de", "en"] },
+    response: {
+      description: "The languages after the change.",
+      schema: languagesSchema,
+      example: exampleLanguages,
+    },
+    errors: ["notKnowledgeBase", "invalidLanguage", "tooManyLanguages", "defaultLanguageTranslated"],
+  })
+  async setLanguages(
+    @Param("spaceId") spaceId: string,
+    @Body() body: z.output<typeof languagesBodySchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.#services.translations.update(actorOf(request), spaceId, body);
+  }
+
+  @Get("articles/:itemId/translations")
+  @Permission("item.view", item)
+  @ApiRoute({
+    summary: "List the translations of an article",
+    description:
+      "Returns the original article and one entry per enabled language, with the state of each translation. Translations the caller cannot read are listed as missing.",
+    tags: [TAG],
+    params: articleParams,
+    response: {
+      description: "The translations.",
+      schema: translationsSchema,
+      example: {
+        sourceId: exampleArticle.id,
+        spaceId: exampleSpace.id,
+        defaultLanguage: "de",
+        language: "de",
+        translations: [
+          {
+            language: "de",
+            itemId: exampleArticle.id,
+            title: "VPN einrichten",
+            state: "original" as const,
+            enabled: true,
+          },
+          { language: "en", itemId: null, title: null, state: "missing" as const, enabled: true },
+        ],
+      },
+    },
+    errors: [],
+  })
+  async translations(@Param("itemId") itemId: string, @Req() request: FastifyRequest) {
+    const found = await this.#services.translations.translations(actorOf(request), itemId);
+    if (!found) throw notFound();
+    return found;
+  }
+
+  @Post("articles/:itemId/translations")
+  @Permission("item.edit", item)
+  @ApiRoute({
+    summary: "Add a translation of an article",
+    description:
+      "Creates the translation as a new article below the original, in the same category, with a copy of the original's content to translate. It shares the number of the original and gets its own address from its title.",
+    tags: [TAG],
+    status: 201,
+    params: articleParams,
+    body: translationBodySchema,
+    bodyExample: { language: "en" },
+    response: { description: "The new translation.", schema: treeItemSchema, example: exampleItem },
+    errors: ["invalidLanguage", "languageNotEnabled", "translationExists", "translationSource"],
+  })
+  async addTranslation(
+    @Param("itemId") itemId: string,
+    @Body() body: z.output<typeof translationBodySchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    return this.#services.translations.create(actorOf(request), itemId, body.language);
   }
 
   @Get("spaces/:spaceId/knowledge-base/templates")

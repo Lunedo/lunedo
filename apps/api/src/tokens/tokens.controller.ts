@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Query, Req } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Put, Query, Req } from "@nestjs/common";
 import { type ApiToken, tokenNameSchema } from "@pagehall/server";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
@@ -11,6 +11,7 @@ import { notFound } from "../http/problems.js";
 import { actorOf } from "../http/request.js";
 import {
   apiTokenSchema,
+  contentLevelSchema,
   exampleApiToken,
   inputTimestamp,
   organizationIdParams,
@@ -39,9 +40,34 @@ const createSchema = z
       .describe(
         "When the token stops working, ISO 8601. Null or left out for a token without expiry. When a maximum lifetime of API tokens applies, an expiry within it is required; left out, it defaults to the maximum.",
       ),
+    contentLevel: contentLevelSchema
+      .optional()
+      .describe(
+        "What the token may do with content. Left out: `publish` when the spaces area is `manage`, otherwise `read`. `draft` and `publish` need the spaces area with `manage`.",
+      ),
+    knowledgeBaseIds: z
+      .array(uuid("ID of a knowledge base."))
+      .min(1)
+      .max(100)
+      .nullable()
+      .optional()
+      .describe("Limit the token's content access to these knowledge bases. Null or left out for no limit."),
   })
   .strict()
   .describe("A new API token.");
+
+const contentAccessSchema = z
+  .object({
+    contentLevel: contentLevelSchema,
+    knowledgeBaseIds: z
+      .array(uuid("ID of a knowledge base."))
+      .min(1)
+      .max(100)
+      .nullable()
+      .describe("Knowledge bases the token is limited to, or null for no limit."),
+  })
+  .strict()
+  .describe("The new content access of the token.");
 
 const renameSchema = z
   .object({ name: tokenNameSchema.describe("New name, 1 to 100 characters.") })
@@ -137,7 +163,7 @@ export class TokensController {
     status: 201,
     body: createSchema,
     response: { description: "The new token.", schema: createdSchema },
-    errors: ["invalidScopes", "expiryRequired", "expiryInPast", "expiryTooLate"],
+    errors: ["invalidScopes", "invalidKnowledgeBases", "expiryRequired", "expiryInPast", "expiryTooLate"],
   })
   async create(@Body() body: z.output<typeof createSchema>, @Req() request: FastifyRequest) {
     const actor = actorOf(request);
@@ -147,7 +173,29 @@ export class TokensController {
       scopes: body.scopes,
       ...(body.organizationId ? { organizationId: body.organizationId } : {}),
       ...(body.expiresAt !== undefined ? { expiresAt: body.expiresAt } : {}),
+      ...(body.contentLevel ? { contentLevel: body.contentLevel } : {}),
+      ...(body.knowledgeBaseIds !== undefined ? { knowledgeBaseIds: body.knowledgeBaseIds } : {}),
     });
+  }
+
+  @Put("account/tokens/:tokenId/content-access")
+  @SessionRoute({ recentAuthentication: true })
+  @ApiRoute({
+    summary: "Change what a personal API token may do with content",
+    description: "Sets the write level and the knowledge bases the token is limited to. Audited.",
+    tags: [TAG],
+    params: tokenParams,
+    body: contentAccessSchema,
+    response: { description: "The changed token.", schema: apiTokenSchema },
+    errors: ["invalidScopes", "invalidKnowledgeBases"],
+  })
+  async changeContentAccess(
+    @Param("tokenId") tokenId: string,
+    @Body() body: z.output<typeof contentAccessSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    await this.#ownToken(request, tokenId);
+    return this.#services.apiTokens.changeContentAccess(actorOf(request), tokenId, body);
   }
 
   @Patch("account/tokens/:tokenId")
@@ -215,7 +263,14 @@ export class TokensController {
     params: serviceAccountParams,
     body: createSchema,
     response: { description: "The new token.", schema: createdSchema },
-    errors: ["invalidScopes", "invalidOwner", "expiryRequired", "expiryInPast", "expiryTooLate"],
+    errors: [
+      "invalidScopes",
+      "invalidKnowledgeBases",
+      "invalidOwner",
+      "expiryRequired",
+      "expiryInPast",
+      "expiryTooLate",
+    ],
   })
   async createForServiceAccount(
     @Param("serviceAccountId") serviceAccountId: string,
@@ -228,7 +283,30 @@ export class TokensController {
       scopes: body.scopes,
       ...(body.organizationId ? { organizationId: body.organizationId } : {}),
       ...(body.expiresAt !== undefined ? { expiresAt: body.expiresAt } : {}),
+      ...(body.contentLevel ? { contentLevel: body.contentLevel } : {}),
+      ...(body.knowledgeBaseIds !== undefined ? { knowledgeBaseIds: body.knowledgeBaseIds } : {}),
     });
+  }
+
+  @Put("service-accounts/:serviceAccountId/tokens/:tokenId/content-access")
+  @Permission("serviceAccount.manage", serviceAccount, { recentAuthentication: true })
+  @ApiRoute({
+    summary: "Change what a service account token may do with content",
+    description: "Sets the write level and the knowledge bases the token is limited to. Audited.",
+    tags: [TAG],
+    params: serviceAccountParams.extend({ tokenId: uuid("ID of the token.") }),
+    body: contentAccessSchema,
+    response: { description: "The changed token.", schema: apiTokenSchema },
+    errors: ["invalidScopes", "invalidKnowledgeBases"],
+  })
+  async changeServiceAccountContentAccess(
+    @Param("serviceAccountId") serviceAccountId: string,
+    @Param("tokenId") tokenId: string,
+    @Body() body: z.output<typeof contentAccessSchema>,
+    @Req() request: FastifyRequest,
+  ) {
+    await this.#serviceAccountToken(serviceAccountId, tokenId);
+    return this.#services.apiTokens.changeContentAccess(actorOf(request), tokenId, body);
   }
 
   @Delete("service-accounts/:serviceAccountId/tokens/:tokenId")

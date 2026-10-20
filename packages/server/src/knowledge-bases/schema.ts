@@ -17,6 +17,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { accounts } from "../accounts/schema.js";
 import { bytes, timestamps } from "../database/columns.js";
+import { invitations } from "../organizations/access-schema.js";
 import { organizations } from "../organizations/schema.js";
 import { spaces, treeItems } from "../spaces/schema.js";
 
@@ -55,9 +56,16 @@ export const knowledgeBases = pgTable(
     poweredBy: boolean().notNull().default(true),
     feedbackRetentionMonths: integer().notNull().default(12),
     logoRef: text(),
+    defaultLanguage: text().notNull().default("en"),
+    languages: text().array().notNull().default(sql`'{en}'::text[]`),
     ...timestamps(),
   },
   (table) => [
+    check(
+      "knowledge_bases_languages",
+      sql`${table.defaultLanguage} = any(${table.languages}) and cardinality(${table.languages}) between 1 and 30
+        and ${table.defaultLanguage} ~ '^[a-z]{2}$'`,
+    ),
     check("knowledge_bases_contact_length", sql`length(${table.contactEmail}) <= 254`),
     check("knowledge_bases_next_number", sql`${table.nextArticleNumber} >= 1`),
     check("knowledge_bases_review_interval", sql`${table.reviewIntervalMonths} in (3, 6, 12)`),
@@ -258,4 +266,46 @@ export const articleReviewEvents = pgTable(
     index().on(table.actorId),
     index().on(table.previousReviewedBy),
   ],
+);
+
+export const articleSyncReasons = ["deleted", "unpublished", "moved"] as const;
+export type ArticleSyncReason = (typeof articleSyncReasons)[number];
+
+export const articleSync = pgTable(
+  "article_sync",
+  {
+    itemId: uuid().notNull(),
+    spaceId: uuid()
+      .notNull()
+      .references(() => spaces.id, { onDelete: "cascade" }),
+    number: integer(),
+    language: text(),
+    changedAt: timestampColumn().notNull().defaultNow(),
+    removedAt: timestampColumn(),
+    removedReason: text(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.spaceId, table.itemId] }),
+    index().on(table.itemId),
+    index().on(table.spaceId, table.changedAt, table.itemId),
+    index("article_sync_removed_index").on(table.removedAt).where(sql`${table.removedAt} is not null`),
+    check(
+      "article_sync_removed",
+      sql`(${table.removedAt} is null) = (${table.removedReason} is null)
+        and (${table.removedReason} is null or ${table.removedReason} in ('deleted', 'unpublished', 'moved'))`,
+    ),
+  ],
+);
+
+export const portalInvitations = pgTable(
+  "portal_invitations",
+  {
+    invitationId: uuid()
+      .primaryKey()
+      .references(() => invitations.id, { onDelete: "cascade" }),
+    spaceId: uuid()
+      .notNull()
+      .references(() => spaces.id, { onDelete: "cascade" }),
+  },
+  (table) => [index().on(table.spaceId)],
 );

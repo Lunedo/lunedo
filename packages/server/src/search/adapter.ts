@@ -153,7 +153,12 @@ export interface SearchAdapter {
   indexedItemsOfSpace(executor: Executor, spaceId: string): Promise<string[]>;
   search(executor: Executor, request: AdapterSearch): Promise<AdapterResult>;
   articles(executor: Executor, request: ArticleListRequest): Promise<ArticleList>;
-  articleCounts(executor: Executor, viewer: SearchViewer, spaceId: string): Promise<Map<string, number>>;
+  articleCounts(
+    executor: Executor,
+    viewer: SearchViewer,
+    spaceId: string,
+    language?: string | null,
+  ): Promise<Map<string, number>>;
 }
 
 export const articleSorts = ["views", "updated", "title"] as const;
@@ -170,6 +175,7 @@ export interface ArticleListRequest {
   viewsSince: string;
   limit: number;
   offset: number;
+  language: string | null;
 }
 
 export interface ListedArticle {

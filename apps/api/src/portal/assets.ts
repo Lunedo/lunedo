@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
+import { EMBED_ALLOW, EMBED_SANDBOX } from "@pagehall/server";
 import { portalStyle } from "./styles.js";
 
 const require = createRequire(import.meta.url);
@@ -93,6 +94,18 @@ const SCRIPT = `(() => {
         say(button.dataset.copyFailed);
       }
     });
+  }
+  for (const frame of document.querySelectorAll(".ph-embed-frame[data-src]")) {
+    const iframe = document.createElement("iframe");
+    iframe.src = frame.dataset.src;
+    iframe.title = frame.dataset.title || "";
+    iframe.loading = "lazy";
+    iframe.setAttribute("sandbox", ${JSON.stringify(EMBED_SANDBOX)});
+    iframe.setAttribute("allow", ${JSON.stringify(EMBED_ALLOW)});
+    iframe.referrerPolicy = frame.dataset.referrerPolicy || "strict-origin-when-cross-origin";
+    const height = Number(frame.dataset.height);
+    if (height > 0) iframe.style.height = height + "px";
+    frame.replaceChildren(iframe);
   }
   const feedback = document.querySelector("[data-feedback]");
   if (!feedback) return;

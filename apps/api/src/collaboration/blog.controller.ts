@@ -186,7 +186,7 @@ export class BlogController {
   }
 
   @Put("blog-posts/:postId/schedule")
-  @Permission("item.edit", post)
+  @Permission("item.publish", post)
   @ApiRoute({
     summary: "Schedule the publication of a blog post",
     description:

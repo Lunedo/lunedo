@@ -8,7 +8,7 @@ import type { ArticleSort, ListedArticle } from "../search/adapter.js";
 import type { SearchCursor, SearchService } from "../search/service.js";
 import type { ArticleType } from "../spaces/schema.js";
 import type { ArticleRenderer } from "./articles.js";
-import type { PortalConfig } from "./portals.js";
+import { interfaceLanguage, type PortalConfig } from "./portals.js";
 import type { RenderedHeading } from "./schema.js";
 import { FREQUENT_SEARCH_DAYS, type PortalStatistics } from "./statistics.js";
 
@@ -35,6 +35,7 @@ export interface PortalArticleSummary {
   itemId: string;
   number: number;
   slug: string;
+  language: string;
   title: string;
   type: ArticleType | null;
   categoryId: string | null;
@@ -44,6 +45,12 @@ export interface PortalArticleSummary {
   views: number;
 }
 
+export interface ArticleAlternate {
+  language: string;
+  number: number;
+  slug: string;
+}
+
 export interface PortalArticle extends PortalArticleSummary {
   spaceKey: string;
   lead: string;
@@ -51,6 +58,8 @@ export interface PortalArticle extends PortalArticleSummary {
   headings: RenderedHeading[];
   contactEmail: string | null;
   canEdit: boolean;
+  fallback: boolean;
+  alternates: ArticleAlternate[];
 }
 
 export type ArticleLookup =
@@ -71,6 +80,7 @@ export interface PortalSearchResult {
   categories: { id: string; count: number }[];
   typeCounts: Record<"all" | ArticleType, number>;
   suggestion: string | null;
+  language: string;
 }
 
 function typeOf(value: string): ArticleType | null {
@@ -112,8 +122,17 @@ export class PortalReader {
     this.#statistics = options.statistics;
   }
 
-  async categories(principal: Principal, config: PortalConfig): Promise<PortalCategory[]> {
-    const counted = await this.#search.portalArticleCounts(principal, config.organizationId, config.spaceId);
+  async categories(
+    principal: Principal,
+    config: PortalConfig,
+    language: string = config.defaultLanguage,
+  ): Promise<PortalCategory[]> {
+    const counted = await this.#search.portalArticleCounts(
+      principal,
+      config.organizationId,
+      config.spaceId,
+      language,
+    );
     if (counted.size === 0) return [];
     const result = await this.#database.execute<{
       id: string;
@@ -160,6 +179,7 @@ export class PortalReader {
       offset?: number;
       itemIds?: string[] | null;
       exclude?: string[];
+      language?: string;
     } = {},
   ): Promise<ArticlePage> {
     const list = await this.#search.portalArticles(principal, config.organizationId, {
@@ -172,6 +192,7 @@ export class PortalReader {
       viewsSince: since(FREQUENT_SEARCH_DAYS),
       limit: Math.min(Math.max(options.limit ?? PORTAL_PAGE_SIZE, 1), 50),
       offset: Math.max(options.offset ?? 0, 0),
+      language: options.language ?? config.defaultLanguage,
     });
     return {
       articles: await this.#summaries(config, list.articles),
@@ -181,26 +202,31 @@ export class PortalReader {
   }
 
   async #addresses(
-    spaceId: string,
+    config: PortalConfig,
     itemIds: string[],
-  ): Promise<Map<string, { number: number; slug: string; reviewedAt: Date | null }>> {
+  ): Promise<Map<string, { number: number; slug: string; language: string; reviewedAt: Date | null }>> {
     if (itemIds.length === 0) return new Map();
     const result = await this.#database.execute<{
       item_id: string;
       number: number;
       slug: string;
+      language: string;
       reviewed_at: Date | string | null;
     }>(sql`
-      select n.item_id, n.number, coalesce(article_slug(v.title), '') as slug, ${lastReviewedAt(sql`t`)} as reviewed_at
-      from article_numbers n join tree_items t on t.id = n.item_id
+      select t.id as item_id, n.number, coalesce(article_slug(v.title), '') as slug,
+        case when t.translation_of is null then ${config.defaultLanguage} else t.content_language end as language,
+        ${lastReviewedAt(sql`t`)} as reviewed_at
+      from tree_items t
+      join article_numbers n on n.item_id = coalesce(t.translation_of, t.id) and n.space_id = t.space_id
       left join page_versions v on v.id = t.published_version_id
-      where n.space_id = ${spaceId} and n.item_id = any(${sql.param(itemIds)}::uuid[])`);
+      where t.space_id = ${config.spaceId} and t.id = any(${sql.param(itemIds)}::uuid[])`);
     return new Map(
       result.rows.map((row) => [
         row.item_id,
         {
           number: Number(row.number),
           slug: row.slug,
+          language: row.language,
           reviewedAt: row.reviewed_at ? new Date(row.reviewed_at) : null,
         },
       ]),
@@ -209,7 +235,7 @@ export class PortalReader {
 
   async #summaries(config: PortalConfig, listed: ListedArticle[]): Promise<PortalArticleSummary[]> {
     const addresses = await this.#addresses(
-      config.spaceId,
+      config,
       listed.map((article) => article.itemId),
     );
     return listed.flatMap((article) => {
@@ -221,6 +247,7 @@ export class PortalReader {
           itemId: article.itemId,
           number: address.number,
           slug: address.slug,
+          language: address.language,
           title: article.title,
           type: typeOf(article.articleType),
           categoryId: ancestors[0] ?? null,
@@ -238,6 +265,7 @@ export class PortalReader {
     config: PortalConfig,
     number: number,
     slug: string,
+    language: string = config.defaultLanguage,
   ): Promise<ArticleLookup> {
     if (!Number.isSafeInteger(number) || number < 1) return null;
     const found = await this.#database.execute<{
@@ -248,6 +276,8 @@ export class PortalReader {
       description: string;
       article_type: ArticleType | null;
       path: string[];
+      translation_of: string | null;
+      language: string;
       version_id: string;
       updated_at: Date;
       reviewed_at: Date | string | null;
@@ -255,51 +285,73 @@ export class PortalReader {
       own_number: number | null;
       known_slug: boolean;
     }>(sql`
-      select t.id, t.space_id, s.key as space_key, v.title, t.description, t.article_type, t.path,
-        v.id as version_id, v.created_at as updated_at, ${lastReviewedAt(sql`t`)} as reviewed_at, coalesce(article_slug(v.title), '') as slug,
-        (select n2.number from article_numbers n2 where n2.item_id = t.id and n2.space_id = t.space_id) as own_number,
+      select t.id, t.space_id, s.key as space_key, v.title, t.description, t.article_type,
+        array_remove(t.path, t.translation_of) as path, t.translation_of,
+        case when t.translation_of is null then kb.default_language else t.content_language end as language,
+        v.id as version_id, v.created_at as updated_at, ${lastReviewedAt(sql`t`)} as reviewed_at,
+        coalesce(article_slug(v.title), '') as slug,
+        (select n2.number from article_numbers n2 where n2.item_id = coalesce(t.translation_of, t.id)
+          and n2.space_id = t.space_id) as own_number,
         (${slug} = '' or ${slug} = coalesce(article_slug(v.title), '')
           or exists (select 1 from article_slugs sl where sl.item_id = t.id and sl.slug = ${slug})) as known_slug
       from article_numbers n
-      join tree_items t on t.id = n.item_id
+      join tree_items src on src.id = n.item_id
+      join tree_items t on t.id = src.id or (t.translation_of = src.id and t.space_id = src.space_id)
       join spaces s on s.id = t.space_id
+      join knowledge_bases kb on kb.space_id = t.space_id
       join page_versions v on v.id = t.published_version_id
       where n.space_id = ${config.spaceId} and n.number = ${number}
         and t.kind = 'page' and t.reader_visible
+        and (t.translation_of is null or t.content_language = any(kb.languages))
         and ${this.#authorization.portalFilter(principal, sql`t`, sql`s`)}`);
-    const row = found.rows[0];
-    if (!row?.known_slug) return null;
-    if (row.space_id !== config.spaceId) {
-      return row.own_number === null
+    const rows = found.rows;
+    if (!rows.some((row) => row.known_slug)) return null;
+    const source = rows.find((row) => row.translation_of === null);
+    if (source && source.space_id !== config.spaceId) {
+      return source.own_number === null
         ? null
-        : { type: "redirect", spaceId: row.space_id, number: Number(row.own_number), slug: row.slug };
+        : {
+            type: "redirect",
+            spaceId: source.space_id,
+            number: Number(source.own_number),
+            slug: source.slug,
+          };
     }
-    const rendered = await this.#renderer.rendered(row.version_id, config.language);
+    const local = rows.filter((row) => row.space_id === config.spaceId);
+    const chosen =
+      local.find((row) => row.language === language) ?? local.find((row) => row.translation_of === null);
+    if (!chosen) return null;
+    const rendered = await this.#renderer.rendered(chosen.version_id, interfaceLanguage(chosen.language));
     if (!rendered) return null;
-    const ancestors = row.path.filter((id) => id !== row.id);
+    const ancestors = chosen.path.filter((id) => id !== chosen.id);
     const contact = await this.#contact(config, ancestors);
     const canEdit =
       principal.type === "account" &&
-      (await this.#authorization.decide(principal, "item.edit", { type: "item", id: row.id })).allowed;
+      (await this.#authorization.decide(principal, "item.edit", { type: "item", id: chosen.id })).allowed;
     return {
       type: "found",
       article: {
-        itemId: row.id,
+        itemId: chosen.id,
         number,
-        slug: row.slug,
-        title: row.title,
-        type: row.article_type,
+        slug: chosen.slug,
+        language: chosen.language,
+        title: chosen.title,
+        type: chosen.article_type,
         categoryId: ancestors[0] ?? null,
         subcategoryId: ancestors[1] ?? null,
-        updatedAt: new Date(row.updated_at),
-        reviewedAt: row.reviewed_at ? new Date(row.reviewed_at) : null,
+        updatedAt: new Date(chosen.updated_at),
+        reviewedAt: chosen.reviewed_at ? new Date(chosen.reviewed_at) : null,
         views: 0,
-        spaceKey: row.space_key,
-        lead: row.description,
+        spaceKey: chosen.space_key,
+        lead: chosen.description,
         html: rendered.html,
         headings: rendered.headings,
         contactEmail: contact,
         canEdit,
+        fallback: chosen.language !== language,
+        alternates: local
+          .map((row) => ({ language: row.language, number, slug: row.slug }))
+          .sort((a, b) => a.language.localeCompare(b.language)),
       },
     };
   }
@@ -326,17 +378,33 @@ export class PortalReader {
       categoryId: string | null;
       type: PortalArticleFilter | null;
       cursor: SearchCursor | null;
+      language?: string;
+      searchedLanguage?: string | null;
     },
   ): Promise<PortalSearchResult> {
-    const response = await this.#search.portalSearch(principal, {
-      organizationId: config.organizationId,
-      spaceId: config.spaceId,
-      query: request.query,
-      categoryId: request.categoryId,
-      articleTypes: request.type ? [request.type] : [],
-      limit: PORTAL_PAGE_SIZE,
-      cursor: request.cursor,
-    });
+    const language = request.language ?? config.defaultLanguage;
+    const run = (searched: string) =>
+      this.#search.portalSearch(principal, {
+        organizationId: config.organizationId,
+        spaceId: config.spaceId,
+        query: request.query,
+        categoryId: request.categoryId,
+        articleTypes: request.type ? [request.type] : [],
+        limit: PORTAL_PAGE_SIZE,
+        cursor: request.cursor,
+        language: searched,
+      });
+    let searched = request.searchedLanguage ?? language;
+    let response = await run(searched);
+    if (
+      response.total === 0 &&
+      !request.searchedLanguage &&
+      !request.cursor &&
+      searched !== config.defaultLanguage
+    ) {
+      searched = config.defaultLanguage;
+      response = await run(searched);
+    }
     const ids = response.results.map((hit) => hit.itemId);
     const listed =
       ids.length === 0
@@ -352,6 +420,7 @@ export class PortalReader {
               viewsSince: since(FREQUENT_SEARCH_DAYS),
               limit: ids.length,
               offset: 0,
+              language: searched,
             })
           ).articles;
     const summaries = new Map(
@@ -367,10 +436,15 @@ export class PortalReader {
       categories: response.categories.map((entry) => ({ id: entry.value, count: entry.count })),
       typeCounts: counts(response.articleTypes),
       suggestion: response.suggestion,
+      language: searched,
     };
   }
 
-  async frequentSearches(principal: Principal, config: PortalConfig): Promise<string[]> {
+  async frequentSearches(
+    principal: Principal,
+    config: PortalConfig,
+    language: string = config.defaultLanguage,
+  ): Promise<string[]> {
     const shown: string[] = [];
     for (const term of await this.#statistics.frequentSearches(config.spaceId, FREQUENT_CANDIDATES)) {
       const found = await this.#search.portalSearch(principal, {
@@ -381,6 +455,7 @@ export class PortalReader {
         articleTypes: [],
         limit: 1,
         cursor: null,
+        language,
       });
       if (found.total > 0) shown.push(term);
       if (shown.length === FREQUENT_SHOWN) break;

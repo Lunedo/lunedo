@@ -12,13 +12,14 @@ import {
 } from "@pagehall/ui";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
-import { CalendarCheck, Check, FilePen, SquarePen, UserRoundX } from "lucide-react";
+import { CalendarCheck, Check, FilePen, Languages, SquarePen, UserRoundX } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LoadError } from "../../errors/failure.js";
 import { translateKey } from "../../i18n/translate.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { useDocumentTitle } from "../../screens/settings/settings-page.js";
+import { contentLanguageLabel } from "../../search/content-language.js";
 import { itemHref } from "../../spaces/item-paths.js";
 import { TransferOwnerDialog } from "../../spaces/ownership/owner-line.js";
 import { spaceDisplayName } from "../../spaces/space-badge.js";
@@ -28,10 +29,10 @@ import { type ReviewFilter, type ReviewItem, reviewListQuery, reviewSettingsQuer
 import { reviewSearch } from "./review-search.js";
 import { ReviewStatus, useReviewAction } from "./review-status.js";
 
-const FILTERS: ReviewFilter[] = ["all", "due", "soon", "unowned"];
+const FILTERS: ReviewFilter[] = ["all", "due", "soon", "unowned", "translations"];
 
 function TitleCell({ row, spaceKey }: { row: ReviewItem; spaceKey: string }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const Icon = articleTypeIcon(row.type);
   const href = itemHref({ id: row.id, kind: "page", title: row.title, link: null }, spaceKey) ?? "";
   const path = row.categoryPath.map((category) => category.title).join(" › ");
@@ -46,7 +47,16 @@ function TitleCell({ row, spaceKey }: { row: ReviewItem; spaceKey: string }) {
         >
           {row.title}
         </Link>
-        {row.state === "sourceChanged" ? (
+        {row.translationOutdated ? (
+          <span className="inline-flex min-w-0 items-center gap-1 text-xs text-text-muted">
+            <Languages aria-hidden="true" className="size-3 shrink-0" />
+            <span className="truncate">
+              {t("reviews.list.translationOutdatedHint", {
+                language: contentLanguageLabel(t, row.language, i18n.language),
+              })}
+            </span>
+          </span>
+        ) : row.state === "sourceChanged" ? (
           <span className="inline-flex min-w-0 items-center gap-1 text-xs text-text-muted">
             <FilePen aria-hidden="true" className="size-3 shrink-0" />
             <span className="truncate">{t("reviews.list.sourceChangedHint")}</span>

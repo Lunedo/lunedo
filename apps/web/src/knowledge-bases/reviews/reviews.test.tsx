@@ -88,6 +88,8 @@ const overdue: ReviewItem = {
   dueAt: day(-17),
   sourceChangedAt: null,
   state: "overdue",
+  language: null,
+  translationOutdated: false,
 };
 
 const orphan: ReviewItem = {
@@ -99,13 +101,19 @@ const orphan: ReviewItem = {
   formerOwner: { id: "01929b1e-0000-7000-8000-0000000000a8", name: "Paul Krämer" },
   dueAt: day(10),
   state: "dueSoon",
+  language: null,
+  translationOutdated: false,
 };
 
 describe("the review list", () => {
   it("lists due articles with their state, marks one as reviewed and undoes it", async () => {
     const api = mockApi({
       [`GET /api/v1/spaces/${SPACE_ID}/reviews`]: () => ({
-        body: { items: [overdue, orphan], nextCursor: null, counts: { all: 2, due: 1, soon: 1, unowned: 1 } },
+        body: {
+          items: [overdue, orphan],
+          nextCursor: null,
+          counts: { all: 2, due: 1, soon: 1, unowned: 1, translations: 0 },
+        },
       }),
       [`POST /api/v1/articles/${ARTICLE}/reviews`]: () => ({
         status: 201,
@@ -136,7 +144,11 @@ describe("the review list", () => {
   it("asks only for the caller's articles when “Only my articles” is ticked", async () => {
     const api = mockApi({
       [`GET /api/v1/spaces/${SPACE_ID}/reviews`]: () => ({
-        body: { items: [], nextCursor: null, counts: { all: 0, due: 0, soon: 0, unowned: 0 } },
+        body: {
+          items: [],
+          nextCursor: null,
+          counts: { all: 0, due: 0, soon: 0, unowned: 0, translations: 0 },
+        },
       }),
     });
     await renderWithProviders(inSpace(<ReviewScreen />));
@@ -153,7 +165,11 @@ describe("the review list", () => {
   it("explains that reviews are off and leads space admins to the settings", async () => {
     mockApi({
       [`GET /api/v1/spaces/${SPACE_ID}/reviews`]: () => ({
-        body: { items: [], nextCursor: null, counts: { all: 0, due: 0, soon: 0, unowned: 0 } },
+        body: {
+          items: [],
+          nextCursor: null,
+          counts: { all: 0, due: 0, soon: 0, unowned: 0, translations: 0 },
+        },
       }),
       [`GET /api/v1/spaces/${SPACE_ID}/knowledge-base/reviews`]: () => ({
         body: { intervalMonths: null, leadDays: 14, recipients: "owner" },
@@ -167,7 +183,11 @@ describe("the review list", () => {
   it("offers to set an owner only to space admins", async () => {
     mockApi({
       [`GET /api/v1/spaces/${SPACE_ID}/reviews`]: () => ({
-        body: { items: [orphan], nextCursor: null, counts: { all: 1, due: 0, soon: 1, unowned: 1 } },
+        body: {
+          items: [orphan],
+          nextCursor: null,
+          counts: { all: 1, due: 0, soon: 1, unowned: 1, translations: 0 },
+        },
       }),
     });
     await renderWithProviders(inSpace(<ReviewScreen />, "editor"));

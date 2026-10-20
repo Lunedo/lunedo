@@ -1,6 +1,13 @@
 import { and, asc, eq, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import { z } from "zod";
-import { type Principal, SYSTEM, type TokenGrant, type TokenScopes } from "../accounts/principal.js";
+import {
+  type ContentLevel,
+  contentLevels,
+  type Principal,
+  SYSTEM,
+  type TokenGrant,
+  type TokenScopes,
+} from "../accounts/principal.js";
 import { accounts } from "../accounts/schema.js";
 import { accountScopeChain } from "../accounts/scope.js";
 import type { AuditLog } from "../audit/audit-log.js";
@@ -36,6 +43,7 @@ export const API_TOKEN_EXPIRY_SCHEDULE = "*/5 * * * *";
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TOUCH_INTERVAL_MS = 60_000;
 const REJECTION_EVENTS_PER_CLIENT_PER_MINUTE = 10;
+export const MAX_TOKEN_KNOWLEDGE_BASES = 100;
 
 import { tokenNameSchema, tokenScopesSchema } from "@pagehall/shared";
 
@@ -48,6 +56,8 @@ export interface ApiToken {
   name: string;
   prefix: string;
   scopes: TokenScopes;
+  contentLevel: ContentLevel;
+  knowledgeBaseIds: string[] | null;
   expiresAt: Date | null;
   createdBy: string | null;
   createdAt: Date;
@@ -76,6 +86,8 @@ const columns = {
   name: apiTokens.name,
   prefix: apiTokens.tokenPrefix,
   scopes: apiTokens.scopes,
+  contentLevel: apiTokens.contentLevel,
+  knowledgeBaseIds: apiTokens.knowledgeBaseIds,
   expiresAt: apiTokens.expiresAt,
   createdBy: apiTokens.createdBy,
   createdAt: apiTokens.createdAt,
@@ -84,8 +96,27 @@ const columns = {
   revokedAt: apiTokens.revokedAt,
 };
 
-function toToken(row: Omit<ApiToken, "scopes"> & { scopes: unknown }): ApiToken {
-  return { ...row, scopes: row.scopes as TokenScopes };
+function toToken(
+  row: Omit<ApiToken, "scopes" | "contentLevel"> & { scopes: unknown; contentLevel: string },
+): ApiToken {
+  return { ...row, scopes: row.scopes as TokenScopes, contentLevel: contentLevelOf(row.contentLevel) };
+}
+
+function contentLevelOf(value: string): ContentLevel {
+  return (contentLevels as readonly string[]).includes(value) ? (value as ContentLevel) : "read";
+}
+
+export function defaultContentLevel(scopes: TokenScopes): ContentLevel {
+  return scopes.organization?.spaces === "manage" ? "publish" : "read";
+}
+
+function checkContentLevel(scopes: TokenScopes, level: ContentLevel): void {
+  if (level !== "read" && scopes.organization?.spaces !== "manage") {
+    throw new OrganizationError(
+      "invalidScopes",
+      "A token that writes content needs the spaces area with manage",
+    );
+  }
 }
 
 export class ApiTokenService {
@@ -178,10 +209,14 @@ export class ApiTokenService {
       scopes: TokenScopes;
       organizationId?: string | null;
       expiresAt?: Date | null;
+      contentLevel?: ContentLevel;
+      knowledgeBaseIds?: readonly string[] | null;
     },
   ): Promise<{ token: string; apiToken: ApiToken }> {
     const name = tokenNameSchema.parse(input.name);
     const scopes = tokenScopesSchema.parse(input.scopes);
+    const contentLevel = input.contentLevel ?? defaultContentLevel(scopes);
+    checkContentLevel(scopes, contentLevel);
     const owner = await this.#owner(this.#database, input.accountId);
     if (owner?.state !== "active" || owner.type === "portal") {
       throw new OrganizationError("invalidOwner", "Tokens belong to active accounts");
@@ -235,6 +270,11 @@ export class ApiTokenService {
         maxLifetimeDays: maxDays,
       });
     }
+    const knowledgeBaseIds = await this.#knowledgeBases(
+      this.#database,
+      input.knowledgeBaseIds ?? null,
+      organizationId,
+    );
     const token = generateApiToken();
     return this.#database.transaction(async (tx) => {
       const [row] = await tx
@@ -246,6 +286,8 @@ export class ApiTokenService {
           tokenHash: hashToken(token),
           tokenPrefix: apiTokenPrefix(token),
           scopes,
+          contentLevel,
+          knowledgeBaseIds,
           expiresAt,
           createdBy: actor.type === "account" ? actor.id : null,
         })
@@ -262,10 +304,83 @@ export class ApiTokenService {
           organizationId,
           scopes: scopes as Record<string, Record<string, string>>,
           expiresAt: expiresAt?.toISOString() ?? null,
+          contentLevel,
+          knowledgeBaseIds,
         },
         ...(scope ? { scope: { type: "organization" as const, id: scope } } : {}),
       });
       return { token, apiToken: toToken(row) };
+    });
+  }
+
+  async #knowledgeBases(
+    executor: Executor,
+    ids: readonly string[] | null,
+    organizationId: string | null,
+  ): Promise<string[] | null> {
+    if (ids === null) return null;
+    const unique = [...new Set(ids.map((id) => id.toLowerCase()))];
+    if (unique.length === 0 || unique.length > MAX_TOKEN_KNOWLEDGE_BASES) {
+      throw new OrganizationError(
+        "invalidKnowledgeBases",
+        `Choose from 1 to ${MAX_TOKEN_KNOWLEDGE_BASES} knowledge bases, or leave the token unlimited`,
+      );
+    }
+    const found = await executor.execute<{ id: string }>(sql`
+      select id from spaces where id = any(${sql.param(unique)}::uuid[]) and type = 'knowledgeBase'
+        and deleted_at is null ${organizationId ? sql`and organization_id = ${organizationId}` : sql``}`);
+    if (found.rows.length !== unique.length) {
+      throw new OrganizationError(
+        "invalidKnowledgeBases",
+        "Choose knowledge bases of the organization the token belongs to",
+      );
+    }
+    return unique.sort();
+  }
+
+  async changeContentAccess(
+    actor: Principal,
+    id: string,
+    change: { contentLevel: ContentLevel; knowledgeBaseIds: readonly string[] | null },
+  ): Promise<ApiToken> {
+    return this.#database.transaction(async (tx) => {
+      const [current] = await tx.select(columns).from(apiTokens).where(eq(apiTokens.id, id)).for("update");
+      if (!current || current.revokedAt) throw new OrganizationError("notFound", "The token does not exist");
+      const scopes = current.scopes as TokenScopes;
+      checkContentLevel(scopes, change.contentLevel);
+      const knowledgeBaseIds = await this.#knowledgeBases(
+        tx,
+        change.knowledgeBaseIds,
+        current.organizationId ?? (await this.ownerOrganization(current.accountId)),
+      );
+      const previousLevel = contentLevelOf(current.contentLevel);
+      const unchanged =
+        previousLevel === change.contentLevel &&
+        (current.knowledgeBaseIds === null) === (knowledgeBaseIds === null) &&
+        (current.knowledgeBaseIds ?? []).join() === (knowledgeBaseIds ?? []).join();
+      if (unchanged) return toToken(current);
+      const [row] = await tx
+        .update(apiTokens)
+        .set({ contentLevel: change.contentLevel, knowledgeBaseIds, updatedAt: new Date() })
+        .where(eq(apiTokens.id, id))
+        .returning(columns);
+      if (!row) throw new OrganizationError("notFound", "The token does not exist");
+      const scope = await this.organizationOf(tx, id);
+      await this.#audit.record(tx, {
+        name: "apiToken.levelChanged",
+        actor,
+        targetId: id,
+        fields: {
+          accountId: current.accountId,
+          name: current.name,
+          contentLevel: change.contentLevel,
+          previousContentLevel: previousLevel,
+          knowledgeBaseIds,
+          previousKnowledgeBaseIds: current.knowledgeBaseIds,
+        },
+        ...(scope ? { scope: { type: "organization" as const, id: scope } } : {}),
+      });
+      return toToken(row);
     });
   }
 
@@ -407,13 +522,16 @@ export class ApiTokenService {
       account_id: string;
       organization_id: string | null;
       scopes: TokenScopes;
+      content_level: string;
+      knowledge_base_ids: string[] | null;
       expired: boolean;
       revoked: boolean;
       state: string;
       last_used_at: Date | string | null;
       scope_organization: string | null;
     }>(sql`
-      select t.id, t.account_id, t.organization_id, t.scopes, t.revoked_at is not null as revoked,
+      select t.id, t.account_id, t.organization_id, t.scopes, t.content_level, t.knowledge_base_ids,
+        t.revoked_at is not null as revoked,
         (t.expires_at is not null and t.expires_at <= now()) as expired, a.state, t.last_used_at,
         coalesce(t.organization_id, a.home_organization_id) as scope_organization
       from api_tokens t join accounts a on a.id = t.account_id
@@ -441,7 +559,13 @@ export class ApiTokenService {
     }
     return {
       accountId: row.account_id,
-      grant: { id: row.id, organizationId: row.organization_id, scopes: row.scopes },
+      grant: {
+        id: row.id,
+        organizationId: row.organization_id,
+        scopes: row.scopes,
+        contentLevel: contentLevelOf(row.content_level),
+        knowledgeBaseIds: row.knowledge_base_ids,
+      },
     };
   }
 

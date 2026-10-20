@@ -373,6 +373,8 @@ export class SearchIndexer {
       created_at: Date | string;
       content_updated_at: Date | string;
       content_language: string | null;
+      translation_of: string | null;
+      knowledge_base_language: string | null;
       indexable: boolean;
       archived: boolean;
       readers: string[];
@@ -392,7 +394,10 @@ export class SearchIndexer {
       status_id: string | null;
     }>(sql`
       select t.id, t.kind, t.mode, t.title, t.space_id, s.organization_id, t.creator_id, t.created_at,
-        t.content_updated_at, t.content_language, ${indexable(sql`t`, sql`s`)} as indexable,
+        t.content_updated_at, t.content_language, t.translation_of,
+        (select kb.default_language from knowledge_bases kb where kb.space_id = s.id and s.type = 'knowledgeBase')
+          as knowledge_base_language,
+        ${indexable(sql`t`, sql`s`)} as indexable,
         ${archived(sql`t`, sql`s`)} as archived, ${readers(sql`t`, sql`s`)} as readers,
         ${restrictionIds(sql`t`)} as restrictions,
         array(select l.label from page_labels l where l.item_id = t.id order by l.label) as labels,
@@ -426,6 +431,9 @@ export class SearchIndexer {
           : (row.version_created_at ?? row.content_updated_at),
     );
     const language: ContentLanguage =
+      (row.knowledge_base_language && row.translation_of === null
+        ? contentLanguageOf(row.knowledge_base_language)
+        : null) ??
       contentLanguageOf(row.content_language) ??
       contentLanguageOf(row.space_language) ??
       contentLanguageOf(row.organization_language) ??

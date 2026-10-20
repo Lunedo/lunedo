@@ -21,6 +21,7 @@ import { signalSpaceChange } from "../spaces/signals.js";
 import { audienceVisibility, type Space, type SpaceService } from "../spaces/spaces.js";
 import { visibleItem } from "../spaces/visibility.js";
 import type { PageTemplate, TemplateService } from "../templates/templates.js";
+import { type TranslationState, translationState } from "./translations.js";
 
 export const MAX_AUDIENCE_GROUPS = 100;
 export const CATEGORY_LEVELS = 2;
@@ -77,6 +78,9 @@ export interface ArticleSummary {
   ownerName: string | null;
   published: boolean;
   contentUpdatedAt: Date;
+  language: string;
+  translationOf: string | null;
+  translations: { language: string; itemId: string; state: TranslationState }[];
 }
 
 export interface ArticleSectionContent {
@@ -89,6 +93,7 @@ export interface ArticleSectionContent {
 
 export interface Article extends ArticleSummary {
   spaceKey: string;
+  lead: string;
   templateId: string | null;
   contactEmail: string | null;
   version: number | null;
@@ -145,6 +150,9 @@ type ArticleRow = {
   owner_name: string | null;
   published: boolean;
   content_updated_at: Date | string;
+  language: string;
+  translation_of: string | null;
+  translations: { language: string; itemId: string; state: TranslationState }[] | null;
 };
 
 function toSummary(row: ArticleRow): ArticleSummary {
@@ -160,6 +168,9 @@ function toSummary(row: ArticleRow): ArticleSummary {
     ownerName: row.owner_name,
     published: row.published,
     contentUpdatedAt: new Date(row.content_updated_at),
+    language: row.language,
+    translationOf: row.translation_of,
+    translations: row.translations ?? [],
   };
 }
 
@@ -462,8 +473,16 @@ export class KnowledgeBaseService {
         array(select c.title from tree_items c where c.id = any(array[${category(1)}, ${category(2)}])
           order by cardinality(c.path)) as category_titles,
         t.owner_id, ${this.#people.visibleName(viewer, sql`o`)} as owner_name,
-        t.published_version_id is not null as published, t.content_updated_at
+        t.published_version_id is not null as published, t.content_updated_at,
+        case when t.translation_of is null then kb.default_language else t.content_language end as language,
+        t.translation_of,
+        (select jsonb_agg(jsonb_build_object('language', tr.content_language, 'itemId', tr.id,
+            'state', ${translationState(sql`t`, sql`tr`)}) order by tr.content_language)
+          from tree_items tr join spaces trs on trs.id = tr.space_id
+          where tr.translation_of = t.id and tr.trash_entry_id is null and tr.archived_root_id is null
+            and ${visibleItem(this.#authorization, viewer, sql`tr`, sql`trs`)}) as translations
       from tree_items t join spaces s on s.id = t.space_id
+      left join knowledge_bases kb on kb.space_id = t.space_id
       left join article_numbers an on an.item_id = t.id and an.space_id = t.space_id
       left join accounts o on o.id = t.owner_id`;
   }
@@ -495,7 +514,7 @@ export class KnowledgeBaseService {
       select found.*, found.sort_key as sort_time from (select inner_found.*,
         to_char(inner_found.content_updated_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US') as sort_key from (${this.#articleSelect(viewer)}
         where t.space_id = ${spaceId} and t.kind = 'page' and t.archived_root_id is null
-          and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)} ${category} ${type}) inner_found) found
+          and t.translation_of is null and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)} ${category} ${type}) inner_found) found
       where true ${
         page.after
           ? sql`and (found.sort_key, found.id) < (${page.after[0] ?? ""}, ${page.after[1] ?? ""}::uuid)`
@@ -514,13 +533,14 @@ export class KnowledgeBaseService {
     const result = await this.#database.execute<
       ArticleRow & {
         space_key: string;
+        lead: string;
         template_id: string | null;
         version_number: number | null;
         version_document: unknown;
         version_schema: number | null;
       }
     >(sql`
-      select found.*, ps.key as space_key, pt.template_id, v.number as version_number,
+      select found.*, ps.key as space_key, pt.template_id, pt.description as lead, v.number as version_number,
         v.document as version_document, v.schema_version as version_schema
       from (${this.#articleSelect(viewer)}
         where t.id = ${itemId} and t.kind = 'page' and s.type = 'knowledgeBase'
@@ -533,7 +553,10 @@ export class KnowledgeBaseService {
     let document: DocumentJson | null = null;
     let version: number | null = row.version_number === null ? null : Number(row.version_number);
     if (options.draft) {
-      const editable = await this.#authorization.explain(viewer, "item.edit", { type: "item", id: itemId });
+      const editable = await this.#authorization.explain(viewer, "item.editDraft", {
+        type: "item",
+        id: itemId,
+      });
       if (!editable.allowed)
         throw new SpaceError("draftNotVisible", "Only editors of the article see its draft");
       const draft = await this.#database.execute<{ snapshot: unknown; schema_version: number }>(
@@ -557,6 +580,7 @@ export class KnowledgeBaseService {
     return {
       ...toSummary(row),
       spaceKey: row.space_key,
+      lead: row.lead,
       templateId: row.template_id,
       contactEmail: await this.#contactFor(row.space_id, row.category_ids),
       version,

@@ -342,8 +342,9 @@ export class PostgresSearchAdapter implements SearchAdapter {
     };
   }
 
-  #visibleArticles(viewer: SearchViewer, spaceId: string): SQL {
-    return sql`select distinct on (c.item_id) c.item_id, c.title, c.content_updated_at, t.path,
+  #visibleArticles(viewer: SearchViewer, spaceId: string, language: string | null): SQL {
+    const visible = sql`select distinct on (c.item_id) c.item_id, c.title, c.content_updated_at,
+        array_remove(t.path, t.translation_of) as path, t.translation_of, c.language,
         coalesce(t.article_type::text, 'none') as article_type
       from search_chunks c
       join tree_items t on t.id = c.item_id
@@ -352,6 +353,14 @@ export class PostgresSearchAdapter implements SearchAdapter {
       where ${sql.join(visibleChunkConditions(viewer), sql` and `)}
         and c.source = 'item' and c.content_type = 'page' and not c.archived and t.space_id = ${spaceId}::uuid
       order by c.item_id, c.position`;
+    if (language === null) {
+      return sql`select a.item_id, a.title, a.content_updated_at, a.path, a.article_type
+        from (${visible}) a where a.translation_of is null`;
+    }
+    return sql`select distinct on (coalesce(a.translation_of, a.item_id)) a.item_id, a.title, a.content_updated_at,
+        a.path, a.article_type
+      from (${visible}) a where a.translation_of is null or a.language = ${language}
+      order by coalesce(a.translation_of, a.item_id), (a.translation_of is not null and a.language = ${language}) desc`;
   }
 
   async articles(executor: Executor, request: ArticleListRequest): Promise<ArticleList> {
@@ -376,7 +385,7 @@ export class PostgresSearchAdapter implements SearchAdapter {
       types: { value: string; count: number }[] | null;
       articles: (Omit<ListedArticle, "views"> & { views: string | number })[] | null;
     }>(sql`
-      with visible as (${this.#visibleArticles(request.viewer, request.spaceId)}),
+      with visible as (${this.#visibleArticles(request.viewer, request.spaceId, request.language)}),
       scoped as (select v.* from visible v where ${sql.join(scope, sql` and `)}),
       listed as (
         select v.*, coalesce((select sum(pv.views) from portal_article_views pv
@@ -402,9 +411,10 @@ export class PostgresSearchAdapter implements SearchAdapter {
     executor: Executor,
     viewer: SearchViewer,
     spaceId: string,
+    language: string | null = null,
   ): Promise<Map<string, number>> {
     const result = await executor.execute<{ category: string; n: string }>(sql`
-      with visible as (${this.#visibleArticles(viewer, spaceId)})
+      with visible as (${this.#visibleArticles(viewer, spaceId, language)})
       select category, count(*) as n from visible v, unnest(v.path) as category
       where category <> v.item_id group by category`);
     return new Map(result.rows.map((row) => [row.category, Number(row.n)]));
@@ -526,6 +536,7 @@ export function visibleChunkConditions(viewer: SearchViewer): SQL[] {
     sql`s.deleted_at is null`,
     sql`t.trash_entry_id is null`,
     viewer.knowledgeBaseOnly ? sql`s.type = 'knowledgeBase'` : sql`true`,
+    viewer.spaceIds ? sql`c.space_id = any(${sql.param([...viewer.spaceIds])}::uuid[])` : sql`true`,
     sql`((p.space_id is null and c.space_id = t.space_id and ${storedAccessCondition(viewer, sql`c`)})
       or ((p.space_id is not null or c.space_id <> t.space_id)
         and ${liveAccessCondition(viewer, sql`c`, sql`t`, sql`s`)}))`,

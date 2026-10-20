@@ -112,6 +112,7 @@ const CONTENT_TYPES: Record<ExportFormat, string> = {
   print: "text/html; charset=utf-8",
   pdf: "application/pdf",
   docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  site: "application/zip",
 };
 
 const EXTENSIONS: Record<ExportFormat, string> = {
@@ -121,6 +122,7 @@ const EXTENSIONS: Record<ExportFormat, string> = {
   print: "html",
   pdf: "pdf",
   docx: "docx",
+  site: "zip",
 };
 
 function tooManyForFile(total: number): string {

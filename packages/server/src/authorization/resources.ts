@@ -252,13 +252,22 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
       self: async (context) => context.resource.id === context.accountId,
       homeOrganizationAdministrator: async (context) => {
         if (!context.resource.id) return false;
-        const target = await context.executor.execute<{ home_organization_id: string | null }>(
-          sql`select home_organization_id from accounts where id = ${context.resource.id}`,
-        );
-        const home = target.rows[0]?.home_organization_id;
-        if (!home) return false;
-        const facts = await context.organizationFacts(home);
-        return facts.roles.some((role) => grantsLevel(role.areas.membersAndGroups, "manage"));
+        const target = await context.executor.execute<{
+          home_organization_id: string | null;
+          type: string;
+          organizations: string[];
+        }>(sql`select a.home_organization_id, a.type,
+            array(select m.organization_id from memberships m where m.account_id = a.id) as organizations
+          from accounts a where a.id = ${context.resource.id}`);
+        const row = target.rows[0];
+        const managed = async (organizationId: string) =>
+          (await context.organizationFacts(organizationId)).roles.some((role) =>
+            grantsLevel(role.areas.membersAndGroups, "manage"),
+          );
+        if (row?.home_organization_id) return managed(row.home_organization_id);
+        if (row?.type !== "portal" || row.organizations.length === 0) return false;
+        for (const organizationId of row.organizations) if (!(await managed(organizationId))) return false;
+        return true;
       },
     },
   };
@@ -283,6 +292,7 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
     actions: {
       "space.view": { scope: "space", spaceRole: "reader", restriction: "present" },
       "space.edit": { scope: "space", spaceRole: "editor", restriction: "writable" },
+      "space.createDraft": { scope: "space", spaceRole: "editor", restriction: "writable" },
       "space.manage": { scope: "space", spaceRole: "admin", restriction: "present" },
       "space.trash": { scope: "space", spaceRole: "editor", restriction: "present" },
       "space.delete": { scope: "space", spaceRole: "admin", restriction: "present" },
@@ -345,6 +355,8 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
     actions: {
       "item.view": { scope: "space", spaceRole: "reader", restriction: "readable" },
       "item.edit": { scope: "space", spaceRole: "editor", restriction: "writable" },
+      "item.editDraft": { scope: "space", spaceRole: "editor", restriction: "writable" },
+      "item.publish": { scope: "space", spaceRole: "editor", restriction: "writable" },
       "item.delete": { scope: "space", spaceRole: "editor", restriction: "present" },
       "item.archive": { scope: "space", spaceRole: "editor", restriction: "present" },
       "item.comment": { scope: "space", spaceRole: "commenter", restriction: "interactive" },

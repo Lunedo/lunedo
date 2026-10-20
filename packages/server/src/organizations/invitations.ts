@@ -57,6 +57,7 @@ export interface InvitationPreview {
   expiresAt: Date;
   organizationName: string;
   invitedByName: string | null;
+  knowledgeBaseName: string | null;
 }
 
 export class InvitationService {
@@ -153,7 +154,10 @@ export class InvitationService {
       membershipExpiresAt?: Date | null;
       responsibleAccountId?: string | null;
     },
-    options: { within?: (tx: Transaction, invitationId: string) => Promise<void> } = {},
+    options: {
+      within?: (tx: Transaction, invitationId: string) => Promise<void>;
+      portal?: { spaceId: string; name: string };
+    } = {},
   ): Promise<Invitation> {
     const email = emailSchema.parse(input.email.trim());
     if (input.role && input.kind !== "member") {
@@ -214,6 +218,10 @@ export class InvitationService {
         })
         .returning();
       if (!row) throw new Error("The invitation was not created");
+      if (options.portal) {
+        await tx.execute(sql`
+          insert into portal_invitations (invitation_id, space_id) values (${row.id}, ${options.portal.spaceId})`);
+      }
       await options.within?.(tx, row.id);
       const [organization] = await tx
         .select({ name: organizations.name })
@@ -223,17 +231,20 @@ export class InvitationService {
         actor.type === "account"
           ? await tx.select({ name: accounts.name }).from(accounts).where(eq(accounts.id, actor.id))
           : [];
-      const id = await this.#mail.queue(tx, {
-        to: email,
-        template: "invitation",
-        language,
-        params: {
-          organizationName: organization?.name ?? "",
-          inviterName: inviter?.name ?? organization?.name ?? "",
-          link,
-          days: INVITATION_DAYS,
-        },
-      });
+      const inviterName = inviter?.name ?? organization?.name ?? "";
+      const id = options.portal
+        ? await this.#mail.queue(tx, {
+            to: email,
+            template: "portalInvitation",
+            language,
+            params: { knowledgeBaseName: options.portal.name, inviterName, link, days: INVITATION_DAYS },
+          })
+        : await this.#mail.queue(tx, {
+            to: email,
+            template: "invitation",
+            language,
+            params: { organizationName: organization?.name ?? "", inviterName, link, days: INVITATION_DAYS },
+          });
       await this.#audit.record(tx, {
         name: "invitation.created",
         actor,
@@ -302,6 +313,8 @@ export class InvitationService {
         expired: sql<boolean>`${invitations.expiresAt} <= now()`,
         organizationName: organizations.name,
         invitedByName: inviter.name,
+        knowledgeBaseName: sql<string | null>`(select s.name from portal_invitations pi
+          join spaces s on s.id = pi.space_id where pi.invitation_id = ${invitations.id})`,
       })
       .from(invitations)
       .innerJoin(organizations, eq(organizations.id, invitations.organizationId))
@@ -315,6 +328,7 @@ export class InvitationService {
       expiresAt: row.expiresAt,
       organizationName: row.organizationName,
       invitedByName: row.invitedByName,
+      knowledgeBaseName: row.knowledgeBaseName,
     };
   }
 
@@ -322,7 +336,12 @@ export class InvitationService {
     token: string,
     input: { name?: string; password?: string },
     clientIp: string | undefined,
-  ): Promise<{ accountId: string; organizationId: string; accountCreated: boolean }> {
+  ): Promise<{
+    accountId: string;
+    organizationId: string;
+    accountCreated: boolean;
+    portalSpaceId: string | null;
+  }> {
     await this.#limit(`invitation:client:${clientSubject(clientIp ?? "unknown")}`, ACCEPTANCES_PER_CLIENT);
     if (!isWellFormedToken(token)) throw new InvalidTokenError();
     return this.#database.transaction(async (tx) => {
@@ -341,11 +360,21 @@ export class InvitationService {
       if (!invitation) throw new InvalidTokenError();
       await lockOrganization(tx, invitation.organizationId);
       const events: AuditEvents = [];
+      const portalRow = await tx.execute<{ space_id: string }>(
+        sql`select space_id from portal_invitations where invitation_id = ${invitation.id}`,
+      );
+      const portalSpaceId = portalRow.rows[0]?.space_id ?? null;
       const existing = await this.#accounts.findByEmail(invitation.email, tx);
       let accountId: string;
       let kind = invitation.kind;
       if (existing) {
         if (existing.state !== "active") throw new InvalidTokenError();
+        if (portalSpaceId && existing.type !== "portal") {
+          throw new OrganizationError(
+            "portalInvitationAccountExists",
+            "This e-mail address already belongs to a Pagehall account. Sign in with it and ask the people who invited you to give that account access.",
+          );
+        }
         if (existing.type === "guest" && kind !== "guest") {
           throw new OrganizationError("invalidInvitation", "A guest account can only join as a guest");
         }
@@ -373,7 +402,7 @@ export class InvitationService {
         const created = await this.#accounts.create(
           tx,
           {
-            type: kind === "guest" ? "guest" : "standard",
+            type: portalSpaceId ? "portal" : kind === "guest" ? "guest" : "standard",
             email: invitation.email,
             name: input.name,
             password: input.password,
@@ -431,7 +460,12 @@ export class InvitationService {
       });
       await this.#audit.recordMany(tx, events);
       await this.#audit.sealer?.linkSubject(tx, invitation.id, accountId);
-      return { accountId, organizationId: invitation.organizationId, accountCreated: !existing };
+      return {
+        accountId,
+        organizationId: invitation.organizationId,
+        accountCreated: !existing,
+        portalSpaceId,
+      };
     });
   }
 

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const exportFormats = ["archive", "html", "markdown", "print", "pdf", "docx"] as const;
+export const exportFormats = ["archive", "html", "markdown", "print", "pdf", "docx", "site"] as const;
 export type ExportFormat = (typeof exportFormats)[number];
 
 export const paperSizes = ["a4", "letter"] as const;

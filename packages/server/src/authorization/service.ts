@@ -111,14 +111,38 @@ function tokenAreas(token: TokenGrant, scope: RoleScope, organizationId: string 
   return (scope === "instance" ? token.scopes.instance : token.scopes.organization) ?? {};
 }
 
-function tokenAllows(token: TokenGrant, action: RegisteredAction, organizationId: string | null): boolean {
+const DRAFT_ACTIONS: ReadonlySet<string> = new Set(["space.createDraft", "item.editDraft"]);
+
+function contentLevelAllows(token: TokenGrant, action: RegisteredAction): boolean {
+  const level = token.contentLevel ?? "publish";
+  if (level === "publish") return true;
+  const reading = action.spaceRole === "reader" && !action.name.endsWith(".react");
+  return reading || (level === "draft" && DRAFT_ACTIONS.has(action.name));
+}
+
+function tokenAllows(
+  token: TokenGrant,
+  action: RegisteredAction,
+  organizationId: string | null,
+  spaceId: string | null = null,
+): boolean {
   if (action.tokenScope) {
     return grantsLevel(token.scopes.organization?.[action.tokenScope.area], action.tokenScope.level);
   }
   if (action.scope === "space") {
     if (token.organizationId && token.organizationId !== organizationId) return false;
+    if (token.knowledgeBaseIds && (spaceId === null || !token.knowledgeBaseIds.includes(spaceId)))
+      return false;
+    if (!contentLevelAllows(token, action)) return false;
     const level = action.spaceRole === "editor" || action.spaceRole === "admin" ? "manage" : "view";
     return grantsLevel(token.scopes.organization?.spaces, level);
+  }
+  if (
+    action.area === "spaces" &&
+    action.level === "manage" &&
+    (token.contentLevel ?? "publish") !== "publish"
+  ) {
+    return false;
   }
   const areas = tokenAreas(token, action.scope, organizationId);
   if (action.area && action.level) return grantsLevel(areas[action.area], action.level);
@@ -130,9 +154,10 @@ function limitByToken(
   action: RegisteredAction,
   organizationId: string | null,
   decision: Decision,
+  spaceId: string | null = null,
 ): Decision {
   if (!decision.allowed || principal.type !== "account" || !principal.token) return decision;
-  if (tokenAllows(principal.token, action, organizationId)) return decision;
+  if (tokenAllows(principal.token, action, organizationId, spaceId)) return decision;
   return { ...decision, allowed: false, grants: [], denials: ["tokenScope"] };
 }
 
@@ -228,7 +253,13 @@ export class AuthorizationService {
           : [];
         if (grants.length === 0) return decision([], [restriction.denial]);
       }
-      return limitByToken(principal, action, facts.space.organizationId, decision(grants, ["noSpaceRole"]));
+      return limitByToken(
+        principal,
+        action,
+        facts.space.organizationId,
+        decision(grants, ["noSpaceRole"]),
+        spaceId,
+      );
     }
 
     const organizationId = await this.#organizationOf(action, resource, executor);

@@ -9,6 +9,7 @@ import {
   FEEDBACK_MAX_LENGTH,
   generateToken,
   hostOf,
+  interfaceLanguage,
   PORTAL_PAGE_SIZE,
   type PortalArticleFilter,
   type PortalConfig,
@@ -28,7 +29,7 @@ import { COOKIES, clearCookie, readCookie, setCookie } from "../http/cookies.js"
 import { ownOrigin } from "../http/csrf.js";
 import { instanceUrlOf } from "../http/instance-url.js";
 import { fontFile, PORTAL_ASSETS, portalCss, portalScript } from "./assets.js";
-import { messagesFor } from "./messages.js";
+import { languageName, messagesFor } from "./messages.js";
 import {
   articlePage,
   articlePath,
@@ -37,6 +38,7 @@ import {
   contactPage,
   emptySearchPage,
   errorPage,
+  type LanguageLink,
   notFoundPage,
   type PortalView,
   type SearchState,
@@ -61,7 +63,9 @@ const FILTERS: readonly PortalArticleFilter[] = ["howTo", "troubleshooting"];
 
 interface Target {
   config: PortalConfig;
+  root: string;
   base: string;
+  language: string;
   domain: string | null;
   origin: string;
   rest: string;
@@ -75,11 +79,12 @@ interface Viewer {
   account: { name: string; email: string; type: string } | null;
 }
 
-function pageSecurityHeaders(reply: FastifyReply, nonce: string): void {
+function pageSecurityHeaders(reply: FastifyReply, nonce: string, frames: readonly string[] = []): void {
   reply.header(
     "content-security-policy",
     [
       "default-src 'none'",
+      ...(frames.length > 0 ? [`frame-src ${frames.join(" ")}`] : []),
       "script-src 'self'",
       `style-src 'self' 'nonce-${nonce}'`,
       "img-src 'self' data:",
@@ -136,6 +141,12 @@ async function readBody(request: FastifyRequest, limit: number): Promise<string 
   return Buffer.concat(chunks).toString("utf8");
 }
 
+function queryLanguage(target: Target, value: string | null): string | null {
+  return value && value !== target.language && target.config.languages.includes(value as never)
+    ? value
+    : null;
+}
+
 function sameOrigin(request: FastifyRequest, origin: string): boolean {
   if (request.headers["sec-fetch-site"] === "cross-site") return false;
   return request.headers.origin === origin;
@@ -179,7 +190,9 @@ async function servePortal(
     if (!config) return bareNotFound(reply);
     target = {
       config,
+      root: "",
       base: "",
+      language: config.defaultLanguage,
       domain: entry.host,
       origin: `https://${entry.host}`,
       rest: entry.path,
@@ -201,7 +214,9 @@ async function servePortal(
     }
     target = {
       config: found.config,
+      root: `/help/${found.config.path}`,
       base: `/help/${found.config.path}`,
+      language: found.config.defaultLanguage,
       domain: null,
       origin: new URL(entry.instanceUrl).origin,
       rest,
@@ -209,13 +224,28 @@ async function servePortal(
       settings,
     };
   }
+  const prefix = /^\/([a-z]{2})(\/.*)?$/.exec(target.rest);
+  const prefixed = prefix?.[1];
+  if (prefixed && target.config.languages.length > 1 && target.config.languages.includes(prefixed as never)) {
+    const remainder = prefix?.[2] ?? "/";
+    if (prefixed === target.config.defaultLanguage) {
+      const query = request.url.includes("?") ? request.url.slice(request.url.indexOf("?")) : "";
+      return reply
+        .code(301)
+        .header("cache-control", "no-cache")
+        .redirect(`${target.root}${remainder}${query}`);
+    }
+    target.language = prefixed;
+    target.base = `${target.root}/${prefixed}`;
+    target.rest = remainder;
+  }
   const viewer = await resolveViewer(request, services, target);
   try {
     return await route(request, reply, services, context, target, viewer);
   } catch (error) {
     request.log.error({ err: error }, "A portal page failed");
     const view = await buildView(services, target, viewer, { categories: false });
-    pageSecurityHeaders(reply, view.nonce);
+    pageSecurityHeaders(reply, view.nonce, view.frameSources);
     return reply
       .code(500)
       .type("text/html; charset=utf-8")
@@ -290,17 +320,69 @@ async function resolveDomainSession(
   return token ? services.portalSessions.resolve(token, domain) : null;
 }
 
+function languageBase(target: Target, language: string): string {
+  return language === target.config.defaultLanguage ? target.root : `${target.root}/${language}`;
+}
+
+function languageLinks(target: Target, href: (language: string) => string): LanguageLink[] {
+  if (target.config.languages.length < 2) return [];
+  return [...target.config.languages]
+    .sort((a, b) =>
+      a === target.config.defaultLanguage ? -1 : b === target.config.defaultLanguage ? 1 : a.localeCompare(b),
+    )
+    .map((language) => ({
+      language,
+      label: languageName(language, language),
+      href: href(language),
+      current: language === target.language,
+    }));
+}
+
+function alternatesOf(
+  target: Target,
+  entries: { language: string; path: string }[],
+): { hreflang: string; href: string }[] {
+  if (target.config.audience !== "public" || target.config.languages.length < 2 || entries.length === 0)
+    return [];
+  const fallback = entries.find((entry) => entry.language === target.config.defaultLanguage) ?? entries[0];
+  return [
+    ...entries.map((entry) => ({ hreflang: entry.language, href: `${target.origin}${entry.path}` })),
+    ...(fallback ? [{ hreflang: "x-default", href: `${target.origin}${fallback.path}` }] : []),
+  ];
+}
+
+function pageLanguages(target: Target, rest: string): Pick<PortalView, "languageLinks" | "alternates"> {
+  return {
+    languageLinks: languageLinks(target, (language) => `${languageBase(target, language)}${rest}`),
+    alternates: alternatesOf(
+      target,
+      target.config.languages.map((language) => ({
+        language,
+        path: `${languageBase(target, language)}${rest}`,
+      })),
+    ),
+  };
+}
+
 async function buildView(
   services: AccountServices,
   target: Target,
   viewer: Viewer,
-  options: { categories?: boolean } = {},
+  options: {
+    categories?: boolean;
+    language?: string;
+    languages?: Pick<PortalView, "languageLinks" | "alternates">;
+    note?: PortalView["note"];
+  } = {},
 ): Promise<PortalView> {
   const { config } = target;
-  const t = messagesFor(config.language);
+  const lang = options.language ?? target.language;
+  const t = messagesFor(interfaceLanguage(lang));
   const brand = brandValues(config.brand);
   const categories =
-    options.categories === false ? [] : await services.portalReader.categories(viewer.principal, config);
+    options.categories === false
+      ? []
+      : await services.portalReader.categories(viewer.principal, config, target.language);
   let appLink: PortalView["appLink"] = null;
   if (
     viewer.account &&
@@ -311,15 +393,20 @@ async function buildView(
     appLink = { label, href: `${target.instanceUrl}/` };
   }
   const logoUrl = config.logoRef
-    ? `${target.base}/logo?v=${config.logoRef}`
+    ? `${target.root}/logo?v=${config.logoRef}`
     : config.organizationLogoRef
-      ? `${target.base}/logo?v=o${config.organizationLogoRef}`
+      ? `${target.root}/logo?v=o${config.organizationLogoRef}`
       : null;
   const assetBase = target.domain ? "/_assets" : "/help/_assets";
   return {
     config,
     t,
+    lang,
+    root: target.root,
     base: target.base,
+    ...(options.languages ?? pageLanguages(target, target.rest)),
+    note: options.note ?? null,
+    frameSources: await services.embeds.frameSources(),
     origin: target.origin,
     nonce: randomBytes(16).toString("base64"),
     assets: { style: `${assetBase}/${PORTAL_ASSETS.style}`, script: `${assetBase}/${PORTAL_ASSETS.script}` },
@@ -329,14 +416,14 @@ async function buildView(
     appLink,
     signInUrl: viewer.account
       ? null
-      : `${target.base}/sign-in?return=${encodeURIComponent(`${target.base}${target.rest}`)}`,
-    signOutUrl: `${target.base}/sign-out`,
+      : `${target.root}/sign-in?return=${encodeURIComponent(`${target.base}${target.rest}`)}`,
+    signOutUrl: `${target.root}/sign-out`,
     categories,
   };
 }
 
 function sendPage(reply: FastifyReply, view: PortalView, markup: string, status = 200): FastifyReply {
-  pageSecurityHeaders(reply, view.nonce);
+  pageSecurityHeaders(reply, view.nonce, view.frameSources);
   return reply.code(status).type("text/html; charset=utf-8").send(markup);
 }
 
@@ -420,9 +507,17 @@ async function start(
 ): Promise<FastifyReply> {
   const reader = services.portalReader;
   const [mostRead, recent, frequent] = await Promise.all([
-    reader.articles(viewer.principal, target.config, { sort: "views", limit: START_LIST_LIMIT }),
-    reader.articles(viewer.principal, target.config, { sort: "updated", limit: START_LIST_LIMIT }),
-    reader.frequentSearches(viewer.principal, target.config),
+    reader.articles(viewer.principal, target.config, {
+      sort: "views",
+      limit: START_LIST_LIMIT,
+      language: target.language,
+    }),
+    reader.articles(viewer.principal, target.config, {
+      sort: "updated",
+      limit: START_LIST_LIMIT,
+      language: target.language,
+    }),
+    reader.frequentSearches(viewer.principal, target.config, target.language),
   ]);
   return sendPage(
     reply,
@@ -456,6 +551,7 @@ async function category(
     sort,
     limit: PORTAL_PAGE_SIZE,
     offset: (page - 1) * PORTAL_PAGE_SIZE,
+    language: target.language,
   });
   return sendPage(reply, view, categoryPage(view, found, list, state, PORTAL_PAGE_SIZE));
 }
@@ -480,7 +576,12 @@ async function search(
   const cursor = decodeCursor(query.get("after"));
   let result: Awaited<ReturnType<AccountServices["portalReader"]["search"]>>;
   try {
-    result = await services.portalReader.search(viewer.principal, target.config, { ...state, cursor });
+    result = await services.portalReader.search(viewer.principal, target.config, {
+      ...state,
+      cursor,
+      language: target.language,
+      searchedLanguage: queryLanguage(target, query.get("in")),
+    });
   } catch (error) {
     request.log.error({ err: error }, "A portal search failed");
     return sendPage(reply, view, searchFailedPage(view, text), 503);
@@ -506,14 +607,33 @@ async function search(
   const params = new URLSearchParams({ q: text });
   if (state.categoryId) params.set("category", state.categoryId);
   if (state.type) params.set("type", state.type);
+  if (result.language !== target.language) params.set("in", result.language);
   if (result.nextCursor) params.set("after", encodeCursor(result.nextCursor));
   const more = result.nextCursor ? `${target.base}/search?${params.toString()}` : null;
   const mostRead =
     result.total === 0
-      ? (await services.portalReader.articles(viewer.principal, target.config, { sort: "views", limit: 4 }))
-          .articles
+      ? (
+          await services.portalReader.articles(viewer.principal, target.config, {
+            sort: "views",
+            limit: 4,
+            language: target.language,
+          })
+        ).articles
       : [];
-  return sendPage(reply, view, searchPage(view, state, result, more, mostRead));
+  const shownView =
+    result.language === target.language
+      ? view
+      : {
+          ...view,
+          note: {
+            text: view.t.searchFallbackNote(
+              languageName(target.language, interfaceLanguage(target.language)),
+              languageName(result.language, interfaceLanguage(target.language)),
+            ),
+            lang: target.language,
+          },
+        };
+  return sendPage(reply, shownView, searchPage(shownView, state, result, more, mostRead));
 }
 
 async function articleRoute(
@@ -527,7 +647,7 @@ async function articleRoute(
   slug: string,
 ): Promise<FastifyReply> {
   const reader = services.portalReader;
-  const lookup = await reader.article(viewer.principal, target.config, number, slug);
+  const lookup = await reader.article(viewer.principal, target.config, number, slug, target.language);
   if (!lookup) return sendPage(reply, view, notFoundPage(view), 404);
   if (lookup.type === "redirect") {
     const other = await services.portals.config(lookup.spaceId);
@@ -538,9 +658,41 @@ async function articleRoute(
     return reply.code(301).header("cache-control", "no-cache").redirect(address);
   }
   const { article } = lookup;
-  if (slug !== article.slug) {
+  if (slug !== article.slug && !article.fallback) {
     return reply.code(301).header("cache-control", "no-cache").redirect(articlePath(target.base, article));
   }
+  if (article.fallback && slug !== "" && !article.alternates.some((entry) => entry.slug === slug)) {
+    return reply
+      .code(301)
+      .header("cache-control", "no-cache")
+      .redirect(articlePath(target.base, { number: article.number, slug: "" }));
+  }
+  const readerLanguage = interfaceLanguage(target.language);
+  const articleView = await buildView(services, target, viewer, {
+    language: article.language,
+    languages: {
+      languageLinks: languageLinks(target, (language) => {
+        const alternate = article.alternates.find((entry) => entry.language === language);
+        return articlePath(languageBase(target, language), alternate ?? { number: article.number, slug: "" });
+      }),
+      alternates: alternatesOf(
+        target,
+        article.alternates.map((entry) => ({
+          language: entry.language,
+          path: articlePath(languageBase(target, entry.language), entry),
+        })),
+      ),
+    },
+    note: article.fallback
+      ? {
+          text: messagesFor(readerLanguage).fallbackNote(
+            languageName(target.language, readerLanguage),
+            languageName(article.language, readerLanguage),
+          ),
+          lang: target.language,
+        }
+      : null,
+  });
   await services.portalStatistics
     .recordView(target.config.spaceId, article.itemId)
     .catch((error: unknown) => request.log.warn({ err: error }, "A portal article view was not counted"));
@@ -553,6 +705,7 @@ async function articleRoute(
             type: "troubleshooting",
             limit: RELATED_LIMIT,
             exclude: [article.itemId],
+            language: target.language,
           })
         ).articles
       : [];
@@ -563,6 +716,7 @@ async function articleRoute(
           categoryId: scope,
           limit: RELATED_LIMIT,
           exclude,
+          language: target.language,
         })
       ).articles
     : [];
@@ -572,13 +726,14 @@ async function articleRoute(
         categoryId: article.categoryId,
         limit: RELATED_LIMIT,
         exclude,
+        language: target.language,
       })
     ).articles;
   }
   const editUrl = article.canEdit
     ? `${target.instanceUrl}/spaces/${encodeURIComponent(article.spaceKey)}/pages/${article.itemId}?edit=true`
     : null;
-  return sendPage(reply, view, articlePage(view, article, { related, similar, editUrl }));
+  return sendPage(reply, articleView, articlePage(articleView, article, { related, similar, editUrl }));
 }
 
 async function signInScreen(

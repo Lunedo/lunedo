@@ -133,6 +133,7 @@ export interface PortalSearchRequest {
   articleTypes: string[];
   limit: number;
   cursor: SearchCursor | null;
+  language: string;
 }
 
 export interface PortalSearchHit {
@@ -313,7 +314,7 @@ export class SearchService {
         labels: [],
         authorIds: null,
         statusIds: [],
-        languages: [],
+        languages: [request.language],
         includeArchived: false,
         updatedAfter: null,
         updatedBefore: null,
@@ -363,10 +364,11 @@ export class SearchService {
     principal: Principal,
     organizationId: string,
     spaceId: string,
+    language: string | null = null,
   ): Promise<Map<string, number>> {
     const viewer = await loadPortalViewer(this.#database, principal, organizationId);
     if (!viewer) return new Map();
-    return this.#adapter.articleCounts(this.#database, viewer, spaceId);
+    return this.#adapter.articleCounts(this.#database, viewer, spaceId, language);
   }
 
   async #visibleSpaces(principal: Principal, organizationId: string): Promise<Map<string, SearchSpace>> {

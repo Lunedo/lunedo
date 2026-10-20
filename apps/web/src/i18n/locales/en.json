@@ -1595,7 +1595,26 @@
     "invalidRetention": "Enter a whole number of months from 1 to 60.",
     "invalidHelpKnowledgeBase": "This knowledge base cannot open from the help icon because not everyone signed in may read it. Choose another one or widen its audience.",
     "organizationNotFound": "The organization does not exist anymore. Reload the page and choose another one.",
-    "feedbackNotFound": "The note was deleted in the meantime. Reload the page to see the current notes."
+    "feedbackNotFound": "The note was deleted in the meantime. Reload the page to see the current notes.",
+    "invalidLanguage": "This language is not supported. Choose one from the list.",
+    "tooManyLanguages": "A knowledge base can have up to 30 languages. Turn off a language you no longer need first.",
+    "defaultLanguageTranslated": "Articles already have translations into this language, so it cannot become the default language. Delete those translations first, or choose another language.",
+    "languageNotEnabled": "The language is not enabled for this knowledge base. A space admin can enable it under Space settings → Languages.",
+    "translationExists": "The article already has a translation into this language. Open it from the languages of the article.",
+    "translationSource": "Only original articles of a knowledge base can be translated. Open the original and add the translation there.",
+    "translationPlacement": "A translation stays with the article it translates. Move the original article to move its translations.",
+    "knowledgeBaseLanguage": "Articles of a knowledge base are in its default language. Add a translation for another language instead.",
+    "invalidKnowledgeBases": "The token can only be limited to knowledge bases of its organization. Choose them again from the list.",
+    "publishNotAllowed": "This token or account may only save drafts. A person publishes them in Pagehall.",
+    "changedSinceTooOld": "Changes are known for 90 days only. Fetch all articles again without a start date.",
+    "invalidCursor": "The page cursor is not valid. Start again from the first page.",
+    "tooManySections": "An article can have up to 50 sections. Combine sections and try again.",
+    "portalAccountOnly": "This account reads knowledge bases in their portal and has no access to the wiki. Open the portal from the list instead.",
+    "invitationNotFound": "The invitation no longer exists. It may have been accepted or withdrawn already; reload the list.",
+    "portalAudienceRequired": "Portal accounts read only knowledge bases for portal accounts. Change the audience under Visibility first.",
+    "portalAccountNotFound": "The portal account no longer belongs to this organization. Reload the list.",
+    "portalAccountShared": "The account also reads knowledge bases of other organizations, so it cannot be deactivated here. Remove it from this organization instead.",
+    "portalInvitationAccountExists": "This e-mail address already belongs to a Pagehall account. Sign in with it and ask the people who invited you to give that account access."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -1800,7 +1819,11 @@
         "uid": "Your user name in the directory, for example lhofer.",
         "unknown": "The name you use to sign in to your computer at work."
       }
-    }
+    },
+    "portalInvitationFor": "Read {knowledgeBase}",
+    "portalInvitationDescription": "{inviter} invited {email} to read the help {knowledgeBase}. Create a reader account with a password; you can add a passkey afterwards.",
+    "portalAccountCreated": "Your reader account is ready. Sign in on the portal of {knowledgeBase}.",
+    "openPortal": "Open {knowledgeBase}"
   },
   "reauthentication": {
     "withProvider": "Continue with {name}",
@@ -2500,7 +2523,35 @@
     "customDate": "Expires on",
     "customDateFuture": "Choose a date in the future.",
     "customDateWithin": "Choose a date in the next {days, plural, one {# day} other {# days}}.",
-    "maximumApplies": "Tokens may live at most {days, plural, one {# day} other {# days}} here."
+    "maximumApplies": "Tokens may live at most {days, plural, one {# day} other {# days}} here.",
+    "content": {
+      "title": "Content",
+      "levels": {
+        "none": "No access to content",
+        "read": "Read",
+        "draft": "Write drafts",
+        "publish": "Write and publish"
+      },
+      "descriptions": {
+        "none": "The token reads no spaces, pages or articles.",
+        "read": "Reads everything the account can read.",
+        "draft": "Also creates articles and saves drafts of knowledge base articles. A person publishes them in Pagehall.",
+        "publish": "Writes and publishes like the account, without a person checking first."
+      },
+      "reach": "Reach",
+      "allContent": "Everything the account may use",
+      "selectedKnowledgeBases": "Only selected knowledge bases",
+      "knowledgeBases": "Knowledge bases",
+      "searchKnowledgeBases": "Search knowledge bases by name",
+      "knowledgeBasesRequired": "Choose at least one knowledge base, or let the token reach all content.",
+      "summaryLimited": "{level} in {count, plural, one {# knowledge base} other {# knowledge bases}}",
+      "change": "Change content access",
+      "changeTitle": "Content access of {name}",
+      "changeFailed": "The content access could not be changed",
+      "readOnlyScope": "This token was created with read access to spaces, so it can only read. Create a new token to write.",
+      "save": "Save content access",
+      "saved": "Content access changed"
+    }
   },
   "notifications": {
     "title": "Notifications",
@@ -3740,7 +3791,8 @@
         "updated": "API token changed",
         "revoked": "API token revoked",
         "expired": "API token expired",
-        "rejected": "API token refused"
+        "rejected": "API token refused",
+        "levelChanged": "Write level of an API token changed"
       },
       "audit": {
         "exported": "Audit log exported"
@@ -3785,7 +3837,8 @@
         "restrictionHolderAdded": "Person or group added to a page restriction",
         "restrictionHolderRemoved": "Person or group removed from a page restriction",
         "subtreeExported": "Page exported with its subpages",
-        "copied": "Page copied"
+        "copied": "Page copied",
+        "publishedWithToken": "Page published with an API token"
       },
       "whiteboard": {
         "updateRejected": "Whiteboard change rejected",
@@ -3867,7 +3920,8 @@
       "knowledgeBase": {
         "audienceChanged": "Readers of a knowledge base changed",
         "reviewSettingsChanged": "Review settings of a knowledge base changed",
-        "portalAddressChanged": "Portal address of a knowledge base changed"
+        "portalAddressChanged": "Portal address of a knowledge base changed",
+        "languagesChanged": "Languages of a knowledge base changed"
       },
       "article": {
         "reviewed": "Article marked as reviewed",
@@ -3875,6 +3929,9 @@
         "sourceAdded": "Source page linked to an article",
         "sourceRemoved": "Source page removed from an article",
         "feedbackDeleted": "Reader note on an article deleted"
+      },
+      "portalAccount": {
+        "invited": "Portal account invited"
       }
     },
     "action": "Action",
@@ -8627,7 +8684,8 @@
       "markdown": "Markdown",
       "print": "Print view",
       "pdf": "PDF",
-      "docx": "Word"
+      "docx": "Word",
+      "site": "Static website"
     }
   },
   "search": {
@@ -9355,7 +9413,8 @@
       "noCategoriesReader": "Nothing has been published in this knowledge base yet.",
       "withoutCategory": "Without category",
       "total": "{count, plural, one {# article} other {# articles}} in categories",
-      "emptyFiltered": "No articles of this type in this category."
+      "emptyFiltered": "No articles of this type in this category.",
+      "languages": "Translations"
     },
     "create": {
       "typeLabel": "Type of space",
@@ -9567,6 +9626,45 @@
       "shortenTitle": "Delete older notes now?",
       "shortenDescription": "{count, plural, one {Notes older than # month are deleted at once and cannot be restored.} other {Notes older than # months are deleted at once and cannot be restored.}}",
       "shortenConfirm": "{count, plural, one {Keep notes for # month} other {Keep notes for # months}}"
+    },
+    "languages": {
+      "tab": "Languages",
+      "title": "Languages",
+      "description": "Articles can be translated. Translations are linked to their original; where one is missing, readers see the default language with a note.",
+      "loadFailed": "The languages could not be loaded",
+      "section": "Languages",
+      "default": "Default language",
+      "defaultDescription": "Language of new articles and fallback for readers whose language has no translation.",
+      "enabled": "Enabled languages",
+      "enabledDescription": "From two languages on, the portal shows a language choice. {language}, the default language, always stays enabled. Turning a language off hides its translations from readers but keeps them.",
+      "add": "Add a language",
+      "progress": "State of the translations",
+      "translated": "{count, plural, one {# of {total} articles translated} other {# of {total} articles translated}}",
+      "missing": "{count, plural, one {# missing} other {# missing}}",
+      "outdated": "{count, plural, one {# outdated} other {# outdated}}",
+      "single": "Only one language is enabled, so readers see nothing about languages."
+    },
+    "translations": {
+      "button": "Languages",
+      "buttonLabel": "Languages of the article: {language}",
+      "heading": "Languages of this article",
+      "loadFailed": "The translations could not be loaded",
+      "states": {
+        "original": "Original",
+        "current": "Up to date",
+        "outdated": "Outdated",
+        "unpublished": "Not published",
+        "missing": "Missing"
+      },
+      "disabled": "Language turned off",
+      "outdatedHint": "The original was published after this translation. Compare it with the original and publish the translation again.",
+      "create": "Translate into {language}",
+      "open": "Open",
+      "created": "Translation created",
+      "createdDescription": "It starts as a copy of the original. Translate the text and publish it.",
+      "createFailed": "The translation could not be created",
+      "translationOf": "Translation of {title}",
+      "badge": "{language}: {state}"
     }
   },
   "helpTarget": {
@@ -9671,7 +9769,8 @@
         "all": "All",
         "due": "Due",
         "soon": "Within 30 days",
-        "unowned": "Without owner"
+        "unowned": "Without owner",
+        "translations": "Translations"
       },
       "mine": "Only my articles",
       "loadFailed": "The articles to review",
@@ -9699,7 +9798,8 @@
       "showAll": "Show all articles",
       "offTitle": "Reviews are off",
       "offDescription": "Articles appear here when they have a review interval and become due, when a source page changes or when they have no owner. Set an interval in the settings of the knowledge base.",
-      "openSettings": "Set review interval"
+      "openSettings": "Set review interval",
+      "translationOutdatedHint": "{language} translation outdated"
     },
     "settings": {
       "tab": "Review",
@@ -9817,5 +9917,64 @@
       "deleteFailed": "The note could not be deleted"
     },
     "privacy": "Counted anonymously: no names, accounts, sessions or IP addresses. Searches older than 12 months are kept only as counts per term and month, for terms searched at least 3 times that month."
+  },
+  "portalAccounts": {
+    "tab": "Portal accounts",
+    "title": "Portal accounts",
+    "description": "Readers without a company account sign in with their e-mail address and a password or passkey. They see only the portal of the organization's knowledge bases for portal accounts, never the wiki.",
+    "notForPortalTitle": "This knowledge base is not for portal accounts",
+    "notForPortal": "Portal accounts read only knowledge bases whose audience is portal accounts. Change the audience to invite readers here.",
+    "toVisibility": "Open Visibility",
+    "adminsOnly": "Only space admins manage portal accounts.",
+    "loadFailed": "The portal accounts could not be loaded",
+    "accounts": "Readers",
+    "invitations": "Open invitations",
+    "emptyTitle": "No portal accounts yet",
+    "emptyDescription": "Invite readers by e-mail. They get a link to create their account.",
+    "deactivated": "Deactivated",
+    "expiresOn": "Access until {date}",
+    "noExpiry": "No end of access",
+    "lastSignIn": "Last signed in {when}",
+    "neverSignedIn": "Never signed in",
+    "linkExpires": "Link valid until {date}",
+    "deactivate": "Deactivate",
+    "remove": "Remove from organization",
+    "withdraw": "Withdraw invitation",
+    "deactivateTitle": "Deactivate {name}?",
+    "deactivateDescription": "All sessions end at once and the account can no longer sign in. An instance administrator can reactivate it.",
+    "deactivateConfirm": "Deactivate account",
+    "deactivateFailed": "The account could not be deactivated",
+    "removeTitle": "Remove {name} from the organization?",
+    "removeDescription": "The account no longer reads the knowledge bases of this organization. Invite it again to give it access back.",
+    "removeConfirm": "Remove from organization",
+    "removed": "Portal account removed",
+    "removeFailed": "The account could not be removed",
+    "withdrawTitle": "Withdraw the invitation for {email}?",
+    "withdrawDescription": "The link in the e-mail stops working. You can invite the address again later.",
+    "withdrawConfirm": "Withdraw invitation",
+    "withdrawFailed": "The invitation could not be withdrawn",
+    "invite": {
+      "open": "Invite reader",
+      "title": "Invite a reader",
+      "description": "The person gets an e-mail with a link that works for 7 days. You are responsible for the account and are reminded before its access ends.",
+      "email": "E-mail address",
+      "emailInvalid": "Enter an e-mail address such as reader@example.org.",
+      "expiry": "Access until (optional)",
+      "expiryDescription": "Leave it empty for access without an end.",
+      "expiryFuture": "Choose a date in the future.",
+      "send": "Send invitation",
+      "sent": "Invitation sent to {email}",
+      "failed": "The invitation could not be sent"
+    },
+    "home": {
+      "title": "Your help portals",
+      "description": "Signed in as {name}. This account reads help portals; it has no access to the wiki.",
+      "signOut": "Sign out",
+      "portals": "Portals",
+      "open": "Open portal",
+      "loadFailed": "The portals could not be loaded",
+      "emptyTitle": "No portal to read",
+      "emptyDescription": "Your access may have ended. Ask the people who invited you."
+    }
   }
 }

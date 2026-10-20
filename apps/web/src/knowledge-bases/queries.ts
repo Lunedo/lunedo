@@ -19,6 +19,9 @@ export type TemplateSections = Ok<"/api/v1/spaces/{spaceId}/knowledge-base/templ
 export type PortalSettings = Ok<"/api/v1/spaces/{spaceId}/knowledge-base/portal", "get">;
 export type PortalDomain = Ok<"/api/v1/spaces/{spaceId}/knowledge-base/portal/domains", "get">[number];
 export type ArticleTypeFilter = ArticleType | "all";
+export type LanguageSettings = Ok<"/api/v1/spaces/{spaceId}/knowledge-base/languages", "get">;
+export type ArticleTranslations = Ok<"/api/v1/articles/{itemId}/translations", "get">;
+export type TranslationState = ArticleTranslations["translations"][number]["state"];
 
 export const ARTICLES_PAGE = 25;
 
@@ -28,6 +31,8 @@ export const knowledgeBaseKeys = {
   categories: (spaceId: string) => ["spaces", spaceId, "knowledgeBase", "categories"] as const,
   templates: (spaceId: string) => ["spaces", spaceId, "knowledgeBase", "templates"] as const,
   portal: (spaceId: string) => ["spaces", spaceId, "knowledgeBase", "portal"] as const,
+  languages: (spaceId: string) => ["spaces", spaceId, "knowledgeBase", "languages"] as const,
+  translations: (itemId: string) => ["articles", itemId, "translations"] as const,
   domains: (spaceId: string) => ["spaces", spaceId, "knowledgeBase", "portal", "domains"] as const,
   articles: (spaceId: string, categoryId: string | null, type: ArticleTypeFilter) =>
     ["spaces", spaceId, "knowledgeBase", "articles", categoryId, type] as const,
@@ -38,6 +43,24 @@ export function knowledgeBaseSettingsQuery(spaceId: string) {
     queryKey: knowledgeBaseKeys.settings(spaceId),
     queryFn: () =>
       request(() => api.GET("/api/v1/spaces/{spaceId}/knowledge-base", { params: { path: { spaceId } } })),
+  });
+}
+
+export function languagesQuery(spaceId: string) {
+  return queryOptions({
+    queryKey: knowledgeBaseKeys.languages(spaceId),
+    queryFn: () =>
+      request(() =>
+        api.GET("/api/v1/spaces/{spaceId}/knowledge-base/languages", { params: { path: { spaceId } } }),
+      ),
+  });
+}
+
+export function translationsQuery(itemId: string) {
+  return queryOptions({
+    queryKey: knowledgeBaseKeys.translations(itemId),
+    queryFn: () =>
+      request(() => api.GET("/api/v1/articles/{itemId}/translations", { params: { path: { itemId } } })),
   });
 }
 

@@ -7,7 +7,11 @@ import { downloadBlob } from "../components/download.js";
 export type ExportEntry =
   paths["/api/v1/exports/{exportId}"]["get"]["responses"][200]["content"]["application/json"];
 export type PageExportFormat = "markdown" | "html" | "zip" | "print" | "pdf" | "docx";
-export type ExportFormat = ExportEntry["format"];
+export type ExportFormat = NonNullable<
+  NonNullable<
+    paths["/api/v1/spaces/{spaceId}/exports"]["post"]["requestBody"]
+  >["content"]["application/json"]["format"]
+>;
 export type ExportOptions = ExportEntry["options"];
 export type ExportCounts =
   paths["/api/v1/spaces/{spaceId}/exports/summary"]["get"]["responses"][200]["content"]["application/json"];

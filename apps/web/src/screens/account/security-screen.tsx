@@ -36,6 +36,7 @@ import { request } from "../../api/request.js";
 import { OwnIdentities } from "../../components/linked-identities.js";
 import { RecoveryCodes } from "../../components/recovery-codes.js";
 import { SecurityActivitySection } from "../../components/security-activity.js";
+import { ContentAccessDialog } from "../../components/token-content-access.js";
 import { CreateTokenDialog, RevokeTokenDialog, scopeSummary } from "../../components/token-dialogs.js";
 import { TotpEnrollment } from "../../components/totp-enrollment.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
@@ -106,7 +107,7 @@ function SecurityDangerZone() {
   );
 }
 
-function SignInSection() {
+export function SignInSection() {
   const { t } = useTranslation();
   const session = useSession();
   const [dialog, setDialog] = useState<"password" | "email" | null>(null);
@@ -254,7 +255,7 @@ function ChangeEmailDialog({ open, onOpenChange }: { open: boolean; onOpenChange
   );
 }
 
-function TwoFactorSection() {
+export function TwoFactorSection() {
   const { t } = useTranslation();
   const format = useFormat();
   const { toast } = useToast();
@@ -486,7 +487,7 @@ function AddPasskeyDialog({
   );
 }
 
-function SessionsSection() {
+export function SessionsSection() {
   const { t } = useTranslation();
   const format = useFormat();
   const showFailure = useFailureToast();
@@ -578,6 +579,8 @@ function TokensSection() {
     throwOnError: false,
   });
   const [revoking, setRevoking] = useState<ApiToken | null>(null);
+  const [changing, setChanging] = useState<ApiToken | null>(null);
+  const { toast } = useToast();
   const refresh = () => queryClient.invalidateQueries({ queryKey: accountKeys.tokens });
   const instanceAccess = [
     ...[
@@ -606,7 +609,7 @@ function TokensSection() {
             icon={KeyRound}
             title={token.name}
             description={[
-              scopeSummary(t, token.scopes),
+              scopeSummary(t, token),
               token.expiresAt
                 ? t("tokens.expiresOn", { date: format.date(token.expiresAt) })
                 : t("tokens.noExpiry"),
@@ -615,19 +618,45 @@ function TokensSection() {
                 : t("tokens.neverUsed"),
             ].join(" · ")}
             actions={
-              <Button variant="danger" onClick={() => setRevoking(token)}>
-                {t("tokens.revoke")}
-              </Button>
+              <>
+                {token.scopes.organization?.spaces ? (
+                  <Button variant="secondary" onClick={() => setChanging(token)}>
+                    {t("tokens.content.change")}
+                  </Button>
+                ) : null}
+                <Button variant="danger" onClick={() => setRevoking(token)}>
+                  {t("tokens.revoke")}
+                </Button>
+              </>
             }
           />
         ))}
       </List>
+      <ContentAccessDialog
+        token={changing}
+        organizationId={changing?.organizationId ?? null}
+        onOpenChange={(open) => {
+          if (!open) setChanging(null);
+        }}
+        onSave={async (change) => {
+          if (!changing) return;
+          await request(() =>
+            api.PUT("/api/v1/account/tokens/{tokenId}/content-access", {
+              params: { path: { tokenId: changing.id } },
+              body: change,
+            }),
+          );
+          await refresh();
+          toast({ title: t("tokens.content.saved"), variant: "success" });
+        }}
+      />
       <CreateTokenDialog
         open={creating}
         onOpenChange={setCreating}
         maxLifetimeDays={lifetime.data ?? null}
         allowInstance={instanceAccess}
         allowOrganization={organization.organizationId !== null}
+        organizationId={organization.organizationId}
         onCreate={async (input) => {
           const created = await request(() =>
             api.POST("/api/v1/account/tokens", {

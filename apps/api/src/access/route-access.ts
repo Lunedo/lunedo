@@ -7,6 +7,7 @@ export type RouteAccess =
       kind: "session";
       secondFactorSetup: boolean;
       recentAuthentication: boolean;
+      portalAccounts?: boolean;
     }
   | { kind: "setupCode" }
   | { kind: "setupSession" }
@@ -33,11 +34,14 @@ export const PublicRoute = () => SetMetadata(ROUTE_ACCESS, { kind: "public" } sa
 export const MetricsTokenRoute = () =>
   SetMetadata(ROUTE_ACCESS, { kind: "metricsToken" } satisfies RouteAccess);
 
-export const SessionRoute = (options: { secondFactorSetup?: boolean; recentAuthentication?: boolean } = {}) =>
+export const SessionRoute = (
+  options: { secondFactorSetup?: boolean; recentAuthentication?: boolean; portalAccounts?: boolean } = {},
+) =>
   SetMetadata(ROUTE_ACCESS, {
     kind: "session",
     secondFactorSetup: options.secondFactorSetup ?? false,
     recentAuthentication: options.recentAuthentication ?? false,
+    portalAccounts: options.portalAccounts ?? false,
   } satisfies RouteAccess);
 
 export const SetupCodeRoute = () => SetMetadata(ROUTE_ACCESS, { kind: "setupCode" } satisfies RouteAccess);

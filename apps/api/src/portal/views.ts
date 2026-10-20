@@ -21,10 +21,23 @@ export interface PortalAccount {
   email: string;
 }
 
+export interface LanguageLink {
+  language: string;
+  label: string;
+  href: string;
+  current: boolean;
+}
+
 export interface PortalView {
   config: PortalConfig;
   t: PortalMessages;
+  lang: string;
+  root: string;
   base: string;
+  languageLinks: LanguageLink[];
+  alternates: { hreflang: string; href: string }[];
+  note: { text: string; lang: string } | null;
+  frameSources: string[];
   origin: string;
   nonce: string;
   assets: { style: string; script: string };
@@ -173,6 +186,15 @@ function header(
           </form>`,
         )}
         ${when(
+          view.languageLinks.length > 1,
+          () =>
+            html`<details class="dd lang" data-menu><summary aria-label="${view.t.languageCurrent(view.languageLinks.find((link) => link.current)?.label ?? "")}">${icon("languages")}<span class="wide">${view.languageLinks.find((link) => link.current)?.label ?? ""}</span>${icon("chevron-down")}</summary>
+              <div class="menu" role="list" aria-label="${view.t.languageMenu}">${view.languageLinks.map(
+                (link) =>
+                  html`<a href="${link.href}" hreflang="${link.language}" lang="${link.language}"${raw(link.current ? ' aria-current="true"' : "")}>${link.label}</a>`,
+              )}</div></details>`,
+        )}
+        ${when(
           navigation,
           () =>
             html`<button class="btn ghost icon narrow" type="button" aria-expanded="false" aria-controls="pmenu" data-open-label="${view.t.openMenu}" data-close-label="${view.t.closeMenu}" aria-label="${view.t.openMenu}" data-phone-menu>${icon("menu")}</button>`,
@@ -229,16 +251,17 @@ export function layout(
     options.title === view.config.name ? view.config.name : `${options.title} · ${view.config.name}`;
   const robots = options.robots ?? (view.config.audience === "public" ? "index,follow" : "noindex,nofollow");
   return `<!doctype html>${
-    html`<html lang="${view.t.locale}"><head>
+    html`<html lang="${view.lang}"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark"><meta name="robots" content="${robots}">
 <title>${title}</title>
+${view.alternates.map((alternate) => html`<link rel="alternate" hreflang="${alternate.hreflang}" href="${alternate.href}">`)}
 <link rel="stylesheet" href="${view.assets.style}">
 <style nonce="${view.nonce}">${raw(view.brandStyle)}</style>
 <script src="${view.assets.script}" defer></script>
 </head><body><a class="skip" href="#content">${view.t.skipToContent}</a><div class="page">
 ${header(view, options)}
-<main id="content" tabindex="-1">${content}</main>
+<main id="content" tabindex="-1">${when(view.note, () => html`<div class="pw"><p class="langnote" role="note" lang="${view.note?.lang ?? ""}">${icon("languages")}${view.note?.text ?? ""}</p></div>`)}${content}</main>
 ${footer(view)}
 </div><div class="toast" role="status" aria-live="polite" hidden data-toast></div></body></html>`.value
   }`;
@@ -403,8 +426,9 @@ export function categoryPage(
   );
 }
 
-export function decorateArticleHtml(markup: string, base: string): string {
+export function decorateArticleHtml(markup: string, base: string, root: string = base): string {
   return markup
+    .replaceAll(`${PORTAL_BASE_PLACEHOLDER}/files/`, `${root}/files/`)
     .replaceAll(`${PORTAL_BASE_PLACEHOLDER}/`, `${base}/`)
     .replace(
       /(<section class="ph-section"[^>]*?data-icon="([a-z0-9-]+)"[^>]*><h2 id="[^"]*">)/g,
@@ -454,7 +478,7 @@ export function articlePage(
                 (heading) => html`<a href="#${heading.id}">${heading.title}</a>`,
               )}</nav></details>`,
           )}
-          <div class="body">${raw(decorateArticleHtml(article.html, view.base))}</div>
+          <div class="body" lang="${article.language}">${raw(decorateArticleHtml(article.html, view.base, view.root))}</div>
           ${when(
             data.related.length > 0,
             () =>
@@ -463,7 +487,7 @@ export function articlePage(
                   html`<li><a href="${articlePath(view.base, entry)}">${typeBadge(entry.type)}<span class="g"><span class="t">${entry.title}</span></span>${icon("chevron-right", "chev")}</a></li>`,
               )}</ul></section>`,
           )}
-          <section class="fb" id="feedback" aria-labelledby="feedback-heading" data-feedback="${article.itemId}" data-endpoint="${view.base}/feedback">
+          <section class="fb" id="feedback" aria-labelledby="feedback-heading" data-feedback="${article.itemId}" data-endpoint="${view.root}/feedback">
             <div class="q"><h2 id="feedback-heading">${t.helpfulQuestion}</h2>
               <div class="row" data-step="ask"><button class="btn" type="button" data-rate="yes">${icon("thumbs-up")}${t.yes}</button><button class="btn" type="button" data-rate="no">${icon("thumbs-down")}${t.no}</button></div></div>
             <p class="hint" data-step="ask">${t.ratingHint}</p>

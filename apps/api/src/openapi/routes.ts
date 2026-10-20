@@ -38,6 +38,7 @@ import { SetupController } from "../setup/setup.controller.js";
 import { ShareLinksController } from "../sharing/links.controller.js";
 import { PageAccessController } from "../sharing/page-access.controller.js";
 import { AccessRequestsController } from "../sharing/requests.controller.js";
+import { ArticleApiController } from "../spaces/article-api.controller.js";
 import { ConfidentialSpacesController } from "../spaces/confidential-spaces.controller.js";
 import { CopiesController } from "../spaces/copies.controller.js";
 import { ItemsController } from "../spaces/items.controller.js";
@@ -45,6 +46,7 @@ import { KnowledgeBasesController } from "../spaces/knowledge-bases.controller.j
 import { OrganizationSpacesController } from "../spaces/organization-spaces.controller.js";
 import { OwnershipController } from "../spaces/ownership.controller.js";
 import { PersonalSpacesController } from "../spaces/personal-spaces.controller.js";
+import { PortalAccountsController } from "../spaces/portal-accounts.controller.js";
 import { ReviewsController } from "../spaces/reviews.controller.js";
 import { ShortcutsController } from "../spaces/shortcuts.controller.js";
 import { SpacesController } from "../spaces/spaces.controller.js";
@@ -84,6 +86,8 @@ export const apiControllers = (): Type[] => [
   ConfidentialSpacesController,
   ItemsController,
   KnowledgeBasesController,
+  ArticleApiController,
+  PortalAccountsController,
   ReviewsController,
   StatisticsController,
   PortalController,

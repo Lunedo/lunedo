@@ -8,7 +8,9 @@ export {
   decisionReportOrders,
   defaultEmbedServices,
   diagramTypes,
+  EMBED_ALLOW,
   EMBED_REFERRER_POLICIES,
+  EMBED_SANDBOX,
   type EmbedService,
   embedFrameSources,
   labeledContentKinds,
@@ -481,6 +483,26 @@ export {
 } from "./jobs/job-queue.js";
 export { PgBossQueue } from "./jobs/pg-boss-queue.js";
 export {
+  ArticleApiService,
+  type ArticleChanges,
+  type ArticleCreate,
+  type ArticleImage,
+  type ArticleRecord,
+  type ArticleSectionInput,
+  type ArticleWrite,
+  CHANGES_PAGE_SIZE,
+  MAX_ARTICLE_SECTIONS,
+  MAX_CHANGES_PAGE_SIZE,
+  type RemovedArticle,
+  TOMBSTONE_DAYS,
+} from "./knowledge-bases/article-api.js";
+export {
+  type PortalAccount,
+  PortalAccountService,
+  type PortalAccounts,
+  type PortalInvitation,
+} from "./knowledge-bases/portal-accounts.js";
+export {
   type ArticleReview,
   type ArticleSource,
   type HomeReview,
@@ -520,6 +542,18 @@ export {
   statisticsPeriods,
   type UnhelpfulArticle,
 } from "./knowledge-bases/statistics.js";
+export {
+  type ArticleLanguage,
+  type ArticleTranslation,
+  ArticleTranslationService,
+  type ArticleTranslations,
+  articleLanguages,
+  isArticleLanguage,
+  type LanguageProgress,
+  type LanguageSettings,
+  MAX_KNOWLEDGE_BASE_LANGUAGES,
+  type TranslationState,
+} from "./knowledge-bases/translations.js";
 export { createLogger, type Logger, type LogLevel, logLevels } from "./logging/logger.js";
 export { GraphMailError } from "./mail/graph.js";
 export {
@@ -667,6 +701,7 @@ export {
   FEEDBACK_RETENTION_MAX,
   type HelpCandidate,
   hostOf,
+  interfaceLanguage,
   normalizeDomain,
   type PathLookup,
   PORTAL_PATH,
@@ -679,6 +714,7 @@ export {
   TOP_BAR_THRESHOLD_MAX,
 } from "./portal/portals.js";
 export {
+  type ArticleAlternate,
   type ArticleLookup,
   type ArticlePage,
   PORTAL_PAGE_SIZE,

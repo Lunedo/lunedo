@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Query, Req, Res } from "@nestjs/common";
-import { ANONYMOUS, accountPrincipal, type Principal } from "@pagehall/server";
+import { ANONYMOUS, accountPrincipal, EMBED_REFERRER_POLICIES, type Principal } from "@pagehall/server";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { InternalRoute, Permission, PublicRoute } from "../access/route-access.js";
@@ -92,6 +92,32 @@ const sharedPageSchema = z
     document: documentSchema,
     updatedAt: timestamp("When the shown content was published."),
     attachments: attachmentListSchema,
+    embedServices: z
+      .array(
+        z
+          .object({
+            id: z.string().describe("ID of the embed service."),
+            name: z.string().describe("Name of the service."),
+            rules: z
+              .array(
+                z
+                  .object({
+                    pattern: z.string().describe("Address pattern the rule accepts."),
+                    embed: z.string().describe("Address of the frame for an accepted address."),
+                    referrerPolicy: z
+                      .enum(EMBED_REFERRER_POLICIES)
+                      .optional()
+                      .describe("Referrer policy of the frame."),
+                  })
+                  .describe("A rule of the service."),
+              )
+              .describe("Rules of the service."),
+          })
+          .describe("An embed service the organization of the page allows."),
+      )
+      .describe(
+        "Embed services of the page's organization that the embeds on the page use. Embeds of other services are shown as links.",
+      ),
   })
   .describe("A page opened through a link for anyone, without the page tree and comments.");
 
@@ -269,6 +295,11 @@ export class ShareLinksController {
     return typeof header === "string" ? header : undefined;
   }
 
+  async #embedServices(itemId: string, document: unknown) {
+    const organizationId = await this.#services.spaces.organizationOfItem(itemId);
+    return organizationId ? this.#services.embeds.forDocument(organizationId, document) : [];
+  }
+
   @Get("share-links/:token/page")
   @PublicRoute()
   @InternalRoute()
@@ -287,6 +318,7 @@ export class ShareLinksController {
         document: exampleDocument,
         updatedAt: "2026-10-01T09:30:00.000Z",
         attachments: [exampleAttachment],
+        embedServices: [],
       },
     },
     errors: ["linkNotFound", "signInRequired", "passwordRequired", "rateLimited"],
@@ -301,6 +333,7 @@ export class ShareLinksController {
       document: readable.document,
       updatedAt: readable.updatedAt,
       attachments: await this.#services.attachments.list(ANONYMOUS, itemId, "published"),
+      embedServices: await this.#embedServices(itemId, readable.document),
     };
   }
 

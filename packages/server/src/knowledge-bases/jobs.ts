@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { NotificationListener } from "../database/notifications.js";
 import { defineJob, type JobQueue } from "../jobs/job-queue.js";
 import type { Logger } from "../logging/logger.js";
+import type { ArticleApiService } from "./article-api.js";
 import { REVIEW_CHANGES_CHANNEL, type ReviewService } from "./reviews.js";
 
 export const reviewReminderJob = defineJob({
@@ -34,6 +35,27 @@ export const reviewSafetyNetJob = defineJob({
 });
 
 export const REVIEW_SAFETY_NET_SCHEDULE = "17 * * * *";
+
+export const removedArticlesJob = defineJob({
+  name: "knowledge-bases.prune-removed-articles",
+  payload: z.object({}),
+  retryLimit: 2,
+  expireInSeconds: 10 * 60,
+});
+
+export const REMOVED_ARTICLES_SCHEDULE = "43 3 * * *";
+
+export async function startRemovedArticlePruning(options: {
+  jobs: JobQueue;
+  articles: ArticleApiService;
+}): Promise<void> {
+  await options.jobs.work(removedArticlesJob, async (job) => {
+    const removed = await options.articles.pruneRemoved();
+    if (removed > 0)
+      job.logger.info({ removed }, "Records of removed articles older than their keeping period deleted");
+  });
+  await options.jobs.schedule(removedArticlesJob, REMOVED_ARTICLES_SCHEDULE, {}, { key: "daily" });
+}
 
 const DISPATCH_DELAY_MS = 200;
 
