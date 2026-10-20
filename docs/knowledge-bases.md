@@ -246,6 +246,60 @@ The content of an article is rendered to HTML once per published version and sto
 - **Embeds** follow the embed services the organization allows (see [embeds-and-blocks.md](embeds-and-blocks.md)). The portal loads frames only from the addresses of these services; other embeds appear as a link.
 - Child page lists and reports are not shown, links to pages outside the knowledge base show "No access" without their title, and mentions name only members of the organization.
 
+## Static website
+
+A public knowledge base can be downloaded as a static website: a ZIP file with plain HTML, CSS and JavaScript files that any web server can serve. The editing source stays the Pagehall instance; download a new ZIP after changes and upload it again, by hand or with your own script.
+
+Space admins start the download on the export page of the knowledge base settings (`POST /api/v1/spaces/{spaceId}/exports` with `"format": "site"`). It is built in the background like other exports, with the same notification, download lifetime and audit entry. Knowledge bases whose audience is not "public" are refused with `staticSiteNotPublic`, because a static website has no sign-in; if the audience changes while the website waits to be built, it fails with the reason `notPublic`.
+
+The ZIP contains:
+
+- every published article that anonymous readers can read, in each enabled language (`<number>-<slug>.html`, translations in a folder per language such as `de/`), rendered like in the portal, with includes from the same knowledge base and allowed embeds;
+- the start page (`index.html`), a page per category (`topics/<id>.html`), the contact page and a search page per language;
+- a search index per language (`search-index.json`), built with [MiniSearch](https://github.com/lucaong/minisearch); the search page loads it in the browser, searches the reader's language first and falls back to the default language with a note;
+- images in their display versions (`files/`), fonts, styles and scripts (`_assets/`);
+- redirects from earlier addresses of an article: a small HTML page per old address and a `_redirects` file that Cloudflare Pages and Netlify understand;
+- `404.html`, and with an address of the website (`siteUrl`, for example `https://help.example.org/`) also `sitemap.xml`, `robots.txt` and language links for search engines.
+
+All links are relative, so the website works under any domain and in a subfolder. Things that need Pagehall are left out: the "Was this helpful?" question, reader statistics, the most-read list, sign-in and the account menu. The contact links stay, because they open the reader's e-mail program. The search needs JavaScript and a web server; opened from a local folder, browsers do not let the page read the index, and the search page says so.
+
+### Publishing on Cloudflare Pages
+
+In the dashboard: **Workers & Pages → Create → Pages → Upload assets**, name the project, drag the unpacked folder (not the ZIP file) into the upload area and deploy. Each new upload replaces the website.
+
+With Wrangler:
+
+```sh
+unzip "Help 2026-10-20.zip" -d site
+npx wrangler pages deploy site --project-name=help
+```
+
+Cloudflare Pages reads `_redirects` and `404.html` by itself and serves `/12-vpn` for `12-vpn.html`.
+
+### Any web server
+
+Copy the unpacked folder to the web server's document root (or a subfolder). Without further settings, the website works with its `.html` addresses and the HTML redirect pages. To serve addresses without `.html` and the `404.html` page with nginx:
+
+```nginx
+location /help/ {
+    try_files $uri $uri.html $uri/index.html =404;
+    error_page 404 /help/404.html;
+}
+```
+
+GitHub Pages serves the files as they are; old addresses work through the HTML redirect pages.
+
+## Moving a knowledge base to another instance
+
+The Markdown and HTML archives of the export keep what a knowledge base needs:
+
+- Every Markdown file starts with front matter: `title`, `created`, `updated`, `labels` and a `pagehall` block with the kind, version, author, `articleType`, `language` and `translation: true` for translations.
+- Sections are marked with comments around their heading and content, such as `<!-- pagehall:section key="steps" icon="list-ordered" -->` … `<!-- /pagehall:section -->`. Markdown viewers do not show them.
+- Each article sits in its own folder with its images; translations sit in folders below their article, and categories are folders.
+- HTML files carry `<html lang>` and a `pagehall:article-type` meta element; sections keep their `data-section` and `data-icon` attributes.
+
+To move a knowledge base, export it as Markdown, start a Markdown import on the other instance and turn on **Import as a knowledge base**. Folders become categories, files become articles with their type, sections and images, and translations are linked to their article again. Numbers are assigned anew in the order of the import. The new knowledge base opens only for the people and groups given a role when the import is accepted; choose its audience in the visibility settings afterwards.
+
 ## Reader statistics
 
 The portal records what readers do, without any account, session or address. No table below has a column for one, and nothing is derived from the reader. The search statistics below are built on this data.

@@ -17,7 +17,8 @@ export function printSearch(
   source: { page: string } | { export: string },
   options: ExportOptions,
 ): PrintRouteSearch {
-  return { ...source, ...options };
+  const { siteUrl: _siteUrl, ...rest } = options;
+  return { ...source, ...rest };
 }
 
 export function printOptions(search: PrintRouteSearch): ExportOptions {
@@ -27,5 +28,6 @@ export function printOptions(search: PrintRouteSearch): ExportOptions {
     contents: search.contents ?? defaultExportOptions.contents,
     paper: search.paper ?? defaultExportOptions.paper,
     orientation: search.orientation ?? defaultExportOptions.orientation,
+    siteUrl: null,
   };
 }

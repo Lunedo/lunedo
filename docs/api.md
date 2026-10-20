@@ -172,3 +172,21 @@ curl -X PUT -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json
   -d '{"sections": [{"key": "steps", "title": "Steps", "markdown": "![Sign-in window](client.png)"}]}' \
   https://wiki.example.org/api/v1/articles/$ARTICLE/draft
 ```
+
+### Example: download the static website
+
+A script can rebuild the static website of a public knowledge base, for example every night, with a token of a space admin (see [knowledge-bases.md](knowledge-bases.md#static-website)):
+
+```sh
+EXPORT=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"format": "site", "siteUrl": "https://help.example.org/"}' \
+  https://wiki.example.org/api/v1/spaces/$SPACE/exports | jq -r .id)
+while :; do
+  STATE=$(curl -s -H "Authorization: Bearer $TOKEN" https://wiki.example.org/api/v1/exports/$EXPORT | jq -r .state)
+  [ "$STATE" = ready ] && break
+  [ "$STATE" = failed ] && exit 1
+  sleep 10
+done
+curl -s -H "Authorization: Bearer $TOKEN" -o site.zip https://wiki.example.org/api/v1/exports/$EXPORT/content
+unzip -o site.zip -d site && npx wrangler pages deploy site --project-name=help
+```

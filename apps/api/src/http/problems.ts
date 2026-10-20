@@ -216,6 +216,7 @@ export const problems = {
   knowledgeBaseMode: { status: 409, title: "Articles always use publish mode" },
   knowledgeBasePlacement: { status: 409, title: "Articles and categories are placed in categories" },
   notKnowledgeBase: { status: 409, title: "The space is not a knowledge base" },
+  staticSiteNotPublic: { status: 409, title: "Only public knowledge bases become a static website" },
   notCategory: { status: 409, title: "The folder is not a category" },
   invalidIcon: { status: 400, title: "The icon is not valid" },
   invalidArticleType: { status: 400, title: "Only articles have an article type" },

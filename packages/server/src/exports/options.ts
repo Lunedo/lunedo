@@ -16,6 +16,13 @@ export const exportOptionsSchema = z
     contents: z.boolean().default(true),
     paper: z.enum(paperSizes).default("a4"),
     orientation: z.enum(orientations).default("portrait"),
+    siteUrl: z
+      .string()
+      .max(500)
+      .url()
+      .refine((value) => /^https?:\/\//i.test(value), "Use an http or https address")
+      .nullable()
+      .default(null),
   })
   .strict();
 

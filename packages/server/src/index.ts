@@ -731,6 +731,12 @@ export {
 export type { RenderedHeading } from "./portal/schema.js";
 export { HANDOFF_SECONDS, PortalSessionService } from "./portal/sessions.js";
 export { helpKnowledgeBaseSetting, portalAppLinkNameSetting } from "./portal/settings.js";
+export { fontFile, PORTAL_ASSETS, portalCss, portalScript } from "./portal/site/assets.js";
+export { escapeHtml, type Html, html, raw, when } from "./portal/site/html.js";
+export { hasIcon, icon } from "./portal/site/icons.js";
+export { languageName, messagesFor, type PortalMessages } from "./portal/site/messages.js";
+export { STATIC_SEARCH_OPTIONS, StaticSiteBuilder } from "./portal/site/static-site.js";
+export * from "./portal/site/views.js";
 export {
   type ArticleCount,
   cleanFeedback,

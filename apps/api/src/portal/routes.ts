@@ -3,24 +3,48 @@ import {
   type AccountServices,
   ANONYMOUS,
   accountPrincipal,
+  articlePage,
+  articlePath,
   brandValues,
+  type CategoryState,
+  categoryPage,
   clientSubject,
+  contactPage,
   currentRequestContext,
+  emptySearchPage,
+  errorPage,
   FEEDBACK_MAX_LENGTH,
+  fontFile,
   generateToken,
   hostOf,
   interfaceLanguage,
+  type LanguageLink,
+  languageName,
+  messagesFor,
+  notFoundPage,
+  PORTAL_ASSETS,
   PORTAL_PAGE_SIZE,
   type PortalArticleFilter,
   type PortalConfig,
+  type PortalSignInMethod,
+  type PortalView,
   type Principal,
   portalAppLinkNameSetting,
+  portalCss,
+  portalLinks,
+  portalScript,
   RELATED_LIMIT,
   type SearchCursor,
+  type SearchState,
   type Session,
   type SettingsService,
   START_LIST_LIMIT,
+  searchFailedPage,
+  searchPage,
   sessionLifetimeSetting,
+  signedOutPage,
+  signInPage,
+  startPage,
 } from "@pagehall/server";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { ApiContext } from "../context.js";
@@ -28,27 +52,6 @@ import { sendAttachment } from "../files/serve.js";
 import { COOKIES, clearCookie, readCookie, setCookie } from "../http/cookies.js";
 import { ownOrigin } from "../http/csrf.js";
 import { instanceUrlOf } from "../http/instance-url.js";
-import { fontFile, PORTAL_ASSETS, portalCss, portalScript } from "./assets.js";
-import { languageName, messagesFor } from "./messages.js";
-import {
-  articlePage,
-  articlePath,
-  type CategoryState,
-  categoryPage,
-  contactPage,
-  emptySearchPage,
-  errorPage,
-  type LanguageLink,
-  notFoundPage,
-  type PortalView,
-  type SearchState,
-  type SignInMethod,
-  searchFailedPage,
-  searchPage,
-  signedOutPage,
-  signInPage,
-  startPage,
-} from "./views.js";
 
 const FLOW_MAX_AGE_SECONDS = 10 * 60;
 const FEEDBACK_BODY_LIMIT = 16 * 1024;
@@ -227,7 +230,7 @@ async function servePortal(
   const prefix = /^\/([a-z]{2})(\/.*)?$/.exec(target.rest);
   const prefixed = prefix?.[1];
   if (prefixed && target.config.languages.length > 1 && target.config.languages.includes(prefixed as never)) {
-    const remainder = prefix?.[2] ?? "/";
+    const remainder = (prefix?.[2] ?? "/").replace(/^[/\\]+/, "/");
     if (prefixed === target.config.defaultLanguage) {
       const query = request.url.includes("?") ? request.url.slice(request.url.indexOf("?")) : "";
       return reply
@@ -404,6 +407,8 @@ async function buildView(
     lang,
     root: target.root,
     base: target.base,
+    links: portalLinks(target.base, target.origin),
+    static: false,
     ...(options.languages ?? pageLanguages(target, target.rest)),
     note: options.note ?? null,
     frameSources: await services.embeds.frameSources(),
@@ -749,7 +754,7 @@ async function signInScreen(
   if (viewer.account && !failed) return reply.code(303).redirect(returnTo);
   const view = await buildView(services, target, viewer, { categories: false });
   const t = view.t;
-  const methods: SignInMethod[] = [];
+  const methods: PortalSignInMethod[] = [];
   if (target.domain) {
     methods.push({ label: t.signIn, action: null, href: `/sign-in?return=${encodeURIComponent(returnTo)}` });
   } else {

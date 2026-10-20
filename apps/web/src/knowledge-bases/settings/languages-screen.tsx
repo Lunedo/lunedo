@@ -4,6 +4,7 @@ import {
   Combobox,
   List,
   ListRow,
+  Notice,
   type SaveState,
   SaveStatus,
   Section,
@@ -96,6 +97,13 @@ export function LanguagesScreen() {
         ) : null}
         {value ? (
           <>
+            {editable ? null : (
+              <Notice variant="info">
+                {t(
+                  space.archived ? "knowledgeBase.languages.archived" : "knowledgeBase.languages.adminsOnly",
+                )}
+              </Notice>
+            )}
             <Section title={t("knowledgeBase.languages.section")} icon={Languages}>
               <div className="flex flex-col divide-y divide-border">
                 <SettingRow

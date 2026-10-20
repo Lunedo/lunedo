@@ -133,6 +133,14 @@ export class PortalReader {
       config.spaceId,
       language,
     );
+    return this.countedCategories(principal, config, counted);
+  }
+
+  async countedCategories(
+    principal: Principal,
+    config: PortalConfig,
+    counted: ReadonlyMap<string, number>,
+  ): Promise<PortalCategory[]> {
     if (counted.size === 0) return [];
     const result = await this.#database.execute<{
       id: string;

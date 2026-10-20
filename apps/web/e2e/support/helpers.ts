@@ -135,7 +135,12 @@ export function liveUpdatesConnected(page: Page): Promise<unknown> {
   );
 }
 
-export async function callApi(page: Page, method: "POST" | "PUT" | "DELETE", path: string, data?: unknown) {
+export async function callApi(
+  page: Page,
+  method: "POST" | "PUT" | "PATCH" | "DELETE",
+  path: string,
+  data?: unknown,
+) {
   const response = await page.request.fetch(path, {
     method,
     ...(data === undefined ? {} : { data }),

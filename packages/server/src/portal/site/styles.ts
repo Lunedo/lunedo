@@ -1,5 +1,10 @@
-import { calloutRules, colorRules, colorVariables, highlightRules } from "@pagehall/server";
 import { tokens } from "@pagehall/tokens";
+import {
+  calloutRules,
+  colorRules,
+  variables as colorVariables,
+  highlightRules,
+} from "../../exports/style.js";
 
 const { color, font, focusRing, icon: iconTokens } = tokens;
 const P = tokens.portal;

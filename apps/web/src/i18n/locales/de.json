@@ -1614,7 +1614,8 @@
     "portalAudienceRequired": "Portalkonten lesen nur Wissensdatenbanken für Portalkonten. Ändere zuerst die Zielgruppe unter Sichtbarkeit.",
     "portalAccountNotFound": "Das Portalkonto gehört nicht mehr zu dieser Organisation. Lade die Liste neu.",
     "portalAccountShared": "Das Konto liest auch Wissensdatenbanken anderer Organisationen und lässt sich deshalb hier nicht deaktivieren. Entferne es stattdessen aus dieser Organisation.",
-    "portalInvitationAccountExists": "Diese E-Mail-Adresse gehört schon zu einem Pagehall-Konto. Melde dich damit an und bitte die Einladenden, diesem Konto Zugriff zu geben."
+    "portalInvitationAccountExists": "Diese E-Mail-Adresse gehört schon zu einem Pagehall-Konto. Melde dich damit an und bitte die Einladenden, diesem Konto Zugriff zu geben.",
+    "staticSiteNotPublic": "Nur öffentliche Wissensdatenbanken lassen sich als statische Website herunterladen, weil eine statische Website keine Anmeldung hat. Mach die Wissensdatenbank zuerst in der Sichtbarkeit öffentlich."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -7728,7 +7729,9 @@
       "pending": "{count, plural, one {# importierte Rolle wartet darauf, dass eine Person oder Gruppe zugeordnet wird, und gilt dann.} other {# importierte Rollen warten darauf, dass Personen oder Gruppen zugeordnet werden, und gelten dann.}}",
       "defaultsUsed": "Der Export enthält keine Space-Berechtigungen, deshalb sind die Standards der Organisation für neue Spaces eingetragen.",
       "importedHint": "Aus Confluence übernommene Rollen. Ändere sie bei Bedarf.",
-      "defaultsHint": "Deine Organisation schlägt diese Rollen für neue Spaces vor. Ändere sie bei Bedarf."
+      "defaultsHint": "Deine Organisation schlägt diese Rollen für neue Spaces vor. Ändere sie bei Bedarf.",
+      "knowledgeBaseTitle": "Der Import wird eine Wissensdatenbank",
+      "knowledgeBase": "Zuerst lesen nur die Personen und Gruppen unten mit. Wer sie liest, zum Beispiel alle im Internet, wählst du danach in den Sichtbarkeitseinstellungen der Wissensdatenbank."
     },
     "errors": {
       "unknown": {
@@ -8369,7 +8372,10 @@
     },
     "markdown": {
       "title": "Markdown-Ordner als ZIP",
-      "description": "Ordner werden zum Seitenbaum; index.md oder README.md wird die Seite ihres Ordners. Front Matter liefert Titel, Labels und Daten, weitere Schlüssel werden Seiteneigenschaften. Links zwischen Dateien werden Seitenlinks, [[Wiki-Links]] eingeschlossen, Bilder und andere Dateien werden Anhänge. Mermaid-Codeblöcke werden Diagramme."
+      "description": "Ordner werden zum Seitenbaum; index.md oder README.md wird die Seite ihres Ordners. Front Matter liefert Titel, Labels und Daten, weitere Schlüssel werden Seiteneigenschaften. Links zwischen Dateien werden Seitenlinks, [[Wiki-Links]] eingeschlossen, Bilder und andere Dateien werden Anhänge. Mermaid-Codeblöcke werden Diagramme.",
+      "spaceType": "Art des Bereichs",
+      "knowledgeBase": "Als Wissensdatenbank importieren",
+      "knowledgeBaseHint": "Ordner werden Kategorien, Dateien werden Artikel. Artikeltypen, Sprachen, Übersetzungen und Abschnitte aus einem Pagehall-Export bleiben erhalten. Nach dem Übernehmen lesen nur die Personen mit einer Rolle mit, bis du in den Einstellungen ein Publikum wählst."
     },
     "documents": {
       "title": "Word-Dokumente",
@@ -8560,7 +8566,8 @@
       "renderFailed": "Der Render-Container konnte das PDF nicht erstellen. Starten Sie den Export erneut; schlägt er wieder fehl, informieren Sie Ihre Instanz-Administration.",
       "renderTooLarge": "Das Dokument mit seinen Bildern ist größer, als der Render-Container annimmt. Exportieren Sie weniger Seiten oder als Word bzw. HTML.",
       "tooManyPagesForFile": "Die Word- oder PDF-Datei hätte mehr Seiten, als sie aufnimmt. Exportieren Sie stattdessen als HTML- oder Markdown-Archiv oder einen kleineren Teil.",
-      "tooLargeToBuild": "Für die Datei hätte der Server mehr Speicher gebraucht, als er hat. Exportieren Sie einen kleineren Teil oder als HTML- oder Markdown-Archiv."
+      "tooLargeToBuild": "Für die Datei hätte der Server mehr Speicher gebraucht, als er hat. Exportieren Sie einen kleineren Teil oder als HTML- oder Markdown-Archiv.",
+      "notPublic": "Die Wissensdatenbank ist nicht mehr öffentlich und kann deshalb keine statische Website werden. Mach sie wieder öffentlich und starte den Download erneut."
     },
     "screen": {
       "title": "Exporte",
@@ -8686,6 +8693,21 @@
       "pdf": "PDF",
       "docx": "Word",
       "site": "Statische Website"
+    },
+    "site": {
+      "title": "Statische Website",
+      "description": "Lade die Wissensdatenbank als ZIP mit einer statischen Website herunter: alle veröffentlichten Artikel, Start-, Kategorie-, Such- und Kontaktseite, Bilder und Weiterleitungen für alte Adressen. Lade die entpackten Dateien zu Cloudflare Pages, GitHub Pages oder auf einen beliebigen Webserver hoch. Rückmeldungen, Statistiken und Anmeldung fehlen, weil sie Pagehall brauchen.",
+      "address": "Adresse der Website (optional)",
+      "addressHint": "Wo die Website erreichbar sein wird. Damit bekommt der Download eine Sitemap und Sprachlinks für Suchmaschinen; die Website selbst funktioniert unter jeder Adresse.",
+      "invalidUrl": "Gib eine vollständige Adresse ein, die mit https:// beginnt, zum Beispiel https://hilfe.example.org/, oder lass das Feld leer.",
+      "start": "Als statische Website herunterladen",
+      "started": "Die Website wird erstellt. Du bekommst eine Benachrichtigung, sobald der Download bereitsteht; er erscheint auch in der Liste unten.",
+      "failed": "Die Website konnte nicht gestartet werden",
+      "notPublicTitle": "Nur für öffentliche Wissensdatenbanken",
+      "notPublic": "Eine statische Website hat keine Anmeldung, alle mit der Adresse können sie lesen. Mach die Wissensdatenbank zuerst öffentlich, wenn alle ihre Artikel für jeden lesbar sein dürfen.",
+      "toVisibility": "Sichtbarkeit öffnen",
+      "exportOff": "Der Export ist für diese Wissensdatenbank ausgeschaltet. Schalte ihn oben ein, um die Website herunterzuladen.",
+      "addressPlaceholder": "https://hilfe.example.org/"
     }
   },
   "search": {
@@ -9642,7 +9664,9 @@
       "translated": "{count, plural, one {# von {total} Artikeln übersetzt} other {# von {total} Artikeln übersetzt}}",
       "missing": "{count, plural, one {# fehlt} other {# fehlen}}",
       "outdated": "{count, plural, one {# veraltet} other {# veraltet}}",
-      "single": "Nur eine Sprache ist aktiviert, deshalb sehen Lesende nichts von Sprachen."
+      "single": "Nur eine Sprache ist aktiviert, deshalb sehen Lesende nichts von Sprachen.",
+      "adminsOnly": "Nur Bereichsadmins ändern die Sprachen. Frag eine von ihnen, wenn eine Sprache fehlt.",
+      "archived": "Die Wissensdatenbank ist archiviert, ihre Sprachen lassen sich deshalb nicht ändern. Hol sie aus dem Archiv zurück, um sie zu ändern."
     },
     "translations": {
       "button": "Sprachen",

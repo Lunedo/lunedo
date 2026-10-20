@@ -1,4 +1,4 @@
-import { accountAttemptLimitSetting, clientAttemptLimitSetting, SYSTEM } from "@pagehall/server";
+import { accountAttemptLimitSetting, clientAttemptLimitSetting, messagesFor, SYSTEM } from "@pagehall/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -16,7 +16,6 @@ import {
   TEST_ORIGIN,
   TestClient,
 } from "../testing/auth-app.js";
-import { messagesFor } from "./messages.js";
 
 const PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
@@ -616,6 +615,9 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     const prefixed = await reader.get(`${kb.path}/de/${original.number}-passwort-aendern`);
     expect(prefixed.statusCode).toBe(301);
     expect(prefixed.headers.location).toBe(`${kb.path}/${original.number}-passwort-aendern`);
+    const doubled = await reader.get(`${kb.path}/de//evil.example/x`);
+    expect(doubled.statusCode).toBe(301);
+    expect(doubled.headers.location).toBe(`${kb.path}/evil.example/x`);
     const start = await reader.get(`${kb.path}/en/`);
     expect(start.statusCode).toBe(200);
     expect(start.body).toContain('<html lang="en"');

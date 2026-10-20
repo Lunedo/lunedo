@@ -54,30 +54,58 @@ const pageExportQuery = z
   })
   .strict();
 
+const exportFields = {
+  format: z
+    .enum(["archive", "html", "markdown", "print", "pdf", "docx"])
+    .default("archive")
+    .describe(
+      "`archive` (the default) for a ZIP with every page as Markdown and HTML, `html` or `markdown` for a ZIP with one of them, `print` for one print-ready HTML file of up to 300 pages, `pdf` for one PDF file, which needs the optional render container, `docx` for one Word document.",
+    ),
+  attachments: z
+    .boolean()
+    .default(true)
+    .describe(
+      "Adds the attachments: next to their pages in a ZIP, as an appendix that lists them in `print`, `pdf` and `docx`. `archive` always contains them.",
+    ),
+  comments: z
+    .boolean()
+    .default(false)
+    .describe("Adds the open comments after each page in `print`, `pdf` and `docx`."),
+  contents: z.boolean().default(true).describe("Adds a table of contents in `print`, `pdf` and `docx`."),
+  paper: z.enum(paperSizes).default("a4").describe("Paper size for `print`, `pdf` and `docx`."),
+  orientation: z
+    .enum(orientations)
+    .default("portrait")
+    .describe("Orientation for `print`, `pdf` and `docx`."),
+};
+
 const exportRequestSchema = z
+  .object(exportFields)
+  .strict()
+  .optional()
+  .describe(
+    "What to export and how. Without a body, the export is a ZIP with every page as Markdown and HTML.",
+  );
+
+const spaceExportRequestSchema = z
   .object({
+    ...exportFields,
     format: z
-      .enum(["archive", "html", "markdown", "print", "pdf", "docx"])
+      .enum(["archive", "html", "markdown", "print", "pdf", "docx", "site"])
       .default("archive")
       .describe(
-        "`archive` (the default) for a ZIP with every page as Markdown and HTML, `html` or `markdown` for a ZIP with one of them, `print` for one print-ready HTML file of up to 300 pages, `pdf` for one PDF file, which needs the optional render container, `docx` for one Word document.",
+        "`archive` (the default) for a ZIP with every page as Markdown and HTML, `html` or `markdown` for a ZIP with one of them, `print` for one print-ready HTML file of up to 300 pages, `pdf` for one PDF file, which needs the optional render container, `docx` for one Word document. `site` for a ZIP with a static website of a public knowledge base: every published article, the start, category, search and contact pages, a search index, images and redirects for old addresses, with relative links so it works under any address.",
       ),
-    attachments: z
-      .boolean()
-      .default(true)
+    siteUrl: z
+      .string()
+      .max(500)
+      .url()
+      .refine((value) => /^https?:\/\//i.test(value), "Use an http or https address")
+      .nullable()
+      .default(null)
       .describe(
-        "Adds the attachments: next to their pages in a ZIP, as an appendix that lists them in `print`, `pdf` and `docx`. `archive` always contains them.",
+        "For `site`: the address the website will be served from, such as `https://help.example.org/`. With it, the website gets `sitemap.xml`, `robots.txt` and language links for search engines; without it, they are left out.",
       ),
-    comments: z
-      .boolean()
-      .default(false)
-      .describe("Adds the open comments after each page in `print`, `pdf` and `docx`."),
-    contents: z.boolean().default(true).describe("Adds a table of contents in `print`, `pdf` and `docx`."),
-    paper: z.enum(paperSizes).default("a4").describe("Paper size for `print`, `pdf` and `docx`."),
-    orientation: z
-      .enum(orientations)
-      .default("portrait")
-      .describe("Orientation for `print`, `pdf` and `docx`."),
   })
   .strict()
   .optional()
@@ -86,11 +114,13 @@ const exportRequestSchema = z
   );
 
 type ExportRequestBody = z.output<typeof exportRequestSchema>;
+type SpaceExportRequestBody = z.output<typeof spaceExportRequestSchema>;
 
-function exportRequest(body: ExportRequestBody): ExportRequest {
+function exportRequest(body: ExportRequestBody | SpaceExportRequestBody): ExportRequest {
   if (!body) return { format: "archive", options: defaultExportOptions };
-  const { format, ...options } = body;
-  return { format, options };
+  const { format, attachments, comments, contents, paper, orientation } = body;
+  const siteUrl = format === "site" && "siteUrl" in body ? body.siteUrl : null;
+  return { format, options: { attachments, comments, contents, paper, orientation, siteUrl } };
 }
 
 function pagedQuery(query: z.output<typeof pageExportQuery>): ExportRequest["options"] {
@@ -102,6 +132,7 @@ function pagedQuery(query: z.output<typeof pageExportQuery>): ExportRequest["opt
     contents: value(query.contents, defaultExportOptions.contents),
     paper: query.paper ?? defaultExportOptions.paper,
     orientation: query.orientation ?? defaultExportOptions.orientation,
+    siteUrl: null,
   };
 }
 
@@ -226,7 +257,7 @@ export class ExportsController {
     tags: [TAG],
     status: 202,
     params: spaceParams,
-    body: exportRequestSchema,
+    body: spaceExportRequestSchema,
     bodyExample: {
       format: "pdf",
       attachments: true,
@@ -248,11 +279,14 @@ export class ExportsController {
       "tooManyPagesToPrint",
       "tooManyPagesForFile",
       "renderUnavailable",
+      "nothingToExport",
+      "notKnowledgeBase",
+      "staticSiteNotPublic",
     ],
   })
   async exportSpace(
     @Param("spaceId") spaceId: string,
-    @Body() body: ExportRequestBody,
+    @Body() body: SpaceExportRequestBody,
     @Req() request: FastifyRequest,
   ) {
     return this.#services.exports.start(actorOf(request), { spaceId }, exportRequest(body));

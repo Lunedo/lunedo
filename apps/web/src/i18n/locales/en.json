@@ -1614,7 +1614,8 @@
     "portalAudienceRequired": "Portal accounts read only knowledge bases for portal accounts. Change the audience under Visibility first.",
     "portalAccountNotFound": "The portal account no longer belongs to this organization. Reload the list.",
     "portalAccountShared": "The account also reads knowledge bases of other organizations, so it cannot be deactivated here. Remove it from this organization instead.",
-    "portalInvitationAccountExists": "This e-mail address already belongs to a Pagehall account. Sign in with it and ask the people who invited you to give that account access."
+    "portalInvitationAccountExists": "This e-mail address already belongs to a Pagehall account. Sign in with it and ask the people who invited you to give that account access.",
+    "staticSiteNotPublic": "Only public knowledge bases can be downloaded as a static website, because a static website has no sign-in. Make the knowledge base public in its visibility settings first."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -7728,7 +7729,9 @@
       "pending": "{count, plural, one {# imported role waits for a person or group to be mapped and applies then.} other {# imported roles wait for people or groups to be mapped and apply then.}}",
       "defaultsUsed": "The export contains no space permissions, so the organization's defaults for new spaces are filled in.",
       "importedHint": "Roles taken from Confluence. Change them as needed.",
-      "defaultsHint": "Your organization suggests these roles for new spaces. Change them as needed."
+      "defaultsHint": "Your organization suggests these roles for new spaces. Change them as needed.",
+      "knowledgeBaseTitle": "The import becomes a knowledge base",
+      "knowledgeBase": "Only the people and groups below can read it at first. Choose who reads it, for example everyone on the internet, afterwards in the visibility settings of the knowledge base."
     },
     "errors": {
       "unknown": {
@@ -8369,7 +8372,10 @@
     },
     "markdown": {
       "title": "Markdown folder as ZIP",
-      "description": "Folders become the page tree; index.md or README.md becomes the page of its folder. Front matter gives the title, labels and dates, other keys become page properties. Links between files become page links, [[wiki links]] included, and images and other files become attachments. Mermaid code blocks become diagrams."
+      "description": "Folders become the page tree; index.md or README.md becomes the page of its folder. Front matter gives the title, labels and dates, other keys become page properties. Links between files become page links, [[wiki links]] included, and images and other files become attachments. Mermaid code blocks become diagrams.",
+      "spaceType": "Kind of space",
+      "knowledgeBase": "Import as a knowledge base",
+      "knowledgeBaseHint": "Folders become categories and files become articles. Article types, languages, translations and sections from a Pagehall export are kept. After accepting, only the people you give a role can read it until you choose an audience in its settings."
     },
     "documents": {
       "title": "Word documents",
@@ -8560,7 +8566,8 @@
       "renderFailed": "The render container could not create the PDF. Start the export again; if it fails again, tell your instance administrator.",
       "renderTooLarge": "The document with its images is larger than the render container accepts. Export fewer pages, or as Word or HTML.",
       "tooManyPagesForFile": "The Word or PDF file would have more pages than it can hold. Export as an HTML or Markdown archive instead, or export a smaller part.",
-      "tooLargeToBuild": "Building the file needed more memory than the server has. Export a smaller part, or as an HTML or Markdown archive."
+      "tooLargeToBuild": "Building the file needed more memory than the server has. Export a smaller part, or as an HTML or Markdown archive.",
+      "notPublic": "The knowledge base is no longer public, so it cannot become a static website. Make it public again, then start the download again."
     },
     "screen": {
       "title": "Exports",
@@ -8686,6 +8693,21 @@
       "pdf": "PDF",
       "docx": "Word",
       "site": "Static website"
+    },
+    "site": {
+      "title": "Static website",
+      "description": "Download the knowledge base as a ZIP with a static website: every published article, the start, category, search and contact pages, images and redirects for old addresses. Upload the unpacked files to Cloudflare Pages, GitHub Pages or any web server. Feedback, statistics and sign-in are left out because they need Pagehall.",
+      "address": "Address of the website (optional)",
+      "addressHint": "Where the website will be reachable. With it, the download gets a sitemap and language links for search engines; the website itself works under any address.",
+      "invalidUrl": "Enter a full address that starts with https://, for example https://help.example.org/, or leave the field empty.",
+      "start": "Download as static website",
+      "started": "The website is being built. You get a notification when the download is ready; it also appears in the list below.",
+      "failed": "The website could not be started",
+      "notPublicTitle": "Only for public knowledge bases",
+      "notPublic": "A static website has no sign-in, so everyone who knows its address can read it. Make the knowledge base public first if all its articles may be read by anyone.",
+      "toVisibility": "Open the visibility settings",
+      "exportOff": "Export is turned off for this knowledge base. Turn it on above to download the website.",
+      "addressPlaceholder": "https://help.example.org/"
     }
   },
   "search": {
@@ -9642,7 +9664,9 @@
       "translated": "{count, plural, one {# of {total} articles translated} other {# of {total} articles translated}}",
       "missing": "{count, plural, one {# missing} other {# missing}}",
       "outdated": "{count, plural, one {# outdated} other {# outdated}}",
-      "single": "Only one language is enabled, so readers see nothing about languages."
+      "single": "Only one language is enabled, so readers see nothing about languages.",
+      "adminsOnly": "Only space admins change the languages. Ask one of them if a language is missing.",
+      "archived": "The knowledge base is archived, so its languages cannot be changed. Restore it from the archive to change them."
     },
     "translations": {
       "button": "Languages",

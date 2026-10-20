@@ -6,6 +6,8 @@ import type { SettingEntry } from "../../api/organization-queries.js";
 import { request } from "../../api/request.js";
 import { SettingsList } from "../../components/settings-list.js";
 import { SpaceExport } from "../../exports/space-export.js";
+import { StaticSiteExport } from "../../exports/static-site-export.js";
+import { isKnowledgeBase } from "../../knowledge-bases/queries.js";
 import type { SettingChange } from "../../settings/setting-mutations.js";
 import { EXPORT_KEYS } from "../../settings/settings-index.js";
 import { contentKeys } from "../content-queries.js";
@@ -59,6 +61,18 @@ export function SpaceExportScreen() {
               canManage={() => admin}
               onChange={async (key, change) => {
                 await mutation.mutateAsync({ key, change });
+              }}
+            />
+          </Panel>
+        ) : null}
+        {space.mayExport && isKnowledgeBase(space) ? (
+          <Panel title={t("exports.site.title")}>
+            <StaticSiteExport
+              space={{
+                id: space.id,
+                key: space.key,
+                audience: space.audience ?? null,
+                exportEnabled: space.exportEnabled,
               }}
             />
           </Panel>

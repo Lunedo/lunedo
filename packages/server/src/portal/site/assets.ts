@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { EMBED_ALLOW, EMBED_SANDBOX } from "@pagehall/server";
+import { EMBED_ALLOW, EMBED_SANDBOX } from "@pagehall/editor-schema";
 import { portalStyle } from "./styles.js";
 
 const require = createRequire(import.meta.url);
@@ -28,6 +28,10 @@ function fontFaces(): string {
         }),
       );
   }).join("\n");
+}
+
+export function fontFiles(): string[] {
+  return [...portalCss.matchAll(/url\(fonts\/([a-z0-9-]+\.woff2)\)/g)].map((match) => match[1] ?? "");
 }
 
 export function fontFile(name: string): Buffer | null {
@@ -168,6 +172,72 @@ function hashed(content: string): string {
 
 export const portalCss = `${fontFaces()}\n${portalStyle}`;
 export const portalScript = SCRIPT;
+export const staticSearchScript = `(() => {
+  const root = document.querySelector("[data-static-search]");
+  if (!root || typeof MiniSearch === "undefined") return;
+  const params = new URLSearchParams(location.search);
+  const query = (params.get("q") || "").trim().slice(0, 200);
+  const input = document.querySelector("form[data-search] input[name=q]");
+  if (input) input.value = query;
+  const list = root.querySelector("[data-results]");
+  const heading = root.querySelector("[data-heading]");
+  const note = root.querySelector("[data-note]");
+  const empty = root.querySelector("[data-empty]");
+  const failed = root.querySelector("[data-failed]");
+  const text = (key, values) =>
+    (root.dataset[key] || "").replace(/\\{(\\w+)\\}/g, (_match, name) => (values && name in values ? values[name] : ""));
+  const options = { fields: ["title", "text", "category"], storeFields: ["title", "url", "excerpt", "category", "type"] };
+  const load = async (address) => {
+    const response = await fetch(address, { credentials: "same-origin" });
+    if (!response.ok) throw new Error(String(response.status));
+    return MiniSearch.loadJSON(await response.text(), options);
+  };
+  const search = (index) =>
+    index.search(query, { prefix: true, fuzzy: 0.2, boost: { title: 3, category: 1.5 }, combineWith: "AND" });
+  const show = (results, base) => {
+    heading.textContent = text(results.length === 1 ? "resultsOne" : "resultsOther", { count: String(results.length), query });
+    heading.hidden = false;
+    list.replaceChildren(
+      ...results.slice(0, 50).map((result) => {
+        const item = document.createElement("li");
+        const path = document.createElement("span");
+        path.className = "path";
+        path.textContent = [result.type ? root.dataset["type" + result.type] || "" : "", result.category || ""]
+          .filter(Boolean)
+          .join(" · ");
+        const link = document.createElement("a");
+        link.className = "t";
+        link.href = base + result.url;
+        link.textContent = result.title;
+        const excerpt = document.createElement("p");
+        excerpt.textContent = result.excerpt || "";
+        item.append(path, link, excerpt);
+        return item;
+      }),
+    );
+    list.hidden = results.length === 0;
+    empty.hidden = results.length > 0;
+  };
+  if (!query) return;
+  (async () => {
+    try {
+      let results = search(await load(root.dataset.index));
+      let base = root.dataset.base || "";
+      if (results.length === 0 && root.dataset.fallbackIndex) {
+        const fallback = search(await load(root.dataset.fallbackIndex));
+        if (fallback.length > 0) {
+          results = fallback;
+          base = root.dataset.fallbackBase || "";
+          note.hidden = false;
+        }
+      }
+      show(results, base);
+    } catch {
+      failed.hidden = false;
+    }
+  })();
+})();
+`;
 export const PORTAL_ASSETS = {
   style: `portal-${hashed(portalCss)}.css`,
   script: `portal-${hashed(portalScript)}.js`,

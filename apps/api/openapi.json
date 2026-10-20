@@ -29426,7 +29426,7 @@
                           "docx",
                           "site"
                         ],
-                        "description": "What the file contains: `archive` a ZIP with every page as Markdown and HTML, `html` or `markdown` a ZIP with one of them, `print` one print-ready HTML file, `pdf` one PDF file, `docx` one Word document."
+                        "description": "What the file contains: `archive` a ZIP with every page as Markdown and HTML, `html` or `markdown` a ZIP with one of them, `print` one print-ready HTML file, `pdf` one PDF file, `docx` one Word document, `site` a ZIP with a static website of a public knowledge base."
                       },
                       "options": {
                         "type": "object",
@@ -29458,6 +29458,13 @@
                               "landscape"
                             ],
                             "description": "Orientation of `print`, `pdf` and `docx`."
+                          },
+                          "siteUrl": {
+                            "description": "Address the static website of `site` is served from, or null when none was given.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
                           }
                         },
                         "required": [
@@ -29465,7 +29472,8 @@
                           "comments",
                           "contents",
                           "paper",
-                          "orientation"
+                          "orientation",
+                          "siteUrl"
                         ],
                         "additionalProperties": false,
                         "description": "The options the export was started with."
@@ -29565,6 +29573,7 @@
                               "renderTooLarge",
                               "tooManyPagesForFile",
                               "tooLargeToBuild",
+                              "notPublic",
                               "interrupted",
                               "internalError"
                             ]
@@ -29573,7 +29582,7 @@
                             "type": "null"
                           }
                         ],
-                        "description": "Why a failed export stopped: export was turned off for the space, the permission to export the space or page was lost, the API token that started it was revoked, the file store ran short of free space while it was written, the render container for PDF is not set up or cannot be reached, it could not create the PDF, the document was larger than the render container accepts, the Word or PDF file would have more pages than the limit, building the file ran out of memory, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
+                        "description": "Why a failed export stopped: export was turned off for the space, the permission to export the space or page was lost, the API token that started it was revoked, the file store ran short of free space while it was written, the render container for PDF is not set up or cannot be reached, it could not create the PDF, the document was larger than the render container accepts, the Word or PDF file would have more pages than the limit, building the file ran out of memory, the knowledge base of a static website is no longer public, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
                       },
                       "createdAt": {
                         "type": "string",
@@ -29637,7 +29646,8 @@
                       "comments": false,
                       "contents": true,
                       "paper": "a4",
-                      "orientation": "portrait"
+                      "orientation": "portrait",
+                      "siteUrl": null
                     },
                     "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                     "rootItemId": null,
@@ -29976,7 +29986,7 @@
                         "docx",
                         "site"
                       ],
-                      "description": "What the file contains: `archive` a ZIP with every page as Markdown and HTML, `html` or `markdown` a ZIP with one of them, `print` one print-ready HTML file, `pdf` one PDF file, `docx` one Word document."
+                      "description": "What the file contains: `archive` a ZIP with every page as Markdown and HTML, `html` or `markdown` a ZIP with one of them, `print` one print-ready HTML file, `pdf` one PDF file, `docx` one Word document, `site` a ZIP with a static website of a public knowledge base."
                     },
                     "options": {
                       "type": "object",
@@ -30008,6 +30018,13 @@
                             "landscape"
                           ],
                           "description": "Orientation of `print`, `pdf` and `docx`."
+                        },
+                        "siteUrl": {
+                          "description": "Address the static website of `site` is served from, or null when none was given.",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
                         }
                       },
                       "required": [
@@ -30015,7 +30032,8 @@
                         "comments",
                         "contents",
                         "paper",
-                        "orientation"
+                        "orientation",
+                        "siteUrl"
                       ],
                       "additionalProperties": false,
                       "description": "The options the export was started with."
@@ -30115,6 +30133,7 @@
                             "renderTooLarge",
                             "tooManyPagesForFile",
                             "tooLargeToBuild",
+                            "notPublic",
                             "interrupted",
                             "internalError"
                           ]
@@ -30123,7 +30142,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Why a failed export stopped: export was turned off for the space, the permission to export the space or page was lost, the API token that started it was revoked, the file store ran short of free space while it was written, the render container for PDF is not set up or cannot be reached, it could not create the PDF, the document was larger than the render container accepts, the Word or PDF file would have more pages than the limit, building the file ran out of memory, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
+                      "description": "Why a failed export stopped: export was turned off for the space, the permission to export the space or page was lost, the API token that started it was revoked, the file store ran short of free space while it was written, the render container for PDF is not set up or cannot be reached, it could not create the PDF, the document was larger than the render container accepts, the Word or PDF file would have more pages than the limit, building the file ran out of memory, the knowledge base of a static website is no longer public, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
                     },
                     "createdAt": {
                       "type": "string",
@@ -30184,7 +30203,8 @@
                     "comments": false,
                     "contents": true,
                     "paper": "a4",
-                    "orientation": "portrait"
+                    "orientation": "portrait",
+                    "siteUrl": null
                   },
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                   "rootItemId": null,
@@ -34057,6 +34077,10 @@
                             "file",
                             "heading"
                           ]
+                        },
+                        "knowledgeBase": {
+                          "description": "For a `markdown` import: whether the new space is a knowledge base.",
+                          "type": "boolean"
                         }
                       },
                       "additionalProperties": false,
@@ -34871,6 +34895,10 @@
                           "file",
                           "heading"
                         ]
+                      },
+                      "knowledgeBase": {
+                        "description": "For a `markdown` import: `true` makes the new space a knowledge base. Folders become categories, files become articles, and article types, languages, translations and sections written by a Pagehall export are kept. The knowledge base opens for the people given a role when it is accepted; choose its audience afterwards in its settings.",
+                        "type": "boolean"
                       }
                     },
                     "additionalProperties": false
@@ -35305,6 +35333,10 @@
                             "file",
                             "heading"
                           ]
+                        },
+                        "knowledgeBase": {
+                          "description": "For a `markdown` import: whether the new space is a knowledge base.",
+                          "type": "boolean"
                         }
                       },
                       "additionalProperties": false,
@@ -36595,6 +36627,10 @@
                             "file",
                             "heading"
                           ]
+                        },
+                        "knowledgeBase": {
+                          "description": "For a `markdown` import: whether the new space is a knowledge base.",
+                          "type": "boolean"
                         }
                       },
                       "additionalProperties": false,
@@ -37711,6 +37747,10 @@
                             "file",
                             "heading"
                           ]
+                        },
+                        "knowledgeBase": {
+                          "description": "For a `markdown` import: whether the new space is a knowledge base.",
+                          "type": "boolean"
                         }
                       },
                       "additionalProperties": false,
@@ -41639,6 +41679,10 @@
                             "file",
                             "heading"
                           ]
+                        },
+                        "knowledgeBase": {
+                          "description": "For a `markdown` import: whether the new space is a knowledge base.",
+                          "type": "boolean"
                         }
                       },
                       "additionalProperties": false,
@@ -42916,6 +42960,10 @@
                             "file",
                             "heading"
                           ]
+                        },
+                        "knowledgeBase": {
+                          "description": "For a `markdown` import: whether the new space is a knowledge base.",
+                          "type": "boolean"
                         }
                       },
                       "additionalProperties": false,
@@ -44686,6 +44734,10 @@
                             "file",
                             "heading"
                           ]
+                        },
+                        "knowledgeBase": {
+                          "description": "For a `markdown` import: whether the new space is a knowledge base.",
+                          "type": "boolean"
                         }
                       },
                       "additionalProperties": false,
@@ -46891,6 +46943,10 @@
                             "file",
                             "heading"
                           ]
+                        },
+                        "knowledgeBase": {
+                          "description": "For a `markdown` import: whether the new space is a knowledge base.",
+                          "type": "boolean"
                         }
                       },
                       "additionalProperties": false,
@@ -48091,6 +48147,10 @@
                             "file",
                             "heading"
                           ]
+                        },
+                        "knowledgeBase": {
+                          "description": "For a `markdown` import: whether the new space is a knowledge base.",
+                          "type": "boolean"
                         }
                       },
                       "additionalProperties": false,
@@ -51638,6 +51698,10 @@
                             "file",
                             "heading"
                           ]
+                        },
+                        "knowledgeBase": {
+                          "description": "For a `markdown` import: whether the new space is a knowledge base.",
+                          "type": "boolean"
                         }
                       },
                       "additionalProperties": false,
@@ -52762,6 +52826,10 @@
                             "file",
                             "heading"
                           ]
+                        },
+                        "knowledgeBase": {
+                          "description": "For a `markdown` import: whether the new space is a knowledge base.",
+                          "type": "boolean"
                         }
                       },
                       "additionalProperties": false,
@@ -53963,6 +54031,10 @@
                             "file",
                             "heading"
                           ]
+                        },
+                        "knowledgeBase": {
+                          "description": "For a `markdown` import: whether the new space is a knowledge base.",
+                          "type": "boolean"
                         }
                       },
                       "additionalProperties": false,
@@ -55079,6 +55151,10 @@
                             "file",
                             "heading"
                           ]
+                        },
+                        "knowledgeBase": {
+                          "description": "For a `markdown` import: whether the new space is a knowledge base.",
+                          "type": "boolean"
                         }
                       },
                       "additionalProperties": false,
@@ -155956,6 +156032,10 @@
                               "file",
                               "heading"
                             ]
+                          },
+                          "knowledgeBase": {
+                            "description": "For a `markdown` import: whether the new space is a knowledge base.",
+                            "type": "boolean"
                           }
                         },
                         "additionalProperties": false,
@@ -157075,6 +157155,10 @@
                             "file",
                             "heading"
                           ]
+                        },
+                        "knowledgeBase": {
+                          "description": "For a `markdown` import: whether the new space is a knowledge base.",
+                          "type": "boolean"
                         }
                       },
                       "additionalProperties": false,
@@ -188367,7 +188451,7 @@
                         "docx",
                         "site"
                       ],
-                      "description": "What the file contains: `archive` a ZIP with every page as Markdown and HTML, `html` or `markdown` a ZIP with one of them, `print` one print-ready HTML file, `pdf` one PDF file, `docx` one Word document."
+                      "description": "What the file contains: `archive` a ZIP with every page as Markdown and HTML, `html` or `markdown` a ZIP with one of them, `print` one print-ready HTML file, `pdf` one PDF file, `docx` one Word document, `site` a ZIP with a static website of a public knowledge base."
                     },
                     "options": {
                       "type": "object",
@@ -188399,6 +188483,13 @@
                             "landscape"
                           ],
                           "description": "Orientation of `print`, `pdf` and `docx`."
+                        },
+                        "siteUrl": {
+                          "description": "Address the static website of `site` is served from, or null when none was given.",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
                         }
                       },
                       "required": [
@@ -188406,7 +188497,8 @@
                         "comments",
                         "contents",
                         "paper",
-                        "orientation"
+                        "orientation",
+                        "siteUrl"
                       ],
                       "additionalProperties": false,
                       "description": "The options the export was started with."
@@ -188506,6 +188598,7 @@
                             "renderTooLarge",
                             "tooManyPagesForFile",
                             "tooLargeToBuild",
+                            "notPublic",
                             "interrupted",
                             "internalError"
                           ]
@@ -188514,7 +188607,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Why a failed export stopped: export was turned off for the space, the permission to export the space or page was lost, the API token that started it was revoked, the file store ran short of free space while it was written, the render container for PDF is not set up or cannot be reached, it could not create the PDF, the document was larger than the render container accepts, the Word or PDF file would have more pages than the limit, building the file ran out of memory, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
+                      "description": "Why a failed export stopped: export was turned off for the space, the permission to export the space or page was lost, the API token that started it was revoked, the file store ran short of free space while it was written, the render container for PDF is not set up or cannot be reached, it could not create the PDF, the document was larger than the render container accepts, the Word or PDF file would have more pages than the limit, building the file ran out of memory, the knowledge base of a static website is no longer public, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
                     },
                     "createdAt": {
                       "type": "string",
@@ -188575,7 +188668,8 @@
                     "comments": false,
                     "contents": true,
                     "paper": "a4",
-                    "orientation": "portrait"
+                    "orientation": "portrait",
+                    "siteUrl": null
                   },
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                   "rootItemId": null,
@@ -212991,7 +213085,7 @@
                 "properties": {
                   "format": {
                     "default": "archive",
-                    "description": "`archive` (the default) for a ZIP with every page as Markdown and HTML, `html` or `markdown` for a ZIP with one of them, `print` for one print-ready HTML file of up to 300 pages, `pdf` for one PDF file, which needs the optional render container, `docx` for one Word document.",
+                    "description": "`archive` (the default) for a ZIP with every page as Markdown and HTML, `html` or `markdown` for a ZIP with one of them, `print` for one print-ready HTML file of up to 300 pages, `pdf` for one PDF file, which needs the optional render container, `docx` for one Word document. `site` for a ZIP with a static website of a public knowledge base: every published article, the start, category, search and contact pages, a search index, images and redirects for old addresses, with relative links so it works under any address.",
                     "type": "string",
                     "enum": [
                       "archive",
@@ -212999,7 +213093,8 @@
                       "markdown",
                       "print",
                       "pdf",
-                      "docx"
+                      "docx",
+                      "site"
                     ]
                   },
                   "attachments": {
@@ -213033,6 +213128,20 @@
                     "enum": [
                       "portrait",
                       "landscape"
+                    ]
+                  },
+                  "siteUrl": {
+                    "default": null,
+                    "description": "For `site`: the address the website will be served from, such as `https://help.example.org/`. With it, the website gets `sitemap.xml`, `robots.txt` and language links for search engines; without it, they are left out.",
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 500,
+                        "format": "uri"
+                      },
+                      {
+                        "type": "null"
+                      }
                     ]
                   }
                 },
@@ -213081,7 +213190,7 @@
                         "docx",
                         "site"
                       ],
-                      "description": "What the file contains: `archive` a ZIP with every page as Markdown and HTML, `html` or `markdown` a ZIP with one of them, `print` one print-ready HTML file, `pdf` one PDF file, `docx` one Word document."
+                      "description": "What the file contains: `archive` a ZIP with every page as Markdown and HTML, `html` or `markdown` a ZIP with one of them, `print` one print-ready HTML file, `pdf` one PDF file, `docx` one Word document, `site` a ZIP with a static website of a public knowledge base."
                     },
                     "options": {
                       "type": "object",
@@ -213113,6 +213222,13 @@
                             "landscape"
                           ],
                           "description": "Orientation of `print`, `pdf` and `docx`."
+                        },
+                        "siteUrl": {
+                          "description": "Address the static website of `site` is served from, or null when none was given.",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
                         }
                       },
                       "required": [
@@ -213120,7 +213236,8 @@
                         "comments",
                         "contents",
                         "paper",
-                        "orientation"
+                        "orientation",
+                        "siteUrl"
                       ],
                       "additionalProperties": false,
                       "description": "The options the export was started with."
@@ -213220,6 +213337,7 @@
                             "renderTooLarge",
                             "tooManyPagesForFile",
                             "tooLargeToBuild",
+                            "notPublic",
                             "interrupted",
                             "internalError"
                           ]
@@ -213228,7 +213346,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Why a failed export stopped: export was turned off for the space, the permission to export the space or page was lost, the API token that started it was revoked, the file store ran short of free space while it was written, the render container for PDF is not set up or cannot be reached, it could not create the PDF, the document was larger than the render container accepts, the Word or PDF file would have more pages than the limit, building the file ran out of memory, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
+                      "description": "Why a failed export stopped: export was turned off for the space, the permission to export the space or page was lost, the API token that started it was revoked, the file store ran short of free space while it was written, the render container for PDF is not set up or cannot be reached, it could not create the PDF, the document was larger than the render container accepts, the Word or PDF file would have more pages than the limit, building the file ran out of memory, the knowledge base of a static website is no longer public, the worker was interrupted too often, or an unexpected error. New values can be added in later versions; handle unknown values."
                     },
                     "createdAt": {
                       "type": "string",
@@ -213289,7 +213407,8 @@
                     "comments": false,
                     "contents": true,
                     "paper": "a4",
-                    "orientation": "portrait"
+                    "orientation": "portrait",
+                    "siteUrl": null
                   },
                   "spaceId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a10",
                   "rootItemId": null,
@@ -213422,7 +213541,7 @@
             }
           },
           "409": {
-            "description": "`exportRunning`: Another export of yours is still running. `tooManyExports`: You keep as many exports as allowed. `tooManyPagesForFile`: Too many pages for a Word or PDF file. `tooManyPagesToPrint`: Too many pages to print in a browser.",
+            "description": "`exportRunning`: Another export of yours is still running. `notKnowledgeBase`: The space is not a knowledge base. `nothingToExport`: There is nothing to export. `staticSiteNotPublic`: Only public knowledge bases become a static website. `tooManyExports`: You keep as many exports as allowed. `tooManyPagesForFile`: Too many pages for a Word or PDF file. `tooManyPagesToPrint`: Too many pages to print in a browser.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -213435,6 +213554,30 @@
                       "title": "Another export of yours is still running",
                       "status": 409,
                       "code": "exportRunning"
+                    }
+                  },
+                  "notKnowledgeBase": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notKnowledgeBase",
+                      "title": "The space is not a knowledge base",
+                      "status": 409,
+                      "code": "notKnowledgeBase"
+                    }
+                  },
+                  "nothingToExport": {
+                    "value": {
+                      "type": "urn:pagehall:problem:nothingToExport",
+                      "title": "There is nothing to export",
+                      "status": 409,
+                      "code": "nothingToExport"
+                    }
+                  },
+                  "staticSiteNotPublic": {
+                    "value": {
+                      "type": "urn:pagehall:problem:staticSiteNotPublic",
+                      "title": "Only public knowledge bases become a static website",
+                      "status": 409,
+                      "code": "staticSiteNotPublic"
                     }
                   },
                   "tooManyExports": {

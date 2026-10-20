@@ -167,6 +167,7 @@ import { ArticleRenderer, renderArticleJob } from "./portal/articles.js";
 import { PortalService } from "./portal/portals.js";
 import { PortalReader } from "./portal/reader.js";
 import { PortalSessionService } from "./portal/sessions.js";
+import { StaticSiteBuilder } from "./portal/site/static-site.js";
 import {
   FEEDBACK_SWEEP_SCHEDULE,
   feedbackDeletionJob,
@@ -971,6 +972,16 @@ export function createAccountServices(options: {
     render,
     jobs,
     logger,
+    site: new StaticSiteBuilder({
+      database,
+      portals,
+      reader: portalReader,
+      renderer: articleRenderer,
+      attachments,
+      displayVersions,
+      files,
+      organizations,
+    }),
   });
   const copies = new CopyService({
     database,
