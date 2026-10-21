@@ -41,6 +41,7 @@ export async function createAuthTestApp(
     PAGEHALL_DATABASE_URL: database.url,
     PAGEHALL_SECRETS_DIR: path.join(dataDir, "secrets"),
     PAGEHALL_FILES_DIR: dataDir,
+    PAGEHALL_BACKUP_DIR: mkdtempSync(path.join(tmpdir(), "pagehall-api-backups-")),
     PAGEHALL_LOG_LEVEL: "silent",
     PAGEHALL_DATABASE_POOL_SIZE: "4",
     ...env,
