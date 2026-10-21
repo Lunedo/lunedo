@@ -3934,6 +3934,9 @@
       },
       "portalAccount": {
         "invited": "Portal account invited"
+      },
+      "portalHandoff": {
+        "consented": "Signing in on a portal domain allowed"
       }
     },
     "action": "Action",

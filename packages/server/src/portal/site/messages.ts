@@ -112,6 +112,10 @@ export interface PortalMessages {
   signedOutHeading: string;
   signedOutLead: string;
   signInAgain: string;
+  consentHeading: (domain: string) => string;
+  consentLead: (domain: string) => string;
+  consentContinue: string;
+  consentCancel: string;
   backToStart: string;
   errorHeading: string;
   errorText: string;
@@ -249,6 +253,11 @@ const en: PortalMessages = {
   signedOutHeading: "You are signed out",
   signedOutLead: "You were signed out everywhere, in the help and in the wiki.",
   signInAgain: "Sign in again",
+  consentHeading: (domain) => `Sign in to ${domain} with your account?`,
+  consentLead: (domain) =>
+    `The help portal at ${domain} then sees your name, your e-mail address and what you may read there. Pagehall asks only once for this address.`,
+  consentContinue: "Continue",
+  consentCancel: "Cancel",
   backToStart: "Back to the start page",
   errorHeading: "This page cannot be shown right now",
   errorText:
@@ -394,6 +403,11 @@ const de: PortalMessages = {
   signedOutHeading: "Du bist abgemeldet",
   signedOutLead: "Du wurdest überall abgemeldet, in der Hilfe und im Wiki.",
   signInAgain: "Wieder anmelden",
+  consentHeading: (domain) => `Bei ${domain} mit deinem Konto anmelden?`,
+  consentLead: (domain) =>
+    `Das Hilfeportal unter ${domain} sieht dann deinen Namen, deine E-Mail-Adresse und was du dort lesen darfst. Pagehall fragt für diese Adresse nur einmal.`,
+  consentContinue: "Weiter",
+  consentCancel: "Abbrechen",
   backToStart: "Zur Startseite",
   errorHeading: "Diese Seite kann gerade nicht angezeigt werden",
   errorText:

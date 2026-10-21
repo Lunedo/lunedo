@@ -9,6 +9,7 @@ import {
   type CategoryState,
   categoryPage,
   clientSubject,
+  consentPage,
   contactPage,
   currentRequestContext,
   emptySearchPage,
@@ -55,6 +56,7 @@ import { instanceUrlOf } from "../http/instance-url.js";
 
 const FLOW_MAX_AGE_SECONDS = 10 * 60;
 const FEEDBACK_BODY_LIMIT = 16 * 1024;
+const CONSENT_BODY_LIMIT = 4 * 1024;
 const FEEDBACK_LIMIT = 30;
 const FEEDBACK_WINDOW_SECONDS = 600;
 const SEARCH_COUNT_LIMIT = 60;
@@ -464,6 +466,11 @@ async function route(
     }
     if (rest === "/sign-out") return signOut(reply, services, target, viewer);
     if (rest === "/feedback") return feedback(request, reply, services, target, viewer);
+    if (rest === "/authorize" && !target.domain) {
+      const body = await readBody(request, CONSENT_BODY_LIMIT);
+      if (body === null) return reply.code(413).send();
+      return authorize(request, reply, services, target, viewer, new URLSearchParams(body), true);
+    }
     return reply.code(404).type("text/plain; charset=utf-8").send("Not found");
   }
   if (method !== "GET" && method !== "HEAD") {
@@ -827,6 +834,7 @@ async function authorize(
   target: Target,
   viewer: Viewer,
   query: URLSearchParams,
+  confirmed = false,
 ): Promise<FastifyReply> {
   const domain = query.get("domain");
   const state = query.get("state") ?? "";
@@ -837,6 +845,26 @@ async function authorize(
   }
   if (!viewer.session) {
     return signInScreen(reply, services, target, viewer, new URLSearchParams({ return: request.url }), false);
+  }
+  const accountId = viewer.session.accountId;
+  if (await services.portalSessions.needsConsent(accountId, domain)) {
+    if (!confirmed) {
+      const view = await buildView(services, target, viewer, { categories: false });
+      return sendPage(
+        reply,
+        view,
+        consentPage(view, {
+          domain,
+          action: `${target.root}/authorize`,
+          fields: { domain, state, return: returnTo },
+          cancelUrl: `${target.root}/`,
+        }),
+      );
+    }
+    await services.portalSessions.consent(accountId, domain, {
+      id: target.config.spaceId,
+      name: target.config.name,
+    });
   }
   const code = await services.portalSessions.issueHandoff(viewer.session, domain, state);
   if (!code)

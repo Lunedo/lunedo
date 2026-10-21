@@ -123,6 +123,20 @@ export const knowledgeBasePaths = pgTable(
   (table) => [index().on(table.spaceId)],
 );
 
+export const portalHandoffConsents = pgTable(
+  "portal_handoff_consents",
+  {
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    domain: text()
+      .notNull()
+      .references(() => portalDomains.domain, { onDelete: "cascade" }),
+    createdAt: timestampColumn().notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.accountId, table.domain] }), index().on(table.domain)],
+);
+
 export const portalPathReservations = pgTable(
   "portal_path_reservations",
   {

@@ -1101,6 +1101,12 @@ export const auditCatalog = {
     visibility: "organization",
     personal: { email: "target" },
   }),
+  "portalHandoff.consented": event({
+    actor: ["account"],
+    target: "account",
+    fields: z.object({ domain: z.string(), spaceId: z.uuid(), spaceName: z.string() }),
+    visibility: "organization",
+  }),
   "knowledgeBase.portalAddressChanged": event({
     actor: ["account", "system"],
     target: "space",

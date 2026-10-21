@@ -795,7 +795,7 @@ export function createAccountServices(options: {
     indexer: new SearchIndexer({ database, adapter: searchAdapter, files }),
   });
   const portals = new PortalService({ database, audit, settings });
-  const portalSessions = new PortalSessionService({ database, sessions });
+  const portalSessions = new PortalSessionService({ database, sessions, audit });
   const embeds = new EmbedServices({ settings });
   const articleRenderer = new ArticleRenderer({ database, authorization, jobs, embeds });
   const articleApi = new ArticleApiService({

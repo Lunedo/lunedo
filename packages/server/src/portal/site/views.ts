@@ -806,6 +806,27 @@ export function signedOutPage(view: PortalView): string {
   );
 }
 
+export function consentPage(
+  view: PortalView,
+  consent: { domain: string; action: string; fields: Record<string, string>; cancelUrl: string },
+): string {
+  const { t } = view;
+  return layout(
+    view,
+    { title: t.consentHeading(consent.domain), navigation: false, robots: "noindex,nofollow" },
+    html`<div class="signin"><div class="card">
+      <span class="logo">${brandMark(view)}</span>
+      <h1>${t.consentHeading(consent.domain)}</h1>
+      <p class="lead">${t.consentLead(consent.domain)}</p>
+      <form class="methods" method="post" action="${consent.action}">
+        ${Object.entries(consent.fields).map(([name, value]) => html`<input type="hidden" name="${name}" value="${value}">`)}
+        <button class="btn lg primary" type="submit">${icon("log-in")}${t.consentContinue}</button>
+        <a class="btn lg" href="${consent.cancelUrl}">${t.consentCancel}</a>
+      </form>
+    </div></div>`,
+  );
+}
+
 export function errorPage(view: PortalView, retryUrl: string): string {
   const { t } = view;
   return layout(

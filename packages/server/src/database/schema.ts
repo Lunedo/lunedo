@@ -124,6 +124,7 @@ export {
   knowledgeBasePaths,
   knowledgeBases,
   portalDomains,
+  portalHandoffConsents,
   portalInvitations,
   portalPathReservations,
   portalReaders,
