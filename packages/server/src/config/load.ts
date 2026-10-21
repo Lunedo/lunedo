@@ -29,7 +29,8 @@ export interface ServerConfig {
   redisUrl: Secret | undefined;
   logLevel: LogLevel;
   database: { url: Secret; poolSize: number };
-  paths: { files: string; secrets: string; webRoot: string | undefined; imports: string };
+  paths: { files: string; secrets: string; webRoot: string | undefined; imports: string; backups: string };
+  backupBeforeUpdate: boolean;
   fileStorage: FileStorageConfig;
   filesUrl: string | undefined;
   keys: {
@@ -230,6 +231,7 @@ export function loadConfig(env: Env): ServerConfig {
     paths: {
       files: values.PAGEHALL_FILES_DIR as string,
       imports: values.PAGEHALL_IMPORT_DIR as string,
+      backups: values.PAGEHALL_BACKUP_DIR as string,
       secrets: secretsDir,
       webRoot: values.PAGEHALL_WEB_ROOT as string | undefined,
     },
@@ -240,6 +242,7 @@ export function loadConfig(env: Env): ServerConfig {
         (values.PAGEHALL_MASTER_KEYS_PATH as string | undefined) ?? path.join(secretsDir, "master-keys"),
       backupKeys: secret("PAGEHALL_BACKUP_KEY"),
     },
+    backupBeforeUpdate: values.PAGEHALL_BACKUP_BEFORE_UPDATE as boolean,
     metricsToken: secret("PAGEHALL_METRICS_TOKEN"),
     render: values.PAGEHALL_RENDER_URL
       ? {

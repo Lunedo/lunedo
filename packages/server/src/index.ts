@@ -155,12 +155,39 @@ export {
   BACKUP_FORMAT_VERSION,
   BackupError,
   type BackupManifest,
+  type BackupScope,
+  backupScopes,
   createBackup,
+  openBackupFile,
   restoreBackup,
   verifyBackup,
 } from "./backup/archive.js";
+export {
+  BackupBeforeUpdateError,
+  createBeforeUpdateBackup,
+  requestSkipBeforeUpdate,
+  SKIP_BEFORE_UPDATE_MARKER,
+} from "./backup/before-update.js";
+export { BACKUP_S3_SECRET, backupS3SecretContext } from "./backup/configuration.js";
+export { BackupBusyError, BackupNotFoundError, BackupSettingsError } from "./backup/errors.js";
+export { backupRunJob, backupTestRestoreJob } from "./backup/jobs.js";
+export { type BackupClass, backupClasses } from "./backup/naming.js";
 export { BackupConfigurationError, type DatabaseArchiver, PostgresArchiver } from "./backup/postgres.js";
 export { checkRestoreComplete, IncompleteRestoreError } from "./backup/restore-marker.js";
+export { type BackupSources, writeBackupFile } from "./backup/runner.js";
+export {
+  type BackupList,
+  type BackupListEntry,
+  type BackupOverview,
+  BackupService,
+  type BackupStatus,
+  type RunView,
+  type SettingsInput as BackupSettingsInput,
+  type TargetInput as BackupTargetInput,
+  type TargetTestResult,
+  type TestRestoreView,
+} from "./backup/service.js";
+export { targetFailures } from "./backup/targets.js";
 export {
   type ChatChannel,
   ChatChannelError,
@@ -691,6 +718,7 @@ export {
 export type { CustomRole, RoleAssignment } from "./organizations/roles.js";
 export { roleNameSchema } from "./organizations/roles.js";
 export * from "./organizations/settings.js";
+export { outboundPolicy } from "./outbound/guarded-request.js";
 export { ArticleRenderer, PORTAL_BASE_PLACEHOLDER, renderArticleJob } from "./portal/articles.js";
 export {
   type AppearanceInput,
@@ -754,6 +782,7 @@ export {
 } from "./portal/statistics.js";
 export { type PushDevice, PushService, PushSubscriptionError } from "./push/push-service.js";
 export {
+  availableMasterKeys,
   createServerRuntime,
   type ProcessRole,
   resolveGeneratedSecrets,

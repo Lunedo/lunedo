@@ -2,6 +2,8 @@ import { parseArgs } from "node:util";
 
 export type Command =
   | { name: "backup create"; output: string }
+  | { name: "backup create before update" }
+  | { name: "backup skip-before-update" }
   | { name: "backup verify"; input: string }
   | { name: "backup restore"; input: string; force: boolean; configDir: string | undefined }
   | { name: "keys rotate" }
@@ -17,6 +19,8 @@ export class UsageError extends Error {
 
 export const usage = `Usage:
   pagehall backup create --output <file>
+  pagehall backup create --before-update
+  pagehall backup skip-before-update
   pagehall backup verify --input <file>
   pagehall backup restore --input <file> [--force] [--config-dir <dir>]
   pagehall keys rotate
@@ -36,6 +40,7 @@ export function parseCommand(argv: readonly string[]): Command {
       input: { type: "string" },
       force: { type: "boolean", default: false },
       "config-dir": { type: "string" },
+      "before-update": { type: "boolean", default: false },
     },
     strict: true,
     allowPositionals: false,
@@ -48,7 +53,14 @@ export function parseCommand(argv: readonly string[]): Command {
 
   switch (`${group} ${action}`) {
     case "backup create":
+      if (values["before-update"]) {
+        if (values.output)
+          throw new UsageError("--before-update writes to the backup target; leave out --output");
+        return { name: "backup create before update" };
+      }
       return { name: "backup create", output: require("output") };
+    case "backup skip-before-update":
+      return { name: "backup skip-before-update" };
     case "backup verify":
       return { name: "backup verify", input: require("input") };
     case "backup restore":

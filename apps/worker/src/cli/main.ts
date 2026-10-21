@@ -1,34 +1,37 @@
 import path from "node:path";
 import {
+  availableMasterKeys,
+  type BackupSources,
   ConfigError,
   checkRestoreComplete,
   configurationForBackup,
-  createBackup,
+  createBeforeUpdateBackup,
   createDatabase,
   createDatabasePool,
   createKeyProvider,
   createLogger,
   currentSchemaVersion,
+  type DatabasePool,
   Encryption,
   encryptedColumns,
   encryptedStreamOwnersOf,
   fileStoreOf,
-  type KeyRing,
-  KeyRingError,
   KeyRingHolder,
   KeyRotation,
-  keyFingerprint,
   knownSchemaVersions,
+  type Logger,
   loadConfig,
-  masterKeyVersionsInUse,
+  outboundPolicy,
   PgBossQueue,
   PostgresArchiver,
+  requestSkipBeforeUpdate,
   resolveGeneratedSecrets,
   restoreBackup,
   rotateDataKeysJob,
   rotateMasterKey,
   type ServerConfig,
   verifyBackup,
+  writeBackupFile,
 } from "@pagehall/server";
 import { verifyAuditLog } from "./audit.js";
 import { type Command, parseCommand, UsageError, usage } from "./parse.js";
@@ -36,43 +39,37 @@ import { rebuildSearchIndex, searchIndexStatus } from "./search.js";
 
 const write = (text: string) => process.stdout.write(`${text}\n`);
 
-/** Master key versions that encrypted data of this instance uses, for the backup header. */
-async function requiredMasterKeys(config: ServerConfig, databaseUrl: string) {
-  const pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-cli" });
-  try {
-    const database = createDatabase(pool);
-    const inUse = Object.keys(
-      await masterKeyVersionsInUse({
-        database,
-        columns: encryptedColumns,
-        streams: {
-          owners: () => encryptedStreamOwnersOf(fileStoreOf(config)),
-          context: { database, filesDir: config.paths.files },
-        },
-      }),
-    ).map(Number);
-    if (inUse.length === 0) return [];
-    const ring = await createKeyProvider(config).load();
-    return inUse.map((version) => {
-      if (!ring.has(version)) {
-        throw new Error(
-          `Encrypted data uses master key version ${version}, which is not in the master key ring of this instance, so a backup could not be restored. Restore that key version first.`,
-        );
-      }
-      return { version, fingerprint: keyFingerprint("master", ring.get(version)) };
-    });
-  } finally {
-    await pool.end();
-  }
+function backupSources(
+  config: ServerConfig,
+  env: NodeJS.ProcessEnv,
+  pool: DatabasePool,
+  logger: Logger,
+  databaseUrl: string,
+): BackupSources {
+  const fileStore = fileStoreOf(config);
+  return {
+    pool,
+    database: createDatabase(pool),
+    archiver: new PostgresArchiver({ databaseUrl }),
+    filesDir: config.paths.files,
+    objectStore: fileStore.kind === "s3" ? fileStore : undefined,
+    streamOwners: encryptedStreamOwnersOf(fileStore),
+    backupKeys: resolveGeneratedSecrets(config).backupKeys,
+    masterKeys: () => availableMasterKeys(config),
+    stagingDir: config.paths.backups,
+    configuration: configurationForBackup(env),
+    pagehallVersion: env.PAGEHALL_VERSION ?? "dev",
+    schemaVersion: currentSchemaVersion(),
+    logger,
+  };
 }
 
-/** The master key ring of this instance, without creating one. */
-async function availableMasterKeys(config: ServerConfig): Promise<KeyRing | null> {
+async function withPool<T>(databaseUrl: string, use: (pool: DatabasePool) => Promise<T>): Promise<T> {
+  const pool = createDatabasePool({ connectionString: databaseUrl, applicationName: "pagehall-cli" });
   try {
-    return await createKeyProvider(config).load();
-  } catch (error) {
-    if (error instanceof KeyRingError) return null;
-    throw error;
+    return await use(pool);
+  } finally {
+    await pool.end();
   }
 }
 
@@ -89,21 +86,30 @@ async function run(command: Command): Promise<void> {
   switch (command.name) {
     case "backup create": {
       await checkRestoreComplete(config.paths.files);
-      const { backupKeys } = resolveGeneratedSecrets(config);
-      const manifest = await createBackup({
-        output: path.resolve(command.output),
-        backupKeys,
-        masterKeys: await requiredMasterKeys(config, databaseUrl),
-        database: new PostgresArchiver({ databaseUrl }),
-        filesDir: config.paths.files,
-        objectStore: config.fileStorage.kind === "s3" ? fileStoreOf(config) : undefined,
-        config: configurationForBackup(env),
-        pagehallVersion: env.PAGEHALL_VERSION ?? "dev",
-        schemaVersion: currentSchemaVersion(),
-        logger,
-      });
+      const manifest = await withPool(databaseUrl, (pool) =>
+        writeBackupFile(backupSources(config, env, pool, logger, databaseUrl), path.resolve(command.output)),
+      );
       write(`Backup written to ${path.resolve(command.output)} (${manifest.entries.length} entries).`);
       write("It can only be restored with the backup key. Keep a copy of the key in a safe place.");
+      return;
+    }
+    case "backup create before update": {
+      await checkRestoreComplete(config.paths.files);
+      const written = await withPool(databaseUrl, (pool) =>
+        createBeforeUpdateBackup({
+          sources: backupSources(config, env, pool, logger, databaseUrl),
+          database: createDatabase(pool),
+          backupDir: config.paths.backups,
+          policy: outboundPolicy(config.outboundAllowedNetworks),
+          logger,
+        }),
+      );
+      write(written.location);
+      return;
+    }
+    case "backup skip-before-update": {
+      const marker = await requestSkipBeforeUpdate(config.paths.backups);
+      write(`The next start applies pending migrations without a backup before the update (${marker}).`);
       return;
     }
     case "backup verify": {

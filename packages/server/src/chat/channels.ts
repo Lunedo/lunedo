@@ -56,7 +56,7 @@ const ABANDONED_MINUTES = 60;
 
 const storageDeliverySchema = z.object({
   message: z.object({
-    event: z.literal("storage"),
+    event: z.enum(["storage", "backup"]),
     heading: z.string(),
     title: z.string(),
     detail: z.string().nullable(),

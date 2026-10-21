@@ -51,7 +51,7 @@ export function roomDirectoryRequest(
 }
 
 export interface ChatMessage {
-  event: ChatEvent | "test" | "storage";
+  event: ChatEvent | "test" | "storage" | "backup";
   heading: string;
   title: string;
   detail: string | null;

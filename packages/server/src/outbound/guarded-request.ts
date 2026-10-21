@@ -148,7 +148,7 @@ export function parseOutboundUrl(value: string): URL {
   return url;
 }
 
-function guardedLookup(policy: OutboundPolicy, secure: boolean): LookupFunction {
+export function guardedLookup(policy: OutboundPolicy, secure: boolean): LookupFunction {
   return (hostname, options, callback) => {
     policy
       .resolve(hostname)
@@ -266,6 +266,10 @@ const CERTIFICATE_ERRORS = new Set([
   "UNABLE_TO_GET_ISSUER_CERT_LOCALLY",
   "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
 ]);
+
+export function isCertificateError(code: string | undefined): boolean {
+  return CERTIFICATE_ERRORS.has(code ?? "");
+}
 
 export interface StreamRequest {
   url: string;

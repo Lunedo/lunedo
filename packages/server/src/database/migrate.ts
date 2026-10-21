@@ -29,6 +29,10 @@ export function knownSchemaVersions(folder = migrationsFolder): string[] {
   return readJournal(folder).map((entry) => entry.tag);
 }
 
+export function schemaVersionTimes(folder = migrationsFolder): Map<string, number> {
+  return new Map(readJournal(folder).map((entry) => [entry.tag, entry.when]));
+}
+
 /** The newest migration this version ships, e.g. `0003_settings`. */
 export function currentSchemaVersion(folder = migrationsFolder): string {
   const entries = readJournal(folder);
@@ -42,7 +46,11 @@ export function currentSchemaVersion(folder = migrationsFolder): string {
  */
 export async function runMigrations(
   pool: DatabasePool,
-  options: { logger: Logger; folder?: string },
+  options: {
+    logger: Logger;
+    folder?: string;
+    beforeMigrate?: (pending: { applied: number; expected: number }) => Promise<void>;
+  },
 ): Promise<void> {
   const folder = options.folder ?? migrationsFolder;
   const client = await pool.connect();
@@ -53,6 +61,9 @@ export async function runMigrations(
     await client.query("select pg_advisory_lock(hashtext($1))", [LOCK_NAME]);
     try {
       const before = await appliedMigrationCount(client);
+      const expected = readJournal(folder).length;
+      if (options.beforeMigrate && before < expected)
+        await options.beforeMigrate({ applied: before, expected });
       await migrate(drizzle({ client }), {
         migrationsFolder: folder,
         migrationsSchema: MIGRATIONS_SCHEMA,
