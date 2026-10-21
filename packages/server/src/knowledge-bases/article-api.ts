@@ -194,6 +194,7 @@ export class ArticleApiService {
         language,
         addresses.renderer,
         viewer,
+        { readerView: false },
       );
       sections.push({ ...section, html: rendered.html });
     }

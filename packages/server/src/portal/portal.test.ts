@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { Readable } from "node:stream";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ANONYMOUS, accountPrincipal, SYSTEM } from "../accounts/principal.js";
@@ -13,6 +14,10 @@ import { PortalSessionService } from "./sessions.js";
 import { cleanFeedback, normalizeTerm, PortalStatistics } from "./statistics.js";
 
 const baseUrl = testDatabaseBaseUrl();
+const PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+  "base64",
+);
 const paragraph = (text: string) => ({ type: "paragraph", content: [{ type: "text", text }] });
 
 describe("statistics values", () => {
@@ -463,7 +468,6 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
     const other = await space(org.id, org.owner, { visibility: "organization" });
     const internal = await publishedPage(org.owner, other.id, "Intern", "Interner Text");
     const target = await publishedPage(org.owner, kb.id, "Ziel", "Ziel");
-    const attachmentId = randomUUID();
     const colleague = await member(org.id, "member", "Kollegin Klara");
     const stranger = await account({ name: "Fremder Franz" });
     const actor = accountPrincipal(org.owner);
@@ -472,6 +476,14 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
       title: "Quelle",
       placement: { parentId: null },
     });
+    const upload = (itemId: string, name: string) =>
+      test.services.attachments.upload(actor, itemId, {
+        name,
+        body: Readable.from([PNG]),
+        contentLength: PNG.length,
+      });
+    const attachmentId = (await upload(page.id, "bild.png")).id;
+    const foreignId = (await upload(internal, "gehalt.png")).id;
     await test.services.documents.replace(actor, page.id, {
       type: "doc",
       content: [
@@ -488,7 +500,9 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
               ],
             },
             { type: "image", attrs: { attachmentId, alt: "Bild" } },
+            { type: "image", attrs: { attachmentId: foreignId, alt: "Fremd" } },
             { type: "includePage", attrs: { pageId: internal } },
+            { type: "taskReport", attrs: { spaceId: other.id, labels: ["gehalt"], assignee: colleague } },
             {
               type: "paragraph",
               content: [
@@ -515,6 +529,16 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
     expect(rendered.html).toContain('data-section="steps"');
     expect(rendered.html).toContain("Kollegin Klara");
     expect(rendered.html).not.toContain("Fremder Franz");
+    for (const hidden of [
+      colleague,
+      other.id,
+      foreignId,
+      "gehalt",
+      "data-attachment-id",
+      "data-account-id",
+    ]) {
+      expect(rendered.html, hidden).not.toContain(hidden);
+    }
     expect(rendered.headings).toEqual([expect.objectContaining({ title: "Schritte", level: 2 })]);
     const again = await test.services.articleRenderer.renderPublished(page.id);
     expect(again?.html).toBe(rendered.html);

@@ -247,7 +247,7 @@ The content of an article is rendered to HTML once per published version and sto
 - **Includes and excerpts** from published articles of the same knowledge base are shown, because they have the same readers. An article that a view restriction hides from some readers of the including article, an article of another space and every other page stay hidden. Translations include the translation of the included article in their language where one is published.
 - **Embeds** follow the embed services the organization allows (see [embeds-and-blocks.md](embeds-and-blocks.md)). The portal loads frames only from the addresses of these services; other embeds appear as a link.
 - **Links to articles** of the same knowledge base show the current published title when the reader can read the target. Links to articles the reader cannot read (restricted, unpublished, in the trash or archived) and to pages outside the knowledge base show "No access" without their title or number.
-- Child page lists and reports are not shown, and mentions show the current name of members of the organization; anonymized people and people who left are not named.
+- Child page lists, attachment lists and reports are left out of the page, images and files show only when they belong to the article or to an article with the same readers, and the HTML carries no internal IDs of people, pages, spaces or files. Mentions show the current name of members of the organization; anonymized people and people who left are not named.
 - Search indexes, in the portal and in the static website, never contain the stored titles of linked pages.
 
 ## Static website

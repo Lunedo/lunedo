@@ -75,15 +75,42 @@ function walk(node: NodeJson, visit: (node: NodeJson) => void): void {
 }
 
 const INCLUDES = new Set(["includePage", "includeExcerpt"]);
+const NOT_FOR_READERS = new Set([
+  "taskReport",
+  "pageReport",
+  "decisionReport",
+  "propertiesReport",
+  "childPages",
+  "attachmentList",
+  "contentByLabel",
+  "relatedLabels",
+]);
+const IDENTIFIER_ATTRIBUTES = / data-(?:[a-z]+-)*(?:id|ids|assignee|labels?)="[^"]*"/g;
+
+function forReaders(nodes: readonly NodeJson[]): NodeJson[] {
+  return nodes
+    .filter((node) => !NOT_FOR_READERS.has(node.type))
+    .map((node) => (node.content ? { ...node, content: forReaders(node.content) } : node));
+}
+
+function readerDocument(document: DocumentJson): DocumentJson {
+  return { ...document, content: forReaders((document.content ?? []) as NodeJson[]) };
+}
+
+function withoutIdentifiers(html: string): string {
+  return html.replace(IDENTIFIER_ATTRIBUTES, "");
+}
 
 function references(document: DocumentJson): {
   images: Set<string>;
+  attachments: Set<string>;
   pages: Set<string>;
   people: Set<string>;
   includes: IncludeRequest[];
   embeds: boolean;
 } {
   const images = new Set<string>();
+  const attachments = new Set<string>();
   const pages = new Set<string>();
   const people = new Set<string>();
   const includes: IncludeRequest[] = [];
@@ -91,6 +118,7 @@ function references(document: DocumentJson): {
   walk(document as NodeJson, (node) => {
     const attrs = (node.attrs ?? {}) as Record<string, unknown>;
     if (node.type === "image" && typeof attrs.attachmentId === "string") images.add(attrs.attachmentId);
+    else if (typeof attrs.attachmentId === "string") attachments.add(attrs.attachmentId);
     if (node.type === "mention" && typeof attrs.id === "string") people.add(attrs.id);
     if (INCLUDES.has(node.type)) includes.push(includeRequest({ type: node.type, attrs }));
     if (node.type === "embed") embeds = true;
@@ -100,7 +128,7 @@ function references(document: DocumentJson): {
     }
     if (typeof attrs.pageId === "string" && !INCLUDES.has(node.type)) pages.add(attrs.pageId);
   });
-  return { images, pages, people, includes, embeds };
+  return { images, attachments, pages, people, includes, embeds };
 }
 
 export function hasLiveParts(document: DocumentJson): boolean {
@@ -203,12 +231,16 @@ export class ArticleRenderer {
     language: Language,
     addresses: ArticleAddresses,
     reader: Principal,
+    options: { readerView?: boolean } = {},
   ): Promise<{ html: string; headings: RenderedHeading[] }> {
-    const embeds = await this.#embedServices(source.spaceId, source.document);
-    const context = await this.#context(source, language, addresses, embeds, reader, [], {
+    const readerView = options.readerView ?? true;
+    const document = readerView ? readerDocument(source.document) : source.document;
+    const embeds = await this.#embedServices(source.spaceId, document);
+    const context = await this.#context({ ...source, document }, language, addresses, embeds, reader, [], {
       remaining: MAX_INCLUDES,
     });
-    const html = renderHtml(source.document, context);
+    const rendered = renderHtml(document, context);
+    const html = readerView ? withoutIdentifiers(rendered) : rendered;
     const headings = extractHeadings(source.document)
       .filter((heading) => heading.level <= TOC_LEVEL)
       .map((heading) => ({ id: heading.id, title: heading.text, level: heading.level }));
@@ -301,7 +333,7 @@ export class ArticleRenderer {
         included.set(key, { state: "noExcerpt" });
         continue;
       }
-      const shown: DocumentJson = { type: "doc", content };
+      const shown = readerDocument({ type: "doc", content });
       const nested = await this.#context(
         { ...source, document: shown },
         language,
@@ -332,7 +364,7 @@ export class ArticleRenderer {
     budget: { remaining: number },
   ): Promise<RenderContext> {
     const { spaceId, document } = source;
-    const { images, pages, people } = references(document);
+    const { images, attachments, pages, people } = references(document);
     const targets = new Map<string, { number: number; title: string }>();
     if (pages.size > 0) {
       const result = await this.#database.execute<{ item_id: string; number: number; title: string }>(sql`
@@ -346,6 +378,14 @@ export class ArticleRenderer {
       for (const entry of result.rows) {
         targets.set(entry.item_id, { number: Number(entry.number), title: entry.title });
       }
+    }
+    const files = new Set<string>();
+    if (images.size > 0 || attachments.size > 0) {
+      const result = await this.#database.execute<{ id: string }>(sql`
+        select a.id from attachments a join tree_items t on t.id = a.item_id
+        where a.id = any(${sql.param([...images, ...attachments])}::uuid[])
+          and (a.item_id = ${source.itemId} or ${this.#shareable(sql`t`, source)})`);
+      for (const entry of result.rows) files.add(entry.id);
     }
     const names = new Map<string, string>();
     if (people.size > 0) {
@@ -368,11 +408,10 @@ export class ArticleRenderer {
         if (!target) return { href: "", title: "", accessible: false };
         return { href: addresses.page(target.number), title: target.title, accessible: true };
       },
-      attachment: (id) => ({
-        href: addresses.file(id, false),
-        display: addresses.file(id, true),
-        image: images.has(id),
-      }),
+      attachment: (id) =>
+        files.has(id)
+          ? { href: addresses.file(id, false), display: addresses.file(id, true), image: images.has(id) }
+          : null,
       include: (request) => included.get(includeKey(request)) ?? { state: "hidden" },
       childPages: () => [],
       attachmentList: () => [],
