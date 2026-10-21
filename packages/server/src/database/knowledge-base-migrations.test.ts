@@ -148,4 +148,36 @@ describe.skipIf(!baseUrl)("knowledge base data migrations", () => {
     });
     expect(lines.join("\n")).toContain(`Space ${space}: 1 role(s) of portal accounts reduced to reader`);
   });
+
+  it("replaces time-ordered IDs of notes and searches with random ones", async () => {
+    const target = await migratedBefore("0087_random_statistics_ids");
+    const organizationId = await organization(target);
+    const space = await knowledgeBase(target, organizationId);
+    const item = randomUUID();
+    await target.query(
+      "insert into tree_items (id, space_id, kind, position, title, mode) values ($1, $2, 'page', 'a0', 'Artikel', 'publish')",
+      [item, space],
+    );
+    const timed = "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a70";
+    const searched = "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a71";
+    await target.query(
+      "insert into portal_feedback (id, item_id, space_id, day, text) values ($1, $2, $3, current_date, 'Hinweis')",
+      [timed, item, space],
+    );
+    await target.query(
+      "insert into portal_searches (id, space_id, term, results, searched_at) values ($1, $2, 'vpn', 1, date_trunc('hour', now()))",
+      [searched, space],
+    );
+
+    await runMigrations(target, { logger: createLogger({ service: "test", level: "silent" }) });
+
+    const rows = await target.query<{ id: string; kind: string }>(
+      "select id, 'feedback' as kind from portal_feedback union all select id, 'search' from portal_searches",
+    );
+    expect(rows.rows.map((row) => row.kind).sort()).toEqual(["feedback", "search"]);
+    for (const row of rows.rows) {
+      expect([timed, searched]).not.toContain(row.id);
+      expect(row.id[14]).toBe("4");
+    }
+  });
 });

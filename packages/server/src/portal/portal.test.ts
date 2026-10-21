@@ -397,6 +397,38 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
     expect(await test.services.portalSessions.resolve(token ?? "", domain)).toBeNull();
   });
 
+  it("gives notes and searches IDs that carry no time and pages notes by day", async () => {
+    const org = await organization();
+    const kb = await knowledgeBase(org.id, org.owner, "public");
+    const article = await publishedPage(org.owner, kb.id, "Artikel", "Text");
+    const daysAgo = (count: number) => new Date(Date.now() - count * 86_400_000);
+    const days = [daysAgo(3), daysAgo(1), daysAgo(2)];
+    const dayOf = (date: Date) => date.toISOString().slice(0, 10);
+    for (const [index, at] of days.entries()) {
+      const statistics = new PortalStatistics({ database: test.database, clock: () => at });
+      await statistics.recordFeedback(kb.id, article, `Hinweis ${index}`);
+      await statistics.recordSearch(kb.id, { term: "vpn", results: 1, categoryId: null });
+    }
+    const ids = await test.database.execute<{ id: string }>(sql`
+      select id from portal_feedback where space_id = ${kb.id}
+      union all select id from portal_searches where space_id = ${kb.id}`);
+    expect(ids.rows).toHaveLength(6);
+    for (const { id } of ids.rows) expect(id[14], id).toBe("4");
+    const owner = accountPrincipal(org.owner);
+    const statistics = test.services.knowledgeBaseStatistics;
+    const first = await statistics.feedback(owner, kb.id, article, { period: "30d", limit: 2 });
+    expect(first.items.map((item) => item.day)).toEqual([dayOf(daysAgo(1)), dayOf(daysAgo(2))]);
+    if (!first.nextCursor) throw new Error("missing cursor");
+    expect(first.nextCursor).toEqual({ day: dayOf(daysAgo(2)), id: first.items[1]?.id });
+    const second = await statistics.feedback(owner, kb.id, article, {
+      period: "30d",
+      limit: 2,
+      before: first.nextCursor,
+    });
+    expect(second.items.map((item) => item.day)).toEqual([dayOf(daysAgo(3))]);
+    expect(second.nextCursor).toBeNull();
+  });
+
   it("deletes free text when its retention ends, and at once when the retention gets shorter", async () => {
     const org = await organization();
     const kb = await knowledgeBase(org.id, org.owner, "public");
@@ -415,9 +447,10 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
     await past.recordFeedback(kb.id, article, "Noch ein alter Hinweis");
     await test.services.portals.updateAppearance(kb.id, { feedbackRetentionMonths: 24 });
     await statistics.retentionChanged(kb.id);
-    expect((await statistics.feedback(kb.id)).map((entry) => entry.text)).toEqual(
-      ["Noch ein alter Hinweis", "Neuer Hinweis"].sort((a, b) => (a < b ? 1 : -1)),
-    );
+    expect((await statistics.feedback(kb.id)).map((entry) => entry.text)).toEqual([
+      "Neuer Hinweis",
+      "Noch ein alter Hinweis",
+    ]);
     await test.services.portals.updateAppearance(kb.id, { feedbackRetentionMonths: 1 });
     await statistics.retentionChanged(kb.id);
     expect((await statistics.feedback(kb.id)).map((entry) => entry.text)).toEqual(["Neuer Hinweis"]);

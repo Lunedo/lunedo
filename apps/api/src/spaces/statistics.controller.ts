@@ -1,15 +1,17 @@
 import { Controller, Delete, Get, HttpCode, Inject, Param, Query, Req } from "@nestjs/common";
 import { MINIMUM_TERM_SEARCHES, statisticsPeriods } from "@pagehall/server";
+import { idSchema } from "@pagehall/shared";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { Permission } from "../access/route-access.js";
 import { servicesOf } from "../auth/auth.controller.js";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { ApiRoute } from "../http/api-route.js";
-import { decodeCursor, encodeCursor, idCursor, pageQuery } from "../http/pagination.js";
+import { decodeCursor, encodeCursor, pageQuery } from "../http/pagination.js";
 import { actorOf } from "../http/request.js";
 import { timestamp, uuid } from "../http/schemas.js";
 
+const feedbackCursor = z.tuple([z.iso.date(), idSchema]);
 const TAG = "Knowledge base statistics";
 const space = { type: "space", param: "spaceId" } as const;
 const spaceParams = z.object({ spaceId: uuid("ID of the knowledge base.") }).strict();
@@ -203,13 +205,14 @@ export class StatisticsController {
     @Query() query: z.output<typeof feedbackQuery>,
     @Req() request: FastifyRequest,
   ) {
-    const after = decodeCursor(query.cursor, idCursor);
+    const after = decodeCursor(query.cursor, feedbackCursor);
     const page = await this.#services.knowledgeBaseStatistics.feedback(actorOf(request), spaceId, itemId, {
       period: query.period,
       limit: query.limit,
-      before: after?.[0],
+      ...(after ? { before: { day: after[0], id: after[1] } } : {}),
     });
-    return { items: page.items, nextCursor: page.nextCursor ? encodeCursor([page.nextCursor]) : null };
+    const next = page.nextCursor;
+    return { items: page.items, nextCursor: next ? encodeCursor([next.day, next.id]) : null };
   }
 
   @Delete("spaces/:spaceId/statistics/feedback/:feedbackId")
