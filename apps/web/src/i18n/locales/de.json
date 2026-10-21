@@ -1081,7 +1081,8 @@
     "embeds": "Externe Einbettungen",
     "portals": "Wissensdatenbank-Portale",
     "systemStatus": "Systemstatus",
-    "maintenance": "Wartungsmodus"
+    "maintenance": "Wartungsmodus",
+    "updates": "Updates"
   },
   "commands": {
     "label": "Befehlspalette",
@@ -2400,6 +2401,10 @@
       "storage_reminder": {
         "label": "Erinnerung, solange eine Stufe aktiv ist",
         "description": "Wie oft Pagehall den aktuellen Stand den informierten Personen wiederholt, solange eine Warnstufe aktiv bleibt."
+      },
+      "operations_updateCheck": {
+        "label": "Nach Updates suchen",
+        "description": "Lädt einmal am Tag die öffentliche Versionsdatei und informiert Instanz-Administratoren über neue Versionen. Aus: Pagehall stellt dafür keine Anfrage."
       }
     },
     "disabled": {
@@ -2624,7 +2629,8 @@
       "storageLevelReached": "Dateispeicher füllt sich",
       "storageLevelCleared": "Belegung des Dateispeichers sinkt",
       "copies": "Meine Kopien",
-      "reviews": "Überprüfung von Artikeln"
+      "reviews": "Überprüfung von Artikeln",
+      "operationsUpdateAvailable": "Neue Pagehall-Version"
     },
     "types": {
       "identityProvider": {
@@ -2722,6 +2728,9 @@
       "article": {
         "reviewDue": "{itemTitle} ist am {dueAt} zur Überprüfung fällig.",
         "sourceChanged": "Eine Quellseite von {itemTitle} wurde geändert. Prüfe, ob der Artikel angepasst werden muss."
+      },
+      "operations": {
+        "updateAvailable": "{breaking, select, true {Pagehall {version} ist verfügbar. Die Hinweise nennen inkompatible Änderungen oder manuelle Schritte.} other {Pagehall {version} ist verfügbar.}}"
       }
     },
     "channelFor": "{event}: {channel}",
@@ -10108,7 +10117,12 @@
       "items": {
         "version": {
           "label": "Version",
-          "ok": "Pagehall {version}"
+          "ok": "Pagehall {version}",
+          "reasons": {
+            "updateAvailable": "Pagehall {version} läuft; {latest} ist verfügbar. Die Update-Seite zeigt die Änderungen und die Befehle.",
+            "checkFailed": "Pagehall {version}. Die letzte Update-Prüfung ist fehlgeschlagen; die Update-Seite sagt warum.",
+            "checkOff": "Pagehall {version}. Die Update-Prüfung ist aus."
+          }
         },
         "database": {
           "label": "Datenbank",
@@ -10269,6 +10283,78 @@
       "updated": "Wartungsnachricht gespeichert",
       "undoFailed": "Der vorherige Zustand konnte nicht wiederhergestellt werden",
       "commandLine": "Skripte schalten ihn mit ./pagehall maintenance on oder off im Installationsverzeichnis, oder mit dem Befehl pagehall maintenance im Container."
+    }
+  },
+  "updates": {
+    "title": "Updates",
+    "description": "Die laufende Version, was darin neu ist, und Updates mit ihren Änderungen und den Befehlen für diese Installation.",
+    "loadFailed": "die Update-Informationen",
+    "running": {
+      "title": "Diese Instanz",
+      "version": "Laufende Version"
+    },
+    "available": {
+      "title": "Pagehall {version} ist verfügbar",
+      "upToDateTitle": "Pagehall ist aktuell",
+      "upToDate": "{version} ist die neueste Version.",
+      "notRelease": "Diese Instanz läuft mit dem Build {version}, der keine veröffentlichte Version ist und deshalb nicht verglichen werden kann. Die neueste Version steht unten."
+    },
+    "commands": {
+      "title": "So wird aktualisiert",
+      "copy": "Befehl kopieren",
+      "docs": "Updates und Zurückrollen in der Dokumentation",
+      "methods": {
+        "script": "Mit dem Setup-Skript installiert. Der Update-Befehl legt zuerst ein Backup an, lädt dann das neue Image und startet Pagehall neu.",
+        "compose": "Mit einer eigenen Compose-Datei installiert. Lege zuerst ein Backup an, ändere dann das Image und starte neu.",
+        "other": "Anders installiert. Lege zuerst ein Backup an und starte dann jeden Pagehall-Container mit dem neuen Image.",
+        "unknown": "Die Installationsart ist nicht hinterlegt (PAGEHALL_INSTALL_METHOD). Lege zuerst ein Backup an und starte dann jeden Pagehall-Container mit dem neuen Image."
+      }
+    },
+    "release": {
+      "title": "Pagehall {version}",
+      "titleDated": "Pagehall {version} · {date}",
+      "minimum": "Update darauf ab {version}.",
+      "link": "Release-Seite von {version}"
+    },
+    "notes": {
+      "empty": "Keine Änderungen aufgeführt.",
+      "groups": {
+        "breaking": "Inkompatible Änderungen: vor dem Update lesen",
+        "manualSteps": "Manuelle Schritte beim Update",
+        "new": "Neu",
+        "improved": "Verbessert",
+        "fixed": "Behoben"
+      }
+    },
+    "check": {
+      "title": "Update-Prüfung",
+      "now": "Jetzt prüfen",
+      "failedToStart": "Die Prüfung konnte nicht starten",
+      "offByEnvironmentTitle": "Durch die Konfiguration ausgeschaltet",
+      "offByEnvironment": "PAGEHALL_UPDATE_CHECK=false schaltet die Update-Prüfung vollständig aus; Pagehall stellt dafür keine Anfrage. Entferne die Variable und starte neu, um sie einzuschalten.",
+      "privacy": "Einmal am Tag lädt der Worker die öffentliche Versionsdatei {url}. Die Anfrage sendet nichts über diese Instanz.",
+      "last": "Letzte Prüfung",
+      "checkedAt": "Geprüft {time}",
+      "notYet": "Noch nicht geprüft.",
+      "succeeded": "Erfolgreich",
+      "failed": "Fehlgeschlagen",
+      "failedTitle": "Update-Prüfung fehlgeschlagen",
+      "failures": {
+        "unreachable": "Der Server der Versionsdatei war nicht erreichbar. Prüfe das Netzwerk und PAGEHALL_UPDATE_CHECK_URL; Pagehall versucht es morgen erneut.",
+        "timeout": "Die Versionsdatei kam nicht innerhalb von 15 Sekunden an. Prüfe das Netzwerk; Pagehall versucht es morgen erneut.",
+        "blockedAddress": "Die Adresse der Versionsdatei liegt in einem privaten Netz. Trage sie in PAGEHALL_OUTBOUND_ALLOWED_NETWORKS ein oder nutze einen öffentlichen Spiegel.",
+        "insecureAddress": "Öffentliche Adressen der Versionsdatei müssen HTTPS verwenden. Ändere PAGEHALL_UPDATE_CHECK_URL.",
+        "untrustedCertificate": "Dem Zertifikat des Servers wird nicht vertraut. Prüfe das Zertifikat des Spiegels.",
+        "tooManyRedirects": "Der Server hat zu oft weitergeleitet. Prüfe PAGEHALL_UPDATE_CHECK_URL.",
+        "httpStatus": "Der Server hat mit einem Fehler geantwortet, etwa weil die Datei dort noch nicht existiert. Prüfe PAGEHALL_UPDATE_CHECK_URL; Pagehall versucht es morgen erneut.",
+        "tooLarge": "Die Versionsdatei ist größer als 2 MB und damit keine Versionsdatei von Pagehall. Prüfe PAGEHALL_UPDATE_CHECK_URL.",
+        "invalidFile": "Die Datei ist keine Versionsdatei von Pagehall. Prüfe PAGEHALL_UPDATE_CHECK_URL."
+      }
+    },
+    "whatsNew": {
+      "title": "Neu in {version}",
+      "noSection": "Das Changelog hat keinen Eintrag für diese Version.",
+      "unavailable": "Dieses Image enthält kein Changelog."
     }
   }
 }

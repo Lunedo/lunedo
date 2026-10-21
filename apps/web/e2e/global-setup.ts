@@ -98,6 +98,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     PAGEHALL_IMPORT_DIR: IMPORT_DIR,
     PAGEHALL_LOG_LEVEL: "info",
     PAGEHALL_TRUSTED_PROXIES: "127.0.0.1,::1",
+    PAGEHALL_UPDATE_CHECK: "false",
     PAGEHALL_INSECURE_IDENTITY_PROVIDERS: process.env.PAGEHALL_E2E_IDP === "1" ? "true" : "false",
   };
   mkdirSync(env.PAGEHALL_FILES_DIR as string, { recursive: true });

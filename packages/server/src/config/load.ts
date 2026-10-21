@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import { instanceUrlSchema } from "../accounts/instance-settings.js";
 import type { LogLevel } from "../logging/logger.js";
@@ -13,13 +14,18 @@ function isTimeZone(value: string): boolean {
   }
 }
 
-import { type ConfigSettingName, configSettings } from "./definitions.js";
+import { pagehallVersion } from "../operations/version.js";
+import { type ConfigSettingName, configSettings, type InstallMethod } from "./definitions.js";
 import { Secret } from "./secret.js";
 
 export type Env = Record<string, string | undefined>;
 
 export class ConfigError extends Error {
   override name = "ConfigError";
+}
+
+export function changelogFileOf(configured: string | undefined): string {
+  return configured?.trim() || fileURLToPath(new URL("../../../../CHANGELOG.md", import.meta.url));
 }
 
 export interface ServerConfig {
@@ -50,6 +56,14 @@ export interface ServerConfig {
   setup: ConfiguredSetup | undefined;
   setupCode: Secret | undefined;
   instanceUrl: string | undefined;
+  version: string;
+  updates: {
+    check: boolean;
+    url: string;
+    installMethod: InstallMethod | undefined;
+    installDir: string | undefined;
+    changelogFile: string;
+  };
 }
 
 export type FileStorageConfig =
@@ -255,6 +269,14 @@ export function loadConfig(env: Env): ServerConfig {
     setup,
     setupCode: secret("PAGEHALL_SETUP_CODE"),
     instanceUrl: instanceUrlSchema.safeParse(values.PAGEHALL_INSTANCE_URL).data,
+    version: pagehallVersion(env),
+    updates: {
+      check: values.PAGEHALL_UPDATE_CHECK as boolean,
+      url: values.PAGEHALL_UPDATE_CHECK_URL as string,
+      installMethod: values.PAGEHALL_INSTALL_METHOD as InstallMethod | undefined,
+      installDir: values.PAGEHALL_INSTALL_DIR as string | undefined,
+      changelogFile: changelogFileOf(values.PAGEHALL_CHANGELOG_FILE as string | undefined),
+    },
   };
 }
 

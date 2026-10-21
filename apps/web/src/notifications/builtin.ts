@@ -1,5 +1,6 @@
 import { slugify } from "@pagehall/editor-schema";
 import {
+  ArrowUpCircle,
   AtSign,
   Bot,
   Building2,
@@ -103,6 +104,11 @@ notificationTypes.register(
   { id: "mail.credentialExpiring", icon: Mail, link: () => ({ to: "/settings/instance/mail" }) },
   { id: "storage.levelReached", icon: HardDrive, link: () => ({ to: "/settings/instance/storage" }) },
   { id: "storage.levelCleared", icon: HardDrive, link: () => ({ to: "/settings/instance/storage" }) },
+  {
+    id: "operations.updateAvailable",
+    icon: ArrowUpCircle,
+    link: () => ({ to: "/settings/instance/updates" }),
+  },
   {
     id: "identityProvider.syncHeld",
     icon: ShieldAlert,

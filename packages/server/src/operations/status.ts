@@ -13,6 +13,7 @@ import type { StorageService } from "../storage/storage.js";
 import type { BackupStatus, BackupStatusSource } from "./backup-status.js";
 import { type RecentErrorType, recentErrorTypes } from "./error-events.js";
 import type { MaintenanceService } from "./maintenance.js";
+import type { UpdateCheckService } from "./update-check.js";
 import { pagehallVersion } from "./version.js";
 
 export type StatusLevel = "ok" | "warning" | "error";
@@ -130,12 +131,14 @@ export class OperationsStatusService {
   readonly #jobs: JobQueue | undefined;
   readonly #backups: BackupStatusSource;
   readonly #maintenance: MaintenanceService;
+  readonly #updates: UpdateCheckService | undefined;
   readonly #collaboration: CollaborationProbe | undefined;
   readonly #filesDir: string;
   readonly #fileStore: "local" | "s3";
   readonly #keyProvider: "env" | "file";
   readonly #configuredInstanceUrl: string | undefined;
   readonly #now: () => Date;
+  readonly #version: string;
 
   constructor(options: {
     database: Database;
@@ -149,11 +152,13 @@ export class OperationsStatusService {
     jobs: JobQueue | undefined;
     backups: BackupStatusSource;
     maintenance: MaintenanceService;
+    updates?: UpdateCheckService | undefined;
     collaboration?: CollaborationProbe | undefined;
     filesDir: string;
     fileStore: "local" | "s3";
     keyProvider: "env" | "file";
     configuredInstanceUrl?: string | undefined;
+    version?: string;
     now?: () => Date;
   }) {
     this.#database = options.database;
@@ -167,12 +172,14 @@ export class OperationsStatusService {
     this.#jobs = options.jobs;
     this.#backups = options.backups;
     this.#maintenance = options.maintenance;
+    this.#updates = options.updates;
     this.#collaboration = options.collaboration;
     this.#filesDir = options.filesDir;
     this.#fileStore = options.fileStore;
     this.#keyProvider = options.keyProvider;
     this.#configuredInstanceUrl = options.configuredInstanceUrl;
     this.#now = options.now ?? (() => new Date());
+    this.#version = options.version ?? pagehallVersion();
   }
 
   get database(): Database {
@@ -203,7 +210,7 @@ export class OperationsStatusService {
     ]);
     const [database, clock] = databaseAndClock;
     const items: StatusItem[] = [
-      item("version", "ok", null, { version: pagehallVersion() }, { docs: "operations.md#updates" }),
+      await this.#versionItem(),
       await this.#maintenanceItem(),
       await this.#databaseItem(database),
       await this.#storageItem(),
@@ -249,6 +256,24 @@ export class OperationsStatusService {
         check.status === "error" && check.cause === "unreachable" ? null : await this.databaseSizeBytes(),
     };
     return item("database", check.status, check.cause, facts, { docs: "setup.md#database" });
+  }
+
+  async #versionItem(): Promise<StatusItem> {
+    const version = this.#version;
+    const links = { page: `${INSTANCE_PAGE}/updates`, docs: "operations.md#updates" };
+    const updates = await this.#updates?.status();
+    if (!updates || !updates.enabled)
+      return item("version", "ok", updates ? "checkOff" : null, { version }, links);
+    const facts = {
+      version,
+      latest: updates.latest,
+      checkedAt: updates.checkedAt?.toISOString() ?? null,
+      failure: updates.failure,
+    };
+    if (updates.runningIsRelease && updates.latest)
+      return item("version", "warning", "updateAvailable", facts, links);
+    if (updates.checkedAt && !updates.succeeded) return item("version", "ok", "checkFailed", facts, links);
+    return item("version", "ok", null, facts, links);
   }
 
   async #maintenanceItem(): Promise<StatusItem> {

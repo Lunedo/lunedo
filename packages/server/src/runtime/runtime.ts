@@ -47,8 +47,9 @@ import { notificationSettings } from "../notifications/types.js";
 import { Metrics } from "../observability/metrics.js";
 import { ErrorEvents } from "../operations/error-events.js";
 import { instanceMetricsSource } from "../operations/instance-metrics.js";
+import { startUpdateChecks } from "../operations/jobs.js";
+import { operationsSettings } from "../operations/settings.js";
 import type { CollaborationProbe } from "../operations/status.js";
-import { pagehallVersion } from "../operations/version.js";
 import { organizationSettings } from "../organizations/settings.js";
 import { portalSettings } from "../portal/settings.js";
 import { startPushDelivery } from "../push/push-service.js";
@@ -160,7 +161,7 @@ export async function createServerRuntime(options: {
   const listener = new NotificationListener({ connectionString, logger });
   const metrics = new Metrics(role);
   metrics.observeDatabasePool(pool);
-  metrics.observeBuild(pagehallVersion());
+  metrics.observeBuild(config.version);
   errorEvents.onRecord(metrics.countLoggedError);
   let flushing: NodeJS.Timeout | undefined;
 
@@ -195,6 +196,7 @@ export async function createServerRuntime(options: {
         ...sharingSettings,
         ...fileSettings,
         ...storageSettings,
+        ...operationsSettings,
         ...importSettings,
         ...embedSettings,
         ...searchSettings,
@@ -246,6 +248,8 @@ export async function createServerRuntime(options: {
       configuredInstanceUrl: config.instanceUrl,
       keyRotation,
       keyProvider: config.keys.provider,
+      updates: config.updates,
+      version: config.version,
       ...(role === "api" ? { collaborationProbe: collaborationProbe(config.collabUpstream) } : {}),
       passwordHashConcurrency: config.passwordHashConcurrency,
       insecureIdentityProviders: config.insecureIdentityProviders,
@@ -275,6 +279,7 @@ export async function createServerRuntime(options: {
         await startDisplayVersions({ jobs, listener, displayVersions: services.displayVersions, logger });
         await startReviewReminders({ jobs, listener, reviews: services.reviews, logger });
         await startRemovedArticlePruning({ jobs, articles: services.articleApi });
+        await startUpdateChecks({ jobs, listener, updates: services.updates, logger });
         await jobs.work(rotateDataKeysJob, keyRotation.run);
         await jobs.work(cleanupJobProgressJob, async () => {
           await cleanupJobProgress(database);
@@ -293,6 +298,7 @@ export async function createServerRuntime(options: {
           mail: services.mail,
           operations: services.operations,
           maintenance: services.maintenance,
+          updates: services.updates,
           collaborationProbe: collaborationProbe(config.collabUpstream),
         }),
       );

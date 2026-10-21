@@ -1081,7 +1081,8 @@
     "embeds": "External embeds",
     "portals": "Knowledge base portals",
     "systemStatus": "System status",
-    "maintenance": "Maintenance mode"
+    "maintenance": "Maintenance mode",
+    "updates": "Updates"
   },
   "commands": {
     "label": "Command palette",
@@ -2400,6 +2401,10 @@
       "storage_reminder": {
         "label": "Reminder while a level is active",
         "description": "How often Pagehall repeats the current state to the people who were told, while a warning level stays active."
+      },
+      "operations_updateCheck": {
+        "label": "Check for updates",
+        "description": "Downloads the public version file once a day and tells instance administrators about new versions. Off: Pagehall makes no request for it."
       }
     },
     "disabled": {
@@ -2624,7 +2629,8 @@
       "storageLevelReached": "File store fills up",
       "storageLevelCleared": "File store usage falls",
       "copies": "Copies I made",
-      "reviews": "Article reviews"
+      "reviews": "Article reviews",
+      "operationsUpdateAvailable": "New Pagehall version"
     },
     "types": {
       "identityProvider": {
@@ -2722,6 +2728,9 @@
       "article": {
         "reviewDue": "{itemTitle} is due for review on {dueAt}.",
         "sourceChanged": "A source page of {itemTitle} changed. Check whether the article needs an update."
+      },
+      "operations": {
+        "updateAvailable": "{breaking, select, true {Pagehall {version} is available. Its notes list breaking changes or manual steps.} other {Pagehall {version} is available.}}"
       }
     },
     "channelFor": "{event}: {channel}",
@@ -10108,7 +10117,12 @@
       "items": {
         "version": {
           "label": "Version",
-          "ok": "Pagehall {version}"
+          "ok": "Pagehall {version}",
+          "reasons": {
+            "updateAvailable": "Pagehall {version} runs; {latest} is available. The update page shows the changes and the commands.",
+            "checkFailed": "Pagehall {version}. The last update check failed; the update page says why.",
+            "checkOff": "Pagehall {version}. The update check is off."
+          }
         },
         "database": {
           "label": "Database",
@@ -10269,6 +10283,78 @@
       "updated": "Maintenance message saved",
       "undoFailed": "The previous state could not be restored",
       "commandLine": "Scripts switch it with ./pagehall maintenance on or off in the installation directory, or with the command pagehall maintenance in the container."
+    }
+  },
+  "updates": {
+    "title": "Updates",
+    "description": "The running version, what is new in it, and updates with their changes and the commands for this installation.",
+    "loadFailed": "the update information",
+    "running": {
+      "title": "This instance",
+      "version": "Running version"
+    },
+    "available": {
+      "title": "Pagehall {version} is available",
+      "upToDateTitle": "Pagehall is up to date",
+      "upToDate": "{version} is the newest release.",
+      "notRelease": "This instance runs the build {version}, which is not a release, so it cannot be compared. The newest release is listed below."
+    },
+    "commands": {
+      "title": "How to update",
+      "copy": "Copy command",
+      "docs": "Updates and rollback in the documentation",
+      "methods": {
+        "script": "Installed with the setup script. The update command takes a backup first, then pulls the new image and restarts Pagehall.",
+        "compose": "Installed with a Compose file of your own. Take a backup first, then change the image and restart.",
+        "other": "Installed in another way. Take a backup first, then start every Pagehall container with the new image.",
+        "unknown": "The installation method is not recorded (PAGEHALL_INSTALL_METHOD). Take a backup first, then start every Pagehall container with the new image."
+      }
+    },
+    "release": {
+      "title": "Pagehall {version}",
+      "titleDated": "Pagehall {version} · {date}",
+      "minimum": "Update to it from {version} or later.",
+      "link": "Release page of {version}"
+    },
+    "notes": {
+      "empty": "No changes are listed.",
+      "groups": {
+        "breaking": "Breaking changes: read before you update",
+        "manualSteps": "Manual steps during the update",
+        "new": "New",
+        "improved": "Improved",
+        "fixed": "Fixed"
+      }
+    },
+    "check": {
+      "title": "Update check",
+      "now": "Check now",
+      "failedToStart": "The check could not start",
+      "offByEnvironmentTitle": "Turned off by the configuration",
+      "offByEnvironment": "PAGEHALL_UPDATE_CHECK=false turns the update check off completely; Pagehall makes no request for it. Remove the variable and restart to turn it on.",
+      "privacy": "Once a day the worker downloads the public version file {url}. The request sends nothing about this instance.",
+      "last": "Last check",
+      "checkedAt": "Checked {time}",
+      "notYet": "Not checked yet.",
+      "succeeded": "Succeeded",
+      "failed": "Failed",
+      "failedTitle": "Update check failed",
+      "failures": {
+        "unreachable": "The server of the version file could not be reached. Check the network and PAGEHALL_UPDATE_CHECK_URL; Pagehall tries again tomorrow.",
+        "timeout": "The version file did not arrive within 15 seconds. Check the network; Pagehall tries again tomorrow.",
+        "blockedAddress": "The address of the version file is in a private network. List it in PAGEHALL_OUTBOUND_ALLOWED_NETWORKS or use a public mirror.",
+        "insecureAddress": "Public addresses of the version file must use HTTPS. Change PAGEHALL_UPDATE_CHECK_URL.",
+        "untrustedCertificate": "The certificate of the server is not trusted. Check the mirror's certificate.",
+        "tooManyRedirects": "The server redirected too often. Check PAGEHALL_UPDATE_CHECK_URL.",
+        "httpStatus": "The server answered with an error, for example because the file does not exist there yet. Check PAGEHALL_UPDATE_CHECK_URL; Pagehall tries again tomorrow.",
+        "tooLarge": "The version file is larger than 2 MB, so it is not a Pagehall version file. Check PAGEHALL_UPDATE_CHECK_URL.",
+        "invalidFile": "The file is not a Pagehall version file. Check PAGEHALL_UPDATE_CHECK_URL."
+      }
+    },
+    "whatsNew": {
+      "title": "What's new in {version}",
+      "noSection": "The changelog has no entry for this version.",
+      "unavailable": "This image contains no changelog."
     }
   }
 }

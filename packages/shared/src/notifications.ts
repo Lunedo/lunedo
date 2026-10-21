@@ -79,6 +79,12 @@ export const notificationParamSchemas = {
     store: z.enum(["local", "s3"]),
     link: z.string().nullable().default(null),
   }),
+  "operations.updateAvailable": z.object({
+    version: z.string(),
+    current: z.string(),
+    breaking: z.boolean(),
+    link: z.string().nullable().default(null),
+  }),
   "identityProvider.credentialExpiring": z.object({
     providerName: z.string(),
     expiresAt: instant,

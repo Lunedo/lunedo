@@ -229,7 +229,7 @@ export { configurationForBackup } from "./config/backup-view.js";
 export { clientAddress, trustedProxyList } from "./config/client-address.js";
 export { configSettings, isAddressOrRange } from "./config/definitions.js";
 export type { ConfiguredSetup } from "./config/load.js";
-export { ConfigError, type Env, loadConfig, type ServerConfig } from "./config/load.js";
+export { ConfigError, changelogFileOf, type Env, loadConfig, type ServerConfig } from "./config/load.js";
 export { Secret } from "./config/secret.js";
 export {
   COPY_IN_REQUEST_LIMIT,
@@ -677,6 +677,15 @@ export {
   commandOnlyBackups,
 } from "./operations/backup-status.js";
 export {
+  type ChangelogSection,
+  parseChangelog,
+  type Release,
+  type RunningChangelog,
+  releaseNotesText,
+  UNRELEASED,
+  versionFileOf,
+} from "./operations/changelog.js";
+export {
   ErrorEvents,
   type RecentErrorType,
   recentErrorTypes,
@@ -691,6 +700,7 @@ export {
   type MaintenanceStatus,
   SignInBlockedError,
 } from "./operations/maintenance.js";
+export { updateCheckSetting } from "./operations/settings.js";
 export {
   type OperationsStatus,
   OperationsStatusService,
@@ -700,6 +710,15 @@ export {
   type StatusLevel,
   statusItemIds,
 } from "./operations/status.js";
+export {
+  IMAGE_REPOSITORY,
+  RELEASES_URL,
+  type UpdateCheckFailure,
+  UpdateCheckService,
+  type UpdateCheckStatus,
+  type UpdateCommands,
+  updateCheckFailures,
+} from "./operations/update-check.js";
 export {
   compareVersions,
   DEVELOPMENT_VERSION,

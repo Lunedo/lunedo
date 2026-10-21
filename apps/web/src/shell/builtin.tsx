@@ -1,6 +1,7 @@
 import {
   Activity,
   AppWindow,
+  ArrowUpCircle,
   BellRing,
   Bot,
   Building2,
@@ -251,6 +252,15 @@ navigationItems.register(
     icon: Activity,
     labelKey: "navigation.systemStatus",
     to: `${INSTANCE}/status`,
+    permission: "instance.operations.view",
+  },
+  {
+    id: "instance.updates",
+    order: 7,
+    section: "instance",
+    icon: ArrowUpCircle,
+    labelKey: "navigation.updates",
+    to: `${INSTANCE}/updates`,
     permission: "instance.operations.view",
   },
   {

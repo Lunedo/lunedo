@@ -673,6 +673,13 @@
       "when": 1792611002562,
       "tag": "0095_maintenance",
       "breakpoints": true
+    },
+    {
+      "idx": 96,
+      "version": "7",
+      "when": 1792612533928,
+      "tag": "0096_update_check",
+      "breakpoints": true
     }
   ]
 }

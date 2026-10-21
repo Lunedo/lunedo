@@ -1,5 +1,10 @@
-import { Body, Controller, Get, Inject, Put, Req } from "@nestjs/common";
-import type { MaintenanceStatus, OperationsStatus } from "@pagehall/server";
+import { Body, Controller, Get, Inject, Post, Put, Req } from "@nestjs/common";
+import type {
+  MaintenanceStatus,
+  OperationsStatus,
+  RunningChangelog,
+  UpdateCheckStatus,
+} from "@pagehall/server";
 import type { FastifyRequest } from "fastify";
 import type { z } from "zod";
 import { InternalRoute, Permission, PublicRoute } from "../access/route-access.js";
@@ -14,6 +19,7 @@ import {
   maintenanceSchema,
   operationsStatusSchema,
 } from "./schemas.js";
+import { exampleUpdates, updatesSchema } from "./update-schemas.js";
 
 const TAG = "Operations";
 
@@ -23,6 +29,30 @@ const exampleMaintenance = {
   blockSignIn: false,
   startedAt: "2026-10-21T16:00:00.000Z",
 };
+
+function presentUpdates(status: UpdateCheckStatus, whatsNew: RunningChangelog) {
+  return {
+    running: status.running,
+    runningIsRelease: status.runningIsRelease,
+    check: {
+      enabled: status.enabled,
+      disabledBy: status.disabledBy,
+      url: status.url,
+      checkedAt: status.checkedAt?.toISOString() ?? null,
+      succeeded: status.succeeded,
+      failure: status.failure,
+    },
+    latest: status.latest,
+    available: status.available,
+    commands: status.commands,
+    whatsNew: {
+      available: whatsNew.available,
+      version: whatsNew.section?.version ?? null,
+      date: whatsNew.section?.date ?? null,
+      notes: whatsNew.section?.notes ?? null,
+    },
+  };
+}
 
 function presentMaintenance(status: MaintenanceStatus) {
   return {
@@ -125,6 +155,38 @@ export class OperationsController {
     @Req() request: FastifyRequest,
   ) {
     return this.#details(request, await this.#services.maintenance.set(actorOf(request), body));
+  }
+
+  @Get("instance/updates")
+  @Permission("instance.operations.view")
+  @ApiRoute({
+    summary: "Get the running version and available updates",
+    description:
+      "Shows the running version, what is new in it, the result of the last update check, every release after the running version with its notes, breaking changes and manual steps, and the commands to update for the recorded installation method. The commands are built by Pagehall; nothing from the version file is executed or shown as HTML.",
+    tags: [TAG],
+    response: { description: "Version and updates.", schema: updatesSchema, example: exampleUpdates },
+  })
+  async updates() {
+    const updates = this.#services.updates;
+    return presentUpdates(await updates.status(), await updates.whatsNew());
+  }
+
+  @Post("instance/updates/check")
+  @Permission("instance.operations.manage")
+  @ApiRoute({
+    summary: "Check for updates now",
+    description:
+      "Downloads the version file now instead of waiting for the daily check. Does nothing when the update check is off. A failed check is not an error of this request; the result names the reason.",
+    tags: [TAG],
+    response: {
+      description: "Version and updates after the check.",
+      schema: updatesSchema,
+      example: exampleUpdates,
+    },
+  })
+  async checkForUpdates() {
+    const updates = this.#services.updates;
+    return presentUpdates(await updates.check(), await updates.whatsNew());
   }
 
   async #details(request: FastifyRequest, status: MaintenanceStatus) {

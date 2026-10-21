@@ -10,6 +10,11 @@ export interface ConfigSetting {
   description: string;
 }
 
+export const DEFAULT_UPDATE_CHECK_URL =
+  "https://github.com/pagehall/pagehall/releases/latest/download/pagehall-versions.json";
+export const installMethods = ["script", "compose", "other"] as const;
+export type InstallMethod = (typeof installMethods)[number];
+
 const port = z.coerce.number().int().min(1).max(65535);
 const positiveInt = z.coerce.number().int().positive();
 const nonEmpty = z.string().trim().min(1);
@@ -255,6 +260,36 @@ export const configSettings = [
     true,
   ),
   setting("PAGEHALL_SMTP_FROM", nonEmpty.optional(), "Sender address for setup through configuration."),
+  setting(
+    "PAGEHALL_UPDATE_CHECK",
+    z
+      .enum(["true", "false"])
+      .default("true")
+      .transform((value) => value === "true"),
+    "Set to false to turn the update check off completely. Pagehall then makes no request for it, and the instance setting cannot turn it on.",
+  ),
+  setting(
+    "PAGEHALL_UPDATE_CHECK_URL",
+    nonEmpty
+      .refine((value) => /^https?:\/\/[^\s]+$/.test(value), "must be an http:// or https:// address")
+      .default(DEFAULT_UPDATE_CHECK_URL),
+    "Address of the version file the update check downloads, for example a mirror inside the company network.",
+  ),
+  setting(
+    "PAGEHALL_CHANGELOG_FILE",
+    path.optional(),
+    "Path of the changelog shown under What's new. The image sets it; it defaults to CHANGELOG.md of the source tree.",
+  ),
+  setting(
+    "PAGEHALL_INSTALL_METHOD",
+    z.enum(installMethods).optional(),
+    "How the instance was installed: script for the setup script, compose for a Compose file of your own, other for anything else. The setup script sets it; the admin area shows the update commands for it.",
+  ),
+  setting(
+    "PAGEHALL_INSTALL_DIR",
+    path.optional(),
+    "Directory on the host that holds the installation, shown in the update commands. The setup script sets it.",
+  ),
   setting(
     "PAGEHALL_SHUTDOWN_TIMEOUT_SECONDS",
     positiveInt.default(30),

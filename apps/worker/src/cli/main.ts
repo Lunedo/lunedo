@@ -34,6 +34,7 @@ import {
 import { verifyAuditLog } from "./audit.js";
 import { maintenance } from "./maintenance.js";
 import { type Command, parseCommand, UsageError, usage } from "./parse.js";
+import { releaseNotes } from "./release-notes.js";
 import { rebuildSearchIndex, searchIndexStatus } from "./search.js";
 
 const write = (text: string) => process.stdout.write(`${text}\n`);
@@ -85,6 +86,10 @@ async function run(command: Command): Promise<void> {
   }
   if (command.name === "version") {
     write(pagehallVersion());
+    return;
+  }
+  if (command.name === "release-notes") {
+    await releaseNotes(process.env, command.command, write);
     return;
   }
   const env = process.env;

@@ -5,6 +5,7 @@ import type { StorageService } from "../storage/storage.js";
 import type { BackupStatus } from "./backup-status.js";
 import type { MaintenanceService } from "./maintenance.js";
 import type { OperationsStatusService } from "./status.js";
+import type { UpdateCheckService } from "./update-check.js";
 
 export interface InstanceMetricsSnapshot {
   databaseSizeBytes: number;
@@ -20,6 +21,7 @@ export interface InstanceMetricsSnapshot {
   search: { pendingItems: number; failingItems: number };
   collaborationReady: boolean | null;
   maintenance: boolean;
+  updateAvailable: boolean | null;
 }
 
 export type InstanceMetricsSource = () => Promise<InstanceMetricsSnapshot>;
@@ -32,6 +34,7 @@ export function instanceMetricsSource(options: {
   mail: MailService;
   operations: OperationsStatusService;
   maintenance: MaintenanceService;
+  updates: UpdateCheckService;
   collaborationProbe?: (() => Promise<boolean>) | undefined;
   now?: () => number;
 }): InstanceMetricsSource {
@@ -51,6 +54,7 @@ export function instanceMetricsSource(options: {
         options.collaborationProbe ? options.collaborationProbe().catch(() => false) : Promise.resolve(null),
         options.maintenance.status(),
       ]);
+    const updateAvailable = await options.updates.updateAvailable();
     const measured =
       storage.measured &&
       storage.usedBytes !== null &&
@@ -80,6 +84,7 @@ export function instanceMetricsSource(options: {
       },
       collaborationReady,
       maintenance: maintenance.enabled,
+      updateAvailable,
     };
   };
 

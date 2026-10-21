@@ -63,6 +63,11 @@ The master keys and the backup keys are needed to read encrypted data and backup
 | `PAGEHALL_RENDER_TOKEN` | none | yes | Token the worker and the API send to the render container, at least 32 characters. Must be the same as `RENDER_TOKEN` of the container. |
 | `PAGEHALL_WEB_ROOT` | `/app/web` in the image | | Directory with the built web client, served by the API. |
 | `PAGEHALL_SHUTDOWN_TIMEOUT_SECONDS` | `30` | | Time running requests and jobs get to finish on shutdown. |
+| `PAGEHALL_UPDATE_CHECK` | `true` | | `false` turns the update check off completely: no request is made, and the instance setting **Check for updates** cannot turn it on. See [operations.md](operations.md#updates). |
+| `PAGEHALL_UPDATE_CHECK_URL` | the version file of the latest GitHub release | | Address of the version file, for example a mirror in the company network. A private address must be listed in `PAGEHALL_OUTBOUND_ALLOWED_NETWORKS`. |
+| `PAGEHALL_CHANGELOG_FILE` | `/app/CHANGELOG.md` in the image | | Changelog shown under **What's new**. |
+| `PAGEHALL_INSTALL_METHOD` | none | | `script`, `compose` or `other`: how the instance was installed. The setup script sets it; the admin area shows the update commands for it. |
+| `PAGEHALL_INSTALL_DIR` | none | | Directory of the installation on the host, used in the update commands. The setup script sets it. |
 | `PAGEHALL_TRUSTED_PROXIES` | none | | Comma-separated IP addresses and CIDR ranges of reverse proxies. Only requests from them may set the client address and protocol through `X-Forwarded-For` and `X-Forwarded-Proto`. |
 | `PAGEHALL_OUTBOUND_ALLOWED_NETWORKS` | none | | Comma-separated IP addresses and CIDR ranges in private networks that chat channels may reach, for example a Matrix server in the local network. Requests to private, loopback and link-local addresses are refused otherwise, also after redirects and when a host name resolves to such an address. Addresses in these ranges may also use `http://`. |
 | `PAGEHALL_PASSWORD_HASH_CONCURRENCY` | `4` | | Password hashes computed at once per process. Each needs about 19 MiB of memory; further sign-ins wait, and beyond a queue of 25 per slot they are rejected with 503. |
@@ -111,4 +116,4 @@ Container orchestrators must therefore allow a stop grace period of at least the
 
 ## Metrics
 
-`GET /metrics` on the API, collaboration and worker ports answers in the Prometheus format when the request carries `Authorization: Bearer <PAGEHALL_METRICS_TOKEN>`. Without a configured token, the generated one is in `metrics-token` in the secrets directory.
+`GET /metrics` on the API, collaboration and worker ports answers in the Prometheus format when the request carries `Authorization: Bearer <PAGEHALL_METRICS_TOKEN>`. Without a configured token, the generated one is in `metrics-token` in the secrets directory. [operations.md](operations.md#metrics) lists every metric.

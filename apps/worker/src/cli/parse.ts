@@ -1,5 +1,6 @@
 import { parseArgs } from "node:util";
 import type { MaintenanceCommand } from "./maintenance.js";
+import type { ReleaseNotesCommand } from "./release-notes.js";
 
 export type Command =
   | { name: "backup create"; output: string }
@@ -12,6 +13,7 @@ export type Command =
   | { name: "search status" }
   | { name: "maintenance"; command: MaintenanceCommand }
   | { name: "version" }
+  | { name: "release-notes"; command: ReleaseNotesCommand }
   | { name: "help" };
 
 export class UsageError extends Error {
@@ -31,12 +33,22 @@ export const usage = `Usage:
   pagehall maintenance off
   pagehall maintenance status
   pagehall version
+  pagehall release-notes [--since <version>] [--json]
 `;
 
 export function parseCommand(argv: readonly string[]): Command {
   const [group, action, ...rest] = argv;
   if (group === undefined || group === "help" || group === "--help") return { name: "help" };
   if (group === "version" && action === undefined) return { name: "version" };
+  if (group === "release-notes") {
+    const { values } = parseArgs({
+      args: argv.slice(1),
+      options: { since: { type: "string" }, json: { type: "boolean", default: false } },
+      strict: true,
+      allowPositionals: false,
+    });
+    return { name: "release-notes", command: { since: values.since ?? null, json: values.json ?? false } };
+  }
   const { values } = parseArgs({
     args: rest,
     options: {

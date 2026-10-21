@@ -130756,6 +130756,1090 @@
         }
       }
     },
+    "/api/v1/instance/updates": {
+      "get": {
+        "operationId": "operations.updates",
+        "summary": "Get the running version and available updates",
+        "description": "Shows the running version, what is new in it, the result of the last update check, every release after the running version with its notes, breaking changes and manual steps, and the commands to update for the recorded installation method. The commands are built by Pagehall; nothing from the version file is executed or shown as HTML.\n\nRequires the permission `instance.operations.view` on the instance.",
+        "tags": [
+          "Operations"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.operations.view",
+          "resource": "instance"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Version and updates.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "running": {
+                      "type": "string",
+                      "description": "The running version. Builds without a release show a commit or `dev`."
+                    },
+                    "runningIsRelease": {
+                      "type": "boolean",
+                      "description": "Whether the running version is a release that can be compared."
+                    },
+                    "check": {
+                      "type": "object",
+                      "properties": {
+                        "enabled": {
+                          "type": "boolean",
+                          "description": "Whether the update check is on."
+                        },
+                        "disabledBy": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "environment",
+                                "setting"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "What turned it off: `environment` for `PAGEHALL_UPDATE_CHECK=false`, `setting` for the instance setting."
+                        },
+                        "url": {
+                          "type": "string",
+                          "description": "The address of the version file."
+                        },
+                        "checkedAt": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "When the last check ran, or null."
+                        },
+                        "succeeded": {
+                          "type": "boolean",
+                          "description": "Whether the last check succeeded."
+                        },
+                        "failure": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "unreachable",
+                                "timeout",
+                                "blockedAddress",
+                                "insecureAddress",
+                                "untrustedCertificate",
+                                "tooManyRedirects",
+                                "httpStatus",
+                                "tooLarge",
+                                "invalidFile"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Why the last check failed: `unreachable`, `timeout`, `blockedAddress`, `insecureAddress`, `untrustedCertificate`, `tooManyRedirects`, `httpStatus`, `tooLarge` or `invalidFile`."
+                        }
+                      },
+                      "required": [
+                        "enabled",
+                        "disabledBy",
+                        "url",
+                        "checkedAt",
+                        "succeeded",
+                        "failure"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The update check. It downloads a public version file and sends nothing beyond the request."
+                    },
+                    "latest": {
+                      "description": "The newest release after the running version, or null.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "available": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "version": {
+                            "type": "string",
+                            "description": "The release version, for example `1.5.0`."
+                          },
+                          "date": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Release date."
+                          },
+                          "minimumUpdateFrom": {
+                            "description": "The oldest version that can update to this release directly, or null for any.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "url": {
+                            "description": "Address of the release page, always HTTPS.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "notes": {
+                            "type": "object",
+                            "properties": {
+                              "new": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "description": "New features."
+                              },
+                              "improved": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "description": "Improvements."
+                              },
+                              "fixed": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "description": "Fixes."
+                              },
+                              "breaking": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "description": "Breaking changes to read before updating."
+                              },
+                              "manualSteps": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "description": "Steps the operator does by hand during the update."
+                              }
+                            },
+                            "required": [
+                              "new",
+                              "improved",
+                              "fixed",
+                              "breaking",
+                              "manualSteps"
+                            ],
+                            "additionalProperties": false,
+                            "description": "Release notes by group, as plain text."
+                          }
+                        },
+                        "required": [
+                          "version",
+                          "date",
+                          "minimumUpdateFrom",
+                          "url",
+                          "notes"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A release."
+                      },
+                      "description": "Releases after the running version, oldest first."
+                    },
+                    "commands": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "method": {
+                              "type": "string",
+                              "enum": [
+                                "script",
+                                "compose",
+                                "other",
+                                "unknown"
+                              ],
+                              "description": "The recorded installation method, from `PAGEHALL_INSTALL_METHOD`."
+                            },
+                            "steps": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "command",
+                                      "note"
+                                    ],
+                                    "description": "`command` to run in a shell, `note` to do by hand."
+                                  },
+                                  "text": {
+                                    "type": "string",
+                                    "description": "The command or the step."
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "text"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "description": "What to do, in order."
+                            }
+                          },
+                          "required": [
+                            "method",
+                            "steps"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "How to update to the newest release, built by Pagehall from the installation method."
+                    },
+                    "whatsNew": {
+                      "type": "object",
+                      "properties": {
+                        "available": {
+                          "type": "boolean",
+                          "description": "Whether the changelog is part of this image."
+                        },
+                        "version": {
+                          "description": "The section shown: the running version, or `Unreleased`.",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "date": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Release date of the running version."
+                        },
+                        "notes": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "new": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "description": "New features."
+                                },
+                                "improved": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "description": "Improvements."
+                                },
+                                "fixed": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "description": "Fixes."
+                                },
+                                "breaking": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "description": "Breaking changes to read before updating."
+                                },
+                                "manualSteps": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "description": "Steps the operator does by hand during the update."
+                                }
+                              },
+                              "required": [
+                                "new",
+                                "improved",
+                                "fixed",
+                                "breaking",
+                                "manualSteps"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Release notes by group, as plain text."
+                        }
+                      },
+                      "required": [
+                        "available",
+                        "version",
+                        "date",
+                        "notes"
+                      ],
+                      "additionalProperties": false,
+                      "description": "What is new in the running version, from the changelog in the image. Works with the check off."
+                    }
+                  },
+                  "required": [
+                    "running",
+                    "runningIsRelease",
+                    "check",
+                    "latest",
+                    "available",
+                    "commands",
+                    "whatsNew"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The running version, available updates and what is new."
+                },
+                "example": {
+                  "running": "1.4.2",
+                  "runningIsRelease": true,
+                  "check": {
+                    "enabled": true,
+                    "disabledBy": null,
+                    "url": "https://github.com/pagehall/pagehall/releases/latest/download/pagehall-versions.json",
+                    "checkedAt": "2026-11-03T04:11:00.000Z",
+                    "succeeded": true,
+                    "failure": null
+                  },
+                  "latest": "1.5.0",
+                  "available": [
+                    {
+                      "version": "1.5.0",
+                      "date": "2026-11-02",
+                      "minimumUpdateFrom": "1.3.0",
+                      "url": "https://github.com/pagehall/pagehall/releases/tag/v1.5.0",
+                      "notes": {
+                        "new": [
+                          "Maintenance mode for scripted maintenance."
+                        ],
+                        "improved": [],
+                        "fixed": [],
+                        "breaking": [],
+                        "manualSteps": []
+                      }
+                    }
+                  ],
+                  "commands": {
+                    "method": "script",
+                    "steps": [
+                      {
+                        "kind": "command",
+                        "text": "cd /opt/pagehall"
+                      },
+                      {
+                        "kind": "command",
+                        "text": "./pagehall update 1.5.0"
+                      }
+                    ]
+                  },
+                  "whatsNew": {
+                    "available": true,
+                    "version": "1.4.2",
+                    "date": "2026-10-01",
+                    "notes": {
+                      "new": [],
+                      "improved": [],
+                      "fixed": [
+                        "Uploads through Nginx."
+                      ],
+                      "breaking": [],
+                      "manualSteps": []
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/instance/updates/check": {
+      "post": {
+        "operationId": "operations.checkForUpdates",
+        "summary": "Check for updates now",
+        "description": "Downloads the version file now instead of waiting for the daily check. Does nothing when the update check is off. A failed check is not an error of this request; the result names the reason.\n\nRequires the permission `instance.operations.manage` on the instance.",
+        "tags": [
+          "Operations"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.operations.manage",
+          "resource": "instance"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Version and updates after the check.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "running": {
+                      "type": "string",
+                      "description": "The running version. Builds without a release show a commit or `dev`."
+                    },
+                    "runningIsRelease": {
+                      "type": "boolean",
+                      "description": "Whether the running version is a release that can be compared."
+                    },
+                    "check": {
+                      "type": "object",
+                      "properties": {
+                        "enabled": {
+                          "type": "boolean",
+                          "description": "Whether the update check is on."
+                        },
+                        "disabledBy": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "environment",
+                                "setting"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "What turned it off: `environment` for `PAGEHALL_UPDATE_CHECK=false`, `setting` for the instance setting."
+                        },
+                        "url": {
+                          "type": "string",
+                          "description": "The address of the version file."
+                        },
+                        "checkedAt": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "When the last check ran, or null."
+                        },
+                        "succeeded": {
+                          "type": "boolean",
+                          "description": "Whether the last check succeeded."
+                        },
+                        "failure": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "unreachable",
+                                "timeout",
+                                "blockedAddress",
+                                "insecureAddress",
+                                "untrustedCertificate",
+                                "tooManyRedirects",
+                                "httpStatus",
+                                "tooLarge",
+                                "invalidFile"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Why the last check failed: `unreachable`, `timeout`, `blockedAddress`, `insecureAddress`, `untrustedCertificate`, `tooManyRedirects`, `httpStatus`, `tooLarge` or `invalidFile`."
+                        }
+                      },
+                      "required": [
+                        "enabled",
+                        "disabledBy",
+                        "url",
+                        "checkedAt",
+                        "succeeded",
+                        "failure"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The update check. It downloads a public version file and sends nothing beyond the request."
+                    },
+                    "latest": {
+                      "description": "The newest release after the running version, or null.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "available": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "version": {
+                            "type": "string",
+                            "description": "The release version, for example `1.5.0`."
+                          },
+                          "date": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Release date."
+                          },
+                          "minimumUpdateFrom": {
+                            "description": "The oldest version that can update to this release directly, or null for any.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "url": {
+                            "description": "Address of the release page, always HTTPS.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "notes": {
+                            "type": "object",
+                            "properties": {
+                              "new": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "description": "New features."
+                              },
+                              "improved": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "description": "Improvements."
+                              },
+                              "fixed": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "description": "Fixes."
+                              },
+                              "breaking": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "description": "Breaking changes to read before updating."
+                              },
+                              "manualSteps": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "description": "Steps the operator does by hand during the update."
+                              }
+                            },
+                            "required": [
+                              "new",
+                              "improved",
+                              "fixed",
+                              "breaking",
+                              "manualSteps"
+                            ],
+                            "additionalProperties": false,
+                            "description": "Release notes by group, as plain text."
+                          }
+                        },
+                        "required": [
+                          "version",
+                          "date",
+                          "minimumUpdateFrom",
+                          "url",
+                          "notes"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A release."
+                      },
+                      "description": "Releases after the running version, oldest first."
+                    },
+                    "commands": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "method": {
+                              "type": "string",
+                              "enum": [
+                                "script",
+                                "compose",
+                                "other",
+                                "unknown"
+                              ],
+                              "description": "The recorded installation method, from `PAGEHALL_INSTALL_METHOD`."
+                            },
+                            "steps": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "command",
+                                      "note"
+                                    ],
+                                    "description": "`command` to run in a shell, `note` to do by hand."
+                                  },
+                                  "text": {
+                                    "type": "string",
+                                    "description": "The command or the step."
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "text"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "description": "What to do, in order."
+                            }
+                          },
+                          "required": [
+                            "method",
+                            "steps"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "How to update to the newest release, built by Pagehall from the installation method."
+                    },
+                    "whatsNew": {
+                      "type": "object",
+                      "properties": {
+                        "available": {
+                          "type": "boolean",
+                          "description": "Whether the changelog is part of this image."
+                        },
+                        "version": {
+                          "description": "The section shown: the running version, or `Unreleased`.",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "date": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Release date of the running version."
+                        },
+                        "notes": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "new": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "description": "New features."
+                                },
+                                "improved": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "description": "Improvements."
+                                },
+                                "fixed": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "description": "Fixes."
+                                },
+                                "breaking": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "description": "Breaking changes to read before updating."
+                                },
+                                "manualSteps": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "description": "Steps the operator does by hand during the update."
+                                }
+                              },
+                              "required": [
+                                "new",
+                                "improved",
+                                "fixed",
+                                "breaking",
+                                "manualSteps"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Release notes by group, as plain text."
+                        }
+                      },
+                      "required": [
+                        "available",
+                        "version",
+                        "date",
+                        "notes"
+                      ],
+                      "additionalProperties": false,
+                      "description": "What is new in the running version, from the changelog in the image. Works with the check off."
+                    }
+                  },
+                  "required": [
+                    "running",
+                    "runningIsRelease",
+                    "check",
+                    "latest",
+                    "available",
+                    "commands",
+                    "whatsNew"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The running version, available updates and what is new."
+                },
+                "example": {
+                  "running": "1.4.2",
+                  "runningIsRelease": true,
+                  "check": {
+                    "enabled": true,
+                    "disabledBy": null,
+                    "url": "https://github.com/pagehall/pagehall/releases/latest/download/pagehall-versions.json",
+                    "checkedAt": "2026-11-03T04:11:00.000Z",
+                    "succeeded": true,
+                    "failure": null
+                  },
+                  "latest": "1.5.0",
+                  "available": [
+                    {
+                      "version": "1.5.0",
+                      "date": "2026-11-02",
+                      "minimumUpdateFrom": "1.3.0",
+                      "url": "https://github.com/pagehall/pagehall/releases/tag/v1.5.0",
+                      "notes": {
+                        "new": [
+                          "Maintenance mode for scripted maintenance."
+                        ],
+                        "improved": [],
+                        "fixed": [],
+                        "breaking": [],
+                        "manualSteps": []
+                      }
+                    }
+                  ],
+                  "commands": {
+                    "method": "script",
+                    "steps": [
+                      {
+                        "kind": "command",
+                        "text": "cd /opt/pagehall"
+                      },
+                      {
+                        "kind": "command",
+                        "text": "./pagehall update 1.5.0"
+                      }
+                    ]
+                  },
+                  "whatsNew": {
+                    "available": true,
+                    "version": "1.4.2",
+                    "date": "2026-10-01",
+                    "notes": {
+                      "new": [],
+                      "improved": [],
+                      "fixed": [
+                        "Uploads through Nginx."
+                      ],
+                      "breaking": [],
+                      "manualSteps": []
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`maintenanceMode`: The instance is in maintenance mode.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "maintenanceMode": {
+                    "value": {
+                      "type": "urn:pagehall:problem:maintenanceMode",
+                      "title": "The instance is in maintenance mode",
+                      "status": 503,
+                      "code": "maintenanceMode"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/invitations/accept": {
       "post": {
         "operationId": "accounts.accept",

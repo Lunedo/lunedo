@@ -44,6 +44,8 @@ import {
 import { collaborationNotificationTypes } from "./collaboration/notifications.js";
 import { ReactionService } from "./collaboration/reactions.js";
 import { TaskService } from "./collaboration/tasks.js";
+import { DEFAULT_UPDATE_CHECK_URL } from "./config/definitions.js";
+import type { ServerConfig } from "./config/load.js";
 import { CopyService } from "./copies/copies.js";
 import { COPY_WATCHDOG_SCHEDULE, copyItemsJob, copyWatchdogJob } from "./copies/jobs.js";
 import { copyNotificationTypes } from "./copies/notifications.js";
@@ -154,7 +156,10 @@ import { type BackupStatusSource, commandOnlyBackups } from "./operations/backup
 import { removeOldErrorEvents } from "./operations/error-events.js";
 import { REMOVE_OLD_ERROR_EVENTS_SCHEDULE, removeOldErrorEventsJob } from "./operations/jobs.js";
 import { MaintenanceService, SignInBlockedError } from "./operations/maintenance.js";
+import { operationsNotificationTypes } from "./operations/notifications.js";
 import { type CollaborationProbe, OperationsStatusService } from "./operations/status.js";
+import { UpdateCheckService } from "./operations/update-check.js";
+import { pagehallVersion } from "./operations/version.js";
 import { BreakGlassService } from "./organizations/break-glass.js";
 import { GroupService } from "./organizations/groups.js";
 import { HomeOrganizationService } from "./organizations/home.js";
@@ -354,6 +359,7 @@ export interface AccountServices {
   rendering: RenderService;
   operations: OperationsStatusService;
   maintenance: MaintenanceService;
+  updates: UpdateCheckService;
 }
 
 export function createAccountServices(options: {
@@ -387,6 +393,9 @@ export function createAccountServices(options: {
   keyProvider?: "env" | "file";
   backups?: BackupStatusSource;
   collaborationProbe?: CollaborationProbe;
+  updates?: ServerConfig["updates"];
+  version?: string;
+  updatePolicy?: OutboundPolicy;
 }): AccountServices {
   const { database, settings, audit, encryption, jobs, logger } = options;
   const hasher = new PasswordHasher({
@@ -447,6 +456,7 @@ export function createAccountServices(options: {
       ...copyNotificationTypes,
       ...chatNotificationTypes,
       ...storageNotificationTypes,
+      ...operationsNotificationTypes,
       ...knowledgeBaseNotificationTypes,
     ),
     unsubscribe,
@@ -1045,6 +1055,22 @@ export function createAccountServices(options: {
       configuredInstanceUrl: options.configuredInstanceUrl,
     }),
   );
+  const version = options.version ?? pagehallVersion();
+  const updates = new UpdateCheckService({
+    database,
+    settings,
+    notifications,
+    policy: options.updatePolicy ?? outboundPolicy(options.outboundAllowedNetworks ?? []),
+    logger,
+    environment: options.updates ?? {
+      check: false,
+      url: DEFAULT_UPDATE_CHECK_URL,
+      installMethod: undefined,
+      installDir: undefined,
+      changelogFile: "CHANGELOG.md",
+    },
+    running: () => version,
+  });
   const operations = new OperationsStatusService({
     database,
     pool: options.pool,
@@ -1057,15 +1083,18 @@ export function createAccountServices(options: {
     jobs,
     backups: options.backups ?? commandOnlyBackups,
     maintenance,
+    updates,
     collaboration: options.collaborationProbe,
     filesDir: options.filesDir,
     fileStore: files.store.kind,
     keyProvider: options.keyProvider ?? "file",
     configuredInstanceUrl: options.configuredInstanceUrl,
+    version,
   });
   return {
     operations,
     maintenance,
+    updates,
     push,
     chatChannels,
     watches,

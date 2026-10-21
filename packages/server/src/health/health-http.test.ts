@@ -127,6 +127,7 @@ describe("Pagehall metrics", () => {
     search: { pendingItems: 4, failingItems: 1 },
     collaborationReady: true,
     maintenance: true,
+    updateAvailable: true,
   };
 
   it("exposes build info, logged errors and collaboration connections", async () => {
@@ -162,6 +163,7 @@ describe("Pagehall metrics", () => {
       'pagehall_search_failing_items{service="api"} 1',
       'pagehall_collab_up{service="api"} 1',
       'pagehall_maintenance_mode{service="api"} 1',
+      'pagehall_update_available{service="api"} 1',
     ]) {
       expect(output).toContain(line);
     }
@@ -175,6 +177,7 @@ describe("Pagehall metrics", () => {
       storage: null,
       backup: null,
       collaborationReady: null,
+      updateAvailable: null,
     }));
     const output = await metrics.render();
     expect(output).toContain('pagehall_storage_level{service="api"} 1');
@@ -183,6 +186,7 @@ describe("Pagehall metrics", () => {
       "pagehall_backup_last_success_timestamp_seconds",
       "pagehall_backup_failures_total",
       "pagehall_collab_up",
+      "pagehall_update_available",
     ]) {
       expect(output).not.toMatch(new RegExp(`^${name}{`, "m"));
     }

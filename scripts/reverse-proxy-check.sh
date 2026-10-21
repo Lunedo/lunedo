@@ -74,6 +74,7 @@ done
 docker run -d --name "$app" --network "$network" --network-alias pagehall \
   -e PAGEHALL_DATABASE_URL="postgres://pagehall:${password}@${postgres}:5432/pagehall" \
   -e PAGEHALL_INSTANCE_URL=https://wiki.example.org -e PAGEHALL_TRUSTED_PROXIES="$subnet" \
+  -e PAGEHALL_UPDATE_CHECK=false \
   -e PAGEHALL_OWNER_EMAIL=owner@example.org -e PAGEHALL_OWNER_NAME=Owner \
   -e PAGEHALL_OWNER_PASSWORD="proxy owner ${suffix}" -e PAGEHALL_ORGANIZATION_NAME=Proxy \
   "$image" >/dev/null

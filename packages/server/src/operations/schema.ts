@@ -1,5 +1,15 @@
 import { sql } from "drizzle-orm";
-import { boolean, check, integer, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  check,
+  integer,
+  jsonb,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { accounts } from "../accounts/schema.js";
 
 const timestampColumn = () => timestamp({ withTimezone: true, mode: "date" });
@@ -35,4 +45,17 @@ export const maintenanceState = pgTable(
     check("maintenance_state_singleton", sql`${table.singleton}`),
     check("maintenance_state_message", sql`char_length(${table.message}) <= 500`),
   ],
+);
+
+export const updateCheckState = pgTable(
+  "update_check_state",
+  {
+    singleton: boolean().primaryKey().default(true),
+    checkedAt: timestampColumn(),
+    succeeded: boolean().notNull().default(false),
+    failure: text(),
+    releases: jsonb().notNull().default([]),
+    notifiedVersion: text(),
+  },
+  (table) => [check("update_check_state_singleton", sql`${table.singleton}`)],
 );

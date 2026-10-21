@@ -5,6 +5,7 @@ import type { StorageService } from "../storage/storage.js";
 import { INSTANCE_METRICS_CACHE_MS, instanceMetricsSource } from "./instance-metrics.js";
 import { MAINTENANCE_OFF, type MaintenanceService } from "./maintenance.js";
 import type { OperationsStatusService } from "./status.js";
+import type { UpdateCheckService } from "./update-check.js";
 
 function source(options: { now: () => number; failDatabaseSize?: () => boolean }) {
   let reads = 0;
@@ -32,6 +33,7 @@ function source(options: { now: () => number; failDatabaseSize?: () => boolean }
       backups: async () => null,
     } as unknown as OperationsStatusService,
     maintenance: { status: async () => MAINTENANCE_OFF } as unknown as MaintenanceService,
+    updates: { updateAvailable: async () => null } as unknown as UpdateCheckService,
     now: options.now,
   });
   return { read, reads: () => reads };

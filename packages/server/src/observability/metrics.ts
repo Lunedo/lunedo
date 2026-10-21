@@ -171,6 +171,11 @@ export class Metrics {
     gauge("pagehall_maintenance_mode", "1 while the instance is in maintenance mode.", (s) =>
       Number(s.maintenance),
     );
+    gauge(
+      "pagehall_update_available",
+      "1 when a newer release is available. Only while the update check is on.",
+      (s) => (s.updateAvailable === null ? null : Number(s.updateAvailable)),
+    );
     gauge("pagehall_collab_up", "1 when the collaboration server answers its readiness check.", (s) =>
       s.collaborationReady === null ? null : Number(s.collaborationReady),
     );
