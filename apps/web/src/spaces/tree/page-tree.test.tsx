@@ -84,7 +84,7 @@ describe("PageTree", () => {
   });
 
   it("lists translations first below their original and names their language", async () => {
-    const original = { ...folder, kind: "page", title: "Set up the VPN", hasChildren: true };
+    const original = { ...folder, kind: "page", title: "Set up the VPN", hasChildren: true, published: true };
     mockApi({
       [items]: ({ path }) =>
         path.includes("parentId=")
@@ -116,16 +116,49 @@ describe("PageTree", () => {
     await renderWithProviders(inSpace(<PageTree space={space} currentId={null} ancestors={[original.id]} />));
     const tree = await screen.findByRole("tree", { name: "Page tree" });
     const translation = await within(tree).findByRole("treeitem", {
-      name: "Set up the VPN (German translation)",
+      name: "Set up the VPN DE (German translation)",
     });
     expect(within(translation).getByText("DE")).toBeTruthy();
     const levelTwo = within(tree)
       .getAllByRole("treeitem")
       .filter((item) => item.getAttribute("aria-level") === "2");
     expect(levelTwo.map((item) => item.getAttribute("aria-label"))).toEqual([
-      "Set up the VPN (German translation)",
+      "Set up the VPN DE (German translation)",
       "Split tunnel",
     ]);
+  });
+
+  it("names every badge it shows, so the name contains the visible text", async () => {
+    const page = { ...folder, kind: "page", title: "Set up the VPN", hasChildren: true, published: false };
+    mockApi({
+      [items]: ({ path }) =>
+        path.includes("parentId=")
+          ? {
+              body: {
+                items: [
+                  {
+                    ...page,
+                    id: child,
+                    parentId: page.id,
+                    hasChildren: false,
+                    translationOf: page.id,
+                    contentLanguage: "de",
+                  },
+                ],
+                nextCursor: null,
+              },
+            }
+          : { body: { items: [page], nextCursor: null } },
+    });
+    await renderWithProviders(inSpace(<PageTree space={space} currentId={null} ancestors={[page.id]} />));
+    const tree = await screen.findByRole("tree", { name: "Page tree" });
+    const original = await within(tree).findByRole("treeitem", { name: "Set up the VPN, Draft" });
+    expect(within(original).getByText("Draft")).toBeTruthy();
+    const translation = await within(tree).findByRole("treeitem", {
+      name: "Set up the VPN DE (German translation), Draft",
+    });
+    expect(within(translation).getByText("DE")).toBeTruthy();
+    expect(within(translation).getByText("Draft")).toBeTruthy();
   });
 
   it("offers more children and a failed level as items of the tree", async () => {

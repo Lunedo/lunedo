@@ -4565,7 +4565,7 @@
       "fromLevel": "From level {level}"
     },
     "callout": {
-      "change": "Change panel type",
+      "change": "Panel type: {type}. Change it",
       "info": "Info",
       "tip": "Tip",
       "note": "Note",
@@ -5450,7 +5450,8 @@
     "newWhiteboard": "New whiteboard",
     "newWhiteboardInside": "New whiteboard inside",
     "copy": "Copy…",
-    "translationLabel": "{title} ({language} translation)",
+    "translationLabel": "{title} {code} ({language} translation)",
+    "draftLabel": "{label}, Draft",
     "translationInto": "Translation into {language}"
   },
   "move": {
@@ -5521,7 +5522,7 @@
     "more": "More actions",
     "description": "Description",
     "addDescription": "Add a description",
-    "editDescription": "Edit the description of the folder",
+    "editDescription": "Edit the description of the folder: {description}",
     "contents": "Contents",
     "loadFailed": "The folder could not be loaded",
     "contentsFailed": "The contents of the folder could not be loaded",
@@ -9024,7 +9025,7 @@
     "failingSince": "failing since {time}",
     "nothingYet": "nothing posted yet",
     "sendTestShort": "Send test",
-    "sendTestTo": "Send a test message to {name}",
+    "sendTestTo": "Send test to {name}",
     "edit": "Edit {name}",
     "disconnect": "Disconnect {name}",
     "failingTitle": "{service} stopped accepting messages for {name}",
@@ -9578,7 +9579,7 @@
       "atSection": "{title} is required. Add text or an image here before publishing."
     },
     "frame": {
-      "change": "Frame of the image",
+      "change": "Frame of the image: {frame}. Change it",
       "auto": "Frame as in the section",
       "on": "Always framed",
       "off": "No frame"
@@ -9945,7 +9946,7 @@
       "last": "Last search",
       "actions": "Actions",
       "create": "Create article",
-      "createFor": "Create an article for “{term}”",
+      "createFor": "Create article for “{term}”",
       "threshold": "Terms appear from 3 searches on, so single searches for names stay hidden."
     },
     "zero": {

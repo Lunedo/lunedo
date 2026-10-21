@@ -37,4 +37,8 @@
   [data-quiet-focus]:focus-visible {
     outline: none;
   }
+
+  [data-initials]::before {
+    content: attr(data-initials);
+  }
 }

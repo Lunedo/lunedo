@@ -47,6 +47,9 @@ async function renderMermaid(source: string): Promise<string> {
   mermaid.initialize({
     startOnLoad: false,
     securityLevel: "strict",
+    layout: "dagre",
+    theme: "default",
+    look: "classic",
     htmlLabels: false,
     flowchart: { htmlLabels: false },
     maxTextSize: 50_000,

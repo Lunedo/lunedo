@@ -21,15 +21,15 @@
   "devDependencies": {
     "@pagehall/config": "workspace:*",
     "@testing-library/react": "^16.3.3",
-    "@testing-library/user-event": "^14.6.7",
+    "@testing-library/user-event": "^14.6.8",
     "@types/node": "^24.19.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "happy-dom": "^20.14.6",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0",
+    "happy-dom": "^21.0.4",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "typescript": "^7.0.2",
-    "vitest": "^5.0.3"
+    "vitest": "^5.0.5"
   },
   "peerDependencies": {
     "react": "^19.0.0",
@@ -41,7 +41,7 @@
   "dependencies": {
     "@pagehall/tokens": "workspace:*",
     "cmdk": "^1.1.1",
-    "lucide-react": "^1.55.0",
-    "radix-ui": "^1.7.0"
+    "lucide-react": "^1.59.0",
+    "radix-ui": "^1.8.1"
   }
 }

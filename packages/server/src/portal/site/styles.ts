@@ -136,6 +136,7 @@ const sections = [
   `.tile .go{width:${L.pill};height:${L.pill};border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--text)}`,
   ".tile:hover .go{background:var(--kb);color:var(--kb-on)}",
   `.tile.mini{gap:${S[2]};padding:${S[6]}}.tile.mini h3{font-size:${F.lg};margin-top:${S[1]}}`,
+  `[data-initial]::before{content:attr(data-initial)}`,
   `.cicon{display:flex;align-items:center;justify-content:center;flex-shrink:0;border-radius:${R.xl};background:var(--kb-t2);color:var(--kb);font-weight:600;letter-spacing:-.02em;line-height:1}`,
   `.cicon.s56{width:3.5rem;height:3.5rem;font-size:${F.lg}}.cicon.s56 svg.i{width:${I.xl};height:${I.xl}}`,
   `.cicon.s72{width:4.5rem;height:4.5rem;font-size:${F["2xl"]};border-radius:1.25rem}.cicon.s72 svg.i{width:${I["2xl"]};height:${I["2xl"]}}`,

@@ -9,7 +9,7 @@ describe("the folder description", () => {
     const onSave = vi.fn(() => Promise.resolve());
     await renderWithProviders(<FolderDescription value="" onSave={onSave} />);
     expect(screen.queryByRole("textbox")).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: "Edit the description of the folder" }));
+    await userEvent.click(screen.getByRole("button", { name: "Add a description" }));
     const field = screen.getByRole("textbox", { name: "Description" });
     expect(document.activeElement).toBe(field);
     await userEvent.type(field, "Runbooks for the on-call team");
@@ -22,7 +22,9 @@ describe("the folder description", () => {
     const onSave = vi.fn(() => Promise.resolve());
     await renderWithProviders(<FolderDescription value="Runbooks" onSave={onSave} />);
     expect(screen.getByText("Runbooks")).toBeTruthy();
-    await userEvent.click(screen.getByRole("button", { name: "Edit the description of the folder" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Edit the description of the folder: Runbooks" }),
+    );
     await userEvent.type(screen.getByRole("textbox", { name: "Description" }), " and more");
     await userEvent.keyboard("{Escape}");
     expect(onSave).not.toHaveBeenCalled();
@@ -32,7 +34,7 @@ describe("the folder description", () => {
   it("stays open and says what failed when saving fails", async () => {
     const onSave = vi.fn(() => Promise.reject(new Error("offline")));
     await renderWithProviders(<FolderDescription value="" onSave={onSave} />);
-    await userEvent.click(screen.getByRole("button", { name: "Edit the description of the folder" }));
+    await userEvent.click(screen.getByRole("button", { name: "Add a description" }));
     await userEvent.type(screen.getByRole("textbox", { name: "Description" }), "Text");
     await userEvent.tab();
     await waitFor(() => expect(screen.getByRole("textbox", { name: "Description" })).toBeTruthy());

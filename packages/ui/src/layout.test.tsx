@@ -113,7 +113,9 @@ describe("feedback components", () => {
         <Avatar name="Tomas Kern" decorative />
       </>,
     );
-    expect(screen.getByRole("img", { name: "Lena Hofer" }).textContent).toBe("LH");
+    const avatar = screen.getByRole("img", { name: "Lena Hofer" });
+    expect(avatar.textContent).toBe("");
+    expect(avatar.querySelector("[data-initials]")?.getAttribute("data-initials")).toBe("LH");
     expect(screen.queryByRole("img", { name: "Tomas Kern" })).toBeNull();
   });
 

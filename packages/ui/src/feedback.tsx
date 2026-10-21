@@ -87,7 +87,7 @@ export function Avatar({
       {...(decorative ? { "aria-hidden": true } : { role: "img", "aria-label": name })}
       className={classNames(classes, avatarColor(name), "font-bold text-bg")}
     >
-      <span aria-hidden="true">{initialsOf(name)}</span>
+      <span aria-hidden="true" data-initials={initialsOf(name)} />
     </span>
   );
 }
