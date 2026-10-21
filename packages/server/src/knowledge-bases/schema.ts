@@ -123,6 +123,32 @@ export const knowledgeBasePaths = pgTable(
   (table) => [index().on(table.spaceId)],
 );
 
+export const portalHandoffConsents = pgTable(
+  "portal_handoff_consents",
+  {
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    domain: text()
+      .notNull()
+      .references(() => portalDomains.domain, { onDelete: "cascade" }),
+    createdAt: timestampColumn().notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.accountId, table.domain] }), index().on(table.domain)],
+);
+
+export const portalPathReservations = pgTable(
+  "portal_path_reservations",
+  {
+    path: text().primaryKey(),
+    organizationId: uuid()
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    createdAt: timestampColumn().notNull().defaultNow(),
+  },
+  (table) => [index().on(table.organizationId)],
+);
+
 export const knowledgeBaseLogos = pgTable("knowledge_base_logos", {
   spaceId: uuid()
     .primaryKey()
@@ -175,10 +201,13 @@ export const articleSlugs = pgTable(
     itemId: uuid()
       .notNull()
       .references(() => treeItems.id, { onDelete: "cascade" }),
+    spaceId: uuid()
+      .notNull()
+      .references(() => spaces.id, { onDelete: "cascade" }),
     slug: text().notNull(),
     createdAt: timestampColumn().notNull().defaultNow(),
   },
-  (table) => [primaryKey({ columns: [table.itemId, table.slug] })],
+  (table) => [primaryKey({ columns: [table.itemId, table.spaceId, table.slug] }), index().on(table.spaceId)],
 );
 
 export const requiredSections = pgTable(
@@ -283,6 +312,7 @@ export const articleSync = pgTable(
     changedAt: timestampColumn().notNull().defaultNow(),
     removedAt: timestampColumn(),
     removedReason: text(),
+    removedRestricted: boolean().notNull().default(false),
   },
   (table) => [
     primaryKey({ columns: [table.spaceId, table.itemId] }),
@@ -308,4 +338,18 @@ export const portalInvitations = pgTable(
       .references(() => spaces.id, { onDelete: "cascade" }),
   },
   (table) => [index().on(table.spaceId)],
+);
+
+export const portalReaders = pgTable(
+  "portal_readers",
+  {
+    spaceId: uuid()
+      .notNull()
+      .references(() => spaces.id, { onDelete: "cascade" }),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    createdAt: timestampColumn().notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.spaceId, table.accountId] }), index().on(table.accountId)],
 );

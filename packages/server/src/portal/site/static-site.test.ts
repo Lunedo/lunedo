@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 import { sql } from "drizzle-orm";
 import MiniSearch from "minisearch";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { accountPrincipal, type Principal } from "../../accounts/principal.js";
+import { ANONYMOUS, accountPrincipal, type Principal } from "../../accounts/principal.js";
 import { bytesOf, unzip } from "../../exports/fixtures.testing.js";
 import { defaultExportOptions } from "../../exports/options.js";
 import { importHarness } from "../../imports/testing/harness.js";
@@ -294,6 +294,209 @@ describe.skipIf(!baseUrl)("static website of a knowledge base", () => {
       state: "failed",
       errorCode: "notPublic",
     });
+  }, 120_000);
+
+  async function knowledgeBase(owner: Principal, organizationId: string, audience: "public" | "signedIn") {
+    const name = `Help ${randomUUID().slice(0, 8)}`;
+    return test.services.spaces.create(
+      owner,
+      organizationId,
+      { name, key: await test.services.spaces.suggestKey(name), type: "knowledgeBase", audience, grants: [] },
+      test.services.spacePermissions.holders,
+    );
+  }
+
+  async function article(owner: Principal, spaceId: string, title: string, text: string) {
+    const created = await test.services.tree.create(owner, spaceId, {
+      kind: "page",
+      title,
+      placement: { parentId: null },
+    });
+    await test.services.documents.replace(owner, created.id, {
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text }] }],
+    });
+    return created.id;
+  }
+
+  async function numberOf(itemId: string, spaceId: string) {
+    const found = await test.database.execute<{ number: number }>(
+      sql`select number from article_numbers where item_id = ${itemId} and space_id = ${spaceId}`,
+    );
+    return Number(found.rows[0]?.number);
+  }
+
+  it("keeps only titles published in this knowledge base as old addresses", async () => {
+    const organization = await fixtures.organization();
+    const owner = accountPrincipal(organization.owner);
+    const open = await knowledgeBase(owner, organization.id, "public");
+    const internal = await knowledgeBase(owner, organization.id, "signedIn");
+    const drafted = await article(owner, open.id, "Entlassungen Standort Nord intern", "Text");
+    await test.services.tree.update(owner, drafted, { title: "Zwischenstand Umzug" });
+    await test.services.tree.update(owner, drafted, { title: "Standortwechsel FAQ" });
+    await test.services.versions.publish(owner, drafted);
+    await test.database.execute(
+      sql`update tree_items set title = ${"Zwischenstand Kündigungen"} where id = ${drafted}`,
+    );
+    const moved = await article(owner, internal.id, "Abmahnung Fall Huber Vorlage", "Text");
+    await test.services.versions.publish(owner, moved);
+    await test.services.tree.update(owner, moved, { title: "Abmahnung Vorlage" });
+    await test.services.versions.publish(owner, moved);
+    const internalNumber = await numberOf(moved, internal.id);
+    await test.services.tree.move(owner, moved, { spaceId: open.id, parentId: null });
+    const draftedNumber = await numberOf(drafted, open.id);
+    const movedNumber = await numberOf(moved, open.id);
+
+    const files = await site(owner, open.id, null);
+    const names = [...files.keys()].join("\n");
+    const redirects = files.get("_redirects")?.toString("utf8") ?? "";
+    for (const hidden of ["entlassungen", "zwischenstand", "kuendigungen", "huber"]) {
+      expect(names).not.toContain(hidden);
+      expect(redirects).not.toContain(hidden);
+    }
+    expect(files.has(`${draftedNumber}-standortwechsel-faq.html`)).toBe(true);
+    expect(files.has(`${movedNumber}-abmahnung-vorlage.html`)).toBe(true);
+
+    const portal = await test.services.portals.config(open.id);
+    const internalPortal = await test.services.portals.config(internal.id);
+    if (!portal || !internalPortal) throw new Error("missing portal");
+    const reader = test.services.portalReader;
+    expect(
+      await reader.article(ANONYMOUS, portal, draftedNumber, "entlassungen-standort-nord-intern", "en"),
+    ).toBeNull();
+    expect(await reader.article(ANONYMOUS, portal, draftedNumber, "zwischenstand-umzug", "en")).toBeNull();
+    expect(
+      await reader.article(ANONYMOUS, portal, movedNumber, "abmahnung-fall-huber-vorlage", "en"),
+    ).toBeNull();
+    expect(
+      await reader.article(ANONYMOUS, portal, draftedNumber, "standortwechsel-faq", "en"),
+    ).not.toBeNull();
+    expect(
+      await reader.article(owner, internalPortal, internalNumber, "abmahnung-fall-huber-vorlage", "en"),
+    ).toMatchObject({ type: "redirect", number: movedNumber });
+  }, 120_000);
+
+  it("keeps titles of linked pages out of both search indexes", async () => {
+    const organization = await fixtures.organization();
+    const owner = accountPrincipal(organization.owner);
+    const open = await knowledgeBase(owner, organization.id, "public");
+    const secret = await fixtures.space(organization.id, organization.owner);
+    const hidden = await test.services.tree.create(owner, secret.id, {
+      kind: "page",
+      title: "Aufhebungsvertrag Huber",
+      placement: { parentId: null },
+    });
+    const entry = await test.services.tree.create(owner, open.id, {
+      kind: "page",
+      title: "Laptop zurückgeben",
+      placement: { parentId: null },
+    });
+    await test.services.documents.replace(owner, entry.id, {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            { type: "text", text: "Gib den Laptop ab. " },
+            {
+              type: "pageLink",
+              attrs: { pageId: hidden.id, spaceId: secret.id, title: "Aufhebungsvertrag Huber" },
+            },
+          ],
+        },
+      ],
+    });
+    await test.services.versions.publish(owner, entry.id);
+    await test.services.search.indexer.drain();
+
+    const files = await site(owner, open.id, null);
+    const index = files.get("search-index.json")?.toString("utf8") ?? "";
+    expect(index).toContain("Gib den Laptop ab");
+    expect(index).not.toContain("Aufhebungsvertrag");
+    expect(index).not.toContain("Huber");
+    const config = await test.services.portals.config(open.id);
+    if (!config) throw new Error("missing portal");
+    const search = (query: string) =>
+      test.services.portalReader.search(ANONYMOUS, config, {
+        query,
+        categoryId: null,
+        type: null,
+        cursor: null,
+      });
+    expect((await search("Huber")).results).toEqual([]);
+    const found = await search("Laptop");
+    expect(found.results).toHaveLength(1);
+    expect(JSON.stringify(found.results[0]?.excerpt)).not.toContain("Huber");
+  }, 120_000);
+
+  it("leaves restricted, unpublished, trashed and turned-off articles out of every file", async () => {
+    const organization = await fixtures.organization();
+    const owner = accountPrincipal(organization.owner);
+    const open = await knowledgeBase(owner, organization.id, "public");
+    const category = await test.services.tree.create(owner, open.id, {
+      kind: "folder",
+      title: "Hardware",
+      placement: { parentId: null },
+    });
+    const place = async (title: string, text: string) => {
+      const created = await test.services.tree.create(owner, open.id, {
+        kind: "page",
+        title,
+        placement: { parentId: category.id },
+      });
+      await test.services.documents.replace(owner, created.id, {
+        type: "doc",
+        content: [{ type: "paragraph", content: [{ type: "text", text }] }],
+      });
+      return created.id;
+    };
+    const visible = await place("Drucker einrichten", "Sichtbarer Text");
+    await test.services.versions.publish(owner, visible);
+    const restricted = await place("Geheimprojekt Nord", "Geheimer Text");
+    await test.services.versions.publish(owner, restricted);
+    await test.services.tree.update(owner, restricted, { title: "Geheimprojekt Nord neu" });
+    await test.services.versions.publish(owner, restricted);
+    await test.services.pageAccess.change(owner, restricted, [{ action: "restrict", kind: "view" }]);
+    await place("Entwurf Umzug", "Entwurfstext");
+    const trashed = await place("Altes Telefon", "Papierkorbtext");
+    await test.services.versions.publish(owner, trashed);
+    await test.services.trash.deleteItem(owner, trashed);
+    await test.services.translations.update(owner, open.id, { languages: ["en", "de"] });
+    const german = await test.services.translations.create(owner, visible, "de");
+    await test.services.documents.replace(owner, german.id, {
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text: "Ausgeschaltete Sprache" }] }],
+    });
+    await test.services.tree.update(owner, german.id, { title: "Drucker auf Deutsch" });
+    await test.services.versions.publish(owner, german.id);
+    await test.services.translations.update(owner, open.id, { languages: ["en"] });
+
+    const files = await site(owner, open.id, "https://help.example.org/");
+    const everything = [...files.entries()]
+      .filter(([path]) => /\.(html|json|xml|txt)$|_redirects$/.test(path))
+      .map(([path, content]) => `${path}\n${content.toString("utf8")}`)
+      .join("\n");
+    expect(everything).toContain("Sichtbarer Text");
+    for (const hidden of [
+      "Geheimprojekt",
+      "geheimprojekt",
+      "Geheimer Text",
+      "Entwurf",
+      "entwurf",
+      "Altes Telefon",
+      "altes-telefon",
+      "Papierkorbtext",
+      "Ausgeschaltete Sprache",
+      "Drucker auf Deutsch",
+    ]) {
+      expect(everything, hidden).not.toContain(hidden);
+    }
+    expect([...files.keys()].some((path) => path.startsWith("de/"))).toBe(false);
+    const topic = files.get(`topics/${category.id}.html`)?.toString("utf8") ?? "";
+    expect(topic).toContain(">Drucker einrichten<");
+    const start = files.get("index.html")?.toString("utf8") ?? "";
+    expect(start).toContain("1 article");
+    expect(start).not.toMatch(/[2-9] articles/);
   }, 120_000);
 
   it("leaves out files of other spaces that an article points to", async () => {

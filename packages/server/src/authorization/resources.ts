@@ -289,6 +289,12 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
   const space: ResourceType = {
     type: "space",
     spaceOf: async (_executor, id) => id,
+    organizationOf: async (executor, id) => {
+      const result = await executor.execute<{ organization_id: string | null }>(
+        sql`select organization_id from spaces where id = ${id}`,
+      );
+      return result.rows[0]?.organization_id ?? null;
+    },
     actions: {
       "space.view": { scope: "space", spaceRole: "reader", restriction: "present" },
       "space.edit": { scope: "space", spaceRole: "editor", restriction: "writable" },
@@ -296,6 +302,7 @@ export function resourceTypes(settings: SettingsService): ResourceType[] {
       "space.manage": { scope: "space", spaceRole: "admin", restriction: "present" },
       "space.trash": { scope: "space", spaceRole: "editor", restriction: "present" },
       "space.delete": { scope: "space", spaceRole: "admin", restriction: "present" },
+      "space.portalAccounts.manage": organizationArea("membersAndGroups", "manage"),
       "space.export": {
         scope: "space",
         spaceRole: "reader",

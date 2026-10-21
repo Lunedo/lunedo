@@ -46,6 +46,9 @@ export async function runMigrations(
 ): Promise<void> {
   const folder = options.folder ?? migrationsFolder;
   const client = await pool.connect();
+  const notice = (message: { message?: string }) =>
+    options.logger.warn({ notice: message.message ?? "" }, "A migration changed existing data");
+  client.on("notice", notice);
   try {
     await client.query("select pg_advisory_lock(hashtext($1))", [LOCK_NAME]);
     try {
@@ -62,6 +65,7 @@ export async function runMigrations(
       await client.query("select pg_advisory_unlock(hashtext($1))", [LOCK_NAME]);
     }
   } finally {
+    client.off("notice", notice);
     client.release();
   }
 }

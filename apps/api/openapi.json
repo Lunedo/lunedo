@@ -3726,7 +3726,7 @@
       "get": {
         "operationId": "portalAccounts.portals",
         "summary": "List the portals the caller reads as a portal account",
-        "description": "Lists the portals of knowledge bases for portal accounts in the caller's organizations.\n\nNeeds a signed-in session.",
+        "description": "Lists the portals of the knowledge bases the caller was invited to read.\n\nNeeds a signed-in session.",
         "tags": [
           "Knowledge bases"
         ],
@@ -11958,6 +11958,422 @@
                       "code": "moveChangesAccess"
                     }
                   },
+                  "notArticle": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notArticle",
+                      "title": "The item is not an article of a knowledge base",
+                      "status": 409,
+                      "code": "notArticle"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/articles/{itemId}/hidden-sources": {
+      "delete": {
+        "operationId": "reviews.removeHiddenSources",
+        "summary": "Remove the source pages of an article the caller cannot read",
+        "description": "Removes the links to all source pages the caller cannot read. People who can read such a page can link it again. Audited.\n\nRequires the permission `item.edit` on the item in `itemId`.",
+        "tags": [
+          "Knowledge base reviews"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.edit",
+          "resource": "item",
+          "parameter": "itemId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the article.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The source pages the caller cannot read after the change.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "count": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991,
+                      "description": "Number of linked source pages the caller cannot read."
+                    },
+                    "changed": {
+                      "type": "boolean",
+                      "description": "Whether one of them changed after the last review of the article."
+                    }
+                  },
+                  "required": [
+                    "count",
+                    "changed"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Source pages the caller cannot read, without their titles."
+                },
+                "example": {
+                  "count": 0,
+                  "changed": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`notArticle`: The item is not an article of a knowledge base.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notArticle": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notArticle",
+                      "title": "The item is not an article of a knowledge base",
+                      "status": 409,
+                      "code": "notArticle"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "reviews.hiddenSources",
+        "summary": "Count the source pages of an article the caller cannot read",
+        "description": "Tells editors of the article how many linked source pages they cannot read, without titles, so that they can remove links nobody can maintain any more.\n\nRequires the permission `item.edit` on the item in `itemId`.",
+        "tags": [
+          "Knowledge base reviews"
+        ],
+        "x-pagehall-permission": {
+          "action": "item.edit",
+          "resource": "item",
+          "parameter": "itemId"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the article.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The source pages the caller cannot read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "count": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991,
+                      "description": "Number of linked source pages the caller cannot read."
+                    },
+                    "changed": {
+                      "type": "boolean",
+                      "description": "Whether one of them changed after the last review of the article."
+                    }
+                  },
+                  "required": [
+                    "count",
+                    "changed"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Source pages the caller cannot read, without their titles."
+                },
+                "example": {
+                  "count": 1,
+                  "changed": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidInput`: The request is not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidInput": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidInput",
+                      "title": "The request is not valid",
+                      "status": 400,
+                      "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`notFound`: Not found.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "notFound": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notFound",
+                      "title": "Not found",
+                      "status": 404,
+                      "code": "notFound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`notArticle`: The item is not an article of a knowledge base.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
                   "notArticle": {
                     "value": {
                       "type": "urn:pagehall:problem:notArticle",
@@ -50256,7 +50672,8 @@
                               "embeddedObject",
                               "wordCommentsDropped",
                               "unreadableImage",
-                              "documentTooLarge"
+                              "documentTooLarge",
+                              "translationNotImported"
                             ]
                           },
                           "count": {
@@ -168927,7 +169344,7 @@
             }
           },
           "400": {
-            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidHolder`: The holder cannot get a role in this space. `invalidInput`: The request is not valid.",
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidHolder`: The holder cannot get a role in this space. `invalidInput`: The request is not valid. `portalAccountReaderOnly`: Portal accounts can only read.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -168956,6 +169373,14 @@
                       "title": "The request is not valid",
                       "status": 400,
                       "code": "invalidInput"
+                    }
+                  },
+                  "portalAccountReaderOnly": {
+                    "value": {
+                      "type": "urn:pagehall:problem:portalAccountReaderOnly",
+                      "title": "Portal accounts can only read",
+                      "status": 400,
+                      "code": "portalAccountReaderOnly"
                     }
                   }
                 }
@@ -169824,7 +170249,7 @@
             }
           },
           "400": {
-            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `audienceGroupsMissing`: Choose at least one group. `invalidAudience`: Only knowledge bases have an audience. `invalidHolder`: The holder cannot get a role in this space. `invalidInput`: The request is not valid. `invalidSpaceDescription`: The space description is too long. `invalidSpaceKey`: The space key is not valid. `invalidSpaceName`: The space name is not valid. `invalidVisibility`: The space needs a visibility. `knowledgeBaseConfidential`: A knowledge base cannot be confidential.",
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `audienceGroupsMissing`: Choose at least one group. `invalidAudience`: Only knowledge bases have an audience. `invalidHolder`: The holder cannot get a role in this space. `invalidInput`: The request is not valid. `invalidSpaceDescription`: The space description is too long. `invalidSpaceKey`: The space key is not valid. `invalidSpaceName`: The space name is not valid. `invalidVisibility`: The space needs a visibility. `knowledgeBaseConfidential`: A knowledge base cannot be confidential. `portalAccountReaderOnly`: Portal accounts can only read.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -169909,6 +170334,14 @@
                       "title": "A knowledge base cannot be confidential",
                       "status": 400,
                       "code": "knowledgeBaseConfidential"
+                    }
+                  },
+                  "portalAccountReaderOnly": {
+                    "value": {
+                      "type": "urn:pagehall:problem:portalAccountReaderOnly",
+                      "title": "Portal accounts can only read",
+                      "status": 400,
+                      "code": "portalAccountReaderOnly"
                     }
                   }
                 }
@@ -217938,7 +218371,7 @@
             }
           },
           "400": {
-            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `audienceGroupsMissing`: Choose at least one group. `invalidHolder`: The holder cannot get a role in this space. `invalidInput`: The request is not valid. `tooManyGroups`: Too many groups.",
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `audienceGroupsMissing`: Choose at least one group. `invalidHolder`: The holder cannot get a role in this space. `invalidInput`: The request is not valid. `portalAccountReaderOnly`: Portal accounts can only read. `tooManyGroups`: Too many groups.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -217975,6 +218408,14 @@
                       "title": "The request is not valid",
                       "status": 400,
                       "code": "invalidInput"
+                    }
+                  },
+                  "portalAccountReaderOnly": {
+                    "value": {
+                      "type": "urn:pagehall:problem:portalAccountReaderOnly",
+                      "title": "Portal accounts can only read",
+                      "status": 400,
+                      "code": "portalAccountReaderOnly"
                     }
                   },
                   "tooManyGroups": {
@@ -220524,7 +220965,7 @@
       "get": {
         "operationId": "portal.spaceDomains",
         "summary": "List the domains a portal can use",
-        "description": "Domains the instance administrators allowed for the organization of the knowledge base.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
+        "description": "Domains the instance administrators allowed for the organization of the knowledge base that are free or used by this knowledge base. Domains of other knowledge bases are left out.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
         "tags": [
           "Knowledge bases"
         ],
@@ -226264,7 +226705,7 @@
             }
           },
           "400": {
-            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidHolder`: The holder cannot get a role in this space. `invalidInput`: The request is not valid.",
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidHolder`: The holder cannot get a role in this space. `invalidInput`: The request is not valid. `portalAccountReaderOnly`: Portal accounts can only read.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -226293,6 +226734,14 @@
                       "title": "The request is not valid",
                       "status": 400,
                       "code": "invalidInput"
+                    }
+                  },
+                  "portalAccountReaderOnly": {
+                    "value": {
+                      "type": "urn:pagehall:problem:portalAccountReaderOnly",
+                      "title": "Portal accounts can only read",
+                      "status": 400,
+                      "code": "portalAccountReaderOnly"
                     }
                   }
                 }
@@ -226935,7 +227384,7 @@
             }
           },
           "400": {
-            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidHolder`: The holder cannot get a role in this space. `invalidInput`: The request is not valid.",
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidHolder`: The holder cannot get a role in this space. `invalidInput`: The request is not valid. `portalAccountReaderOnly`: Portal accounts can only read.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -226964,6 +227413,14 @@
                       "title": "The request is not valid",
                       "status": 400,
                       "code": "invalidInput"
+                    }
+                  },
+                  "portalAccountReaderOnly": {
+                    "value": {
+                      "type": "urn:pagehall:problem:portalAccountReaderOnly",
+                      "title": "Portal accounts can only read",
+                      "status": 400,
+                      "code": "portalAccountReaderOnly"
                     }
                   }
                 }
@@ -227101,12 +227558,12 @@
       "get": {
         "operationId": "portalAccounts.list",
         "summary": "List the portal accounts of a knowledge base",
-        "description": "Lists the portal accounts of the organization and the open invitations sent from this knowledge base.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
+        "description": "Lists the portal accounts that read this knowledge base and the open invitations sent from it. Needs the permission to manage the organization's members.\n\nRequires the permission `space.portalAccounts.manage` on the space in `spaceId`.",
         "tags": [
           "Knowledge bases"
         ],
         "x-pagehall-permission": {
-          "action": "space.manage",
+          "action": "space.portalAccounts.manage",
           "resource": "space",
           "parameter": "spaceId"
         },
@@ -227211,7 +227668,7 @@
                         "additionalProperties": false,
                         "description": "A portal account."
                       },
-                      "description": "Portal accounts of the organization, which read its knowledge bases for portal accounts."
+                      "description": "Portal accounts that read this knowledge base."
                     },
                     "invitations": {
                       "type": "array",
@@ -227420,12 +227877,12 @@
       "post": {
         "operationId": "portalAccounts.invite",
         "summary": "Invite a reader as a portal account",
-        "description": "Sends an invitation to read the knowledge base. The reader creates a portal account that sees only the portal of the organization's knowledge bases for portal accounts. The person who invites is responsible for the account. Audited.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
+        "description": "Sends an invitation to read the knowledge base. The reader creates a portal account that reads only the knowledge bases it was invited to. Open member invitations for the same address stay valid. The person who invites is responsible for the account. Needs the permission to manage the organization's members. Audited.\n\nRequires the permission `space.portalAccounts.manage` on the space in `spaceId`.",
         "tags": [
           "Knowledge bases"
         ],
         "x-pagehall-permission": {
-          "action": "space.manage",
+          "action": "space.portalAccounts.manage",
           "resource": "space",
           "parameter": "spaceId"
         },
@@ -227717,12 +228174,12 @@
       "delete": {
         "operationId": "portalAccounts.remove",
         "summary": "Remove a portal account from the organization",
-        "description": "The account no longer reads the organization's knowledge bases. It keeps reading other organizations it belongs to. Audited.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
+        "description": "The account no longer reads the organization's knowledge bases. It keeps reading other organizations it belongs to. Audited.\n\nRequires the permission `space.portalAccounts.manage` on the space in `spaceId`.",
         "tags": [
           "Knowledge bases"
         ],
         "x-pagehall-permission": {
-          "action": "space.manage",
+          "action": "space.portalAccounts.manage",
           "resource": "space",
           "parameter": "spaceId"
         },
@@ -227899,12 +228356,12 @@
       "post": {
         "operationId": "portalAccounts.deactivate",
         "summary": "Deactivate a portal account",
-        "description": "Ends all sessions of the account; it can no longer sign in. Its ratings and notes stay anonymous as before. Only for accounts that read no other organization. Audited.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
+        "description": "Ends all sessions of the account; it can no longer sign in. Its ratings and notes stay anonymous as before. Only for accounts that read no other organization. Audited.\n\nRequires the permission `space.portalAccounts.manage` on the space in `spaceId`.",
         "tags": [
           "Knowledge bases"
         ],
         "x-pagehall-permission": {
-          "action": "space.manage",
+          "action": "space.portalAccounts.manage",
           "resource": "space",
           "parameter": "spaceId"
         },
@@ -228101,12 +228558,12 @@
       "delete": {
         "operationId": "portalAccounts.revoke",
         "summary": "Withdraw an invitation of a portal account",
-        "description": "The link in the invitation stops working. Audited.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
+        "description": "The link in the invitation stops working. Audited.\n\nRequires the permission `space.portalAccounts.manage` on the space in `spaceId`.",
         "tags": [
           "Knowledge bases"
         ],
         "x-pagehall-permission": {
-          "action": "space.manage",
+          "action": "space.portalAccounts.manage",
           "resource": "space",
           "parameter": "spaceId"
         },

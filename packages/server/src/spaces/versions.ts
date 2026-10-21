@@ -283,6 +283,7 @@ export class VersionService {
     const actorId = actorIdOf(actor);
     if (actorId) await recordClient(tx, page.itemId, doc.clientID, actorId);
     const revision = await this.#documents.storeLocked(tx, page.itemId, doc, actorId, { notify });
+    await tx.execute(sql`update page_documents set draft_note = null where item_id = ${page.itemId}`);
     const stored = await tx.execute<{ state: Buffer; snapshot: unknown; schema_version: number }>(
       sql`select state, snapshot, schema_version from page_documents where item_id = ${page.itemId}`,
     );
@@ -370,7 +371,6 @@ export class VersionService {
       );
       const note = given || cleanNote(pending.rows[0]?.draft_note ?? "");
       const version = await this.#publishLocked(tx, page, actorIdOf(actor), note);
-      await tx.execute(sql`update page_documents set draft_note = null where item_id = ${itemId}`);
       await this.#audit.record(tx, {
         name: "page.published",
         actor,
@@ -399,6 +399,7 @@ export class VersionService {
     note: string,
   ): Promise<number> {
     const version = await this.#createVersion(tx, page, { reason: "published", note, actorId });
+    await tx.execute(sql`update page_documents set draft_note = null where item_id = ${page.itemId}`);
     const revealed = await refreshReaderVisibility(tx, [page.itemId]);
     const document = migrated(page.snapshot, page.schemaVersion);
     await syncCommentAnchors(tx, page.itemId, document);

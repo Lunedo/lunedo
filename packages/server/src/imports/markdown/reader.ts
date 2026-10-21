@@ -1,4 +1,5 @@
 import { posix } from "node:path";
+import { isArticleLanguage } from "../../knowledge-bases/translations.js";
 import { kinds, StagedConfluenceReader, titleKey } from "../confluence/staged.js";
 import { ImportFormatError } from "../errors.js";
 import type { ByteSource } from "../formats/bytes.js";
@@ -88,6 +89,7 @@ export class MarkdownTree {
   readonly files = new Map<string, Entry>();
   readonly markdown: string[] = [];
   readonly folders = new Map<string, Folder>();
+  readonly namedFolders: string[] = [];
   readonly root: string;
   readonly #markdown = new Set<string>();
   readonly #stemBest = new Map<string, string>();
@@ -95,7 +97,7 @@ export class MarkdownTree {
   readonly #nameBest = new Map<string, string>();
   readonly #folderByName = new Map<string, string>();
 
-  constructor(entries: readonly Entry[]) {
+  constructor(entries: readonly Entry[], options: { indexOnly?: ReadonlySet<string> } = {}) {
     const visible = entries.filter((entry) => !hidden(entry.path));
     const firsts = new Set(visible.map((entry) => entry.path.split("/")[0]));
     const [only] = firsts;
@@ -139,10 +141,13 @@ export class MarkdownTree {
         .basename(directory)
         .replace(/ \(\d+\)$/, "")
         .toLocaleLowerCase("en");
-      const index =
-        INDEX_NAMES.map((name) => names.get(name)).find((path) => path !== undefined) ??
-        (directory === "" ? undefined : (names.get(`${own}.md`) ?? names.get(`${own}.markdown`))) ??
-        null;
+      const generic = INDEX_NAMES.map((name) => names.get(name)).find((path) => path !== undefined);
+      const named =
+        generic === undefined && directory !== ""
+          ? (names.get(`${own}.md`) ?? names.get(`${own}.markdown`))
+          : undefined;
+      if (named !== undefined) this.namedFolders.push(directory);
+      const index = generic ?? (options.indexOnly?.has(directory) ? undefined : named) ?? null;
       const pageId = index ? pageIdOf(index) : directory === "" ? null : `md:${directory}/`;
       this.folders.set(directory, { path: directory, pageId, index });
     }
@@ -263,8 +268,30 @@ class AttachmentNames {
   }
 }
 
+function refusedTranslation(
+  language: string,
+  originalLanguage: string | null,
+  originalId: string,
+  claimed: Set<string>,
+): "unknown" | "defaultLanguage" | "duplicate" | null {
+  if (!isArticleLanguage(language)) return "unknown";
+  if (language === originalLanguage) return "defaultLanguage";
+  const key = `${originalId} ${language}`;
+  if (claimed.has(key)) return "duplicate";
+  claimed.add(key);
+  return null;
+}
+
 export class MarkdownReader extends StagedConfluenceReader {
   readonly source = "markdown" as const;
+
+  async #tree(entries: readonly Entry[], context: ScanContext): Promise<MarkdownTree> {
+    const tree = new MarkdownTree(entries);
+    if (tree.namedFolders.length === 0 || !context.knownPages) return tree;
+    const known = await context.knownPages(tree.namedFolders.map((directory) => `md:${directory}/`));
+    const indexOnly = new Set(tree.namedFolders.filter((directory) => known.has(`md:${directory}/`)));
+    return indexOnly.size === 0 ? tree : new MarkdownTree(entries, { indexOnly });
+  }
 
   async scan(file: ByteSource, context: ScanContext): Promise<void> {
     const archive = await ZipArchive.open(file, MARKDOWN_ZIP_LIMITS);
@@ -277,7 +304,7 @@ export class MarkdownReader extends StagedConfluenceReader {
       entries.push({ path: entry.name, size: entry.size, location: entry.location });
     }
     for (const name of duplicates) await context.problem("duplicateEntry", { name });
-    const tree = new MarkdownTree(entries);
+    const tree = await this.#tree(entries, context);
     if (tree.markdown.length === 0) {
       throw new ImportFormatError("noMarkdown", "The ZIP file contains no Markdown files.");
     }
@@ -285,12 +312,13 @@ export class MarkdownReader extends StagedConfluenceReader {
     const spaceTitle = tree.folders.get("")?.index
       ? await this.#frontMatterTitle(archive, tree, tree.folders.get("")?.index ?? "")
       : null;
-    const articles = new Set<string>();
+    const articles = new Map<string, string | null>();
+    const claimed = new Set<string>();
     if (knowledgeBase) {
       for (const folder of [...tree.folders.values()]) {
         if (!folder.index) continue;
         const facts = (await this.#frontMatter(archive, tree, folder.index))?.pagehall;
-        if (folder.path !== "" && facts?.kind === "page") articles.add(folder.pageId ?? "");
+        if (folder.path !== "" && facts?.kind === "page") articles.set(folder.pageId ?? "", facts.language);
         else tree.separateIndex(folder.path);
       }
     }
@@ -312,10 +340,18 @@ export class MarkdownReader extends StagedConfluenceReader {
       sourceId: `md:${tree.root || "markdown"}`,
       data: { key: folderName, name: spaceName, homePageId: rootIndex ? pageIdOf(rootIndex) : null },
     });
+    const known =
+      knowledgeBase && context.knownPages
+        ? await context.knownPages(tree.markdown.map(pageIdOf))
+        : new Set<string>();
+    const order = [
+      ...tree.markdown.filter((path) => known.has(pageIdOf(path))),
+      ...tree.markdown.filter((path) => !known.has(pageIdOf(path))),
+    ];
     const skip = typeof context.checkpoint.files === "number" ? context.checkpoint.files : 0;
-    for (const [index, path] of tree.markdown.entries()) {
+    for (const [index, path] of order.entries()) {
       if (index < skip) continue;
-      await this.#page(archive, tree, path, context, knowledgeBase ? { articles, placement } : null);
+      await this.#page(archive, tree, path, context, knowledgeBase ? { articles, claimed, placement } : null);
       if ((index + 1) % BATCH === 0) {
         await context.staging.flush();
         await context.saveCheckpoint({ files: index + 1 });
@@ -375,7 +411,8 @@ export class MarkdownReader extends StagedConfluenceReader {
     path: string,
     context: ScanContext,
     knowledgeBase: {
-      articles: ReadonlySet<string>;
+      articles: ReadonlyMap<string, string | null>;
+      claimed: Set<string>;
       placement: (parentId: string | null, translation: boolean) => string | null;
     } | null,
   ): Promise<void> {
@@ -401,12 +438,30 @@ export class MarkdownReader extends StagedConfluenceReader {
     const title = (converted.frontMatter.title ?? converted.heading ?? displayName(fallback)).slice(0, 255);
     const facts = converted.frontMatter.pagehall;
     const parentId = tree.parentOfFile(path);
-    const translation =
+    const wanted =
       knowledgeBase !== null &&
       facts?.translation === true &&
       facts.language !== null &&
       parentId !== null &&
       knowledgeBase.articles.has(parentId);
+    const refused =
+      wanted && knowledgeBase && facts?.language && parentId
+        ? refusedTranslation(
+            facts.language,
+            knowledgeBase.articles.get(parentId) ?? null,
+            parentId,
+            knowledgeBase.claimed,
+          )
+        : null;
+    if (refused && facts?.language) {
+      await context.problem("translationNotImported", {
+        title,
+        language: facts.language,
+        reason: refused,
+        outcome: "separate",
+      });
+    }
+    const translation = wanted && refused === null;
     await context.staging.put({
       kind: kinds.page,
       sourceId: pageId,

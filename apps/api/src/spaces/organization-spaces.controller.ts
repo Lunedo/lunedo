@@ -152,7 +152,7 @@ export class OrganizationSpacesController {
         grants: [{ principalKind: "organizationMembers", principalId: null, role: "reader", name: null }],
       },
     },
-    errors: ["invalidHolder"],
+    errors: ["invalidHolder", "portalAccountReaderOnly"],
   })
   async setDefaults(
     @Param("organizationId") organizationId: string,
@@ -234,6 +234,7 @@ export class OrganizationSpacesController {
       "invalidVisibility",
       "keyTaken",
       "invalidHolder",
+      "portalAccountReaderOnly",
       "knowledgeBaseConfidential",
       "invalidAudience",
       "audienceGroupsMissing",

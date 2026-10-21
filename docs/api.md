@@ -121,7 +121,7 @@ Sections are written as Markdown or as ProseMirror JSON nodes. Markdown referenc
 
 `article-changes` returns the articles, oldest change first, that changed after `changedSince`: new, republished, renamed, moved, retyped, reviewed, restricted or unrestricted articles, articles in renamed categories and new or changed translations. `removed` lists the number and language of articles that were deleted, unpublished or moved to another space since then. Removed articles are known for 90 days; an older `changedSince` is refused with `changedSinceTooOld`, and the program fetches everything again. Without `changedSince` the endpoint lists every published article and no removed ones.
 
-Store `nextChangedSince` of the last page and send it as `changedSince` next time. It lies a few minutes in the past, so that changes saved at the same moment are not missed; articles can therefore appear twice and are best stored by ID. An article that becomes hidden from the token's account through a view restriction is not listed as removed; programs that must forget such articles fetch everything again from time to time.
+Store `nextChangedSince` of the last page and send it as `changedSince` next time. It lies a few minutes in the past, so that changes saved at the same moment are not missed; articles can therefore appear twice and are best stored by ID. An article that becomes hidden from the token's account through a view restriction is not listed as removed, and neither is an article that had a view restriction when it was removed, because its number would reveal it; programs that must forget such articles fetch everything again from time to time.
 
 ### Example: daily read sync
 

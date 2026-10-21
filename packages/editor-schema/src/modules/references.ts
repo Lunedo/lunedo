@@ -118,7 +118,7 @@ export const pageLinkModule = defineModule({
         const href = resolved ? renderer.safeHref(resolved.href) : null;
         return href ? `[${title}](${markdownUrl(href)})` : title;
       },
-      text: (node) => attrOf<string | null>(node, "title") ?? "",
+      text: () => "",
     },
   ],
 });

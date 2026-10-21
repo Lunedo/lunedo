@@ -533,6 +533,36 @@ describe.skipIf(!baseUrl)("knowledge base reviews", () => {
       ).rejects.toMatchObject({ code: "sourceNotFound" });
     });
 
+    it("lets editors remove source pages they cannot read, without showing them", async () => {
+      const context = await withSource();
+      const colleagueId = await member(context.org.id, "member", "Colleague");
+      await test.services.spacePermissions.apply(context.admin, context.kb.id, {
+        action: "grant",
+        principalKind: "account",
+        principalId: colleagueId,
+        role: "editor",
+      });
+      const colleague = accountPrincipal(colleagueId);
+      await changeSource(context.admin, context.sourceId, "New gateway address");
+      const reviews = reviewsAt(new Date());
+      expect(await reviews.sources(colleague, context.itemId)).toEqual([]);
+      expect(await reviews.hiddenSources(colleague, context.itemId)).toEqual({ count: 1, changed: true });
+      expect(await reviews.hiddenSources(context.editor, context.itemId)).toEqual({
+        count: 0,
+        changed: false,
+      });
+      expect(await reviews.removeHiddenSources(colleague, context.itemId)).toEqual({
+        count: 0,
+        changed: false,
+      });
+      expect(await reviews.sources(context.editor, context.itemId)).toEqual([]);
+      expect((await row(context.itemId)).source_changed_at).toBeNull();
+      const audit = await test.database.execute<{ source_id: string }>(sql`
+        select fields ->> 'sourceId' as source_id from audit_events
+        where name = 'article.sourceRemoved' and target_id = ${context.itemId}`);
+      expect(audit.rows).toEqual([{ source_id: context.sourceId }]);
+    });
+
     it("refuses sources the person cannot read, articles and missing pages", async () => {
       const context = await withSource();
       const hidden = await space(context.org.id, context.adminId);

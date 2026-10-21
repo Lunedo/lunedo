@@ -178,6 +178,7 @@ export interface ScanContext {
   progress(progress: ScanProgress): Promise<void>;
   problem(code: string, details?: Record<string, string | number>): Promise<void>;
   readonly signal: AbortSignal;
+  readonly knownPages?: (sourceIds: readonly string[]) => Promise<ReadonlySet<string>>;
 }
 
 export interface ExportSummary {

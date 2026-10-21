@@ -7,6 +7,7 @@ import {
   createAccount,
   firstOrganizationId,
   OWNER,
+  signedInClient,
 } from "../testing/accounts.js";
 import { type AuthTestApp, createAuthTestApp, databaseBaseUrl, TestClient } from "../testing/auth-app.js";
 
@@ -48,9 +49,9 @@ describe.skipIf(!databaseBaseUrl)("portal accounts", () => {
     return test.mail.sent.filter((mail) => mail.to.toLowerCase() === address.toLowerCase()).at(-1);
   }
 
-  async function knowledgeBase(audience: "portal" | "signedIn") {
+  async function knowledgeBase(audience: "portal" | "signedIn", creator: TestClient = owner) {
     counter += 1;
-    const created = await owner.post(`/api/v1/organizations/${organizationId}/spaces`, {
+    const created = await creator.post(`/api/v1/organizations/${organizationId}/spaces`, {
       name: `Kundenhilfe ${counter}`,
       key: `KH${counter}X`,
       type: "knowledgeBase",
@@ -60,7 +61,7 @@ describe.skipIf(!databaseBaseUrl)("portal accounts", () => {
     expect(created.statusCode, created.body).toBe(201);
     const id = created.json().id as string;
     if (audience === "portal") {
-      const changed = await owner.put(`/api/v1/spaces/${id}/knowledge-base/audience`, {
+      const changed = await creator.put(`/api/v1/spaces/${id}/knowledge-base/audience`, {
         audience,
         groupIds: [],
         confirmWidening: true,
@@ -208,5 +209,102 @@ describe.skipIf(!databaseBaseUrl)("portal accounts", () => {
       member.id,
     ]);
     expect(type.rows[0]?.type).toBe("standard");
+  });
+
+  it("lets only member managers invite and manage portal accounts, even in a knowledge base a member created", async () => {
+    const partner = await knowledgeBase("portal");
+    const { token } = await invite(partner.id, "partnerin@example.org");
+    const partnerReader = await accept(token, "Paula Partnerin");
+    const pending = await owner.post(`/api/v1/organizations/${organizationId}/invitations`, {
+      email: "neu-im-team@example.org",
+      kind: "member",
+    });
+    expect(pending.statusCode, pending.body).toBe(201);
+    const member = await createAccount(test, "max-kb@pagehall.test");
+    const max = await signedInClient(test, member.email, member.password);
+    const own = await knowledgeBase("portal", max);
+    const attempts = [
+      await max.get(`/api/v1/spaces/${own.id}/portal-accounts`),
+      await max.post(`/api/v1/spaces/${own.id}/portal-accounts`, { email: "neu-im-team@example.org" }),
+      await max.post(`/api/v1/spaces/${own.id}/portal-accounts/${partnerReader.accountId}/deactivate`, {}),
+      await max.delete(`/api/v1/spaces/${own.id}/portal-accounts/${partnerReader.accountId}`),
+      await max.delete(`/api/v1/spaces/${own.id}/portal-invitations/${pending.json().id as string}`),
+    ];
+    expect(attempts.map((attempt) => attempt.statusCode)).toEqual([403, 403, 403, 403, 403]);
+    const states = await test.runtime.pool.query<{ revoked_at: Date | null; state: string }>(
+      `select i.revoked_at, a.state from invitations i, accounts a where i.id = $1 and a.id = $2`,
+      [pending.json().id, partnerReader.accountId],
+    );
+    expect(states.rows[0]).toEqual({ revoked_at: null, state: "active" });
+  });
+
+  it("lets a portal account read only the knowledge bases it was invited to", async () => {
+    const first = await knowledgeBase("portal");
+    const second = await knowledgeBase("portal");
+    for (const kb of [first, second]) {
+      const article = await owner.post(`/api/v1/spaces/${kb.id}/articles`, {
+        title: "Lieferzeiten",
+        sections: [{ key: "steps", title: "Schritte", markdown: `Lieferzeiten für ${kb.id}` }],
+        publish: true,
+      });
+      expect(article.statusCode, article.body).toBe(201);
+    }
+    await services().search.indexer.drain();
+    const firstInvite = await invite(first.id, "nur-eins@example.org");
+    const onlyFirst = await accept(firstInvite.token, "Nur Eins");
+    const secondInvite = await invite(second.id, "nur-zwei@example.org");
+    const onlySecond = await accept(secondInvite.token, "Nur Zwei");
+    const reader = await signIn("nur-eins@example.org");
+    expect((await reader.get("/api/v1/account/portals")).json()).toEqual([
+      expect.objectContaining({ spaceId: first.id }),
+    ]);
+    expect((await reader.get(`${first.path}/1-lieferzeiten`)).statusCode).toBe(200);
+    const hidden = await reader.get(`${second.path}/1-lieferzeiten`);
+    expect(hidden.statusCode).toBe(404);
+    expect(hidden.body).not.toContain(second.id);
+    const search = await reader.get(`${second.path}/search?q=Lieferzeiten`);
+    expect(search.body).not.toContain(second.id);
+    const ownSearch = await reader.get(`${first.path}/search?q=Lieferzeiten`);
+    expect(ownSearch.body).toContain(first.id);
+    const listedFirst = (await owner.get(`/api/v1/spaces/${first.id}/portal-accounts`)).json().accounts as {
+      id: string;
+    }[];
+    expect(listedFirst.map((account) => account.id)).toEqual([onlyFirst.accountId]);
+    const foreign = await owner.post(
+      `/api/v1/spaces/${first.id}/portal-accounts/${onlySecond.accountId}/deactivate`,
+      {},
+    );
+    expect(foreign.statusCode).toBe(404);
+    expect(foreign.json().code).toBe("portalAccountNotFound");
+    expect(
+      (await owner.delete(`/api/v1/spaces/${first.id}/portal-accounts/${onlySecond.accountId}`)).statusCode,
+    ).toBe(404);
+    const again = await invite(second.id, "nur-eins@example.org");
+    await accept(again.token, "Nur Eins");
+    expect((await reader.get(`${second.path}/1-lieferzeiten`)).statusCode).toBe(200);
+    expect(
+      (await owner.delete(`/api/v1/spaces/${second.id}/portal-accounts/${onlyFirst.accountId}`)).statusCode,
+    ).toBe(204);
+    const back = await invite(second.id, "nur-eins@example.org");
+    const rejoined = await new TestClient(test.app).post("/api/v1/invitations/accept", { token: back.token });
+    expect(rejoined.statusCode, rejoined.body).toBe(200);
+    expect((await reader.get(`${first.path}/1-lieferzeiten`)).statusCode).toBe(404);
+  });
+
+  it("keeps an open member invitation when the same address gets a portal invitation", async () => {
+    const kb = await knowledgeBase("portal");
+    const member = await owner.post(`/api/v1/organizations/${organizationId}/invitations`, {
+      email: "beides@example.org",
+      kind: "member",
+    });
+    expect(member.statusCode, member.body).toBe(201);
+    await invite(kb.id, "beides@example.org");
+    const other = await knowledgeBase("portal");
+    await invite(other.id, "beides@example.org");
+    const open = await test.runtime.pool.query<{ id: string }>(
+      "select id from invitations where lower(email) = 'beides@example.org' and revoked_at is null order by id",
+    );
+    expect(open.rows).toHaveLength(3);
+    expect(open.rows.map((row) => row.id)).toContain(member.json().id);
   });
 });

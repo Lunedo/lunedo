@@ -7,6 +7,7 @@ import type { Encryption } from "../crypto/envelope.js";
 import type { Database, Executor } from "../database/database.js";
 import type { DatabasePool } from "../database/pool.js";
 import type { JobContext, JobQueue } from "../jobs/job-queue.js";
+import { isKnowledgeBase } from "../knowledge-bases/rules.js";
 import type { Logger } from "../logging/logger.js";
 import type { NotificationService } from "../notifications/service.js";
 import { isValidSpaceKey, normalizeSpaceKey, spaceKeyCandidates, suggestSpaceKey } from "../spaces/keys.js";
@@ -256,6 +257,13 @@ export class ImportWorker {
     return this.#options.readers.get(row.source as ImportSource);
   }
 
+  async #knownPages(spaceId: string, sourceIds: readonly string[]): Promise<ReadonlySet<string>> {
+    const found = await this.#database.execute<{ source_id: string }>(sql`
+      select source_id from import_baselines where space_id = ${spaceId} and kind = 'page'
+        and source_id = any(${sql.param([...sourceIds])}::text[])`);
+    return new Set(found.rows.map((row) => row.source_id));
+  }
+
   async #analyze(row: WorkRow, signal: AbortSignal, deadline: number): Promise<void> {
     const runId = typeof row.checkpoint.run === "string" ? row.checkpoint.run : randomUUID();
     if (row.checkpoint.run !== runId) {
@@ -290,9 +298,12 @@ export class ImportWorker {
       await reader.scan(file, {
         staging,
         checkpoint: scanCheckpoint ?? {},
-        options: row.options ?? {},
+        options: { ...(row.options ?? {}), knowledgeBase: await this.#knowledgeBase(row) },
         history: row.history,
         signal,
+        ...(row.target_space_id
+          ? { knownPages: (ids) => this.#knownPages(row.target_space_id ?? "", ids) }
+          : {}),
         saveCheckpoint: async (checkpoint) => {
           const updated = await this.#database.execute(sql`
             update imports set checkpoint = ${JSON.stringify({ run: runId, scan: checkpoint })}::jsonb,
@@ -497,7 +508,7 @@ export class ImportWorker {
           file,
           staging,
           reimport,
-          knowledgeBase: reimport === null && row.options?.knowledgeBase === true,
+          knowledgeBase: await this.#knowledgeBase(row),
           beat,
           progress: async (done, total) => {
             if (Date.now() - lastProgress < PROGRESS_MS && done < total) return;
@@ -522,6 +533,14 @@ export class ImportWorker {
     } finally {
       await file.close();
     }
+  }
+
+  async #knowledgeBase(row: {
+    readonly options: ImportOptions | null;
+    readonly target_space_id: string | null;
+  }): Promise<boolean> {
+    if (row.target_space_id === null) return row.options?.knowledgeBase === true;
+    return isKnowledgeBase(this.#database, row.target_space_id);
   }
 
   async #requireImporter(row: WorkRow): Promise<void> {

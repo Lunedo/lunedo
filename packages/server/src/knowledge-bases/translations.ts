@@ -307,10 +307,14 @@ export class ArticleTranslationService {
     }
     const existing = await this.#database.execute<{ id: string }>(sql`
       select id from tree_items where translation_of = ${itemId} and content_language = ${language}`);
-    if (existing.rows[0]) {
-      throw new SpaceError("translationExists", "The article already has a translation into this language", {
-        translationId: existing.rows[0].id,
-      });
+    const taken = existing.rows[0];
+    if (taken) {
+      const visible = await this.#authorization.authorize(actor, "item.view", { type: "item", id: taken.id });
+      throw new SpaceError(
+        "translationExists",
+        "The article already has a translation into this language",
+        visible ? { translationId: taken.id } : {},
+      );
     }
     await this.#authorization.require(actor, "item.edit", { type: "item", id: itemId });
     const document =

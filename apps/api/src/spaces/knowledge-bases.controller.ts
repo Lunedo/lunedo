@@ -537,6 +537,7 @@ export class KnowledgeBasesController {
       "audienceGroupsMissing",
       "tooManyGroups",
       "invalidHolder",
+      "portalAccountReaderOnly",
       "selfExtension",
     ],
   })

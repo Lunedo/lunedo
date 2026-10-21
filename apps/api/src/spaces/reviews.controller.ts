@@ -272,6 +272,13 @@ const sourceBodySchema = z
   .strict()
   .describe("The source page to link.");
 
+const hiddenSourcesSchema = z
+  .object({
+    count: z.number().int().min(0).describe("Number of linked source pages the caller cannot read."),
+    changed: z.boolean().describe("Whether one of them changed after the last review of the article."),
+  })
+  .describe("Source pages the caller cannot read, without their titles.");
+
 const sourceParams = z
   .object({ itemId: uuid("ID of the article."), sourceId: uuid("ID of the source page.") })
   .strict();
@@ -538,5 +545,43 @@ export class ReviewsController {
     @Req() request: FastifyRequest,
   ) {
     return this.#services.reviews.removeSource(actorOf(request), itemId, sourceId);
+  }
+
+  @Get("articles/:itemId/hidden-sources")
+  @Permission("item.edit", item)
+  @ApiRoute({
+    summary: "Count the source pages of an article the caller cannot read",
+    description:
+      "Tells editors of the article how many linked source pages they cannot read, without titles, so that they can remove links nobody can maintain any more.",
+    tags: [TAG],
+    params: articleParams,
+    response: {
+      description: "The source pages the caller cannot read.",
+      schema: hiddenSourcesSchema,
+      example: { count: 1, changed: true },
+    },
+    errors: ["notArticle"],
+  })
+  async hiddenSources(@Param("itemId") itemId: string, @Req() request: FastifyRequest) {
+    return this.#services.reviews.hiddenSources(actorOf(request), itemId);
+  }
+
+  @Delete("articles/:itemId/hidden-sources")
+  @Permission("item.edit", item)
+  @ApiRoute({
+    summary: "Remove the source pages of an article the caller cannot read",
+    description:
+      "Removes the links to all source pages the caller cannot read. People who can read such a page can link it again. Audited.",
+    tags: [TAG],
+    params: articleParams,
+    response: {
+      description: "The source pages the caller cannot read after the change.",
+      schema: hiddenSourcesSchema,
+      example: { count: 0, changed: false },
+    },
+    errors: ["notArticle"],
+  })
+  async removeHiddenSources(@Param("itemId") itemId: string, @Req() request: FastifyRequest) {
+    return this.#services.reviews.removeHiddenSources(actorOf(request), itemId);
   }
 }

@@ -1,7 +1,9 @@
 import { sql } from "drizzle-orm";
 import type { Executor } from "../database/database.js";
+import { organizationLanguage } from "../settings/sql.js";
 import { SpaceError } from "../spaces/common.js";
 import type { SpaceType, TreeItemKind } from "../spaces/schema.js";
+import { articleLanguages } from "./translations.js";
 
 export const KNOWLEDGE_BASE_KINDS: ReadonlySet<TreeItemKind> = new Set<TreeItemKind>(["page", "folder"]);
 
@@ -89,4 +91,17 @@ export function knowledgeBaseViolation(error: unknown): SpaceError | null {
 
 export function rethrowKnowledgeBaseViolation(error: unknown): never {
   throw knowledgeBaseViolation(error) ?? error;
+}
+
+export async function insertKnowledgeBase(
+  executor: Executor,
+  spaceId: string,
+  organizationId: string,
+): Promise<void> {
+  const preferred = organizationLanguage(sql`${organizationId}::uuid`);
+  await executor.execute(sql`
+    insert into knowledge_bases (space_id, default_language, languages)
+    select ${spaceId}, chosen.language, array[chosen.language]
+    from (select case when ${preferred} = any(${sql.param([...articleLanguages])}::text[]) then ${preferred}
+      else 'en' end as language) chosen`);
 }

@@ -1,8 +1,12 @@
 import { randomUUID } from "node:crypto";
+import { Readable } from "node:stream";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ANONYMOUS, accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import { generateToken } from "../auth/tokens.js";
+import { itemLevel } from "../authorization/item-access.js";
+import { NotificationListener } from "../database/notifications.js";
+import { createLogger } from "../logging/logger.js";
 import type { KnowledgeBaseAudience } from "../spaces/schema.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
@@ -12,6 +16,10 @@ import { PortalSessionService } from "./sessions.js";
 import { cleanFeedback, normalizeTerm, PortalStatistics } from "./statistics.js";
 
 const baseUrl = testDatabaseBaseUrl();
+const PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+  "base64",
+);
 const paragraph = (text: string) => ({ type: "paragraph", content: [{ type: "text", text }] });
 
 describe("statistics values", () => {
@@ -82,6 +90,57 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
       await test.services.versions.publish(accountPrincipal(actor), page.id);
     return page.id;
   }
+
+  it("caps portal accounts at reader in every path, also through groups", async () => {
+    const org = await organization();
+    const kb = await knowledgeBase(org.id, org.owner, "portal");
+    const reader = await fixtures.portalReader(org.id, [kb.id]);
+    const groupId = await group(org.id, [reader]);
+    const owner = accountPrincipal(org.owner);
+    await test.services.spacePermissions.apply(owner, kb.id, {
+      action: "grant",
+      principalKind: "group",
+      principalId: groupId,
+      role: "admin",
+    });
+    const article = await publishedPage(org.owner, kb.id, "Artikel", "Text");
+    const principal = accountPrincipal(reader);
+    const allowed = (action: string, type: string, id: string) =>
+      test.services.authorization.authorize(principal, action, { type, id });
+    expect(await allowed("item.view", "item", article)).toBe(true);
+    expect(await allowed("item.edit", "item", article)).toBe(false);
+    expect(await allowed("item.editDraft", "item", article)).toBe(false);
+    expect(await allowed("item.publish", "item", article)).toBe(false);
+    expect(await allowed("space.manage", "space", kb.id)).toBe(false);
+    expect(await allowed("space.createDraft", "space", kb.id)).toBe(false);
+    expect((await test.services.authorization.spaceRole(reader, kb.id, { fresh: true })).role).toBe("reader");
+    const editable = await test.database.execute<{ level: number }>(sql`
+      select ${itemLevel(sql`${reader}::uuid`, sql`t`, sql`s`)} as level
+      from tree_items t join spaces s on s.id = t.space_id where t.id = ${article}`);
+    expect(editable.rows[0]?.level).toBe(1);
+    const refused = test.services.spacePermissions.apply(owner, kb.id, {
+      action: "grant",
+      principalKind: "account",
+      principalId: reader,
+      role: "editor",
+    });
+    await expect(refused).rejects.toMatchObject({ code: "portalAccountReaderOnly" });
+    const granted = await test.services.spacePermissions.apply(owner, kb.id, {
+      action: "grant",
+      principalKind: "account",
+      principalId: reader,
+      role: "reader",
+    });
+    const own = granted.find((entry) => entry.principalId === reader);
+    if (!own) throw new Error("missing permission");
+    await expect(
+      test.services.spacePermissions.apply(owner, kb.id, {
+        action: "change",
+        permissionId: own.id,
+        role: "editor",
+      }),
+    ).rejects.toMatchObject({ code: "portalAccountReaderOnly" });
+  });
 
   it("keeps portal accounts to knowledge bases in permissions, lists and search", async () => {
     const org = await organization();
@@ -156,11 +215,45 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
     const groupMember = await member(org.id);
     const groupId = await group(org.id, [groupMember]);
     const reader = await portalAccount(org.id);
+    const uninvited = await portalAccount(org.id);
     const cases: [KnowledgeBaseAudience, Record<string, boolean>][] = [
-      ["public", { anonymous: true, member: true, outsider: true, groupMember: true, portal: true }],
-      ["signedIn", { anonymous: false, member: true, outsider: true, groupMember: true, portal: false }],
-      ["groups", { anonymous: false, member: false, outsider: false, groupMember: true, portal: false }],
-      ["portal", { anonymous: false, member: false, outsider: false, groupMember: false, portal: true }],
+      [
+        "public",
+        { anonymous: true, member: true, outsider: true, groupMember: true, portal: true, uninvited: true },
+      ],
+      [
+        "signedIn",
+        {
+          anonymous: false,
+          member: true,
+          outsider: true,
+          groupMember: true,
+          portal: false,
+          uninvited: false,
+        },
+      ],
+      [
+        "groups",
+        {
+          anonymous: false,
+          member: false,
+          outsider: false,
+          groupMember: true,
+          portal: false,
+          uninvited: false,
+        },
+      ],
+      [
+        "portal",
+        {
+          anonymous: false,
+          member: false,
+          outsider: false,
+          groupMember: false,
+          portal: true,
+          uninvited: false,
+        },
+      ],
     ];
     for (const [audience, expected] of cases) {
       const kb = await knowledgeBase(org.id, org.owner, "signedIn");
@@ -169,6 +262,8 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
         groupIds: audience === "groups" ? [groupId] : [],
         confirmWidening: true,
       });
+      await test.database.execute(sql`
+        insert into portal_readers (space_id, account_id) values (${kb.id}, ${reader})`);
       const article = await publishedPage(org.owner, kb.id, "Artikel", "Text");
       const config = await test.services.portals.config(kb.id);
       if (!config) throw new Error("missing config");
@@ -181,7 +276,52 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
         expected.groupMember,
       );
       expect(await readable(accountPrincipal(reader)), `${audience} portal`).toBe(expected.portal);
+      expect(await readable(accountPrincipal(uninvited)), `${audience} uninvited portal`).toBe(
+        expected.uninvited,
+      );
     }
+  });
+
+  it("caches the allowed domains and drops the cache when another node changes them", async () => {
+    const org = await organization();
+    const listener = new NotificationListener({
+      connectionString: test.url,
+      logger: createLogger({ service: "test", level: "silent" }),
+    });
+    try {
+      const cached = test.anotherNode().portals;
+      await cached.enableDomainCache(listener);
+      const domain = `cache-${randomUUID().slice(0, 6)}.example.org`;
+      expect(await cached.isPortalDomain(domain)).toBe(false);
+      await test.services.portals.allowDomain(SYSTEM, { domain, organizationId: org.id });
+      await expect.poll(() => cached.isPortalDomain(domain), { timeout: 5000 }).toBe(true);
+      await test.services.portals.removeDomain(SYSTEM, domain);
+      await expect.poll(() => cached.isPortalDomain(domain), { timeout: 5000 }).toBe(false);
+    } finally {
+      await listener.close();
+    }
+  });
+
+  it("keeps the paths of a purged knowledge base reserved for its organization", async () => {
+    const org = await organization();
+    const other = await organization();
+    const actor = accountPrincipal(org.owner);
+    const purged = await knowledgeBase(org.id, org.owner, "public");
+    const old = `alt-${randomUUID().slice(0, 6)}`;
+    const current = `neu-${randomUUID().slice(0, 6)}`;
+    await test.services.portals.setAddress(actor, purged.id, { path: old, domain: null });
+    await test.services.portals.setAddress(actor, purged.id, { path: current, domain: null });
+    await test.database.execute(sql`delete from spaces where id = ${purged.id}`);
+    const foreign = await knowledgeBase(other.id, other.owner, "public");
+    for (const path of [old, current]) {
+      await expect(
+        test.services.portals.setAddress(accountPrincipal(other.owner), foreign.id, { path, domain: null }),
+      ).rejects.toMatchObject({ code: "portalPathTaken" });
+    }
+    const successor = await knowledgeBase(org.id, org.owner, "public");
+    await test.services.portals.setAddress(actor, successor.id, { path: current, domain: null });
+    const found = await test.services.portals.byPath(current);
+    expect(found?.type === "found" && found.config.spaceId).toBe(successor.id);
   });
 
   it("validates portal addresses, keeps old paths as redirects and gives them up to a new owner", async () => {
@@ -306,6 +446,38 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
     expect(await test.services.portalSessions.resolve(token ?? "", domain)).toBeNull();
   });
 
+  it("gives notes and searches IDs that carry no time and pages notes by day", async () => {
+    const org = await organization();
+    const kb = await knowledgeBase(org.id, org.owner, "public");
+    const article = await publishedPage(org.owner, kb.id, "Artikel", "Text");
+    const daysAgo = (count: number) => new Date(Date.now() - count * 86_400_000);
+    const days = [daysAgo(3), daysAgo(1), daysAgo(2)];
+    const dayOf = (date: Date) => date.toISOString().slice(0, 10);
+    for (const [index, at] of days.entries()) {
+      const statistics = new PortalStatistics({ database: test.database, clock: () => at });
+      await statistics.recordFeedback(kb.id, article, `Hinweis ${index}`);
+      await statistics.recordSearch(kb.id, { term: "vpn", results: 1, categoryId: null });
+    }
+    const ids = await test.database.execute<{ id: string }>(sql`
+      select id from portal_feedback where space_id = ${kb.id}
+      union all select id from portal_searches where space_id = ${kb.id}`);
+    expect(ids.rows).toHaveLength(6);
+    for (const { id } of ids.rows) expect(id[14], id).toBe("4");
+    const owner = accountPrincipal(org.owner);
+    const statistics = test.services.knowledgeBaseStatistics;
+    const first = await statistics.feedback(owner, kb.id, article, { period: "30d", limit: 2 });
+    expect(first.items.map((item) => item.day)).toEqual([dayOf(daysAgo(1)), dayOf(daysAgo(2))]);
+    if (!first.nextCursor) throw new Error("missing cursor");
+    expect(first.nextCursor).toEqual({ day: dayOf(daysAgo(2)), id: first.items[1]?.id });
+    const second = await statistics.feedback(owner, kb.id, article, {
+      period: "30d",
+      limit: 2,
+      before: first.nextCursor,
+    });
+    expect(second.items.map((item) => item.day)).toEqual([dayOf(daysAgo(3))]);
+    expect(second.nextCursor).toBeNull();
+  });
+
   it("deletes free text when its retention ends, and at once when the retention gets shorter", async () => {
     const org = await organization();
     const kb = await knowledgeBase(org.id, org.owner, "public");
@@ -324,9 +496,10 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
     await past.recordFeedback(kb.id, article, "Noch ein alter Hinweis");
     await test.services.portals.updateAppearance(kb.id, { feedbackRetentionMonths: 24 });
     await statistics.retentionChanged(kb.id);
-    expect((await statistics.feedback(kb.id)).map((entry) => entry.text)).toEqual(
-      ["Noch ein alter Hinweis", "Neuer Hinweis"].sort((a, b) => (a < b ? 1 : -1)),
-    );
+    expect((await statistics.feedback(kb.id)).map((entry) => entry.text)).toEqual([
+      "Neuer Hinweis",
+      "Noch ein alter Hinweis",
+    ]);
     await test.services.portals.updateAppearance(kb.id, { feedbackRetentionMonths: 1 });
     await statistics.retentionChanged(kb.id);
     expect((await statistics.feedback(kb.id)).map((entry) => entry.text)).toEqual(["Neuer Hinweis"]);
@@ -339,7 +512,6 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
     const other = await space(org.id, org.owner, { visibility: "organization" });
     const internal = await publishedPage(org.owner, other.id, "Intern", "Interner Text");
     const target = await publishedPage(org.owner, kb.id, "Ziel", "Ziel");
-    const attachmentId = randomUUID();
     const colleague = await member(org.id, "member", "Kollegin Klara");
     const stranger = await account({ name: "Fremder Franz" });
     const actor = accountPrincipal(org.owner);
@@ -348,6 +520,14 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
       title: "Quelle",
       placement: { parentId: null },
     });
+    const upload = (itemId: string, name: string) =>
+      test.services.attachments.upload(actor, itemId, {
+        name,
+        body: Readable.from([PNG]),
+        contentLength: PNG.length,
+      });
+    const attachmentId = (await upload(page.id, "bild.png")).id;
+    const foreignId = (await upload(internal, "gehalt.png")).id;
     await test.services.documents.replace(actor, page.id, {
       type: "doc",
       content: [
@@ -364,7 +544,9 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
               ],
             },
             { type: "image", attrs: { attachmentId, alt: "Bild" } },
+            { type: "image", attrs: { attachmentId: foreignId, alt: "Fremd" } },
             { type: "includePage", attrs: { pageId: internal } },
+            { type: "taskReport", attrs: { spaceId: other.id, labels: ["gehalt"], assignee: colleague } },
             {
               type: "paragraph",
               content: [
@@ -391,9 +573,97 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
     expect(rendered.html).toContain('data-section="steps"');
     expect(rendered.html).toContain("Kollegin Klara");
     expect(rendered.html).not.toContain("Fremder Franz");
+    for (const hidden of [
+      colleague,
+      other.id,
+      foreignId,
+      "gehalt",
+      "data-attachment-id",
+      "data-account-id",
+    ]) {
+      expect(rendered.html, hidden).not.toContain(hidden);
+    }
     expect(rendered.headings).toEqual([expect.objectContaining({ title: "Schritte", level: 2 })]);
     const again = await test.services.articleRenderer.renderPublished(page.id);
     expect(again?.html).toBe(rendered.html);
+  });
+
+  it("resolves page links and mentions for the current reader on every request", async () => {
+    const org = await organization();
+    const kb = await knowledgeBase(org.id, org.owner, "public");
+    const actor = accountPrincipal(org.owner);
+    const restricted = await publishedPage(org.owner, kb.id, "Kündigungswelle Nord", "Geheim");
+    await test.services.pageAccess.change(actor, restricted, [{ action: "restrict", kind: "view" }]);
+    const unpublished = await test.services.tree.create(actor, kb.id, {
+      kind: "page",
+      title: "Entwurf Sozialplan",
+      placement: { parentId: null },
+    });
+    const trashed = await publishedPage(org.owner, kb.id, "Altes Verfahren", "Alt");
+    await test.services.trash.deleteItem(actor, trashed);
+    const open = await publishedPage(org.owner, kb.id, "Offene Anleitung", "Offen");
+    const colleague = await member(org.id, "member", "Klara Beispiel");
+    const link = (pageId: string, title: string) => ({
+      type: "pageLink",
+      attrs: { pageId, spaceId: kb.id, title },
+    });
+    const source = await test.services.tree.create(actor, kb.id, {
+      kind: "page",
+      title: "Quelle",
+      placement: { parentId: null },
+    });
+    await test.services.documents.replace(actor, source.id, {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            link(restricted, "Kündigungswelle Nord"),
+            link(unpublished.id, "Entwurf Sozialplan"),
+            link(trashed, "Altes Verfahren"),
+            link(open, "Gespeicherter Titel"),
+            { type: "mention", attrs: { id: colleague } },
+          ],
+        },
+      ],
+    });
+    await test.services.versions.publish(actor, source.id);
+    await test.services.articleRenderer.renderPublished(source.id);
+    const numbers = await test.database.execute<{ item_id: string; number: number }>(
+      sql`select item_id, number from article_numbers where space_id = ${kb.id}`,
+    );
+    const numberOf = (id: string) => numbers.rows.find((row) => row.item_id === id)?.number;
+    const config = await test.services.portals.config(kb.id);
+    if (!config) throw new Error("missing config");
+    const html = async () => {
+      const found = await test.services.portalReader.article(ANONYMOUS, config, numberOf(source.id) ?? 0, "");
+      if (found?.type !== "found") throw new Error("missing article");
+      return found.article.html;
+    };
+    const first = await html();
+    for (const hidden of ["Kündigungswelle", "Entwurf Sozialplan", "Altes Verfahren"]) {
+      expect(first).not.toContain(hidden);
+    }
+    for (const id of [restricted, unpublished.id, trashed]) {
+      expect(first).not.toContain(`/__portal__/${numberOf(id)}"`);
+    }
+    expect(first).toContain(`href="/__portal__/${numberOf(open)}"`);
+    expect(first).toContain(">Offene Anleitung<");
+    expect(first).not.toContain("Gespeicherter Titel");
+    expect(first).toContain("Klara Beispiel");
+    await test.services.pageAccess.change(actor, open, [{ action: "restrict", kind: "view" }]);
+    await test.database.execute(
+      sql`update accounts set state = 'anonymized', name = 'Ehemaliges Mitglied' where id = ${colleague}`,
+    );
+    const later = await html();
+    expect(later).not.toContain("Offene Anleitung");
+    expect(later).not.toContain(`/__portal__/${numberOf(open)}"`);
+    expect(later).not.toContain("Klara Beispiel");
+    const cached = await test.database.execute<{ html: string }>(
+      sql`select r.html from article_renders r join tree_items t on t.published_version_id = r.version_id
+        where t.id = ${source.id}`,
+    );
+    expect(cached.rows).toEqual([]);
   });
 
   it("counts zero-result searches and offers only repeated terms with results as frequent searches", async () => {

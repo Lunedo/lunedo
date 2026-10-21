@@ -1,5 +1,5 @@
 import { accountAttemptLimitSetting, clientAttemptLimitSetting, messagesFor, SYSTEM } from "@pagehall/server";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   addTotp,
   completeConfiguredSetup,
@@ -292,11 +292,47 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect(hidden.statusCode).toBe(404);
     expect(missing.statusCode).toBe(404);
     expect(comparable(hidden.body)).toBe(comparable(missing.body));
+    const startPage = await outsider.client.get(`${kb.path}/`);
+    const unknownPortal = await outsider.client.get(`/help/unknown-${counter}x/`);
+    expect(startPage.statusCode).toBe(404);
+    expect(startPage.body).toBe(unknownPortal.body);
+    expect((await member.client.get(`${kb.path}/`)).statusCode).toBe(200);
+  });
+
+  it("lists only free domains and the own domain to a knowledge base", async () => {
+    const first = await knowledgeBase("signedIn");
+    const second = await knowledgeBase("signedIn");
+    const used = `used${counter}.example.org`;
+    const free = `free${counter}.example.org`;
+    for (const domain of [used, free]) {
+      expect(
+        (await owner.post("/api/v1/instance/portal-domains", { domain, organizationId })).statusCode,
+      ).toBe(201);
+    }
+    const set = await owner.put(`/api/v1/spaces/${first.id}/knowledge-base/portal/address`, {
+      path: first.path.slice("/help/".length),
+      domain: used,
+    });
+    expect(set.statusCode, set.body).toBe(200);
+    const listed = (await owner.get(`/api/v1/spaces/${second.id}/knowledge-base/portal/domains`)).json() as {
+      domain: string;
+      spaceName: string | null;
+    }[];
+    expect(listed.map((entry) => entry.domain)).toContain(free);
+    expect(listed.map((entry) => entry.domain)).not.toContain(used);
+    const own = (await owner.get(`/api/v1/spaces/${first.id}/knowledge-base/portal/domains`)).json() as {
+      domain: string;
+    }[];
+    expect(own.map((entry) => entry.domain)).toContain(used);
   });
 
   it("lets portal accounts read a knowledge base for portal accounts but never internal spaces", async () => {
     const reader = await person({ portal: true });
     const kb = await knowledgeBase("portal");
+    await test.runtime.pool.query("insert into portal_readers (space_id, account_id) values ($1, $2)", [
+      kb.id,
+      reader.id,
+    ]);
     const entry = await article(kb.id, null, "Kundenhilfe", "Für Kunden.");
     const internal = await knowledgeBase("signedIn");
     const secret = await article(internal.id, null, "Intern", "Nur intern.");
@@ -490,6 +526,24 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect(ownerStart.body).toContain("kündigungsfrist");
   });
 
+  it("answers health checks on any host without asking for portal domains", async () => {
+    const lookup = vi
+      .spyOn(services().portals, "isPortalDomain")
+      .mockRejectedValue(new Error("database down"));
+    try {
+      const probe = new TestClient(test.app);
+      const live = await probe.get("/health/live", { host: "10.0.0.7" });
+      expect(live.statusCode).toBe(200);
+      expect(lookup).not.toHaveBeenCalled();
+      const foreign = await probe.get("/help/", { host: "unknown.example.org" });
+      expect(foreign.statusCode).toBe(503);
+      expect(foreign.headers["retry-after"]).toBe("30");
+      expect(foreign.body).toContain("Try again in a minute");
+    } finally {
+      lookup.mockRestore();
+    }
+  });
+
   it("refuses portal posts from another origin", async () => {
     const kb = await knowledgeBase("public");
     const entry = await article(kb.id, null, "Fremd", "Text.");
@@ -554,6 +608,74 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect(signedOut.statusCode).toBe(303);
     expect((await member.client.get("/api/v1/auth/session")).statusCode).toBe(401);
   });
+  it("asks people of other organizations once before handing their session to an own domain", async () => {
+    const kb = await knowledgeBase("signedIn");
+    const domain = `consent${counter}.example.org`;
+    expect((await owner.post("/api/v1/instance/portal-domains", { domain, organizationId })).statusCode).toBe(
+      201,
+    );
+    const set = await owner.put(`/api/v1/spaces/${kb.id}/knowledge-base/portal/address`, {
+      path: kb.path.slice("/help/".length),
+      domain,
+    });
+    expect(set.statusCode, set.body).toBe(200);
+    const elsewhere = await services().organizations.createAsActor(SYSTEM, {
+      name: `Elsewhere ${counter}`,
+      ownerAccountId: (await createAccount(test, `elsewhere-owner${counter}@pagehall.test`)).id,
+    });
+    const visitorAccount = await createAccount(
+      test,
+      `elsewhere${counter}@pagehall.test`,
+      "a long enough passphrase",
+      elsewhere.id,
+    );
+    const visitor = await signedInClient(test, visitorAccount.email, visitorAccount.password);
+    const handoff = async () => {
+      const browser = new TestClient(test.app, { origin: `https://${domain}` });
+      const started = await browser.get("/sign-in?return=%2F", { host: domain });
+      expect(started.statusCode).toBe(303);
+      const authorize = new URL(started.headers.location as string);
+      for (const [name, value] of visitor.cookies) browser.cookies.set(name, value);
+      return { browser, authorize, response: await browser.get(`${authorize.pathname}${authorize.search}`) };
+    };
+    const first = await handoff();
+    expect(first.response.statusCode).toBe(200);
+    expect(first.response.body).toContain(`Sign in to ${domain} with your account?`);
+    expect(first.response.body).not.toContain("_portal/callback");
+    const form = new URLSearchParams({
+      domain,
+      state: first.authorize.searchParams.get("state") ?? "",
+      return: "/",
+    }).toString();
+    const formHeaders = { "content-type": "application/x-www-form-urlencoded" };
+    const crossSite = await first.browser.post(`${first.authorize.pathname}`, form, {
+      ...formHeaders,
+      origin: `https://${domain}`,
+    });
+    expect(crossSite.statusCode).toBe(403);
+    const confirmed = await first.browser.post(`${first.authorize.pathname}`, form, {
+      ...formHeaders,
+      origin: TEST_ORIGIN,
+    });
+    expect(confirmed.statusCode).toBe(303);
+    expect(new URL(confirmed.headers.location as string).host).toBe(domain);
+    const audit = await test.runtime.pool.query<{ fields: Record<string, unknown> }>(
+      "select fields from audit_events where name = 'portalHandoff.consented' and target_id = $1",
+      [visitorAccount.id],
+    );
+    expect(audit.rows.map((row) => row.fields)).toEqual([
+      expect.objectContaining({ domain, spaceId: kb.id }),
+    ]);
+    const second = await handoff();
+    expect(second.response.statusCode).toBe(303);
+    const member = await person();
+    const browser = new TestClient(test.app, { origin: `https://${domain}` });
+    const started = await browser.get("/sign-in?return=%2F", { host: domain });
+    const authorize = new URL(started.headers.location as string);
+    for (const [name, value] of member.client.cookies) browser.cookies.set(name, value);
+    expect((await browser.get(`${authorize.pathname}${authorize.search}`)).statusCode).toBe(303);
+  });
+
   it("shows nothing about languages while only one language is enabled", async () => {
     const kb = await knowledgeBase("public");
     const single = await article(kb.id, null, "Drucker", "Drucker im Flur.");

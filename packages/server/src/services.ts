@@ -795,9 +795,9 @@ export function createAccountServices(options: {
     indexer: new SearchIndexer({ database, adapter: searchAdapter, files }),
   });
   const portals = new PortalService({ database, audit, settings });
-  const portalSessions = new PortalSessionService({ database, sessions });
+  const portalSessions = new PortalSessionService({ database, sessions, audit });
   const embeds = new EmbedServices({ settings });
-  const articleRenderer = new ArticleRenderer({ database, jobs, embeds });
+  const articleRenderer = new ArticleRenderer({ database, authorization, jobs, embeds });
   const articleApi = new ArticleApiService({
     database,
     authorization,
@@ -850,6 +850,9 @@ export function createAccountServices(options: {
   );
   memberships.onMembershipEnded((tx, organizationId, accountId) =>
     savedSearches.afterMembershipEnded(tx, organizationId, accountId),
+  );
+  memberships.onMembershipEnded((tx, organizationId, accountId) =>
+    portalAccounts.afterMembershipEnded(tx, organizationId, accountId),
   );
   const meetings = new MeetingService({
     database,

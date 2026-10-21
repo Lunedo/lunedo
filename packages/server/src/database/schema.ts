@@ -124,7 +124,10 @@ export {
   knowledgeBasePaths,
   knowledgeBases,
   portalDomains,
+  portalHandoffConsents,
   portalInvitations,
+  portalPathReservations,
+  portalReaders,
   requiredSections,
   reviewRecipient,
 } from "../knowledge-bases/schema.js";

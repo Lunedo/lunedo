@@ -202,6 +202,42 @@ describe.skipIf(!baseUrl)("collaboration server", () => {
       );
     });
 
+    it("from portal accounts, even with an editor role through a group", async () => {
+      const { organization, portalReader, group } = cluster.fixtures;
+      const runtime = cluster.runtimes[0] as ServerRuntime;
+      const org = await organization();
+      const owner = accountPrincipal(org.owner);
+      const kb = await runtime.services.spaces.create(
+        owner,
+        org.id,
+        {
+          name: "Hilfe",
+          key: await runtime.services.spaces.suggestKey("Hilfe"),
+          type: "knowledgeBase",
+          audience: "portal",
+          grants: [],
+        },
+        runtime.services.spacePermissions.holders,
+      );
+      const reader = await portalReader(org.id, [kb.id]);
+      const groupId = await group(org.id, [reader]);
+      await runtime.services.spacePermissions.apply(owner, kb.id, {
+        action: "grant",
+        principalKind: "group",
+        principalId: groupId,
+        role: "editor",
+      });
+      const item = await runtime.services.tree.create(owner, kb.id, {
+        kind: "page",
+        title: "Artikel",
+        placement: { parentId: null },
+      });
+      await runtime.services.versions.publish(owner, item.id);
+      expect(await refusal(open(first.url, item.id, { token: await signIn(runtime, reader) }))).toBe(
+        "noEditPermission",
+      );
+    });
+
     it("from other origins, without an origin and with an API token", async () => {
       const { itemId, token } = await editor();
       expect(await refusal(open(first.url, itemId, { token, origin: "https://evil.example" }))).toBe(

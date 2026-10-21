@@ -113,8 +113,9 @@ export function accountItemCondition(
   minimum: SpaceRole,
   options: ItemAccessOptions = {},
 ): SQL {
+  const portal = minimum === "reader" ? sql`${space}.type = 'knowledgeBase'` : sql`false`;
   const active = sql`exists (select 1 from accounts ia where ia.id = ${account} and ia.state = 'active'
-    and (ia.type <> 'portal' or ${space}.type = 'knowledgeBase'))`;
+    and (ia.type <> 'portal' or ${portal}))`;
   const internal = sql`exists (select 1 from accounts sa where sa.id = ${account} and sa.type <> 'portal')`;
   const itemSources = [shareCondition(account, item, space, minimum)];
   if (minimum === "reader") itemSources.push(linkCondition(account, item, space));
@@ -140,7 +141,9 @@ export function portalAudienceCondition(principal: Principal, item: SQL, space: 
   }
   if (principal.token) return sql`false`;
   const account = sql`${principal.id}::uuid`;
-  const portalReader = sql`exists (select 1 from accounts pa where pa.id = ${account} and pa.type = 'portal'
+  const portalReader = sql`exists (select 1 from accounts pa
+    join portal_readers pr on pr.account_id = pa.id and pr.space_id = ${space}.id
+    where pa.id = ${account} and pa.type = 'portal'
     and exists (select 1 from memberships pm where pm.organization_id = ${space}.organization_id
       and pm.account_id = pa.id and (pm.expires_at is null or pm.expires_at > now())))`;
   return sql`(${knowledgeBase}

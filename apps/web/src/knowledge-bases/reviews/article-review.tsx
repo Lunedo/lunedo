@@ -3,6 +3,7 @@ import {
   Combobox,
   type ComboboxItem,
   type ComboboxLoader,
+  ConfirmDialog,
   Dialog,
   Field,
   focusFirstInvalidSoon,
@@ -12,7 +13,7 @@ import {
 } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Check, ChevronDown, FileText, Link2, X } from "lucide-react";
+import { Check, ChevronDown, EyeOff, FileText, Link2, X } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
@@ -26,6 +27,7 @@ import {
   type ArticleSource,
   articleReviewQuery,
   articleSourcesQuery,
+  hiddenSourcesQuery,
   reviewKeys,
 } from "./queries.js";
 import { ReviewStatus, useReviewAction } from "./review-status.js";
@@ -180,6 +182,56 @@ function SourceDialog({ itemId, onClose }: { itemId: string; onClose: () => void
   );
 }
 
+function HiddenSources({ itemId }: { itemId: string }) {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const hidden = useQuery({ ...hiddenSourcesQuery(itemId), throwOnError: false });
+  const [confirming, setConfirming] = useState(false);
+  const count = hidden.data?.count ?? 0;
+  if (count === 0) return null;
+  return (
+    <span className="inline-flex min-w-0 max-w-full items-center gap-1">
+      <EyeOff aria-hidden="true" className="size-icon-sm shrink-0" />
+      <span>{t("reviews.sources.hidden", { count })}</span>
+      {hidden.data?.changed ? <span className="text-warning">{t("reviews.sources.changed")}</span> : null}
+      <button
+        type="button"
+        className="rounded-sm text-accent hover:underline focus-visible:focus-ring"
+        onClick={() => setConfirming(true)}
+      >
+        {t("reviews.sources.removeHidden", { count })}
+      </button>
+      <ConfirmDialog
+        open={confirming}
+        onOpenChange={setConfirming}
+        title={t("reviews.sources.removeHiddenTitle", { count })}
+        description={t("reviews.sources.removeHiddenDescription", { count })}
+        confirmLabel={t("reviews.sources.removeHidden", { count })}
+        cancelLabel={t("common.cancel")}
+        destructive
+        onConfirm={async () => {
+          try {
+            const next = await request(() =>
+              api.DELETE("/api/v1/articles/{itemId}/hidden-sources", { params: { path: { itemId } } }),
+            );
+            queryClient.setQueryData(reviewKeys.hiddenSources(itemId), next);
+            await queryClient.invalidateQueries({ queryKey: reviewKeys.article(itemId) });
+            toast({ title: t("reviews.sources.hiddenRemoved", { count }), variant: "success" });
+          } catch (error) {
+            toast({
+              title: t("reviews.sources.removeHiddenFailed", { count }),
+              description: problemMessage(t, error),
+              variant: "error",
+            });
+            throw error;
+          }
+        }}
+      />
+    </span>
+  );
+}
+
 function SourceLine({ itemId, editable }: { itemId: string; editable: boolean }) {
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -237,6 +289,7 @@ function SourceLine({ itemId, editable }: { itemId: string; editable: boolean })
           </span>
         );
       })}
+      {editable ? <HiddenSources itemId={itemId} /> : null}
       {list.length === 0 && sources.data ? <span>{t("reviews.sources.none")}</span> : null}
       {editable ? (
         <button

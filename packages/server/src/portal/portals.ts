@@ -13,6 +13,7 @@ import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { Database, Executor } from "../database/database.js";
+import type { NotificationListener } from "../database/notifications.js";
 import type { ArticleLanguage } from "../knowledge-bases/translations.js";
 import { logoContentType } from "../organizations/organizations.js";
 import { supportedLanguages, timeZoneSetting } from "../settings/builtin.js";
@@ -161,10 +162,14 @@ interface ConfigRow extends Record<string, unknown> {
   languages: ArticleLanguage[];
 }
 
+export const PORTAL_DOMAINS_CHANNEL = "pagehall_portal_domains";
+
 export class PortalService {
   readonly #database: Database;
   readonly #audit: AuditLog;
   readonly #settings: SettingsService;
+  #domains: Promise<ReadonlySet<string>> | null = null;
+  #caching = false;
 
   constructor(options: { database: Database; audit: AuditLog; settings: SettingsService }) {
     this.#database = options.database;
@@ -236,11 +241,33 @@ export class PortalService {
     return this.#select(this.#database, sql`kb.portal_domain = ${domain}`);
   }
 
+  async enableDomainCache(listener: NotificationListener): Promise<void> {
+    await listener.listen(PORTAL_DOMAINS_CHANNEL, () => {
+      this.#domains = null;
+    });
+    listener.onReconnect(() => {
+      this.#domains = null;
+    });
+    this.#caching = true;
+  }
+
   async isPortalDomain(host: string): Promise<boolean> {
-    const result = await this.#database.execute<{ found: boolean }>(
-      sql`select exists (select 1 from portal_domains where domain = ${host}) as found`,
-    );
-    return result.rows[0]?.found ?? false;
+    if (!this.#caching) {
+      const result = await this.#database.execute<{ found: boolean }>(
+        sql`select exists (select 1 from portal_domains where domain = ${host}) as found`,
+      );
+      return result.rows[0]?.found ?? false;
+    }
+    if (!this.#domains) {
+      const loading = this.#database
+        .execute<{ domain: string }>(sql`select domain from portal_domains`)
+        .then((result) => new Set(result.rows.map((row) => row.domain)));
+      this.#domains = loading;
+      loading.catch(() => {
+        if (this.#domains === loading) this.#domains = null;
+      });
+    }
+    return (await this.#domains).has(host);
   }
 
   async setAddress(
@@ -268,7 +295,9 @@ export class PortalService {
           select exists (select 1 from knowledge_bases where portal_path = ${path} and space_id <> ${spaceId}) as taken`);
         const retired = await tx.execute<{ reserved: boolean }>(sql`
           select exists (select 1 from knowledge_base_paths p join spaces s on s.id = p.space_id
-            where p.path = ${path} and s.organization_id <> ${current.organizationId}) as reserved`);
+              where p.path = ${path} and s.organization_id <> ${current.organizationId})
+            or exists (select 1 from portal_path_reservations r
+              where r.path = ${path} and r.organization_id <> ${current.organizationId}) as reserved`);
         if (taken.rows[0]?.taken || retired.rows[0]?.reserved) {
           throw new SpaceError("portalPathTaken", "Another knowledge base already uses this path");
         }
@@ -291,6 +320,7 @@ export class PortalService {
         if (path === current.path && domain === current.domain) return current;
         if (path !== current.path) {
           await tx.execute(sql`delete from knowledge_base_paths where path = ${path}`);
+          await tx.execute(sql`delete from portal_path_reservations where path = ${path}`);
           await tx.execute(sql`
             insert into knowledge_base_paths (path, space_id) values (${current.path}, ${spaceId})
             on conflict (path) do update set space_id = excluded.space_id, created_at = now()`);

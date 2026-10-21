@@ -11,6 +11,7 @@ import {
 } from "../authorization/space-access.js";
 import type { Database, Executor, Transaction } from "../database/database.js";
 import { afterKey, FIRST_PAGE, type Page, type PageRequest, pageLimit, toPage } from "../database/keyset.js";
+import { insertKnowledgeBase } from "../knowledge-bases/rules.js";
 import type { SettingsService } from "../settings/service.js";
 import {
   actorIdOf,
@@ -400,7 +401,7 @@ export class SpaceService {
       });
       await insertGrants(tx, this.#audit, actor, { ...target, name }, grants);
       if (type === "knowledgeBase") {
-        await tx.execute(sql`insert into knowledge_bases (space_id) values (${space.id})`);
+        await insertKnowledgeBase(tx, space.id, organizationId);
       } else {
         const mode = await defaultPageMode(this.#settings, { id: space.id, organizationId });
         const overview = await insertPage(tx, {

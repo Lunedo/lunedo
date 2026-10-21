@@ -34,6 +34,7 @@ export const reportCategories = {
     "wordCommentsDropped",
     "unreadableImage",
     "documentTooLarge",
+    "translationNotImported",
   ],
 } as const;
 

@@ -158,7 +158,7 @@ export class StaticSiteBuilder {
       select t.id, v.id as version_id, n.number, coalesce(article_slug(v.title), '') as slug,
         case when t.translation_of is null then ${config.defaultLanguage} else t.content_language end as language,
         v.title, t.article_type, array_remove(t.path, t.translation_of) as path,
-        array(select sl.slug from article_slugs sl where sl.item_id = t.id
+        array(select sl.slug from article_slugs sl where sl.item_id = t.id and sl.space_id = t.space_id
           and sl.slug <> coalesce(article_slug(v.title), '') and sl.slug <> '' order by sl.slug) as old_slugs,
         v.document, v.schema_version
       from tree_items t
@@ -471,6 +471,7 @@ export class StaticSiteBuilder {
         },
         interfaceLanguage(article.language),
         addresses,
+        ANONYMOUS,
       );
       const categories = categoriesOf.get(article.language) ?? [];
       const versions = [...(byNumber.get(article.number)?.values() ?? [])];

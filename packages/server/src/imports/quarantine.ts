@@ -1,6 +1,7 @@
 import { uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
 import type { Database, Transaction } from "../database/database.js";
+import { insertKnowledgeBase } from "../knowledge-bases/rules.js";
 import { insertPage } from "../spaces/items.js";
 import { signalSpaceChange } from "../spaces/signals.js";
 import { insertDefaultPageStatuses } from "../spaces/status.js";
@@ -29,7 +30,7 @@ export async function createQuarantineSpace(
   await insertDefaultPageStatuses(tx, spaceId);
   await setQuarantineReaders(tx, spaceId, input.importerId, [input.importerId, ...input.readers]);
   if (input.knowledgeBase) {
-    await tx.execute(sql`insert into knowledge_bases (space_id) values (${spaceId})`);
+    await insertKnowledgeBase(tx, spaceId, input.organizationId);
     await signalSpaceChange(tx, { spaceId, kind: "space", itemId: null });
     return { spaceId, overviewId: null };
   }

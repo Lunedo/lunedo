@@ -3,7 +3,13 @@ import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database } from "../database/database.js";
-import type { FeedbackText, Period, PortalStatistics, TermCount } from "../portal/statistics.js";
+import type {
+  FeedbackCursor,
+  FeedbackText,
+  Period,
+  PortalStatistics,
+  TermCount,
+} from "../portal/statistics.js";
 import { auditScopeOf, SpaceError } from "../spaces/common.js";
 import { visibleItem } from "../spaces/visibility.js";
 
@@ -45,7 +51,7 @@ export interface KnowledgeBaseStatistics {
 
 export interface FeedbackPage {
   items: FeedbackText[];
-  nextCursor: string | null;
+  nextCursor: FeedbackCursor | null;
 }
 
 function isoDay(date: Date): string {
@@ -197,7 +203,7 @@ export class KnowledgeBaseStatisticsService {
     viewer: Principal,
     spaceId: string,
     itemId: string,
-    options: { period: StatisticsPeriod; before?: string | undefined; limit?: number | undefined },
+    options: { period: StatisticsPeriod; before?: FeedbackCursor | undefined; limit?: number | undefined },
   ): Promise<FeedbackPage> {
     await this.#requireKnowledgeBase(spaceId);
     const article = itemId.toLowerCase();
@@ -212,7 +218,8 @@ export class KnowledgeBaseStatisticsService {
       ...(options.before ? { before: options.before } : {}),
     });
     const page = items.slice(0, limit);
-    return { items: page, nextCursor: items.length > limit ? (page.at(-1)?.id ?? null) : null };
+    const last = page.at(-1);
+    return { items: page, nextCursor: items.length > limit && last ? { day: last.day, id: last.id } : null };
   }
 
   async deleteFeedback(actor: Principal, spaceId: string, feedbackId: string): Promise<void> {

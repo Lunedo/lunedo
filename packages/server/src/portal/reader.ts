@@ -301,7 +301,8 @@ export class PortalReader {
         (select n2.number from article_numbers n2 where n2.item_id = coalesce(t.translation_of, t.id)
           and n2.space_id = t.space_id) as own_number,
         (${slug} = '' or ${slug} = coalesce(article_slug(v.title), '')
-          or exists (select 1 from article_slugs sl where sl.item_id = t.id and sl.slug = ${slug})) as known_slug
+          or exists (select 1 from article_slugs sl where sl.item_id = t.id and sl.space_id = n.space_id
+            and sl.slug = ${slug})) as known_slug
       from article_numbers n
       join tree_items src on src.id = n.item_id
       join tree_items t on t.id = src.id or (t.translation_of = src.id and t.space_id = src.space_id)
@@ -329,7 +330,11 @@ export class PortalReader {
     const chosen =
       local.find((row) => row.language === language) ?? local.find((row) => row.translation_of === null);
     if (!chosen) return null;
-    const rendered = await this.#renderer.rendered(chosen.version_id, interfaceLanguage(chosen.language));
+    const rendered = await this.#renderer.rendered(
+      chosen.version_id,
+      interfaceLanguage(chosen.language),
+      principal,
+    );
     if (!rendered) return null;
     const ancestors = chosen.path.filter((id) => id !== chosen.id);
     const contact = await this.#contact(config, ancestors);
@@ -485,6 +490,19 @@ export class PortalReader {
       select name, email, type from accounts where id = ${accountId} and state = 'active'`);
     const row = result.rows[0];
     return row ? { name: row.name, email: row.email ?? "", type: row.type } : null;
+  }
+
+  async admits(principal: Principal, config: PortalConfig): Promise<boolean> {
+    if (config.audience === "public") return true;
+    if (principal.type !== "account") return false;
+    if (await this.#authorization.authorize(principal, "space.view", { type: "space", id: config.spaceId })) {
+      return true;
+    }
+    const result = await this.#database.execute<{ found: boolean }>(sql`
+      select exists (select 1 from tree_items t join spaces s on s.id = t.space_id
+        where t.space_id = ${config.spaceId} and t.kind in ('page', 'folder')
+          and ${this.#authorization.portalFilter(principal, sql`t`, sql`s`)}) as found`);
+    return result.rows[0]?.found ?? false;
   }
 
   async seesSpaces(principal: Principal): Promise<boolean> {

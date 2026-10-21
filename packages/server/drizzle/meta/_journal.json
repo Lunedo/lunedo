@@ -596,6 +596,69 @@
       "when": 1792505830911,
       "tag": "0084_kb_languages_export_api",
       "breakpoints": true
+    },
+    {
+      "idx": 85,
+      "version": "7",
+      "when": 1792573138272,
+      "tag": "0085_portal_readers",
+      "breakpoints": true
+    },
+    {
+      "idx": 86,
+      "version": "7",
+      "when": 1792574285729,
+      "tag": "0086_portal_accounts_read_only",
+      "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "7",
+      "when": 1792574921067,
+      "tag": "0087_random_statistics_ids",
+      "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1792575464178,
+      "tag": "0088_published_slug_history",
+      "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "7",
+      "when": 1792575795269,
+      "tag": "0089_restricted_tombstones",
+      "breakpoints": true
+    },
+    {
+      "idx": 90,
+      "version": "7",
+      "when": 1792576240018,
+      "tag": "0090_reader_resolved_links",
+      "breakpoints": true
+    },
+    {
+      "idx": 91,
+      "version": "7",
+      "when": 1792579903952,
+      "tag": "0091_portal_path_reservations",
+      "breakpoints": true
+    },
+    {
+      "idx": 92,
+      "version": "7",
+      "when": 1792580340712,
+      "tag": "0092_portal_domain_changes",
+      "breakpoints": true
+    },
+    {
+      "idx": 93,
+      "version": "7",
+      "when": 1792580604591,
+      "tag": "0093_portal_handoff_consents",
+      "breakpoints": true
     }
   ]
 }

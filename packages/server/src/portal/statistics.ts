@@ -1,4 +1,4 @@
-import { uuidv7 } from "@pagehall/shared";
+import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Database } from "../database/database.js";
@@ -68,6 +68,11 @@ export interface FeedbackText {
   text: string;
 }
 
+export interface FeedbackCursor {
+  day: string;
+  id: string;
+}
+
 export function normalizeTerm(value: string): string | null {
   const term = [
     ...value
@@ -133,7 +138,7 @@ export class PortalStatistics {
     if (!term) return;
     await this.#database.execute(sql`
       insert into portal_searches (id, space_id, term, results, category_id, searched_at)
-      select ${uuidv7()}, ${spaceId}, ${term}, ${Math.max(0, input.results)},
+      select ${randomUUID()}, ${spaceId}, ${term}, ${Math.max(0, input.results)},
         (select id from tree_items where id = ${input.categoryId} and space_id = ${spaceId}),
         ${hour(this.#clock())}`);
     await this.#scheduleAggregation(spaceId);
@@ -201,7 +206,7 @@ export class PortalStatistics {
   async recordFeedback(spaceId: string, itemId: string, value: string): Promise<boolean> {
     const text = cleanFeedback(value);
     if (!text) return false;
-    const id = uuidv7();
+    const id = randomUUID();
     const inserted = await this.#database.execute<{ due: string }>(sql`
       insert into portal_feedback (id, item_id, space_id, day, text)
       values (${id}, ${itemId}, ${spaceId}, ${day(this.#clock())}, ${text})
@@ -355,7 +360,7 @@ export class PortalStatistics {
 
   async feedback(
     spaceId: string,
-    options: { itemId?: string; period?: Period; limit?: number; before?: string } = {},
+    options: { itemId?: string; period?: Period; limit?: number; before?: FeedbackCursor } = {},
   ): Promise<FeedbackText[]> {
     const result = await this.#database.execute<{
       id: string;
@@ -366,8 +371,8 @@ export class PortalStatistics {
       select id, item_id, day::text as day, text from portal_feedback
       where space_id = ${spaceId} ${options.itemId ? sql`and item_id = ${options.itemId}` : sql``}
         ${options.period ? sql`and day between ${options.period.from}::date and ${options.period.to}::date` : sql``}
-        ${options.before ? sql`and id < ${options.before}::uuid` : sql``}
-      order by id desc limit ${options.limit ?? 50}`);
+        ${options.before ? sql`and (day, id) < (${options.before.day}::date, ${options.before.id}::uuid)` : sql``}
+      order by day desc, id desc limit ${options.limit ?? 50}`);
     return result.rows.map((row) => ({ id: row.id, itemId: row.item_id, day: row.day, text: row.text }));
   }
 }

@@ -324,7 +324,7 @@ export class SpacesController {
       role: "reader",
     },
     response: { description: "The change in access.", schema: impactSchema, example: exampleImpact },
-    errors: ["invalidHolder", "alreadyGranted", "permissionNotFound"],
+    errors: ["invalidHolder", "portalAccountReaderOnly", "alreadyGranted", "permissionNotFound"],
   })
   async preview(
     @Param("spaceId") spaceId: string,
@@ -355,7 +355,14 @@ export class SpacesController {
       schema: z.array(permissionSchema).describe("Permissions of the space."),
       example: [examplePermission],
     },
-    errors: ["invalidHolder", "alreadyGranted", "permissionNotFound", "lastSpaceAdmin", "selfExtension"],
+    errors: [
+      "invalidHolder",
+      "portalAccountReaderOnly",
+      "alreadyGranted",
+      "permissionNotFound",
+      "lastSpaceAdmin",
+      "selfExtension",
+    ],
   })
   async change(
     @Param("spaceId") spaceId: string,

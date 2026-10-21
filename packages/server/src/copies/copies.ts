@@ -129,6 +129,7 @@ interface SourceRow {
   mode: PageMode;
   position: string;
   content_language: string | null;
+  translation_of: string | null;
   status_id: string | null;
   link_item_id: string | null;
   link_url: string | null;
@@ -540,7 +541,7 @@ export class CopyService {
           and c.archived_root_id is not distinct from down.archived_root_id and down.depth < 1000
       )
       select t.id, t.parent_id, t.space_id, t.kind, t.title, t.description, t.width, t.number_headings, t.mode,
-        t.position, t.content_language, t.status_id, t.link_item_id, t.link_url, d.depth,
+        t.position, t.content_language, t.translation_of, t.status_id, t.link_item_id, t.link_url, d.depth,
         (t.kind not in ('page', 'blogPost') or t.mode = 'live' or t.published_version_id is not null) as published,
         exists (select 1 from meetings m where m.item_id = t.id) as meeting,
         ${visibleItem(this.#authorization, actor, sql`t`, sql`s`)} as readable
@@ -716,18 +717,23 @@ export class CopyService {
     const titles = await this.#titles(tx, actor, plan, located.targetSpaceId);
     const position = await this.#position(tx, located.targetSpaceId, request);
     const copies = new Map(plan.items.map((item) => [item.id, item]));
+    const knowledgeBase = await isKnowledgeBase(tx, located.targetSpaceId);
     const context: CopyContext = { tx, actor, actorId, plan, located, copies, linked: [] };
     for (const [index, item] of plan.items.entries()) {
       const isRoot = index === 0;
       const linked = item.link_item_id ? (copies.get(item.link_item_id)?.copyId ?? item.link_item_id) : null;
+      const translationOf =
+        knowledgeBase && !isRoot && item.translation_of
+          ? (copies.get(item.translation_of)?.copyId ?? null)
+          : null;
       await tx.execute(sql`
         insert into tree_items (id, space_id, parent_id, kind, position, title, description, width, number_headings,
-          mode, link_item_id, link_url, content_language, status_id, status_changed_at, status_changed_by,
-          creator_id, owner_id)
+          mode, link_item_id, link_url, content_language, translation_of, status_id, status_changed_at,
+          status_changed_by, creator_id, owner_id)
         values (${item.copyId}, ${located.targetSpaceId}, ${isRoot ? request.parentId : item.copyParentId}, ${item.kind},
           ${isRoot ? position : item.position}, ${titles.get(item.id) ?? item.title}, ${item.description},
           ${item.width}, ${item.number_headings}, ${item.mode}, ${linked}, ${item.link_url}, ${item.content_language},
-          ${item.status_id}, ${item.status_id ? sql`now()` : null}, ${item.status_id ? actorId : null},
+          ${translationOf}, ${item.status_id}, ${item.status_id ? sql`now()` : null}, ${item.status_id ? actorId : null},
           ${actorId}, ${actorId})`);
       await tx.execute(sql`
         insert into page_labels (item_id, label, created_by)

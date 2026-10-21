@@ -334,7 +334,8 @@ export class PortalController {
   @Permission("space.manage", space)
   @ApiRoute({
     summary: "List the domains a portal can use",
-    description: "Domains the instance administrators allowed for the organization of the knowledge base.",
+    description:
+      "Domains the instance administrators allowed for the organization of the knowledge base that are free or used by this knowledge base. Domains of other knowledge bases are left out.",
     tags: [TAG],
     params: spaceParams,
     response: { description: "The domains.", schema: z.array(domainSchema), example: [exampleDomain] },
@@ -343,7 +344,8 @@ export class PortalController {
   async spaceDomains(@Param("spaceId") spaceId: string): Promise<PortalDomain[]> {
     const config = await this.#services.portals.config(spaceId);
     if (!config) throw notFound();
-    return this.#services.portals.domains(config.organizationId);
+    const domains = await this.#services.portals.domains(config.organizationId);
+    return domains.filter((entry) => entry.spaceId === null || entry.spaceId === spaceId);
   }
 
   @Get("instance/portal-domains")

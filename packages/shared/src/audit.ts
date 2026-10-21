@@ -127,6 +127,7 @@ export const auditEventNames = [
   "knowledgeBase.portalAddressChanged",
   "knowledgeBase.languagesChanged",
   "portalAccount.invited",
+  "portalHandoff.consented",
   "space.updated",
   "space.permissionGranted",
   "space.permissionChanged",

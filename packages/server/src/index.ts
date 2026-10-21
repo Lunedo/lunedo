@@ -505,6 +505,7 @@ export {
 export {
   type ArticleReview,
   type ArticleSource,
+  type HiddenSources,
   type HomeReview,
   MAX_SOURCES,
   type PersonReference,

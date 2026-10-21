@@ -1276,6 +1276,7 @@
     "invalidSpaceName": "Der Name braucht 1 bis 100 Zeichen.",
     "invalidSpaceDescription": "Die Beschreibung darf bis zu 1000 Zeichen haben. Kürze sie und speichere erneut.",
     "invalidHolder": "Diese Person oder Gruppe kann hier keine Rolle bekommen. Wähle jemanden aus der Organisation oder bei einem persönlichen Space jemanden, mit dem du zusammenarbeitest.",
+    "portalAccountReaderOnly": "Portalkonten können nur lesen. Gib diesem Konto die Rolle „Leser“, oder lade die Person mit einem Firmenkonto ein, damit sie bearbeiten kann.",
     "alreadyGranted": "Diese Person oder Gruppe hat bereits eine Rolle im Space. Ändere stattdessen diese Rolle.",
     "permissionNotFound": "Jemand hat die Berechtigungen gleichzeitig geändert. Lade die Seite neu und versuch es erneut.",
     "lastSpaceAdmin": "Ein Space braucht mindestens einen Space-Admin. Gib zuerst jemand anderem die Rolle Space-Admin.",
@@ -3933,6 +3934,9 @@
       },
       "portalAccount": {
         "invited": "Portalkonto eingeladen"
+      },
+      "portalHandoff": {
+        "consented": "Anmeldung auf einer Portal-Domain erlaubt"
       }
     },
     "action": "Aktion",
@@ -7681,6 +7685,11 @@
           "hint": "Pagehall hat sie ausgelassen; die anderen Dokumente wurden importiert. Teile das Dokument in kleinere Dokumente oder entferne große Teile und importiere es erneut.",
           "entry": "{file}: Der Text des Dokuments ist größer als {limit, number} MB oder braucht zum Umwandeln zu viel Speicher."
         },
+        "translationNotImported": {
+          "title": "{count, plural, one {# Übersetzung passt} other {# Übersetzungen passen}} nicht zu den Sprachen",
+          "hint": "Die Sprache im Front Matter passt nicht zur Wissensdatenbank. Prüfe die Dateien und übernimm ihren Text bei Bedarf in eine Übersetzung.",
+          "entry": "„{title}“: {reason, select, unknown {„{language}“ ist keine Sprache, die Pagehall anbietet} defaultLanguage {„{language}“ ist die Standardsprache} duplicate {der Artikel hat schon eine Übersetzung in „{language}“} notEnabled {„{language}“ gehört nicht zu den Sprachen der Wissensdatenbank} other {die Sprache passt nicht}}. {outcome, select, separate {Die Datei wurde ein eigener Artikel.} skipped {Die Datei wurde nicht importiert.} other {}}"
+        },
         "embedNotAllowed": {
           "title": "{count, plural, one {# Einbettung wird} other {# Einbettungen werden}} als Link angezeigt",
           "hint": "Ihre Adresse steht nicht auf der Liste erlaubter Einbettungen dieser Organisation. Nimm den Dienst in die Liste auf, um sie eingebettet anzuzeigen.",
@@ -9864,7 +9873,13 @@
       "addConfirm": "Quellseite hinzufügen",
       "remove": "Quellseite „{title}“ entfernen",
       "removed": "Quellseite „{title}“ entfernt",
-      "removeFailed": "Quellseite „{title}“ wurde nicht entfernt"
+      "removeFailed": "Quellseite „{title}“ wurde nicht entfernt",
+      "hidden": "{count, plural, one {# Quellseite, die du nicht lesen kannst} other {# Quellseiten, die du nicht lesen kannst}}",
+      "removeHidden": "{count, plural, one {Diese Quellseite entfernen} other {Diese Quellseiten entfernen}}",
+      "removeHiddenTitle": "{count, plural, one {Die Quellseite entfernen, die du nicht lesen kannst?} other {Die # Quellseiten entfernen, die du nicht lesen kannst?}}",
+      "removeHiddenDescription": "Der Artikel erinnert dann nicht mehr an Änderungen {count, plural, one {dieser Seite} other {dieser Seiten}}. Nur wer {count, plural, one {sie} other {sie}} lesen kann, kann {count, plural, one {sie} other {sie}} wieder verknüpfen.",
+      "hiddenRemoved": "{count, plural, one {Quellseite entfernt} other {# Quellseiten entfernt}}",
+      "removeHiddenFailed": "{count, plural, one {Die Quellseite wurde nicht entfernt} other {Die Quellseiten wurden nicht entfernt}}"
     }
   },
   "statistics": {
@@ -9945,11 +9960,11 @@
   "portalAccounts": {
     "tab": "Portalkonten",
     "title": "Portalkonten",
-    "description": "Lesende ohne Firmenkonto melden sich mit E-Mail-Adresse und Passwort oder Passkey an. Sie sehen nur das Portal der Wissensdatenbanken der Organisation für Portalkonten, nie das Wiki.",
+    "description": "Lesende ohne Firmenkonto melden sich mit E-Mail-Adresse und Passwort oder Passkey an. Sie sehen nur die Portale der Wissensdatenbanken, zu denen sie eingeladen wurden, nie das Wiki.",
     "notForPortalTitle": "Diese Wissensdatenbank ist nicht für Portalkonten",
     "notForPortal": "Portalkonten lesen nur Wissensdatenbanken mit der Zielgruppe Portalkonten. Ändere die Zielgruppe, um hier Lesende einzuladen.",
     "toVisibility": "Sichtbarkeit öffnen",
-    "adminsOnly": "Nur Space-Admins verwalten Portalkonten.",
+    "managersOnly": "Nur wer die Mitglieder der Organisation verwaltet, lädt Portalkonten ein und verwaltet sie. Frag die Administration der Organisation.",
     "loadFailed": "Die Portalkonten konnten nicht geladen werden",
     "accounts": "Lesende",
     "invitations": "Offene Einladungen",

@@ -27,16 +27,17 @@ Guests read a knowledge base only when they hold a role. Portal accounts (see be
 
 ### Portal accounts
 
-Portal accounts are for readers without an account of the organization, for example customers. Space admins of a knowledge base whose audience is "Portal accounts" invite them under **Space settings → Portal accounts** by e-mail address, optionally with a date when the access ends.
+Portal accounts are for readers without an account of the organization, for example customers. People who may manage the organization's members (organization owners and administrators, or a custom role with **Members and groups: manage**) invite them for a knowledge base whose audience is "Portal accounts" under **Space settings → Portal accounts** by e-mail address, optionally with a date when the access ends. Being space admin of the knowledge base is not enough, because a portal account joins the organization.
 
-- The invitation e-mail links to a page where the reader chooses a name and a password; afterwards the link leads to the portal. The link works once and for 7 days. Space admins can withdraw an open invitation.
-- A portal account signs in with its e-mail address and password, and can add a passkey and an authenticator app on its own page. It reads the portals of every knowledge base of the organization whose audience is "Portal accounts". It never sees the wiki: the API answers every other request of a portal account with `portalAccountOnly`, and opening the wiki shows only the list of its portals and its sign-in settings.
+- The invitation e-mail links to a page where the reader chooses a name and a password; afterwards the link leads to the portal. The link works once and for 7 days. An open invitation can be withdrawn there. A portal invitation replaces only an earlier portal invitation for the same address and knowledge base; open member invitations stay valid.
+- A portal account signs in with its e-mail address and password, and can add a passkey and an authenticator app on its own page. It reads the portals of the knowledge bases it was invited to, and of knowledge bases where it holds a role, never every knowledge base of the organization. It never sees the wiki: the API answers every other request of a portal account with `portalAccountOnly`, and opening the wiki shows only the list of its portals and its sign-in settings.
+- Portal accounts only read. A role above Reader for a portal account is refused (`portalAccountReaderOnly`), and a higher role through a group counts as Reader for it, in the API, the collaboration server and every other path.
 - An address that already belongs to another Pagehall account cannot accept the invitation (`portalInvitationAccountExists`); give that account a role instead.
 - The person who invites is responsible for the account and is reminded before its access ends, like for guests. When the date is reached, the access ends and the account no longer reads the organization's knowledge bases.
-- Space admins can **deactivate** a portal account, which ends its sessions and blocks its sign-in, or **remove** it from the organization. Organization administrators can do the same in the member list. An account that also reads knowledge bases of other organizations can only be removed, not deactivated, from one organization.
+- The list shows the portal accounts invited to this knowledge base. From there an account can be **deactivated**, which ends its sessions and blocks its sign-in, or **removed** from the organization. Organization administrators can do the same in the member list. An account that also reads knowledge bases of other organizations can only be removed, not deactivated, from one organization.
 - Invitations are recorded in the audit log as `invitation.created` and `portalAccount.invited`, acceptances as `invitation.accepted` and `account.created`, the end of access as `membership.removed` with the reason `expired` or `removed`, and deactivation as `account.deactivated`.
 
-API: `GET` and `POST /api/v1/spaces/{spaceId}/portal-accounts`, `DELETE /api/v1/spaces/{spaceId}/portal-invitations/{invitationId}`, `POST /api/v1/spaces/{spaceId}/portal-accounts/{accountId}/deactivate` and `DELETE /api/v1/spaces/{spaceId}/portal-accounts/{accountId}`, all for space admins; `GET /api/v1/account/portals` for the portal account itself.
+API: `GET` and `POST /api/v1/spaces/{spaceId}/portal-accounts`, `DELETE /api/v1/spaces/{spaceId}/portal-invitations/{invitationId}`, `POST /api/v1/spaces/{spaceId}/portal-accounts/{accountId}/deactivate` and `DELETE /api/v1/spaces/{spaceId}/portal-accounts/{accountId}`, all with the permission to manage the organization's members; `GET /api/v1/account/portals` for the portal account itself.
 
 Categories and articles can narrow the audience with view restrictions, as pages can in every space. They can never widen it. Shares of single articles and share links work as in every other space.
 
@@ -81,7 +82,7 @@ Images in the sections **Steps**, **What you see** and **Solution** are framed b
 
 ### Addresses
 
-Every article gets a number when it is created or moved into the knowledge base. The number is unique within the knowledge base, never reused, and stays when the article moves within it. The address of an article is the number followed by a short form of its title, such as `123-vpn-verbindung-einrichten`. When the published title changes, the old short forms are kept so that old addresses can be redirected. An article moved into another knowledge base gets a number there; its old number keeps pointing to it.
+Every article gets a number when it is created or moved into the knowledge base. The number is unique within the knowledge base, never reused, and stays when the article moves within it. The address of an article is the number followed by a short form of its title, such as `123-vpn-verbindung-einrichten`. When the published title changes, the old short forms are kept so that old addresses can be redirected. Only titles that were published in this knowledge base count: working titles before the first publication never become addresses, and an article moved into another knowledge base starts there without the short forms of its old knowledge base. An article moved into another knowledge base gets a number there; its old number keeps pointing to it.
 
 ## Categories
 
@@ -160,7 +161,7 @@ An article can be based on internal pages, for example the operating documentati
 
 When a source page is published with changes, the article shows **Source page changed** in the review list until it is marked as reviewed, and its owner is notified once. Live pages count each saved version as a change. The notification and the review list name the article, never the source page.
 
-In Pagehall, the link to a source page and its title are shown only to people who can read the source page; for everyone else the source does not exist. The portal for readers never shows source pages, and they are not part of the article's content or its machine-readable form. Linking and removing a source page is audited as `article.sourceAdded` and `article.sourceRemoved`.
+In Pagehall, the link to a source page and its title are shown only to people who can read the source page; for everyone else the source does not exist. The portal for readers never shows source pages, and they are not part of the article's content or its machine-readable form. Editors of the article see only how many linked source pages they cannot read, and can remove those links, for example when the person who linked a restricted page has left; only people who can read such a page can link it again. Linking and removing a source page is audited as `article.sourceAdded` and `article.sourceRemoved`.
 
 ## Reviews through the API
 
@@ -175,6 +176,7 @@ In Pagehall, the link to a source page and its title are shown only to people wh
 | `POST /api/v1/articles/{itemId}/reviews` | edit the article | mark as reviewed |
 | `DELETE /api/v1/articles/{itemId}/reviews/{reviewId}` | edit the article | undo the latest own review within two minutes |
 | `GET`, `POST /api/v1/articles/{itemId}/sources`, `DELETE …/sources/{sourceId}` | read, edit the article | source pages the caller can read |
+| `GET`, `DELETE /api/v1/articles/{itemId}/hidden-sources` | edit the article | number of linked source pages the caller cannot read; remove them |
 
 `POST /api/v1/pages/{pageId}/publish` accepts `"reviewed": true` for articles. Reviews also appear in `GET /api/v1/items/{itemId}/activity` with the type `review`.
 
@@ -186,9 +188,9 @@ Readers open a knowledge base in its portal: a start page with the search and th
 
 ### Addresses
 
-- Every knowledge base has a portal at `/help/<path>/` on the instance. The path is the space key in lowercase until a space admin changes it under **Space settings → Address**. A changed path keeps redirecting old links (301) to the new one. An old path stays reserved for the organization: only a knowledge base of the same organization can take it over.
+- Every knowledge base has a portal at `/help/<path>/` on the instance. The path is the space key in lowercase until a space admin changes it under **Space settings → Address**. A changed path keeps redirecting old links (301) to the new one. An old path stays reserved for the organization: only a knowledge base of the same organization can take it over. The paths of a knowledge base that is deleted for good stay reserved the same way.
 - Articles have the address `<number>-<short form of the title>`, for example `/help/help/12-set-up-the-vpn-connection`. An old short form or the bare number redirects to the current address. A number of an article that moved to another knowledge base redirects there. Categories are at `topics/<id>`, the search at `search?q=…`.
-- An unknown address, a hidden article and an article that does not exist look exactly the same: "We can't find this page", status 404.
+- An unknown address, a hidden article and an article that does not exist look exactly the same: "We can't find this page", status 404. A signed-in person who can read nothing in a knowledge base that is not public gets the same answer as for a portal that does not exist, without its name or welcome text.
 - The change of a path or domain is recorded in the audit log as `knowledgeBase.portalAddressChanged`.
 
 ### Own domains
@@ -197,15 +199,15 @@ A knowledge base can have its own domain, for example the address of an older he
 
 1. An instance administrator allows the domain for one organization under **Instance settings → Knowledge base portals** (`POST /api/v1/instance/portal-domains`). Allowing and removing are recorded in the audit log (`organization.portalDomainAllowed`, `organization.portalDomainRemoved`).
 2. The DNS record of the domain points to the instance, and the reverse proxy sends the domain to Pagehall and holds its certificate. Pagehall does not request certificates itself. Portals on own domains need HTTPS.
-3. A space admin chooses the domain under **Space settings → Address**. The page shows the DNS record to copy before saving.
+3. A space admin chooses the domain under **Space settings → Address**, which lists only domains that are free or already used by this knowledge base. The page shows the DNS record to copy before saving.
 
-On its own domain only the portal answers; the app and `/api/` are not reachable there. The portal keeps working under `/help/<path>/` on the instance as well.
+On its own domain only the portal answers; the app and `/api/` are not reachable there. Health checks (`/health/…`) and `/metrics` answer on every host without a database lookup. Each API node keeps the list of allowed domains in memory and reloads it whenever a domain is allowed or removed on any node; while the database cannot be reached, requests to other hosts get status 503. The portal keeps working under `/help/<path>/` on the instance as well.
 
 ### Signing in
 
 - Under `/help/<path>/` the portal uses the session of the app.
 - Anonymous visitors of a knowledge base that is not public see the sign-in page of the portal on every address, with one button per identity provider of the instance and "Sign in with an e-mail address", which leads to the normal sign-in and back to the requested address.
-- On an own domain the portal has a session of its own. A visitor without one is sent to the instance; when they are already signed in there, they come back at once with a session for the domain, otherwise they sign in first. The handoff uses a one-time code that is valid for 60 seconds, bound to the domain and to a random value in a cookie of the domain, and can be used once. The cookie of the domain (`__Host-pagehall-portal`) is host-only, `Secure`, `HttpOnly` and `SameSite=Lax`.
+- On an own domain the portal has a session of its own. A visitor without one is sent to the instance; when they are already signed in there, they come back at once with a session for the domain, otherwise they sign in first. People who do not belong to the organization of the domain are asked once per account and domain ("Sign in to <domain> with your account?", **Continue**); the answer is remembered and recorded in the audit log as `portalHandoff.consented`. Members of the organization are not asked. The handoff uses a one-time code that is valid for 60 seconds, bound to the domain and to a random value in a cookie of the domain, and can be used once. The cookie of the domain (`__Host-pagehall-portal`) is host-only, `Secure`, `HttpOnly` and `SameSite=Lax`.
 - The session of a domain belongs to the session of the instance. Signing out in the portal signs out everywhere; when the instance session ends (sign-out, expiry, deactivation, "sign out everywhere"), the session of the domain ends too.
 - Requests that change something in the portal (rating, notes, sign-out) must come from the portal's own origin.
 
@@ -240,11 +242,13 @@ API: `GET /api/v1/spaces/{spaceId}/knowledge-base/portal`, `PUT …/portal/addre
 
 ### Pre-rendered articles
 
-The content of an article is rendered to HTML once per published version and stored; publishing queues the rendering, and a missing rendering is made on first read. Articles with included content or embeds are rendered on every request instead, so that a changed article, restriction or embed setting shows at once. Permissions are checked on every request before the HTML is served.
+The content of an article is rendered to HTML once per published version and stored; publishing queues the rendering, and a missing rendering is made on first read. Articles with included content, embeds, links to other articles or mentions are rendered on every request instead, for the person reading, so that a changed article, restriction, name or embed setting shows at once. Permissions are checked on every request before the HTML is served.
 
 - **Includes and excerpts** from published articles of the same knowledge base are shown, because they have the same readers. An article that a view restriction hides from some readers of the including article, an article of another space and every other page stay hidden. Translations include the translation of the included article in their language where one is published.
 - **Embeds** follow the embed services the organization allows (see [embeds-and-blocks.md](embeds-and-blocks.md)). The portal loads frames only from the addresses of these services; other embeds appear as a link.
-- Child page lists and reports are not shown, links to pages outside the knowledge base show "No access" without their title, and mentions name only members of the organization.
+- **Links to articles** of the same knowledge base show the current published title when the reader can read the target. Links to articles the reader cannot read (restricted, unpublished, in the trash or archived) and to pages outside the knowledge base show "No access" without their title or number.
+- Child page lists, attachment lists and reports are left out of the page, images and files show only when they belong to the article or to an article with the same readers, and the HTML carries no internal IDs of people, pages, spaces or files. Mentions show the current name of members of the organization; anonymized people and people who left are not named.
+- Search indexes, in the portal and in the static website, never contain the stored titles of linked pages.
 
 ## Static website
 

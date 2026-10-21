@@ -1276,6 +1276,7 @@
     "invalidSpaceName": "The name needs 1 to 100 characters.",
     "invalidSpaceDescription": "The description can have up to 1000 characters. Shorten it and save again.",
     "invalidHolder": "This person or group cannot get a role here. Choose someone from the organization, or for a personal space someone you work with.",
+    "portalAccountReaderOnly": "Portal accounts can only read. Give this account the role “Reader”, or invite the person with a company account to let them edit.",
     "alreadyGranted": "This person or group already has a role in the space. Change that role instead.",
     "permissionNotFound": "Someone changed the permissions at the same moment. Reload the page and try again.",
     "lastSpaceAdmin": "A space needs at least one space admin. Give someone else the space admin role first.",
@@ -3933,6 +3934,9 @@
       },
       "portalAccount": {
         "invited": "Portal account invited"
+      },
+      "portalHandoff": {
+        "consented": "Signing in on a portal domain allowed"
       }
     },
     "action": "Action",
@@ -7681,6 +7685,11 @@
           "hint": "Pagehall left them out; the other documents were imported. Split the document into smaller documents or remove large parts, then import it again.",
           "entry": "{file}: the document text is larger than {limit, number} MB or needs too much memory to convert."
         },
+        "translationNotImported": {
+          "title": "{count, plural, one {# translation does} other {# translations do}} not fit the languages",
+          "hint": "The language in the front matter does not fit the knowledge base. Check the files and move their text into a translation if needed.",
+          "entry": "“{title}”: {reason, select, unknown {“{language}” is not a language Pagehall offers} defaultLanguage {“{language}” is the default language} duplicate {the article already has a translation into “{language}”} notEnabled {“{language}” is not one of the languages of the knowledge base} other {the language does not fit}}. {outcome, select, separate {The file became a separate article.} skipped {The file was not imported.} other {}}"
+        },
         "embedNotAllowed": {
           "title": "{count, plural, one {# embed is} other {# embeds are}} shown as a link",
           "hint": "Their address is not on the embed allowlist of this organization. Add the service to the allowlist to show them embedded.",
@@ -9864,7 +9873,13 @@
       "addConfirm": "Add source page",
       "remove": "Remove source page “{title}”",
       "removed": "Source page “{title}” removed",
-      "removeFailed": "Source page “{title}” was not removed"
+      "removeFailed": "Source page “{title}” was not removed",
+      "hidden": "{count, plural, one {# source page you cannot read} other {# source pages you cannot read}}",
+      "removeHidden": "{count, plural, one {Remove this source page} other {Remove these source pages}}",
+      "removeHiddenTitle": "{count, plural, one {Remove the source page you cannot read?} other {Remove the # source pages you cannot read?}}",
+      "removeHiddenDescription": "The article is no longer reminded of changes to {count, plural, one {this page} other {these pages}}. Only people who can read {count, plural, one {it} other {them}} can link {count, plural, one {it} other {them}} again.",
+      "hiddenRemoved": "{count, plural, one {Source page removed} other {# source pages removed}}",
+      "removeHiddenFailed": "{count, plural, one {The source page was not removed} other {The source pages were not removed}}"
     }
   },
   "statistics": {
@@ -9945,11 +9960,11 @@
   "portalAccounts": {
     "tab": "Portal accounts",
     "title": "Portal accounts",
-    "description": "Readers without a company account sign in with their e-mail address and a password or passkey. They see only the portal of the organization's knowledge bases for portal accounts, never the wiki.",
+    "description": "Readers without a company account sign in with their e-mail address and a password or passkey. They see only the portals of the knowledge bases they were invited to, never the wiki.",
     "notForPortalTitle": "This knowledge base is not for portal accounts",
     "notForPortal": "Portal accounts read only knowledge bases whose audience is portal accounts. Change the audience to invite readers here.",
     "toVisibility": "Open Visibility",
-    "adminsOnly": "Only space admins manage portal accounts.",
+    "managersOnly": "Only people who manage the organization's members invite and manage portal accounts. Ask an organization administrator.",
     "loadFailed": "The portal accounts could not be loaded",
     "accounts": "Readers",
     "invitations": "Open invitations",

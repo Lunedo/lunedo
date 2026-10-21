@@ -1,4 +1,5 @@
 import { Writable } from "node:stream";
+import { DrizzleQueryError } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { runWithRequestContext } from "../observability/request-context.js";
 import { createLogger } from "./logger.js";
@@ -65,5 +66,25 @@ describe("request IDs", () => {
     const logger = createLogger({ service: "api", level: "info", destination }).child({ requestId: "req-2" });
     runWithRequestContext({ requestId: "req-2" }, () => logger.info("child"));
     expect(chunks[0]?.match(/"requestId"/g)).toHaveLength(1);
+  });
+
+  it("keeps query text and parameters of failed database queries out of the log", () => {
+    const { lines, destination } = capture();
+    const logger = createLogger({ service: "api", level: "info", destination });
+    const cause = Object.assign(new Error("deadlock detected"), {
+      code: "40P01",
+      detail: "Process 12 waits for ShareLock on transaction 34",
+    });
+    const failed = new DrizzleQueryError(
+      "insert into portal_searches (term) values ($1)",
+      ["kündigung huber"],
+      cause,
+    );
+    logger.warn({ err: failed }, "A portal search was not counted");
+    const line = JSON.stringify(lines[0]);
+    expect(line).not.toContain("kündigung huber");
+    expect(line).not.toContain("portal_searches");
+    expect(line).not.toContain("ShareLock");
+    expect(lines[0]).toMatchObject({ err: { message: "Failed query", cause: { code: "40P01" } } });
   });
 });

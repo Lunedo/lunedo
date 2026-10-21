@@ -170,10 +170,15 @@ export class ArticleApiService {
     if (!article) return null;
     const draft = options.draft === true;
     if (!draft && options.publishedOnly && article.version === null) return null;
-    return this.#present(article, draft, options.origin);
+    return this.#present(viewer, article, draft, options.origin);
   }
 
-  async #present(article: Article, draft: boolean, origin: string): Promise<ArticleRecord> {
+  async #present(
+    viewer: Principal,
+    article: Article,
+    draft: boolean,
+    origin: string,
+  ): Promise<ArticleRecord> {
     const document: DocumentJson = article.document ?? { type: "doc", content: [] };
     const addresses = await this.#addresses(article, origin);
     const language = interfaceLanguage(article.language);
@@ -188,6 +193,8 @@ export class ArticleApiService {
         },
         language,
         addresses.renderer,
+        viewer,
+        { readerView: false },
       );
       sections.push({ ...section, html: rendered.html });
     }
@@ -287,7 +294,8 @@ export class ArticleApiService {
       ? sql`union all
         select t.id as item_id, t.space_id, n.number,
           case when t.translation_of is null then kb.default_language else t.content_language end as language,
-          null::timestamptz as removed_at, null::text as removed_reason, greatest(d.changed_at, t.updated_at) as changed_at
+          null::timestamptz as removed_at, null::text as removed_reason, false as removed_restricted,
+          greatest(d.changed_at, t.updated_at) as changed_at
         from tree_items t join page_documents d on d.item_id = t.id
         join knowledge_bases kb on kb.space_id = t.space_id
         left join article_numbers n on n.item_id = coalesce(t.translation_of, t.id) and n.space_id = t.space_id
@@ -303,7 +311,8 @@ export class ArticleApiService {
       present: boolean;
     }>(sql`
       with candidates as (
-        select a.item_id, a.space_id, a.number, a.language, a.removed_at, a.removed_reason, a.changed_at
+        select a.item_id, a.space_id, a.number, a.language, a.removed_at, a.removed_reason, a.removed_restricted,
+          a.changed_at
         from article_sync a where a.space_id = ${spaceId}
         ${drafts}
       ),
@@ -318,7 +327,7 @@ export class ArticleApiService {
       select k.item_id, k.number, k.language, k.removed_at, k.removed_reason, k.changed_key,
         (k.removed_at is null) as present
       from keyed k
-      where (k.removed_at is not null or exists (select 1 from tree_items t join spaces s on s.id = t.space_id
+      where ((k.removed_at is not null and not k.removed_restricted) or exists (select 1 from tree_items t join spaces s on s.id = t.space_id
           where t.id = k.item_id and t.space_id = ${spaceId}
             and ${
               draft

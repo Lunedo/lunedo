@@ -1,6 +1,7 @@
 import type { NodeJson } from "@pagehall/editor-schema";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { languageSetting } from "../../settings/builtin.js";
 import { testDatabaseBaseUrl } from "../../testing/database.js";
 import { createTestServices, type TestServices } from "../../testing/services.js";
 import { spaceFixtures } from "../../testing/spaces.js";
@@ -248,6 +249,259 @@ describe.skipIf(!baseUrl)("Markdown folder imports", () => {
     expect(again.source).toBe("markdown");
     expect(again.state).toBe("review");
     expect(again.counts).toMatchObject({ new: 0, updated: 1, conflicts: 0, deleted: 0 });
+  });
+
+  it("keeps the folder pages of an earlier import when the folder now has its own file", async () => {
+    const organization = await fixtures.organization();
+    const admin = harness.as(organization.owner);
+    const before: ZipFileSpec[] = [
+      { name: "it/README.md", data: "# IT\n" },
+      { name: "it/Netzwerk/VPN-Zugangsdaten.md", data: "Zugang nur für IT.\n" },
+    ];
+    const first = await harness.importedFiles({
+      organizationId: organization.id,
+      admin: organization.owner,
+      source: "markdown",
+      files: [{ name: "it.zip", data: createZip(before) }],
+      key: "MDFOLD",
+    });
+    await test.services.imports.accept(admin, first.id, { visibility: "organization", grants: [] });
+    const folder = await harness.target(first.id, "page", "md:Netzwerk/");
+    const secret = await harness.target(first.id, "page", "md:Netzwerk/VPN-Zugangsdaten.md");
+    expect(folder).not.toBe("");
+    await test.services.pageAccess.change(admin, folder, [{ action: "restrict", kind: "view" }]);
+    const again = await harness.importedFiles({
+      organizationId: organization.id,
+      admin: organization.owner,
+      source: "markdown",
+      files: [
+        {
+          name: "it-2.zip",
+          data: createZip([
+            ...before,
+            { name: "it/Netzwerk/Netzwerk.md", data: "# Netzwerk\n\nÜbersicht.\n" },
+          ]),
+        },
+      ],
+      spaceId: first.quarantineSpace?.id ?? "",
+      key: "MDFOLD",
+    });
+    expect(again.state).toBe("review");
+    expect(again.counts).toMatchObject({ moved: 0, deleted: 0 });
+    await harness.applyChanges(organization.owner, again.id);
+    const parents = await test.database.execute<{ id: string; parent_id: string | null }>(sql`
+      select id, parent_id from tree_items where space_id = ${first.quarantineSpace?.id ?? ""} and kind = 'page'`);
+    const parentOf = (id: string) => parents.rows.find((row) => row.id === id)?.parent_id;
+    expect(parentOf(secret)).toBe(folder);
+    const overview = await harness.target(again.id, "page", "md:Netzwerk/Netzwerk.md");
+    expect(parentOf(overview)).toBe(folder);
+  });
+
+  it("imports a knowledge base in the language of the organization", async () => {
+    const organization = await fixtures.organization();
+    await test.settings.set(languageSetting, { organization: organization.id }, "organization", "de");
+    const view = await harness.importedFiles({
+      organizationId: organization.id,
+      admin: organization.owner,
+      source: "markdown",
+      files: [{ name: "hilfe.zip", data: createZip([{ name: "hilfe/Drucker.md", data: "Drucker.\n" }]) }],
+      options: { knowledgeBase: true },
+      key: "MDLANG",
+    });
+    const languages = await test.database.execute<{ default_language: string; languages: string[] }>(sql`
+      select default_language, languages from knowledge_bases where space_id = ${view.quarantineSpace?.id ?? ""}`);
+    expect(languages.rows[0]).toEqual({ default_language: "de", languages: ["de"] });
+  });
+
+  it("imports translations only into languages that fit and reports the others", async () => {
+    const organization = await fixtures.organization();
+    await test.settings.set(languageSetting, { organization: organization.id }, "organization", "de");
+    const file = (name: string, language: string, translation: boolean, text: string): ZipFileSpec => ({
+      name: `hilfe/Drucker/${name}.md`,
+      data: `---\npagehall:\n  kind: page\n  language: ${language}\n${translation ? "  translation: true\n" : ""}---\n${text}\n`,
+    });
+    const files = [
+      file("Drucker", "de", false, "Drucker einrichten."),
+      file("Printer 1", "en", true, "Set up the printer."),
+      file("Printer 2", "en", true, "Set up the printer again."),
+      file("Stampante", "it", true, "Configurare la stampante."),
+      file("Unbekannt", "xx", true, "Unbekannte Sprache."),
+      file("Doppelt", "de", true, "Noch einmal Deutsch."),
+    ];
+    const view = await harness.importedFiles({
+      organizationId: organization.id,
+      admin: organization.owner,
+      source: "markdown",
+      files: [{ name: "hilfe.zip", data: createZip(files) }],
+      options: { knowledgeBase: true },
+      key: "MDTRANS",
+    });
+    expect(view.state).toBe("review");
+    const spaceId = view.quarantineSpace?.id ?? "";
+    const items = await test.database.execute<{
+      title: string;
+      parent_id: string | null;
+      translation_of: string | null;
+      content_language: string | null;
+    }>(sql`
+      select title, parent_id, translation_of, content_language from tree_items
+      where space_id = ${spaceId} and kind = 'page' order by title`);
+    const byTitle = new Map(items.rows.map((row) => [row.title, row]));
+    const original = await harness.target(view.id, "page", "md:Drucker/Drucker.md");
+    expect(byTitle.get("Printer 1")).toMatchObject({ translation_of: original, content_language: "en" });
+    expect(byTitle.get("Stampante")).toMatchObject({ translation_of: original, content_language: "it" });
+    for (const title of ["Printer 2", "Unbekannt", "Doppelt"]) {
+      expect(byTitle.get(title), title).toMatchObject({ translation_of: null, content_language: null });
+      expect(byTitle.get(title)?.parent_id, title).not.toBe(original);
+    }
+    const languages = await test.database.execute<{ languages: string[] }>(
+      sql`select languages from knowledge_bases where space_id = ${spaceId}`,
+    );
+    expect([...(languages.rows[0]?.languages ?? [])].sort()).toEqual(["de", "en", "it"]);
+    const problems = await test.database.execute<{ reason: string; language: string }>(sql`
+      select details ->> 'reason' as reason, details ->> 'language' as language from import_problems
+      where import_id = ${view.id} and code = 'translationNotImported' order by 1`);
+    expect(problems.rows).toEqual([
+      { reason: "defaultLanguage", language: "de" },
+      { reason: "duplicate", language: "en" },
+      { reason: "unknown", language: "xx" },
+    ]);
+  });
+
+  describe("re-imports into a knowledge base", () => {
+    const article = (name: string, language: string, translation: boolean, text: string): ZipFileSpec => ({
+      name,
+      data: `---\npagehall:\n  kind: page\n  language: ${language}\n${translation ? "  translation: true\n" : ""}---\n${text}\n`,
+    });
+    const before: ZipFileSpec[] = [
+      article("hilfe/Geräte/Drucker/Drucker.md", "de", false, "Drucker einrichten."),
+      article("hilfe/Geräte/Telefon/Telefon.md", "de", false, "Telefon einrichten."),
+      article("hilfe/Geräte/Telefon/Phone.md", "en", true, "Set up the phone."),
+    ];
+
+    async function reimported(
+      added: ZipFileSpec[],
+      key: string,
+      removed: readonly string[] = [],
+      earlier: ZipFileSpec[] = [],
+    ) {
+      const organization = await fixtures.organization();
+      await test.settings.set(languageSetting, { organization: organization.id }, "organization", "de");
+      const first = await harness.importedFiles({
+        organizationId: organization.id,
+        admin: organization.owner,
+        source: "markdown",
+        files: [{ name: "hilfe.zip", data: createZip([...before, ...earlier]) }],
+        options: { knowledgeBase: true },
+        key,
+      });
+      await test.services.imports.accept(harness.as(organization.owner), first.id, {
+        visibility: "organization",
+        grants: [],
+      });
+      const spaceId = first.quarantineSpace?.id ?? "";
+      const again = await harness.importedFiles({
+        organizationId: organization.id,
+        admin: organization.owner,
+        source: "markdown",
+        files: [
+          {
+            name: "hilfe-2.zip",
+            data: createZip([
+              ...[...before, ...earlier].filter((file) => !removed.includes(file.name)),
+              ...added,
+            ]),
+          },
+        ],
+        spaceId,
+        key,
+      });
+      expect(again.state).toBe("review");
+      const applied = await harness.applyChanges(organization.owner, again.id);
+      expect(applied.errorCode).toBeNull();
+      const items = await test.database.execute<{
+        id: string;
+        title: string;
+        kind: string;
+        parent_id: string | null;
+        translation_of: string | null;
+        content_language: string | null;
+        numbered: boolean;
+      }>(sql`
+        select t.id, t.title, t.kind, t.parent_id, t.translation_of, t.content_language,
+          exists (select 1 from article_numbers n where n.item_id = t.id) as numbered
+        from tree_items t where t.space_id = ${spaceId} and t.trash_entry_id is null`);
+      return {
+        first,
+        again,
+        spaceId,
+        item: (title: string) => items.rows.find((row) => row.title === title),
+        byId: (id: string) => items.rows.find((row) => row.id === id),
+      };
+    }
+
+    it("imports a new translation file as a translation of its article", async () => {
+      const result = await reimported(
+        [article("hilfe/Geräte/Drucker/Printer.md", "en", true, "Set up the printer.")],
+        "MDKBTRANS",
+      );
+      const original = await harness.target(result.first.id, "page", "md:Geräte/Drucker/Drucker.md");
+      expect(result.item("Printer")).toMatchObject({
+        parent_id: original,
+        translation_of: original,
+        content_language: "en",
+        numbered: false,
+      });
+    });
+
+    it("keeps an article in its category when its file turns into a translation", async () => {
+      const result = await reimported(
+        [article("hilfe/Geräte/Drucker/Handbuch.md", "en", true, "Printer manual.")],
+        "MDKBMOVE",
+        ["hilfe/Geräte/Drucker/Handbuch.md"],
+        [{ name: "hilfe/Geräte/Drucker/Handbuch.md", data: "# Handbook\n\nDruckerhandbuch.\n" }],
+      );
+      const handbook = await harness.target(result.first.id, "page", "md:Geräte/Drucker/Handbuch.md");
+      expect(handbook).not.toBe("");
+      expect(result.byId(handbook)).toMatchObject({
+        parent_id: result.item("Geräte")?.id,
+        translation_of: null,
+      });
+    });
+
+    it("places new files by the rules of the knowledge base", async () => {
+      const result = await reimported(
+        [
+          article("hilfe/Geräte/Scanner/Scanner.md", "de", false, "Scanner einrichten."),
+          { name: "hilfe/Geräte/Drucker/Wartung.md", data: "# Wartung\n\nToner wechseln.\n" },
+          article("hilfe/Geräte/Drucker/Imprimante.md", "fr", true, "Configurer l'imprimante."),
+          article("hilfe/Geräte/Telefon/Phone again.md", "en", true, "Set up the phone again."),
+        ],
+        "MDKBRULES",
+      );
+      const category = result.item("Geräte");
+      expect(category?.kind).toBe("folder");
+      expect(result.item("Scanner")).toMatchObject({ kind: "page", parent_id: category?.id, numbered: true });
+      expect(result.item("Wartung")).toMatchObject({
+        kind: "page",
+        parent_id: category?.id,
+        translation_of: null,
+        numbered: true,
+      });
+      expect(result.item("Imprimante")).toBeUndefined();
+      expect(result.item("Phone again")).toMatchObject({ parent_id: category?.id, translation_of: null });
+      const languages = await test.database.execute<{ languages: string[] }>(
+        sql`select languages from knowledge_bases where space_id = ${result.spaceId}`,
+      );
+      expect([...(languages.rows[0]?.languages ?? [])].sort()).toEqual(["de", "en"]);
+      const problems = await test.database.execute<{ reason: string; language: string; outcome: string }>(sql`
+        select details ->> 'reason' as reason, details ->> 'language' as language, details ->> 'outcome' as outcome
+        from import_problems where import_id = ${result.again.id} and code = 'translationNotImported' order by 1`);
+      expect(problems.rows).toEqual([
+        { reason: "duplicate", language: "en", outcome: "separate" },
+        { reason: "notEnabled", language: "fr", outcome: "skipped" },
+      ]);
+    });
   });
 
   it("starts a re-import of a Markdown space as a Markdown import", async () => {

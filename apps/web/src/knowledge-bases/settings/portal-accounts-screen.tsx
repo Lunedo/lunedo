@@ -20,7 +20,7 @@ import { Mail, UserPlus, UserRound, Users } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
-import { request } from "../../api/request.js";
+import { isApiError, request } from "../../api/request.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
@@ -159,9 +159,10 @@ export function PortalAccountsScreen() {
   const queryClient = useQueryClient();
   const showFailure = useFailureToast();
   const { toast } = useToast();
-  const manage = space.role === "admin" && !space.archived;
   const query = portalAccountsQuery(space.id);
-  const accounts = useQuery({ ...query, enabled: manage, throwOnError: false });
+  const accounts = useQuery({ ...query, enabled: !space.archived, throwOnError: false });
+  const forbidden = isApiError(accounts.error, "forbidden");
+  const manage = !space.archived && !forbidden;
   const [inviting, setInviting] = useState(false);
   const [deactivating, setDeactivating] = useState<PortalAccount | null>(null);
   const [removing, setRemoving] = useState<PortalAccount | null>(null);
@@ -188,9 +189,9 @@ export function PortalAccountsScreen() {
             </Link>
           </Notice>
         )}
-        {!manage ? <Notice variant="info">{t("portalAccounts.adminsOnly")}</Notice> : null}
+        {!manage ? <Notice variant="info">{t("portalAccounts.managersOnly")}</Notice> : null}
         {manage && accounts.isPending ? <Skeleton className="h-card w-full" /> : null}
-        {accounts.isError ? (
+        {accounts.isError && !forbidden ? (
           <LoadError
             what={t("portalAccounts.loadFailed")}
             error={accounts.error}

@@ -22,6 +22,7 @@ import { allowedEmbedServicesSetting, embedServicesSetting } from "../embeds/set
 import { type FileService, FileTooLargeError } from "../files/files.js";
 import { cleanFileName, fileNameKey } from "../files/names.js";
 import { MEGABYTE, maxFileSizeSetting } from "../files/settings.js";
+import { isArticleLanguage } from "../knowledge-bases/translations.js";
 import { languageSetting } from "../settings/builtin.js";
 import type { SettingsService } from "../settings/service.js";
 import { encodeState, MAX_LABELS_PER_PAGE, normalizeLabel, recomputeLinks } from "../spaces/documents.js";
@@ -438,6 +439,50 @@ export class ImportPipeline {
     return new Map(rows.rows.map((row) => [row.source_id, row.target_id]));
   }
 
+  async #refusedTranslation(
+    tx: Transaction,
+    spaceId: string,
+    originalId: string,
+    language: string,
+    addLanguage: boolean,
+  ): Promise<"unknown" | "defaultLanguage" | "duplicate" | "notEnabled" | null> {
+    if (!isArticleLanguage(language)) return "unknown";
+    const found = await tx.execute<{ default_language: string; enabled: boolean; taken: boolean }>(sql`
+      select kb.default_language, ${language} = any(kb.languages) as enabled,
+        exists (select 1 from tree_items t where t.translation_of = ${originalId} and t.content_language = ${language}) as taken
+      from knowledge_bases kb where kb.space_id = ${spaceId} for update`);
+    const row = found.rows[0];
+    if (!row || row.default_language === language) return "defaultLanguage";
+    if (row.taken) return "duplicate";
+    if (row.enabled) return null;
+    if (!addLanguage) return "notEnabled";
+    await tx.execute(sql`
+      update knowledge_bases set languages = array_append(languages, ${language}), updated_at = now()
+      where space_id = ${spaceId}`);
+    return null;
+  }
+
+  async #adoptLanguage(tx: Transaction, spaceId: string, language: string): Promise<void> {
+    if (!isArticleLanguage(language)) return;
+    await tx.execute(sql`
+      update knowledge_bases set default_language = ${language}, languages = array[${language}]::text[], updated_at = now()
+      where space_id = ${spaceId} and default_language <> ${language}
+        and not exists (select 1 from tree_items t where t.space_id = ${spaceId} and t.kind = 'page')`);
+  }
+
+  async #placeableInKnowledgeBase(
+    tx: Transaction,
+    itemId: string,
+    parentId: string | null,
+  ): Promise<boolean> {
+    const result = await tx.execute<{ placeable: boolean }>(sql`
+      select s.type <> 'knowledgeBase' or (t.translation_of is null
+        and (${parentId}::uuid is null or exists (select 1 from tree_items p where p.id = ${parentId} and p.kind = 'folder')))
+        as placeable
+      from tree_items t join spaces s on s.id = t.space_id where t.id = ${itemId}`);
+    return result.rows[0]?.placeable === true;
+  }
+
   async #inSpace(tx: Transaction, itemId: string, spaceId: string): Promise<boolean> {
     const result = await tx.execute(
       sql`select 1 from tree_items where id = ${itemId} and space_id = ${spaceId}`,
@@ -613,11 +658,34 @@ export class ImportPipeline {
             }
             const creatorId = (page.creatorId ? people.get(page.creatorId) : undefined) ?? run.importerId;
             id = uuidv7();
-            const position = await endPosition(tx, space.spaceId, parentId);
             const linkUrl = links.get(page.sourceId) ?? null;
             const kind = treeKindOf(page, linkUrl);
             const article = kind === "page" && run.knowledgeBase ? page.article : undefined;
+            if (article?.language && !article.translation && !run.reimport) {
+              await this.#adoptLanguage(tx, space.spaceId, article.language);
+            }
+            const refused =
+              article?.translation && article.language && parentId
+                ? await this.#refusedTranslation(tx, space.spaceId, parentId, article.language, !run.reimport)
+                : null;
+            if (refused) {
+              await recordProblems(tx, run.importId, [
+                {
+                  code: "translationNotImported",
+                  sourceKind: "page",
+                  sourceId: page.sourceId,
+                  details: {
+                    title: pageTitle(page),
+                    language: article?.language ?? "",
+                    reason: refused,
+                    outcome: "skipped",
+                  },
+                },
+              ]);
+              continue;
+            }
             const translationOf = article?.translation && article.language && parentId ? parentId : null;
+            const position = await endPosition(tx, space.spaceId, parentId);
             await tx.execute(sql`
               insert into tree_items (id, space_id, parent_id, kind, position, title, link_url, mode, creator_id,
                 owner_id, created_at, content_updated_at, article_type, translation_of, content_language)
@@ -2348,6 +2416,7 @@ export class ImportPipeline {
                 and space_id = ${reimport.spaceId}) as found`);
           if (blocked.rows[0]?.found) follow = false;
         }
+        if (follow && !(await this.#placeableInKnowledgeBase(tx, itemId, parentId))) follow = false;
         if (follow) {
           const position = await endPosition(tx, reimport.spaceId, parentId);
           await tx.execute(sql`

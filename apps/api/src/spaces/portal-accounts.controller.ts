@@ -34,7 +34,7 @@ const portalAccountsSchema = z
           })
           .describe("A portal account."),
       )
-      .describe("Portal accounts of the organization, which read its knowledge bases for portal accounts."),
+      .describe("Portal accounts that read this knowledge base."),
     invitations: z
       .array(
         z
@@ -92,11 +92,11 @@ export class PortalAccountsController {
   }
 
   @Get("spaces/:spaceId/portal-accounts")
-  @Permission("space.manage", space)
+  @Permission("space.portalAccounts.manage", space)
   @ApiRoute({
     summary: "List the portal accounts of a knowledge base",
     description:
-      "Lists the portal accounts of the organization and the open invitations sent from this knowledge base.",
+      "Lists the portal accounts that read this knowledge base and the open invitations sent from it. Needs the permission to manage the organization's members.",
     tags: [TAG],
     params: spaceParams,
     response: {
@@ -111,11 +111,11 @@ export class PortalAccountsController {
   }
 
   @Post("spaces/:spaceId/portal-accounts")
-  @Permission("space.manage", space)
+  @Permission("space.portalAccounts.manage", space)
   @ApiRoute({
     summary: "Invite a reader as a portal account",
     description:
-      "Sends an invitation to read the knowledge base. The reader creates a portal account that sees only the portal of the organization's knowledge bases for portal accounts. The person who invites is responsible for the account. Audited.",
+      "Sends an invitation to read the knowledge base. The reader creates a portal account that reads only the knowledge bases it was invited to. Open member invitations for the same address stay valid. The person who invites is responsible for the account. Needs the permission to manage the organization's members. Audited.",
     tags: [TAG],
     status: 201,
     params: spaceParams,
@@ -148,7 +148,7 @@ export class PortalAccountsController {
   }
 
   @Delete("spaces/:spaceId/portal-invitations/:invitationId")
-  @Permission("space.manage", space)
+  @Permission("space.portalAccounts.manage", space)
   @ApiRoute({
     summary: "Withdraw an invitation of a portal account",
     description: "The link in the invitation stops working. Audited.",
@@ -166,7 +166,7 @@ export class PortalAccountsController {
   }
 
   @Post("spaces/:spaceId/portal-accounts/:accountId/deactivate")
-  @Permission("space.manage", space)
+  @Permission("space.portalAccounts.manage", space)
   @ApiRoute({
     summary: "Deactivate a portal account",
     description:
@@ -185,7 +185,7 @@ export class PortalAccountsController {
   }
 
   @Delete("spaces/:spaceId/portal-accounts/:accountId")
-  @Permission("space.manage", space)
+  @Permission("space.portalAccounts.manage", space)
   @ApiRoute({
     summary: "Remove a portal account from the organization",
     description:
@@ -208,7 +208,7 @@ export class PortalAccountsController {
   @InternalRoute()
   @ApiRoute({
     summary: "List the portals the caller reads as a portal account",
-    description: "Lists the portals of knowledge bases for portal accounts in the caller's organizations.",
+    description: "Lists the portals of the knowledge bases the caller was invited to read.",
     tags: [TAG],
     response: {
       description: "The portals.",
