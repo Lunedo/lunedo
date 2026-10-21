@@ -1,6 +1,7 @@
 import type { NodeJson } from "@pagehall/editor-schema";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { languageSetting } from "../../settings/builtin.js";
 import { testDatabaseBaseUrl } from "../../testing/database.js";
 import { createTestServices, type TestServices } from "../../testing/services.js";
 import { spaceFixtures } from "../../testing/spaces.js";
@@ -294,6 +295,22 @@ describe.skipIf(!baseUrl)("Markdown folder imports", () => {
     expect(parentOf(secret)).toBe(folder);
     const overview = await harness.target(again.id, "page", "md:Netzwerk/Netzwerk.md");
     expect(parentOf(overview)).toBe(folder);
+  });
+
+  it("imports a knowledge base in the language of the organization", async () => {
+    const organization = await fixtures.organization();
+    await test.settings.set(languageSetting, { organization: organization.id }, "organization", "de");
+    const view = await harness.importedFiles({
+      organizationId: organization.id,
+      admin: organization.owner,
+      source: "markdown",
+      files: [{ name: "hilfe.zip", data: createZip([{ name: "hilfe/Drucker.md", data: "Drucker.\n" }]) }],
+      options: { knowledgeBase: true },
+      key: "MDLANG",
+    });
+    const languages = await test.database.execute<{ default_language: string; languages: string[] }>(sql`
+      select default_language, languages from knowledge_bases where space_id = ${view.quarantineSpace?.id ?? ""}`);
+    expect(languages.rows[0]).toEqual({ default_language: "de", languages: ["de"] });
   });
 
   it("starts a re-import of a Markdown space as a Markdown import", async () => {

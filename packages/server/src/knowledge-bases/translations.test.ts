@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ANONYMOUS, accountPrincipal } from "../accounts/principal.js";
+import { languageSetting } from "../settings/builtin.js";
 import type { KnowledgeBaseAudience } from "../spaces/schema.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
@@ -72,6 +73,57 @@ describe.skipIf(!baseUrl)("knowledge base languages", () => {
       update page_versions set created_at = now() - make_interval(mins => ${minutes})
       where id = (select published_version_id from tree_items where id = ${itemId})`);
   }
+
+  it("starts a new knowledge base in the language of its organization", async () => {
+    const org = await organization();
+    const owner = accountPrincipal(org.owner);
+    const create = async () => {
+      const name = `Hilfe ${randomUUID().slice(0, 8)}`;
+      return test.services.spaces.create(
+        owner,
+        org.id,
+        {
+          name,
+          key: await test.services.spaces.suggestKey(name),
+          type: "knowledgeBase",
+          audience: "public",
+          grants: [],
+        },
+        test.services.spacePermissions.holders,
+      );
+    };
+    const english = await create();
+    expect(await test.services.translations.settings(english.id)).toMatchObject({
+      defaultLanguage: "en",
+      languages: ["en"],
+    });
+    await test.settings.set(languageSetting, { organization: org.id }, "organization", "de");
+    const german = await create();
+    expect(await test.services.translations.settings(german.id)).toMatchObject({
+      defaultLanguage: "de",
+      languages: ["de"],
+    });
+  });
+
+  it("does not reveal a translation the editor cannot see", async () => {
+    const { org, editor, kb } = await setup();
+    const colleagueId = await member(org.id);
+    await test.services.spacePermissions.apply(editor, kb.id, {
+      action: "grant",
+      principalKind: "account",
+      principalId: colleagueId,
+      role: "editor",
+    });
+    const original = await article(editor, kb.id, "Drucker", "Drucker einrichten");
+    const english = await test.services.translations.create(editor, original, "en");
+    await test.services.pageAccess.change(editor, english.id, [{ action: "restrict", kind: "view" }]);
+    const colleague = accountPrincipal(colleagueId);
+    const hidden = await test.services.translations.create(colleague, original, "en").catch((error) => error);
+    expect(hidden).toMatchObject({ code: "translationExists" });
+    expect(hidden.details).toEqual({});
+    const shown = await test.services.translations.create(editor, original, "en").catch((error) => error);
+    expect(shown.details).toEqual({ translationId: english.id });
+  });
 
   it("keeps the languages of a knowledge base and audits changes", async () => {
     const { editor, kb } = await setup("signedIn", ["de"]);
