@@ -112,10 +112,29 @@ export function LanguagesScreen() {
             )}
             {value.searchUpdate ? (
               <Notice variant="info">
-                {t("knowledgeBase.languages.searchUpdate", {
-                  count: value.searchUpdate.remaining,
-                  total: value.searchUpdate.total,
-                })}
+                <div className="flex flex-col gap-2">
+                  <p>
+                    {t("knowledgeBase.languages.searchUpdate", {
+                      count: value.searchUpdate.remaining,
+                      total: value.searchUpdate.total,
+                    })}
+                  </p>
+                  <div
+                    role="progressbar"
+                    aria-label={t("knowledgeBase.languages.searchUpdateLabel")}
+                    aria-valuemin={0}
+                    aria-valuemax={value.searchUpdate.total}
+                    aria-valuenow={value.searchUpdate.total - value.searchUpdate.remaining}
+                    className="h-2 overflow-hidden rounded-full bg-surface-sunken"
+                  >
+                    <div
+                      className="h-full bg-accent transition-[width] motion-reduce:transition-none"
+                      style={{
+                        width: `${Math.round(((value.searchUpdate.total - value.searchUpdate.remaining) / value.searchUpdate.total) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                </div>
               </Notice>
             ) : null}
             <Section title={t("knowledgeBase.languages.section")} icon={Languages}>

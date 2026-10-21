@@ -9708,7 +9708,8 @@
       "single": "Only one language is enabled, so readers see nothing about languages.",
       "adminsOnly": "Only space admins change the languages. Ask one of them if a language is missing.",
       "archived": "The knowledge base is archived, so its languages cannot be changed. Restore it from the archive to change them.",
-      "searchUpdate": "{count, plural, one {Search is being updated: # of {total} articles left. Until then, portal search may not find it.} other {Search is being updated: # of {total} articles left. Until then, portal search may not find them.}}"
+      "searchUpdate": "{count, plural, one {Search is being updated: # of {total} articles left. Until then, portal search may not find it.} other {Search is being updated: # of {total} articles left. Until then, portal search may not find them.}}",
+      "searchUpdateLabel": "Search update"
     },
     "translations": {
       "button": "Languages",

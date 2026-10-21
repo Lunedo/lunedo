@@ -9708,7 +9708,8 @@
       "single": "Nur eine Sprache ist aktiviert, deshalb sehen Lesende nichts von Sprachen.",
       "adminsOnly": "Nur Bereichsadmins ändern die Sprachen. Frag eine von ihnen, wenn eine Sprache fehlt.",
       "archived": "Die Wissensdatenbank ist archiviert, ihre Sprachen lassen sich deshalb nicht ändern. Hol sie aus dem Archiv zurück, um sie zu ändern.",
-      "searchUpdate": "{count, plural, one {Die Suche wird aktualisiert: noch # von {total} Artikeln. Bis dahin findet die Portalsuche ihn eventuell nicht.} other {Die Suche wird aktualisiert: noch # von {total} Artikeln. Bis dahin findet die Portalsuche sie eventuell nicht.}}"
+      "searchUpdate": "{count, plural, one {Die Suche wird aktualisiert: noch # von {total} Artikeln. Bis dahin findet die Portalsuche ihn eventuell nicht.} other {Die Suche wird aktualisiert: noch # von {total} Artikeln. Bis dahin findet die Portalsuche sie eventuell nicht.}}",
+      "searchUpdateLabel": "Aktualisierung der Suche"
     },
     "translations": {
       "button": "Sprachen",

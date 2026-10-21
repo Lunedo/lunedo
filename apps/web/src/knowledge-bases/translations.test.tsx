@@ -106,6 +106,7 @@ describe("languages of a knowledge base", () => {
     await renderWithProviders(inSpace(<LanguagesScreen />));
     expect(await screen.findByText(/A change updates the search of all articles in the background/)).toBeTruthy();
     expect(screen.getByText(/Search is being updated: 2 of 140 articles left/)).toBeTruthy();
+    expect(screen.getByRole("progressbar", { name: "Search update" }).getAttribute("aria-valuenow")).toBe("138");
     remaining = 0;
     await waitFor(() => expect(screen.queryByText(/Search is being updated/)).toBeNull(), { timeout: 5000 });
   });

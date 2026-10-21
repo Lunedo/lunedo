@@ -347,11 +347,12 @@ function GalleryContent({
                     onRetry={() => categoryList.refetch()}
                   />
                 ) : (
-                  <Select
+                  <Combobox
+                    aria-label={t("gallery.article.category")}
                     value={articleCategory}
-                    onValueChange={setArticleCategory}
                     disabled={categoryList.isPending}
-                    options={categoryOptions(articleCategories, t("gallery.article.noCategory"))}
+                    items={categoryOptions(articleCategories, t("gallery.article.noCategory"))}
+                    onValueChange={(next) => setArticleCategory(next ?? NO_CATEGORY)}
                   />
                 )}
               </Field>
