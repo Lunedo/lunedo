@@ -7,6 +7,7 @@ import type { Encryption } from "../crypto/envelope.js";
 import type { Database, Executor } from "../database/database.js";
 import type { DatabasePool } from "../database/pool.js";
 import type { JobContext, JobQueue } from "../jobs/job-queue.js";
+import { isKnowledgeBase } from "../knowledge-bases/rules.js";
 import type { Logger } from "../logging/logger.js";
 import type { NotificationService } from "../notifications/service.js";
 import { isValidSpaceKey, normalizeSpaceKey, spaceKeyCandidates, suggestSpaceKey } from "../spaces/keys.js";
@@ -297,7 +298,7 @@ export class ImportWorker {
       await reader.scan(file, {
         staging,
         checkpoint: scanCheckpoint ?? {},
-        options: row.options ?? {},
+        options: { ...(row.options ?? {}), knowledgeBase: await this.#knowledgeBase(row) },
         history: row.history,
         signal,
         ...(row.target_space_id
@@ -507,7 +508,7 @@ export class ImportWorker {
           file,
           staging,
           reimport,
-          knowledgeBase: reimport === null && row.options?.knowledgeBase === true,
+          knowledgeBase: await this.#knowledgeBase(row),
           beat,
           progress: async (done, total) => {
             if (Date.now() - lastProgress < PROGRESS_MS && done < total) return;
@@ -532,6 +533,14 @@ export class ImportWorker {
     } finally {
       await file.close();
     }
+  }
+
+  async #knowledgeBase(row: {
+    readonly options: ImportOptions | null;
+    readonly target_space_id: string | null;
+  }): Promise<boolean> {
+    if (row.target_space_id === null) return row.options?.knowledgeBase === true;
+    return isKnowledgeBase(this.#database, row.target_space_id);
   }
 
   async #requireImporter(row: WorkRow): Promise<void> {

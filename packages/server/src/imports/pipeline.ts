@@ -444,7 +444,8 @@ export class ImportPipeline {
     spaceId: string,
     originalId: string,
     language: string,
-  ): Promise<"unknown" | "defaultLanguage" | "duplicate" | null> {
+    addLanguage: boolean,
+  ): Promise<"unknown" | "defaultLanguage" | "duplicate" | "notEnabled" | null> {
     if (!isArticleLanguage(language)) return "unknown";
     const found = await tx.execute<{ default_language: string; enabled: boolean; taken: boolean }>(sql`
       select kb.default_language, ${language} = any(kb.languages) as enabled,
@@ -454,6 +455,7 @@ export class ImportPipeline {
     if (!row || row.default_language === language) return "defaultLanguage";
     if (row.taken) return "duplicate";
     if (row.enabled) return null;
+    if (!addLanguage) return "notEnabled";
     await tx.execute(sql`
       update knowledge_bases set languages = array_append(languages, ${language}), updated_at = now()
       where space_id = ${spaceId}`);
@@ -466,6 +468,19 @@ export class ImportPipeline {
       update knowledge_bases set default_language = ${language}, languages = array[${language}]::text[], updated_at = now()
       where space_id = ${spaceId} and default_language <> ${language}
         and not exists (select 1 from tree_items t where t.space_id = ${spaceId} and t.kind = 'page')`);
+  }
+
+  async #placeableInKnowledgeBase(
+    tx: Transaction,
+    itemId: string,
+    parentId: string | null,
+  ): Promise<boolean> {
+    const result = await tx.execute<{ placeable: boolean }>(sql`
+      select s.type <> 'knowledgeBase' or (t.translation_of is null
+        and (${parentId}::uuid is null or exists (select 1 from tree_items p where p.id = ${parentId} and p.kind = 'folder')))
+        as placeable
+      from tree_items t join spaces s on s.id = t.space_id where t.id = ${itemId}`);
+    return result.rows[0]?.placeable === true;
   }
 
   async #inSpace(tx: Transaction, itemId: string, spaceId: string): Promise<boolean> {
@@ -650,8 +665,8 @@ export class ImportPipeline {
               await this.#adoptLanguage(tx, space.spaceId, article.language);
             }
             const refused =
-              article?.translation && article.language && parentId && !run.reimport
-                ? await this.#refusedTranslation(tx, space.spaceId, parentId, article.language)
+              article?.translation && article.language && parentId
+                ? await this.#refusedTranslation(tx, space.spaceId, parentId, article.language, !run.reimport)
                 : null;
             if (refused) {
               await recordProblems(tx, run.importId, [
@@ -669,8 +684,7 @@ export class ImportPipeline {
               ]);
               continue;
             }
-            const translationOf =
-              article?.translation && article.language && parentId && !run.reimport ? parentId : null;
+            const translationOf = article?.translation && article.language && parentId ? parentId : null;
             const position = await endPosition(tx, space.spaceId, parentId);
             await tx.execute(sql`
               insert into tree_items (id, space_id, parent_id, kind, position, title, link_url, mode, creator_id,
@@ -2402,6 +2416,7 @@ export class ImportPipeline {
                 and space_id = ${reimport.spaceId}) as found`);
           if (blocked.rows[0]?.found) follow = false;
         }
+        if (follow && !(await this.#placeableInKnowledgeBase(tx, itemId, parentId))) follow = false;
         if (follow) {
           const position = await endPosition(tx, reimport.spaceId, parentId);
           await tx.execute(sql`

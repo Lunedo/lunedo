@@ -340,8 +340,16 @@ export class MarkdownReader extends StagedConfluenceReader {
       sourceId: `md:${tree.root || "markdown"}`,
       data: { key: folderName, name: spaceName, homePageId: rootIndex ? pageIdOf(rootIndex) : null },
     });
+    const known =
+      knowledgeBase && context.knownPages
+        ? await context.knownPages(tree.markdown.map(pageIdOf))
+        : new Set<string>();
+    const order = [
+      ...tree.markdown.filter((path) => known.has(pageIdOf(path))),
+      ...tree.markdown.filter((path) => !known.has(pageIdOf(path))),
+    ];
     const skip = typeof context.checkpoint.files === "number" ? context.checkpoint.files : 0;
-    for (const [index, path] of tree.markdown.entries()) {
+    for (const [index, path] of order.entries()) {
       if (index < skip) continue;
       await this.#page(archive, tree, path, context, knowledgeBase ? { articles, claimed, placement } : null);
       if ((index + 1) % BATCH === 0) {

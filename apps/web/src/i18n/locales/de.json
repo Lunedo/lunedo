@@ -7688,7 +7688,7 @@
         "translationNotImported": {
           "title": "{count, plural, one {# Übersetzung passt} other {# Übersetzungen passen}} nicht zu den Sprachen",
           "hint": "Die Sprache im Front Matter passt nicht zur Wissensdatenbank. Prüfe die Dateien und übernimm ihren Text bei Bedarf in eine Übersetzung.",
-          "entry": "„{title}“: {reason, select, unknown {„{language}“ ist keine Sprache, die Pagehall anbietet} defaultLanguage {„{language}“ ist die Standardsprache} duplicate {der Artikel hat schon eine Übersetzung in „{language}“} other {die Sprache passt nicht}}. {outcome, select, separate {Die Datei wurde ein eigener Artikel.} skipped {Die Datei wurde nicht importiert.} other {}}"
+          "entry": "„{title}“: {reason, select, unknown {„{language}“ ist keine Sprache, die Pagehall anbietet} defaultLanguage {„{language}“ ist die Standardsprache} duplicate {der Artikel hat schon eine Übersetzung in „{language}“} notEnabled {„{language}“ gehört nicht zu den Sprachen der Wissensdatenbank} other {die Sprache passt nicht}}. {outcome, select, separate {Die Datei wurde ein eigener Artikel.} skipped {Die Datei wurde nicht importiert.} other {}}"
         },
         "embedNotAllowed": {
           "title": "{count, plural, one {# Einbettung wird} other {# Einbettungen werden}} als Link angezeigt",

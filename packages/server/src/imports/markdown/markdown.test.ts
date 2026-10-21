@@ -368,6 +368,142 @@ describe.skipIf(!baseUrl)("Markdown folder imports", () => {
     ]);
   });
 
+  describe("re-imports into a knowledge base", () => {
+    const article = (name: string, language: string, translation: boolean, text: string): ZipFileSpec => ({
+      name,
+      data: `---\npagehall:\n  kind: page\n  language: ${language}\n${translation ? "  translation: true\n" : ""}---\n${text}\n`,
+    });
+    const before: ZipFileSpec[] = [
+      article("hilfe/Geräte/Drucker/Drucker.md", "de", false, "Drucker einrichten."),
+      article("hilfe/Geräte/Telefon/Telefon.md", "de", false, "Telefon einrichten."),
+      article("hilfe/Geräte/Telefon/Phone.md", "en", true, "Set up the phone."),
+    ];
+
+    async function reimported(
+      added: ZipFileSpec[],
+      key: string,
+      removed: readonly string[] = [],
+      earlier: ZipFileSpec[] = [],
+    ) {
+      const organization = await fixtures.organization();
+      await test.settings.set(languageSetting, { organization: organization.id }, "organization", "de");
+      const first = await harness.importedFiles({
+        organizationId: organization.id,
+        admin: organization.owner,
+        source: "markdown",
+        files: [{ name: "hilfe.zip", data: createZip([...before, ...earlier]) }],
+        options: { knowledgeBase: true },
+        key,
+      });
+      await test.services.imports.accept(harness.as(organization.owner), first.id, {
+        visibility: "organization",
+        grants: [],
+      });
+      const spaceId = first.quarantineSpace?.id ?? "";
+      const again = await harness.importedFiles({
+        organizationId: organization.id,
+        admin: organization.owner,
+        source: "markdown",
+        files: [
+          {
+            name: "hilfe-2.zip",
+            data: createZip([
+              ...[...before, ...earlier].filter((file) => !removed.includes(file.name)),
+              ...added,
+            ]),
+          },
+        ],
+        spaceId,
+        key,
+      });
+      expect(again.state).toBe("review");
+      const applied = await harness.applyChanges(organization.owner, again.id);
+      expect(applied.errorCode).toBeNull();
+      const items = await test.database.execute<{
+        id: string;
+        title: string;
+        kind: string;
+        parent_id: string | null;
+        translation_of: string | null;
+        content_language: string | null;
+        numbered: boolean;
+      }>(sql`
+        select t.id, t.title, t.kind, t.parent_id, t.translation_of, t.content_language,
+          exists (select 1 from article_numbers n where n.item_id = t.id) as numbered
+        from tree_items t where t.space_id = ${spaceId} and t.trash_entry_id is null`);
+      return {
+        first,
+        again,
+        spaceId,
+        item: (title: string) => items.rows.find((row) => row.title === title),
+        byId: (id: string) => items.rows.find((row) => row.id === id),
+      };
+    }
+
+    it("imports a new translation file as a translation of its article", async () => {
+      const result = await reimported(
+        [article("hilfe/Geräte/Drucker/Printer.md", "en", true, "Set up the printer.")],
+        "MDKBTRANS",
+      );
+      const original = await harness.target(result.first.id, "page", "md:Geräte/Drucker/Drucker.md");
+      expect(result.item("Printer")).toMatchObject({
+        parent_id: original,
+        translation_of: original,
+        content_language: "en",
+        numbered: false,
+      });
+    });
+
+    it("keeps an article in its category when its file turns into a translation", async () => {
+      const result = await reimported(
+        [article("hilfe/Geräte/Drucker/Handbuch.md", "en", true, "Printer manual.")],
+        "MDKBMOVE",
+        ["hilfe/Geräte/Drucker/Handbuch.md"],
+        [{ name: "hilfe/Geräte/Drucker/Handbuch.md", data: "# Handbook\n\nDruckerhandbuch.\n" }],
+      );
+      const handbook = await harness.target(result.first.id, "page", "md:Geräte/Drucker/Handbuch.md");
+      expect(handbook).not.toBe("");
+      expect(result.byId(handbook)).toMatchObject({
+        parent_id: result.item("Geräte")?.id,
+        translation_of: null,
+      });
+    });
+
+    it("places new files by the rules of the knowledge base", async () => {
+      const result = await reimported(
+        [
+          article("hilfe/Geräte/Scanner/Scanner.md", "de", false, "Scanner einrichten."),
+          { name: "hilfe/Geräte/Drucker/Wartung.md", data: "# Wartung\n\nToner wechseln.\n" },
+          article("hilfe/Geräte/Drucker/Imprimante.md", "fr", true, "Configurer l'imprimante."),
+          article("hilfe/Geräte/Telefon/Phone again.md", "en", true, "Set up the phone again."),
+        ],
+        "MDKBRULES",
+      );
+      const category = result.item("Geräte");
+      expect(category?.kind).toBe("folder");
+      expect(result.item("Scanner")).toMatchObject({ kind: "page", parent_id: category?.id, numbered: true });
+      expect(result.item("Wartung")).toMatchObject({
+        kind: "page",
+        parent_id: category?.id,
+        translation_of: null,
+        numbered: true,
+      });
+      expect(result.item("Imprimante")).toBeUndefined();
+      expect(result.item("Phone again")).toMatchObject({ parent_id: category?.id, translation_of: null });
+      const languages = await test.database.execute<{ languages: string[] }>(
+        sql`select languages from knowledge_bases where space_id = ${result.spaceId}`,
+      );
+      expect([...(languages.rows[0]?.languages ?? [])].sort()).toEqual(["de", "en"]);
+      const problems = await test.database.execute<{ reason: string; language: string; outcome: string }>(sql`
+        select details ->> 'reason' as reason, details ->> 'language' as language, details ->> 'outcome' as outcome
+        from import_problems where import_id = ${result.again.id} and code = 'translationNotImported' order by 1`);
+      expect(problems.rows).toEqual([
+        { reason: "duplicate", language: "en", outcome: "separate" },
+        { reason: "notEnabled", language: "fr", outcome: "skipped" },
+      ]);
+    });
+  });
+
   it("starts a re-import of a Markdown space as a Markdown import", async () => {
     const organization = await fixtures.organization();
     const first = await harness.importedFiles({

@@ -7688,7 +7688,7 @@
         "translationNotImported": {
           "title": "{count, plural, one {# translation does} other {# translations do}} not fit the languages",
           "hint": "The language in the front matter does not fit the knowledge base. Check the files and move their text into a translation if needed.",
-          "entry": "“{title}”: {reason, select, unknown {“{language}” is not a language Pagehall offers} defaultLanguage {“{language}” is the default language} duplicate {the article already has a translation into “{language}”} other {the language does not fit}}. {outcome, select, separate {The file became a separate article.} skipped {The file was not imported.} other {}}"
+          "entry": "“{title}”: {reason, select, unknown {“{language}” is not a language Pagehall offers} defaultLanguage {“{language}” is the default language} duplicate {the article already has a translation into “{language}”} notEnabled {“{language}” is not one of the languages of the knowledge base} other {the language does not fit}}. {outcome, select, separate {The file became a separate article.} skipped {The file was not imported.} other {}}"
         },
         "embedNotAllowed": {
           "title": "{count, plural, one {# embed is} other {# embeds are}} shown as a link",
