@@ -94,12 +94,15 @@ describe("portal accounts of a knowledge base", () => {
   });
 
   it("explains that only knowledge bases for portal accounts take readers", async () => {
-    mockApi({
+    const api = mockApi({
       [`GET /api/v1/spaces/${SPACE_ID}/portal-accounts`]: () => ({ body: { accounts: [], invitations: [] } }),
     });
     await renderWithProviders(inSpace(<PortalAccountsScreen />, "signedIn"));
     expect(await screen.findByText("This knowledge base is not for portal accounts")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Invite reader" })).toBeNull();
+    await waitFor(() => expect(api.requests.length).toBeGreaterThan(0));
+    expect(screen.queryByText("No portal accounts yet")).toBeNull();
+    expect(screen.queryByText(/Invite readers by e-mail/)).toBeNull();
   });
 
   it("tells space admins without member management who manages portal accounts", async () => {

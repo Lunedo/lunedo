@@ -200,65 +200,67 @@ export function PortalAccountsScreen() {
         ) : null}
         {accounts.data ? (
           <>
-            <Section
-              title={t("portalAccounts.accounts")}
-              icon={Users}
-              actions={
-                forPortal ? (
-                  <Button variant="primary" size="sm" icon={UserPlus} onClick={() => setInviting(true)}>
-                    {t("portalAccounts.invite.open")}
-                  </Button>
-                ) : null
-              }
-            >
-              {accounts.data.accounts.length === 0 ? (
-                <EmptyState
-                  icon={UserRound}
-                  title={t("portalAccounts.emptyTitle")}
-                  description={t("portalAccounts.emptyDescription")}
-                />
-              ) : (
-                <List label={t("portalAccounts.accounts")}>
-                  {accounts.data.accounts.map((account) => (
-                    <ListRow
-                      key={account.id}
-                      icon={UserRound}
-                      title={
-                        <span className="flex flex-wrap items-center gap-2">
-                          <span className="truncate" title={account.name}>
-                            {account.name}
+            {forPortal || accounts.data.accounts.length > 0 ? (
+              <Section
+                title={t("portalAccounts.accounts")}
+                icon={Users}
+                actions={
+                  forPortal ? (
+                    <Button variant="primary" size="sm" icon={UserPlus} onClick={() => setInviting(true)}>
+                      {t("portalAccounts.invite.open")}
+                    </Button>
+                  ) : null
+                }
+              >
+                {accounts.data.accounts.length === 0 ? (
+                  <EmptyState
+                    icon={UserRound}
+                    title={t("portalAccounts.emptyTitle")}
+                    description={t("portalAccounts.emptyDescription")}
+                  />
+                ) : (
+                  <List label={t("portalAccounts.accounts")}>
+                    {accounts.data.accounts.map((account) => (
+                      <ListRow
+                        key={account.id}
+                        icon={UserRound}
+                        title={
+                          <span className="flex flex-wrap items-center gap-2">
+                            <span className="truncate" title={account.name}>
+                              {account.name}
+                            </span>
+                            {account.state === "deactivated" ? (
+                              <Badge variant="neutral">{t("portalAccounts.deactivated")}</Badge>
+                            ) : null}
                           </span>
-                          {account.state === "deactivated" ? (
-                            <Badge variant="neutral">{t("portalAccounts.deactivated")}</Badge>
-                          ) : null}
-                        </span>
-                      }
-                      description={[
-                        account.email,
-                        account.expiresAt
-                          ? t("portalAccounts.expiresOn", { date: format.date(account.expiresAt) })
-                          : t("portalAccounts.noExpiry"),
-                        account.lastSignInAt
-                          ? t("portalAccounts.lastSignIn", { when: format.relative(account.lastSignInAt) })
-                          : t("portalAccounts.neverSignedIn"),
-                      ].join(" · ")}
-                      actions={
-                        <span className="flex flex-wrap gap-2">
-                          {account.state === "active" && !account.otherOrganizations ? (
-                            <Button variant="secondary" size="sm" onClick={() => setDeactivating(account)}>
-                              {t("portalAccounts.deactivate")}
+                        }
+                        description={[
+                          account.email,
+                          account.expiresAt
+                            ? t("portalAccounts.expiresOn", { date: format.date(account.expiresAt) })
+                            : t("portalAccounts.noExpiry"),
+                          account.lastSignInAt
+                            ? t("portalAccounts.lastSignIn", { when: format.relative(account.lastSignInAt) })
+                            : t("portalAccounts.neverSignedIn"),
+                        ].join(" · ")}
+                        actions={
+                          <span className="flex flex-wrap gap-2">
+                            {account.state === "active" && !account.otherOrganizations ? (
+                              <Button variant="secondary" size="sm" onClick={() => setDeactivating(account)}>
+                                {t("portalAccounts.deactivate")}
+                              </Button>
+                            ) : null}
+                            <Button variant="danger" size="sm" onClick={() => setRemoving(account)}>
+                              {t("portalAccounts.remove")}
                             </Button>
-                          ) : null}
-                          <Button variant="danger" size="sm" onClick={() => setRemoving(account)}>
-                            {t("portalAccounts.remove")}
-                          </Button>
-                        </span>
-                      }
-                    />
-                  ))}
-                </List>
-              )}
-            </Section>
+                          </span>
+                        }
+                      />
+                    ))}
+                  </List>
+                )}
+              </Section>
+            ) : null}
             {accounts.data.invitations.length > 0 ? (
               <Section title={t("portalAccounts.invitations")} icon={Mail}>
                 <List label={t("portalAccounts.invitations")}>
