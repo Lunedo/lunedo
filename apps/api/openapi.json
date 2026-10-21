@@ -16095,6 +16095,18 @@
                       ],
                       "description": "Type of an article in a knowledge base, or null for other items and articles without a type."
                     },
+                    "translationOf": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Original article of a translation in a knowledge base, or null. A translation is listed below its original; `contentLanguage` is its language."
+                    },
                     "ownerId": {
                       "anyOf": [
                         {
@@ -16205,6 +16217,7 @@
                     "creatorId",
                     "contentLanguage",
                     "articleType",
+                    "translationOf",
                     "ownerId",
                     "status",
                     "createdAt",
@@ -16235,6 +16248,7 @@
                   "ownerId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                   "contentLanguage": null,
                   "articleType": null,
+                  "translationOf": null,
                   "status": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
                     "builtIn": "verified",
@@ -127172,6 +127186,18 @@
                         ],
                         "description": "Type of an article in a knowledge base, or null for other items and articles without a type."
                       },
+                      "translationOf": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Original article of a translation in a knowledge base, or null. A translation is listed below its original; `contentLanguage` is its language."
+                      },
                       "ownerId": {
                         "anyOf": [
                           {
@@ -127290,6 +127316,7 @@
                       "creatorId",
                       "contentLanguage",
                       "articleType",
+                      "translationOf",
                       "ownerId",
                       "status",
                       "createdAt",
@@ -127325,6 +127352,7 @@
                     "ownerId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                     "contentLanguage": null,
                     "articleType": null,
+                    "translationOf": null,
                     "status": {
                       "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
                       "builtIn": "verified",
@@ -128115,6 +128143,18 @@
                       ],
                       "description": "Type of an article in a knowledge base, or null for other items and articles without a type."
                     },
+                    "translationOf": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Original article of a translation in a knowledge base, or null. A translation is listed below its original; `contentLanguage` is its language."
+                    },
                     "ownerId": {
                       "anyOf": [
                         {
@@ -128362,6 +128402,7 @@
                     "creatorId",
                     "contentLanguage",
                     "articleType",
+                    "translationOf",
                     "ownerId",
                     "status",
                     "createdAt",
@@ -128399,6 +128440,7 @@
                   "ownerId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                   "contentLanguage": null,
                   "articleType": null,
+                  "translationOf": null,
                   "status": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
                     "builtIn": "verified",
@@ -128879,6 +128921,18 @@
                       ],
                       "description": "Type of an article in a knowledge base, or null for other items and articles without a type."
                     },
+                    "translationOf": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Original article of a translation in a knowledge base, or null. A translation is listed below its original; `contentLanguage` is its language."
+                    },
                     "ownerId": {
                       "anyOf": [
                         {
@@ -128989,6 +129043,7 @@
                     "creatorId",
                     "contentLanguage",
                     "articleType",
+                    "translationOf",
                     "ownerId",
                     "status",
                     "createdAt",
@@ -129019,6 +129074,7 @@
                   "ownerId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                   "contentLanguage": null,
                   "articleType": null,
+                  "translationOf": null,
                   "status": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
                     "builtIn": "verified",
@@ -130191,6 +130247,18 @@
                       ],
                       "description": "Type of an article in a knowledge base, or null for other items and articles without a type."
                     },
+                    "translationOf": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Original article of a translation in a knowledge base, or null. A translation is listed below its original; `contentLanguage` is its language."
+                    },
                     "ownerId": {
                       "anyOf": [
                         {
@@ -130301,6 +130369,7 @@
                     "creatorId",
                     "contentLanguage",
                     "articleType",
+                    "translationOf",
                     "ownerId",
                     "status",
                     "createdAt",
@@ -130331,6 +130400,7 @@
                   "ownerId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                   "contentLanguage": null,
                   "articleType": null,
+                  "translationOf": null,
                   "status": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
                     "builtIn": "verified",
@@ -131873,6 +131943,18 @@
                       ],
                       "description": "Type of an article in a knowledge base, or null for other items and articles without a type."
                     },
+                    "translationOf": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Original article of a translation in a knowledge base, or null. A translation is listed below its original; `contentLanguage` is its language."
+                    },
                     "ownerId": {
                       "anyOf": [
                         {
@@ -131983,6 +132065,7 @@
                     "creatorId",
                     "contentLanguage",
                     "articleType",
+                    "translationOf",
                     "ownerId",
                     "status",
                     "createdAt",
@@ -132013,6 +132096,7 @@
                   "ownerId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                   "contentLanguage": null,
                   "articleType": null,
+                  "translationOf": null,
                   "status": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
                     "builtIn": "verified",
@@ -185218,6 +185302,18 @@
                       ],
                       "description": "Type of an article in a knowledge base, or null for other items and articles without a type."
                     },
+                    "translationOf": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Original article of a translation in a knowledge base, or null. A translation is listed below its original; `contentLanguage` is its language."
+                    },
                     "ownerId": {
                       "anyOf": [
                         {
@@ -185328,6 +185424,7 @@
                     "creatorId",
                     "contentLanguage",
                     "articleType",
+                    "translationOf",
                     "ownerId",
                     "status",
                     "createdAt",
@@ -185358,6 +185455,7 @@
                   "ownerId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                   "contentLanguage": "de",
                   "articleType": null,
+                  "translationOf": null,
                   "status": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
                     "builtIn": "verified",
@@ -216209,6 +216307,18 @@
                             ],
                             "description": "Type of an article in a knowledge base, or null for other items and articles without a type."
                           },
+                          "translationOf": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Original article of a translation in a knowledge base, or null. A translation is listed below its original; `contentLanguage` is its language."
+                          },
                           "ownerId": {
                             "anyOf": [
                               {
@@ -216319,6 +216429,7 @@
                           "creatorId",
                           "contentLanguage",
                           "articleType",
+                          "translationOf",
                           "ownerId",
                           "status",
                           "createdAt",
@@ -216368,6 +216479,7 @@
                       "ownerId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                       "contentLanguage": null,
                       "articleType": null,
+                      "translationOf": null,
                       "status": {
                         "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
                         "builtIn": "verified",
@@ -216968,6 +217080,18 @@
                       ],
                       "description": "Type of an article in a knowledge base, or null for other items and articles without a type."
                     },
+                    "translationOf": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Original article of a translation in a knowledge base, or null. A translation is listed below its original; `contentLanguage` is its language."
+                    },
                     "ownerId": {
                       "anyOf": [
                         {
@@ -217078,6 +217202,7 @@
                     "creatorId",
                     "contentLanguage",
                     "articleType",
+                    "translationOf",
                     "ownerId",
                     "status",
                     "createdAt",
@@ -217108,6 +217233,7 @@
                   "ownerId": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
                   "contentLanguage": null,
                   "articleType": null,
+                  "translationOf": null,
                   "status": {
                     "id": "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a60",
                     "builtIn": "verified",

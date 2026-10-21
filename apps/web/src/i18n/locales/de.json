@@ -5445,7 +5445,9 @@
     "editRestricted": "Eingeschränkt: Nur die Zugriffsliste kann sie bearbeiten",
     "newWhiteboard": "Neues Whiteboard",
     "newWhiteboardInside": "Neues Whiteboard darin",
-    "copy": "Kopieren…"
+    "copy": "Kopieren…",
+    "translationLabel": "{title} (Übersetzung: {language})",
+    "translationInto": "Übersetzung: {language}"
   },
   "move": {
     "title": "{title} verschieben",

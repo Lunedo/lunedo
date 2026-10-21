@@ -81,6 +81,7 @@ export interface TreeItem {
   ownerId: string | null;
   contentLanguage: ContentLanguage | null;
   articleType: ArticleType | null;
+  translationOf: string | null;
   status: PageStatus | null;
   createdAt: Date;
   updatedAt: Date;
@@ -145,6 +146,7 @@ type ItemRow = {
   owner_id: string | null;
   content_language: string | null;
   article_type: ArticleType | null;
+  translation_of: string | null;
   status_id: string | null;
   status_built_in: BuiltInPageStatus | null;
   status_name: string | null;
@@ -232,6 +234,7 @@ function toItem(row: ItemRow): TreeItem {
     ownerId: row.owner_id,
     contentLanguage: contentLanguageOf(row.content_language),
     articleType: row.article_type,
+    translationOf: row.translation_of,
     status:
       row.status_id && row.status_color
         ? { id: row.status_id, builtIn: row.status_built_in, name: row.status_name, color: row.status_color }
@@ -504,7 +507,7 @@ export class TreeService {
         (lt.trash_entry_id is not null and ${this.#authorization.itemFilter(viewer, sql`lt`, sql`ls`)}
           and ${publishedFor(this.#authorization, viewer, sql`lt`, sql`ls`)}) as link_in_trash,
         lt.space_id as link_space_id, ls.key as link_space_key, lt.kind as link_kind, lt.title as link_title,
-        t.creator_id, t.owner_id, t.content_language, t.article_type, sv.id as status_id, sv.built_in as status_built_in, sv.name as status_name,
+        t.creator_id, t.owner_id, t.content_language, t.article_type, t.translation_of, sv.id as status_id, sv.built_in as status_built_in, sv.name as status_name,
         sv.color as status_color, t.created_at, t.updated_at, t.content_updated_at
       from tree_items t
       join spaces ts on ts.id = t.space_id

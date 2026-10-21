@@ -10,7 +10,7 @@ import {
 } from "@pagehall/ui";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { ChevronDown, ChevronRight, ExternalLink, Lock, MoreHorizontal } from "lucide-react";
+import { ChevronDown, ChevronRight, ExternalLink, Languages, Lock, MoreHorizontal } from "lucide-react";
 import {
   createContext,
   type DragEvent,
@@ -27,6 +27,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { request } from "../../api/request.js";
 import { problemMessage } from "../../errors/problem-message.js";
+import { contentLanguageLabel } from "../../search/content-language.js";
 import { WhiteboardPreview } from "../../whiteboards/whiteboard-preview.js";
 import { itemIcon } from "../item-icons.js";
 import { isExternal, itemHref } from "../item-paths.js";
@@ -281,7 +282,7 @@ export function PageTree({
         break;
       case "Enter":
         event.preventDefault();
-        current.querySelector<HTMLAnchorElement>("a")?.click();
+        current.querySelector<HTMLElement>(current.dataset.treeAction === undefined ? "a" : "button")?.click();
         break;
     }
   };
@@ -319,27 +320,44 @@ function LevelLoading({ depth, hidden = false }: { depth: number; hidden?: boole
   );
 }
 
-function LevelLoadFailed({ onRetry }: { onRetry: () => void }) {
+function LevelLoadFailed({ onRetry, depth }: { onRetry: () => void; depth?: number }) {
   const { t } = useTranslation();
+  const inTree = depth !== undefined;
   return (
-    <div role="none" className="px-2 py-1 text-sm text-danger">
+    <div
+      {...(inTree
+        ? {
+            role: "treeitem",
+            "aria-level": depth,
+            "aria-label": `${t("tree.loadFailed")} ${t("ui.retry")}`,
+            tabIndex: -1,
+            "data-tree-action": "",
+            style: { paddingInlineStart: indent(depth) },
+          }
+        : { role: "none" })}
+      className="rounded-sm px-2 py-1 text-sm text-danger outline-none focus-visible:focus-ring"
+    >
       {t("tree.loadFailed")}{" "}
-      <button type="button" className="text-accent underline" onClick={onRetry}>
+      <button type="button" tabIndex={inTree ? -1 : 0} className="text-accent underline" onClick={onRetry}>
         {t("ui.retry")}
       </button>
     </div>
   );
 }
 
+function translationsFirst(items: TreeItem[]): TreeItem[] {
+  return [...items.filter((item) => item.translationOf), ...items.filter((item) => !item.translationOf)];
+}
+
 function TreeLevel({ parentId, depth }: { parentId: string | null; depth: number }) {
   const { t } = useTranslation();
   const tree = useTree();
   const children = useChildren(tree.space.id, parentId);
-  const items = children.data?.pages.flatMap((page) => page.items) ?? [];
+  const items = translationsFirst(children.data?.pages.flatMap((page) => page.items) ?? []);
   const { loading } = tree;
   useLayoutEffect(() => (children.isPending ? loading() : undefined), [children.isPending, loading]);
   if (children.isPending) return <LevelLoading depth={depth} hidden />;
-  if (children.isError) return <LevelLoadFailed onRetry={() => void children.refetch()} />;
+  if (children.isError) return <LevelLoadFailed depth={depth} onRetry={() => void children.refetch()} />;
   return (
     <>
       {items.map((item, index) => (
@@ -354,10 +372,19 @@ function TreeLevel({ parentId, depth }: { parentId: string | null; depth: number
         />
       ))}
       {children.hasNextPage ? (
-        <div role="none" style={{ paddingInlineStart: indent(depth + 1) }}>
+        <div
+          role="treeitem"
+          aria-level={depth}
+          aria-label={children.isFetchingNextPage ? t("tree.loading") : t("tree.showMore")}
+          tabIndex={-1}
+          data-tree-action=""
+          className="rounded-sm outline-none focus-visible:focus-ring"
+          style={{ paddingInlineStart: indent(depth + 1) }}
+        >
           <button
             type="button"
-            className="h-row rounded-sm px-2 text-sm text-accent hover:underline focus-visible:focus-ring"
+            tabIndex={-1}
+            className="h-row rounded-sm px-2 text-sm text-accent hover:underline"
             onClick={() => void children.fetchNextPage()}
           >
             {children.isFetchingNextPage ? t("tree.loading") : t("tree.showMore")}
@@ -383,10 +410,12 @@ function TreeNode({
   previousId: string | null;
   nextId: string | null;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const tree = useTree();
   const navigate = useNavigate();
   const actions = useItemActions(tree.space, item, tree.currentId);
+  const language = item.translationOf && item.contentLanguage ? item.contentLanguage : null;
+  const languageName = language ? contentLanguageLabel(t, language, i18n.language) : null;
   const expandable = item.hasChildren;
   const open = tree.expanded.has(item.id);
   const current = tree.currentId === item.id;
@@ -395,7 +424,7 @@ function TreeNode({
   const external = href !== null && isExternal(href);
   const title = item.kind === "link" && !item.link?.accessible ? t("tree.noAccess") : item.title;
   const target = tree.dropTarget?.id === item.id ? tree.dropTarget.zone : null;
-  const Glyph = item.kind === "link" && external ? ExternalLink : itemIcon(item.kind);
+  const Glyph = language ? Languages : item.kind === "link" && external ? ExternalLink : itemIcon(item.kind);
 
   const onDragStart = (event: DragEvent<HTMLElement>) => {
     tree.dragged.current = { item, previousId, nextId };
@@ -421,7 +450,7 @@ function TreeNode({
         aria-posinset={position}
         aria-selected={current}
         {...(expandable ? { "aria-expanded": open } : {})}
-        aria-label={title}
+        aria-label={languageName ? t("tree.translationLabel", { title, language: languageName }) : title}
         data-item-id={item.id}
         data-parent-id={item.parentId ?? ""}
         data-expandable={expandable}
@@ -514,6 +543,11 @@ function TreeNode({
             {title}
           </span>
         )}
+        {language && languageName ? (
+          <span title={t("tree.translationInto", { language: languageName })} className="shrink-0">
+            <Badge variant="neutral">{language.toUpperCase()}</Badge>
+          </span>
+        ) : null}
         {item.kind === "link" && !item.link?.accessible ? (
           <Lock aria-hidden="true" className="size-icon-sm shrink-0 text-text-muted" />
         ) : null}

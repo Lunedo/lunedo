@@ -5445,7 +5445,9 @@
     "editRestricted": "Restricted: only the access list can edit it",
     "newWhiteboard": "New whiteboard",
     "newWhiteboardInside": "New whiteboard inside",
-    "copy": "Copy…"
+    "copy": "Copy…",
+    "translationLabel": "{title} ({language} translation)",
+    "translationInto": "Translation into {language}"
   },
   "move": {
     "title": "Move {title}",

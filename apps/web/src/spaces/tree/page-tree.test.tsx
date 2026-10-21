@@ -82,4 +82,58 @@ describe("PageTree", () => {
     const tree = screen.getByRole("tree", { name: "Page tree" });
     await waitFor(() => expect(tree.hasAttribute("aria-busy")).toBe(false));
   });
+
+  it("lists translations first below their original and names their language", async () => {
+    const original = { ...folder, kind: "page", title: "Set up the VPN", hasChildren: true };
+    mockApi({
+      [items]: ({ path }) =>
+        path.includes("parentId=")
+          ? {
+              body: {
+                items: [
+                  { ...original, id: child, title: "Split tunnel", parentId: original.id, hasChildren: false },
+                  {
+                    ...original,
+                    id: "0192f0c4-7c3a-7d2e-9f4b-3c2d1e0f5a43",
+                    title: "Set up the VPN",
+                    parentId: original.id,
+                    hasChildren: false,
+                    translationOf: original.id,
+                    contentLanguage: "de",
+                  },
+                ],
+                nextCursor: null,
+              },
+            }
+          : { body: { items: [original], nextCursor: null } },
+    });
+    await renderWithProviders(inSpace(<PageTree space={space} currentId={null} ancestors={[original.id]} />));
+    const tree = await screen.findByRole("tree", { name: "Page tree" });
+    const translation = await within(tree).findByRole("treeitem", { name: "Set up the VPN (German translation)" });
+    expect(within(translation).getByText("DE")).toBeTruthy();
+    const levelTwo = within(tree)
+      .getAllByRole("treeitem")
+      .filter((item) => item.getAttribute("aria-level") === "2");
+    expect(levelTwo.map((item) => item.getAttribute("aria-label"))).toEqual([
+      "Set up the VPN (German translation)",
+      "Split tunnel",
+    ]);
+  });
+
+  it("offers more children and a failed level as items of the tree", async () => {
+    mockApi({
+      [items]: ({ path }) =>
+        path.includes("parentId=")
+          ? problem(500, "internal")
+          : { body: { items: [folder], nextCursor: "next" } },
+    });
+    await renderWithProviders(inSpace(<PageTree space={space} currentId={null} ancestors={[folder.id]} />));
+    const tree = await screen.findByRole("tree", { name: "Page tree" });
+    expect(await within(tree).findByRole("treeitem", { name: "Show more" })).toBeTruthy();
+    const failed = await within(tree).findByRole("treeitem", { name: /Try again/ });
+    expect(within(failed).getByRole("button", { name: "Try again" })).toBeTruthy();
+    for (const button of within(tree).getAllByRole("button", { hidden: true })) {
+      expect(button.closest('[role="treeitem"]')).not.toBeNull();
+    }
+  });
 });

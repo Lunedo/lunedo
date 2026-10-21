@@ -455,6 +455,9 @@ export const treeItemSchema = z
       .describe(
         "Type of an article in a knowledge base, or null for other items and articles without a type.",
       ),
+    translationOf: uuid(
+      "Original article of a translation in a knowledge base, or null. A translation is listed below its original; `contentLanguage` is its language.",
+    ).nullable(),
     ownerId: uuid(
       "Owner of the item, or null. The owner stays set when the person leaves; `owner.active` in the item details says whether the item has an active owner.",
     ).nullable(),
@@ -488,6 +491,7 @@ export const exampleItem = {
   ownerId: "01929b1e-7c3a-7d2e-9f4b-3c2d1e0f5a20",
   contentLanguage: null,
   articleType: null,
+  translationOf: null,
   status: examplePageStatus,
   createdAt: "2026-10-05T08:00:00.000Z",
   updatedAt: "2026-10-05T08:00:00.000Z",
