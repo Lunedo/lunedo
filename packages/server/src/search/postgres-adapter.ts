@@ -254,7 +254,9 @@ export class PostgresSearchAdapter implements SearchAdapter {
     const languages = request.articleLanguages;
     if (languages) conditions.push(sql`c.language in (${languages.preferred}, ${languages.fallback})`);
     const baseScore =
-      request.usageBoost && viewer.accountId ? sql`(${parts.score}) * (1 + ${usageBoost(sql`rv`)})` : parts.score;
+      request.usageBoost && viewer.accountId
+        ? sql`(${parts.score}) * (1 + ${usageBoost(sql`rv`)})`
+        : parts.score;
     const score = languages
       ? sql`(${baseScore}) + case when c.language = ${languages.preferred} then ${PREFERRED_LANGUAGE_RANK} else 0 end`
       : baseScore;
@@ -352,7 +354,12 @@ export class PostgresSearchAdapter implements SearchAdapter {
     };
   }
 
-  #visibleArticles(viewer: SearchViewer, spaceId: string, language: string | null, everyLanguage = false): SQL {
+  #visibleArticles(
+    viewer: SearchViewer,
+    spaceId: string,
+    language: string | null,
+    everyLanguage = false,
+  ): SQL {
     const visible = sql`select distinct on (c.item_id) c.item_id, c.title, c.content_updated_at,
         array_remove(t.path, t.translation_of) as path, t.translation_of, c.language,
         coalesce(t.article_type::text, 'none') as article_type

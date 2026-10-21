@@ -84,7 +84,9 @@ describe("portal markup", () => {
 describe("the language choice of the portal", () => {
   it("hides the browser's disclosure marker and marks the current language", () => {
     expect(portalCss).toContain(".dd.lang summary::-webkit-details-marker{display:none}");
-    expect(portalCss).toMatch(/\.dd\.lang summary\{display:inline-flex;align-items:center;gap:[^;]+;[^}]*list-style:none/);
+    expect(portalCss).toMatch(
+      /\.dd\.lang summary\{display:inline-flex;align-items:center;gap:[^;]+;[^}]*list-style:none/,
+    );
     expect(portalCss).toContain('.dd.lang .menu a[aria-current="true"]{font-weight:600}');
   });
 });

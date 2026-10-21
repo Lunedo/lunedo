@@ -149,7 +149,9 @@ describe("accepting an invitation", () => {
   });
 
   it("shows the account form at once when accepting creates an account and marks every invalid field", async () => {
-    const { requests } = api(() => ({ body: { ...OPEN, knowledgeBaseName: "Kundenhilfe", newAccount: true } }));
+    const { requests } = api(() => ({
+      body: { ...OPEN, knowledgeBaseName: "Kundenhilfe", newAccount: true },
+    }));
     await open(`/accept-invitation#token=${TOKEN}`);
     expect(await screen.findByRole("heading", { name: "Read Kundenhilfe" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Accept invitation" })).toBeNull();

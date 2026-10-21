@@ -107,7 +107,11 @@ describe("search script of a static website", () => {
   it("keeps the query in every search field and shows an excerpt with the matches marked", async () => {
     const { inputs, part } = await run("printer", {
       "search-index.json": index([
-        { title: "Set up the printer", text: "The printer in the hallway prints in color.", url: "en/7-printer.html" },
+        {
+          title: "Set up the printer",
+          text: "The printer in the hallway prints in color.",
+          url: "en/7-printer.html",
+        },
       ]),
       "../search-index.json": index([]),
     });
@@ -118,7 +122,9 @@ describe("search script of a static website", () => {
     expect(path?.textContent).toBe("How-to · IT");
     expect(link).toMatchObject({ href: "../en/7-printer.html", textContent: "Set up the printer" });
     expect(excerpt?.text).toBe("The printer in the hallway prints in color.");
-    expect(excerpt?.children.filter((child) => child instanceof FakeElement && child.tag === "mark")).toHaveLength(1);
+    expect(
+      excerpt?.children.filter((child) => child instanceof FakeElement && child.tag === "mark"),
+    ).toHaveLength(1);
     expect(part("[data-empty]").hidden).toBe(true);
   });
 
@@ -129,12 +135,20 @@ describe("search script of a static website", () => {
       ]),
       "../search-index.json": index([
         { title: "VPN einrichten", text: "VPN-Client installieren.", url: "1-vpn.html", number: 1 },
-        { title: "VPN trennt die Verbindung", text: "Das VPN bricht ab.", url: "2-vpn-trennt.html", number: 2 },
+        {
+          title: "VPN trennt die Verbindung",
+          text: "Das VPN bricht ab.",
+          url: "2-vpn-trennt.html",
+          number: 2,
+        },
       ]),
     });
     expect(requested).toEqual(["search-index.json", "../search-index.json"]);
     const items = part("[data-results]").children.map(element);
-    expect(items.map((item) => element(item.children[1]).href)).toEqual(["../en/1-vpn.html", "../2-vpn-trennt.html"]);
+    expect(items.map((item) => element(item.children[1]).href)).toEqual([
+      "../en/1-vpn.html",
+      "../2-vpn-trennt.html",
+    ]);
     expect(items[1]?.lang).toBe("de");
     expect(element(items[1]?.children[0]).text).toContain("Deutsch");
     expect(part("[data-heading]").textContent).toBe("2 articles for “vpn”");

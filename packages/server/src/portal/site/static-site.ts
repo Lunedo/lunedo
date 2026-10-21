@@ -87,7 +87,11 @@ function walk(node: NodeJson, visit: (node: NodeJson) => void): void {
 
 function excerptOf(article: SiteArticle): string {
   const lead = article.found.lead.trim();
-  const text = lead || extractSections(article.document).map((section) => section.text).join(" ");
+  const text =
+    lead ||
+    extractSections(article.document)
+      .map((section) => section.text)
+      .join(" ");
   return text.replace(/\s+/g, " ").trim().slice(0, EXCERPT);
 }
 

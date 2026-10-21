@@ -27,13 +27,11 @@ describe("creating a folder", () => {
     mockApi({});
     await renderWithProviders(
       inRouter(
-        <>
-          <CreateItemDialog
-            space={knowledgeBase}
-            request={{ kind: "folder", parentId: null }}
-            onOpenChange={() => undefined}
-          />
-        </>,
+        <CreateItemDialog
+          space={knowledgeBase}
+          request={{ kind: "folder", parentId: null }}
+          onOpenChange={() => undefined}
+        />,
       ),
     );
     const dialog = await screen.findByRole("dialog", { name: "New category" });

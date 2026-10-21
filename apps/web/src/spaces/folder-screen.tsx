@@ -180,7 +180,9 @@ function FolderContents({ folderId, view }: { folderId: string; view: "list" | "
       <EmptyState
         icon={Folder}
         title={knowledgeBase ? t("knowledgeBase.category.empty") : t("folder.empty")}
-        description={knowledgeBase ? t("knowledgeBase.category.emptyDescription") : t("folder.emptyDescription")}
+        description={
+          knowledgeBase ? t("knowledgeBase.category.emptyDescription") : t("folder.emptyDescription")
+        }
         action={
           canEdit ? (
             <Button variant="primary" icon={FilePlus} onClick={() => openCreate("page", folderId)}>

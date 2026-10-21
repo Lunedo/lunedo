@@ -858,7 +858,10 @@ export function staticSearchPage(view: PortalView, data: StaticSearchData): stri
           <div class="tips"><div><b>${t.tipSpelling}</b>${t.tipSpellingText}</div><div><b>${t.tipGeneral}</b>${t.tipGeneralText}</div>
             <div><b>${t.tipBrowse}</b>${view.categories
               .filter((category) => category.parentId === null)
-              .map((category, index) => html`${index > 0 ? ", " : ""}<a href="${view.links.category(category.id)}">${category.title}</a>`)}</div></div>
+              .map(
+                (category, index) =>
+                  html`${index > 0 ? ", " : ""}<a href="${view.links.category(category.id)}">${category.title}</a>`,
+              )}</div></div>
           <p class="gap-top"><a class="btn" href="${view.links.contact()}">${icon("mail")}${t.contactByArea}</a></p></div>
         <div class="alert" role="alert" data-failed hidden>${icon("circle-alert")}<div><b>${t.searchFailedHeading}</b><p>${t.staticSearchFailed}</p></div></div>
         <noscript><p class="hint">${t.staticSearchNeedsScript}</p></noscript>

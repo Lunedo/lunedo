@@ -91,7 +91,13 @@ describe("PageTree", () => {
           ? {
               body: {
                 items: [
-                  { ...original, id: child, title: "Split tunnel", parentId: original.id, hasChildren: false },
+                  {
+                    ...original,
+                    id: child,
+                    title: "Split tunnel",
+                    parentId: original.id,
+                    hasChildren: false,
+                  },
                   {
                     ...original,
                     id: "0192f0c4-7c3a-7d2e-9f4b-3c2d1e0f5a43",
@@ -109,7 +115,9 @@ describe("PageTree", () => {
     });
     await renderWithProviders(inSpace(<PageTree space={space} currentId={null} ancestors={[original.id]} />));
     const tree = await screen.findByRole("tree", { name: "Page tree" });
-    const translation = await within(tree).findByRole("treeitem", { name: "Set up the VPN (German translation)" });
+    const translation = await within(tree).findByRole("treeitem", {
+      name: "Set up the VPN (German translation)",
+    });
     expect(within(translation).getByText("DE")).toBeTruthy();
     const levelTwo = within(tree)
       .getAllByRole("treeitem")

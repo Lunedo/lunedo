@@ -342,7 +342,9 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect(read.body).toContain("Für Kunden.");
     expect(read.body).not.toContain(">Zum Wiki<");
     expect(read.body).not.toContain(">Go to the wiki<");
-    expect(read.body).toMatch(new RegExp(`<a href="${TEST_ORIGIN}/"><svg[^>]*>.*?</svg>Account settings</a>`));
+    expect(read.body).toMatch(
+      new RegExp(`<a href="${TEST_ORIGIN}/"><svg[^>]*>.*?</svg>Account settings</a>`),
+    );
     const blocked = await reader.client.get(`${internal.path}/${secret.number}-intern`);
     expect(blocked.statusCode).toBe(404);
     const standard = await person();
@@ -733,7 +735,9 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect(english.body).toMatch(
       /hreflang="en" lang="en" aria-current="true"><span class="trunc" title="English">English<\/span><svg class="i cur"/,
     );
-    expect(english.body).toMatch(/hreflang="de" lang="de"><span class="trunc" title="Deutsch">Deutsch<\/span><\/a>/);
+    expect(english.body).toMatch(
+      /hreflang="de" lang="de"><span class="trunc" title="Deutsch">Deutsch<\/span><\/a>/,
+    );
     expect(english.body).toContain(
       `<link rel="alternate" hreflang="de" href="${TEST_ORIGIN}${kb.path}/${original.number}-passwort-aendern">`,
     );

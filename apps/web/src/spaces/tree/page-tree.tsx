@@ -282,7 +282,9 @@ export function PageTree({
         break;
       case "Enter":
         event.preventDefault();
-        current.querySelector<HTMLElement>(current.dataset.treeAction === undefined ? "a" : "button")?.click();
+        current
+          .querySelector<HTMLElement>(current.dataset.treeAction === undefined ? "a" : "button")
+          ?.click();
         break;
     }
   };
