@@ -1,4 +1,4 @@
-import { load } from "js-yaml";
+import { CORE_SCHEMA, load, timestampTag } from "js-yaml";
 import MarkdownIt, { type MarkdownIt as Markdown, type StateInline, type Token } from "markdown-it";
 import {
   attachmentImage,
@@ -48,6 +48,7 @@ export interface ConvertedMarkdown {
 }
 
 const MAX_FRONT_MATTER = 64 * 1024;
+const FRONT_MATTER_SCHEMA = CORE_SCHEMA.withTags(timestampTag);
 const MAX_PROPERTIES = 50;
 const MAX_LABELS = 100;
 const TITLE_KEYS = ["title"];
@@ -146,7 +147,7 @@ export function parseFrontMatter(yaml: string | null, problem: MarkdownLookup["p
   }
   let data: unknown;
   try {
-    data = load(yaml, { json: true });
+    data = load(yaml, { json: true, schema: FRONT_MATTER_SCHEMA });
   } catch {
     problem("unsupportedMarkdown", { construct: "frontMatter" });
     return EMPTY_FRONT_MATTER;
