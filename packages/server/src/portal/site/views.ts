@@ -223,7 +223,7 @@ function header(
             html`<details class="dd lang" data-menu><summary aria-label="${view.t.languageCurrent(view.languageLinks.find((link) => link.current)?.label ?? "")}">${icon("languages")}<span class="wide">${view.languageLinks.find((link) => link.current)?.label ?? ""}</span>${icon("chevron-down")}</summary>
               <div class="menu" role="list" aria-label="${view.t.languageMenu}">${view.languageLinks.map(
                 (link) =>
-                  html`<a href="${link.href}" hreflang="${link.language}" lang="${link.language}"${raw(link.current ? ' aria-current="true"' : "")}>${link.label}</a>`,
+                  html`<a href="${link.href}" hreflang="${link.language}" lang="${link.language}"${raw(link.current ? ' aria-current="true"' : "")}><span class="trunc" title="${link.label}">${link.label}</span>${when(link.current, () => icon("check", "cur"))}</a>`,
               )}</div></details>`,
         )}
         ${when(

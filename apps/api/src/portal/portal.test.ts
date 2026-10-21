@@ -715,6 +715,10 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect(english.body).toContain("Choose a new password.");
     expect(english.body).toContain(messagesFor("en").onThisPage);
     expect(english.body).toContain('class="dd lang"');
+    expect(english.body).toMatch(
+      /hreflang="en" lang="en" aria-current="true"><span class="trunc" title="English">English<\/span><svg class="i cur"/,
+    );
+    expect(english.body).toMatch(/hreflang="de" lang="de"><span class="trunc" title="Deutsch">Deutsch<\/span><\/a>/);
     expect(english.body).toContain(
       `<link rel="alternate" hreflang="de" href="${TEST_ORIGIN}${kb.path}/${original.number}-passwort-aendern">`,
     );

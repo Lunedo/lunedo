@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PortalCategory } from "../reader.js";
+import { portalCss } from "./assets.js";
 import { html, raw } from "./html.js";
 import { decorateArticleHtml, initialOf, mailto, topBar } from "./views.js";
 
@@ -77,5 +78,13 @@ describe("portal markup", () => {
     expect(decorated).toContain('href="/help/it/12"');
     expect(decorated).toContain('<h2 id="steps"><span class="hb" aria-hidden="true"><svg');
     expect(decorateArticleHtml(markup.replace("wrench", "unknown-icon"), "")).not.toContain('class="hb"');
+  });
+});
+
+describe("the language choice of the portal", () => {
+  it("hides the browser's disclosure marker and marks the current language", () => {
+    expect(portalCss).toContain(".dd.lang summary::-webkit-details-marker{display:none}");
+    expect(portalCss).toMatch(/\.dd\.lang summary\{display:inline-flex;align-items:center;gap:[^;]+;[^}]*list-style:none/);
+    expect(portalCss).toContain('.dd.lang .menu a[aria-current="true"]{font-weight:600}');
   });
 });
