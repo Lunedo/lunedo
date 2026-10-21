@@ -48,7 +48,7 @@ services:
       retries: 10
 
   mailpit:
-    image: axllent/mailpit:v1.31.4
+    image: axllent/mailpit:v1.31.6
     environment:
       MP_DISABLE_VERSION_CHECK: "true"
       MP_DATABASE: "file::memory:"
@@ -150,7 +150,7 @@ services:
   # Browsers and Pagehall reach them under the same *.localhost address, so issuers match.
   keycloak:
     profiles: [idp]
-    image: quay.io/keycloak/keycloak:26.8.0@sha256:27b3230fbabb8c9ff3c66c864cf09dcd8a41aca82e5100679d109ef0eeb05741
+    image: quay.io/keycloak/keycloak:26.8.1@sha256:79c623a22abacf3fe6c00a5fb30f5b7843d717b234033b80995891c06116d244
     command: ["start-dev", "--import-realm"]
     environment:
       KC_HOSTNAME: http://keycloak.localhost:${KEYCLOAK_PORT:-8080}
@@ -199,7 +199,7 @@ services:
 
   authentik-server:
     profiles: [idp]
-    image: ghcr.io/goauthentik/server:2026.8.3@sha256:ab9b4e8cc4ab3f8d1198d2db6aeea66bafea1963b3f2843589e0d163f97d9849
+    image: ghcr.io/goauthentik/server:2026.8.4@sha256:e7226ae116dac5aa0a5643803e735b010038f492c401e08e16b3bf1ac54c090c
     command: server
     environment: &authentik-environment
       AUTHENTIK_SECRET_KEY: pagehall-development-only-secret-key-not-for-production
@@ -227,7 +227,7 @@ services:
 
   authentik-worker:
     profiles: [idp]
-    image: ghcr.io/goauthentik/server:2026.8.3@sha256:ab9b4e8cc4ab3f8d1198d2db6aeea66bafea1963b3f2843589e0d163f97d9849
+    image: ghcr.io/goauthentik/server:2026.8.4@sha256:e7226ae116dac5aa0a5643803e735b010038f492c401e08e16b3bf1ac54c090c
     command: worker
     environment: *authentik-environment
     volumes:
