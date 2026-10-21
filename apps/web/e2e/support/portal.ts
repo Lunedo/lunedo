@@ -200,11 +200,18 @@ export async function createPortal(
 }
 
 export async function waitForIndex(page: Page, fixture: PortalFixture, query: string): Promise<void> {
+  const matching = fixture.articles.filter((article) =>
+    article.title.toLowerCase().includes(query.toLowerCase()),
+  );
+  const expected = (matching.length > 0 ? matching : fixture.articles.slice(0, 1)).map(
+    (article) => article.address,
+  );
   await expect
     .poll(
       async () => {
         const response = await page.request.get(`${fixture.path}/search?q=${encodeURIComponent(query)}`);
-        return (await response.text()).includes(fixture.articles[0]?.address ?? "missing");
+        const html = await response.text();
+        return expected.length > 0 && expected.every((address) => html.includes(address));
       },
       { timeout: 30_000, intervals: [500, 1000] },
     )

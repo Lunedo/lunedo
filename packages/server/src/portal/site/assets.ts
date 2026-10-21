@@ -177,16 +177,17 @@ export const staticSearchScript = `(() => {
   if (!root || typeof MiniSearch === "undefined") return;
   const params = new URLSearchParams(location.search);
   const query = (params.get("q") || "").trim().slice(0, 200);
-  const input = document.querySelector("form[data-search] input[name=q]");
-  if (input) input.value = query;
+  for (const input of document.querySelectorAll("form[data-search] input[name=q]")) input.value = query;
   const list = root.querySelector("[data-results]");
   const heading = root.querySelector("[data-heading]");
-  const note = root.querySelector("[data-note]");
   const empty = root.querySelector("[data-empty]");
   const failed = root.querySelector("[data-failed]");
   const text = (key, values) =>
     (root.dataset[key] || "").replace(/\\{(\\w+)\\}/g, (_match, name) => (values && name in values ? values[name] : ""));
-  const options = { fields: ["title", "text", "category"], storeFields: ["title", "url", "excerpt", "category", "type"] };
+  const options = {
+    fields: ["title", "text", "category"],
+    storeFields: ["title", "url", "excerpt", "category", "type", "number"],
+  };
   const load = async (address) => {
     const response = await fetch(address, { credentials: "same-origin" });
     if (!response.ok) throw new Error(String(response.status));
@@ -194,8 +195,38 @@ export const staticSearchScript = `(() => {
   };
   const search = (index) =>
     index.search(query, { prefix: true, fuzzy: 0.2, boost: { title: 3, category: 1.5 }, combineWith: "AND" });
-  const show = (results, base) => {
-    heading.textContent = text(results.length === 1 ? "resultsOne" : "resultsOther", { count: String(results.length), query });
+  const terms = query.toLowerCase().split(/\\s+/).filter((term) => term.length > 1);
+  const marked = (value) => {
+    const fragment = document.createDocumentFragment();
+    const lower = value.toLowerCase();
+    let position = 0;
+    while (position < value.length) {
+      let next = -1;
+      let length = 0;
+      for (const term of terms) {
+        const found = lower.indexOf(term, position);
+        if (found !== -1 && (next === -1 || found < next)) {
+          next = found;
+          length = term.length;
+        }
+      }
+      if (next === -1) {
+        fragment.append(value.slice(position));
+        break;
+      }
+      fragment.append(value.slice(position, next));
+      const mark = document.createElement("mark");
+      mark.textContent = value.slice(next, next + length);
+      fragment.append(mark);
+      position = next + length;
+    }
+    return fragment;
+  };
+  const show = (results) => {
+    heading.textContent = text(
+      results.length === 0 ? "resultsNone" : results.length === 1 ? "resultsOne" : "resultsOther",
+      { count: String(results.length), query },
+    );
     heading.hidden = false;
     list.replaceChildren(
       ...results.slice(0, 50).map((result) => {
@@ -205,13 +236,24 @@ export const staticSearchScript = `(() => {
         path.textContent = [result.type ? root.dataset["type" + result.type] || "" : "", result.category || ""]
           .filter(Boolean)
           .join(" · ");
+        if (result.fallback) {
+          item.lang = root.dataset.fallbackLanguage || "";
+          path.lang = document.documentElement.lang;
+          const tag = document.createElement("span");
+          tag.className = "ltag";
+          tag.textContent = root.dataset.fallbackLabel || "";
+          path.append(tag);
+        }
         const link = document.createElement("a");
         link.className = "t";
-        link.href = base + result.url;
+        link.href = result.base + result.url;
         link.textContent = result.title;
-        const excerpt = document.createElement("p");
-        excerpt.textContent = result.excerpt || "";
-        item.append(path, link, excerpt);
+        item.append(path, link);
+        if (result.excerpt) {
+          const excerpt = document.createElement("p");
+          excerpt.append(marked(result.excerpt));
+          item.append(excerpt);
+        }
         return item;
       }),
     );
@@ -221,17 +263,16 @@ export const staticSearchScript = `(() => {
   if (!query) return;
   (async () => {
     try {
-      let results = search(await load(root.dataset.index));
-      let base = root.dataset.base || "";
-      if (results.length === 0 && root.dataset.fallbackIndex) {
-        const fallback = search(await load(root.dataset.fallbackIndex));
-        if (fallback.length > 0) {
-          results = fallback;
-          base = root.dataset.fallbackBase || "";
-          note.hidden = false;
+      const base = root.dataset.base || "";
+      const results = search(await load(root.dataset.index)).map((result) => ({ ...result, base }));
+      if (root.dataset.fallbackIndex) {
+        const shown = new Set(results.map((result) => result.number));
+        const fallbackBase = root.dataset.fallbackBase || "";
+        for (const result of search(await load(root.dataset.fallbackIndex))) {
+          if (!shown.has(result.number)) results.push({ ...result, base: fallbackBase, fallback: true });
         }
       }
-      show(results, base);
+      show(results);
     } catch {
       failed.hidden = false;
     }

@@ -219220,6 +219220,36 @@
                         "description": "State of the translations into one language."
                       },
                       "description": "State of the translations per enabled language other than the default."
+                    },
+                    "searchUpdate": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "remaining": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991,
+                              "description": "Articles whose search entry is still being updated."
+                            },
+                            "total": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991,
+                              "description": "Articles of the knowledge base."
+                            }
+                          },
+                          "required": [
+                            "remaining",
+                            "total"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Progress of updating the search, for example after the default language changed, or null when search is up to date."
                     }
                   },
                   "required": [
@@ -219227,7 +219257,8 @@
                     "defaultLanguage",
                     "languages",
                     "articles",
-                    "progress"
+                    "progress",
+                    "searchUpdate"
                   ],
                   "additionalProperties": false,
                   "description": "Languages of a knowledge base."
@@ -219247,7 +219278,8 @@
                       "outdated": 2,
                       "missing": 128
                     }
-                  ]
+                  ],
+                  "searchUpdate": null
                 }
               }
             }
@@ -219524,6 +219556,36 @@
                         "description": "State of the translations into one language."
                       },
                       "description": "State of the translations per enabled language other than the default."
+                    },
+                    "searchUpdate": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "remaining": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991,
+                              "description": "Articles whose search entry is still being updated."
+                            },
+                            "total": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991,
+                              "description": "Articles of the knowledge base."
+                            }
+                          },
+                          "required": [
+                            "remaining",
+                            "total"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Progress of updating the search, for example after the default language changed, or null when search is up to date."
                     }
                   },
                   "required": [
@@ -219531,7 +219593,8 @@
                     "defaultLanguage",
                     "languages",
                     "articles",
-                    "progress"
+                    "progress",
+                    "searchUpdate"
                   ],
                   "additionalProperties": false,
                   "description": "Languages of a knowledge base."
@@ -219551,7 +219614,8 @@
                       "outdated": 2,
                       "missing": 128
                     }
-                  ]
+                  ],
+                  "searchUpdate": null
                 }
               }
             }

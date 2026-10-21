@@ -429,6 +429,41 @@ describe.skipIf(!baseUrl)("static website of a knowledge base", () => {
     expect(JSON.stringify(found.results[0]?.excerpt)).not.toContain("Huber");
   }, 120_000);
 
+  it("shows the text of an article as the excerpt of a search result, not its section headings", async () => {
+    const organization = await fixtures.organization();
+    const owner = accountPrincipal(organization.owner);
+    const open = await knowledgeBase(owner, organization.id, "public");
+    const entry = await test.services.tree.create(owner, open.id, {
+      kind: "page",
+      title: "VPN disconnects",
+      placement: { parentId: null },
+    });
+    const heading = (text: string) => ({
+      type: "heading",
+      attrs: { level: 2 },
+      content: [{ type: "text", text }],
+    });
+    const paragraph = (text: string) => ({ type: "paragraph", content: [{ type: "text", text }] });
+    await test.services.documents.replace(owner, entry.id, {
+      type: "doc",
+      content: [
+        heading("What you see"),
+        paragraph("The VPN drops after a few minutes."),
+        heading("Cause"),
+        paragraph("The router closes idle connections."),
+      ],
+    });
+    await test.services.versions.publish(owner, entry.id);
+
+    const files = await site(owner, open.id, null);
+    const index = MiniSearch.loadJSON(
+      files.get("search-index.json")?.toString("utf8") ?? "",
+      STATIC_SEARCH_OPTIONS,
+    );
+    const [found] = index.search("vpn", { prefix: true });
+    expect(found?.excerpt).toBe("The VPN drops after a few minutes. The router closes idle connections.");
+  }, 120_000);
+
   it("leaves restricted, unpublished, trashed and turned-off articles out of every file", async () => {
     const organization = await fixtures.organization();
     const owner = accountPrincipal(organization.owner);

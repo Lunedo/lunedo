@@ -52,6 +52,15 @@ const languagesSchema = z
           .describe("State of the translations into one language."),
       )
       .describe("State of the translations per enabled language other than the default."),
+    searchUpdate: z
+      .object({
+        remaining: z.number().int().describe("Articles whose search entry is still being updated."),
+        total: z.number().int().describe("Articles of the knowledge base."),
+      })
+      .nullable()
+      .describe(
+        "Progress of updating the search, for example after the default language changed, or null when search is up to date.",
+      ),
   })
   .describe("Languages of a knowledge base.");
 
@@ -61,6 +70,7 @@ const exampleLanguages = {
   languages: ["de", "en"],
   articles: 140,
   progress: [{ language: "en", translated: 12, outdated: 2, missing: 128 }],
+  searchUpdate: null,
 };
 
 const languagesBodySchema = z

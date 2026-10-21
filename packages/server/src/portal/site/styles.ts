@@ -215,6 +215,7 @@ const article = [
   `.alert.inline{margin-top:0}`,
   `.langnote{display:flex;gap:${S[3]};align-items:flex-start;margin-top:${S[6]};padding:${S[4]} ${S[5]};border-radius:${R.xl};background:var(--info-soft);font-size:${F.base};line-height:1.55}.langnote>svg.i{width:${I.lg};height:${I.lg};color:var(--info);flex-shrink:0;margin-top:2px}`,
   ".dd.lang .menu{left:auto;right:0}",
+  `.ltag{display:inline-flex;align-items:center;gap:${S[1]};padding:0 ${S[2]};border-radius:${R.full};background:var(--tile);color:var(--text-muted)}.ltag svg.i{width:${I.sm};height:${I.sm}}`,
   `.body .ph-embed{margin:${S[6]} 0}.body .ph-embed-frame iframe{display:block;width:100%;height:28rem;border:0;border-radius:${R.lg};background:var(--tile)}.body .ph-embed figcaption{margin-top:${S[2]};font-size:${F.sm};color:var(--text-muted)}`,
   `.related{margin-top:${S[16]}}`,
   `.relgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:${S[4]}}`,

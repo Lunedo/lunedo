@@ -72,6 +72,7 @@ const LANGUAGES: LanguageSettings = {
   languages: ["de", "en"],
   articles: 140,
   progress: [{ language: "en", translated: 12, outdated: 2, missing: 128 }],
+  searchUpdate: null,
 };
 
 describe("languages of a knowledge base", () => {
@@ -93,6 +94,20 @@ describe("languages of a knowledge base", () => {
     await waitFor(() => expect(api.requests.some((request) => request.method === "PUT")).toBe(true));
     expect(api.requests.find((request) => request.method === "PUT")?.body).toEqual({ defaultLanguage: "en" });
     expect(await screen.findByText(/already have translations/)).toBeTruthy();
+  });
+
+  it("says before a change that search is updated and shows the progress until it is done", async () => {
+    let remaining = 2;
+    mockApi({
+      [`GET /api/v1/spaces/${SPACE_ID}/knowledge-base/languages`]: () => ({
+        body: { ...LANGUAGES, searchUpdate: remaining > 0 ? { remaining, total: 140 } : null },
+      }),
+    });
+    await renderWithProviders(inSpace(<LanguagesScreen />));
+    expect(await screen.findByText(/A change updates the search of all articles in the background/)).toBeTruthy();
+    expect(screen.getByText(/Search is being updated: 2 of 140 articles left/)).toBeTruthy();
+    remaining = 0;
+    await waitFor(() => expect(screen.queryByText(/Search is being updated/)).toBeNull(), { timeout: 5000 });
   });
 
   it("says that readers see nothing about languages while only one is enabled", async () => {

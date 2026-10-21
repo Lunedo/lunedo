@@ -95,6 +95,7 @@ export interface AdapterSearch {
   firstSpaceId: string | null;
   facets: boolean;
   articleFacets?: boolean;
+  articleLanguages?: { preferred: string; fallback: string };
   suggest: boolean;
 }
 
@@ -176,6 +177,7 @@ export interface ArticleListRequest {
   limit: number;
   offset: number;
   language: string | null;
+  everyLanguage?: boolean;
 }
 
 export interface ListedArticle {

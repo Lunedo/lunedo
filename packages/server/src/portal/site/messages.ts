@@ -126,7 +126,6 @@ export interface PortalMessages {
   languageMenu: string;
   languageCurrent: (language: string) => string;
   fallbackNote: (requested: string, shown: string) => string;
-  searchFallbackNote: (requested: string, shown: string) => string;
 }
 
 const en: PortalMessages = {
@@ -270,8 +269,6 @@ const en: PortalMessages = {
   languageCurrent: (language) => `Language: ${language}`,
   fallbackNote: (requested, shown) =>
     `This article is not available in ${requested} yet, so it is shown in ${shown}.`,
-  searchFallbackNote: (requested, shown) =>
-    `Nothing was found in ${requested}. These results are in ${shown}.`,
 };
 
 const de: PortalMessages = {
@@ -420,8 +417,6 @@ const de: PortalMessages = {
   languageCurrent: (language) => `Sprache: ${language}`,
   fallbackNote: (requested, shown) =>
     `Diesen Artikel gibt es noch nicht auf ${requested}. Er wird auf ${shown} angezeigt.`,
-  searchFallbackNote: (requested, shown) =>
-    `Auf ${requested} wurde nichts gefunden. Diese Treffer sind auf ${shown}.`,
 };
 
 export function messagesFor(language: string): PortalMessages {

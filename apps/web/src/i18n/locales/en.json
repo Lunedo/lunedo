@@ -9665,7 +9665,7 @@
       "loadFailed": "The languages could not be loaded",
       "section": "Languages",
       "default": "Default language",
-      "defaultDescription": "Language of new articles and fallback for readers whose language has no translation.",
+      "defaultDescription": "Language of new articles and fallback for readers whose language has no translation. A change updates the search of all articles in the background; the progress shows here.",
       "enabled": "Enabled languages",
       "enabledDescription": "From two languages on, the portal shows a language choice. {language}, the default language, always stays enabled. Turning a language off hides its translations from readers but keeps them.",
       "add": "Add a language",
@@ -9675,7 +9675,8 @@
       "outdated": "{count, plural, one {# outdated} other {# outdated}}",
       "single": "Only one language is enabled, so readers see nothing about languages.",
       "adminsOnly": "Only space admins change the languages. Ask one of them if a language is missing.",
-      "archived": "The knowledge base is archived, so its languages cannot be changed. Restore it from the archive to change them."
+      "archived": "The knowledge base is archived, so its languages cannot be changed. Restore it from the archive to change them.",
+      "searchUpdate": "{count, plural, one {Search is being updated: # of {total} articles left. Until then, portal search may not find it.} other {Search is being updated: # of {total} articles left. Until then, portal search may not find them.}}"
     },
     "translations": {
       "button": "Languages",

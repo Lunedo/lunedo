@@ -31,6 +31,7 @@ const RECENT_USE_DAYS = 30;
 const MAX_RECENT_BOOST = 0.15;
 const MAX_FREQUENT_BOOST = 0.1;
 const FREQUENT_VIEWS = 10;
+const PREFERRED_LANGUAGE_RANK = 1_000_000;
 const EXCERPT_OPTIONS = `StartSel=${EXCERPT_START}, StopSel=${EXCERPT_END}, MaxWords=30, MinWords=12, ShortWord=2, MaxFragments=2, FragmentDelimiter=" … "`;
 
 type FacetGroup = keyof AdapterFacets;
@@ -250,6 +251,13 @@ export class PostgresSearchAdapter implements SearchAdapter {
 
     const conditions = [...visibleChunkConditions(request.viewer), parts.match];
     if (!request.filters.includeArchived) conditions.push(sql`not c.archived`);
+    const languages = request.articleLanguages;
+    if (languages) conditions.push(sql`c.language in (${languages.preferred}, ${languages.fallback})`);
+    const baseScore =
+      request.usageBoost && viewer.accountId ? sql`(${parts.score}) * (1 + ${usageBoost(sql`rv`)})` : parts.score;
+    const score = languages
+      ? sql`(${baseScore}) + case when c.language = ${languages.preferred} then ${PREFERRED_LANGUAGE_RANK} else 0 end`
+      : baseScore;
     const filtered = this.#filterConditions(request.filters);
     if (!request.facets) conditions.push(...filtered.map(([, condition]) => condition));
     const flags = request.facets ? filtered : [];
@@ -259,6 +267,10 @@ export class PostgresSearchAdapter implements SearchAdapter {
         [sql`true`, ...flags.filter(([group]) => group !== except).map(([group]) => sql.raw(`f_${group}`))],
         sql` and `,
       );
+    const deduplicated = sql`select distinct on (source, source_id) * from matched order by source, source_id, score desc, position`;
+    const candidates = languages
+      ? sql`select distinct on (article_id) * from (${deduplicated}) d order by article_id, (${passing()}) desc, score desc, position`
+      : deduplicated;
 
     const visible = sql`${sql.param(request.visibleSpaceIds)}::uuid[]`;
     const first = request.firstSpaceId ? sql`(b.space_id = ${request.firstSpaceId}::uuid) desc, ` : sql``;
@@ -303,8 +315,8 @@ export class PostgresSearchAdapter implements SearchAdapter {
         select c.id, c.source, c.source_id, c.item_id, t.space_id, c.content_type, c.title, c.heading, c.anchor,
           c.labels, c.status, c.author_id, c.archived, c.attachment, c.content_updated_at, c.position, c.language,
           case when cardinality(t.path) > 1 then t.path[1] end as top_category,
-          coalesce(t.article_type::text, 'none') as article_type,
-          (${request.usageBoost && viewer.accountId ? sql`(${parts.score}) * (1 + ${usageBoost(sql`rv`)})` : parts.score})::float8 as score
+          coalesce(t.article_type::text, 'none') as article_type, coalesce(t.translation_of, t.id) as article_id,
+          (${score})::float8 as score
           ${sql.join(flagColumns, sql``)}
         from search_chunks c
         join tree_items t on t.id = c.item_id
@@ -313,9 +325,7 @@ export class PostgresSearchAdapter implements SearchAdapter {
         ${request.usageBoost && viewer.accountId ? sql`left join recent_views rv on rv.account_id = ${viewer.accountId}::uuid and rv.item_id = c.item_id` : sql``}
         where ${sql.join(conditions, sql` and `)}
       ),
-      candidates as (
-        select distinct on (source, source_id) * from matched order by source, source_id, score desc, position
-      ),
+      candidates as (${candidates}),
       best as (
         select * from candidates where ${passing()}
       ),
@@ -342,7 +352,7 @@ export class PostgresSearchAdapter implements SearchAdapter {
     };
   }
 
-  #visibleArticles(viewer: SearchViewer, spaceId: string, language: string | null): SQL {
+  #visibleArticles(viewer: SearchViewer, spaceId: string, language: string | null, everyLanguage = false): SQL {
     const visible = sql`select distinct on (c.item_id) c.item_id, c.title, c.content_updated_at,
         array_remove(t.path, t.translation_of) as path, t.translation_of, c.language,
         coalesce(t.article_type::text, 'none') as article_type
@@ -353,6 +363,9 @@ export class PostgresSearchAdapter implements SearchAdapter {
       where ${sql.join(visibleChunkConditions(viewer), sql` and `)}
         and c.source = 'item' and c.content_type = 'page' and not c.archived and t.space_id = ${spaceId}::uuid
       order by c.item_id, c.position`;
+    if (everyLanguage) {
+      return sql`select a.item_id, a.title, a.content_updated_at, a.path, a.article_type from (${visible}) a`;
+    }
     if (language === null) {
       return sql`select a.item_id, a.title, a.content_updated_at, a.path, a.article_type
         from (${visible}) a where a.translation_of is null`;
@@ -385,7 +398,7 @@ export class PostgresSearchAdapter implements SearchAdapter {
       types: { value: string; count: number }[] | null;
       articles: (Omit<ListedArticle, "views"> & { views: string | number })[] | null;
     }>(sql`
-      with visible as (${this.#visibleArticles(request.viewer, request.spaceId, request.language)}),
+      with visible as (${this.#visibleArticles(request.viewer, request.spaceId, request.language, request.everyLanguage)}),
       scoped as (select v.* from visible v where ${sql.join(scope, sql` and `)}),
       listed as (
         select v.*, coalesce((select sum(pv.views) from portal_article_views pv

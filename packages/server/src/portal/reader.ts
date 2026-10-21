@@ -80,7 +80,6 @@ export interface PortalSearchResult {
   categories: { id: string; count: number }[];
   typeCounts: Record<"all" | ArticleType, number>;
   suggestion: string | null;
-  language: string;
 }
 
 function typeOf(value: string): ArticleType | null {
@@ -392,32 +391,20 @@ export class PortalReader {
       type: PortalArticleFilter | null;
       cursor: SearchCursor | null;
       language?: string;
-      searchedLanguage?: string | null;
     },
   ): Promise<PortalSearchResult> {
     const language = request.language ?? config.defaultLanguage;
-    const run = (searched: string) =>
-      this.#search.portalSearch(principal, {
-        organizationId: config.organizationId,
-        spaceId: config.spaceId,
-        query: request.query,
-        categoryId: request.categoryId,
-        articleTypes: request.type ? [request.type] : [],
-        limit: PORTAL_PAGE_SIZE,
-        cursor: request.cursor,
-        language: searched,
-      });
-    let searched = request.searchedLanguage ?? language;
-    let response = await run(searched);
-    if (
-      response.total === 0 &&
-      !request.searchedLanguage &&
-      !request.cursor &&
-      searched !== config.defaultLanguage
-    ) {
-      searched = config.defaultLanguage;
-      response = await run(searched);
-    }
+    const response = await this.#search.portalSearch(principal, {
+      organizationId: config.organizationId,
+      spaceId: config.spaceId,
+      query: request.query,
+      categoryId: request.categoryId,
+      articleTypes: request.type ? [request.type] : [],
+      limit: PORTAL_PAGE_SIZE,
+      cursor: request.cursor,
+      language,
+      fallbackLanguage: config.defaultLanguage,
+    });
     const ids = response.results.map((hit) => hit.itemId);
     const listed =
       ids.length === 0
@@ -433,7 +420,8 @@ export class PortalReader {
               viewsSince: since(FREQUENT_SEARCH_DAYS),
               limit: ids.length,
               offset: 0,
-              language: searched,
+              language,
+              everyLanguage: true,
             })
           ).articles;
     const summaries = new Map(
@@ -449,7 +437,6 @@ export class PortalReader {
       categories: response.categories.map((entry) => ({ id: entry.value, count: entry.count })),
       typeCounts: counts(response.articleTypes),
       suggestion: response.suggestion,
-      language: searched,
     };
   }
 
@@ -469,6 +456,7 @@ export class PortalReader {
         limit: 1,
         cursor: null,
         language,
+        fallbackLanguage: config.defaultLanguage,
       });
       if (found.total > 0) shown.push(term);
       if (shown.length === FREQUENT_SHOWN) break;

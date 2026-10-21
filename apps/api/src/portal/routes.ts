@@ -146,12 +146,6 @@ async function readBody(request: FastifyRequest, limit: number): Promise<string 
   return Buffer.concat(chunks).toString("utf8");
 }
 
-function queryLanguage(target: Target, value: string | null): string | null {
-  return value && value !== target.language && target.config.languages.includes(value as never)
-    ? value
-    : null;
-}
-
 function sameOrigin(request: FastifyRequest, origin: string): boolean {
   if (request.headers["sec-fetch-site"] === "cross-site") return false;
   return request.headers.origin === origin;
@@ -609,7 +603,6 @@ async function search(
       ...state,
       cursor,
       language: target.language,
-      searchedLanguage: queryLanguage(target, query.get("in")),
     });
   } catch (error) {
     request.log.error({ err: error }, "A portal search failed");
@@ -636,7 +629,6 @@ async function search(
   const params = new URLSearchParams({ q: text });
   if (state.categoryId) params.set("category", state.categoryId);
   if (state.type) params.set("type", state.type);
-  if (result.language !== target.language) params.set("in", result.language);
   if (result.nextCursor) params.set("after", encodeCursor(result.nextCursor));
   const more = result.nextCursor ? `${target.base}/search?${params.toString()}` : null;
   const mostRead =
@@ -649,20 +641,7 @@ async function search(
           })
         ).articles
       : [];
-  const shownView =
-    result.language === target.language
-      ? view
-      : {
-          ...view,
-          note: {
-            text: view.t.searchFallbackNote(
-              languageName(target.language, interfaceLanguage(target.language)),
-              languageName(result.language, interfaceLanguage(target.language)),
-            ),
-            lang: target.language,
-          },
-        };
-  return sendPage(reply, shownView, searchPage(shownView, state, result, more, mostRead));
+  return sendPage(reply, view, searchPage(view, state, result, more, mostRead));
 }
 
 async function articleRoute(

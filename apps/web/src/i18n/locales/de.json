@@ -9665,7 +9665,7 @@
       "loadFailed": "Die Sprachen konnten nicht geladen werden",
       "section": "Sprachen",
       "default": "Standardsprache",
-      "defaultDescription": "Sprache neuer Artikel und Rückfall für fehlende Übersetzungen.",
+      "defaultDescription": "Sprache neuer Artikel und Rückfall für fehlende Übersetzungen. Eine Änderung aktualisiert im Hintergrund die Suche aller Artikel; der Fortschritt steht hier.",
       "enabled": "Aktivierte Sprachen",
       "enabledDescription": "Ab zwei Sprachen zeigt das Portal eine Sprachauswahl. {language} als Standardsprache bleibt immer aktiviert. Eine deaktivierte Sprache blendet ihre Übersetzungen für Lesende aus, behält sie aber.",
       "add": "Sprache hinzufügen",
@@ -9675,7 +9675,8 @@
       "outdated": "{count, plural, one {# veraltet} other {# veraltet}}",
       "single": "Nur eine Sprache ist aktiviert, deshalb sehen Lesende nichts von Sprachen.",
       "adminsOnly": "Nur Bereichsadmins ändern die Sprachen. Frag eine von ihnen, wenn eine Sprache fehlt.",
-      "archived": "Die Wissensdatenbank ist archiviert, ihre Sprachen lassen sich deshalb nicht ändern. Hol sie aus dem Archiv zurück, um sie zu ändern."
+      "archived": "Die Wissensdatenbank ist archiviert, ihre Sprachen lassen sich deshalb nicht ändern. Hol sie aus dem Archiv zurück, um sie zu ändern.",
+      "searchUpdate": "{count, plural, one {Die Suche wird aktualisiert: noch # von {total} Artikeln. Bis dahin findet die Portalsuche ihn eventuell nicht.} other {Die Suche wird aktualisiert: noch # von {total} Artikeln. Bis dahin findet die Portalsuche sie eventuell nicht.}}"
     },
     "translations": {
       "button": "Sprachen",

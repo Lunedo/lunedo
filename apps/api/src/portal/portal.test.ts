@@ -747,7 +747,9 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect(start.body).toContain(`href="${kb.path}/en/${original.number}-change-the-password"`);
     const search = await reader.get(`${kb.path}/en/search?q=Drucker`);
     expect(search.statusCode).toBe(200);
-    expect(search.body).toContain('class="langnote"');
+    expect(search.body).not.toContain('class="langnote"');
+    expect(search.body).toContain(`<li lang="de"><span class="path" lang="en">`);
+    expect(search.body).toContain('<span class="ltag">');
     expect(search.body).toContain(`/${untranslated.number}-drucker`);
   });
 
