@@ -16,7 +16,7 @@ This page has tested examples for [Caddy](#caddy), [Nginx](#nginx) and [Traefik]
 Pagehall reads the client address from `X-Forwarded-For`, the protocol from `X-Forwarded-Proto` and the host from `X-Forwarded-Host`, but only from proxies listed in `PAGEHALL_TRUSTED_PROXIES` (comma-separated addresses and CIDR ranges). From every other address these headers are ignored, so nobody can fake a client address to get around rate limits.
 
 - The proxy must set all three headers and replace values sent by the client. Caddy and Traefik do this by default; the Nginx example sets them.
-- With the proxy in the same Compose project, give the network a fixed subnet and list it, as in the examples below. With the proxy on the host, list the address Pagehall sees, usually the gateway of the Docker network (for example `172.30.0.1`).
+- With the proxy in the same Compose project, list the subnet of the network. The Compose file of the setup script gives its network the fixed subnet `172.30.0.0/24` (`--subnet` changes it) and trusts it. With the proxy on the host, Pagehall sees the gateway of that network, which is in the same subnet.
 - The system status page shows a warning under HTTPS when the instance address does not use HTTPS.
 
 ### WebSockets
@@ -44,7 +44,7 @@ A knowledge base portal can have its own domain ([knowledge-bases.md](knowledge-
 
 ## Caddy
 
-The Compose file with Caddy in front of Pagehall. Caddy gets certificates from Let's Encrypt for the instance address and, on demand, for allowed portal domains.
+Caddy in the same Compose project as Pagehall. Add the service to the `compose.yml` of the setup script, or to your own; it joins the default network, whose subnet `PAGEHALL_TRUSTED_PROXIES` already trusts (`172.30.0.0/24` with the setup script). Caddy gets certificates from Let's Encrypt for the instance address and, on demand, for allowed portal domains.
 
 <!-- reverse-proxy-check: caddy-compose -->
 ```yaml
@@ -59,22 +59,9 @@ services:
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
-    networks: [pagehall]
-
-  pagehall:
-    environment:
-      PAGEHALL_INSTANCE_URL: https://wiki.example.org
-      PAGEHALL_TRUSTED_PROXIES: 172.30.0.0/24
-    networks: [pagehall]
 
 volumes:
   caddy-data:
-
-networks:
-  pagehall:
-    ipam:
-      config:
-        - subnet: 172.30.0.0/24
 ```
 
 <!-- reverse-proxy-check: caddy -->
@@ -150,7 +137,7 @@ server {
 }
 ```
 
-Set `PAGEHALL_TRUSTED_PROXIES` to the address Nginx connects from, here `127.0.0.1`. `$proxy_add_x_forwarded_for` appends to a header a client sent; Pagehall reads the entries from the right and stops at the first address that is not a trusted proxy, so a faked entry on the left is ignored. Each portal domain needs a certificate that covers it; add it to `server_name` in both blocks, or give it a server block of its own.
+Docker forwards the published port, so Pagehall sees the connection from the gateway of its Compose network, not from `127.0.0.1`; the trusted subnet of the setup script (`172.30.0.0/24`) covers it. With your own Compose file, set `PAGEHALL_TRUSTED_PROXIES` to the subnet of the network. `$proxy_add_x_forwarded_for` appends to a header a client sent; Pagehall reads the entries from the right and stops at the first address that is not a trusted proxy, so a faked entry on the left is ignored. Each portal domain needs a certificate that covers it; add it to `server_name` in both blocks, or give it a server block of its own.
 
 ## Traefik
 
@@ -203,7 +190,7 @@ http:
           - url: http://pagehall:3000
 ```
 
-Traefik passes WebSockets and the forwarded headers by default and has no body limit. Its `readTimeout` of 60 seconds would cut off long uploads, so the example raises it. Run Traefik in the Compose network of Pagehall as in the Caddy example and set `PAGEHALL_TRUSTED_PROXIES` to the subnet of that network. With Docker labels instead of the file provider, put the same rule, entry point and resolver on the `pagehall` service and set `traefik.http.services.pagehall.loadbalancer.server.port=3000`.
+Traefik passes WebSockets and the forwarded headers by default and has no body limit. Its `readTimeout` of 60 seconds would cut off long uploads, so the example raises it. Run Traefik in the Compose project of Pagehall as in the Caddy example, so that the trusted subnet covers it. With Docker labels instead of the file provider, put the same rule, entry point and resolver on the `pagehall` service and set `traefik.http.services.pagehall.loadbalancer.server.port=3000`.
 
 ## Checking a proxy
 

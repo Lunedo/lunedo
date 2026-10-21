@@ -33,7 +33,7 @@ export const usage = `Usage:
   pagehall maintenance off
   pagehall maintenance status
   pagehall version
-  pagehall release-notes [--since <version>] [--json]
+  pagehall release-notes [--since <version>] [--update-from <version>] [--json]
 `;
 
 export function parseCommand(argv: readonly string[]): Command {
@@ -43,11 +43,22 @@ export function parseCommand(argv: readonly string[]): Command {
   if (group === "release-notes") {
     const { values } = parseArgs({
       args: argv.slice(1),
-      options: { since: { type: "string" }, json: { type: "boolean", default: false } },
+      options: {
+        since: { type: "string" },
+        json: { type: "boolean", default: false },
+        "update-from": { type: "string" },
+      },
       strict: true,
       allowPositionals: false,
     });
-    return { name: "release-notes", command: { since: values.since ?? null, json: values.json ?? false } };
+    return {
+      name: "release-notes",
+      command: {
+        since: values.since ?? null,
+        json: values.json ?? false,
+        updateFrom: values["update-from"] ?? null,
+      },
+    };
   }
   const { values } = parseArgs({
     args: rest,

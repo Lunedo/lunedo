@@ -57,6 +57,7 @@ COPY --from=build --chown=root:root /out/collab ./collab
 COPY --from=build --chown=root:root /out/worker ./worker
 COPY --from=build --chown=root:root /repo/apps/web/dist ./web
 COPY --chown=root:root CHANGELOG.md ./CHANGELOG.md
+COPY --chown=root:root --chmod=644 scripts/install.sh ./install.sh
 COPY --chmod=755 docker/start.sh /usr/local/bin/pagehall
 # sharp loads its prebuilt libvips for the architecture of this image; fail the build if it cannot.
 RUN for app in api worker; do \

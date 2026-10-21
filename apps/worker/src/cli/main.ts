@@ -34,7 +34,7 @@ import {
 import { verifyAuditLog } from "./audit.js";
 import { maintenance } from "./maintenance.js";
 import { type Command, parseCommand, UsageError, usage } from "./parse.js";
-import { releaseNotes } from "./release-notes.js";
+import { releaseNotes, UpdateStepError } from "./release-notes.js";
 import { rebuildSearchIndex, searchIndexStatus } from "./search.js";
 
 const write = (text: string) => process.stdout.write(`${text}\n`);
@@ -214,6 +214,11 @@ try {
   if (error instanceof UsageError) {
     process.stderr.write(`${error.message}\n\n${usage}`);
     process.exit(64);
+  }
+  if (error instanceof UpdateStepError) {
+    process.stderr.write(`${error.message}
+`);
+    process.exit(65);
   }
   if (error instanceof ConfigError) {
     process.stderr.write(`${error.message}\n`);
