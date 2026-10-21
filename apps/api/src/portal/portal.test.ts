@@ -1,5 +1,5 @@
 import { accountAttemptLimitSetting, clientAttemptLimitSetting, messagesFor, SYSTEM } from "@pagehall/server";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   addTotp,
   completeConfiguredSetup,
@@ -305,7 +305,9 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     const used = `used${counter}.example.org`;
     const free = `free${counter}.example.org`;
     for (const domain of [used, free]) {
-      expect((await owner.post("/api/v1/instance/portal-domains", { domain, organizationId })).statusCode).toBe(201);
+      expect(
+        (await owner.post("/api/v1/instance/portal-domains", { domain, organizationId })).statusCode,
+      ).toBe(201);
     }
     const set = await owner.put(`/api/v1/spaces/${first.id}/knowledge-base/portal/address`, {
       path: first.path.slice("/help/".length),
@@ -522,6 +524,24 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect(visitorStart.body).not.toContain("kündigungsfrist");
     const ownerStart = await owner.get(`${kb.path}/`);
     expect(ownerStart.body).toContain("kündigungsfrist");
+  });
+
+  it("answers health checks on any host without asking for portal domains", async () => {
+    const lookup = vi
+      .spyOn(services().portals, "isPortalDomain")
+      .mockRejectedValue(new Error("database down"));
+    try {
+      const probe = new TestClient(test.app);
+      const live = await probe.get("/health/live", { host: "10.0.0.7" });
+      expect(live.statusCode).toBe(200);
+      expect(lookup).not.toHaveBeenCalled();
+      const foreign = await probe.get("/help/", { host: "unknown.example.org" });
+      expect(foreign.statusCode).toBe(503);
+      expect(foreign.headers["retry-after"]).toBe("30");
+      expect(foreign.body).toContain("Try again in a minute");
+    } finally {
+      lookup.mockRestore();
+    }
   });
 
   it("refuses portal posts from another origin", async () => {

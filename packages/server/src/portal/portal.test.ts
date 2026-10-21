@@ -5,6 +5,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ANONYMOUS, accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import { generateToken } from "../auth/tokens.js";
 import { itemLevel } from "../authorization/item-access.js";
+import { NotificationListener } from "../database/notifications.js";
+import { createLogger } from "../logging/logger.js";
 import type { KnowledgeBaseAudience } from "../spaces/schema.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
@@ -277,6 +279,26 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
       expect(await readable(accountPrincipal(uninvited)), `${audience} uninvited portal`).toBe(
         expected.uninvited,
       );
+    }
+  });
+
+  it("caches the allowed domains and drops the cache when another node changes them", async () => {
+    const org = await organization();
+    const listener = new NotificationListener({
+      connectionString: test.url,
+      logger: createLogger({ service: "test", level: "silent" }),
+    });
+    try {
+      const cached = test.anotherNode().portals;
+      await cached.enableDomainCache(listener);
+      const domain = `cache-${randomUUID().slice(0, 6)}.example.org`;
+      expect(await cached.isPortalDomain(domain)).toBe(false);
+      await test.services.portals.allowDomain(SYSTEM, { domain, organizationId: org.id });
+      await expect.poll(() => cached.isPortalDomain(domain), { timeout: 5000 }).toBe(true);
+      await test.services.portals.removeDomain(SYSTEM, domain);
+      await expect.poll(() => cached.isPortalDomain(domain), { timeout: 5000 }).toBe(false);
+    } finally {
+      await listener.close();
     }
   });
 

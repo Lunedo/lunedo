@@ -201,7 +201,7 @@ A knowledge base can have its own domain, for example the address of an older he
 2. The DNS record of the domain points to the instance, and the reverse proxy sends the domain to Pagehall and holds its certificate. Pagehall does not request certificates itself. Portals on own domains need HTTPS.
 3. A space admin chooses the domain under **Space settings → Address**. The page shows the DNS record to copy before saving.
 
-On its own domain only the portal answers; the app and `/api/` are not reachable there. The portal keeps working under `/help/<path>/` on the instance as well.
+On its own domain only the portal answers; the app and `/api/` are not reachable there. Health checks (`/health/…`) and `/metrics` answer on every host without a database lookup. Each API node keeps the list of allowed domains in memory and reloads it whenever a domain is allowed or removed on any node; while the database cannot be reached, requests to other hosts get status 503. The portal keeps working under `/help/<path>/` on the instance as well.
 
 ### Signing in
 

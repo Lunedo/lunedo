@@ -155,15 +155,31 @@ function sameOrigin(request: FastifyRequest, origin: string): boolean {
   return request.headers.origin === origin;
 }
 
+const OPERATIONS = /^\/(health|metrics)(\/|$)/;
+const UNAVAILABLE = "Pagehall cannot reach its database at the moment. Try again in a minute.";
+
 export function registerPortal(fastify: FastifyInstance, context: ApiContext): void {
   fastify.addHook("onRequest", async (request, reply) => {
     const services = context.services;
     if (!services) return;
     const path = request.url.split("?")[0] ?? "/";
+    if (OPERATIONS.test(path)) return undefined;
     const instanceUrl = (await instanceUrlOf(context)) || ownOrigin(request);
     const host = hostOf(request.hostname);
-    if (host && host !== new URL(instanceUrl).hostname && (await services.portals.isPortalDomain(host))) {
-      return servePortal(request, reply, services, context, { kind: "domain", host, path, instanceUrl });
+    if (host && host !== new URL(instanceUrl).hostname) {
+      let portal: boolean;
+      try {
+        portal = await services.portals.isPortalDomain(host);
+      } catch (error) {
+        request.log.warn({ err: error }, "The portal domains could not be read");
+        return reply
+          .code(503)
+          .header("retry-after", "30")
+          .type("text/plain; charset=utf-8")
+          .send(UNAVAILABLE);
+      }
+      if (portal)
+        return servePortal(request, reply, services, context, { kind: "domain", host, path, instanceUrl });
     }
     if (path === "/help" || path.startsWith("/help/")) {
       return servePortal(request, reply, services, context, { kind: "path", path, instanceUrl });

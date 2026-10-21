@@ -13,6 +13,7 @@ import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { Database, Executor } from "../database/database.js";
+import type { NotificationListener } from "../database/notifications.js";
 import type { ArticleLanguage } from "../knowledge-bases/translations.js";
 import { logoContentType } from "../organizations/organizations.js";
 import { supportedLanguages, timeZoneSetting } from "../settings/builtin.js";
@@ -161,10 +162,14 @@ interface ConfigRow extends Record<string, unknown> {
   languages: ArticleLanguage[];
 }
 
+export const PORTAL_DOMAINS_CHANNEL = "pagehall_portal_domains";
+
 export class PortalService {
   readonly #database: Database;
   readonly #audit: AuditLog;
   readonly #settings: SettingsService;
+  #domains: Promise<ReadonlySet<string>> | null = null;
+  #caching = false;
 
   constructor(options: { database: Database; audit: AuditLog; settings: SettingsService }) {
     this.#database = options.database;
@@ -236,11 +241,33 @@ export class PortalService {
     return this.#select(this.#database, sql`kb.portal_domain = ${domain}`);
   }
 
+  async enableDomainCache(listener: NotificationListener): Promise<void> {
+    await listener.listen(PORTAL_DOMAINS_CHANNEL, () => {
+      this.#domains = null;
+    });
+    listener.onReconnect(() => {
+      this.#domains = null;
+    });
+    this.#caching = true;
+  }
+
   async isPortalDomain(host: string): Promise<boolean> {
-    const result = await this.#database.execute<{ found: boolean }>(
-      sql`select exists (select 1 from portal_domains where domain = ${host}) as found`,
-    );
-    return result.rows[0]?.found ?? false;
+    if (!this.#caching) {
+      const result = await this.#database.execute<{ found: boolean }>(
+        sql`select exists (select 1 from portal_domains where domain = ${host}) as found`,
+      );
+      return result.rows[0]?.found ?? false;
+    }
+    if (!this.#domains) {
+      const loading = this.#database
+        .execute<{ domain: string }>(sql`select domain from portal_domains`)
+        .then((result) => new Set(result.rows.map((row) => row.domain)));
+      this.#domains = loading;
+      loading.catch(() => {
+        if (this.#domains === loading) this.#domains = null;
+      });
+    }
+    return (await this.#domains).has(host);
   }
 
   async setAddress(

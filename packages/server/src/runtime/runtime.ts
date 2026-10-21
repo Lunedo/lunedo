@@ -231,6 +231,7 @@ export async function createServerRuntime(options: {
     });
 
     await services.instanceAddress.applyConfigured();
+    await services.portals.enableDomainCache(listener);
 
     if (jobs && keyRotation) {
       if (role === "worker") {
