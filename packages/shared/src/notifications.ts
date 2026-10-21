@@ -79,6 +79,23 @@ export const notificationParamSchemas = {
     store: z.enum(["local", "s3"]),
     link: z.string().nullable().default(null),
   }),
+  "backup.failed": z.object({
+    reason: z.string(),
+    reminder: z.boolean(),
+    link: z.string().nullable().default(null),
+  }),
+  "backup.missing": z.object({
+    days: z.number().int(),
+    lastSuccessAt: instant.nullable(),
+    reminder: z.boolean(),
+    link: z.string().nullable().default(null),
+  }),
+  "backup.recovered": z.object({ link: z.string().nullable().default(null) }),
+  "backup.testRestoreFailed": z.object({
+    backupName: z.string(),
+    reason: z.string(),
+    link: z.string().nullable().default(null),
+  }),
   "identityProvider.credentialExpiring": z.object({
     providerName: z.string(),
     expiresAt: instant,
@@ -145,6 +162,10 @@ export const securityNotificationTypes: ReadonlySet<NotificationType> = new Set<
 export const operationsNotificationTypes: ReadonlySet<NotificationType> = new Set<NotificationType>([
   "storage.levelReached",
   "storage.levelCleared",
+  "backup.failed",
+  "backup.missing",
+  "backup.recovered",
+  "backup.testRestoreFailed",
 ]);
 
 function administrationEvent(

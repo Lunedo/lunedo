@@ -20,6 +20,16 @@ describe("parseCommand", () => {
       configDir: "/restored",
     });
     expect(parseCommand(["backup", "restore", "--input", "a.phbak"])).toMatchObject({ force: false });
+    expect(parseCommand(["backup", "create", "--before-update"])).toEqual({
+      name: "backup create before update",
+    });
+    expect(parseCommand(["backup", "skip-before-update"])).toEqual({ name: "backup skip-before-update" });
+  });
+
+  it("does not combine a backup before an update with an output file", () => {
+    expect(() => parseCommand(["backup", "create", "--before-update", "--output", "a.phbak"])).toThrow(
+      UsageError,
+    );
   });
 
   it("parses key commands and help", () => {

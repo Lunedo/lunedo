@@ -15,6 +15,8 @@ export const instanceKeys = {
   breakGlass: ["instance", "breakGlass"] as const,
   address: ["instance", "address"] as const,
   storage: ["instance", "storage"] as const,
+  backups: ["instance", "backups"] as const,
+  backupFiles: ["instance", "backups", "files"] as const,
   rendering: ["instance", "rendering"] as const,
 };
 
@@ -78,6 +80,20 @@ export const storageQuery = queryOptions({
 });
 
 export type StorageStatus = Awaited<ReturnType<NonNullable<(typeof storageQuery)["queryFn"]>>>;
+
+export const backupsQuery = queryOptions({
+  queryKey: instanceKeys.backups,
+  queryFn: () => request(() => api.GET("/api/v1/instance/backups")),
+});
+
+export type BackupOverview = Awaited<ReturnType<NonNullable<(typeof backupsQuery)["queryFn"]>>>;
+
+export const backupFilesQuery = queryOptions({
+  queryKey: instanceKeys.backupFiles,
+  queryFn: () => request(() => api.GET("/api/v1/instance/backups/files")),
+});
+
+export type BackupFiles = Awaited<ReturnType<NonNullable<(typeof backupFilesQuery)["queryFn"]>>>;
 
 export const breakGlassQuery = queryOptions({
   queryKey: instanceKeys.breakGlass,

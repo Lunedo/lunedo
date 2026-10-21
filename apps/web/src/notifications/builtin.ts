@@ -8,6 +8,7 @@ import {
   CalendarPlus,
   CircleDot,
   Copy,
+  DatabaseBackup,
   FileArchive,
   FileInput,
   FilePen,
@@ -103,6 +104,14 @@ notificationTypes.register(
   { id: "mail.credentialExpiring", icon: Mail, link: () => ({ to: "/settings/instance/mail" }) },
   { id: "storage.levelReached", icon: HardDrive, link: () => ({ to: "/settings/instance/storage" }) },
   { id: "storage.levelCleared", icon: HardDrive, link: () => ({ to: "/settings/instance/storage" }) },
+  { id: "backup.failed", icon: DatabaseBackup, link: () => ({ to: "/settings/instance/backups" }) },
+  { id: "backup.missing", icon: DatabaseBackup, link: () => ({ to: "/settings/instance/backups" }) },
+  { id: "backup.recovered", icon: DatabaseBackup, link: () => ({ to: "/settings/instance/backups" }) },
+  {
+    id: "backup.testRestoreFailed",
+    icon: DatabaseBackup,
+    link: () => ({ to: "/settings/instance/backups" }),
+  },
   {
     id: "identityProvider.syncHeld",
     icon: ShieldAlert,

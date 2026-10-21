@@ -4,6 +4,7 @@ import { RouteAccessGuard } from "./access/route-access.guard.js";
 import { RouteAccessVerifier } from "./access/route-access.verifier.js";
 import { AuditModule } from "./audit/audit.module.js";
 import { AuthModule } from "./auth/auth.module.js";
+import { BackupsModule } from "./backups/backups.module.js";
 import { ChatModule } from "./chat/chat.module.js";
 import { CollaborationModule } from "./collaboration/collaboration.module.js";
 import { API_CONTEXT, type ApiContext } from "./context.js";
@@ -51,6 +52,7 @@ export class AppModule {
               ImportsModule,
               ExportsModule,
               StorageModule,
+              BackupsModule,
               SharingModule,
               SearchModule,
             ]

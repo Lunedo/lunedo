@@ -8,17 +8,169 @@ The commands run inside the image, with the same configuration as the instance:
 
 ```sh
 docker compose exec pagehall pagehall backup create --output /var/lib/pagehall/backups/pagehall.phbak
+docker compose exec pagehall pagehall backup create --before-update
+docker compose run --rm pagehall backup skip-before-update
 docker compose exec pagehall pagehall backup verify --input /var/lib/pagehall/backups/pagehall.phbak
 docker compose run --rm pagehall backup restore --input /var/lib/pagehall/backups/pagehall.phbak
 ```
 
 - `create` writes the backup. The output directory must be writable by the container user; `/var/lib/pagehall/backups` is.
+- `create --before-update` writes a backup with the class "before update" to the configured target instead of a file; see [Backups before updates](#backups-before-updates). `skip-before-update` lets the next start apply pending migrations without that backup.
 - `verify` checks the header, decrypts the whole backup and checks the manifest and every checksum without restoring anything.
 - `restore` restores into an empty instance: an empty database and an empty file store. It verifies the backup first. It refuses to overwrite existing data unless `--force` is given, which replaces all database schemas and the content of the file store. See [How a restore changes the instance](#how-a-restore-changes-the-instance). `--config-dir <dir>` writes the configuration files from the backup to a directory for review; they are never applied automatically.
 
 Stop the application before restoring. After the restore, start Pagehall; it applies migrations if the backup is from an older version.
 
 Exit codes: 0 success, 1 failure, 64 invalid command, 78 invalid configuration.
+
+## Scheduled backups
+
+Instance administrators set up backups once under **Settings > Instance > Backups**. The section shows the target, the schedule, the retention, backups before updates, the backup key warning, the latest runs and the backups in the target. Viewing the section (settings without the secret key, the status, the list and the test restore results) needs the instance permission to view operations, which security auditors have; every change, backup, test restore and deletion needs the permission to manage operations. Backups are never offered for download through the web interface. Changes of the settings and the target (never the secret key), confirmations of the backup key, manual and failed backups, created and deleted backups and test restores are audited as `backup.*` events.
+
+### Targets
+
+One target per instance:
+
+- **Directory:** an absolute path inside the container, by default `/var/lib/pagehall/backups` (`PAGEHALL_BACKUP_DIR`). It must be writable by the container user and must not lie inside the file store, the secrets directory or the import folder. When the directory is on the same volume as the file store, the section warns that one disk failure loses both.
+- **S3-compatible storage:** endpoint, region, bucket, optional prefix ending with `/`, access key, secret key and whether the bucket is addressed in the path. The secret key is stored encrypted with the master key and never shown again; leave it empty to keep it, or enter a new one to replace it. Changing the endpoint, the region, the bucket or the access key requires the secret key again, so a stored key is never sent to another service. Backups are streamed in parts of 8 MB and never held in memory; an upload that fails is aborted, and parts that a killed process left behind are aborted before the next run.
+
+**Test connection** writes, reads, lists and deletes a small test object with the entered settings, without saving them, and names the step and the cause of a failure: missing directory, permission, read-only file system, full target, DNS, a refused private address, connection, TLS, credentials or bucket.
+
+The S3 client follows the same outbound rules as chat channels: private, loopback and link-local addresses are refused unless they are listed in `PAGEHALL_OUTBOUND_ALLOWED_NETWORKS`, and public endpoints need HTTPS.
+
+When a private endpoint is refused, **Test connection** names the address the endpoint resolved to and the network to add, for example `172.18.0.7/32`.
+
+#### A storage service on the same Docker network
+
+A storage service in the same Compose project, such as SeaweedFS, Garage or MinIO, gets an address in the private network of the project. Give that network a fixed subnet and allow it, so a new container address after a restart keeps working:
+
+```yaml
+services:
+  pagehall:
+    environment:
+      PAGEHALL_OUTBOUND_ALLOWED_NETWORKS: 172.30.0.0/24
+    networks: [backend]
+  storage:
+    image: chrislusf/seaweedfs:4.48
+    command: server -s3 -dir=/data
+    volumes:
+      - storage:/data
+    networks: [backend]
+
+networks:
+  backend:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+
+volumes:
+  storage:
+```
+
+Use `http://storage:8333` as endpoint, with path-style addressing on. Addresses in allowed networks may use `http://`. Keep the backups on another disk or host than the file store; a storage service on the same disk does not protect against losing it.
+
+| Service | Endpoint | Region | Path-style | Keys |
+|---|---|---|---|---|
+| Amazon S3 | empty | the bucket's region, for example `eu-central-1` | off | an IAM access key with `s3:PutObject`, `s3:GetObject`, `s3:ListBucket`, `s3:DeleteObject`, `s3:AbortMultipartUpload` and `s3:ListBucketMultipartUploads` |
+| Google Cloud Storage | `https://storage.googleapis.com` | `auto` or the bucket's location | off | an HMAC key of a service account (Cloud Storage > Settings > Interoperability) with the Storage Object Admin role on the bucket |
+| MinIO | the MinIO address, for example `https://minio.example.org` | `us-east-1` unless MinIO is set to another one | on | a MinIO access key with read and write access to the bucket |
+| Cloudflare R2 | `https://<account id>.r2.cloudflarestorage.com` | `auto` | off | an R2 API token with Object Read & Write for the bucket |
+
+#### A network share as target
+
+Mount the share into the container and use the mount point as directory target. With Docker Compose and NFS:
+
+```yaml
+services:
+  pagehall:
+    volumes:
+      - pagehall-data:/var/lib/pagehall
+      - backups:/mnt/backups
+
+volumes:
+  pagehall-data:
+  backups:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: addr=nas.example.org,rw,nfsvers=4
+      device: ":/export/pagehall-backups"
+```
+
+For SMB, use `type: cifs`, `device: "//nas.example.org/pagehall-backups"` and `o: "username=pagehall,password=…,uid=1000,gid=1000,file_mode=0600,dir_mode=0700"`. The container runs as user 1000 (`node`). Then set the directory target to `/mnt/backups`.
+
+### Schedule
+
+- **Back up every day** at a time in the time zone of the instance, which the section shows. The run happens on the worker. A day whose backup is due while the worker was down gets one backup when it is back, not one per missed day.
+- **Weekly backup** on a day of the week and **monthly backup** on a day of the month (in shorter months on the last day): the backup of that day is kept as a weekly or monthly one. A day that is both counts as monthly.
+- Only one backup runs at a time across all workers. A scheduled run that would overlap a running backup is skipped and listed as skipped.
+- **Back up now** starts a manual backup to the same target. Manual backups are kept until they are deleted.
+- Before a backup to a directory, the free space is checked against the critical level of the storage warnings (95 % by default, see [storage.md](storage.md)): a backup that would take the disk above it is refused with the space it needs and the space that is free.
+
+Backups are named `pagehall-backup-<UTC time>-<class>-<random>.phbak`, for example `pagehall-backup-20261021T020000Z-daily-3f0c8a1b.phbak`.
+
+### Retention
+
+Grandfather-father-son: the newest 7 daily, 4 weekly and 6 monthly backups are kept (each number can be changed), the newest 3 backups before updates, and every manual backup until it is deleted. Every backup has exactly one class, so a backup kept as a monthly one never counts against the daily ones. Retention runs after each successful scheduled backup and deletes only files or objects that have the name of a Pagehall backup and a readable backup header; other files in the target are never touched.
+
+Deleting a backup in the list asks for its name and cannot be undone.
+
+### Content
+
+**Everything** (default) contains the database, the file store and the configuration. **Without the file store** is for installations that snapshot the file store volume themselves: the header says `"scope": "database"`, and a restore of such a backup restores the database and leaves the file store as it is. Restore the file store from a snapshot of the same time, or attachments created or deleted in between are missing or left over.
+
+## Backups before updates
+
+When a process starts and migrations are pending, Pagehall first writes a backup with the class "before update" to the target and waits for it, logging its progress every 30 seconds. While no target is set up, it goes to `PAGEHALL_BACKUP_DIR`, and the log says so. Only the first process applies migrations; the others wait. The backup carries the schema version of the database before the update, so the previous version can restore it.
+
+If the backup fails, the migrations are not run and the process stops with the reason and the command to start once without it:
+
+```sh
+docker compose run --rm pagehall backup skip-before-update
+```
+
+The setting **Back up before migrations** and the environment variable `PAGEHALL_BACKUP_BEFORE_UPDATE=false` turn the backup off for installations with their own backup strategy; the backup section shows which of them did. A fresh installation without migrations applied takes no backup.
+
+Update scripts can take the backup themselves before pulling a new image:
+
+```sh
+docker compose exec pagehall pagehall backup create --before-update
+```
+
+It writes a "before update" backup to the target (or to `PAGEHALL_BACKUP_DIR`), applies the retention of that class and prints only the location on standard output: a path, or `s3://<bucket>/<key>`. Messages go to standard error. Run `backup skip-before-update` afterwards if the next start should not take a second backup.
+
+Rolling back an update means restoring the backup before the update with the previous image.
+
+## Test restore
+
+**Test restore** in the list, or the monthly test restore (on by default: after the first scheduled backup of a month), checks one backup:
+
+1. It verifies the backup like `backup verify`.
+2. When the database user may create databases, it restores the backup into a temporary database on the same server and a temporary directory under `PAGEHALL_BACKUP_DIR`, and checks that the schema version matches the backup, that the main tables contain data (the row counts are listed) and that every file the database refers to is present.
+3. It removes the temporary database and directory, also when a step fails.
+
+Without the privilege it stops after step 1 with the result "verified only" and shows the SQL that grants it, for example `ALTER ROLE "pagehall" CREATEDB;`. The result is kept with the backup: when, by whom, how far it got and what it checked. Only one test restore runs at a time.
+
+## Warnings
+
+Warnings go to the instance administrators (notification center, e-mail and push by their preferences) and to the operations contacts of the storage settings (e-mail and Teams), with the same rules as the storage warnings:
+
+| Warning | When | Repeated |
+|---|---|---|
+| A backup failed | the first failed run, with the reason | by the reminder of the operations contacts while backups keep failing; one message when a backup succeeds again |
+| No recent backup | no successful backup for the configured number of days (default 2), checked every minute | by the reminder; one message when a backup succeeds again |
+| A test restore failed | every failed test restore | no |
+
+While the instance has content and backups are off or have no target, a banner on the settings pages says so; there is no mail for it.
+
+For monitoring, `GET /api/v1/instance/backups/status` returns the last success, the last failure, the next run, whether scheduled backups are on and whether backups before updates are on.
+
+## Upgrading PostgreSQL to a new major version
+
+1. Stop Pagehall and take a backup: `docker compose run --rm pagehall backup create --output /var/lib/pagehall/backups/before-postgres.phbak`.
+2. Start a new database container with the new major version and an empty data volume, for example `postgres:17-alpine` instead of `postgres:16-alpine`, and keep the old volume until the restore is checked.
+3. Restore into it with the same secrets directory: `docker compose run --rm pagehall backup restore --input /var/lib/pagehall/backups/before-postgres.phbak`.
+4. Start Pagehall. CI restores a backup of the current major version into the next one on every run.
 
 ## Backup keys
 
@@ -67,6 +219,8 @@ The header JSON:
   "chunkSize": 65536
 }
 ```
+
+A backup without the file store adds `"scope": "database"`; a backup with everything leaves the field out, so older versions read it unchanged.
 
 The header is readable without the key, so a backup can be identified and checked before decryption. It is authenticated: the first 10 + n bytes are part of the authenticated data of every encrypted chunk, so any change to the header makes decryption fail.
 
@@ -141,6 +295,4 @@ Other URL parameters stop the command with a message that names the parameter.
 
 ## Tests
 
-CI creates a backup of an instance with sample data, verifies it, restores it into a fresh database and file store, compares both, and checks that a second restore is refused (`scripts/backup-roundtrip.sh`).
-
-Schedules, retention, remote targets and the backup screens are not part of this version.
+CI creates a backup of an instance with sample data, verifies it, restores it into a fresh database and file store, compares both, and checks that a second restore is refused. It restores the same backup into the next PostgreSQL major version and compares again, and it lets a worker write a scheduled backup to S3-compatible storage (SeaweedFS), restores that backup into another fresh instance and compares its content and files (`scripts/backup-roundtrip.sh`).

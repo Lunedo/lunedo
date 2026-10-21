@@ -158,6 +158,9 @@ export const problems = {
   notEnoughStorage: { status: 507, title: "Not enough storage for this export" },
   storageFull: { status: 507, title: "Storage is almost full" },
   invalidStorageSettings: { status: 400, title: "The storage settings are not valid" },
+  invalidBackupSettings: { status: 400, title: "The backup settings are not valid" },
+  backupRunning: { status: 409, title: "A backup or test restore is already running" },
+  backupNotFound: { status: 404, title: "The backup is not in the backup target" },
   tooManyExports: { status: 409, title: "You keep as many exports as allowed" },
   tooManyPagesToPrint: { status: 409, title: "Too many pages to print in a browser" },
   tooManyPagesForFile: { status: 409, title: "Too many pages for a Word or PDF file" },
@@ -483,7 +486,7 @@ export const problemSchema = z
       .array(z.string().describe("Path of an invalid field, with dots between levels."))
       .optional()
       .describe(
-        "Invalid fields, for `invalidInput`, `invalidStorageSettings` and the codes about the address of a chat channel.",
+        "Invalid fields, for `invalidInput`, `invalidStorageSettings`, `invalidBackupSettings` and the codes about the address of a chat channel.",
       ),
     denials: z
       .array(z.string().describe("Reason code of the authorization service."))
@@ -498,7 +501,7 @@ export const problemSchema = z
       .string()
       .optional()
       .describe(
-        "Which password rule failed, for `passwordPolicy`; why the address of a chat channel was refused, for `invalidChatAddress`; which storage setting was refused (`invalidThresholds`, `invalidS3Limit`, `invalidContacts` or `invalidTeamsWebhook`), for `invalidStorageSettings`.",
+        "Which password rule failed, for `passwordPolicy`; why the address of a chat channel was refused, for `invalidChatAddress`; which storage setting was refused (`invalidThresholds`, `invalidS3Limit`, `invalidContacts` or `invalidTeamsWebhook`), for `invalidStorageSettings`; which backup setting was refused, for `invalidBackupSettings`; whether a `backup` or a `testRestore` is running, for `backupRunning`.",
       ),
     refusal: z
       .enum(["upload", "largeWrite"])

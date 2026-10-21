@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { createReadStream, createWriteStream, type Dirent } from "node:fs";
 import { mkdir, open, readdir, rename, rm, stat } from "node:fs/promises";
 import path from "node:path";
-import { Readable, Transform } from "node:stream";
+import { Readable, Transform, type Writable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { createGunzip, createGzip } from "node:zlib";
 import tar from "tar-stream";
@@ -39,6 +39,8 @@ import {
  * Inside the stream: a gzip-compressed tar archive whose last entry is manifest.json.
  */
 export const BACKUP_FORMAT_VERSION = 1;
+export const backupScopes = ["all", "database"] as const;
+export type BackupScope = (typeof backupScopes)[number];
 const MAGIC = Buffer.from("PHBK");
 const PREFIX_LENGTH = 10;
 const MAX_HEADER_LENGTH = 64 * 1024;
@@ -62,6 +64,7 @@ const headerSchema = z.object({
   ),
   cipher: z.string(),
   chunkSize: z.int().positive(),
+  scope: z.enum(backupScopes).optional(),
 });
 
 export type BackupHeader = z.infer<typeof headerSchema>;
@@ -138,33 +141,78 @@ export function encodeBackupHeader(header: BackupHeader, formatVersion = BACKUP_
 export async function readBackupHeader(input: string): Promise<{ header: BackupHeader; bytes: Buffer }> {
   const file = await open(input, "r");
   try {
-    const prefix = Buffer.alloc(PREFIX_LENGTH);
-    const { bytesRead } = await file.read(prefix, 0, PREFIX_LENGTH, 0);
-    if (bytesRead < PREFIX_LENGTH || !prefix.subarray(0, 4).equals(MAGIC)) {
-      throw new BackupError(`${input} is not a Pagehall backup`);
-    }
-    const formatVersion = prefix.readUInt16BE(4);
-    if (formatVersion !== BACKUP_FORMAT_VERSION) {
-      throw new BackupError(
-        `The backup uses format version ${formatVersion}, which this Pagehall version cannot read. Restore it with the Pagehall version that created it or a newer one.`,
-      );
-    }
-    const length = prefix.readUInt32BE(6);
-    if (length > MAX_HEADER_LENGTH) throw new BackupError("The backup header is damaged");
-    const json = Buffer.alloc(length);
-    const read = await file.read(json, 0, length, PREFIX_LENGTH);
-    if (read.bytesRead < length) throw new BackupError("The backup header is damaged");
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(json.toString("utf8"));
-    } catch {
-      throw new BackupError("The backup header is damaged");
-    }
-    const header = headerSchema.safeParse(parsed);
-    if (!header.success) throw new BackupError("The backup header is damaged");
-    return { header: header.data, bytes: Buffer.concat([prefix, json]) };
+    return await readHeaderFrom(input, (buffer, position) => file.read(buffer, 0, buffer.length, position));
   } finally {
     await file.close();
+  }
+}
+
+export const MAX_HEADER_BYTES = PREFIX_LENGTH + MAX_HEADER_LENGTH;
+
+async function readHeaderFrom(
+  name: string,
+  read: (buffer: Buffer, position: number) => Promise<{ bytesRead: number }>,
+): Promise<{ header: BackupHeader; bytes: Buffer }> {
+  const prefix = Buffer.alloc(PREFIX_LENGTH);
+  const { bytesRead } = await read(prefix, 0);
+  if (bytesRead < PREFIX_LENGTH || !prefix.subarray(0, 4).equals(MAGIC)) {
+    throw new BackupError(`${name} is not a Pagehall backup`);
+  }
+  const formatVersion = prefix.readUInt16BE(4);
+  if (formatVersion !== BACKUP_FORMAT_VERSION) {
+    throw new BackupError(
+      `The backup uses format version ${formatVersion}, which this Pagehall version cannot read. Restore it with the Pagehall version that created it or a newer one.`,
+    );
+  }
+  const length = prefix.readUInt32BE(6);
+  if (length > MAX_HEADER_LENGTH) throw new BackupError("The backup header is damaged");
+  const json = Buffer.alloc(length);
+  const rest = await read(json, PREFIX_LENGTH);
+  if (rest.bytesRead < length) throw new BackupError("The backup header is damaged");
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json.toString("utf8"));
+  } catch {
+    throw new BackupError("The backup header is damaged");
+  }
+  const header = headerSchema.safeParse(parsed);
+  if (!header.success) throw new BackupError("The backup header is damaged");
+  return { header: header.data, bytes: Buffer.concat([prefix, json]) };
+}
+
+export function parseBackupHeader(
+  name: string,
+  start: Buffer,
+): Promise<{ header: BackupHeader; bytes: Buffer }> {
+  return readHeaderFrom(name, async (buffer, position) => ({
+    bytesRead: position >= start.length ? 0 : start.copy(buffer, 0, position),
+  }));
+}
+
+export interface BackupSource {
+  readonly name: string;
+  readHeader(): Promise<{ header: BackupHeader; bytes: Buffer }>;
+  open(start: number): Promise<Readable>;
+  close(): Promise<void>;
+}
+
+export async function openBackupFile(input: string): Promise<BackupSource> {
+  const handle = await open(input, "r");
+  return {
+    name: input,
+    readHeader: () =>
+      readHeaderFrom(input, (buffer, position) => handle.read(buffer, 0, buffer.length, position)),
+    open: async (start) => handle.createReadStream({ start, autoClose: false }),
+    close: () => handle.close(),
+  };
+}
+
+async function withSource<T>(input: string | BackupSource, use: (source: BackupSource) => Promise<T>) {
+  const source = typeof input === "string" ? await openBackupFile(input) : input;
+  try {
+    return await use(source);
+  } finally {
+    if (typeof input === "string") await source.close();
   }
 }
 
@@ -230,11 +278,12 @@ export interface BackupArchiveWriter {
 
 /** Writes the header and opens the encrypted archive behind it. Callers add entries and finalize `pack`. */
 export function openBackupArchive(options: {
-  output: string;
+  output: string | Writable;
   backupKeys: KeyRing;
   masterKeys: BackupHeader["masterKeys"];
   pagehallVersion: string;
   schemaVersion: string;
+  scope?: BackupScope;
   chunkSize?: number;
 }): BackupArchiveWriter {
   const chunkSize = options.chunkSize ?? DEFAULT_CHUNK_SIZE;
@@ -249,10 +298,12 @@ export function openBackupArchive(options: {
     masterKeys: options.masterKeys,
     cipher: CIPHER,
     chunkSize,
+    ...(options.scope === "database" ? { scope: "database" as const } : {}),
   };
   const headerBytes = encodeBackupHeader(header);
   const pack = tar.pack();
-  const output = createWriteStream(options.output, { mode: 0o600 });
+  const output =
+    typeof options.output === "string" ? createWriteStream(options.output, { mode: 0o600 }) : options.output;
   output.write(headerBytes);
   const finished = pipeline(
     pack,
@@ -294,14 +345,31 @@ async function isEmptyFileStore(dir: string): Promise<boolean> {
   }
 }
 
+export interface BackupDestination {
+  open(): Writable;
+  commit(): Promise<void>;
+  abort(): Promise<void>;
+}
+
+export function fileDestination(output: string): BackupDestination {
+  const partial = `${output}.${randomUUID()}.partial`;
+  return {
+    open: () => createWriteStream(partial, { mode: 0o600 }),
+    commit: () => rename(partial, output),
+    abort: () => rm(partial, { force: true }),
+  };
+}
+
 export interface CreateBackupOptions {
-  output: string;
+  output: string | BackupDestination;
+  stagingDir?: string | undefined;
   backupKeys: KeyRing;
   /** Master key versions used by encrypted data in the database and the file store. */
   masterKeys: BackupHeader["masterKeys"];
   database: DatabaseArchiver;
   filesDir: string;
   objectStore?: FileStore | undefined;
+  scope?: BackupScope | undefined;
   /** Configuration files to include, by name. They must not contain the master or backup key. */
   config: Record<string, string>;
   pagehallVersion: string;
@@ -315,19 +383,27 @@ export interface CreateBackupOptions {
  * needs its size in advance.
  */
 export async function createBackup(options: CreateBackupOptions): Promise<BackupManifest> {
-  const partial = `${options.output}.${randomUUID()}.partial`;
-  const staged = `${options.output}.${randomUUID()}.dump`;
+  const destination = typeof options.output === "string" ? fileDestination(options.output) : options.output;
+  const stagingDir =
+    options.stagingDir ?? (typeof options.output === "string" ? path.dirname(options.output) : undefined);
+  if (!stagingDir) throw new BackupError("A staging directory is needed for the database dump");
+  const staged = path.join(stagingDir, `.pagehall-backup-${randomUUID()}.dump`);
   const entries: BackupManifest["entries"] = [];
+  let committed = false;
   try {
+    await mkdir(stagingDir, { recursive: true });
     await pipeline(options.database.dump(), createWriteStream(staged, { mode: 0o600 }));
 
+    const scope = options.scope ?? "all";
     const { header, pack, finished } = openBackupArchive({
-      output: partial,
+      output: destination.open(),
       backupKeys: options.backupKeys,
       masterKeys: options.masterKeys,
       pagehallVersion: options.pagehallVersion,
       schemaVersion: options.schemaVersion,
+      scope,
     });
+    finished.catch(() => {});
 
     const add = async (name: string, source: Readable, size: number) => {
       const hasher = new Hasher();
@@ -337,11 +413,11 @@ export async function createBackup(options: CreateBackupOptions): Promise<Backup
     };
 
     await add(DATABASE_ENTRY, createReadStream(staged), (await stat(staged)).size);
-    for (const file of await listFiles(options.filesDir)) {
+    for (const file of scope === "all" ? await listFiles(options.filesDir) : []) {
       const full = path.join(options.filesDir, ...file.split("/"));
       await add(`${FILES_PREFIX}${file}`, createReadStream(full), (await stat(full)).size);
     }
-    if (options.objectStore) {
+    if (options.objectStore && scope === "all") {
       for await (const object of options.objectStore.list()) {
         await add(
           `${FILES_PREFIX}${ATTACHMENTS_DIRECTORY}/${object.key}`,
@@ -370,19 +446,20 @@ export async function createBackup(options: CreateBackupOptions): Promise<Backup
     );
     pack.finalize();
     await finished;
-    await rename(partial, options.output);
+    await destination.commit();
+    committed = true;
     options.logger.info({ entries: entries.length, schemaVersion: options.schemaVersion }, "Backup created");
     return manifest;
   } finally {
     await rm(staged, { force: true });
-    await rm(partial, { force: true });
+    if (!committed) await destination.abort();
   }
 }
 
 type EntryHandler = (name: string, content: Readable) => Promise<void>;
 
 interface ReadOptions {
-  input: string;
+  input: string | BackupSource;
   backupKeys: KeyRing;
   knownSchemaVersions: readonly string[];
   masterKeys?: KeyRing | null;
@@ -392,13 +469,17 @@ interface ReadOptions {
  * Checks the header, then decrypts and reads the archive, checks every entry against the
  * manifest and returns it.
  */
-async function readArchive(options: ReadOptions, handle: EntryHandler): Promise<BackupManifest> {
-  const { header, bytes } = await readBackupHeader(options.input);
+async function readArchive(
+  source: BackupSource,
+  options: ReadOptions,
+  handle: EntryHandler,
+): Promise<{ manifest: BackupManifest; header: BackupHeader; bytes: Buffer }> {
+  const { header, bytes } = await source.readHeader();
   checkBackupHeader(header, options);
 
   const extract = tar.extract();
   const reading = pipeline(
-    createReadStream(options.input, { start: bytes.length }),
+    await source.open(bytes.length),
     createDecryptStream(backupStreamKeys(options.backupKeys), { associatedData: bytes }),
     createGunzip(),
     extract,
@@ -423,7 +504,7 @@ async function readArchive(options: ReadOptions, handle: EntryHandler): Promise<
       manifest = parsed.data;
       continue;
     }
-    if (!isKnownEntry(name)) {
+    if (!isKnownEntry(name) || (header.scope === "database" && name.startsWith(FILES_PREFIX))) {
       throw new BackupError(`Restore refused: the backup entry ${name} is outside the restore targets`);
     }
     const hasher = new Hasher();
@@ -449,7 +530,7 @@ async function readArchive(options: ReadOptions, handle: EntryHandler): Promise<
       throw new BackupError(`Checksum mismatch for ${entry.path}`);
     }
   }
-  return manifest;
+  return { manifest, header, bytes };
 }
 
 async function drain(content: Readable): Promise<void> {
@@ -458,7 +539,10 @@ async function drain(content: Readable): Promise<void> {
 
 /** Checks the header, decryption, the manifest and all checksums without restoring anything. */
 export async function verifyBackup(options: ReadOptions): Promise<BackupManifest> {
-  return readArchive(options, (_name, content) => drain(content));
+  return withSource(options.input, async (source) => {
+    const { manifest } = await readArchive(source, options, (_name, content) => drain(content));
+    return manifest;
+  });
 }
 
 export interface RestoreBackupOptions extends ReadOptions {
@@ -485,13 +569,20 @@ export interface RestoreBackupOptions extends ReadOptions {
  * the instance as it was.
  */
 export async function restoreBackup(options: RestoreBackupOptions): Promise<BackupManifest> {
-  const { header } = await readBackupHeader(options.input);
+  return withSource(options.input, (source) => restoreFrom(source, options));
+}
+
+async function restoreFrom(source: BackupSource, options: RestoreBackupOptions): Promise<BackupManifest> {
+  const { header } = await source.readHeader();
   checkBackupHeader(header, options);
+  const withFiles = header.scope !== "database";
 
   const databaseEmpty = await options.database.isEmpty();
   const filesEmpty =
-    (await isEmptyFileStore(options.filesDir)) &&
-    (!options.objectStore || (await options.objectStore.list()[Symbol.asyncIterator]().next()).done === true);
+    !withFiles ||
+    ((await isEmptyFileStore(options.filesDir)) &&
+      (!options.objectStore ||
+        (await options.objectStore.list()[Symbol.asyncIterator]().next()).done === true));
   if (!options.force && (!databaseEmpty || !filesEmpty)) {
     throw new BackupError(
       `Restore refused: the ${!databaseEmpty ? "database" : "file store"} is not empty. Use --force to overwrite it`,
@@ -501,9 +592,9 @@ export async function restoreBackup(options: RestoreBackupOptions): Promise<Back
   const staging = path.join(options.filesDir, RESTORE_STAGING);
   await rm(staging, { recursive: true, force: true });
   await mkdir(staging, { recursive: true });
-  let manifest: BackupManifest;
+  let first: Awaited<ReturnType<typeof readArchive>>;
   try {
-    manifest = await readArchive(options, async (name, content) => {
+    first = await readArchive(source, options, async (name, content) => {
       if (!name.startsWith(FILES_PREFIX)) return drain(content);
       const target = path.join(staging, ...name.slice(FILES_PREFIX.length).split("/"));
       await mkdir(path.dirname(target), { recursive: true });
@@ -515,10 +606,13 @@ export async function restoreBackup(options: RestoreBackupOptions): Promise<Back
   }
 
   const earlierRestoreIncomplete = await hasRestoreMarker(options.filesDir);
-  await writeRestoreMarker(options.filesDir, options.input);
+  await writeRestoreMarker(options.filesDir, source.name);
   let databaseRestored = false;
   try {
-    await readArchive(options, async (name, content) => {
+    if (!(await source.readHeader()).bytes.equals(first.bytes)) {
+      throw new BackupError("The backup changed while it was being restored");
+    }
+    const second = await readArchive(source, options, async (name, content) => {
       if (name === DATABASE_ENTRY) {
         await options.database.restore(content, { replaceExisting: !databaseEmpty });
         databaseRestored = true;
@@ -530,9 +624,19 @@ export async function restoreBackup(options: RestoreBackupOptions): Promise<Back
         await drain(content);
       }
     });
-    if (options.objectStore)
-      await replaceObjects(options.objectStore, path.join(staging, ATTACHMENTS_DIRECTORY));
-    await replaceFiles(options.filesDir, staging);
+    if (
+      !second.bytes.equals(first.bytes) ||
+      JSON.stringify(second.manifest) !== JSON.stringify(first.manifest)
+    ) {
+      throw new BackupError("The backup changed while it was being restored");
+    }
+    if (withFiles) {
+      if (options.objectStore)
+        await replaceObjects(options.objectStore, path.join(staging, ATTACHMENTS_DIRECTORY));
+      await replaceFiles(options.filesDir, staging);
+    } else {
+      await rm(staging, { recursive: true, force: true });
+    }
   } catch (error) {
     if (databaseRestored) {
       throw new BackupError(
@@ -546,10 +650,10 @@ export async function restoreBackup(options: RestoreBackupOptions): Promise<Back
   }
   await removeRestoreMarker(options.filesDir);
   options.logger.info(
-    { schemaVersion: manifest.schemaVersion, entries: manifest.entries.length },
+    { schemaVersion: first.manifest.schemaVersion, entries: first.manifest.entries.length },
     "Backup restored",
   );
-  return manifest;
+  return first.manifest;
 }
 
 async function replaceObjects(store: FileStore, staged: string): Promise<void> {

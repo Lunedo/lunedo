@@ -130,6 +130,19 @@ export const configSettings = [
     "Master key ring file for the file key provider. Defaults to master-keys in the secrets directory.",
   ),
   setting("PAGEHALL_BACKUP_KEY", nonEmpty.optional(), "Key ring that encrypts backups.", true),
+  setting(
+    "PAGEHALL_BACKUP_DIR",
+    path.default("/var/lib/pagehall/backups"),
+    "Default local backup target, used for backups before updates while no target is set up. Backups to S3 stage the database dump here.",
+  ),
+  setting(
+    "PAGEHALL_BACKUP_BEFORE_UPDATE",
+    z
+      .enum(["true", "false"])
+      .default("true")
+      .transform((value) => value === "true"),
+    "Set to false to start without a backup when migrations are pending, for installations with their own backup strategy.",
+  ),
   setting("PAGEHALL_METRICS_TOKEN", nonEmpty.optional(), "Bearer token required by /metrics.", true),
   setting(
     "PAGEHALL_RENDER_URL",
@@ -186,7 +199,7 @@ export const configSettings = [
         (entries) => entries.every(isAddressOrRange),
         "must be a comma-separated list of IP addresses and CIDR ranges",
       ),
-    "Private networks that chat channels may reach. Requests to private, loopback and link-local addresses are refused otherwise.",
+    "Private networks that chat channels, Confluence imports and the S3 backup target may reach. Requests to private, loopback and link-local addresses are refused otherwise.",
   ),
   setting(
     "PAGEHALL_PASSWORD_HASH_CONCURRENCY",

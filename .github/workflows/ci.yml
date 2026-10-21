@@ -144,16 +144,15 @@ jobs:
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
-      minio:
-        image: bitnamilegacy/minio:2025.4.22@sha256:50cec18ac4184af4671a78aedd5554942c8ae105d51a465fa82037949046da01
+      s3:
+        image: chrislusf/seaweedfs:4.48@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d
         env:
-          MINIO_ROOT_USER: pagehall
-          MINIO_ROOT_PASSWORD: pagehall-minio
-          MINIO_DEFAULT_BUCKETS: pagehall-test
+          AWS_ACCESS_KEY_ID: pagehall
+          AWS_SECRET_ACCESS_KEY: pagehall-s3
         ports:
-          - 9000
+          - 8333
         options: >-
-          --health-cmd "curl -fs http://127.0.0.1:9000/minio/health/live"
+          --health-cmd "wget -qO- http://127.0.0.1:8333/healthz"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 20
@@ -205,7 +204,7 @@ jobs:
           PAGEHALL_TEST_MAILPIT_URL: http://localhost:${{ job.services.mailpit.ports['8025'] }}
           PAGEHALL_TEST_MAILPIT_SMTP_PORT: ${{ job.services.mailpit.ports['1025'] }}
           PAGEHALL_TEST_REDIS_URL: redis://localhost:${{ job.services.valkey.ports['6379'] }}
-          PAGEHALL_TEST_S3_ENDPOINT: http://localhost:${{ job.services.minio.ports['9000'] }}
+          PAGEHALL_TEST_S3_ENDPOINT: http://localhost:${{ job.services.s3.ports['8333'] }}
         run: |
           args=(run test --continue)
           if [ "$LANE" = "fast" ]; then args+=(--affected); fi
@@ -337,6 +336,8 @@ jobs:
           path: .turbo/cache
           key: turbo-e2e-${{ github.sha }}
           restore-keys: turbo-e2e-
+      - name: Install PostgreSQL client tools for the backup test
+        run: command -v pg_dump > /dev/null || (apt-get update && apt-get install -y --no-install-recommends postgresql-client)
       - run: pnpm install --frozen-lockfile
       - name: Turn off durability in the test database
         run: node scripts/tune-test-postgres.ts "$PAGEHALL_E2E_DATABASE_URL"
@@ -431,6 +432,8 @@ jobs:
           done
           docker compose -f docker/compose.dev.yml -f docker/compose.ci.yml --profile idp logs authentik-worker
           exit 1
+      - name: Install PostgreSQL client tools for the backup test
+        run: command -v pg_dump > /dev/null || (sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client)
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm --filter @pagehall/web build:e2e

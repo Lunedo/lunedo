@@ -19,6 +19,8 @@ The notification center is the core channel: it always works, also without a mai
 | `identityProvider.syncHeld` | Instance owner and instance administrators | The identity provider |
 | `storage.levelReached` | Instance owner and instance administrators, and the operations contacts by e-mail and Teams | The instance |
 | `storage.levelCleared` | As above | The instance |
+| `backup.failed`, `backup.missing`, `backup.recovered` | Instance owner and instance administrators, and the operations contacts by e-mail and Teams | The instance |
+| `backup.testRestoreFailed` | As above | The instance |
 
 Content events reach people who watch the content, see [Watching](#watching): `content.changed` (a new version, published or saved at the end of a live editing session), `comment.created` (a comment or reply), `page.statusChanged` and `ownership.transferred` (also to the new owner). Mentions, assigned tasks, shares and access requests reach the person concerned.
 

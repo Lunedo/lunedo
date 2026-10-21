@@ -4,6 +4,7 @@ import { INTERNAL_ROUTE, ROUTE_ACCESS, type RouteAccess } from "../access/route-
 import { AuditController } from "../audit/audit.controller.js";
 import { AccountController } from "../auth/account.controller.js";
 import { AuthController } from "../auth/auth.controller.js";
+import { BackupsController } from "../backups/backups.controller.js";
 import { ChatChannelsController } from "../chat/chat-channels.controller.js";
 import { BlogController } from "../collaboration/blog.controller.js";
 import { CommentsController } from "../collaboration/comments.controller.js";
@@ -117,6 +118,7 @@ export const apiControllers = (): Type[] => [
   ExportsController,
   RenderingController,
   StorageController,
+  BackupsController,
   SearchController,
   SavedSearchesController,
 ];

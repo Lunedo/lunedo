@@ -1,5 +1,15 @@
 import designTokens from "@pagehall/tokens/design-tokens.json" with { type: "json" };
 import type { supportedLanguages } from "../settings/builtin.js";
+import {
+  type BackupFailedText,
+  type BackupMissingText,
+  type BackupRecoveredText,
+  type BackupTestRestoreFailedText,
+  backupFailed,
+  backupMissing,
+  backupRecovered,
+  backupTestRestoreFailed,
+} from "./backup-texts.js";
 import { storageCleared, storageReached, storageTest } from "./storage-texts.js";
 import type { MailMessage } from "./transport.js";
 
@@ -75,6 +85,10 @@ export interface MailTemplates {
     link: string | null;
   };
   storageTest: { instanceName: string; link: string | null };
+  backupFailed: BackupFailedText;
+  backupMissing: BackupMissingText;
+  backupRecovered: BackupRecoveredText;
+  backupTestRestoreFailed: BackupTestRestoreFailedText;
   accountRolesWithheld: { instanceName: string; accountName: string; providerName: string; roles: number };
   accountWithoutOrganization: {
     instanceName: string;
@@ -293,6 +307,10 @@ const catalogs: Record<Language, Catalog> = {
     storageLevelReached: (params) => storageReached("en", params),
     storageLevelCleared: (params) => storageCleared("en", params),
     storageTest: (params) => storageTest("en", params),
+    backupFailed: (params) => backupFailed("en", params),
+    backupMissing: (params) => backupMissing("en", params),
+    backupRecovered: (params) => backupRecovered("en", params),
+    backupTestRestoreFailed: (params) => backupTestRestoreFailed("en", params),
     mailCredentialExpiring: ({ instanceName, date }) => ({
       subject: `E-mail on ${instanceName} stops on ${date}`,
       paragraphs: [
@@ -483,6 +501,10 @@ const catalogs: Record<Language, Catalog> = {
     storageLevelReached: (params) => storageReached("de", params),
     storageLevelCleared: (params) => storageCleared("de", params),
     storageTest: (params) => storageTest("de", params),
+    backupFailed: (params) => backupFailed("de", params),
+    backupMissing: (params) => backupMissing("de", params),
+    backupRecovered: (params) => backupRecovered("de", params),
+    backupTestRestoreFailed: (params) => backupTestRestoreFailed("de", params),
     mailCredentialExpiring: ({ instanceName, date }) => ({
       subject: `E-Mail-Versand auf ${instanceName} endet am ${date}`,
       paragraphs: [

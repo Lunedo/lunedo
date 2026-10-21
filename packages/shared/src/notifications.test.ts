@@ -63,7 +63,7 @@ describe("notification events", () => {
     ]);
   });
 
-  it("mark only events about sign-in, credentials and storage as events without an unsubscribe link", () => {
+  it("mark only events about sign-in, credentials, storage and backups as events without an unsubscribe link", () => {
     expect(notificationEvents.filter((event) => event.security).map((event) => event.id)).toEqual([
       "apiTokenExpiring",
       "breakGlassStarted",
@@ -71,6 +71,10 @@ describe("notification events", () => {
       "mailCredentialExpiring",
       "storageLevelReached",
       "storageLevelCleared",
+      "backupFailed",
+      "backupMissing",
+      "backupRecovered",
+      "backupTestRestoreFailed",
       "identityProviderCredentialExpiring",
       "signInNewBrowser",
     ]);

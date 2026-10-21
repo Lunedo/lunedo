@@ -6,14 +6,16 @@ import { AuditLog, auditSettingChanges } from "../audit/audit-log.js";
 import { Secret } from "../config/secret.js";
 import { Encryption } from "../crypto/envelope.js";
 import { EnvKeyProvider, type KeyProvider } from "../crypto/key-provider.js";
-import { formatKeyEntry, parseKeyRing } from "../crypto/key-ring.js";
+import { formatKeyEntry, type KeyRing, parseKeyRing } from "../crypto/key-ring.js";
 import { KeyRingHolder } from "../crypto/key-ring-holder.js";
 import { createDatabase, type Database } from "../database/database.js";
 import { runMigrations } from "../database/migrate.js";
 import { createDatabasePool, type DatabasePool } from "../database/pool.js";
 import type { RenderConnection } from "../exports/rendering.js";
+import type { FileStore } from "../files/store.js";
 import type { DirectoryConnector } from "../identity/ldap-connection.js";
 import type { ConfluenceTransport } from "../imports/confluence/api-client.js";
+import type { JobQueue } from "../jobs/job-queue.js";
 import { createLogger } from "../logging/logger.js";
 import type { OutboundPolicy } from "../outbound/guarded-request.js";
 import { type AccountServices, createAccountServices } from "../services.js";
@@ -22,6 +24,8 @@ import { createMigratedDatabase, createTemporaryDatabase, type TemporaryDatabase
 import { CapturingTransport } from "./jobs.js";
 
 export interface TestServices {
+  backupKeys: KeyRing;
+  filesDir: string;
   encryption: Encryption;
   keyRing: KeyRingHolder;
   url: string;
@@ -48,6 +52,9 @@ export async function createTestServices(
     render?: RenderConnection;
     renderFetch?: typeof fetch;
     beforeMigrations?: (url: string) => Promise<unknown>;
+    jobs?: JobQueue;
+    fileStore?: FileStore;
+    backup?: (url: string) => NonNullable<Parameters<typeof createAccountServices>[0]["backup"]>;
   } = {},
 ): Promise<TestServices> {
   const temporary: TemporaryDatabase = options.beforeMigrations
@@ -68,6 +75,8 @@ export async function createTestServices(
   const audit = new AuditLog({ database, encryption });
   const settings = new SettingsService({ database, logger, onChange: auditSettingChanges(audit) });
   const mail = new CapturingTransport();
+  const backupKeys = parseKeyRing(formatKeyEntry(1, randomBytes(32)));
+  const filesDir = mkdtempSync(path.join(tmpdir(), "pagehall-files-"));
   const build = () =>
     createAccountServices({
       database,
@@ -76,10 +85,12 @@ export async function createTestServices(
       audit,
       encryption,
       keyRing,
-      backupKeys: parseKeyRing(formatKeyEntry(1, randomBytes(32))),
-      jobs: undefined,
+      backupKeys,
+      jobs: options.jobs,
       logger,
-      filesDir: mkdtempSync(path.join(tmpdir(), "pagehall-files-")),
+      filesDir,
+      ...(options.fileStore ? { fileStore: options.fileStore } : {}),
+      ...(options.backup ? { backup: options.backup(temporary.url) } : {}),
       passwordHashConcurrency: 2,
       insecureIdentityProviders: true,
       configuredInstanceUrl: options.configuredInstanceUrl,
@@ -94,6 +105,8 @@ export async function createTestServices(
     });
   const services = build();
   return {
+    backupKeys,
+    filesDir,
     url: temporary.url,
     pool,
     database,
