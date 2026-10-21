@@ -60,7 +60,8 @@ export interface ArticleTranslations {
 export function translationState(source: SQL, translation: SQL): SQL {
   return sql`(case when ${translation}.published_version_id is null then 'unpublished'
     when (select sv.created_at from page_versions sv where sv.id = ${source}.published_version_id)
-      > (select tv.created_at from page_versions tv where tv.id = ${translation}.published_version_id)
+      > greatest((select tv.created_at from page_versions tv where tv.id = ${translation}.published_version_id),
+        (select ar.reviewed_at from article_reviews ar where ar.item_id = ${translation}.id))
       then 'outdated' else 'current' end)`;
 }
 
@@ -142,7 +143,9 @@ export class ArticleTranslationService {
           };
         }),
       searchUpdate:
-        remaining > 0 ? { remaining, total: Math.max(Number(indexing.rows[0]?.total ?? 0), remaining) } : null,
+        remaining > 0
+          ? { remaining, total: Math.max(Number(indexing.rows[0]?.total ?? 0), remaining) }
+          : null,
     };
   }
 

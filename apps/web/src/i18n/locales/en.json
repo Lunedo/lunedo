@@ -9691,7 +9691,7 @@
         "missing": "Missing"
       },
       "disabled": "Language turned off",
-      "outdatedHint": "The original was published after this translation. Compare it with the original and publish the translation again.",
+      "outdatedHint": "The original was published after this translation. Compare it with the original, then publish the translation again or, if it still matches, mark it as reviewed.",
       "create": "Translate into {language}",
       "open": "Open",
       "created": "Translation created",
@@ -9810,7 +9810,7 @@
       "loadFailed": "The articles to review",
       "emptyTitle": "Nothing due in this selection",
       "emptyDescription": "New due dates appear here and on “For you”.",
-      "hint": "Only articles you may edit are listed. “Mark as reviewed” sets the last review to today without creating a version.",
+      "hint": "Only articles you may edit are listed. “Mark as reviewed” sets the last review to today without creating a version. For an outdated translation it confirms that the translation still matches its original.",
       "article": "Article",
       "owner": "Owner",
       "interval": "Interval",

@@ -9691,7 +9691,7 @@
         "missing": "Fehlt"
       },
       "disabled": "Sprache deaktiviert",
-      "outdatedHint": "Das Original wurde nach dieser Übersetzung veröffentlicht. Vergleiche sie mit dem Original und veröffentliche die Übersetzung erneut.",
+      "outdatedHint": "Das Original wurde nach dieser Übersetzung veröffentlicht. Vergleiche sie mit dem Original und veröffentliche die Übersetzung erneut oder markiere sie als geprüft, wenn sie noch passt.",
       "create": "Übersetzen ins {language}",
       "open": "Öffnen",
       "created": "Übersetzung angelegt",
@@ -9810,7 +9810,7 @@
       "loadFailed": "Die Artikel zur Überprüfung",
       "emptyTitle": "In dieser Auswahl ist nichts fällig",
       "emptyDescription": "Neue Fälligkeiten erscheinen hier und auf „Für dich“.",
-      "hint": "Hier stehen nur Artikel, die du bearbeiten darfst. „Als geprüft markieren“ setzt die letzte Überprüfung auf heute, ohne eine Version anzulegen.",
+      "hint": "Hier stehen nur Artikel, die du bearbeiten darfst. „Als geprüft markieren“ setzt die letzte Überprüfung auf heute, ohne eine Version anzulegen. Bei einer veralteten Übersetzung bestätigt es, dass sie noch zum Original passt.",
       "article": "Artikel",
       "owner": "Verantwortlich",
       "interval": "Intervall",

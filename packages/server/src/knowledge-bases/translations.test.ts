@@ -282,6 +282,34 @@ describe.skipIf(!baseUrl)("knowledge base languages", () => {
     expect(reviews.counts.translations).toBe(1);
   });
 
+  it("confirms an outdated translation when it is marked as reviewed and undoes that again", async () => {
+    const { editor, kb } = await setup();
+    const source = await article(editor, kb.id, "Drucker", "Drucker im Flur.");
+    const translation = await test.services.translations.create(editor, source, "en");
+    await write(editor, translation.id, "Printer in the hallway.");
+    await ageVersion(translation.id, 10);
+    await test.database.execute(sql`
+      update article_reviews set reviewed_at = now() - interval '10 minutes' where item_id = ${translation.id}`);
+    await write(editor, source, "Drucker im zweiten Stock.");
+    const state = async () =>
+      (await test.services.translations.translations(editor, source))?.translations.find(
+        (entry) => entry.language === "en",
+      )?.state;
+    expect(await state()).toBe("outdated");
+    const record = await test.services.reviews.markReviewed(editor, translation.id);
+    expect(await state()).toBe("current");
+    expect((await test.services.translations.settings(kb.id)).progress).toEqual([
+      { language: "en", translated: 1, outdated: 0, missing: 0 },
+    ]);
+    const reviews = await test.services.reviews.list(editor, kb.id, {
+      filter: "translations",
+      page: { limit: 50 },
+    });
+    expect(reviews.counts.translations).toBe(0);
+    await test.services.reviews.undoReview(editor, translation.id, record.reviewId);
+    expect(await state()).toBe("outdated");
+  });
+
   it("refuses a default language that already has translations", async () => {
     const { editor, kb } = await setup();
     const source = await article(editor, kb.id, "WLAN", "Verbinden.");
