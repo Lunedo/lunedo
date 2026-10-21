@@ -33,12 +33,25 @@ test("an article becomes due, appears on For you, is marked as reviewed and leav
   await expectAccessible(page, "due for review on the home page");
 
   await page.goto(`/spaces/${space.key}/reviews`);
-  const table = page.getByRole("table", { name: "Review" });
-  await expect(table.getByRole("link", { name: title, exact: true })).toBeVisible();
+  const list = page.getByRole("list", { name: "Review" });
+  await expect(list.getByRole("link", { name: title, exact: true })).toBeVisible();
   await expectAccessible(page, "review list");
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    const row = list.getByRole("listitem").filter({ hasText: title });
+    for (const part of [
+      row.getByText(/Overdue for|Due today/),
+      row.getByRole("button", { name: `Mark as reviewed: ${title}` }),
+      row.getByRole("link", { name: `Edit “${title}”` }),
+    ]) {
+      await expect(part).toBeInViewport({ ratio: 1 });
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
 
   await page.goto("/home");
-  await due.getByRole("button", { name: "Mark as reviewed" }).click();
+  await due.getByRole("button", { name: `Mark as reviewed: ${title}` }).click();
   await expect(page.getByText(`“${title}” marked as reviewed.`, { exact: false }).first()).toBeVisible();
   await expect(page.getByRole("region", { name: "Due for review" })).toHaveCount(0);
 

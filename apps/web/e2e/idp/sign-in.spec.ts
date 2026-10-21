@@ -298,7 +298,6 @@ test.describe("linking an existing account", () => {
     const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
     const page = await context.newPage();
     await page.goto(linkFrom(mail.text).replace(/^https?:\/\/[^/]+/, ""));
-    await page.getByRole("button", { name: "Accept invitation" }).click();
     await page.getByLabel("Name", { exact: true }).fill(person.name);
     await page.getByLabel("Password", { exact: true }).fill(person.password);
     await page.getByLabel("Repeat the password").fill(person.password);

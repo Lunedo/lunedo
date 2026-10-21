@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
-import { type DocumentJson, type NodeJson, plainText } from "@pagehall/editor-schema";
+import { type DocumentJson, extractSections, type NodeJson, plainText } from "@pagehall/editor-schema";
 import { sql } from "drizzle-orm";
 import MiniSearch from "minisearch";
 import { ANONYMOUS } from "../../accounts/principal.js";
@@ -37,7 +37,7 @@ const MAX_INDEXED_TEXT = 20_000;
 
 export const STATIC_SEARCH_OPTIONS = {
   fields: ["title", "text", "category"],
-  storeFields: ["title", "url", "excerpt", "category", "type"],
+  storeFields: ["title", "url", "excerpt", "category", "type", "number"],
 };
 
 interface SiteArticle {
@@ -83,6 +83,16 @@ function extensionOf(name: string): string {
 function walk(node: NodeJson, visit: (node: NodeJson) => void): void {
   visit(node);
   for (const child of node.content ?? []) walk(child, visit);
+}
+
+function excerptOf(article: SiteArticle): string {
+  const lead = article.found.lead.trim();
+  const text =
+    lead ||
+    extractSections(article.document)
+      .map((section) => section.text)
+      .join(" ");
+  return text.replace(/\s+/g, " ").trim().slice(0, EXCERPT);
 }
 
 function up(depth: number): string {
@@ -311,6 +321,7 @@ export class StaticSiteBuilder {
         logoUrl: logoPath ? `${root}/${logoPath}` : null,
         account: null,
         appLink: null,
+        accountLink: null,
         signInUrl: null,
         signOutUrl: "",
         categories,
@@ -435,12 +446,13 @@ export class StaticSiteBuilder {
           return [
             {
               id: `${summary.language}:${summary.number}`,
+              number: summary.number,
               title: summary.title,
               text: body,
               category: category?.title ?? "",
               type: summary.type ?? "",
               url: articleFile(article),
-              excerpt: body.slice(0, EXCERPT),
+              excerpt: excerptOf(article),
             },
           ];
         }),

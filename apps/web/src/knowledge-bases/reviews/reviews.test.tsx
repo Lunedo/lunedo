@@ -123,16 +123,16 @@ describe("the review list", () => {
       [`DELETE /api/v1/articles/${ARTICLE}/reviews/${REVIEW}`]: () => ({ status: 204 }),
     });
     await renderWithProviders(inSpace(<ReviewScreen />));
-    const table = await screen.findByRole("table", { name: "Review" });
-    expect(within(table).getByText("Overdue for 17 days")).toBeTruthy();
-    expect(within(table).getByText("Due in 10 days")).toBeTruthy();
-    expect(within(table).getByText("Nobody (Paul Krämer left)")).toBeTruthy();
-    expect(within(table).getByRole("button", { name: "Set owner" })).toBeTruthy();
+    const list = await screen.findByRole("list", { name: "Review" });
+    expect(within(list).getByText("Overdue for 17 days")).toBeTruthy();
+    expect(within(list).getByText("Due in 10 days")).toBeTruthy();
+    expect(within(list).getByText("Nobody (Paul Krämer left)")).toBeTruthy();
+    expect(within(list).getByRole("button", { name: "Set owner" })).toBeTruthy();
     expect(screen.getByRole("radio", { name: "Due (1)" })).toBeTruthy();
 
-    const row = within(table).getByText("Set up the VPN at home").closest("tr");
+    const row = within(list).getByText("Set up the VPN at home").closest("li");
     if (!row) throw new Error("No row for the article");
-    await userEvent.click(within(row).getByRole("button", { name: "Mark as reviewed" }));
+    await userEvent.click(within(row).getByRole("button", { name: /^Mark as reviewed/ }));
     expect(await screen.findByText(/“Set up the VPN at home” marked as reviewed/)).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: /Undo/ }));
     await waitFor(() =>
@@ -192,8 +192,78 @@ describe("the review list", () => {
       }),
     });
     await renderWithProviders(inSpace(<ReviewScreen />, "editor"));
-    await screen.findByRole("table", { name: "Review" });
+    await screen.findByRole("list", { name: "Review" });
     expect(screen.queryByRole("button", { name: "Set owner" })).toBeNull();
+  });
+
+  it("keeps state, owner and actions in the row of each article, with no hidden columns", async () => {
+    mockApi({
+      [`GET /api/v1/spaces/${SPACE_ID}/reviews`]: () => ({
+        body: {
+          items: [overdue],
+          nextCursor: null,
+          counts: { all: 1, due: 1, soon: 0, unowned: 0, translations: 0 },
+        },
+      }),
+    });
+    await renderWithProviders(inSpace(<ReviewScreen />));
+    const list = await screen.findByRole("list", { name: "Review" });
+    expect(screen.queryByRole("table")).toBeNull();
+    const row = within(list).getByRole("listitem");
+    expect(row.className).toContain("flex-wrap");
+    for (const element of [
+      within(row).getByText("Overdue for 17 days"),
+      within(row).getByText("Lea Hoffmann"),
+      within(row).getByRole("button", { name: "Mark as reviewed: Set up the VPN at home" }),
+      within(row).getByRole("link", { name: "Edit “Set up the VPN at home”" }),
+    ]) {
+      expect(element.closest(".hidden")).toBeNull();
+    }
+    expect(within(row).getByRole("link", { name: "Edit “Set up the VPN at home”" }).className).toContain(
+      "after:h-hit",
+    );
+    expect(within(row).getByRole("button", { name: /^Mark as reviewed/ }).className).toContain("after:h-hit");
+  });
+
+  it("says that a source page changed also when the article is overdue", async () => {
+    mockApi({
+      [`GET /api/v1/spaces/${SPACE_ID}/reviews`]: () => ({
+        body: {
+          items: [{ ...overdue, sourceChangedAt: day(-2) }],
+          nextCursor: null,
+          counts: { all: 1, due: 1, soon: 0, unowned: 0, translations: 0 },
+        },
+      }),
+    });
+    await renderWithProviders(inSpace(<ReviewScreen />));
+    const list = await screen.findByRole("list", { name: "Review" });
+    expect(within(list).getByText("Overdue for 17 days")).toBeTruthy();
+    expect(within(list).getByText("A source page changed since the last review")).toBeTruthy();
+  });
+
+  it("moves the focus to the next article after one was marked as reviewed", async () => {
+    let reviewed = false;
+    mockApi({
+      [`GET /api/v1/spaces/${SPACE_ID}/reviews`]: () => ({
+        body: {
+          items: reviewed ? [orphan] : [overdue, orphan],
+          nextCursor: null,
+          counts: { all: 2, due: 1, soon: 1, unowned: 1, translations: 0 },
+        },
+      }),
+      [`POST /api/v1/articles/${ARTICLE}/reviews`]: () => {
+        reviewed = true;
+        return { status: 201, body: { reviewId: REVIEW, reviewedAt: day(0), dueAt: day(182) } };
+      },
+    });
+    await renderWithProviders(inSpace(<ReviewScreen />));
+    const button = await screen.findByRole("button", { name: "Mark as reviewed: Set up the VPN at home" });
+    await userEvent.click(button);
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole("button", { name: "Mark as reviewed: Printer on the third floor" }),
+      ),
+    );
   });
 });
 
@@ -270,7 +340,7 @@ describe("due for review on the personal home page", () => {
     await renderWithProviders(inSpace(<DueForReview />));
     expect(await screen.findByRole("heading", { name: "Due for review" })).toBeTruthy();
     expect(screen.getByText("Source page changed")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Mark as reviewed" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Mark as reviewed: Set up the VPN at home" })).toBeTruthy();
   });
 
   it("shows nothing without due articles", async () => {

@@ -21,6 +21,17 @@ export interface ContentAccess {
 
 export const NO_CONTENT_ACCESS: ContentAccess = { choice: "none", limited: false, knowledgeBases: [] };
 
+export function useSpaceNames(spaceIds: readonly string[]): ReadonlyMap<string, string> {
+  const spaces = useQueries({
+    queries: [...new Set(spaceIds)].map((spaceId) => ({
+      queryKey: ["spaces", spaceId, "name"],
+      queryFn: () => request(() => api.GET("/api/v1/spaces/{spaceId}", { params: { path: { spaceId } } })),
+      retry: false,
+    })),
+  });
+  return new Map(spaces.flatMap((entry) => (entry.data ? [[entry.data.id, entry.data.name] as const] : [])));
+}
+
 export function contentAccessOf(
   token: Pick<ApiToken, "scopes" | "contentLevel" | "knowledgeBaseIds">,
   names: ReadonlyMap<string, string> = new Map(),
@@ -36,12 +47,18 @@ export function contentAccessOf(
 export function contentSummary(
   t: Parameters<typeof translateKey>[0],
   token: Pick<ApiToken, "scopes" | "contentLevel" | "knowledgeBaseIds">,
+  names: ReadonlyMap<string, string> = new Map(),
 ): string | null {
   if (!token.scopes.organization?.spaces) return null;
   const level = translateKey(t, `tokens.content.levels.${token.contentLevel}`);
-  return token.knowledgeBaseIds
-    ? t("tokens.content.summaryLimited", { level, count: token.knowledgeBaseIds.length })
-    : level;
+  if (!token.knowledgeBaseIds) return level;
+  const named = token.knowledgeBaseIds.flatMap((id) => {
+    const name = names.get(id);
+    return name ? [name] : [];
+  });
+  return named.length === token.knowledgeBaseIds.length && named.length > 0
+    ? t("tokens.content.summaryNamed", { level, names: named.join(", ") })
+    : t("tokens.content.summaryLimited", { level, count: token.knowledgeBaseIds.length });
 }
 
 export function ContentAccessFields({
@@ -132,16 +149,7 @@ export function ContentAccessDialog({
   const [fieldError, setFieldError] = useState<string | undefined>();
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const spaces = useQueries({
-    queries: (token?.knowledgeBaseIds ?? []).map((spaceId) => ({
-      queryKey: ["spaces", spaceId, "name"],
-      queryFn: () => request(() => api.GET("/api/v1/spaces/{spaceId}", { params: { path: { spaceId } } })),
-      retry: false,
-    })),
-  });
-  const names = new Map(
-    spaces.flatMap((entry) => (entry.data ? [[entry.data.id, entry.data.name] as const] : [])),
-  );
+  const names = useSpaceNames(token?.knowledgeBaseIds ?? []);
   const current = access ?? (token ? contentAccessOf(token, names) : NO_CONTENT_ACCESS);
   const manages = token?.scopes.organization?.spaces === "manage";
   const close = (open: boolean) => {

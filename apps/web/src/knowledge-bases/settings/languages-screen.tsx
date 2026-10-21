@@ -25,6 +25,8 @@ import { SpaceSettingsPage } from "../../spaces/settings/space-settings-page.js"
 import { useSpace } from "../../spaces/space-context.js";
 import { knowledgeBaseKeys, type LanguageSettings, languagesQuery } from "../queries.js";
 
+const SEARCH_UPDATE_REFRESH_MS = 3000;
+
 type Field = "defaultLanguage" | "languages";
 type Change = { defaultLanguage?: string; languages?: string[] };
 
@@ -32,7 +34,11 @@ export function LanguagesScreen() {
   const { t, i18n } = useTranslation();
   const { space } = useSpace();
   const queryClient = useQueryClient();
-  const settings = useQuery({ ...languagesQuery(space.id), throwOnError: false });
+  const settings = useQuery({
+    ...languagesQuery(space.id),
+    throwOnError: false,
+    refetchInterval: (query) => (query.state.data?.searchUpdate ? SEARCH_UPDATE_REFRESH_MS : false),
+  });
   const editable = space.role === "admin" && !space.archived;
   const [states, setStates] = useState<Partial<Record<Field, SaveState>>>({});
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
@@ -104,6 +110,33 @@ export function LanguagesScreen() {
                 )}
               </Notice>
             )}
+            {value.searchUpdate ? (
+              <Notice variant="info">
+                <div className="flex flex-col gap-2">
+                  <p>
+                    {t("knowledgeBase.languages.searchUpdate", {
+                      count: value.searchUpdate.remaining,
+                      total: value.searchUpdate.total,
+                    })}
+                  </p>
+                  <div
+                    role="progressbar"
+                    aria-label={t("knowledgeBase.languages.searchUpdateLabel")}
+                    aria-valuemin={0}
+                    aria-valuemax={value.searchUpdate.total}
+                    aria-valuenow={value.searchUpdate.total - value.searchUpdate.remaining}
+                    className="h-2 overflow-hidden rounded-full bg-surface-sunken"
+                  >
+                    <div
+                      className="h-full bg-accent transition-[width] motion-reduce:transition-none"
+                      style={{
+                        width: `${Math.round(((value.searchUpdate.total - value.searchUpdate.remaining) / value.searchUpdate.total) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              </Notice>
+            ) : null}
             <Section title={t("knowledgeBase.languages.section")} icon={Languages}>
               <div className="flex flex-col divide-y divide-border">
                 <SettingRow

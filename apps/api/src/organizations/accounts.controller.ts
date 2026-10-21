@@ -48,6 +48,11 @@ const invitationPreviewSchema = z.object({
     .describe(
       "The knowledge base whose portal the invited reader account reads, or null for other invitations.",
     ),
+  newAccount: z
+    .boolean()
+    .describe(
+      "Whether accepting creates an account, so a name and a password are needed. False once the invitation is no longer open.",
+    ),
 });
 const secondFactorResetSchema = z
   .object({

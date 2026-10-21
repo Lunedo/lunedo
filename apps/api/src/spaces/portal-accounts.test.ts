@@ -117,6 +117,7 @@ describe.skipIf(!databaseBaseUrl)("portal accounts", () => {
     expect(preview.json()).toMatchObject({
       state: "open",
       knowledgeBaseName: expect.stringContaining("Kundenhilfe"),
+      newAccount: true,
     });
     const accepted = await accept(token, "Klara Kundin");
     expect(accepted.portalUrl).toContain(kb.path);
@@ -144,6 +145,10 @@ describe.skipIf(!databaseBaseUrl)("portal accounts", () => {
         expiresAt: "2099-01-01T00:00:00.000Z",
       }),
     ]);
+    const other = await knowledgeBase("portal");
+    const again = await invite(other.id, "kundin@example.org", "2099-01-01T00:00:00.000Z");
+    const known = await new TestClient(test.app).post("/api/v1/invitations/preview", { token: again.token });
+    expect(known.json()).toMatchObject({ state: "open", newAccount: false });
   });
 
   it("deactivates and removes portal accounts and ends their access when it expires", async () => {

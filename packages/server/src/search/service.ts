@@ -134,6 +134,7 @@ export interface PortalSearchRequest {
   limit: number;
   cursor: SearchCursor | null;
   language: string;
+  fallbackLanguage: string;
 }
 
 export interface PortalSearchHit {
@@ -314,13 +315,14 @@ export class SearchService {
         labels: [],
         authorIds: null,
         statusIds: [],
-        languages: [request.language],
+        languages: [],
         includeArchived: false,
         updatedAfter: null,
         updatedBefore: null,
         categoryId: request.categoryId,
         articleTypes: request.articleTypes,
       },
+      articleLanguages: { preferred: request.language, fallback: request.fallbackLanguage },
       visibleSpaceIds: [request.spaceId],
       sort: "relevance",
       limit,

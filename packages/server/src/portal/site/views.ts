@@ -77,6 +77,7 @@ export interface PortalView {
   logoUrl: string | null;
   account: PortalAccount | null;
   appLink: { label: string; href: string } | null;
+  accountLink: string | null;
   signInUrl: string | null;
   signOutUrl: string;
   categories: PortalCategory[];
@@ -223,7 +224,7 @@ function header(
             html`<details class="dd lang" data-menu><summary aria-label="${view.t.languageCurrent(view.languageLinks.find((link) => link.current)?.label ?? "")}">${icon("languages")}<span class="wide">${view.languageLinks.find((link) => link.current)?.label ?? ""}</span>${icon("chevron-down")}</summary>
               <div class="menu" role="list" aria-label="${view.t.languageMenu}">${view.languageLinks.map(
                 (link) =>
-                  html`<a href="${link.href}" hreflang="${link.language}" lang="${link.language}"${raw(link.current ? ' aria-current="true"' : "")}>${link.label}</a>`,
+                  html`<a href="${link.href}" hreflang="${link.language}" lang="${link.language}"${raw(link.current ? ' aria-current="true"' : "")}><span class="trunc" title="${link.label}">${link.label}</span>${when(link.current, () => icon("check", "cur"))}</a>`,
               )}</div></details>`,
         )}
         ${when(
@@ -235,6 +236,7 @@ function header(
           account
             ? html`<details class="acct" data-menu><summary aria-label="${view.t.account(account.name)}"><span class="av" aria-hidden="true">${initialOf(account.name).slice(0, 2)}</span><span class="name trunc">${account.name.split(" ")[0]}</span>${icon("chevron-down")}</summary>
               <div class="menu"><div class="mh"><b>${account.name}</b><span>${account.email}</span></div>
+                ${when(view.accountLink, () => html`<a href="${view.accountLink ?? ""}">${icon("user-round")}${view.t.accountSettings}</a>`)}
                 ${when(view.appLink, () => html`<a href="${view.appLink?.href ?? ""}">${icon("external-link")}${view.appLink?.label ?? ""}</a>`)}
                 <form method="post" action="${view.signOutUrl}"><button type="submit">${icon("log-out")}${view.t.signOut}</button></form>
               </div></details>`
@@ -342,7 +344,7 @@ export function startPage(
     <div class="pw">
       ${
         empty
-          ? html`<section class="empty" aria-labelledby="empty-heading"><h2 class="h3" id="empty-heading">${t.emptyHeading}</h2><p>${t.emptyText}</p>${when(view.signInUrl, () => html`<p class="row gap-top"><a class="btn primary" href="${view.signInUrl ?? ""}">${icon("log-in")}${t.signIn}</a></p>`)}</section>`
+          ? html`<section class="empty" aria-labelledby="empty-heading"><h2 class="h3" id="empty-heading">${t.emptyHeading}</h2><p>${view.account ? t.emptyTextSignedIn : t.emptyText}</p>${when(view.signInUrl, () => html`<p class="row gap-top"><a class="btn primary" href="${view.signInUrl ?? ""}">${icon("log-in")}${t.signIn}</a></p>`)}</section>`
           : html`
       ${when(
         view.categories.length > 0,
@@ -656,10 +658,11 @@ export function searchPage(
               : html`<ul class="res">${result.results.map((hit) => {
                   const category = categoryOf(view, hit.categoryId);
                   const sub = categoryOf(view, hit.subcategoryId);
-                  return html`<li><span class="path">${kindText(view, hit.type)}${when(hit.type && category, () => html`<span class="dot"></span>`)}${category?.title ?? ""}${when(sub, () => html` › ${sub?.title ?? ""}`)}</span>
+                  const other = hit.language !== view.lang;
+                  return html`<li${raw(other ? ` lang="${hit.language}"` : "")}><span class="path" lang="${view.lang}">${kindText(view, hit.type)}${when(hit.type && category, () => html`<span class="dot"></span>`)}${category?.title ?? ""}${when(sub, () => html` › ${sub?.title ?? ""}`)}${when(other, () => html`<span class="ltag">${icon("languages")}${languageName(hit.language, view.lang)}</span>`)}</span>
                     <a class="t" href="${view.links.article(hit)}">${hit.title}</a>
                     ${when(hit.excerpt.length > 0, () => html`<p>${excerpt(hit.excerpt)}</p>`)}
-                    <span class="path">${icon("history")}${changedOn(view, hit)}</span></li>`;
+                    <span class="path" lang="${view.lang}">${icon("history")}${changedOn(view, hit)}</span></li>`;
                 })}</ul>`
           }
           ${when(more, () => html`<div class="more"><a class="btn" href="${more ?? ""}">${t.moreArticles}</a></div>`)}
@@ -729,7 +732,7 @@ export function contactPage(view: PortalView, query: string): string {
       <span class="cicon s56" aria-hidden="true">${icon("message-circle-question")}</span>
       <h1>${t.noAnswerHeading}</h1>
       <p class="lead">${t.noAnswerText}</p>
-      <section class="panel" aria-labelledby="area-heading"><h2 id="area-heading">${t.areaHeading}</h2><p>${t.areaText}</p>
+      <section class="panel" aria-labelledby="area-heading"><h2 id="area-heading">${query ? t.areaHeading : t.contactAreaHeading}</h2><p>${query ? t.areaText : t.contactAreaText}</p>
         ${areaChoice(view, query ? t.searchSubject(query) : view.config.name)}</section>
     </div></div>`,
   );
@@ -848,11 +851,17 @@ export function staticSearchPage(view: PortalView, data: StaticSearchData): stri
     { title: t.searchLabel, search: false, robots: "noindex,follow" },
     html`<div class="pw">
       <div class="shead">${searchForm(view, "search")}</div>
-      <div data-static-search data-index="${data.index}" data-base="${data.base}" data-fallback-index="${data.fallbackIndex ?? ""}" data-fallback-base="${data.fallbackBase ?? ""}" data-results-one="${t.resultsFor(1, "{query}")}" data-results-other="${t.resultsFor(COUNT_MARK, "{query}").replace(String(COUNT_MARK), "{count}")}" data-typehow-to="${t.types.howTo}" data-typetroubleshooting="${t.types.troubleshooting}">
+      <div data-static-search data-index="${data.index}" data-base="${data.base}" data-fallback-index="${data.fallbackIndex ?? ""}" data-fallback-base="${data.fallbackBase ?? ""}" data-fallback-language="${data.fallbackLanguage}" data-fallback-label="${languageName(data.fallbackLanguage, view.lang)}" data-results-one="${t.resultsFor(1, "{query}")}" data-results-other="${t.resultsFor(COUNT_MARK, "{query}").replace(String(COUNT_MARK), "{count}")}" data-results-none="${t.noResultsHeading("{query}")}" data-typehow-to="${t.types.howTo}" data-typetroubleshooting="${t.types.troubleshooting}">
         <div class="scount"><h1 data-heading hidden></h1></div>
-        <p class="langnote" role="note" data-note hidden>${icon("languages")}${t.searchFallbackNote(languageName(view.lang, view.lang), languageName(data.fallbackLanguage, view.lang))}</p>
         <ul class="res" data-results hidden></ul>
         <div class="center" data-empty hidden><span class="cicon s56" aria-hidden="true">${icon("search-x")}</span><p class="lead">${t.noResultsLead}</p>
+          <div class="tips"><div><b>${t.tipSpelling}</b>${t.tipSpellingText}</div><div><b>${t.tipGeneral}</b>${t.tipGeneralText}</div>
+            <div><b>${t.tipBrowse}</b>${view.categories
+              .filter((category) => category.parentId === null)
+              .map(
+                (category, index) =>
+                  html`${index > 0 ? ", " : ""}<a href="${view.links.category(category.id)}">${category.title}</a>`,
+              )}</div></div>
           <p class="gap-top"><a class="btn" href="${view.links.contact()}">${icon("mail")}${t.contactByArea}</a></p></div>
         <div class="alert" role="alert" data-failed hidden>${icon("circle-alert")}<div><b>${t.searchFailedHeading}</b><p>${t.staticSearchFailed}</p></div></div>
         <noscript><p class="hint">${t.staticSearchNeedsScript}</p></noscript>

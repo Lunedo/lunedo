@@ -342,10 +342,19 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect(read.body).toContain("Für Kunden.");
     expect(read.body).not.toContain(">Zum Wiki<");
     expect(read.body).not.toContain(">Go to the wiki<");
+    expect(read.body).toMatch(
+      new RegExp(`<a href="${TEST_ORIGIN}/"><svg[^>]*>.*?</svg>Account settings</a>`),
+    );
     const blocked = await reader.client.get(`${internal.path}/${secret.number}-intern`);
     expect(blocked.statusCode).toBe(404);
     const standard = await person();
     expect((await standard.client.get(`${kb.path}/${entry.number}-kundenhilfe`)).statusCode).toBe(404);
+    const other = await knowledgeBase("public");
+    const empty = await reader.client.get(`${other.path}/`);
+    expect(empty.statusCode).toBe(200);
+    const t = messagesFor((await services().portals.config(other.id))?.defaultLanguage ?? "en");
+    expect(empty.body).toContain(t.emptyTextSignedIn);
+    expect(empty.body).not.toContain(t.emptyText);
   });
 
   it("hides restricted categories and their articles and does not count them", async () => {
@@ -441,6 +450,7 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     await index();
     const page = await owner.get(`${kb.path}/${entry.number}-bearbeitbar`);
     expect(page.body).toContain(`/pages/${entry.id}?edit=true`);
+    expect(page.body).not.toContain("Account settings");
     const reader = await person();
     const readerPage = await reader.client.get(`${kb.path}/${entry.number}-bearbeitbar`);
     expect(readerPage.body).not.toContain("?edit=true");
@@ -464,6 +474,13 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect(none.body).toContain("mailto:it@example.org?subject=");
     expect(none.body).toContain("mailto:help@example.org?subject=");
     expect(none.body).toContain(encodeURIComponent("Question from the help search: parkausweis"));
+    const t = messagesFor("en");
+    const contact = await anonymous().get(`${kb.path}/contact`);
+    expect(contact.body).toContain(`<h2 id="area-heading">${t.contactAreaHeading}</h2>`);
+    expect(contact.body).not.toContain(t.areaHeading);
+    expect(contact.body).not.toContain(t.areaText);
+    const asked = await anonymous().get(`${kb.path}/contact?q=parkausweis`);
+    expect(asked.body).toContain(`<h2 id="area-heading">${t.areaHeading}</h2>`);
   });
 
   it("records searches, views and ratings without any personal reference", async () => {
@@ -715,6 +732,12 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect(english.body).toContain("Choose a new password.");
     expect(english.body).toContain(messagesFor("en").onThisPage);
     expect(english.body).toContain('class="dd lang"');
+    expect(english.body).toMatch(
+      /hreflang="en" lang="en" aria-current="true"><span class="trunc" title="English">English<\/span><svg class="i cur"/,
+    );
+    expect(english.body).toMatch(
+      /hreflang="de" lang="de"><span class="trunc" title="Deutsch">Deutsch<\/span><\/a>/,
+    );
     expect(english.body).toContain(
       `<link rel="alternate" hreflang="de" href="${TEST_ORIGIN}${kb.path}/${original.number}-passwort-aendern">`,
     );
@@ -747,7 +770,9 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect(start.body).toContain(`href="${kb.path}/en/${original.number}-change-the-password"`);
     const search = await reader.get(`${kb.path}/en/search?q=Drucker`);
     expect(search.statusCode).toBe(200);
-    expect(search.body).toContain('class="langnote"');
+    expect(search.body).not.toContain('class="langnote"');
+    expect(search.body).toContain(`<li lang="de"><span class="path" lang="en">`);
+    expect(search.body).toContain('<span class="ltag">');
     expect(search.body).toContain(`/${untranslated.number}-drucker`);
   });
 

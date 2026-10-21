@@ -10,6 +10,7 @@ import { instanceAccountsQuery } from "../../api/instance-queries.js";
 import { membersQuery, organizationKeys, organizationTokensQuery } from "../../api/organization-queries.js";
 import { request } from "../../api/request.js";
 import { usePaged, useSorted } from "../../components/table-state.js";
+import { useSpaceNames } from "../../components/token-content-access.js";
 import { RevokeTokenDialog, scopeSummary } from "../../components/token-dialogs.js";
 import { useFailureToast } from "../../errors/failure.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
@@ -26,6 +27,9 @@ export function OrganizationTokensScreen() {
   const showFailure = useFailureToast();
   const queryClient = useQueryClient();
   const tokens = useQuery(organizationTokensQuery(organizationId));
+  const knowledgeBaseNames = useSpaceNames(
+    tokens.data?.flatMap((token) => token.knowledgeBaseIds ?? []) ?? [],
+  );
   const members = useQuery(membersQuery(organizationId));
   const accounts = useQuery({ ...instanceAccountsQuery, enabled: state.can("instance.accounts.view") });
   const [revoking, setRevoking] = useState<ApiToken | null>(null);
@@ -68,7 +72,7 @@ export function OrganizationTokensScreen() {
             cell: (token) => (
               <div className="flex flex-col">
                 <span className="font-medium">{token.name}</span>
-                <span className="text-sm text-text-muted">{scopeSummary(t, token)}</span>
+                <span className="text-sm text-text-muted">{scopeSummary(t, token, knowledgeBaseNames)}</span>
               </div>
             ),
           },

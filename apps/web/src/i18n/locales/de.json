@@ -1825,7 +1825,9 @@
     "portalInvitationFor": "{knowledgeBase} lesen",
     "portalInvitationDescription": "{inviter} hat {email} eingeladen, die Hilfe {knowledgeBase} zu lesen. Lege ein Lesekonto mit Passwort an; einen Passkey kannst du danach hinzufügen.",
     "portalAccountCreated": "Dein Lesekonto ist bereit. Melde dich im Portal von {knowledgeBase} an.",
-    "openPortal": "{knowledgeBase} öffnen"
+    "openPortal": "{knowledgeBase} öffnen",
+    "passwordRuleMet": "Erfüllt.",
+    "passwordRuleOpen": "Noch nicht erfüllt."
   },
   "reauthentication": {
     "withProvider": "Weiter mit {name}",
@@ -2552,7 +2554,8 @@
       "changeFailed": "Der Zugriff auf Inhalte konnte nicht geändert werden",
       "readOnlyScope": "Dieses Token wurde mit Lesezugriff auf Spaces angelegt und kann deshalb nur lesen. Lege für Schreibzugriff ein neues Token an.",
       "save": "Zugriff speichern",
-      "saved": "Zugriff auf Inhalte geändert"
+      "saved": "Zugriff auf Inhalte geändert",
+      "summaryNamed": "{level} in {names}"
     }
   },
   "notifications": {
@@ -5410,7 +5413,8 @@
       "adminsOnlyTitle": "Nur Space-Admins verwalten Einschränkungen",
       "adminsOnly": "Wende dich an einen Space-Admin, wenn eine eingeschränkte Seite Aufmerksamkeit braucht.",
       "whyDescription": "Suche eine Person, um ihre Rolle in diesem Space und deren Herkunft zu sehen."
-    }
+    },
+    "articlesButton": "Artikel"
   },
   "tree": {
     "title": "Seiten",
@@ -5445,7 +5449,9 @@
     "editRestricted": "Eingeschränkt: Nur die Zugriffsliste kann sie bearbeiten",
     "newWhiteboard": "Neues Whiteboard",
     "newWhiteboardInside": "Neues Whiteboard darin",
-    "copy": "Kopieren…"
+    "copy": "Kopieren…",
+    "translationLabel": "{title} (Übersetzung: {language})",
+    "translationInto": "Übersetzung: {language}"
   },
   "move": {
     "title": "{title} verschieben",
@@ -5495,7 +5501,16 @@
     "createLink": "Link erstellen",
     "failed": "Der Eintrag konnte nicht erstellt werden",
     "createWhiteboard": "Whiteboard erstellen",
-    "whiteboardTitle": "Neues Whiteboard"
+    "whiteboardTitle": "Neues Whiteboard",
+    "category": {
+      "title": "Neue Kategorie",
+      "create": "Kategorie erstellen",
+      "descriptionHint": "Optional. Lesende sehen sie im Portal oben in der Kategorie."
+    },
+    "subcategory": {
+      "title": "Neue Unterkategorie",
+      "create": "Unterkategorie erstellen"
+    }
   },
   "folder": {
     "titleLabel": "Titel des Ordners",
@@ -5994,7 +6009,20 @@
     "createSeriesFrom": "Serie mit {name} einrichten",
     "seriesTemplate": "Das ist eine Vorlage für Besprechungsserien. Als Nächstes wählst du Name, Mitglieder und Rhythmus; jede Besprechungsseite beginnt dann mit ihr.",
     "articleTitle": "Titel des Artikels",
-    "articleTitleHint": "Leer lassen, um den Titel der Vorlage zu verwenden und den Artikel später umzubenennen."
+    "articleTitleHint": "Leer lassen, um den Titel der Vorlage zu verwenden und den Artikel später umzubenennen.",
+    "article": {
+      "title": "Neuer Artikel in {space}",
+      "searchPlaceholder": "Anleitung, Störung …",
+      "blank": "Leerer Artikel",
+      "createBlank": "Leeren Artikel erstellen",
+      "untitled": "Artikel ohne Titel",
+      "noInput": "Diese Vorlage braucht keine Eingaben. Der Artikel beginnt mit ihren Abschnitten.",
+      "noResultsDescription": "Versuche ein anderes Wort.",
+      "category": "Kategorie",
+      "categoryHint": "Wo der Artikel im Portal erscheint. Du kannst ihn später verschieben.",
+      "noCategory": "Keine Kategorie (oberste Ebene)",
+      "categoriesFailed": "Die Kategorien konnten nicht geladen werden"
+    }
   },
   "home": {
     "title": "Für dich",
@@ -8535,7 +8563,8 @@
       "menu": "Space exportieren",
       "panelTitle": "Diesen Space exportieren",
       "description": "Exportieren Sie alle Seiten und veröffentlichten Blogbeiträge, die Sie lesen können, als PDF, Word, HTML oder Markdown. Eingeschränkte Seiten sind nur enthalten, wenn Sie sie lesen können; private Notizen und der Verlauf nicht. Nur Sie können den Download öffnen. Er wird 24 Stunden nach dem ersten vollständigen Download gelöscht, oder nach 7 Tagen, wenn Sie ihn nie herunterladen. Der Export wird abgelehnt, wenn der Speicher von Pagehall fast voll ist.",
-      "empty": "Du hast keine Exporte dieses Space."
+      "empty": "Du hast keine Exporte dieses Space.",
+      "descriptionArticles": "Exportiere alle Artikel, die du lesen kannst, als PDF, Word, HTML oder Markdown. Eingeschränkte Artikel sind nur enthalten, wenn du sie lesen kannst; private Notizen und der Verlauf nicht. Nur du kannst den Download öffnen. Er wird 24 Stunden nach dem ersten vollständigen Download gelöscht, oder nach 7 Tagen, wenn du ihn nie herunterlädst. Der Export wird abgelehnt, wenn der Speicher von Pagehall fast voll ist."
     },
     "list": {
       "label": "Deine Exporte",
@@ -8587,7 +8616,8 @@
       "title": "Export",
       "description": "Erlauben Sie, Seiten und den ganzen Space als PDF, Word, HTML und Markdown zu exportieren.",
       "settingTitle": "Export-Einstellung",
-      "copyNote": "Das Ausschalten des Exports verhindert kein Kopieren: Wer eine Seite lesen kann, kann ihren Inhalt weiterhin kopieren."
+      "copyNote": "Das Ausschalten des Exports verhindert kein Kopieren: Wer eine Seite lesen kann, kann ihren Inhalt weiterhin kopieren.",
+      "descriptionArticles": "Erlaube, Artikel und die ganze Wissensdatenbank als PDF, Word, HTML und Markdown zu exportieren oder als statische Website herunterzuladen."
     },
     "dialog": {
       "title": "„{name}“ exportieren",
@@ -8638,7 +8668,9 @@
         "space": {
           "label": "Der ganze Space „{name}“",
           "description": "Alle Seiten und veröffentlichten Blogbeiträge, die Sie lesen können",
-          "counted": "{pages, plural, one {# Seite} other {# Seiten}} und {posts, plural, one {# Blogbeitrag} other {# Blogbeiträge}}"
+          "counted": "{pages, plural, one {# Seite} other {# Seiten}} und {posts, plural, one {# Blogbeitrag} other {# Blogbeiträge}}",
+          "countedArticles": "{count, plural, one {# Artikel} other {# Artikel}}",
+          "descriptionArticles": "Alle Artikel, die du lesen kannst"
         },
         "adminsOnly": "Nur Space-Admins können mehrere Seiten auf einmal exportieren. Fragen Sie einen Space-Admin von {name}."
       },
@@ -9465,7 +9497,7 @@
       "narrowHint": "Kategorien und Artikel können das Lesen mit Einschränkungen weiter begrenzen, aber nie erweitern. Wer bearbeiten darf, regeln die Berechtigungen des Space.",
       "public": {
         "title": "Öffentlich",
-        "description": "Alle, auch ohne Anmeldung, sobald das Portal verfügbar ist. Bis dahin lesen alle angemeldeten Personen dieser Instanz sie hier."
+        "description": "Alle, auch ohne Anmeldung. Das Portal zeigt die veröffentlichten Artikel, und Suchmaschinen können sie finden."
       },
       "signedIn": {
         "title": "Alle angemeldeten Personen",
@@ -9665,7 +9697,7 @@
       "loadFailed": "Die Sprachen konnten nicht geladen werden",
       "section": "Sprachen",
       "default": "Standardsprache",
-      "defaultDescription": "Sprache neuer Artikel und Rückfall für fehlende Übersetzungen.",
+      "defaultDescription": "Sprache neuer Artikel und Rückfall für fehlende Übersetzungen. Eine Änderung aktualisiert im Hintergrund die Suche aller Artikel; der Fortschritt steht hier.",
       "enabled": "Aktivierte Sprachen",
       "enabledDescription": "Ab zwei Sprachen zeigt das Portal eine Sprachauswahl. {language} als Standardsprache bleibt immer aktiviert. Eine deaktivierte Sprache blendet ihre Übersetzungen für Lesende aus, behält sie aber.",
       "add": "Sprache hinzufügen",
@@ -9675,7 +9707,9 @@
       "outdated": "{count, plural, one {# veraltet} other {# veraltet}}",
       "single": "Nur eine Sprache ist aktiviert, deshalb sehen Lesende nichts von Sprachen.",
       "adminsOnly": "Nur Bereichsadmins ändern die Sprachen. Frag eine von ihnen, wenn eine Sprache fehlt.",
-      "archived": "Die Wissensdatenbank ist archiviert, ihre Sprachen lassen sich deshalb nicht ändern. Hol sie aus dem Archiv zurück, um sie zu ändern."
+      "archived": "Die Wissensdatenbank ist archiviert, ihre Sprachen lassen sich deshalb nicht ändern. Hol sie aus dem Archiv zurück, um sie zu ändern.",
+      "searchUpdate": "{count, plural, one {Die Suche wird aktualisiert: noch # von {total} Artikeln. Bis dahin findet die Portalsuche ihn eventuell nicht.} other {Die Suche wird aktualisiert: noch # von {total} Artikeln. Bis dahin findet die Portalsuche sie eventuell nicht.}}",
+      "searchUpdateLabel": "Aktualisierung der Suche"
     },
     "translations": {
       "button": "Sprachen",
@@ -9690,7 +9724,7 @@
         "missing": "Fehlt"
       },
       "disabled": "Sprache deaktiviert",
-      "outdatedHint": "Das Original wurde nach dieser Übersetzung veröffentlicht. Vergleiche sie mit dem Original und veröffentliche die Übersetzung erneut.",
+      "outdatedHint": "Das Original wurde nach dieser Übersetzung veröffentlicht. Vergleiche sie mit dem Original und veröffentliche die Übersetzung erneut oder markiere sie als geprüft, wenn sie noch passt.",
       "create": "Übersetzen ins {language}",
       "open": "Öffnen",
       "created": "Übersetzung angelegt",
@@ -9698,6 +9732,10 @@
       "createFailed": "Die Übersetzung konnte nicht angelegt werden",
       "translationOf": "Übersetzung von {title}",
       "badge": "{language}: {state}"
+    },
+    "category": {
+      "empty": "Diese Kategorie hat noch keine Artikel",
+      "emptyDescription": "Artikel und Unterkategorien, die du hier erstellst, erscheinen in dieser Übersicht und, sobald sie veröffentlicht sind, im Portal."
     }
   },
   "helpTarget": {
@@ -9809,15 +9847,8 @@
       "loadFailed": "Die Artikel zur Überprüfung",
       "emptyTitle": "In dieser Auswahl ist nichts fällig",
       "emptyDescription": "Neue Fälligkeiten erscheinen hier und auf „Für dich“.",
-      "hint": "Hier stehen nur Artikel, die du bearbeiten darfst. „Als geprüft markieren“ setzt die letzte Überprüfung auf heute, ohne eine Version anzulegen.",
-      "article": "Artikel",
-      "owner": "Verantwortlich",
-      "interval": "Intervall",
-      "lastReviewed": "Zuletzt geprüft",
-      "state": "Fälligkeit",
-      "actions": "Aktionen",
+      "hint": "Hier stehen nur Artikel, die du bearbeiten darfst. „Als geprüft markieren“ setzt die letzte Überprüfung auf heute, ohne eine Version anzulegen. Bei einer veralteten Übersetzung bestätigt es, dass sie noch zum Original passt.",
       "publishedOn": "Veröffentlicht {date}",
-      "never": "Nie",
       "noOwner": "Niemand",
       "ownerLeft": "Niemand ({name} ist nicht mehr dabei)",
       "assignOwner": "Verantwortlich festlegen",
@@ -9832,7 +9863,10 @@
       "offTitle": "Die Überprüfung ist aus",
       "offDescription": "Artikel erscheinen hier, wenn sie ein Überprüfungsintervall haben und fällig werden, wenn sich eine Quellseite ändert oder wenn sie keine Verantwortlichen haben. Lege das Intervall in den Einstellungen der Wissensdatenbank fest.",
       "openSettings": "Überprüfungsintervall festlegen",
-      "translationOutdatedHint": "Übersetzung ({language}) veraltet"
+      "translationOutdatedHint": "Übersetzung ({language}) veraltet",
+      "lastReviewedOn": "Geprüft am {date}",
+      "neverReviewed": "Nie geprüft",
+      "markArticle": "Als geprüft markieren: {title}"
     },
     "settings": {
       "tab": "Überprüfung",

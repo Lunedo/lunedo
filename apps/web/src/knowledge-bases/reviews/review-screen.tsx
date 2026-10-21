@@ -7,13 +7,11 @@ import {
   PageHeader,
   SegmentedControl,
   Skeleton,
-  Table,
-  type TableColumn,
 } from "@pagehall/ui";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { CalendarCheck, Check, FilePen, Languages, SquarePen, UserRoundX } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LoadError } from "../../errors/failure.js";
 import { translateKey } from "../../i18n/translate.js";
@@ -31,53 +29,42 @@ import { ReviewStatus, useReviewAction } from "./review-status.js";
 
 const FILTERS: ReviewFilter[] = ["all", "due", "soon", "unowned", "translations"];
 
-function TitleCell({ row, spaceKey }: { row: ReviewItem; spaceKey: string }) {
+function Hints({ row }: { row: ReviewItem }) {
   const { t, i18n } = useTranslation();
-  const Icon = articleTypeIcon(row.type);
-  const href = itemHref({ id: row.id, kind: "page", title: row.title, link: null }, spaceKey) ?? "";
   const path = row.categoryPath.map((category) => category.title).join(" › ");
   return (
-    <span className="flex min-w-0 items-start gap-2">
-      <Icon aria-hidden="true" className="mt-0.5 size-icon shrink-0 text-text-muted" />
-      <span className="flex min-w-0 flex-col">
-        <Link
-          to={href}
-          className="truncate font-medium hover:underline focus-visible:focus-ring"
-          title={row.title}
-        >
-          {row.title}
-        </Link>
-        {row.translationOutdated ? (
-          <span className="inline-flex min-w-0 items-center gap-1 text-xs text-text-muted">
-            <Languages aria-hidden="true" className="size-3 shrink-0" />
-            <span className="truncate">
-              {t("reviews.list.translationOutdatedHint", {
-                language: contentLanguageLabel(t, row.language, i18n.language),
-              })}
-            </span>
+    <>
+      {path ? (
+        <span className="truncate text-xs text-text-muted" title={path}>
+          {path}
+        </span>
+      ) : null}
+      {row.translationOutdated ? (
+        <span className="inline-flex min-w-0 items-center gap-1 text-xs text-warning">
+          <Languages aria-hidden="true" className="size-3 shrink-0" />
+          <span className="truncate">
+            {t("reviews.list.translationOutdatedHint", {
+              language: contentLanguageLabel(t, row.language, i18n.language),
+            })}
           </span>
-        ) : row.state === "sourceChanged" ? (
-          <span className="inline-flex min-w-0 items-center gap-1 text-xs text-text-muted">
-            <FilePen aria-hidden="true" className="size-3 shrink-0" />
-            <span className="truncate">{t("reviews.list.sourceChangedHint")}</span>
-          </span>
-        ) : path ? (
-          <span className="truncate text-xs text-text-muted" title={path}>
-            {path}
-          </span>
-        ) : null}
-      </span>
-    </span>
+        </span>
+      ) : null}
+      {row.sourceChangedAt ? (
+        <span className="inline-flex min-w-0 items-center gap-1 text-xs text-warning">
+          <FilePen aria-hidden="true" className="size-3 shrink-0" />
+          <span className="truncate">{t("reviews.list.sourceChangedHint")}</span>
+        </span>
+      ) : null}
+    </>
   );
 }
 
-function OwnerCell({ row, onAssign }: { row: ReviewItem; onAssign: (row: ReviewItem) => void }) {
+function Owner({ row }: { row: ReviewItem }) {
   const { t } = useTranslation();
-  const { space } = useSpace();
   if (row.owner) {
     const name = row.owner.name ?? t("ownership.someone");
     return (
-      <span className="flex min-w-0 items-center gap-2">
+      <span className="inline-flex min-w-0 items-center gap-1">
         <Avatar name={name} size="sm" decorative />
         <span className="truncate" title={name}>
           {name}
@@ -85,27 +72,106 @@ function OwnerCell({ row, onAssign }: { row: ReviewItem; onAssign: (row: ReviewI
       </span>
     );
   }
-  const former = row.formerOwner?.name;
+  const text = row.formerOwner?.name
+    ? t("reviews.list.ownerLeft", { name: row.formerOwner.name })
+    : t("reviews.list.noOwner");
   return (
-    <span className="flex min-w-0 flex-col items-start gap-1">
-      <span className="inline-flex items-center gap-2 text-text-muted">
-        <UserRoundX aria-hidden="true" className="size-icon shrink-0" />
-        <span className="truncate" title={former ? t("reviews.list.ownerLeft", { name: former }) : undefined}>
-          {former ? t("reviews.list.ownerLeft", { name: former }) : t("reviews.list.noOwner")}
-        </span>
+    <span className="inline-flex min-w-0 items-center gap-1">
+      <UserRoundX aria-hidden="true" className="size-icon shrink-0" />
+      <span className="truncate" title={text}>
+        {text}
       </span>
-      {space.role === "admin" ? (
-        <Button size="sm" variant="secondary" onClick={() => onAssign(row)}>
-          {t("reviews.list.assignOwner")}
-        </Button>
-      ) : null}
     </span>
+  );
+}
+
+function ReviewRow({
+  row,
+  now,
+  busy,
+  onReview,
+  onAssign,
+  focusRef,
+}: {
+  row: ReviewItem;
+  now: number;
+  busy: boolean;
+  onReview: (row: ReviewItem) => void;
+  onAssign: (row: ReviewItem) => void;
+  focusRef: (element: HTMLElement | null) => void;
+}) {
+  const { t } = useTranslation();
+  const format = useFormat();
+  const { space } = useSpace();
+  const Icon = articleTypeIcon(row.type);
+  const href = itemHref({ id: row.id, kind: "page", title: row.title, link: null }, space.key) ?? "";
+  const reviewed = row.reviewedAt
+    ? t("reviews.list.lastReviewedOn", { date: format.date(row.reviewedAt) })
+    : row.publishedAt
+      ? t("reviews.list.publishedOn", { date: format.date(row.publishedAt) })
+      : t("reviews.list.neverReviewed");
+  const interval = row.intervalMonths
+    ? t("reviews.interval.months", { count: row.intervalMonths })
+    : t("reviews.interval.off");
+  return (
+    <li className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
+      <div className="flex min-w-0 flex-1 basis-field items-start gap-2">
+        <Icon aria-hidden="true" className="mt-0.5 size-icon shrink-0 text-text-muted" />
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <Link
+            to={href}
+            className="truncate font-medium hover:underline focus-visible:focus-ring"
+            title={row.title}
+          >
+            {row.title}
+          </Link>
+          <Hints row={row} />
+          <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-text-muted">
+            <Owner row={row} />
+            <span aria-hidden="true">·</span>
+            <span className="tabular-nums">{reviewed}</span>
+            <span aria-hidden="true">·</span>
+            <span>{interval}</span>
+          </span>
+        </div>
+      </div>
+      <ReviewStatus timing={row} now={now} fixed />
+      <div className="flex flex-wrap items-center gap-2">
+        {!row.owner && space.role === "admin" ? (
+          <Button size="sm" variant="secondary" onClick={() => onAssign(row)}>
+            {t("reviews.list.assignOwner")}
+          </Button>
+        ) : null}
+        {row.publishedAt ? (
+          <Button
+            ref={focusRef}
+            size="sm"
+            variant="secondary"
+            icon={Check}
+            loading={busy}
+            aria-label={t("reviews.list.markArticle", { title: row.title })}
+            onClick={() => onReview(row)}
+          >
+            {t("reviews.markReviewed")}
+          </Button>
+        ) : null}
+        <Link
+          ref={row.publishedAt ? undefined : focusRef}
+          to={href}
+          search={{ edit: true }}
+          className={buttonClassName({ variant: "outline", size: "sm" })}
+          aria-label={t("reviews.list.editArticle", { title: row.title })}
+        >
+          <SquarePen aria-hidden="true" className="size-icon" />
+          {t("reviews.list.edit")}
+        </Link>
+      </div>
+    </li>
   );
 }
 
 export function ReviewScreen() {
   const { t } = useTranslation();
-  const format = useFormat();
   const { space } = useSpace();
   const name = spaceDisplayName(t, space);
   useDocumentTitle(`${t("reviews.list.title")} · ${name}`);
@@ -132,79 +198,23 @@ export function ReviewScreen() {
   const counts = list.data?.pages[0]?.counts;
   const now = Date.now();
 
-  const columns: TableColumn<ReviewItem>[] = [
-    {
-      key: "title",
-      header: t("reviews.list.article"),
-      cell: (row) => <TitleCell row={row} spaceKey={space.key} />,
-    },
-    {
-      key: "owner",
-      header: t("reviews.list.owner"),
-      cell: (row) => <OwnerCell row={row} onAssign={setAssigning} />,
-      hideBelow: "md",
-    },
-    {
-      key: "interval",
-      header: t("reviews.list.interval"),
-      cell: (row) =>
-        row.intervalMonths ? (
-          <span className="text-text-muted">
-            {t("reviews.interval.months", { count: row.intervalMonths })}
-          </span>
-        ) : (
-          <span className="text-text-muted">{t("reviews.interval.off")}</span>
-        ),
-      hideBelow: "md",
-    },
-    {
-      key: "reviewed",
-      header: t("reviews.list.lastReviewed"),
-      cell: (row) => (
-        <span className="text-text-muted tabular-nums">
-          {row.reviewedAt
-            ? format.date(row.reviewedAt)
-            : row.publishedAt
-              ? t("reviews.list.publishedOn", { date: format.date(row.publishedAt) })
-              : t("reviews.list.never")}
-        </span>
-      ),
-      hideBelow: "sm",
-    },
-    { key: "state", header: t("reviews.list.state"), cell: (row) => <ReviewStatus timing={row} now={now} /> },
-    {
-      key: "actions",
-      header: <span className="sr-only">{t("reviews.list.actions")}</span>,
-      align: "end",
-      cell: (row) => {
-        const href = itemHref({ id: row.id, kind: "page", title: row.title, link: null }, space.key) ?? "";
-        return (
-          <span className="flex flex-wrap justify-end gap-2">
-            {row.publishedAt ? (
-              <Button
-                size="sm"
-                variant="secondary"
-                icon={Check}
-                loading={review.busy === row.id}
-                onClick={() => void review.run(row.id, row.title)}
-              >
-                {t("reviews.markReviewed")}
-              </Button>
-            ) : null}
-            <Link
-              to={href}
-              search={{ edit: true }}
-              className="inline-flex h-control-sm items-center gap-1 rounded-md px-2 text-sm font-medium hover:bg-hover focus-visible:focus-ring"
-              aria-label={t("reviews.list.editArticle", { title: row.title })}
-            >
-              <SquarePen aria-hidden="true" className="size-icon" />
-              {t("reviews.list.edit")}
-            </Link>
-          </span>
-        );
-      },
-    },
-  ];
+  const rowElements = useRef(new Map<string, HTMLElement>());
+  const listElement = useRef<HTMLUListElement>(null);
+  const [focusAfter, setFocusAfter] = useState<{ id: string; next: string | null } | null>(null);
+  useEffect(() => {
+    if (!focusAfter || review.busy) return;
+    const target =
+      rowElements.current.get(focusAfter.id) ??
+      (focusAfter.next ? rowElements.current.get(focusAfter.next) : undefined) ??
+      listElement.current;
+    target?.focus();
+    setFocusAfter(null);
+  }, [focusAfter, review.busy]);
+  const onReview = (row: ReviewItem) => {
+    const index = rows.findIndex((entry) => entry.id === row.id);
+    const next = rows[index + 1]?.id ?? rows[index - 1]?.id ?? null;
+    void review.run(row.id, row.title).then(() => setFocusAfter({ id: row.id, next }));
+  };
 
   return (
     <div className="mx-auto flex w-full max-w-page flex-col gap-6 px-4 pt-6 pb-12 md:px-8">
@@ -282,17 +292,27 @@ export function ReviewScreen() {
         )
       ) : null}
       {rows.length > 0 ? (
-        <Table
-          caption={t("reviews.list.title")}
-          columns={columns}
-          rows={rows}
-          rowKey={(row) => row.id}
-          rowLabel={(row) => row.title}
-          onRowClick={(row) => {
-            const href = itemHref({ id: row.id, kind: "page", title: row.title, link: null }, space.key);
-            if (href) void navigate({ to: href });
-          }}
-        />
+        <ul
+          ref={listElement}
+          tabIndex={-1}
+          aria-label={t("reviews.list.title")}
+          className="flex flex-col divide-y divide-border rounded-md border border-border bg-surface focus-visible:focus-ring"
+        >
+          {rows.map((row) => (
+            <ReviewRow
+              key={row.id}
+              row={row}
+              now={now}
+              busy={review.busy === row.id}
+              onReview={onReview}
+              onAssign={setAssigning}
+              focusRef={(element) => {
+                if (element) rowElements.current.set(row.id, element);
+                else rowElements.current.delete(row.id);
+              }}
+            />
+          ))}
+        </ul>
       ) : null}
       {list.hasNextPage ? (
         <Button

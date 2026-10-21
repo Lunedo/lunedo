@@ -282,6 +282,34 @@ describe.skipIf(!baseUrl)("knowledge base languages", () => {
     expect(reviews.counts.translations).toBe(1);
   });
 
+  it("confirms an outdated translation when it is marked as reviewed and undoes that again", async () => {
+    const { editor, kb } = await setup();
+    const source = await article(editor, kb.id, "Drucker", "Drucker im Flur.");
+    const translation = await test.services.translations.create(editor, source, "en");
+    await write(editor, translation.id, "Printer in the hallway.");
+    await ageVersion(translation.id, 10);
+    await test.database.execute(sql`
+      update article_reviews set reviewed_at = now() - interval '10 minutes' where item_id = ${translation.id}`);
+    await write(editor, source, "Drucker im zweiten Stock.");
+    const state = async () =>
+      (await test.services.translations.translations(editor, source))?.translations.find(
+        (entry) => entry.language === "en",
+      )?.state;
+    expect(await state()).toBe("outdated");
+    const record = await test.services.reviews.markReviewed(editor, translation.id);
+    expect(await state()).toBe("current");
+    expect((await test.services.translations.settings(kb.id)).progress).toEqual([
+      { language: "en", translated: 1, outdated: 0, missing: 0 },
+    ]);
+    const reviews = await test.services.reviews.list(editor, kb.id, {
+      filter: "translations",
+      page: { limit: 50 },
+    });
+    expect(reviews.counts.translations).toBe(0);
+    await test.services.reviews.undoReview(editor, translation.id, record.reviewId);
+    expect(await state()).toBe("outdated");
+  });
+
   it("refuses a default language that already has translations", async () => {
     const { editor, kb } = await setup();
     const source = await article(editor, kb.id, "WLAN", "Verbinden.");
@@ -363,11 +391,12 @@ describe.skipIf(!baseUrl)("knowledge base languages", () => {
       });
     });
 
-    it("searches the reader's language first and then the default language", async () => {
+    it("searches the reader's language together with the default language, the reader's first", async () => {
       const { editor, kb } = await setup();
       const source = await article(editor, kb.id, "Bildschirm", "Monitor anschließen mit Kabel.");
       const english = await test.services.translations.create(editor, source, "en");
       await write(editor, english.id, "Connect the screen with the cable.");
+      const untranslated = await article(editor, kb.id, "Adapter", "Den cable Adapter benutzen.");
       await article(editor, kb.id, "Tastatur", "Tastatur reinigen.");
       await test.services.search.indexer.drain();
       const portal = await config(kb.id);
@@ -379,13 +408,46 @@ describe.skipIf(!baseUrl)("knowledge base languages", () => {
           cursor: null,
           language,
         });
-      const english_hits = await search("cable", "en");
-      expect(english_hits).toMatchObject({ language: "en", total: 1 });
-      expect(english_hits.results[0]?.itemId).toBe(english.id);
-      const fallback = await search("Tastatur", "en");
-      expect(fallback).toMatchObject({ language: "de", total: 1 });
+      const both = await search("cable", "en");
+      expect(both.total).toBe(2);
+      expect(both.results.map((hit) => [hit.itemId, hit.language])).toEqual([
+        [english.id, "en"],
+        [untranslated, "de"],
+      ]);
+      const defaultOnly = await search("Tastatur", "en");
+      expect(defaultOnly.results.map((hit) => hit.language)).toEqual(["de"]);
+      const original = await search("Monitor", "en");
+      expect(original.results.map((hit) => hit.itemId)).toEqual([source]);
       const german = await search("cable", "de");
-      expect(german.total).toBe(0);
+      expect(german.results.map((hit) => hit.itemId)).toEqual([untranslated]);
+    });
+
+    it("finds existing articles again after the default language changed", async () => {
+      const { editor, kb } = await setup("public", ["de"]);
+      const page = await article(editor, kb.id, "Urlaub", "Urlaub beantragen im Portal.");
+      await test.services.search.indexer.drain();
+      const portal = await config(kb.id);
+      const before = await test.services.portalReader.search(ANONYMOUS, portal, {
+        query: "Urlaub",
+        categoryId: null,
+        type: null,
+        cursor: null,
+      });
+      expect(before.total).toBe(1);
+      const changed = await test.services.translations.update(editor, kb.id, {
+        defaultLanguage: "en",
+        languages: ["en"],
+      });
+      expect(changed.searchUpdate).toMatchObject({ remaining: 1, total: 1 });
+      await test.services.search.indexer.drain();
+      expect((await test.services.translations.settings(kb.id)).searchUpdate).toBeNull();
+      const after = await test.services.portalReader.search(ANONYMOUS, await config(kb.id), {
+        query: "Urlaub",
+        categoryId: null,
+        type: null,
+        cursor: null,
+      });
+      expect(after.results.map((hit) => [hit.itemId, hit.language])).toEqual([[page, "en"]]);
     });
   });
 

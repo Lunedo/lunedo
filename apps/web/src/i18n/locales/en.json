@@ -1825,7 +1825,9 @@
     "portalInvitationFor": "Read {knowledgeBase}",
     "portalInvitationDescription": "{inviter} invited {email} to read the help {knowledgeBase}. Create a reader account with a password; you can add a passkey afterwards.",
     "portalAccountCreated": "Your reader account is ready. Sign in on the portal of {knowledgeBase}.",
-    "openPortal": "Open {knowledgeBase}"
+    "openPortal": "Open {knowledgeBase}",
+    "passwordRuleMet": "Met.",
+    "passwordRuleOpen": "Not met yet."
   },
   "reauthentication": {
     "withProvider": "Continue with {name}",
@@ -2552,7 +2554,8 @@
       "changeFailed": "The content access could not be changed",
       "readOnlyScope": "This token was created with read access to spaces, so it can only read. Create a new token to write.",
       "save": "Save content access",
-      "saved": "Content access changed"
+      "saved": "Content access changed",
+      "summaryNamed": "{level} in {names}"
     }
   },
   "notifications": {
@@ -5410,7 +5413,8 @@
       "adminsOnlyTitle": "Only space admins manage restrictions",
       "adminsOnly": "Ask a space admin if a restricted page needs attention.",
       "whyDescription": "Search a person to see their role in this space and where it comes from."
-    }
+    },
+    "articlesButton": "Articles"
   },
   "tree": {
     "title": "Pages",
@@ -5445,7 +5449,9 @@
     "editRestricted": "Restricted: only the access list can edit it",
     "newWhiteboard": "New whiteboard",
     "newWhiteboardInside": "New whiteboard inside",
-    "copy": "Copy…"
+    "copy": "Copy…",
+    "translationLabel": "{title} ({language} translation)",
+    "translationInto": "Translation into {language}"
   },
   "move": {
     "title": "Move {title}",
@@ -5495,7 +5501,16 @@
     "createLink": "Create link",
     "failed": "The item could not be created",
     "createWhiteboard": "Create whiteboard",
-    "whiteboardTitle": "New whiteboard"
+    "whiteboardTitle": "New whiteboard",
+    "category": {
+      "title": "New category",
+      "create": "Create category",
+      "descriptionHint": "Optional. Readers see it at the top of the category in the portal."
+    },
+    "subcategory": {
+      "title": "New subcategory",
+      "create": "Create subcategory"
+    }
   },
   "folder": {
     "titleLabel": "Folder title",
@@ -5994,7 +6009,20 @@
     "createSeriesFrom": "Set up series with {name}",
     "seriesTemplate": "This is a template for meeting series. Next you choose the name, members and rhythm; each meeting page then starts from it.",
     "articleTitle": "Title of the article",
-    "articleTitleHint": "Leave it empty to use the title of the template and rename the article later."
+    "articleTitleHint": "Leave it empty to use the title of the template and rename the article later.",
+    "article": {
+      "title": "New article in {space}",
+      "searchPlaceholder": "How-to, troubleshooting …",
+      "blank": "Blank article",
+      "createBlank": "Create blank article",
+      "untitled": "Untitled article",
+      "noInput": "This template needs no input. The article starts with its sections.",
+      "noResultsDescription": "Try another word.",
+      "category": "Category",
+      "categoryHint": "Where the article appears in the portal. You can move it later.",
+      "noCategory": "No category (top level)",
+      "categoriesFailed": "The categories could not be loaded"
+    }
   },
   "home": {
     "title": "For you",
@@ -8535,7 +8563,8 @@
       "menu": "Export space",
       "panelTitle": "Export this space",
       "description": "Export every page and published blog post you can read as PDF, Word, HTML or Markdown. Restricted pages are included only when you can read them; private notes and history are not. Only you can open the download. It is deleted 24 hours after you first downloaded it completely, or after 7 days if you never download it. The export is refused when the storage of Pagehall is almost full.",
-      "empty": "You have no exports of this space."
+      "empty": "You have no exports of this space.",
+      "descriptionArticles": "Export every article you can read as PDF, Word, HTML or Markdown. Restricted articles are included only when you can read them; private notes and history are not. Only you can open the download. It is deleted 24 hours after you first downloaded it completely, or after 7 days if you never download it. The export is refused when the storage of Pagehall is almost full."
     },
     "list": {
       "label": "Your exports",
@@ -8587,7 +8616,8 @@
       "title": "Export",
       "description": "Let people export pages and the whole space as PDF, Word, HTML and Markdown.",
       "settingTitle": "Export setting",
-      "copyNote": "Turning export off does not prevent copying: people who can read a page can still copy its content."
+      "copyNote": "Turning export off does not prevent copying: people who can read a page can still copy its content.",
+      "descriptionArticles": "Let people export articles and the whole knowledge base as PDF, Word, HTML and Markdown, or download it as a static website."
     },
     "dialog": {
       "title": "Export “{name}”",
@@ -8638,7 +8668,9 @@
         "space": {
           "label": "The whole space “{name}”",
           "description": "Every page and published blog post you can read",
-          "counted": "{pages, plural, one {# page} other {# pages}} and {posts, plural, one {# blog post} other {# blog posts}}"
+          "counted": "{pages, plural, one {# page} other {# pages}} and {posts, plural, one {# blog post} other {# blog posts}}",
+          "countedArticles": "{count, plural, one {# article} other {# articles}}",
+          "descriptionArticles": "Every article you can read"
         },
         "adminsOnly": "Only space admins can export several pages at once. Ask a space admin of {name}."
       },
@@ -9465,7 +9497,7 @@
       "narrowHint": "Categories and articles can restrict reading further with view restrictions, never widen it. Who may edit is set in the permissions of the space.",
       "public": {
         "title": "Public",
-        "description": "Everyone, also without signing in, once the portal is available. Until then all signed-in people of this instance read it here."
+        "description": "Everyone, also without signing in. The portal shows the published articles, and search engines can find them."
       },
       "signedIn": {
         "title": "All signed-in people",
@@ -9665,7 +9697,7 @@
       "loadFailed": "The languages could not be loaded",
       "section": "Languages",
       "default": "Default language",
-      "defaultDescription": "Language of new articles and fallback for readers whose language has no translation.",
+      "defaultDescription": "Language of new articles and fallback for readers whose language has no translation. A change updates the search of all articles in the background; the progress shows here.",
       "enabled": "Enabled languages",
       "enabledDescription": "From two languages on, the portal shows a language choice. {language}, the default language, always stays enabled. Turning a language off hides its translations from readers but keeps them.",
       "add": "Add a language",
@@ -9675,7 +9707,9 @@
       "outdated": "{count, plural, one {# outdated} other {# outdated}}",
       "single": "Only one language is enabled, so readers see nothing about languages.",
       "adminsOnly": "Only space admins change the languages. Ask one of them if a language is missing.",
-      "archived": "The knowledge base is archived, so its languages cannot be changed. Restore it from the archive to change them."
+      "archived": "The knowledge base is archived, so its languages cannot be changed. Restore it from the archive to change them.",
+      "searchUpdate": "{count, plural, one {Search is being updated: # of {total} articles left. Until then, portal search may not find it.} other {Search is being updated: # of {total} articles left. Until then, portal search may not find them.}}",
+      "searchUpdateLabel": "Search update"
     },
     "translations": {
       "button": "Languages",
@@ -9690,7 +9724,7 @@
         "missing": "Missing"
       },
       "disabled": "Language turned off",
-      "outdatedHint": "The original was published after this translation. Compare it with the original and publish the translation again.",
+      "outdatedHint": "The original was published after this translation. Compare it with the original, then publish the translation again or, if it still matches, mark it as reviewed.",
       "create": "Translate into {language}",
       "open": "Open",
       "created": "Translation created",
@@ -9698,6 +9732,10 @@
       "createFailed": "The translation could not be created",
       "translationOf": "Translation of {title}",
       "badge": "{language}: {state}"
+    },
+    "category": {
+      "empty": "This category has no articles yet",
+      "emptyDescription": "Articles and subcategories you create here appear in this overview and in the portal once they are published."
     }
   },
   "helpTarget": {
@@ -9809,15 +9847,8 @@
       "loadFailed": "The articles to review",
       "emptyTitle": "Nothing due in this selection",
       "emptyDescription": "New due dates appear here and on “For you”.",
-      "hint": "Only articles you may edit are listed. “Mark as reviewed” sets the last review to today without creating a version.",
-      "article": "Article",
-      "owner": "Owner",
-      "interval": "Interval",
-      "lastReviewed": "Last reviewed",
-      "state": "Due",
-      "actions": "Actions",
+      "hint": "Only articles you may edit are listed. “Mark as reviewed” sets the last review to today without creating a version. For an outdated translation it confirms that the translation still matches its original.",
       "publishedOn": "Published {date}",
-      "never": "Never",
       "noOwner": "Nobody",
       "ownerLeft": "Nobody ({name} left)",
       "assignOwner": "Set owner",
@@ -9832,7 +9863,10 @@
       "offTitle": "Reviews are off",
       "offDescription": "Articles appear here when they have a review interval and become due, when a source page changes or when they have no owner. Set an interval in the settings of the knowledge base.",
       "openSettings": "Set review interval",
-      "translationOutdatedHint": "{language} translation outdated"
+      "translationOutdatedHint": "{language} translation outdated",
+      "lastReviewedOn": "Reviewed {date}",
+      "neverReviewed": "Never reviewed",
+      "markArticle": "Mark as reviewed: {title}"
     },
     "settings": {
       "tab": "Review",

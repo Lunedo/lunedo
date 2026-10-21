@@ -2,7 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockApi, problem, renderWithProviders } from "../testing/render.js";
-import { CreateTokenDialog, expiryChoices, type TokenRequest } from "./token-dialogs.js";
+import { CreateTokenDialog, expiryChoices, scopeSummary, type TokenRequest } from "./token-dialogs.js";
 
 beforeEach(() => {
   mockApi({ "GET /api/v1/auth/session": () => problem(401, "notSignedIn") });
@@ -115,5 +115,22 @@ describe("content access of a token", () => {
       contentLevel: "read",
       knowledgeBaseIds: [knowledgeBase.id],
     });
+  });
+});
+
+describe("token summary", () => {
+  const token = {
+    scopes: { organization: { spaces: "view" as const } },
+    contentLevel: "draft" as const,
+    knowledgeBaseIds: ["01929b1e-0000-7000-8000-0000000000a1"],
+  };
+
+  it("names the knowledge bases a token is limited to", async () => {
+    const { i18n } = await renderWithProviders(<span />);
+    const t = i18n.getFixedT("en");
+    expect(scopeSummary(t, token, new Map([["01929b1e-0000-7000-8000-0000000000a1", "Help Center"]]))).toBe(
+      "Content: Write drafts in Help Center",
+    );
+    expect(scopeSummary(t, token)).toBe("Content: Write drafts in 1 knowledge base");
   });
 });

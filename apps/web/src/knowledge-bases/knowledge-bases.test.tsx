@@ -171,6 +171,16 @@ describe("the visibility of a knowledge base", () => {
     );
   });
 
+  it("describes the public audience as it works today, through the portal", async () => {
+    await showAudience(false);
+    expect(
+      screen.getByText(
+        "Everyone, also without signing in. The portal shows the published articles, and search engines can find them.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(/once the portal is available/)).toBeNull();
+  });
+
   it("narrows without asking", async () => {
     const api = await showAudience(false);
     await userEvent.click(screen.getByRole("radio", { name: /^Portal accounts/ }));

@@ -140,6 +140,7 @@ describe.skipIf(!databaseBaseUrl)("organizations through the API", () => {
       organizationName: "Engineering Team",
       invitedByName: "Olivia Owner",
       knowledgeBaseName: null,
+      newAccount: true,
     });
     const accepted = await new TestClient(test.app).post("/api/v1/invitations/accept", {
       token: linkToken(mail?.text),
@@ -147,7 +148,7 @@ describe.skipIf(!databaseBaseUrl)("organizations through the API", () => {
       password: "a member passphrase",
     });
     expect(accepted.json()).toMatchObject({ organizationId, accountCreated: true });
-    expect((await preview()).json()).toMatchObject({ state: "accepted" });
+    expect((await preview()).json()).toMatchObject({ state: "accepted", newAccount: false });
     expect(
       (await new TestClient(test.app).post("/api/v1/invitations/preview", { token: "x".repeat(43) })).json(),
     ).toMatchObject({ code: "invalidToken" });

@@ -16,6 +16,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../api/client.js";
 import { request } from "../../api/request.js";
 import { problemMessage } from "../../errors/problem-message.js";
+import { isKnowledgeBase } from "../../knowledge-bases/queries.js";
 import { itemHref } from "../item-paths.js";
 import type { SpaceWithRole } from "../space-queries.js";
 
@@ -33,6 +34,7 @@ export function CreateItemDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const { t } = useTranslation();
+  const category = isKnowledgeBase(space) ? (pending?.parentId ? "subcategory" : "category") : null;
   return (
     <Dialog
       open={pending !== null}
@@ -42,7 +44,11 @@ export function CreateItemDialog({
           ? t("createItem.linkTitle")
           : pending?.kind === "whiteboard"
             ? t("createItem.whiteboardTitle")
-            : t("createItem.folderTitle")
+            : category === "category"
+              ? t("createItem.category.title")
+              : category === "subcategory"
+                ? t("createItem.subcategory.title")
+                : t("createItem.folderTitle")
       }
       size="sm"
     >
@@ -73,6 +79,7 @@ function CreateItemForm({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const category = isKnowledgeBase(space) ? (parentId ? "subcategory" : "category") : null;
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [target, setTarget] = useState<"item" | "url">("item");
@@ -212,7 +219,10 @@ function CreateItemForm({
         />
       </Field>
       {kind === "folder" ? (
-        <Field label={t("createItem.description")} hint={t("createItem.descriptionHint")}>
+        <Field
+          label={t("createItem.description")}
+          hint={category ? t("createItem.category.descriptionHint") : t("createItem.descriptionHint")}
+        >
           <Textarea
             rows={2}
             maxLength={1000}
@@ -230,7 +240,11 @@ function CreateItemForm({
             ? t("createItem.createLink")
             : kind === "whiteboard"
               ? t("createItem.createWhiteboard")
-              : t("createItem.createFolder")}
+              : category === "category"
+                ? t("createItem.category.create")
+                : category === "subcategory"
+                  ? t("createItem.subcategory.create")
+                  : t("createItem.createFolder")}
         </Button>
       </div>
     </form>

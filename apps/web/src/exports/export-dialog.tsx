@@ -30,6 +30,7 @@ export interface ExportSpace {
   exportEnabled: boolean;
   admin: boolean;
   mayExportPages: boolean;
+  knowledgeBase?: boolean;
 }
 
 export interface ExportPage {
@@ -248,8 +249,12 @@ export function ExportForm({
       : t("exports.dialog.scopes.pages.description", { title: page?.title ?? "" });
   const spaceDescription =
     scope === "space" && counts.data
-      ? t("exports.dialog.scopes.space.counted", { pages: counts.data.pages, posts: counts.data.blogPosts })
-      : t("exports.dialog.scopes.space.description");
+      ? space.knowledgeBase
+        ? t("exports.dialog.scopes.space.countedArticles", { count: counts.data.pages })
+        : t("exports.dialog.scopes.space.counted", { pages: counts.data.pages, posts: counts.data.blogPosts })
+      : space.knowledgeBase
+        ? t("exports.dialog.scopes.space.descriptionArticles")
+        : t("exports.dialog.scopes.space.description");
   const label =
     choice === "pdf" && !serverPdf
       ? multi

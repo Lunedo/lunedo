@@ -38,6 +38,7 @@ export interface LanguageSettings {
   languages: ArticleLanguage[];
   articles: number;
   progress: LanguageProgress[];
+  searchUpdate: { remaining: number; total: number } | null;
 }
 
 export interface ArticleTranslation {
@@ -59,7 +60,8 @@ export interface ArticleTranslations {
 export function translationState(source: SQL, translation: SQL): SQL {
   return sql`(case when ${translation}.published_version_id is null then 'unpublished'
     when (select sv.created_at from page_versions sv where sv.id = ${source}.published_version_id)
-      > (select tv.created_at from page_versions tv where tv.id = ${translation}.published_version_id)
+      > greatest((select tv.created_at from page_versions tv where tv.id = ${translation}.published_version_id),
+        (select ar.reviewed_at from article_reviews ar where ar.item_id = ${translation}.id))
       then 'outdated' else 'current' end)`;
 }
 
@@ -117,6 +119,11 @@ export class ArticleTranslationService {
       where t.space_id = ${spaceId} and t.kind = 'page' and t.translation_of is null
         and t.trash_entry_id is null and t.archived_root_id is null and t.published_version_id is not null`);
     const articles = Number(total.rows[0]?.articles ?? 0);
+    const indexing = await this.#database.execute<{ remaining: number; total: number }>(sql`
+      select count(p.item_id)::int as remaining, count(*)::int as total from tree_items t
+      left join search_pending_items p on p.item_id = t.id
+      where t.space_id = ${spaceId} and t.kind = 'page' and t.trash_entry_id is null`);
+    const remaining = Number(indexing.rows[0]?.remaining ?? 0);
     const byLanguage = new Map(counts.rows.map((row) => [row.language, row]));
     return {
       spaceId,
@@ -135,6 +142,10 @@ export class ArticleTranslationService {
             missing: Math.max(articles - translated, 0),
           };
         }),
+      searchUpdate:
+        remaining > 0
+          ? { remaining, total: Math.max(Number(indexing.rows[0]?.total ?? 0), remaining) }
+          : null,
     };
   }
 
@@ -183,9 +194,8 @@ export class ArticleTranslationService {
         where space_id = ${spaceId}`);
       if (defaultLanguage !== current.default_language) {
         await tx.execute(sql`
-          insert into search_pending_spaces (space_id) values (${spaceId})
-          on conflict (space_id) do update set generation = search_pending_spaces.generation + 1,
-            updated_at = now()`);
+          select search_mark_item(t.id, interval '0') from tree_items t
+          where t.space_id = ${spaceId} and t.kind = 'page'`);
       }
       await this.#audit.record(tx, {
         name: "knowledgeBase.languagesChanged",

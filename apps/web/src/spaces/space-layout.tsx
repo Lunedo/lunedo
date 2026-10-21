@@ -204,7 +204,7 @@ function SpaceFrame({ space }: { space: SpaceWithRole }) {
         >
           <div className="flex items-center gap-2 border-b border-border px-4 py-2 md:hidden">
             <Button variant="secondary" size="sm" icon={ListTree} onClick={() => setTreeOpen(true)}>
-              {t("spaces.pagesButton")}
+              {isKnowledgeBase(space) ? t("spaces.articlesButton") : t("spaces.pagesButton")}
             </Button>
             <span className="min-w-0 flex-1 truncate text-sm text-text-muted">
               {spaceDisplayName(t, space)}
@@ -355,6 +355,7 @@ function SpaceNavigation({
             name,
             exportEnabled: space.exportEnabled,
             admin: space.role === "admin",
+            knowledgeBase: isKnowledgeBase(space),
           }}
           open={exporting}
           onOpenChange={setExporting}

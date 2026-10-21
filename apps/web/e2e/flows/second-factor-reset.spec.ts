@@ -24,7 +24,6 @@ test("an administrator resets a member's second factor with a reason", async ({
   const context = await forwardFrom(await browser.newContext({ storageState: SIGNED_OUT }));
   const invitee = await context.newPage();
   await invitee.goto(link.replace(/^https?:\/\/[^/]+/, ""));
-  await invitee.getByRole("button", { name: "Accept invitation" }).click();
   await invitee.getByLabel("Name", { exact: true }).fill(person.name);
   await invitee.getByLabel("Password", { exact: true }).fill(person.password);
   await invitee.getByLabel("Repeat the password").fill(person.password);

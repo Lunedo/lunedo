@@ -2,7 +2,7 @@ import { passwordSchema, totpCodeSchema } from "@pagehall/shared";
 import { Button, Dialog, Field, Notice, PasswordInput, SegmentedControl } from "@pagehall/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Fingerprint } from "lucide-react";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { type ReactNode, useEffect, useId, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { api } from "../api/client.js";
@@ -24,10 +24,41 @@ type Method = "password" | "totp" | "passkey" | "provider";
 let pending: ((confirmed: boolean) => void) | null = null;
 const listeners = new Set<() => void>();
 let open = false;
+let slots: string[] = [];
+
+function notify() {
+  for (const listener of listeners) listener();
+}
 
 function setOpen(next: boolean) {
   open = next;
-  for (const listener of listeners) listener();
+  notify();
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+export function useInlineReauthentication(enabled: boolean): { active: boolean; panel: ReactNode } {
+  const id = useId();
+  useEffect(() => {
+    if (!enabled) return;
+    slots = [...slots, id];
+    notify();
+    return () => {
+      slots = slots.filter((slot) => slot !== id);
+      notify();
+    };
+  }, [id, enabled]);
+  const active = useSyncExternalStore(
+    subscribe,
+    () => open && slots.at(-1) === id,
+    () => false,
+  );
+  return { active, panel: active ? <ReauthenticationPanel inline /> : null };
 }
 
 export function requestReauthentication(): Promise<boolean> {
@@ -54,12 +85,9 @@ const codeForm = z.object({ code: totpCodeSchema.min(1) });
 
 export function ReauthenticationHost() {
   const isOpen = useSyncExternalStore(
-    (listener) => {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
-    },
-    () => open,
-    () => open,
+    subscribe,
+    () => open && slots.length === 0,
+    () => false,
   );
   useEffect(() => {
     setReauthenticationHandler(requestReauthentication);
@@ -69,6 +97,23 @@ export function ReauthenticationHost() {
 }
 
 function ReauthenticationDialog() {
+  const { t } = useTranslation();
+  return (
+    <Dialog
+      open
+      onOpenChange={(next) => {
+        if (!next) finish(false);
+      }}
+      title={t("reauthentication.title")}
+      description={t("reauthentication.description")}
+      size="sm"
+    >
+      <ReauthenticationPanel />
+    </Dialog>
+  );
+}
+
+function ReauthenticationPanel({ inline = false }: { inline?: boolean }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const security = useQuery({
@@ -135,125 +180,119 @@ function ReauthenticationDialog() {
   };
 
   return (
-    <Dialog
-      open
-      onOpenChange={(next) => {
-        if (!next) finish(false);
-      }}
-      title={t("reauthentication.title")}
-      description={t("reauthentication.description")}
-      size="sm"
-    >
-      <div className="flex flex-col gap-4">
-        {methods.length > 1 ? (
-          <SegmentedControl
-            label={t("reauthentication.method")}
-            value={method}
-            onValueChange={(value) => {
-              setMethod(value as Method);
-              setError(null);
-            }}
-            options={methods.map((value) => ({ value, label: t(`reauthentication.methods.${value}`) }))}
-          />
-        ) : null}
-        {error ? (
-          <Notice variant="danger" title={t("failures.confirmIdentity")}>
-            {error}
-          </Notice>
-        ) : null}
-        {method === "password" ? (
-          <form
-            className="flex flex-col gap-4"
-            onSubmit={submitWith(
-              password.handleSubmit((values) => confirm({ method: "password", password: values.password })),
-            )}
-          >
-            <Field label={t("auth.password")} error={password.formState.errors.password?.message}>
-              <PasswordInput autoComplete="current-password" autoFocus {...password.register("password")} />
-            </Field>
-            <DialogActions busy={busy} />
-          </form>
-        ) : null}
-        {method === "totp" ? (
-          <form
-            className="flex flex-col gap-4"
-            onSubmit={submitWith(
-              code.handleSubmit((values) => confirm({ method: "totp", code: values.code })),
-            )}
-          >
-            <Field label={t("auth.authenticatorCode")} error={code.formState.errors.code?.message}>
-              <CodeInput control={code.control} name="code" autoFocus />
-            </Field>
-            <DialogActions busy={busy} />
-          </form>
-        ) : null}
-        {method === "provider" ? (
-          <div className="flex flex-col gap-4">
-            {directories.map((identity) => (
-              <DirectoryConfirm
-                key={identity.id}
-                identity={identity}
-                onConfirmed={async () => {
-                  await queryClient.invalidateQueries({ queryKey: queryKeys.session });
-                  finish(true);
-                }}
-                onError={setError}
-              />
-            ))}
-            {redirected.length > 0 ? (
-              <Notice variant="info">{t("reauthentication.providerHint")}</Notice>
-            ) : null}
-            <div className="flex flex-wrap justify-end gap-2">
-              <Button variant="secondary" onClick={() => finish(false)}>
-                {t("common.cancel")}
-              </Button>
-              {redirected.map((identity) => (
-                <Button
-                  key={identity.id}
-                  variant="primary"
-                  loading={busy}
-                  onClick={() =>
-                    void (async () => {
-                      setBusy(true);
-                      setError(null);
-                      try {
-                        await startProviderReauthentication(
-                          identity.providerId,
-                          `${globalThis.location.pathname}${globalThis.location.search}`,
-                        );
-                      } catch (failure) {
-                        setError(problemMessage(t, failure));
-                        setBusy(false);
-                      }
-                    })()
-                  }
-                >
-                  {t("reauthentication.withProvider", { name: identity.providerName })}
-                </Button>
-              ))}
-            </div>
-          </div>
-        ) : null}
-        {method === "passkey" ? (
-          <div className="flex flex-col gap-4">
-            <Notice variant="info">{t("auth.passkeyHint")}</Notice>
-            <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => finish(false)}>
-                {t("common.cancel")}
-              </Button>
+    <section aria-label={t("reauthentication.title")} className="flex flex-col gap-4">
+      {inline ? (
+        <div className="flex flex-col gap-1">
+          <h3 className="font-semibold">{t("reauthentication.title")}</h3>
+          <p className="text-sm text-text-muted">{t("reauthentication.description")}</p>
+        </div>
+      ) : null}
+      {methods.length > 1 ? (
+        <SegmentedControl
+          label={t("reauthentication.method")}
+          value={method}
+          onValueChange={(value) => {
+            setMethod(value as Method);
+            setError(null);
+          }}
+          options={methods.map((value) => ({ value, label: t(`reauthentication.methods.${value}`) }))}
+        />
+      ) : null}
+      {error ? (
+        <Notice variant="danger" title={t("failures.confirmIdentity")}>
+          {error}
+        </Notice>
+      ) : null}
+      {method === "password" ? (
+        <form
+          className="flex flex-col gap-4"
+          onSubmit={submitWith(
+            password.handleSubmit((values) => confirm({ method: "password", password: values.password })),
+          )}
+        >
+          <Field label={t("auth.password")} error={password.formState.errors.password?.message}>
+            <PasswordInput autoComplete="current-password" autoFocus {...password.register("password")} />
+          </Field>
+          <DialogActions busy={busy} />
+        </form>
+      ) : null}
+      {method === "totp" ? (
+        <form
+          className="flex flex-col gap-4"
+          onSubmit={submitWith(code.handleSubmit((values) => confirm({ method: "totp", code: values.code })))}
+        >
+          <Field label={t("auth.authenticatorCode")} error={code.formState.errors.code?.message}>
+            <CodeInput control={code.control} name="code" autoFocus />
+          </Field>
+          <DialogActions busy={busy} />
+        </form>
+      ) : null}
+      {method === "provider" ? (
+        <div className="flex flex-col gap-4">
+          {directories.map((identity) => (
+            <DirectoryConfirm
+              key={identity.id}
+              identity={identity}
+              onConfirmed={async () => {
+                await queryClient.invalidateQueries({ queryKey: queryKeys.session });
+                finish(true);
+              }}
+              onError={setError}
+            />
+          ))}
+          {redirected.length > 0 ? (
+            <Notice variant="info">{t("reauthentication.providerHint")}</Notice>
+          ) : null}
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button variant="secondary" onClick={() => finish(false)}>
+              {t("common.cancel")}
+            </Button>
+            {redirected.map((identity) => (
               <Button
+                key={identity.id}
                 variant="primary"
-                icon={Fingerprint}
                 loading={busy}
-                onClick={() => void confirmWithPasskey()}
+                onClick={() =>
+                  void (async () => {
+                    setBusy(true);
+                    setError(null);
+                    try {
+                      await startProviderReauthentication(
+                        identity.providerId,
+                        `${globalThis.location.pathname}${globalThis.location.search}`,
+                      );
+                    } catch (failure) {
+                      setError(problemMessage(t, failure));
+                      setBusy(false);
+                    }
+                  })()
+                }
               >
-                {t("auth.usePasskey")}
+                {t("reauthentication.withProvider", { name: identity.providerName })}
               </Button>
-            </div>
+            ))}
           </div>
-        ) : null}
-      </div>
-    </Dialog>
+        </div>
+      ) : null}
+      {method === "passkey" ? (
+        <div className="flex flex-col gap-4">
+          <Notice variant="info">{t("auth.passkeyHint")}</Notice>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => finish(false)}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="primary"
+              icon={Fingerprint}
+              loading={busy}
+              onClick={() => void confirmWithPasskey()}
+            >
+              {t("auth.usePasskey")}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+    </section>
   );
 }
 

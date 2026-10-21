@@ -15,6 +15,7 @@ export interface PortalMessages {
   signIn: string;
   signOut: string;
   appLinkDefault: string;
+  accountSettings: string;
   footerContact: (email: string) => string;
   poweredBy: string;
   defaultHeading: string;
@@ -29,6 +30,7 @@ export interface PortalMessages {
   writeUs: string;
   emptyHeading: string;
   emptyText: string;
+  emptyTextSignedIn: string;
   types: { howTo: string; troubleshooting: string };
   filters: { all: string; howTo: string; troubleshooting: string };
   breadcrumb: string;
@@ -87,6 +89,8 @@ export interface PortalMessages {
   tipBrowse: string;
   areaHeading: string;
   areaText: string;
+  contactAreaHeading: string;
+  contactAreaText: string;
   areaOther: string;
   zeroResultsCounted: string;
   searchSubject: (query: string) => string;
@@ -126,7 +130,6 @@ export interface PortalMessages {
   languageMenu: string;
   languageCurrent: (language: string) => string;
   fallbackNote: (requested: string, shown: string) => string;
-  searchFallbackNote: (requested: string, shown: string) => string;
 }
 
 const en: PortalMessages = {
@@ -146,6 +149,7 @@ const en: PortalMessages = {
   signIn: "Sign in",
   signOut: "Sign out",
   appLinkDefault: "Go to the wiki",
+  accountSettings: "Account settings",
   footerContact: (email) => `Contact: ${email}`,
   poweredBy: "Provided with Pagehall",
   defaultHeading: "How can we help?",
@@ -161,6 +165,8 @@ const en: PortalMessages = {
   emptyHeading: "No articles yet",
   emptyText:
     "Nothing has been published here yet, or you cannot read the articles. Sign in or try again later.",
+  emptyTextSignedIn:
+    "Nothing has been published here yet, or your account cannot read these articles. Write to the team below if you need them.",
   types: { howTo: "How-to", troubleshooting: "Troubleshooting" },
   filters: { all: "All", howTo: "How-tos", troubleshooting: "Troubleshooting" },
   breadcrumb: "Breadcrumb",
@@ -223,6 +229,8 @@ const en: PortalMessages = {
   areaHeading: "Not found? Write to us",
   areaText:
     "Choose the area your question belongs to. Your e-mail program opens with the search term as the subject.",
+  contactAreaHeading: "Choose the area of your question",
+  contactAreaText: "Your e-mail program opens with a new message to the team of that area.",
   areaOther: "Something else",
   zeroResultsCounted:
     "Searches without results are counted without your name, so the team can see which articles are missing.",
@@ -270,8 +278,6 @@ const en: PortalMessages = {
   languageCurrent: (language) => `Language: ${language}`,
   fallbackNote: (requested, shown) =>
     `This article is not available in ${requested} yet, so it is shown in ${shown}.`,
-  searchFallbackNote: (requested, shown) =>
-    `Nothing was found in ${requested}. These results are in ${shown}.`,
 };
 
 const de: PortalMessages = {
@@ -291,6 +297,7 @@ const de: PortalMessages = {
   signIn: "Anmelden",
   signOut: "Abmelden",
   appLinkDefault: "Zum Wiki",
+  accountSettings: "Kontoeinstellungen",
   footerContact: (email) => `Kontakt: ${email}`,
   poweredBy: "Bereitgestellt mit Pagehall",
   defaultHeading: "Wie können wir helfen?",
@@ -306,6 +313,8 @@ const de: PortalMessages = {
   emptyHeading: "Noch keine Artikel",
   emptyText:
     "Hier ist noch nichts veröffentlicht, oder du darfst die Artikel nicht lesen. Melde dich an oder versuche es später noch einmal.",
+  emptyTextSignedIn:
+    "Hier ist noch nichts veröffentlicht, oder dein Konto darf diese Artikel nicht lesen. Schreib dem Team unten, wenn du sie brauchst.",
   types: { howTo: "Anleitung", troubleshooting: "Störung" },
   filters: { all: "Alle", howTo: "Anleitungen", troubleshooting: "Störungen" },
   breadcrumb: "Pfad",
@@ -369,6 +378,8 @@ const de: PortalMessages = {
   areaHeading: "Nicht gefunden? Schreib uns",
   areaText:
     "Wähle den Bereich, zu dem deine Frage gehört. Dein E-Mail-Programm öffnet sich mit dem Suchbegriff als Betreff.",
+  contactAreaHeading: "Wähle den Bereich deiner Frage",
+  contactAreaText: "Dein E-Mail-Programm öffnet sich mit einer neuen Nachricht an das Team dieses Bereichs.",
   areaOther: "Etwas anderes",
   zeroResultsCounted:
     "Suchen ohne Treffer werden ohne deinen Namen gezählt, damit das Team fehlende Artikel erkennt.",
@@ -420,8 +431,6 @@ const de: PortalMessages = {
   languageCurrent: (language) => `Sprache: ${language}`,
   fallbackNote: (requested, shown) =>
     `Diesen Artikel gibt es noch nicht auf ${requested}. Er wird auf ${shown} angezeigt.`,
-  searchFallbackNote: (requested, shown) =>
-    `Auf ${requested} wurde nichts gefunden. Diese Treffer sind auf ${shown}.`,
 };
 
 export function messagesFor(language: string): PortalMessages {

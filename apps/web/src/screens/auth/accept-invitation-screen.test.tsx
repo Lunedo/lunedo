@@ -1,4 +1,5 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App, createQueryClient } from "../../app.js";
 import { initI18n } from "../../i18n/index.js";
@@ -58,6 +59,7 @@ const OPEN = {
   organizationName: "Engineering",
   invitedByName: "Olivia Owner",
   knowledgeBaseName: null,
+  newAccount: false,
 };
 
 describe("accepting an invitation", () => {
@@ -144,5 +146,27 @@ describe("accepting an invitation", () => {
     screen.getByRole("button", { name: "Accept invitation" }).click();
     const link = await screen.findByRole("link", { name: "Open Kundenhilfe" });
     expect(link.getAttribute("href")).toBe("https://help.example.org/");
+  });
+
+  it("shows the account form at once when accepting creates an account and marks every invalid field", async () => {
+    const { requests } = api(() => ({
+      body: { ...OPEN, knowledgeBaseName: "Kundenhilfe", newAccount: true },
+    }));
+    await open(`/accept-invitation#token=${TOKEN}`);
+    expect(await screen.findByRole("heading", { name: "Read Kundenhilfe" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Accept invitation" })).toBeNull();
+    const user = userEvent.setup();
+    await user.type(screen.getByRole("textbox", { name: "Name" }), "Klara Kundin");
+    const password = screen.getByLabelText("Password");
+    await user.type(password, "short");
+    expect(screen.getByText(/Not met yet/)).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Create account" }));
+    expect(await screen.findByText("Use at least 12 characters.")).toBeTruthy();
+    expect(screen.getByText("The passwords do not match.")).toBeTruthy();
+    await waitFor(() => expect(document.activeElement).toBe(password));
+    expect(requests.some((request) => request.path === "/api/v1/invitations/accept")).toBe(false);
+    await user.clear(password);
+    await user.type(password, "a long reader passphrase");
+    expect(screen.getByText(/Met\./)).toBeTruthy();
   });
 });
