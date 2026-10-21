@@ -159,6 +159,16 @@ const en: Texts = {
     title: params.level === 0 ? "Storage usage is back to normal" : "Storage usage has fallen",
     body: `${Math.round(Number(params.percent) || 0)} %`,
   }),
+  "backup.failed": ({ params }) => ({ title: "A backup failed", body: text(params.reason) }),
+  "backup.missing": ({ params }) => ({
+    title: "No recent backup",
+    body: `${Number(params.days) || 0} days without a successful backup`,
+  }),
+  "backup.recovered": () => ({ title: "Backups work again", body: "The last backup succeeded." }),
+  "backup.testRestoreFailed": ({ params }) => ({
+    title: "A test restore failed",
+    body: text(params.backupName),
+  }),
   "identityProvider.credentialExpiring": ({ params }) => ({
     title: "A sign-in provider credential expires soon",
     body: text(params.providerName),
@@ -317,6 +327,19 @@ const de: Texts = {
     title:
       params.level === 0 ? "Die Speicherbelegung ist wieder normal" : "Die Speicherbelegung ist gesunken",
     body: `${Math.round(Number(params.percent) || 0)} %`,
+  }),
+  "backup.failed": ({ params }) => ({ title: "Ein Backup ist fehlgeschlagen", body: text(params.reason) }),
+  "backup.missing": ({ params }) => ({
+    title: "Kein aktuelles Backup",
+    body: `${Number(params.days) || 0} Tage ohne erfolgreiches Backup`,
+  }),
+  "backup.recovered": () => ({
+    title: "Backups funktionieren wieder",
+    body: "Das letzte Backup ist gelungen.",
+  }),
+  "backup.testRestoreFailed": ({ params }) => ({
+    title: "Eine Test-Wiederherstellung ist fehlgeschlagen",
+    body: text(params.backupName),
   }),
   "identityProvider.credentialExpiring": ({ params }) => ({
     title: "Zugangsdaten eines Anmeldeanbieters laufen bald ab",

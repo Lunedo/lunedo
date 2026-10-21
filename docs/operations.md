@@ -152,7 +152,7 @@ Each check says `ok`, `warning` or `error` with a short reason, the values it me
 | File storage | A storage warning level is active: levels 1 and 2 are warnings, level 3 is an error. Notes when S3 storage has no limit. |
 | Background jobs <a id="jobs"></a> | Jobs failed after all attempts, or more than 1,000 are waiting. The job queue table lists every queue with jobs. The worker's log says why a job failed. |
 | Collaboration server <a id="collaboration"></a> | The collaboration server does not answer its readiness check: nobody can edit. |
-| Backups | No backup target, scheduled backups off, the last backup failed, or none succeeded for 48 hours. Notes when backups before updates are off. |
+| Backups | No backup target, scheduled backups off, backups failing, or no successful backup for the number of days set in the backup settings. Notes when backups before updates are off. See [backup.md](backup.md). |
 | Search index <a id="search-index"></a> | The index is being rebuilt, or items failed to be indexed and are retried. |
 | Recent errors | Error-level events were logged in the last 24 hours. |
 | HTTPS | The instance address is not set or does not use HTTPS. |

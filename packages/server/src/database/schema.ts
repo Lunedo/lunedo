@@ -29,6 +29,21 @@ export {
   webauthnCredentials,
 } from "../auth/schema.js";
 export {
+  backupAlert,
+  backupClass,
+  backupConfiguration,
+  backupRunState,
+  backupRuns,
+  backupScope,
+  backupState,
+  backupTargetKind,
+  backupTestRestores,
+  backupTrigger,
+  testRestoreStage,
+  testRestoreState,
+  testRestoreTrigger,
+} from "../backup/schema.js";
+export {
   chatChannelKind,
   chatChannelState,
   chatChannels,

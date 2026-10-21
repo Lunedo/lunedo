@@ -4,10 +4,13 @@ import { instanceSettings } from "../accounts/instance-settings.js";
 import { AuditLog, auditSettingChanges } from "../audit/audit-log.js";
 import { auditRetentionSetting } from "../audit/retention.js";
 import { authSettings } from "../auth/settings.js";
+import { backupBeforeMigrations } from "../backup/before-update.js";
+import { PostgresArchiver } from "../backup/postgres.js";
 import { checkRestoreComplete } from "../backup/restore-marker.js";
 import { startChatDelivery } from "../chat/jobs.js";
 import { startBlogAnnouncements } from "../collaboration/jobs.js";
 import { collaborationSettings } from "../collaboration/settings.js";
+import { configurationForBackup } from "../config/backup-view.js";
 import { ensureSecretFile, generateToken } from "../config/generated-secrets.js";
 import { type Env, loadConfig, type ServerConfig } from "../config/load.js";
 import { Secret } from "../config/secret.js";
@@ -21,7 +24,7 @@ import { loadMasterKeyRing } from "../crypto/key-usage.js";
 import { KeyRotation, rotateDataKeysJob } from "../crypto/rotation.js";
 import { masterStreamKeys, type StreamKeys } from "../crypto/stream.js";
 import { createDatabase, type Database } from "../database/database.js";
-import { runMigrations } from "../database/migrate.js";
+import { currentSchemaVersion, knownSchemaVersions, runMigrations } from "../database/migrate.js";
 import { NotificationListener } from "../database/notifications.js";
 import { createDatabasePool, type DatabasePool } from "../database/pool.js";
 import { embedSettings } from "../embeds/settings.js";
@@ -51,6 +54,7 @@ import { startUpdateChecks } from "../operations/jobs.js";
 import { operationsSettings } from "../operations/settings.js";
 import type { CollaborationProbe } from "../operations/status.js";
 import { organizationSettings } from "../organizations/settings.js";
+import { outboundPolicy } from "../outbound/guarded-request.js";
 import { portalSettings } from "../portal/settings.js";
 import { startPushDelivery } from "../push/push-service.js";
 import { startSearchIndexing } from "../search/jobs.js";
@@ -121,6 +125,15 @@ export function resolveGeneratedSecrets(config: ServerConfig): {
   }
 }
 
+export async function availableMasterKeys(config: ServerConfig): Promise<KeyRing | null> {
+  try {
+    return await createKeyProvider(config).load();
+  } catch (error) {
+    if (error instanceof KeyRingError) return null;
+    throw error;
+  }
+}
+
 export function startupWarnings(config: Pick<ServerConfig, "insecureIdentityProviders">): string[] {
   return config.insecureIdentityProviders
     ? [
@@ -167,7 +180,35 @@ export async function createServerRuntime(options: {
 
   let jobs: PgBossQueue | undefined;
   try {
-    await runMigrations(pool, { logger });
+    await runMigrations(pool, {
+      logger,
+      beforeMigrate: async ({ applied }) => {
+        if (applied === 0) return;
+        const fileStore = fileStoreOf(config);
+        await backupBeforeMigrations({
+          sources: {
+            pool,
+            database,
+            archiver: new PostgresArchiver({ databaseUrl: connectionString }),
+            filesDir: config.paths.files,
+            objectStore: fileStore.kind === "s3" ? fileStore : undefined,
+            streamOwners: options.encrypted?.streamOwners ?? encryptedStreamOwnersOf(fileStore),
+            backupKeys,
+            masterKeys: () => availableMasterKeys(config),
+            stagingDir: config.paths.backups,
+            configuration: configurationForBackup(options.env),
+            pagehallVersion: options.env.PAGEHALL_VERSION ?? "dev",
+            schemaVersion: knownSchemaVersions()[applied - 1] ?? currentSchemaVersion(),
+            logger,
+          },
+          database,
+          backupDir: config.paths.backups,
+          policy: outboundPolicy(config.outboundAllowedNetworks),
+          environmentAllows: config.backupBeforeUpdate,
+          logger,
+        });
+      },
+    });
 
     const columns = options.encrypted?.columns ?? encryptedColumns;
     const fileStore = fileStoreOf(config);
@@ -256,6 +297,14 @@ export async function createServerRuntime(options: {
       outboundAllowedNetworks: config.outboundAllowedNetworks,
       ...(config.render ? { render: config.render } : {}),
       ...(options.mailTransport ? { mailTransport: options.mailTransport } : {}),
+      backup: {
+        databaseUrl: connectionString,
+        backupDir: config.paths.backups,
+        secretsDir: config.paths.secrets,
+        configuration: configurationForBackup(options.env),
+        pagehallVersion: options.env.PAGEHALL_VERSION ?? "dev",
+        beforeUpdateEnvironment: config.backupBeforeUpdate,
+      },
     });
 
     await services.instanceAddress.applyConfigured();

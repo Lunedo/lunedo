@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import type { Database } from "../database/database.js";
 import type { MailService } from "../mail/mail-service.js";
 import type { StorageService } from "../storage/storage.js";
-import type { BackupStatus } from "./backup-status.js";
+import { failedBackups } from "./backup-status.js";
 import type { MaintenanceService } from "./maintenance.js";
 import type { OperationsStatusService } from "./status.js";
 import type { UpdateCheckService } from "./update-check.js";
@@ -11,7 +11,7 @@ export interface InstanceMetricsSnapshot {
   databaseSizeBytes: number;
   storage: { usedBytes: number; totalBytes: number; ratio: number; level: number } | null;
   storageLevel: number;
-  backup: BackupStatus | null;
+  backup: { lastSuccessAt: Date | null; failures: number; scheduled: boolean };
   mail: {
     failedAttempts: number;
     failedMessages: number;
@@ -71,7 +71,11 @@ export function instanceMetricsSource(options: {
           }
         : null,
       storageLevel: storage.level,
-      backup,
+      backup: {
+        lastSuccessAt: backup.lastSuccess?.at ?? null,
+        failures: await failedBackups(options.database),
+        scheduled: backup.enabled && backup.targetConfigured,
+      },
       mail: {
         failedAttempts: delivery.failedAttempts,
         failedMessages: delivery.failedMessages,

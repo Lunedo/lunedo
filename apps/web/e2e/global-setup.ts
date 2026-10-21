@@ -95,6 +95,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     PAGEHALL_WEB_ROOT: webRoot,
     PAGEHALL_SECRETS_DIR: path.join(dataDir, "secrets"),
     PAGEHALL_FILES_DIR: path.join(dataDir, "files"),
+    PAGEHALL_BACKUP_DIR: path.join(dataDir, "backups"),
     PAGEHALL_IMPORT_DIR: IMPORT_DIR,
     PAGEHALL_LOG_LEVEL: "info",
     PAGEHALL_TRUSTED_PROXIES: "127.0.0.1,::1",
@@ -102,6 +103,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     PAGEHALL_INSECURE_IDENTITY_PROVIDERS: process.env.PAGEHALL_E2E_IDP === "1" ? "true" : "false",
   };
   mkdirSync(env.PAGEHALL_FILES_DIR as string, { recursive: true });
+  mkdirSync(env.PAGEHALL_BACKUP_DIR as string, { recursive: true });
   mkdirSync(IMPORT_DIR, { recursive: true });
   await writeSyntheticExport("csv", FOLDER_EXPORT_TEMPLATE);
   await writeSyntheticExport("csv", PEOPLE_EXPORT_TEMPLATE, "people");

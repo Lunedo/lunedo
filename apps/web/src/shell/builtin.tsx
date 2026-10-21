@@ -7,6 +7,7 @@ import {
   Building2,
   CircleHelp,
   Construction,
+  DatabaseBackup,
   FileArchive,
   FileClock,
   Globe,
@@ -343,6 +344,15 @@ navigationItems.register(
     labelKey: "navigation.storage",
     to: `${INSTANCE}/storage`,
     permission: "instance.settings.view",
+  },
+  {
+    id: "instance.backups",
+    order: 66,
+    section: "instance",
+    icon: DatabaseBackup,
+    labelKey: "navigation.backups",
+    to: `${INSTANCE}/backups`,
+    permission: "instance.operations.view",
   },
   {
     id: "instance.embeds",

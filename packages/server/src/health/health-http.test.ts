@@ -109,15 +109,7 @@ describe("Pagehall metrics", () => {
     databaseSizeBytes: 5_000_000,
     storage: { usedBytes: 800, totalBytes: 1000, ratio: 0.8, level: 1 },
     storageLevel: 1,
-    backup: {
-      scheduled: true,
-      targetConfigured: true,
-      beforeUpdate: true,
-      lastSuccessAt: new Date("2026-10-21T03:00:00Z"),
-      lastFailure: null,
-      nextRunAt: null,
-      failuresTotal: 2,
-    },
+    backup: { lastSuccessAt: new Date("2026-10-21T03:00:00Z"), failures: 2, scheduled: true },
     mail: {
       failedAttempts: 7,
       failedMessages: 1,
@@ -175,7 +167,7 @@ describe("Pagehall metrics", () => {
     metrics.observeInstance(async () => ({
       ...snapshot,
       storage: null,
-      backup: null,
+      backup: { lastSuccessAt: null, failures: 0, scheduled: false },
       collaborationReady: null,
       updateAvailable: null,
     }));
@@ -184,7 +176,6 @@ describe("Pagehall metrics", () => {
     for (const name of [
       "pagehall_storage_used_bytes",
       "pagehall_backup_last_success_timestamp_seconds",
-      "pagehall_backup_failures_total",
       "pagehall_collab_up",
       "pagehall_update_available",
     ]) {

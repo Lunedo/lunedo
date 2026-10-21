@@ -12,9 +12,11 @@ import { LocalFileStore } from "../files/store.js";
 import { createLogger } from "../logging/logger.js";
 import {
   BackupError,
+  type BackupSource,
   createBackup,
   isSafeRelativePath,
   openBackupArchive,
+  openBackupFile,
   readBackupHeader,
   restoreBackup,
   verifyBackup,
@@ -270,6 +272,102 @@ describe("backups", () => {
     await writeFile(archivePath, raw);
     await truncate(archivePath, raw.length - 100);
     await expect(verifyBackup({ input: archivePath, backupKeys, knownSchemaVersions })).rejects.toThrow();
+  });
+});
+
+describe("backups without the file store", () => {
+  it("contain no files, say so in the header and leave the files of the instance alone on restore", async () => {
+    await createBackup({
+      output: archivePath,
+      backupKeys,
+      masterKeys: requiredMasterKeys(),
+      database: new FakeDatabase(databaseDump),
+      filesDir,
+      scope: "database",
+      config: {},
+      pagehallVersion: "1.0.0",
+      schemaVersion,
+      logger,
+    });
+    const manifest = await verifyBackup({ input: archivePath, backupKeys, knownSchemaVersions });
+    expect(manifest.entries.map((entry) => entry.path)).toEqual(["database.dump"]);
+    expect((await readBackupHeader(archivePath)).header.scope).toBe("database");
+    const target = path.join(dir, "instance");
+    await mkdir(target);
+    await writeFile(path.join(target, "kept.txt"), "snapshot of the operator");
+    const database = new FakeDatabase(Buffer.alloc(0), false);
+    await restoreInto(target, database, { force: true });
+    expect(database.restored?.equals(databaseDump)).toBe(true);
+    expect(await readdir(target)).toEqual(["kept.txt"]);
+  });
+
+  it("leave out the header field when they contain everything", async () => {
+    await create();
+    expect((await readBackupHeader(archivePath)).header.scope).toBeUndefined();
+  });
+});
+
+describe("reading a backup for a restore", () => {
+  it("reads every pass through the same file, also when the path is replaced in between", async () => {
+    await create();
+    const source = await openBackupFile(archivePath);
+    try {
+      const first = await source.readHeader();
+      await rm(archivePath);
+      await writeFile(archivePath, "replaced");
+      expect((await source.readHeader()).bytes.equals(first.bytes)).toBe(true);
+      await expect(verifyBackup({ input: source, backupKeys, knownSchemaVersions })).resolves.toMatchObject({
+        schemaVersion,
+      });
+    } finally {
+      await source.close();
+    }
+  });
+
+  it("stops before the database is touched when the backup changes between the passes", async () => {
+    await create();
+    const other = path.join(dir, "other.phbak");
+    await createBackup({
+      output: other,
+      backupKeys,
+      masterKeys: requiredMasterKeys(),
+      database: new FakeDatabase(Buffer.from("PGDMP another dump")),
+      filesDir,
+      config: {},
+      pagehallVersion: "1.0.0",
+      schemaVersion,
+      logger,
+    });
+    const first = await openBackupFile(archivePath);
+    const second = await openBackupFile(other);
+    let reads = 0;
+    const switching: BackupSource = {
+      name: archivePath,
+      readHeader: () => (reads++ < 2 ? first.readHeader() : second.readHeader()),
+      open: (start) => (reads <= 2 ? first.open(start) : second.open(start)),
+      close: async () => {},
+    };
+    const target = path.join(dir, "instance");
+    const database = new FakeDatabase(Buffer.alloc(0));
+    try {
+      await expect(
+        restoreBackup({
+          input: switching,
+          backupKeys,
+          knownSchemaVersions,
+          masterKeys,
+          database,
+          filesDir: target,
+          force: false,
+          logger,
+        }),
+      ).rejects.toThrow("The backup changed while it was being restored");
+    } finally {
+      await first.close();
+      await second.close();
+    }
+    expect(database.restored).toBeUndefined();
+    await expect(checkRestoreComplete(target)).resolves.toBeUndefined();
   });
 });
 

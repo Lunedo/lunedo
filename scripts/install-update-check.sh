@@ -87,7 +87,7 @@ echo "Updating to $current with one command"
 
 check "the instance runs the image under test" grep -q "^    image: $current\$" "$directory/compose.yml"
 check "the update is recorded with the previous version" grep -q '^previous=' "$directory/.pagehall-install"
-backup_file="$(compgen -G "$directory/backups/before-update-*.phbak" | head -n 1 || true)"
+backup_file="$(compgen -G "$directory/backups/pagehall-backup-*-before-update-*.phbak" | head -n 1 || true)"
 check "a backup was taken before the update" test -n "$backup_file"
 check "the backup is complete and readable" \
   compose exec -T pagehall pagehall backup verify --input "/var/lib/pagehall/backups/$(basename "$backup_file")"
@@ -124,7 +124,7 @@ check "the page is untouched" \
 
 echo "Following the documented rollback"
 rollback_backup=""
-for candidate in "$directory"/backups/before-update-*.phbak; do
+for candidate in "$directory"/backups/pagehall-backup-*-before-update-*.phbak; do
   if [ -z "$rollback_backup" ] || [ "$candidate" -nt "$rollback_backup" ]; then rollback_backup="$candidate"; fi
 done
 compose stop pagehall >/dev/null

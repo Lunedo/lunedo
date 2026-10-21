@@ -171,7 +171,7 @@ export function updateCommands(
           { kind: "command", text: `cd ${folder}` },
           {
             kind: "command",
-            text: "docker compose exec pagehall pagehall backup create --output /var/lib/pagehall/backups/before-update.phbak",
+            text: "docker compose exec pagehall pagehall backup create --before-update",
           },
           { kind: "note", text: `Set the image of the pagehall service to ${image}.` },
           { kind: "command", text: "docker compose pull" },
@@ -182,7 +182,7 @@ export function updateCommands(
       return {
         method: method ?? "unknown",
         steps: [
-          { kind: "note", text: "Create a backup with pagehall backup create before you update." },
+          { kind: "note", text: "Create a backup with pagehall backup create --before-update before you update." },
           { kind: "command", text: `docker pull ${image}` },
           { kind: "note", text: `Restart every Pagehall container with ${image}.` },
         ],

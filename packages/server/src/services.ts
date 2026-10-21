@@ -27,6 +27,10 @@ import { AccessReductions } from "./authorization/access-reductions.js";
 import { AuthorizationRegistry } from "./authorization/registry.js";
 import { resourceTypes } from "./authorization/resources.js";
 import { AuthorizationService } from "./authorization/service.js";
+import { backupRunJob, backupTestRestoreJob } from "./backup/jobs.js";
+import { backupNotificationTypes } from "./backup/notifications.js";
+import { type DatabaseArchiver, PostgresArchiver } from "./backup/postgres.js";
+import { BackupService } from "./backup/service.js";
 import { ChatChannelService } from "./chat/channels.js";
 import { chatNotificationTypes } from "./chat/notifications.js";
 import { organizationAdministrators } from "./chat/recipients.js";
@@ -54,6 +58,7 @@ import type { KeyRing } from "./crypto/key-ring.js";
 import type { KeyRingHolder } from "./crypto/key-ring-holder.js";
 import type { KeyRotation } from "./crypto/rotation.js";
 import type { Database } from "./database/database.js";
+import { currentSchemaVersion, knownSchemaVersions, schemaVersionTimes } from "./database/migrate.js";
 import type { DatabasePool } from "./database/pool.js";
 import { DiagramService } from "./diagrams/diagrams.js";
 import { EmbedServices } from "./embeds/embeds.js";
@@ -71,6 +76,7 @@ import { AttachmentService } from "./files/attachments.js";
 import { DisplayVersionService } from "./files/display-versions.js";
 import { FileService } from "./files/files.js";
 import { FILE_CLEANUP_SCHEDULE, fileCleanupJob } from "./files/jobs.js";
+import { encryptedStreamOwnersOf } from "./files/owners.js";
 import { type FileStore, LocalFileStore } from "./files/store.js";
 import { GroupMappingService } from "./identity/groups.js";
 import { LdapAdapter } from "./identity/ldap.js";
@@ -152,7 +158,6 @@ import { NotificationService } from "./notifications/service.js";
 import { builtinNotificationTypes } from "./notifications/types.js";
 import { UnsubscribeService } from "./notifications/unsubscribe.js";
 import { WatchService } from "./notifications/watches.js";
-import { type BackupStatusSource, commandOnlyBackups } from "./operations/backup-status.js";
 import { removeOldErrorEvents } from "./operations/error-events.js";
 import { REMOVE_OLD_ERROR_EVENTS_SCHEDULE, removeOldErrorEventsJob } from "./operations/jobs.js";
 import { MaintenanceService, SignInBlockedError } from "./operations/maintenance.js";
@@ -339,6 +344,7 @@ export interface AccountServices {
   files: FileService;
   displayVersions: DisplayVersionService;
   storage: StorageService;
+  backups: BackupService;
   attachments: AttachmentService;
   guestShares: GuestShareService;
   confidentialSpaces: ConfidentialSpaceService;
@@ -391,11 +397,21 @@ export function createAccountServices(options: {
   nodeId?: string;
   keyRotation?: KeyRotation | undefined;
   keyProvider?: "env" | "file";
-  backups?: BackupStatusSource;
   collaborationProbe?: CollaborationProbe;
   updates?: ServerConfig["updates"];
   version?: string;
   updatePolicy?: OutboundPolicy;
+  backup?: {
+    databaseUrl: string;
+    backupDir: string;
+    secretsDir: string;
+    configuration: Record<string, string>;
+    pagehallVersion: string;
+    beforeUpdateEnvironment: boolean;
+    policy?: OutboundPolicy;
+    archiver?: (databaseUrl: string) => DatabaseArchiver;
+    clock?: () => Date;
+  };
 }): AccountServices {
   const { database, settings, audit, encryption, jobs, logger } = options;
   const hasher = new PasswordHasher({
@@ -457,6 +473,7 @@ export function createAccountServices(options: {
       ...chatNotificationTypes,
       ...storageNotificationTypes,
       ...operationsNotificationTypes,
+      ...backupNotificationTypes,
       ...knowledgeBaseNotificationTypes,
     ),
     unsubscribe,
@@ -776,6 +793,58 @@ export function createAccountServices(options: {
     jobs,
     logger,
   });
+  const backupOptions = options.backup;
+  const backupArchiver =
+    backupOptions?.archiver ?? ((url: string) => new PostgresArchiver({ databaseUrl: url }));
+  const backupDatabaseUrl = backupOptions?.databaseUrl ?? "";
+  const backupDir = backupOptions?.backupDir ?? options.filesDir;
+  const masterKeysOfInstance = async () => options.keyRing.ring;
+  const backups = new BackupService({
+    database,
+    pool: options.pool,
+    settings,
+    notifications,
+    mail,
+    chat: chatChannels,
+    encryption,
+    audit,
+    jobs,
+    sources: {
+      pool: options.pool,
+      database,
+      archiver: backupArchiver(backupDatabaseUrl),
+      filesDir: options.filesDir,
+      objectStore: files.store.kind === "s3" ? files.store : undefined,
+      streamOwners: encryptedStreamOwnersOf(files.store),
+      backupKeys: options.backupKeys,
+      masterKeys: masterKeysOfInstance,
+      stagingDir: backupDir,
+      configuration: backupOptions?.configuration ?? {},
+      pagehallVersion: backupOptions?.pagehallVersion ?? "dev",
+      schemaVersion: currentSchemaVersion(),
+    },
+    testRestore: {
+      databaseUrl: backupDatabaseUrl,
+      backupKeys: options.backupKeys,
+      masterKeys: masterKeysOfInstance,
+      knownSchemaVersions: knownSchemaVersions(),
+      migrationTimes: schemaVersionTimes(),
+      workDir: backupDir,
+      archiver: backupArchiver,
+    },
+    policy: backupOptions?.policy ?? outboundPolicy(options.outboundAllowedNetworks ?? []),
+    paths: {
+      files: options.filesDir,
+      secrets: backupOptions?.secretsDir ?? options.filesDir,
+      imports: options.importDir ?? options.filesDir,
+      backups: backupDir,
+    },
+    fileStoreKind: files.store.kind,
+    beforeUpdateEnvironment: backupOptions?.beforeUpdateEnvironment ?? true,
+    criticalPercent: async () => (await storage.thresholds()).critical,
+    logger,
+    ...(backupOptions?.clock ? { clock: backupOptions.clock } : {}),
+  });
   const attachments = new AttachmentService({ database, files, settings, people, audit, storage });
   const templates = new TemplateService({
     database,
@@ -1081,7 +1150,7 @@ export function createAccountServices(options: {
     keyRing: options.keyRing,
     keyRotation: options.keyRotation,
     jobs,
-    backups: options.backups ?? commandOnlyBackups,
+    backups,
     maintenance,
     updates,
     collaboration: options.collaborationProbe,
@@ -1095,6 +1164,7 @@ export function createAccountServices(options: {
     operations,
     maintenance,
     updates,
+    backups,
     push,
     chatChannels,
     watches,
@@ -1328,8 +1398,20 @@ export async function workAccountJobs(
       "Old error counts removed",
     );
   });
-  await jobs.work(storageCheckJob, async () => {
-    await services.storage.check();
+  await jobs.work(storageCheckJob, async (job) => {
+    try {
+      await services.storage.check();
+    } finally {
+      await services.backups.check().catch((error: unknown) => {
+        job.logger.warn({ err: error }, "The backup check failed");
+      });
+    }
+  });
+  await jobs.work(backupRunJob, async (job) => {
+    await services.backups.run(job.payload);
+  });
+  await jobs.work(backupTestRestoreJob, async (job) => {
+    await services.backups.runTestRestore(job.payload);
   });
   await jobs.work(storageReconcileJob, async () => {
     await services.storage.reconcile();

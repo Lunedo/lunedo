@@ -637,6 +637,87 @@ export const auditCatalog = {
     fields: z.object({ minutes: z.number().int() }),
     visibility: "instance",
   }),
+  "backup.settingsChanged": event({
+    actor: ["account"],
+    target: "instance",
+    fields: z.object({
+      changes: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])),
+    }),
+    visibility: "instance",
+  }),
+  "backup.targetChanged": event({
+    actor: ["account"],
+    target: "instance",
+    fields: z.object({
+      kind: z.enum(["local", "s3"]),
+      location: z.string(),
+      endpointHost: z.string().nullable(),
+      accessKeyId: z.string().nullable(),
+      credentialsReplaced: z.boolean(),
+    }),
+    visibility: "instance",
+  }),
+  "backup.keyConfirmed": event({
+    actor: ["account"],
+    target: "instance",
+    fields: z.object({ confirmed: z.boolean() }),
+    visibility: "instance",
+  }),
+  "backup.requested": event({
+    actor: ["account"],
+    target: "instance",
+    fields: z.object({}),
+    visibility: "instance",
+  }),
+  "backup.created": event({
+    actor: ["account", "system"],
+    target: "instance",
+    fields: z.object({
+      name: z.string(),
+      backupClass: z.string(),
+      trigger: z.enum(["scheduled", "manual", "beforeUpdate"]),
+      location: z.string(),
+      sizeBytes: z.number().int().nonnegative(),
+    }),
+    visibility: "instance",
+  }),
+  "backup.failed": event({
+    actor: ["account", "system"],
+    target: "instance",
+    fields: z.object({
+      backupClass: z.string(),
+      trigger: z.enum(["scheduled", "manual", "beforeUpdate"]),
+      reason: z.string(),
+    }),
+    visibility: "instance",
+  }),
+  "backup.deleted": event({
+    actor: ["account", "system"],
+    target: "instance",
+    fields: z.object({
+      name: z.string(),
+      backupClass: z.string(),
+      reason: z.enum(["manual", "retention"]),
+    }),
+    visibility: "instance",
+  }),
+  "backup.testRestoreStarted": event({
+    actor: ["account", "system"],
+    target: "instance",
+    fields: z.object({ name: z.string(), trigger: z.enum(["manual", "automatic"]) }),
+    visibility: "instance",
+  }),
+  "backup.testRestoreFinished": event({
+    actor: ["account", "system"],
+    target: "instance",
+    fields: z.object({
+      name: z.string(),
+      trigger: z.enum(["manual", "automatic"]),
+      state: z.enum(["passed", "verified", "failed"]),
+      stage: z.enum(["verify", "restore", "checks", "done"]),
+    }),
+    visibility: "instance",
+  }),
   "storage.contactsChanged": event({
     actor: ["account"],
     target: "instance",

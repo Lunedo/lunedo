@@ -30,7 +30,16 @@ function source(options: { now: () => number; failDatabaseSize?: () => boolean }
         if (options.failDatabaseSize?.()) throw new Error("down");
         return 42;
       },
-      backups: async () => null,
+      backups: async () => ({
+        enabled: false,
+        targetConfigured: false,
+        running: false,
+        nextRunAt: null,
+        lastSuccess: null,
+        lastFailure: null,
+        alert: "none",
+        beforeUpdate: { enabled: true, disabledBy: null },
+      }),
     } as unknown as OperationsStatusService,
     maintenance: { status: async () => MAINTENANCE_OFF } as unknown as MaintenanceService,
     updates: { updateAvailable: async () => null } as unknown as UpdateCheckService,
@@ -47,7 +56,7 @@ describe("instanceMetricsSource", () => {
     expect(first).toMatchObject({
       databaseSizeBytes: 42,
       storage: null,
-      backup: null,
+      backup: { lastSuccessAt: null, failures: 0, scheduled: false },
       search: { pendingItems: 3, failingItems: 1 },
       collaborationReady: null,
     });

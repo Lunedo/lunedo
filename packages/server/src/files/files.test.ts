@@ -257,7 +257,7 @@ describe.skipIf(!baseUrl)("the encrypted file store", () => {
       endpoint: s3Endpoint,
       region: "us-east-1",
       accessKeyId: new Secret(process.env.PAGEHALL_TEST_S3_ACCESS_KEY_ID ?? "pagehall"),
-      secretAccessKey: new Secret(process.env.PAGEHALL_TEST_S3_SECRET_ACCESS_KEY ?? "pagehall-minio"),
+      secretAccessKey: new Secret(process.env.PAGEHALL_TEST_S3_SECRET_ACCESS_KEY ?? "pagehall-s3"),
       forcePathStyle: true,
       prefix: "test/",
     };

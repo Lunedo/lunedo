@@ -1,6 +1,9 @@
 import { type ArgumentsHost, Catch, type ExceptionFilter, HttpException, Inject } from "@nestjs/common";
 import {
   AuthError,
+  BackupBusyError,
+  BackupNotFoundError,
+  BackupSettingsError,
   BusyError,
   ChatChannelError,
   CommentInvalidError,
@@ -208,6 +211,19 @@ function map(error: unknown): Mapped | null {
       detail: error.message,
       extensions: { fields: error.fields.map((field) => `body.${field}`), problem: error.code },
     };
+  }
+  if (error instanceof BackupSettingsError) {
+    return {
+      code: "invalidBackupSettings",
+      detail: error.message,
+      extensions: { fields: error.fields.map((field) => `body.${field}`), problem: error.code },
+    };
+  }
+  if (error instanceof BackupBusyError) {
+    return { code: "backupRunning", detail: error.message, extensions: { problem: error.what } };
+  }
+  if (error instanceof BackupNotFoundError) {
+    return { code: "backupNotFound", detail: error.message };
   }
   if (error instanceof ExportBusyError) {
     return {

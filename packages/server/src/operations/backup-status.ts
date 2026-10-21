@@ -1,19 +1,14 @@
-export interface BackupStatus {
-  scheduled: boolean;
-  targetConfigured: boolean;
-  beforeUpdate: boolean;
-  lastSuccessAt: Date | null;
-  lastFailure: { at: Date; reason: string } | null;
-  nextRunAt: Date | null;
-  failuresTotal: number;
-}
+import { sql } from "drizzle-orm";
+import type { BackupStatus } from "../backup/service.js";
+import type { Executor } from "../database/database.js";
 
 export interface BackupStatusSource {
-  status(): Promise<BackupStatus | null>;
+  status(): Promise<BackupStatus>;
 }
 
-export const commandOnlyBackups: BackupStatusSource = {
-  async status() {
-    return null;
-  },
-};
+export async function failedBackups(executor: Executor): Promise<number> {
+  const result = await executor.execute<{ count: string | number }>(
+    sql`select count(*) as count from backup_runs where state = 'failed'`,
+  );
+  return Number(result.rows[0]?.count ?? 0);
+}

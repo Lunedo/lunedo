@@ -8,7 +8,7 @@ import type { JobQueue } from "../jobs/job-queue.js";
 import { smtpSetting } from "../mail/mail-service.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
-import type { BackupStatus } from "./backup-status.js";
+import type { BackupStatus } from "../backup/service.js";
 import { ErrorEvents } from "./error-events.js";
 import { backupItem, jobsItem, OperationsStatusService, type StatusItem } from "./status.js";
 
@@ -17,50 +17,42 @@ const NOW = new Date("2026-10-21T08:00:00Z");
 const HOUR = 60 * 60 * 1000;
 
 const healthyBackup: BackupStatus = {
-  scheduled: true,
+  enabled: true,
   targetConfigured: true,
-  beforeUpdate: true,
-  lastSuccessAt: new Date(NOW.getTime() - 3 * HOUR),
-  lastFailure: null,
+  running: false,
   nextRunAt: new Date(NOW.getTime() + 20 * HOUR),
-  failuresTotal: 0,
+  lastSuccess: { at: new Date(NOW.getTime() - 3 * HOUR), name: "pagehall-daily.phbak", sizeBytes: 1024 },
+  lastFailure: null,
+  alert: "none",
+  beforeUpdate: { enabled: true, disabledBy: null },
 };
 
 describe("backupItem", () => {
-  it("says that only the backup command exists when no backup status is available", () => {
-    expect(backupItem(null, NOW)).toMatchObject({ status: "warning", reason: "commandOnly" });
-  });
-
-  it("is ok after a recent successful backup and notes when pre-update backups are off", () => {
-    expect(backupItem(healthyBackup, NOW)).toMatchObject({ status: "ok", reason: null });
-    expect(backupItem({ ...healthyBackup, beforeUpdate: false }, NOW)).toMatchObject({
+  it("is ok after a recent successful backup and notes when backups before updates are off", () => {
+    expect(backupItem(healthyBackup)).toMatchObject({
       status: "ok",
-      reason: "beforeUpdateOff",
+      reason: null,
+      page: "/settings/instance/backups",
     });
+    expect(backupItem({ ...healthyBackup, beforeUpdate: { enabled: false, disabledBy: "environment" } })).toMatchObject(
+      { status: "ok", reason: "beforeUpdateOff" },
+    );
   });
 
-  it("warns when backups are off, have no target or are too old, and fails after a failed run", () => {
-    expect(backupItem({ ...healthyBackup, targetConfigured: false }, NOW).reason).toBe("noTarget");
-    expect(backupItem({ ...healthyBackup, scheduled: false }, NOW).reason).toBe("off");
-    expect(
-      backupItem({ ...healthyBackup, lastSuccessAt: new Date(NOW.getTime() - 49 * HOUR) }, NOW),
-    ).toMatchObject({
+  it("warns when backups are off, have no target or are missing, and fails while they fail", () => {
+    expect(backupItem({ ...healthyBackup, targetConfigured: false }).reason).toBe("noTarget");
+    expect(backupItem({ ...healthyBackup, enabled: false }).reason).toBe("off");
+    expect(backupItem({ ...healthyBackup, alert: "missing" })).toMatchObject({
       status: "warning",
       reason: "noRecentBackup",
     });
-    expect(backupItem({ ...healthyBackup, lastSuccessAt: null }, NOW).reason).toBe("noRecentBackup");
     expect(
-      backupItem(
-        { ...healthyBackup, lastFailure: { at: new Date(NOW.getTime() - HOUR), reason: "targetFull" } },
-        NOW,
-      ),
-    ).toMatchObject({ status: "error", reason: "failed", facts: { lastFailureReason: "targetFull" } });
-    expect(
-      backupItem(
-        { ...healthyBackup, lastFailure: { at: new Date(NOW.getTime() - 5 * HOUR), reason: "targetFull" } },
-        NOW,
-      ).status,
-    ).toBe("ok");
+      backupItem({
+        ...healthyBackup,
+        alert: "failing",
+        lastFailure: { at: new Date(NOW.getTime() - HOUR), reason: "The target is full" },
+      }),
+    ).toMatchObject({ status: "error", reason: "failed", facts: { lastFailureReason: "The target is full" } });
   });
 });
 
@@ -85,7 +77,7 @@ describe("jobsItem", () => {
 
 describe.skipIf(!baseUrl)("OperationsStatusService", () => {
   let test: TestServices;
-  let backup: BackupStatus | null;
+  let backup: BackupStatus;
   let collaborationReady: boolean | Error;
   let counts: Awaited<ReturnType<JobQueue["counts"]>>;
   const filesDir = mkdtempSync(path.join(tmpdir(), "pagehall-status-"));

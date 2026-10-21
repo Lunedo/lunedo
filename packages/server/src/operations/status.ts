@@ -10,7 +10,8 @@ import type { SearchIndexer } from "../search/indexer.js";
 import type { SettingsService } from "../settings/service.js";
 import { checkDatabaseAndClock, checkFileStorage } from "../setup/steps.js";
 import type { StorageService } from "../storage/storage.js";
-import type { BackupStatus, BackupStatusSource } from "./backup-status.js";
+import type { BackupStatus } from "../backup/service.js";
+import type { BackupStatusSource } from "./backup-status.js";
 import { type RecentErrorType, recentErrorTypes } from "./error-events.js";
 import type { MaintenanceService } from "./maintenance.js";
 import type { UpdateCheckService } from "./update-check.js";
@@ -64,7 +65,6 @@ export type CollaborationProbe = () => Promise<boolean>;
 export const RECENT_ERRORS_HOURS = 24;
 export const RECENT_ERRORS_LIMIT = 50;
 export const QUEUE_BACKLOG_WARNING = 1000;
-export const BACKUP_MAX_AGE_HOURS = 48;
 const HOUR_MS = 60 * 60 * 1000;
 const INSTANCE_PAGE = "/settings/instance";
 
@@ -83,30 +83,23 @@ function worst(levels: readonly StatusLevel[]): StatusLevel {
   return levels.includes("warning") ? "warning" : "ok";
 }
 
-export function backupItem(backup: BackupStatus | null, now: Date): StatusItem {
+export function backupItem(backup: BackupStatus): StatusItem {
   const links = { page: `${INSTANCE_PAGE}/backups`, docs: "backup.md" };
-  if (!backup) return item("backups", "warning", "commandOnly", {}, { docs: "backup.md#commands" });
   const facts = {
-    scheduled: backup.scheduled,
+    enabled: backup.enabled,
     targetConfigured: backup.targetConfigured,
-    beforeUpdate: backup.beforeUpdate,
-    lastSuccessAt: backup.lastSuccessAt?.toISOString() ?? null,
+    running: backup.running,
+    beforeUpdate: backup.beforeUpdate.enabled,
+    lastSuccessAt: backup.lastSuccess?.at.toISOString() ?? null,
     lastFailureAt: backup.lastFailure?.at.toISOString() ?? null,
     lastFailureReason: backup.lastFailure?.reason ?? null,
     nextRunAt: backup.nextRunAt?.toISOString() ?? null,
   };
   if (!backup.targetConfigured) return item("backups", "warning", "noTarget", facts, links);
-  if (!backup.scheduled) return item("backups", "warning", "off", facts, links);
-  if (backup.lastFailure && (!backup.lastSuccessAt || backup.lastFailure.at > backup.lastSuccessAt)) {
-    return item("backups", "error", "failed", facts, links);
-  }
-  if (
-    !backup.lastSuccessAt ||
-    now.getTime() - backup.lastSuccessAt.getTime() > BACKUP_MAX_AGE_HOURS * HOUR_MS
-  ) {
-    return item("backups", "warning", "noRecentBackup", facts, links);
-  }
-  return item("backups", "ok", backup.beforeUpdate ? null : "beforeUpdateOff", facts, links);
+  if (!backup.enabled) return item("backups", "warning", "off", facts, links);
+  if (backup.alert === "failing") return item("backups", "error", "failed", facts, links);
+  if (backup.alert === "missing") return item("backups", "warning", "noRecentBackup", facts, links);
+  return item("backups", "ok", backup.beforeUpdate.enabled ? null : "beforeUpdateOff", facts, links);
 }
 
 export function jobsItem(queues: readonly QueueStatus[]): StatusItem {
@@ -186,7 +179,7 @@ export class OperationsStatusService {
     return this.#database;
   }
 
-  backups(): Promise<BackupStatus | null> {
+  backups(): Promise<BackupStatus> {
     return this.#backups.status();
   }
 
@@ -216,7 +209,7 @@ export class OperationsStatusService {
       await this.#storageItem(),
       queues ? jobsItem(queues) : item("jobs", "error", "unreachable", {}, { docs: "operations.md#jobs" }),
       await this.#collaborationItem(),
-      backupItem(await this.#backups.status(), now),
+      backupItem(await this.#backups.status()),
       await this.#searchItem(),
       this.#errorsItem(recentErrors),
       await this.#tlsItem(),

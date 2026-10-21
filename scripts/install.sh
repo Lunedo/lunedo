@@ -389,14 +389,15 @@ update_pagehall() {
     exit 0
   }
 
-  local stamp backup
-  stamp="$(date -u +%Y%m%dT%H%M%SZ)"
-  backup="before-update-${current}-${stamp}.phbak"
-  say "Creating the backup backups/$backup"
+  local location
+  say "Creating the backup before the update"
   compose up -d --wait --wait-timeout "$READY_TIMEOUT_SECONDS" >/dev/null 2>&1 || true
-  if ! compose exec -T pagehall pagehall backup create --output "/var/lib/pagehall/backups/$backup"; then
+  if ! location="$(compose exec -T pagehall pagehall backup create --before-update)" || [ -z "$location" ]; then
     fail "The backup before the update failed, so Pagehall was not updated. Fix the cause shown above and run the update again."
   fi
+  location="$(printf '%s' "$location" | tail -n 1 | tr -d '\r')"
+  say "The backup is $(host_location "$location")"
+  compose exec -T pagehall pagehall backup skip-before-update >/dev/null
 
   say "Starting Pagehall $target"
   replace_image "$target_reference"
@@ -411,10 +412,10 @@ The update stopped. Nothing was restored automatically. To go back to Pagehall $
   cd $directory
   docker compose stop pagehall
   sed -i.bak 's#image: $target_reference#image: $current_reference#' compose.yml
-  docker compose run --rm pagehall backup restore --input /var/lib/pagehall/backups/$backup --force
+  docker compose run --rm pagehall backup restore --input $(restore_input "$location") --force
   docker compose up -d
 
-The backup is in $directory/backups/$backup. See docs/setup.md#rollback.
+The backup is $(host_location "$location").$(s3_note "$location") See docs/setup.md#rollback.
 ROLLBACK
     exit 1
   fi
@@ -426,7 +427,27 @@ ROLLBACK
     rm -f "$directory/pagehall.new"
   fi
   say ""
-  say "Pagehall runs version $target. The backup from before the update is backups/$backup."
+  say "Pagehall runs version $target. The backup from before the update is $(host_location "$location")."
+}
+
+host_location() {
+  case "$1" in
+    /var/lib/pagehall/backups/*) printf '%s/backups/%s' "$directory" "${1#/var/lib/pagehall/backups/}" ;;
+    *) printf '%s' "$1" ;;
+  esac
+}
+
+restore_input() {
+  case "$1" in
+    s3://*) printf '/var/lib/pagehall/backups/%s' "${1##*/}" ;;
+    *) printf '%s' "$1" ;;
+  esac
+}
+
+s3_note() {
+  case "$1" in
+    s3://*) printf ' Download it to %s/backups/%s first.' "$directory" "${1##*/}" ;;
+  esac
 }
 
 check_requirements_for_update() {

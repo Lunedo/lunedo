@@ -142,7 +142,7 @@ cd /opt/pagehall
 1. downloads the image of the target version, without changing the running instance;
 2. shows the breaking changes, manual steps and other changes of every release since the installed version, and stops when the target cannot be reached directly (`Update from … or later` in the [changelog](operations.md#changelog));
 3. asks for confirmation (`--yes` skips it);
-4. creates a backup `backups/before-update-<version>-<time>.phbak` with the running version and stops if that fails;
+4. creates a backup of the class "before update" with the running version (`pagehall backup create --before-update`, see [backup.md](backup.md#backups-before-updates)) and stops if that fails, so that the new version does not take a second one when it starts;
 5. starts the new version and waits until `/health/ready` answers;
 6. reports the result, records the new version and replaces itself with the update command of the new version.
 
@@ -152,7 +152,7 @@ The update command is part of the setup script, so installation and update are t
 
 ### With your own Compose file
 
-1. Create a backup: `docker compose exec pagehall pagehall backup create --output /var/lib/pagehall/backups/before-update.phbak`.
+1. Create a backup: `docker compose exec pagehall pagehall backup create --before-update`. It prints where it wrote the backup. Without this step, the new version takes the same backup itself when it starts, before its migrations.
 2. Read the breaking changes and manual steps of the new version under **Instance settings → Updates** or with `docker run --rm ghcr.io/pagehall/pagehall:<new version> release-notes --update-from <installed version>`.
 3. Change the image in `compose.yml` to the new version, then run `docker compose pull` and `docker compose up -d --wait`.
 
@@ -163,11 +163,11 @@ Migrations only go forward, so going back means restoring the backup from before
 ```sh
 cd /opt/pagehall
 docker compose stop pagehall
-docker compose run --rm pagehall backup restore --input /var/lib/pagehall/backups/before-update-<version>-<time>.phbak --force
+docker compose run --rm pagehall backup restore --input /var/lib/pagehall/backups/<backup before the update> --force
 docker compose up -d --wait
 ```
 
-`--force` replaces the database and the files with the content of the backup; changes made after the backup are lost. The `.env` with the keys stays as it is. See [backup.md](backup.md#commands).
+The update command prints the exact commands with the name of its backup. A backup in S3 storage is downloaded to the `backups` directory first. `--force` replaces the database and the files with the content of the backup; changes made after the backup are lost. The `.env` with the keys stays as it is. See [backup.md](backup.md#commands).
 
 ## Setup code
 

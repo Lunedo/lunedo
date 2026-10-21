@@ -1077,6 +1077,7 @@
     "exports": "Exporte",
     "announcements": "Ankündigungen",
     "storage": "Speicher",
+    "backups": "Backups",
     "rendering": "Rendering",
     "embeds": "Externe Einbettungen",
     "portals": "Wissensdatenbank-Portale",
@@ -1534,6 +1535,9 @@
     },
     "storageFull": "Der Speicher ist fast voll. Die Administration der Instanz wurde informiert. Versuche es erneut, sobald Platz geschaffen wurde.",
     "invalidStorageSettings": "Die Speichereinstellungen sind ungültig. Prüfe die markierten Felder und versuche es erneut.",
+    "invalidBackupSettings": "Die Backup-Einstellungen sind ungültig. Prüfen Sie die markierten Felder und versuchen Sie es erneut.",
+    "backupRunning": "Ein Backup oder eine Test-Wiederherstellung läuft bereits. Warten Sie, bis sie fertig ist, und versuchen Sie es erneut.",
+    "backupNotFound": "Das Backup ist nicht mehr im Ziel. Laden Sie die Liste neu.",
     "tooManyPagesToPrint": "Browser drucken bis zu 300 Seiten auf einmal. Exportieren Sie stattdessen als Word oder HTML, oder als PDF auf dem Server, falls Ihre Administration den Render-Container eingerichtet hat.",
     "tooManyPagesForFile": "Word- und PDF-Dateien nehmen bis zu 1.000 Seiten auf. Exportieren Sie stattdessen als HTML- oder Markdown-Archiv oder einen kleineren Teil.",
     "renderUnavailable": "PDF auf dem Server braucht den Render-Container, der nicht eingerichtet oder nicht erreichbar ist. Drucken Sie das PDF stattdessen über Ihren Browser oder fragen Sie Ihre Instanz-Administration.",
@@ -2628,6 +2632,10 @@
       "importsAndExports": "Importe und Exporte",
       "storageLevelReached": "Dateispeicher füllt sich",
       "storageLevelCleared": "Belegung des Dateispeichers sinkt",
+      "backupFailed": "Ein Backup schlägt fehl",
+      "backupMissing": "Kein aktuelles Backup",
+      "backupRecovered": "Backups funktionieren wieder",
+      "backupTestRestoreFailed": "Eine Test-Wiederherstellung schlägt fehl",
       "copies": "Meine Kopien",
       "reviews": "Überprüfung von Artikeln",
       "operationsUpdateAvailable": "Neue Pagehall-Version"
@@ -2720,6 +2728,12 @@
       "storage": {
         "levelReached": "{level, select, 1 {Der Dateispeicher ist zu {percent, number, ::.0} % belegt. Noch ist nichts gesperrt.} 2 {Der Dateispeicher ist zu {percent, number, ::.0} % belegt. Neue Exporte und Importe werden abgelehnt.} other {Der Dateispeicher ist zu {percent, number, ::.0} % belegt. Auch Uploads werden abgelehnt.}}",
         "levelCleared": "{level, select, 0 {Die Belegung des Dateispeichers ist wieder normal ({percent, number, ::.0} %).} 1 {Die Belegung des Dateispeichers ist auf {percent, number, ::.0} % gesunken. Exporte, Importe und Uploads funktionieren wieder.} other {Die Belegung des Dateispeichers ist auf {percent, number, ::.0} % gesunken. Uploads funktionieren wieder; neue Exporte und Importe werden weiter abgelehnt.}}"
+      },
+      "backup": {
+        "failed": "{reminder, select, true {Erinnerung: Backups schlagen weiter fehl.} other {Ein Backup ist fehlgeschlagen.}} {reason}",
+        "missing": "Seit {days, plural, one {# Tag} other {# Tagen}} gibt es kein erfolgreiches Backup. Prüfen Sie den Zeitplan, das Ziel und die letzten Läufe.",
+        "recovered": "Backups funktionieren wieder. Das letzte Backup ist gelungen.",
+        "testRestoreFailed": "Die Test-Wiederherstellung von {backupName} ist fehlgeschlagen: {reason}"
       },
       "copy": {
         "finished": "Deine Kopie {itemTitle} ist im Space {spaceKey} fertig.",
@@ -3743,6 +3757,17 @@
         "graphChanged": "E-Mail-Einstellungen für Microsoft Graph geändert",
         "credentialAdded": "E-Mail-Zugangsdaten hinzugefügt",
         "credentialRemoved": "E-Mail-Zugangsdaten entfernt"
+      },
+      "backup": {
+        "settingsChanged": "Backup-Einstellungen geändert",
+        "targetChanged": "Backup-Ziel geändert",
+        "keyConfirmed": "Aufbewahrung des Backup-Schlüssels bestätigt",
+        "requested": "Backup von Hand gestartet",
+        "created": "Backup erstellt",
+        "failed": "Backup fehlgeschlagen",
+        "deleted": "Backup gelöscht",
+        "testRestoreStarted": "Test-Wiederherstellung gestartet",
+        "testRestoreFinished": "Test-Wiederherstellung beendet"
       },
       "storage": {
         "contactsChanged": "Betriebskontakte geändert"
@@ -9259,6 +9284,236 @@
       }
     }
   },
+  "backups": {
+    "title": "Backups",
+    "description": "Sichern Sie Datenbank, Dateispeicher und Konfiguration nach Zeitplan, bewahren Sie Generationen auf und prüfen Sie, ob sich Backups wiederherstellen lassen.",
+    "readOnly": "Sie können die Backups und ihre Test-Wiederherstellungen ansehen. Für Änderungen, Backups, Test-Wiederherstellungen und das Löschen brauchen Sie das Recht, den Betrieb zu verwalten.",
+    "failures": {
+      "load": "Die Backup-Einstellungen konnten nicht geladen werden",
+      "list": "Die Liste der Backups konnte nicht geladen werden",
+      "testRestore": "Die Test-Wiederherstellung konnte nicht gestartet werden",
+      "delete": "Das Backup konnte nicht gelöscht werden"
+    },
+    "errors": {
+      "invalidTime": "Geben Sie die Uhrzeit in Stunden und Minuten ein, zum Beispiel 02:30.",
+      "invalidDay": "Wählen Sie einen Tag aus der Liste.",
+      "invalidCount": "Geben Sie eine ganze Zahl im erlaubten Bereich ein.",
+      "invalidScope": "Wählen Sie, was die Backups enthalten.",
+      "invalidPath": "Geben Sie einen absoluten Pfad im Container ein, zum Beispiel /var/lib/pagehall/backups.",
+      "reservedPath": "Dieser Pfad enthält den Dateispeicher, die Geheimnisse oder den Importordner. Wählen Sie ein eigenes Verzeichnis.",
+      "invalidEndpoint": "Geben Sie nur die Adresse des Dienstes ein, beginnend mit https://, zum Beispiel https://s3.example.org.",
+      "invalidRegion": "Geben Sie die Region ein, zum Beispiel eu-central-1, oder auto für Cloudflare R2.",
+      "invalidBucket": "Geben Sie den Bucket-Namen ein: 3 bis 63 Kleinbuchstaben, Ziffern, Punkte, Bindestriche oder Unterstriche.",
+      "invalidPrefix": "Lassen Sie das Präfix leer oder beenden Sie es mit einem Schrägstrich, zum Beispiel pagehall/.",
+      "invalidAccessKey": "Geben Sie den Zugriffsschlüssel ein.",
+      "secretKeyRequired": "Geben Sie den geheimen Schlüssel ein.",
+      "noTarget": "Richten Sie zuerst ein Backup-Ziel ein. Backups lassen sich einschalten, sobald Pagehall weiß, wohin es sie schreiben soll.",
+      "range": "Geben Sie eine ganze Zahl von {min} bis {max} ein."
+    },
+    "status": {
+      "title": "Status",
+      "failingTitle": "Backups schlagen fehl",
+      "failingUnknown": "Das letzte Backup ist fehlgeschlagen. Prüfen Sie das Ziel und die letzten Läufe unten.",
+      "missingTitle": "Kein aktuelles Backup",
+      "missingBody": "Seit {count, plural, one {# Tag} other {# Tagen}} ist kein Backup gelungen. Prüfen Sie den Zeitplan und das Ziel.",
+      "lastSuccess": "Letztes erfolgreiches Backup",
+      "at": "{relative} ({time})",
+      "never": "Noch keines",
+      "lastFailure": "Letztes fehlgeschlagenes Backup",
+      "nextRun": "Nächstes geplantes Backup",
+      "nextRunAt": "{time} ({zone})",
+      "noSchedule": "Geplante Backups sind ausgeschaltet",
+      "running": "Ein Backup läuft",
+      "backUpNow": "Jetzt sichern",
+      "started": "Das Backup wurde gestartet. Es erscheint in der Liste, sobald es fertig ist."
+    },
+    "key": {
+      "title": "Backup-Schlüssel",
+      "warningTitle": "Ohne diesen Schlüssel lässt sich kein Backup wiederherstellen",
+      "warning": "Backups sind mit dem Backup-Schlüssel verschlüsselt (PAGEHALL_BACKUP_KEY oder backup-keys im Verzeichnis für Geheimnisse). Bewahren Sie eine Kopie des Backup-Schlüssels und der Hauptschlüssel außerhalb dieses Servers auf, zum Beispiel in einem Passwortmanager. Backups enthalten die Schlüssel nie.",
+      "confirm": "Der Backup-Schlüssel ist außerhalb von Pagehall aufbewahrt",
+      "confirmedBy": "Bestätigt am {date} von {name}.",
+      "confirmedAt": "Bestätigt am {date}.",
+      "notConfirmed": "Noch nicht bestätigt."
+    },
+    "target": {
+      "title": "Ziel",
+      "noneTitle": "Kein Ziel eingerichtet",
+      "none": "Wählen Sie, wohin Backups geschrieben werden. Bis dahin landen Backups vor Updates im Standardverzeichnis des Containers.",
+      "kind": "Wohin Backups geschrieben werden",
+      "local": "Verzeichnis",
+      "localDescription": "Ein Verzeichnis im Container. Binden Sie dort eine Netzwerkfreigabe (NFS, SMB) ein, damit Backups auf einem anderen Rechner liegen.",
+      "s3": "S3-kompatibler Speicher",
+      "s3Description": "Amazon S3, Google Cloud Storage, MinIO, Cloudflare R2 und andere S3-kompatible Dienste.",
+      "path": "Verzeichnis",
+      "pathHint": "Absoluter Pfad im Container. Der Container-Benutzer muss dort schreiben dürfen.",
+      "sameVolumeTitle": "Auf demselben Laufwerk wie der Dateispeicher",
+      "sameVolume": "Dieses Verzeichnis liegt auf demselben Laufwerk wie der Dateispeicher, ein Plattendefekt verliert also beides. Binden Sie ein eigenes Laufwerk oder eine Netzwerkfreigabe ein, oder nutzen Sie S3-kompatiblen Speicher.",
+      "endpoint": "Endpunkt",
+      "endpointHint": "Adresse des Dienstes. Für Amazon S3 leer lassen.",
+      "region": "Region",
+      "regionHint": "Zum Beispiel eu-central-1. Cloudflare R2 verwendet auto.",
+      "bucket": "Bucket",
+      "bucketHint": "Der Bucket muss existieren.",
+      "prefix": "Präfix",
+      "prefixHint": "Optionaler Ordner für die Backups, endet mit einem Schrägstrich.",
+      "accessKey": "Zugriffsschlüssel",
+      "accessKeyHint": "Der Schlüssel braucht das Recht, Objekte zu schreiben, zu lesen, aufzulisten und zu löschen.",
+      "secretKey": "Geheimer Schlüssel",
+      "secretKeyStored": "Ein geheimer Schlüssel ist gespeichert. Lassen Sie das Feld leer, um ihn zu behalten, oder geben Sie einen neuen ein, um ihn zu ersetzen.",
+      "secretKeyHint": "Wird verschlüsselt gespeichert und nie wieder angezeigt.",
+      "pathStyle": "Bucket im Pfad adressieren",
+      "pathStyleHint": "Nötig für MinIO und einige andere Dienste.",
+      "test": "Verbindung testen",
+      "testOk": "Pagehall hat ein Testobjekt geschrieben, gelesen, aufgelistet und gelöscht. Das Ziel funktioniert.",
+      "save": "Ziel speichern",
+      "steps": {
+        "write": "Schreiben",
+        "read": "Lesen",
+        "delete": "Löschen",
+        "list": "Auflisten"
+      },
+      "failures": {
+        "notFound": "{step} fehlgeschlagen: Das Verzeichnis existiert im Container nicht. Legen Sie es an oder binden Sie das Laufwerk dort ein.",
+        "permission": "{step} fehlgeschlagen: Pagehall darf das nicht. Geben Sie dem Container-Benutzer oder dem Zugriffsschlüssel das Recht zu schreiben, zu lesen, aufzulisten und zu löschen.",
+        "readOnly": "{step} fehlgeschlagen: Das Dateisystem ist schreibgeschützt eingebunden. Binden Sie es beschreibbar ein.",
+        "full": "{step} fehlgeschlagen: Das Ziel ist voll. Schaffen Sie Platz oder wählen Sie ein anderes Ziel.",
+        "dns": "{step} fehlgeschlagen: Der Hostname des Endpunkts ließ sich nicht auflösen. Prüfen Sie den Endpunkt.",
+        "blockedAddress": "{step} fehlgeschlagen: Der Endpunkt liegt in einem privaten Netz. Soll er erreichbar sein, tragen Sie seine Adresse in PAGEHALL_OUTBOUND_ALLOWED_NETWORKS ein.",
+        "blockedAddressAt": "{step} fehlgeschlagen: Der Endpunkt löst zu {address} auf, einer Adresse in einem privaten Netz. Soll Pagehall ihn erreichen, tragen Sie {network} oder das Subnetz seines Netzes in PAGEHALL_OUTBOUND_ALLOWED_NETWORKS ein und starten Sie Pagehall neu.",
+        "insecureAddress": "{step} fehlgeschlagen: Öffentliche Endpunkte brauchen HTTPS. Verwenden Sie eine https://-Adresse.",
+        "connection": "{step} fehlgeschlagen: Der Endpunkt war nicht erreichbar. Prüfen Sie Adresse, Port und Firewall.",
+        "tls": "{step} fehlgeschlagen: Dem TLS-Zertifikat des Endpunkts wird nicht vertraut. Prüfen Sie das Zertifikat oder die Adresse.",
+        "credentials": "{step} fehlgeschlagen: Der Zugriffsschlüssel oder der geheime Schlüssel wurde nicht angenommen. Prüfen Sie beide Schlüssel.",
+        "bucket": "{step} fehlgeschlagen: Den Bucket gibt es nicht oder er liegt in einer anderen Region. Prüfen Sie Bucket und Region.",
+        "mismatch": "{step} fehlgeschlagen: Das Testobjekt kam verändert zurück. Prüfen Sie den Speicherdienst.",
+        "other": "{step} fehlgeschlagen: Der Speicherdienst hat die Anfrage abgelehnt. Prüfen Sie die Einstellungen und die Protokolle des Dienstes."
+      }
+    },
+    "schedule": {
+      "title": "Zeitplan",
+      "enabled": "Täglich sichern",
+      "enabledHint": "Läuft einmal am Tag auf dem Worker. Ein Lauf, der sich mit einem laufenden Backup überschneiden würde, wird übersprungen und aufgeführt.",
+      "time": "Uhrzeit",
+      "timeHint": "In der Zeitzone der Instanz: {zone}.",
+      "weekly": "Wöchentliches Backup",
+      "weeklyHint": "Das Backup dieses Tages wird als wöchentliches aufbewahrt.",
+      "noWeekly": "Keine wöchentlichen Backups",
+      "monthly": "Monatliches Backup",
+      "monthlyHint": "Das Backup dieses Tages wird als monatliches aufbewahrt. In kürzeren Monaten gilt der letzte Tag.",
+      "noMonthly": "Keine monatlichen Backups",
+      "dayOfMonth": "Tag {day}"
+    },
+    "retention": {
+      "title": "Aufbewahrung",
+      "description": "Pagehall löscht nur Backups, die es selbst in diesem Ziel angelegt hat, nie andere Dateien. Ein als monatlich aufbewahrtes Backup zählt nicht als tägliches. Manuelle Backups bleiben, bis Sie sie löschen.",
+      "daily": "Tägliche Backups",
+      "dailyHint": "Anzahl, die aufbewahrt wird.",
+      "weekly": "Wöchentliche Backups",
+      "weeklyHint": "Anzahl, die aufbewahrt wird.",
+      "monthly": "Monatliche Backups",
+      "monthlyHint": "Anzahl, die aufbewahrt wird.",
+      "beforeUpdate": "Backups vor Updates",
+      "beforeUpdateHint": "Anzahl, die aufbewahrt wird."
+    },
+    "updates": {
+      "title": "Vor Updates",
+      "environmentTitle": "Für diese Installation ausgeschaltet",
+      "environment": "PAGEHALL_BACKUP_BEFORE_UPDATE=false ist gesetzt, Pagehall startet also ohne Backup, wenn Migrationen anstehen. Entfernen Sie die Variable, um diese Einstellung zu nutzen.",
+      "enabled": "Vor Migrationen sichern",
+      "enabledHint": "Startet eine neue Version mit anstehenden Migrationen, schreibt sie zuerst ein Backup ins Ziel und wartet darauf.",
+      "defaultTarget": "Startet eine neue Version mit anstehenden Migrationen, schreibt sie zuerst ein Backup ins Standardverzeichnis des Containers, weil kein Ziel eingerichtet ist."
+    },
+    "advanced": {
+      "title": "Erweiterte Optionen",
+      "scope": "Inhalt",
+      "scopeAll": "Alles",
+      "scopeAllHint": "Datenbank, Dateispeicher und Konfiguration.",
+      "scopeDatabase": "Ohne Dateispeicher",
+      "scopeDatabaseHint": "Für Installationen, die das Laufwerk des Dateispeichers selbst sichern. Eine Wiederherstellung bringt dann nur die Datenbank zurück; stellen Sie den Dateispeicher aus Ihrer Sicherung vom selben Zeitpunkt wieder her, sonst fehlen Anhänge.",
+      "missingDays": "Warnen nach Tagen ohne Backup",
+      "missingDaysHint": "Instanzadministration und Betriebskontakte werden einmal informiert.",
+      "autoTestRestore": "Neuestes Backup jeden Monat testweise wiederherstellen",
+      "autoTestRestoreHint": "Nach dem ersten geplanten Backup eines Monats stellt Pagehall es in eine temporäre Datenbank wieder her und prüft es.",
+      "contacts": "Warnungen gehen an die Instanzadministration und an die Betriebskontakte aus den Speichereinstellungen, mit derselben Erinnerung."
+    },
+    "test": {
+      "title": "Test-Wiederherstellung",
+      "states": {
+        "running": "Läuft",
+        "passed": "Bestanden",
+        "verified": "Nur geprüft",
+        "failed": "Fehlgeschlagen"
+      },
+      "startedBy": "Gestartet {time} von {name}.",
+      "startedAutomatically": "Gestartet {time} durch den monatlichen Zeitplan.",
+      "checks": {
+        "verify": "Backup ist vollständig und lesbar",
+        "privilege": "Temporäre Datenbank konnte nicht angelegt werden",
+        "restore": "In eine temporäre Datenbank wiederhergestellt",
+        "schemaVersion": "Schemaversion stimmt",
+        "rows": "Haupttabellen enthalten Daten",
+        "files": "Alle verwiesenen Dateien sind vorhanden"
+      },
+      "filesNotIncluded": "Das Backup enthält den Dateispeicher nicht.",
+      "filesMissing": "{count, plural, one {# Datei fehlt} other {# Dateien fehlen}}.",
+      "privilege": "Eine vollständige Test-Wiederherstellung braucht einen Datenbankbenutzer, der Datenbanken anlegen darf. Führen Sie dies als Datenbank-Superuser aus:",
+      "copyGrant": "SQL kopieren"
+    },
+    "classes": {
+      "daily": "Täglich",
+      "weekly": "Wöchentlich",
+      "monthly": "Monatlich",
+      "manual": "Manuell",
+      "beforeUpdate": "Vor Update"
+    },
+    "list": {
+      "title": "Backups im Ziel",
+      "scheduled": "Geplante Backups",
+      "manual": "Manuelle Backups",
+      "beforeUpdate": "Backups vor Updates",
+      "created": "Erstellt",
+      "class": "Art",
+      "size": "Größe",
+      "version": "Version",
+      "unreadable": "Nicht lesbar",
+      "testRestore": "Test-Wiederherstellung",
+      "notTested": "Nicht getestet",
+      "actions": "Aktionen",
+      "actionsFor": "Aktionen für {name}",
+      "runTestRestore": "Testweise wiederherstellen",
+      "showTestRestore": "Ergebnis der Test-Wiederherstellung anzeigen",
+      "delete": "Backup löschen",
+      "unavailableTitle": "Das Ziel konnte nicht gelesen werden",
+      "emptyTitle": "Noch keine Backups",
+      "empty": "Backups erscheinen hier, sobald das erste geschrieben ist. Mit „Jetzt sichern“ legen Sie eines an."
+    },
+    "delete": {
+      "title": "Dieses Backup löschen?",
+      "description": "Das Backup wird aus dem Ziel entfernt und lässt sich nicht mehr wiederherstellen. Das kann nicht rückgängig gemacht werden.",
+      "confirm": "Backup löschen",
+      "keep": "Backup behalten"
+    },
+    "banner": {
+      "open": "Backup-Einstellungen öffnen",
+      "failing": {
+        "title": "Backups schlagen fehl",
+        "body": "Das letzte Backup ist fehlgeschlagen. Öffnen Sie die Backup-Einstellungen, um den Grund zu sehen."
+      },
+      "missing": {
+        "title": "Kein aktuelles Backup",
+        "body": "Seit {count, plural, one {# Tag} other {# Tagen}} ist kein Backup gelungen."
+      },
+      "off": {
+        "title": "Backups sind ausgeschaltet",
+        "body": "Diese Instanz enthält Inhalte, aber keine geplanten Backups. Schalten Sie sie in den Backup-Einstellungen ein."
+      },
+      "noTarget": {
+        "title": "Backups sind nicht eingerichtet",
+        "body": "Diese Instanz enthält Inhalte, aber kein Backup-Ziel. Richten Sie eines in den Backup-Einstellungen ein."
+      }
+    }
+  },
   "whiteboards": {
     "titleLabel": "Titel des Whiteboards",
     "canvas": "Whiteboard",
@@ -10163,11 +10418,10 @@
           "label": "Backups",
           "ok": "Letztes erfolgreiches Backup {lastSuccessAt}.",
           "reasons": {
-            "commandOnly": "Backups laufen nur mit dem Backup-Befehl. Plane ihn außerhalb von Pagehall ein, bis geplante Backups eingerichtet sind.",
             "noTarget": "Es ist kein Backup-Ziel eingerichtet. Richte eines ein, damit Backups laufen können.",
             "off": "Geplante Backups sind aus. Schalte sie ein oder stelle sicher, dass deine eigenen Backups Datenbank und Dateien abdecken.",
             "failed": "Das letzte Backup ist fehlgeschlagen: {lastFailureReason}. Prüfe das Ziel und starte erneut ein Backup.",
-            "noRecentBackup": "In den letzten zwei Tagen gab es kein erfolgreiches Backup. Prüfe Zeitplan und Ziel.",
+            "noRecentBackup": "Seit länger als in den Backup-Einstellungen erlaubt gab es kein erfolgreiches Backup. Prüfe Zeitplan und Ziel.",
             "beforeUpdateOff": "Backups funktionieren, aber Backups vor Updates sind aus."
           }
         },

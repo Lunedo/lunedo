@@ -1,6 +1,6 @@
 {
-  "id": "5437ba82-031c-48fc-8fd9-3f458a483b72",
-  "prevId": "f913c64c-ef32-4970-b071-635496692ac6",
+  "id": "375891f9-fd87-4f12-be4a-30bdf333e5a3",
+  "prevId": "b61898b7-c6a9-4d55-bfef-4ecb8eb9f6c1",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3012,6 +3012,572 @@
             "id"
           ],
           "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.backup_configuration": {
+      "name": "backup_configuration",
+      "schema": "",
+      "columns": {
+        "singleton": {
+          "name": "singleton",
+          "type": "boolean",
+          "primaryKey": true,
+          "notNull": true,
+          "default": true
+        },
+        "enabled": {
+          "name": "enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "daily_time": {
+          "name": "daily_time",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'02:00'"
+        },
+        "weekly_day": {
+          "name": "weekly_day",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "monthly_day": {
+          "name": "monthly_day",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "keep_daily": {
+          "name": "keep_daily",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 7
+        },
+        "keep_weekly": {
+          "name": "keep_weekly",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 4
+        },
+        "keep_monthly": {
+          "name": "keep_monthly",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 6
+        },
+        "keep_before_update": {
+          "name": "keep_before_update",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 3
+        },
+        "scope": {
+          "name": "scope",
+          "type": "backup_scope",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'all'"
+        },
+        "before_update": {
+          "name": "before_update",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "missing_days": {
+          "name": "missing_days",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 2
+        },
+        "auto_test_restore": {
+          "name": "auto_test_restore",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "target_kind": {
+          "name": "target_kind",
+          "type": "backup_target_kind",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "target_path": {
+          "name": "target_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "s3_endpoint": {
+          "name": "s3_endpoint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "s3_region": {
+          "name": "s3_region",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "s3_bucket": {
+          "name": "s3_bucket",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "s3_prefix": {
+          "name": "s3_prefix",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "s3_force_path_style": {
+          "name": "s3_force_path_style",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "s3_access_key_id": {
+          "name": "s3_access_key_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "key_confirmed_at": {
+          "name": "key_confirmed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "key_confirmed_by": {
+          "name": "key_confirmed_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "backup_configuration_key_confirmed_by_accounts_id_fk": {
+          "name": "backup_configuration_key_confirmed_by_accounts_id_fk",
+          "tableFrom": "backup_configuration",
+          "tableTo": "accounts",
+          "columnsFrom": [
+            "key_confirmed_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "backup_configuration_singleton": {
+          "name": "backup_configuration_singleton",
+          "value": "\"backup_configuration\".\"singleton\""
+        },
+        "backup_configuration_time": {
+          "name": "backup_configuration_time",
+          "value": "\"backup_configuration\".\"daily_time\" ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'"
+        },
+        "backup_configuration_weekly": {
+          "name": "backup_configuration_weekly",
+          "value": "\"backup_configuration\".\"weekly_day\" between 1 and 7"
+        },
+        "backup_configuration_monthly": {
+          "name": "backup_configuration_monthly",
+          "value": "\"backup_configuration\".\"monthly_day\" between 1 and 31"
+        },
+        "backup_configuration_counts": {
+          "name": "backup_configuration_counts",
+          "value": "\"backup_configuration\".\"keep_daily\" between 1 and 1000 and \"backup_configuration\".\"keep_weekly\" between 1 and 1000\n        and \"backup_configuration\".\"keep_monthly\" between 1 and 1000 and \"backup_configuration\".\"keep_before_update\" between 1 and 1000\n        and \"backup_configuration\".\"missing_days\" between 1 and 365"
+        },
+        "backup_configuration_target": {
+          "name": "backup_configuration_target",
+          "value": "(\"backup_configuration\".\"target_kind\" is null)\n        or (\"backup_configuration\".\"target_kind\" = 'local' and \"backup_configuration\".\"target_path\" is not null)\n        or (\"backup_configuration\".\"target_kind\" = 's3' and \"backup_configuration\".\"s3_bucket\" is not null and \"backup_configuration\".\"s3_region\" is not null\n          and \"backup_configuration\".\"s3_access_key_id\" is not null)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.backup_runs": {
+      "name": "backup_runs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "trigger": {
+          "name": "trigger",
+          "type": "backup_trigger",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "backup_class": {
+          "name": "backup_class",
+          "type": "backup_class",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "backup_run_state",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "target": {
+          "name": "target",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "size_bytes": {
+          "name": "size_bytes",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "error": {
+          "name": "error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "actor_id": {
+          "name": "actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "finished_at": {
+          "name": "finished_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "backup_runs_started_at_index": {
+          "name": "backup_runs_started_at_index",
+          "columns": [
+            {
+              "expression": "started_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "backup_runs_state_finished_at_index": {
+          "name": "backup_runs_state_finished_at_index",
+          "columns": [
+            {
+              "expression": "state",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "finished_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "backup_runs_actor_id_accounts_id_fk": {
+          "name": "backup_runs_actor_id_accounts_id_fk",
+          "tableFrom": "backup_runs",
+          "tableTo": "accounts",
+          "columnsFrom": [
+            "actor_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.backup_state": {
+      "name": "backup_state",
+      "schema": "",
+      "columns": {
+        "singleton": {
+          "name": "singleton",
+          "type": "boolean",
+          "primaryKey": true,
+          "notNull": true,
+          "default": true
+        },
+        "last_slot": {
+          "name": "last_slot",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "enabled_at": {
+          "name": "enabled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "alert": {
+          "name": "alert",
+          "type": "backup_alert",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'none'"
+        },
+        "alert_notified_at": {
+          "name": "alert_notified_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_automatic_test_at": {
+          "name": "last_automatic_test_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "backup_state_singleton": {
+          "name": "backup_state_singleton",
+          "value": "\"backup_state\".\"singleton\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.backup_test_restores": {
+      "name": "backup_test_restores",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "backup_name": {
+          "name": "backup_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "trigger": {
+          "name": "trigger",
+          "type": "backup_test_restore_trigger",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "backup_test_restore_state",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "stage": {
+          "name": "stage",
+          "type": "backup_test_restore_stage",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "checks": {
+          "name": "checks",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "error": {
+          "name": "error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "actor_id": {
+          "name": "actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "finished_at": {
+          "name": "finished_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "backup_test_restores_backup_name_started_at_index": {
+          "name": "backup_test_restores_backup_name_started_at_index",
+          "columns": [
+            {
+              "expression": "backup_name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "started_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "backup_test_restores_actor_id_accounts_id_fk": {
+          "name": "backup_test_restores_actor_id_accounts_id_fk",
+          "tableFrom": "backup_test_restores",
+          "tableTo": "accounts",
+          "columnsFrom": [
+            "actor_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -23531,6 +24097,63 @@
       },
       "isRLSEnabled": false
     },
+    "public.update_check_state": {
+      "name": "update_check_state",
+      "schema": "",
+      "columns": {
+        "singleton": {
+          "name": "singleton",
+          "type": "boolean",
+          "primaryKey": true,
+          "notNull": true,
+          "default": true
+        },
+        "checked_at": {
+          "name": "checked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "succeeded": {
+          "name": "succeeded",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "failure": {
+          "name": "failure",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "releases": {
+          "name": "releases",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "notified_version": {
+          "name": "notified_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "update_check_state_singleton": {
+          "name": "update_check_state_singleton",
+          "value": "\"update_check_state\".\"singleton\""
+        }
+      },
+      "isRLSEnabled": false
+    },
     "public.watches": {
       "name": "watches",
       "schema": "",
@@ -24480,6 +25103,61 @@
         "organization"
       ]
     },
+    "public.backup_alert": {
+      "name": "backup_alert",
+      "schema": "public",
+      "values": [
+        "none",
+        "failing",
+        "missing"
+      ]
+    },
+    "public.backup_class": {
+      "name": "backup_class",
+      "schema": "public",
+      "values": [
+        "daily",
+        "weekly",
+        "monthly",
+        "manual",
+        "beforeUpdate"
+      ]
+    },
+    "public.backup_run_state": {
+      "name": "backup_run_state",
+      "schema": "public",
+      "values": [
+        "running",
+        "succeeded",
+        "failed",
+        "skipped"
+      ]
+    },
+    "public.backup_scope": {
+      "name": "backup_scope",
+      "schema": "public",
+      "values": [
+        "all",
+        "database"
+      ]
+    },
+    "public.backup_target_kind": {
+      "name": "backup_target_kind",
+      "schema": "public",
+      "values": [
+        "local",
+        "s3"
+      ]
+    },
+    "public.backup_trigger": {
+      "name": "backup_trigger",
+      "schema": "public",
+      "values": [
+        "scheduled",
+        "manual",
+        "beforeUpdate"
+      ]
+    },
     "public.built_in_role": {
       "name": "built_in_role",
       "schema": "public",
@@ -24978,6 +25656,34 @@
         "instance",
         "organization",
         "space"
+      ]
+    },
+    "public.backup_test_restore_stage": {
+      "name": "backup_test_restore_stage",
+      "schema": "public",
+      "values": [
+        "verify",
+        "restore",
+        "checks",
+        "done"
+      ]
+    },
+    "public.backup_test_restore_state": {
+      "name": "backup_test_restore_state",
+      "schema": "public",
+      "values": [
+        "running",
+        "passed",
+        "verified",
+        "failed"
+      ]
+    },
+    "public.backup_test_restore_trigger": {
+      "name": "backup_test_restore_trigger",
+      "schema": "public",
+      "values": [
+        "manual",
+        "automatic"
       ]
     },
     "public.meeting_topic_outcome": {

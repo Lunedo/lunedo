@@ -49,7 +49,7 @@ describe.skipIf(!databaseBaseUrl)("operations status through the API", () => {
       status: "error",
       reason: "unavailable",
     });
-    expect(body.items.find((item) => item.id === "backups")).toMatchObject({ reason: "commandOnly" });
+    expect(body.items.find((item) => item.id === "backups")).toMatchObject({ reason: "noTarget" });
     expect(body.status).toBe("error");
 
     expect((await member.get("/api/v1/instance/operations/status")).statusCode).toBe(403);

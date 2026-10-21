@@ -136,11 +136,11 @@ export class Metrics {
       (s) => s.storageLevel,
     );
     gauge("pagehall_backup_last_success_timestamp_seconds", "Time of the last successful backup.", (s) =>
-      seconds(s.backup?.lastSuccessAt),
+      seconds(s.backup.lastSuccessAt),
     );
-    counter("pagehall_backup_failures_total", "Backups that failed.", (s) => s.backup?.failuresTotal ?? null);
+    counter("pagehall_backup_failures_total", "Backups that failed.", (s) => s.backup.failures);
     gauge("pagehall_backup_scheduled", "1 when scheduled backups are on.", (s) =>
-      s.backup ? Number(s.backup.scheduled && s.backup.targetConfigured) : null,
+      Number(s.backup.scheduled),
     );
     counter(
       "pagehall_mail_delivery_failures_total",

@@ -923,6 +923,11 @@ const instanceStorageRoute = instanceScreen(
   () => import("./screens/instance/storage-screen.js"),
   "InstanceStorageScreen",
 );
+const instanceBackupsRoute = instanceScreen(
+  "/backups",
+  () => import("./screens/instance/backups-screen.js"),
+  "InstanceBackupsScreen",
+);
 const breakGlassRoute = instanceScreen(
   "/break-glass",
   () => import("./screens/instance/break-glass-screen.js"),
@@ -1083,6 +1088,7 @@ const routeTree = rootRoute.addChildren([
         instanceProviderRoute,
         instanceMailRoute,
         instanceStorageRoute,
+        instanceBackupsRoute,
         instanceRenderingRoute,
         instanceEmbedsRoute,
         instancePortalsRoute,
