@@ -280,6 +280,28 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
     }
   });
 
+  it("keeps the paths of a purged knowledge base reserved for its organization", async () => {
+    const org = await organization();
+    const other = await organization();
+    const actor = accountPrincipal(org.owner);
+    const purged = await knowledgeBase(org.id, org.owner, "public");
+    const old = `alt-${randomUUID().slice(0, 6)}`;
+    const current = `neu-${randomUUID().slice(0, 6)}`;
+    await test.services.portals.setAddress(actor, purged.id, { path: old, domain: null });
+    await test.services.portals.setAddress(actor, purged.id, { path: current, domain: null });
+    await test.database.execute(sql`delete from spaces where id = ${purged.id}`);
+    const foreign = await knowledgeBase(other.id, other.owner, "public");
+    for (const path of [old, current]) {
+      await expect(
+        test.services.portals.setAddress(accountPrincipal(other.owner), foreign.id, { path, domain: null }),
+      ).rejects.toMatchObject({ code: "portalPathTaken" });
+    }
+    const successor = await knowledgeBase(org.id, org.owner, "public");
+    await test.services.portals.setAddress(actor, successor.id, { path: current, domain: null });
+    const found = await test.services.portals.byPath(current);
+    expect(found?.type === "found" && found.config.spaceId).toBe(successor.id);
+  });
+
   it("validates portal addresses, keeps old paths as redirects and gives them up to a new owner", async () => {
     const org = await organization();
     const other = await organization();

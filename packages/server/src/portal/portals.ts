@@ -268,7 +268,9 @@ export class PortalService {
           select exists (select 1 from knowledge_bases where portal_path = ${path} and space_id <> ${spaceId}) as taken`);
         const retired = await tx.execute<{ reserved: boolean }>(sql`
           select exists (select 1 from knowledge_base_paths p join spaces s on s.id = p.space_id
-            where p.path = ${path} and s.organization_id <> ${current.organizationId}) as reserved`);
+              where p.path = ${path} and s.organization_id <> ${current.organizationId})
+            or exists (select 1 from portal_path_reservations r
+              where r.path = ${path} and r.organization_id <> ${current.organizationId}) as reserved`);
         if (taken.rows[0]?.taken || retired.rows[0]?.reserved) {
           throw new SpaceError("portalPathTaken", "Another knowledge base already uses this path");
         }
@@ -291,6 +293,7 @@ export class PortalService {
         if (path === current.path && domain === current.domain) return current;
         if (path !== current.path) {
           await tx.execute(sql`delete from knowledge_base_paths where path = ${path}`);
+          await tx.execute(sql`delete from portal_path_reservations where path = ${path}`);
           await tx.execute(sql`
             insert into knowledge_base_paths (path, space_id) values (${current.path}, ${spaceId})
             on conflict (path) do update set space_id = excluded.space_id, created_at = now()`);

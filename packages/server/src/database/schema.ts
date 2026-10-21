@@ -125,6 +125,7 @@ export {
   knowledgeBases,
   portalDomains,
   portalInvitations,
+  portalPathReservations,
   portalReaders,
   requiredSections,
   reviewRecipient,

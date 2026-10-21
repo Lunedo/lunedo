@@ -123,6 +123,18 @@ export const knowledgeBasePaths = pgTable(
   (table) => [index().on(table.spaceId)],
 );
 
+export const portalPathReservations = pgTable(
+  "portal_path_reservations",
+  {
+    path: text().primaryKey(),
+    organizationId: uuid()
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    createdAt: timestampColumn().notNull().defaultNow(),
+  },
+  (table) => [index().on(table.organizationId)],
+);
+
 export const knowledgeBaseLogos = pgTable("knowledge_base_logos", {
   spaceId: uuid()
     .primaryKey()

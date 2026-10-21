@@ -188,7 +188,7 @@ Readers open a knowledge base in its portal: a start page with the search and th
 
 ### Addresses
 
-- Every knowledge base has a portal at `/help/<path>/` on the instance. The path is the space key in lowercase until a space admin changes it under **Space settings → Address**. A changed path keeps redirecting old links (301) to the new one. An old path stays reserved for the organization: only a knowledge base of the same organization can take it over.
+- Every knowledge base has a portal at `/help/<path>/` on the instance. The path is the space key in lowercase until a space admin changes it under **Space settings → Address**. A changed path keeps redirecting old links (301) to the new one. An old path stays reserved for the organization: only a knowledge base of the same organization can take it over. The paths of a knowledge base that is deleted for good stay reserved the same way.
 - Articles have the address `<number>-<short form of the title>`, for example `/help/help/12-set-up-the-vpn-connection`. An old short form or the bare number redirects to the current address. A number of an article that moved to another knowledge base redirects there. Categories are at `topics/<id>`, the search at `search?q=…`.
 - An unknown address, a hidden article and an article that does not exist look exactly the same: "We can't find this page", status 404.
 - The change of a path or domain is recorded in the audit log as `knowledgeBase.portalAddressChanged`.
