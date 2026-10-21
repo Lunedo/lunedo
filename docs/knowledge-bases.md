@@ -190,7 +190,7 @@ Readers open a knowledge base in its portal: a start page with the search and th
 
 - Every knowledge base has a portal at `/help/<path>/` on the instance. The path is the space key in lowercase until a space admin changes it under **Space settings → Address**. A changed path keeps redirecting old links (301) to the new one. An old path stays reserved for the organization: only a knowledge base of the same organization can take it over. The paths of a knowledge base that is deleted for good stay reserved the same way.
 - Articles have the address `<number>-<short form of the title>`, for example `/help/help/12-set-up-the-vpn-connection`. An old short form or the bare number redirects to the current address. A number of an article that moved to another knowledge base redirects there. Categories are at `topics/<id>`, the search at `search?q=…`.
-- An unknown address, a hidden article and an article that does not exist look exactly the same: "We can't find this page", status 404.
+- An unknown address, a hidden article and an article that does not exist look exactly the same: "We can't find this page", status 404. A signed-in person who can read nothing in a knowledge base that is not public gets the same answer as for a portal that does not exist, without its name or welcome text.
 - The change of a path or domain is recorded in the audit log as `knowledgeBase.portalAddressChanged`.
 
 ### Own domains
@@ -199,7 +199,7 @@ A knowledge base can have its own domain, for example the address of an older he
 
 1. An instance administrator allows the domain for one organization under **Instance settings → Knowledge base portals** (`POST /api/v1/instance/portal-domains`). Allowing and removing are recorded in the audit log (`organization.portalDomainAllowed`, `organization.portalDomainRemoved`).
 2. The DNS record of the domain points to the instance, and the reverse proxy sends the domain to Pagehall and holds its certificate. Pagehall does not request certificates itself. Portals on own domains need HTTPS.
-3. A space admin chooses the domain under **Space settings → Address**. The page shows the DNS record to copy before saving.
+3. A space admin chooses the domain under **Space settings → Address**, which lists only domains that are free or already used by this knowledge base. The page shows the DNS record to copy before saving.
 
 On its own domain only the portal answers; the app and `/api/` are not reachable there. Health checks (`/health/…`) and `/metrics` answer on every host without a database lookup. Each API node keeps the list of allowed domains in memory and reloads it whenever a domain is allowed or removed on any node; while the database cannot be reached, requests to other hosts get status 503. The portal keeps working under `/help/<path>/` on the instance as well.
 
