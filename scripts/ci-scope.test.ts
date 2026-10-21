@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { scopeOf } from "./ci-scope.ts";
 
-const none = { endToEnd: false, sweeps: false, identityProviders: false, backup: false };
-const all = { endToEnd: true, sweeps: true, identityProviders: true, backup: true };
+const none = { endToEnd: false, sweeps: false, identityProviders: false, backup: false, operations: false };
+const all = { endToEnd: true, sweeps: true, identityProviders: true, backup: true, operations: true };
 
 function ready(files: string[] | null) {
   return scopeOf({ event: "pull_request", draft: false, files });
@@ -119,6 +119,26 @@ describe("scopeOf", () => {
     }
     assert.equal(ready(["packages/server/src/backupish.ts"]).backup, false);
     assert.equal(ready(["packages/server/src/filesystem.ts"]).backup, false);
+  });
+
+  it("runs the installation, update and reverse proxy checks for the image and the operations code", () => {
+    for (const file of [
+      "docker/Dockerfile",
+      "docker/compose.yml",
+      "scripts/install.sh",
+      "scripts/reverse-proxy-check.sh",
+      "docs/reverse-proxy.md",
+      "packages/server/src/operations/status.ts",
+      "packages/server/src/portal/portals.ts",
+      "packages/server/drizzle/0094_operations.sql",
+      "apps/api/src/health/tls-ask.controller.ts",
+      "apps/collab/src/server.ts",
+    ]) {
+      assert.equal(ready([file]).operations, true, file);
+    }
+    for (const file of ["docs/setup.md", "apps/web/src/app.tsx", "docker/compose.dev.yml"]) {
+      assert.equal(ready([file]).operations, false, file);
+    }
   });
 
   it("runs the identity provider job, not the backup job, for the compose file", () => {

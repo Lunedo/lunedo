@@ -46,6 +46,7 @@ if (process.env.GITHUB_STEP_SUMMARY) {
     `- Accessibility and screenshot sweeps: ${scope.sweeps ? "run" : "skipped"}`,
     `- Sign-in through identity providers: ${scope.identityProviders ? "run" : "skipped"}`,
     `- Backup round trip: ${scope.backup ? "run" : "skipped"}`,
+    `- Installation, update and reverse proxies: ${scope.operations ? "run" : "skipped"}`,
   ];
   appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${summary.join("\n")}\n`);
 }

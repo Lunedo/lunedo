@@ -38,6 +38,7 @@ jobs:
       sweeps: ${{ steps.scope.outputs.sweeps }}
       identity-providers: ${{ steps.scope.outputs.identityProviders }}
       backup: ${{ steps.scope.outputs.backup }}
+      operations: ${{ steps.scope.outputs.operations }}
       base: ${{ steps.scope.outputs.base }}
       head: ${{ steps.scope.outputs.head }}
     steps:
@@ -98,6 +99,7 @@ jobs:
       - run: pnpm patches:check
       - run: pnpm playwright-image:check
       - run: pnpm i18n:check
+      - run: pnpm shell:check
       - run: pnpm typecheck
       - name: Script tests
         run: node --test "scripts/*.test.ts"
@@ -266,6 +268,53 @@ jobs:
       - name: Remove the image of this job
         if: always()
         run: docker image rm --force pagehall:ci-${{ github.run_id }}-${{ github.run_attempt }}
+
+  operations:
+    name: Installation, update and reverse proxies
+    needs: [scope, browsers-first]
+    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository || !contains(vars.RUNNER_LABELS, 'self-hosted')) && needs.scope.outputs.operations == 'true'
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        with:
+          driver: ${{ contains(vars.RUNNER_LABELS, 'self-hosted') && 'docker' || 'docker-container' }}
+      - name: Build the image for amd64 with the local layer cache
+        if: ${{ contains(vars.RUNNER_LABELS, 'self-hosted') }}
+        timeout-minutes: 15
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: docker/Dockerfile
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: pagehall:operations-${{ github.run_id }}-${{ github.run_attempt }}
+          build-args: VERSION=ci
+      - name: Build the image for amd64
+        if: ${{ !contains(vars.RUNNER_LABELS, 'self-hosted') }}
+        timeout-minutes: 15
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: docker/Dockerfile
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: pagehall:operations-${{ github.run_id }}-${{ github.run_attempt }}
+          build-args: VERSION=ci
+          cache-from: |
+            type=gha,scope=amd64
+            type=gha,scope=image
+          cache-to: type=gha,mode=max,scope=amd64
+      - name: Check the reverse proxy examples
+        run: scripts/reverse-proxy-check.sh pagehall:operations-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Remove the image of this job
+        if: always()
+        run: docker image rm --force pagehall:operations-${{ github.run_id }}-${{ github.run_attempt }}
 
   e2e:
     name: End-to-end, accessibility and visual tests
@@ -564,7 +613,7 @@ jobs:
 
   result:
     name: CI result
-    needs: [scope, browsers-first, checks, unit, backup, e2e, identity-providers, quick-checks]
+    needs: [scope, browsers-first, checks, unit, backup, operations, e2e, identity-providers, quick-checks]
     if: always()
     runs-on: ${{ fromJSON((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && contains(vars.RUNNER_LABELS, 'self-hosted')) && '"ubuntu-24.04"' || vars.RUNNER_LABELS || '"ubuntu-24.04"') }}
     timeout-minutes: 5

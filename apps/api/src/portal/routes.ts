@@ -151,7 +151,7 @@ function sameOrigin(request: FastifyRequest, origin: string): boolean {
   return request.headers.origin === origin;
 }
 
-const OPERATIONS = /^\/(health|metrics)(\/|$)/;
+const OPERATIONS = /^\/(health|metrics|tls)(\/|$)/;
 const UNAVAILABLE = "Pagehall cannot reach its database at the moment. Try again in a minute.";
 
 export function registerPortal(fastify: FastifyInstance, context: ApiContext): void {
