@@ -155,12 +155,86 @@ test("renders a Mermaid block in the sandbox, keeps the last good image on error
   expect(image).toBeDefined();
   const svg = await (await page.request.get(`/api/v1/attachments/${image?.id}/content`)).text();
   expect(svg).toContain(">Incident<");
-  expect(svg).toContain("> reported<");
+  expect(svg).toContain(">reported<");
   expect(svg).not.toContain("evil.example");
   expect(svg).not.toContain("foreignObject");
 
   await page.goto(created.path);
   await expect(page.locator('figure.ph-diagram[data-diagram="mermaid"] img')).toBeVisible();
+});
+
+test("renders several Mermaid diagram types and neutralizes scripts and javascript links", async ({
+  page,
+  organization,
+}) => {
+  const { spaceId, spaceKey } = await teamSpace(page, organization);
+  const created = await createPage(page, spaceId, spaceKey, "Diagram types");
+  await page.goto(`${created.path}?edit=true`);
+  const outside = outsideRequests(page);
+  const dialogs: string[] = [];
+  page.on("dialog", (dialog) => {
+    dialogs.push(dialog.message());
+    void dialog.dismiss();
+  });
+  const diagrams = [
+    {
+      text: "Start",
+      source: [
+        "flowchart LR",
+        '  A["<script>window.top.mermaidInjected = true</script>Start"] --> B["<a href=\'javascript:alert(1)\'>Finish</a>"]',
+        '  click A "javascript:alert(2)"',
+        '  click B href "javascript:alert(3)"',
+      ].join("\n"),
+    },
+    { text: "Alice", source: "sequenceDiagram\n  Alice->>Bob: Hello Bob" },
+    { text: "Invoice", source: "classDiagram\n  class Invoice {\n    +total() number\n  }" },
+    { text: "Draft", source: "stateDiagram-v2\n  [*] --> Draft\n  Draft --> Published" },
+    { text: "CUSTOMER", source: "erDiagram\n  CUSTOMER ||--o{ ORDER : places" },
+    { text: "Tickets", source: 'pie title Tickets\n  "Open" : 3\n  "Closed" : 7' },
+    { text: "Wiki", source: "mindmap\n  root((Wiki))\n    Pages\n    Spaces" },
+    { text: "Review", source: "---\nconfig:\n  layout: elk\n---\nflowchart TD\n  Review --> Done" },
+  ];
+
+  for (const diagram of diagrams) {
+    await insertBlock(page, "/mermaid", /^Mermaid diagram/);
+    const block = page.locator('[data-diagram="mermaid"]').last();
+    const source = block.getByLabel("Source of the Mermaid diagram");
+    await source.fill(diagram.source);
+    await expect(block.getByRole("img", { name: "Mermaid diagram" })).toBeVisible({ timeout: 20_000 });
+    await block.getByRole("button", { name: "Save diagram" }).click();
+    await expect(source).toBeHidden({ timeout: 20_000 });
+  }
+  await expect(page.getByRole("status").getByText("Saved", { exact: true })).toBeVisible({ timeout: 20_000 });
+
+  const attachments = (await (await page.request.get(`/api/v1/pages/${created.id}/attachments`)).json()) as {
+    id: string;
+    name: string;
+  }[];
+  const images = attachments.filter((attachment) => /^mermaid-[0-9a-f-]+\.svg$/.test(attachment.name));
+  expect(images).toHaveLength(diagrams.length);
+  const stored = await Promise.all(
+    images.map(async (image) => (await page.request.get(`/api/v1/attachments/${image.id}/content`)).text()),
+  );
+  for (const diagram of diagrams) {
+    expect(
+      stored.some((svg) => svg.includes(`>${diagram.text}<`)),
+      diagram.text,
+    ).toBe(true);
+  }
+  for (const svg of stored) {
+    expect(svg).not.toMatch(/<script/i);
+    expect(svg).not.toMatch(/javascript:/i);
+    expect(svg).not.toMatch(/\son[a-z]+\s*=/i);
+    expect(svg).not.toContain("foreignObject");
+  }
+
+  await page.goto(created.path);
+  await expect(page.locator('figure.ph-diagram[data-diagram="mermaid"] img')).toHaveCount(diagrams.length);
+  expect(
+    await page.evaluate(() => (window as { mermaidInjected?: boolean }).mermaidInjected),
+  ).toBeUndefined();
+  expect(dialogs).toEqual([]);
+  expect(outside).toEqual([]);
 });
 
 test("refuses PlantUML includes and renders PlantUML in the browser", async ({ page, organization }) => {

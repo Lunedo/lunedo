@@ -20,6 +20,8 @@ The block shows the version of the diagram file. While someone edits a diagram, 
 
 Type `/mermaid` or `/plantuml`. The block opens with a small example. Write the source in the text field; the preview below follows while you type. **Save diagram** stores the source and the image; **Cancel** keeps the diagram as it was.
 
+Mermaid diagrams use the classic look, the default theme and the dagre layout, so they keep their appearance when they are saved again. A diagram can choose another layout or look in its front matter, for example `layout: elk` under `config:`.
+
 When the source has an error, the block keeps the last working preview and shows the error with the line it names. **Save diagram** stores nothing until the error is fixed.
 
 While editing a page, **Preview** and **Source** on the block switch between the image and the source. In the read view, **Source** below the image shows the source.
