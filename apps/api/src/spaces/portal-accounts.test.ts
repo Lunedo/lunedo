@@ -270,14 +270,21 @@ describe.skipIf(!databaseBaseUrl)("portal accounts", () => {
       id: string;
     }[];
     expect(listedFirst.map((account) => account.id)).toEqual([onlyFirst.accountId]);
-    const foreign = await owner.post(`/api/v1/spaces/${first.id}/portal-accounts/${onlySecond.accountId}/deactivate`, {});
+    const foreign = await owner.post(
+      `/api/v1/spaces/${first.id}/portal-accounts/${onlySecond.accountId}/deactivate`,
+      {},
+    );
     expect(foreign.statusCode).toBe(404);
     expect(foreign.json().code).toBe("portalAccountNotFound");
-    expect((await owner.delete(`/api/v1/spaces/${first.id}/portal-accounts/${onlySecond.accountId}`)).statusCode).toBe(404);
+    expect(
+      (await owner.delete(`/api/v1/spaces/${first.id}/portal-accounts/${onlySecond.accountId}`)).statusCode,
+    ).toBe(404);
     const again = await invite(second.id, "nur-eins@example.org");
     await accept(again.token, "Nur Eins");
     expect((await reader.get(`${second.path}/1-lieferzeiten`)).statusCode).toBe(200);
-    expect((await owner.delete(`/api/v1/spaces/${second.id}/portal-accounts/${onlyFirst.accountId}`)).statusCode).toBe(204);
+    expect(
+      (await owner.delete(`/api/v1/spaces/${second.id}/portal-accounts/${onlyFirst.accountId}`)).statusCode,
+    ).toBe(204);
     const back = await invite(second.id, "nur-eins@example.org");
     const rejoined = await new TestClient(test.app).post("/api/v1/invitations/accept", { token: back.token });
     expect(rejoined.statusCode, rejoined.body).toBe(200);

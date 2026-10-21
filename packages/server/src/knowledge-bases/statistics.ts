@@ -3,7 +3,13 @@ import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
 import type { AuthorizationService } from "../authorization/service.js";
 import type { Database } from "../database/database.js";
-import type { FeedbackCursor, FeedbackText, Period, PortalStatistics, TermCount } from "../portal/statistics.js";
+import type {
+  FeedbackCursor,
+  FeedbackText,
+  Period,
+  PortalStatistics,
+  TermCount,
+} from "../portal/statistics.js";
 import { auditScopeOf, SpaceError } from "../spaces/common.js";
 import { visibleItem } from "../spaces/visibility.js";
 

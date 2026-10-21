@@ -110,7 +110,8 @@ export async function loadViewer(
   if (row.type === "standard") shared.push("internal");
   const tokens = [...(row.in_organization ? own : []), ...shared];
   if (row.member) tokens.push(`members:${organizationId}`);
-  const portalTokens = portal && row.in_organization ? row.portal_spaces.map((space) => `portal:${space}`) : [];
+  const portalTokens =
+    portal && row.in_organization ? row.portal_spaces.map((space) => `portal:${space}`) : [];
   const personalTokens = token?.organizationId ? [] : [...own, ...shared];
   return {
     accountId: principal.id,
