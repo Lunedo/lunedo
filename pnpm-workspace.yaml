@@ -11,8 +11,18 @@ allowBuilds:
 ignoredOptionalDependencies:
   - "@napi-rs/canvas"
 
+minimumReleaseAgeExclude:
+  - "@turbo/darwin-64@2.11.10"
+  - "@turbo/darwin-arm64@2.11.10"
+  - "@turbo/linux-64@2.11.10"
+  - "@turbo/linux-arm64@2.11.10"
+  - "@turbo/windows-64@2.11.10"
+  - "@turbo/windows-arm64@2.11.10"
+  - happy-dom@21.0.4
+  - i18next@26.5.4
+  - turbo@2.11.10
+
 overrides:
-  "@scalar/json-magic>undici": ^7.29.1
   fractional-indexing: link:./packages/fractional-indexing
   "@excalidraw/excalidraw>nanoid": ^3.3.12
   "@excalidraw/mermaid-to-excalidraw>nanoid": ^5.1.11
