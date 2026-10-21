@@ -77,6 +77,7 @@ export interface PortalView {
   logoUrl: string | null;
   account: PortalAccount | null;
   appLink: { label: string; href: string } | null;
+  accountLink: string | null;
   signInUrl: string | null;
   signOutUrl: string;
   categories: PortalCategory[];
@@ -235,6 +236,7 @@ function header(
           account
             ? html`<details class="acct" data-menu><summary aria-label="${view.t.account(account.name)}"><span class="av" aria-hidden="true">${initialOf(account.name).slice(0, 2)}</span><span class="name trunc">${account.name.split(" ")[0]}</span>${icon("chevron-down")}</summary>
               <div class="menu"><div class="mh"><b>${account.name}</b><span>${account.email}</span></div>
+                ${when(view.accountLink, () => html`<a href="${view.accountLink ?? ""}">${icon("user-round")}${view.t.accountSettings}</a>`)}
                 ${when(view.appLink, () => html`<a href="${view.appLink?.href ?? ""}">${icon("external-link")}${view.appLink?.label ?? ""}</a>`)}
                 <form method="post" action="${view.signOutUrl}"><button type="submit">${icon("log-out")}${view.t.signOut}</button></form>
               </div></details>`

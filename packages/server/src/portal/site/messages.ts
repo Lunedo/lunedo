@@ -15,6 +15,7 @@ export interface PortalMessages {
   signIn: string;
   signOut: string;
   appLinkDefault: string;
+  accountSettings: string;
   footerContact: (email: string) => string;
   poweredBy: string;
   defaultHeading: string;
@@ -148,6 +149,7 @@ const en: PortalMessages = {
   signIn: "Sign in",
   signOut: "Sign out",
   appLinkDefault: "Go to the wiki",
+  accountSettings: "Account settings",
   footerContact: (email) => `Contact: ${email}`,
   poweredBy: "Provided with Pagehall",
   defaultHeading: "How can we help?",
@@ -295,6 +297,7 @@ const de: PortalMessages = {
   signIn: "Anmelden",
   signOut: "Abmelden",
   appLinkDefault: "Zum Wiki",
+  accountSettings: "Kontoeinstellungen",
   footerContact: (email) => `Kontakt: ${email}`,
   poweredBy: "Bereitgestellt mit Pagehall",
   defaultHeading: "Wie können wir helfen?",

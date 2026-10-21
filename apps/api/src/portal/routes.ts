@@ -431,6 +431,7 @@ async function buildView(
     logoUrl,
     account: viewer.account ? { name: viewer.account.name, email: viewer.account.email } : null,
     appLink,
+    accountLink: viewer.account?.type === "portal" ? `${target.instanceUrl}/` : null,
     signInUrl: viewer.account
       ? null
       : `${target.root}/sign-in?return=${encodeURIComponent(`${target.base}${target.rest}`)}`,

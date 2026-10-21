@@ -317,6 +317,7 @@ export class StaticSiteBuilder {
         logoUrl: logoPath ? `${root}/${logoPath}` : null,
         account: null,
         appLink: null,
+        accountLink: null,
         signInUrl: null,
         signOutUrl: "",
         categories,

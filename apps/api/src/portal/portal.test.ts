@@ -342,6 +342,7 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect(read.body).toContain("Für Kunden.");
     expect(read.body).not.toContain(">Zum Wiki<");
     expect(read.body).not.toContain(">Go to the wiki<");
+    expect(read.body).toMatch(new RegExp(`<a href="${TEST_ORIGIN}/"><svg[^>]*>.*?</svg>Account settings</a>`));
     const blocked = await reader.client.get(`${internal.path}/${secret.number}-intern`);
     expect(blocked.statusCode).toBe(404);
     const standard = await person();
@@ -447,6 +448,7 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     await index();
     const page = await owner.get(`${kb.path}/${entry.number}-bearbeitbar`);
     expect(page.body).toContain(`/pages/${entry.id}?edit=true`);
+    expect(page.body).not.toContain("Account settings");
     const reader = await person();
     const readerPage = await reader.client.get(`${kb.path}/${entry.number}-bearbeitbar`);
     expect(readerPage.body).not.toContain("?edit=true");
