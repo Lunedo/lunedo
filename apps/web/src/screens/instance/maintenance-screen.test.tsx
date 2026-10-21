@@ -145,6 +145,8 @@ describe("the maintenance mode screen", () => {
     ).toBeTruthy();
     await waitFor(() => expect(document.activeElement).toBe(field));
     expect(requests.some((request) => request.method === "PUT")).toBe(false);
+    await user.keyboard("{Backspace}");
+    await waitFor(() => expect(screen.queryByText(/Shorten it to at most 500/)).toBeNull());
   });
 
   it("shows the state without the form to people who may only view it", async () => {

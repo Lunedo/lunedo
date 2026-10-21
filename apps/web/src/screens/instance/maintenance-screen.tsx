@@ -63,10 +63,18 @@ function MaintenanceForm({ details, canManage }: { details: Details; canManage: 
     return saved;
   };
 
+  const messageProblem = (value: string): string | null => {
+    const length = normalizedMessage(value).length;
+    return length > MESSAGE_MAX
+      ? t("maintenance.form.messageTooLong", { max: MESSAGE_MAX, count: length })
+      : null;
+  };
+
   const submit = async (enabled: boolean) => {
     const text = normalizedMessage(message);
-    if (enabled && text.length > MESSAGE_MAX) {
-      setError(t("maintenance.form.messageTooLong", { max: MESSAGE_MAX, count: text.length }));
+    const problem = enabled ? messageProblem(message) : null;
+    if (problem) {
+      setError(problem);
       focusFirstInvalidSoon(form.current ?? undefined);
       return;
     }
@@ -157,9 +165,10 @@ function MaintenanceForm({ details, canManage }: { details: Details; canManage: 
                 rows={3}
                 onChange={(event) => {
                   setMessage(event.target.value);
-                  setError(null);
+                  if (error) setError(messageProblem(event.target.value));
                   setFailure(null);
                 }}
+                onBlur={() => setError(messageProblem(message))}
               />
             </Field>
             <Checkbox
