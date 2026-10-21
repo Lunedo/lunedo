@@ -33,7 +33,6 @@ test("invites a member who accepts and signs in", async ({ page, browser, organi
   const invited = await forwardFrom(await browser.newContext({ storageState: { cookies: [], origins: [] } }));
   const invitee = await invited.newPage();
   await invitee.goto(link.replace(/^https?:\/\/[^/]+/, ""));
-  await invitee.getByRole("button", { name: "Accept invitation" }).click();
   await invitee.getByLabel("Name", { exact: true }).fill(member.name);
   await invitee.getByLabel("Password", { exact: true }).fill(member.password);
   await invitee.getByLabel("Repeat the password").fill(member.password);

@@ -35,7 +35,6 @@ test("invites a portal account that reads an article and never sees the wiki", a
   const invitee = await context.newPage();
   await invitee.goto(linkFrom(mail.text).replace(/^https?:\/\/[^/]+/, ""));
   await expect(invitee.getByRole("heading", { name: `Read ${portal.name}` })).toBeVisible();
-  await invitee.getByRole("button", { name: "Accept invitation" }).click();
   await invitee.getByLabel("Name", { exact: true }).fill(reader.name);
   await invitee.getByLabel("Password", { exact: true }).fill(reader.password);
   await invitee.getByLabel("Repeat the password").fill(reader.password);

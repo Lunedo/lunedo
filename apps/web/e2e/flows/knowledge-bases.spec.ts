@@ -34,7 +34,7 @@ test("creates a knowledge base and publishes a how-to only once its required sec
   await page.getByRole("button", { name: "Create in this space" }).click();
   await expect(page.getByRole("menuitem", { name: "New whiteboard" })).toHaveCount(0);
   await page.getByRole("menuitem", { name: "New article" }).click();
-  const gallery = page.getByRole("dialog", { name: `Create in ${name}` });
+  const gallery = page.getByRole("dialog", { name: `New article in ${name}` });
   await gallery.getByRole("button", { name: /How-to/ }).click();
   await gallery.getByRole("button", { name: "Create from How-to" }).click();
   const editor = page.getByRole("textbox", { name: "Page content" });
