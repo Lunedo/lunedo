@@ -1,7 +1,7 @@
 DELETE FROM "article_slugs" s USING "tree_items" t
 WHERE t."id" = s."item_id" AND (
 	t."published_version_id" IS NULL
-	OR (s."slug" <> article_slug(t."title")
+	OR (NOT EXISTS (SELECT 1 FROM "page_versions" c WHERE c."id" = t."published_version_id" AND article_slug(c."title") = s."slug")
 		AND (NOT EXISTS (SELECT 1 FROM "page_versions" v
 				WHERE v."item_id" = t."id" AND v."reason" = 'published' AND article_slug(v."title") = s."slug")
 			OR EXISTS (SELECT 1 FROM "article_numbers" n WHERE n."item_id" = t."id" AND n."space_id" <> t."space_id"))));--> statement-breakpoint
@@ -27,15 +27,15 @@ BEGIN
 			WHERE "space_id" = NEW."space_id" RETURNING "next_article_number" - 1 INTO "assigned";
 		INSERT INTO "article_numbers" ("space_id", "number", "item_id") VALUES (NEW."space_id", "assigned", NEW."id");
 	END IF;
-	IF NEW."published_version_id" IS NOT NULL THEN
-		INSERT INTO "article_slugs" ("item_id", "space_id", "slug") VALUES (NEW."id", NEW."space_id", article_slug(NEW."title"))
-			ON CONFLICT ("item_id", "space_id", "slug") DO UPDATE SET "created_at" = now();
-	END IF;
+	INSERT INTO "article_slugs" ("item_id", "space_id", "slug")
+		SELECT NEW."id", NEW."space_id", article_slug("v"."title") FROM "page_versions" "v"
+		WHERE "v"."id" = NEW."published_version_id"
+		ON CONFLICT ("item_id", "space_id", "slug") DO UPDATE SET "created_at" = now();
 	RETURN NEW;
 END $$;--> statement-breakpoint
 DROP TRIGGER "tree_items_article_address_update" ON "tree_items";--> statement-breakpoint
 CREATE TRIGGER "tree_items_article_address_update" AFTER UPDATE OF "space_id", "kind", "title", "translation_of", "published_version_id" ON "tree_items"
 	FOR EACH ROW WHEN (OLD."space_id" IS DISTINCT FROM NEW."space_id" OR OLD."kind" IS DISTINCT FROM NEW."kind"
 		OR OLD."title" IS DISTINCT FROM NEW."title" OR OLD."translation_of" IS DISTINCT FROM NEW."translation_of"
-		OR (OLD."published_version_id" IS NULL AND NEW."published_version_id" IS NOT NULL))
+		OR OLD."published_version_id" IS DISTINCT FROM NEW."published_version_id")
 	EXECUTE FUNCTION "tree_items_article_address"();

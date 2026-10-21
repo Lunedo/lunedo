@@ -335,6 +335,9 @@ describe.skipIf(!baseUrl)("static website of a knowledge base", () => {
     await test.services.tree.update(owner, drafted, { title: "Zwischenstand Umzug" });
     await test.services.tree.update(owner, drafted, { title: "Standortwechsel FAQ" });
     await test.services.versions.publish(owner, drafted);
+    await test.database.execute(
+      sql`update tree_items set title = ${"Zwischenstand Kündigungen"} where id = ${drafted}`,
+    );
     const moved = await article(owner, internal.id, "Abmahnung Fall Huber Vorlage", "Text");
     await test.services.versions.publish(owner, moved);
     await test.services.tree.update(owner, moved, { title: "Abmahnung Vorlage" });
@@ -347,7 +350,7 @@ describe.skipIf(!baseUrl)("static website of a knowledge base", () => {
     const files = await site(owner, open.id, null);
     const names = [...files.keys()].join("\n");
     const redirects = files.get("_redirects")?.toString("utf8") ?? "";
-    for (const hidden of ["entlassungen", "zwischenstand", "huber"]) {
+    for (const hidden of ["entlassungen", "zwischenstand", "kuendigungen", "huber"]) {
       expect(names).not.toContain(hidden);
       expect(redirects).not.toContain(hidden);
     }
