@@ -9,6 +9,7 @@ import { isLanguage, rememberChosenLanguage, rememberLanguage } from "../../i18n
 import { isAccentColor } from "../../preferences/preferences.js";
 import { setAccentColor } from "../../preferences/preferences-provider.js";
 import { BrandMark } from "../../shell/brand.js";
+import { MaintenanceBanner } from "../../shell/maintenance-banner.js";
 
 export function AuthLayout() {
   const { t } = useTranslation();
@@ -21,6 +22,7 @@ export function AuthLayout() {
 
   return (
     <div className="flex min-h-full flex-col bg-sidebar">
+      <MaintenanceBanner />
       <main className="flex flex-1 items-center justify-center px-4 py-10">
         <Outlet />
       </main>

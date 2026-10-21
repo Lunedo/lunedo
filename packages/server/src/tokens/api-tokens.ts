@@ -34,6 +34,7 @@ import {
 
 export const apiTokenExpiryJob = defineJob({
   name: "api-tokens.process-expiry",
+  duringMaintenance: "run",
   payload: z.object({}),
   retryLimit: 2,
 });

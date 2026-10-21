@@ -3,6 +3,7 @@ import { defineJob } from "../jobs/job-queue.js";
 
 export const removeOldErrorEventsJob = defineJob({
   name: "operations.remove-old-errors",
+  duringMaintenance: "run",
   payload: z.object({}),
   retryLimit: 2,
   expireInSeconds: 15 * 60,

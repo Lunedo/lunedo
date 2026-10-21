@@ -1080,7 +1080,8 @@
     "rendering": "Rendering",
     "embeds": "Externe Einbettungen",
     "portals": "Wissensdatenbank-Portale",
-    "systemStatus": "Systemstatus"
+    "systemStatus": "Systemstatus",
+    "maintenance": "Wartungsmodus"
   },
   "commands": {
     "label": "Befehlspalette",
@@ -1617,7 +1618,9 @@
     "portalAccountNotFound": "Das Portalkonto gehört nicht mehr zu dieser Organisation. Lade die Liste neu.",
     "portalAccountShared": "Das Konto liest auch Wissensdatenbanken anderer Organisationen und lässt sich deshalb hier nicht deaktivieren. Entferne es stattdessen aus dieser Organisation.",
     "portalInvitationAccountExists": "Diese E-Mail-Adresse gehört schon zu einem Pagehall-Konto. Melde dich damit an und bitte die Einladenden, diesem Konto Zugriff zu geben.",
-    "staticSiteNotPublic": "Nur öffentliche Wissensdatenbanken lassen sich als statische Website herunterladen, weil eine statische Website keine Anmeldung hat. Mach die Wissensdatenbank zuerst in der Sichtbarkeit öffentlich."
+    "staticSiteNotPublic": "Nur öffentliche Wissensdatenbanken lassen sich als statische Website herunterladen, weil eine statische Website keine Anmeldung hat. Mach die Wissensdatenbank zuerst in der Sichtbarkeit öffentlich.",
+    "maintenanceMode": "Pagehall wird gerade gewartet und speichert keine Änderungen. Es wurde nichts geändert; versuche es nach der Wartung noch einmal.",
+    "signInPaused": "Die Anmeldung ist während der Wartung pausiert; nur Instanz-Administratoren können sich jetzt anmelden. Versuche es nach der Wartung noch einmal."
   },
   "access": {
     "gainsAccess": "Wer Zugriff erhält",
@@ -3941,6 +3944,11 @@
       },
       "portalHandoff": {
         "consented": "Anmeldung auf einer Portal-Domain erlaubt"
+      },
+      "maintenance": {
+        "started": "Wartungsmodus eingeschaltet",
+        "changed": "Wartungsmodus geändert",
+        "ended": "Wartungsmodus ausgeschaltet"
       }
     },
     "action": "Aktion",
@@ -4769,6 +4777,10 @@
       "unknown": {
         "title": "Bearbeitung beendet",
         "description": "Die Verbindung zum Server wurde geschlossen. Lade neu, um weiter zu bearbeiten."
+      },
+      "maintenance": {
+        "title": "Während der Wartung nur lesend",
+        "description": "Du kannst die Seite lesen. Bearbeiten geht wieder, sobald die Wartung endet, ohne die Seite neu zu laden."
       }
     },
     "placeholderNode": {
@@ -10201,8 +10213,62 @@
             "notWritable": "Pagehall kann nicht in {path} schreiben. Ändere den Besitzer mit dem Befehl unten.",
             "lowSpace": "In {path} sind nur {freeBytes} frei. Gib Platz frei oder vergrößere das Volume."
           }
+        },
+        "maintenance": {
+          "label": "Wartungsmodus",
+          "ok": "Aus. Alle können Änderungen vornehmen.",
+          "reasons": {
+            "on": "Ein seit {startedAt}: Die Instanz ist nur lesend. Schalte ihn aus, wenn die Wartung erledigt ist.",
+            "onSignInPaused": "Ein seit {startedAt}: Die Instanz ist nur lesend und nur Instanz-Administratoren können sich anmelden. Schalte ihn aus, wenn die Wartung erledigt ist."
+          }
         }
       }
+    }
+  },
+  "maintenance": {
+    "title": "Wartungsmodus",
+    "description": "Schaltet die Instanz für geplante Wartung, etwa ein Update oder eine Datenmigration, auf nur lesen, mit einer Nachricht für alle.",
+    "loadFailed": "den Wartungsmodus",
+    "banner": {
+      "title": "Wartung läuft",
+      "readOnly": "Du kannst lesen und suchen, aber Änderungen werden erst nach der Wartung wieder gespeichert.",
+      "signInPaused": "Die Anmeldung ist für alle außer Instanz-Administratoren pausiert.",
+      "message": "Von den Administratoren:"
+    },
+    "state": {
+      "title": "Zustand",
+      "label": "Wartungsmodus",
+      "on": "Ein",
+      "off": "Aus",
+      "offDescription": "Alle können Änderungen vornehmen.",
+      "since": "Ein seit {time}.",
+      "sinceBy": "Ein seit {time}, eingeschaltet von {name}.",
+      "signInPaused": "Die Anmeldung ist für alle außer Instanz-Administratoren pausiert. Bestehende Sitzungen bleiben angemeldet, nur lesend."
+    },
+    "effects": {
+      "title": "Was passiert, solange er an ist",
+      "readOnly": "Jede Änderung über die Oberfläche und die API wird abgelehnt, auch für Instanz-Administratoren. Lesen, Suche und Exporte einzelner Seiten funktionieren weiter.",
+      "editors": "Offene Editoren wechseln auf nur lesen und zeigen die Nachricht; nach der Wartung sind sie ohne Neuladen wieder bearbeitbar.",
+      "jobs": "Hintergrund-Jobs, die Inhalte ändern, etwa Importe, Kopien und geplante Veröffentlichungen, warten und laufen danach.",
+      "running": "Backups, Mail-Zustellung, Suchindex, SCIM und die Synchronisation mit Identitätsanbietern laufen weiter, damit Zugänge auch jetzt entzogen werden, wenn jemand geht.",
+      "sessions": "Niemand wird abgemeldet. Ein- und Ausschalten wird im Audit-Log festgehalten und auf der Systemstatus-Seite gezeigt."
+    },
+    "form": {
+      "title": "Einschalten",
+      "changeTitle": "Ändern oder ausschalten",
+      "message": "Nachricht",
+      "messageHint": "Erscheint im Banner auf jeder Seite und in Wissensdatenbank-Portalen, etwa wann die Wartung endet. Höchstens {max} Zeichen.",
+      "messageTooLong": "Die Nachricht hat {count} Zeichen. Kürze sie auf höchstens {max}.",
+      "blockSignIn": "Anmeldung für alle außer Instanz-Administratoren pausieren",
+      "blockSignInHint": "Wer angemeldet ist, bleibt angemeldet, kann aber nur lesen.",
+      "switchOn": "Wartungsmodus einschalten",
+      "switchOff": "Wartungsmodus ausschalten",
+      "save": "Nachricht und Anmeldung speichern",
+      "switchedOn": "Wartungsmodus ist an",
+      "switchedOff": "Wartungsmodus ist aus",
+      "updated": "Wartungsnachricht gespeichert",
+      "undoFailed": "Der vorherige Zustand konnte nicht wiederhergestellt werden",
+      "commandLine": "Skripte schalten ihn mit ./pagehall maintenance on oder off im Installationsverzeichnis, oder mit dem Befehl pagehall maintenance im Container."
     }
   }
 }

@@ -3,6 +3,7 @@ import type { Database } from "../database/database.js";
 import type { MailService } from "../mail/mail-service.js";
 import type { StorageService } from "../storage/storage.js";
 import type { BackupStatus } from "./backup-status.js";
+import type { MaintenanceService } from "./maintenance.js";
 import type { OperationsStatusService } from "./status.js";
 
 export interface InstanceMetricsSnapshot {
@@ -18,6 +19,7 @@ export interface InstanceMetricsSnapshot {
   };
   search: { pendingItems: number; failingItems: number };
   collaborationReady: boolean | null;
+  maintenance: boolean;
 }
 
 export type InstanceMetricsSource = () => Promise<InstanceMetricsSnapshot>;
@@ -29,6 +31,7 @@ export function instanceMetricsSource(options: {
   storage: StorageService;
   mail: MailService;
   operations: OperationsStatusService;
+  maintenance: MaintenanceService;
   collaborationProbe?: (() => Promise<boolean>) | undefined;
   now?: () => number;
 }): InstanceMetricsSource {
@@ -36,16 +39,18 @@ export function instanceMetricsSource(options: {
   let cached: { at: number; value: Promise<InstanceMetricsSnapshot> } | null = null;
 
   const read = async (): Promise<InstanceMetricsSnapshot> => {
-    const [databaseSizeBytes, storage, backup, delivery, search, collaborationReady] = await Promise.all([
-      options.operations.databaseSizeBytes(),
-      options.storage.status(),
-      options.operations.backups(),
-      options.mail.deliveryState(),
-      options.database.execute<{ pending: string | number; failing: string | number }>(sql`
+    const [databaseSizeBytes, storage, backup, delivery, search, collaborationReady, maintenance] =
+      await Promise.all([
+        options.operations.databaseSizeBytes(),
+        options.storage.status(),
+        options.operations.backups(),
+        options.mail.deliveryState(),
+        options.database.execute<{ pending: string | number; failing: string | number }>(sql`
         select count(*) as pending, count(*) filter (where attempts > 0) as failing from search_pending_items
       `),
-      options.collaborationProbe ? options.collaborationProbe().catch(() => false) : Promise.resolve(null),
-    ]);
+        options.collaborationProbe ? options.collaborationProbe().catch(() => false) : Promise.resolve(null),
+        options.maintenance.status(),
+      ]);
     const measured =
       storage.measured &&
       storage.usedBytes !== null &&
@@ -74,6 +79,7 @@ export function instanceMetricsSource(options: {
         failingItems: Number(search.rows[0]?.failing ?? 0),
       },
       collaborationReady,
+      maintenance: maintenance.enabled,
     };
   };
 

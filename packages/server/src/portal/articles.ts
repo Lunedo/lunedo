@@ -33,6 +33,7 @@ const MAX_INCLUDES = 50;
 
 export const renderArticleJob = defineJob({
   name: "portal.render-article",
+  duringMaintenance: "wait",
   payload: z.object({ itemId: z.uuid() }),
   retryLimit: 3,
   retryDelaySeconds: 30,

@@ -11,6 +11,7 @@ import {
   type ImportChangeSignal,
   parseImportChangeSignal,
 } from "../imports/signals.js";
+import { MAINTENANCE_CHANNEL } from "../operations/maintenance.js";
 import {
   parseSettingChangeSignal,
   SETTING_CHANGES_CHANNEL,
@@ -36,6 +37,7 @@ export class NotificationHub {
   readonly #spaceHandlers = new Set<SpaceHandler>();
   readonly #importHandlers = new Set<ImportHandler>();
   readonly #announcementHandlers = new Set<AnnouncementHandler>();
+  readonly #maintenanceHandlers = new Set<Handler>();
   #listening: Promise<void> | undefined;
 
   constructor(listener: NotificationListener) {
@@ -98,6 +100,14 @@ export class NotificationHub {
     };
   }
 
+  async subscribeMaintenance(handler: Handler): Promise<() => void> {
+    await this.#ready();
+    this.#maintenanceHandlers.add(handler);
+    return () => {
+      this.#maintenanceHandlers.delete(handler);
+    };
+  }
+
   async subscribe(accountId: string, handler: Handler): Promise<() => void> {
     await this.#ready();
     let handlers = this.#handlers.get(accountId);
@@ -153,8 +163,12 @@ export class NotificationHub {
       if (!signal) return;
       for (const handler of this.#announcementHandlers) handler(signal);
     });
+    await this.#listener.listen(MAINTENANCE_CHANNEL, () => {
+      for (const handler of this.#maintenanceHandlers) handler();
+    });
     this.#listener.onReconnect(() => {
       for (const handlers of this.#handlers.values()) for (const handler of handlers) handler();
+      for (const handler of this.#maintenanceHandlers) handler();
     });
   }
 }

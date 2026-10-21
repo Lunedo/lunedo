@@ -3,6 +3,7 @@ import { defineJob } from "../jobs/job-queue.js";
 
 export const exportBuildJob = defineJob({
   name: "exports.build",
+  duringMaintenance: "wait",
   payload: z.object({ exportId: z.uuid() }),
   retryLimit: 3,
   retryDelaySeconds: 30,
@@ -12,6 +13,7 @@ export const exportBuildJob = defineJob({
 
 export const exportWatchdogJob = defineJob({
   name: "exports.watchdog",
+  duringMaintenance: "run",
   payload: z.object({}),
   retryLimit: 1,
   expireInSeconds: 10 * 60,
@@ -19,6 +21,7 @@ export const exportWatchdogJob = defineJob({
 
 export const exportCleanupJob = defineJob({
   name: "exports.cleanup",
+  duringMaintenance: "run",
   payload: z.object({}),
   retryLimit: 3,
   expireInSeconds: 30 * 60,

@@ -1080,7 +1080,8 @@
     "rendering": "Rendering",
     "embeds": "External embeds",
     "portals": "Knowledge base portals",
-    "systemStatus": "System status"
+    "systemStatus": "System status",
+    "maintenance": "Maintenance mode"
   },
   "commands": {
     "label": "Command palette",
@@ -1617,7 +1618,9 @@
     "portalAccountNotFound": "The portal account no longer belongs to this organization. Reload the list.",
     "portalAccountShared": "The account also reads knowledge bases of other organizations, so it cannot be deactivated here. Remove it from this organization instead.",
     "portalInvitationAccountExists": "This e-mail address already belongs to a Pagehall account. Sign in with it and ask the people who invited you to give that account access.",
-    "staticSiteNotPublic": "Only public knowledge bases can be downloaded as a static website, because a static website has no sign-in. Make the knowledge base public in its visibility settings first."
+    "staticSiteNotPublic": "Only public knowledge bases can be downloaded as a static website, because a static website has no sign-in. Make the knowledge base public in its visibility settings first.",
+    "maintenanceMode": "Pagehall is in maintenance and saves no changes right now. Nothing was changed; try again when the maintenance has ended.",
+    "signInPaused": "Signing in is paused during maintenance; only instance administrators can sign in now. Try again when the maintenance has ended."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -3941,6 +3944,11 @@
       },
       "portalHandoff": {
         "consented": "Signing in on a portal domain allowed"
+      },
+      "maintenance": {
+        "started": "Maintenance mode switched on",
+        "changed": "Maintenance mode changed",
+        "ended": "Maintenance mode switched off"
       }
     },
     "action": "Action",
@@ -4769,6 +4777,10 @@
       "unknown": {
         "title": "Editing stopped",
         "description": "The connection to the server was closed. Reload to continue editing."
+      },
+      "maintenance": {
+        "title": "Read-only during maintenance",
+        "description": "You can read the page. Editing works again when the maintenance ends, without reloading the page."
       }
     },
     "placeholderNode": {
@@ -10201,8 +10213,62 @@
             "notWritable": "Pagehall cannot write to {path}. Change the owner with the command below.",
             "lowSpace": "Only {freeBytes} are free in {path}. Free space or enlarge the volume."
           }
+        },
+        "maintenance": {
+          "label": "Maintenance mode",
+          "ok": "Off. Everyone can make changes.",
+          "reasons": {
+            "on": "On since {startedAt}: the instance is read-only. Switch it off when the maintenance is done.",
+            "onSignInPaused": "On since {startedAt}: the instance is read-only and only instance administrators can sign in. Switch it off when the maintenance is done."
+          }
         }
       }
+    }
+  },
+  "maintenance": {
+    "title": "Maintenance mode",
+    "description": "Makes the instance read-only for scripted maintenance, for example an update or a data migration, with a message for everyone.",
+    "loadFailed": "the maintenance mode",
+    "banner": {
+      "title": "Maintenance in progress",
+      "readOnly": "You can read and search, but changes are not saved until the maintenance ends.",
+      "signInPaused": "Signing in is paused for everyone except instance administrators.",
+      "message": "From the administrators:"
+    },
+    "state": {
+      "title": "State",
+      "label": "Maintenance mode",
+      "on": "On",
+      "off": "Off",
+      "offDescription": "Everyone can make changes.",
+      "since": "On since {time}.",
+      "sinceBy": "On since {time}, switched by {name}.",
+      "signInPaused": "Signing in is paused for everyone except instance administrators. Existing sessions stay signed in, read-only."
+    },
+    "effects": {
+      "title": "What happens while it is on",
+      "readOnly": "Every change through the interface and the API is refused, also for instance administrators. Reading, search and exports of single pages keep working.",
+      "editors": "Open editors switch to read-only and show the message; they become editable again when maintenance ends, without reloading.",
+      "jobs": "Background jobs that change content, such as imports, copies and scheduled publications, wait and run afterwards.",
+      "running": "Backups, mail delivery, search indexing, SCIM and identity provider synchronization keep running, so access is still removed when someone leaves.",
+      "sessions": "Nobody is signed out. Switching on and off is recorded in the audit log and shown on the system status page."
+    },
+    "form": {
+      "title": "Switch on",
+      "changeTitle": "Change or switch off",
+      "message": "Message",
+      "messageHint": "Shown in the banner on every page and in knowledge base portals, for example when the maintenance ends. At most {max} characters.",
+      "messageTooLong": "The message has {count} characters. Shorten it to at most {max}.",
+      "blockSignIn": "Pause signing in for everyone except instance administrators",
+      "blockSignInHint": "People who are signed in stay signed in, but can only read.",
+      "switchOn": "Switch on maintenance mode",
+      "switchOff": "Switch off maintenance mode",
+      "save": "Save message and sign-in setting",
+      "switchedOn": "Maintenance mode is on",
+      "switchedOff": "Maintenance mode is off",
+      "updated": "Maintenance message saved",
+      "undoFailed": "The previous state could not be restored",
+      "commandLine": "Scripts switch it with ./pagehall maintenance on or off in the installation directory, or with the command pagehall maintenance in the container."
     }
   }
 }

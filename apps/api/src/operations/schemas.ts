@@ -1,4 +1,5 @@
 import { statusItemIds } from "@pagehall/server";
+import { idSchema } from "@pagehall/shared";
 import { z } from "zod";
 
 const level = z.enum(["ok", "warning", "error"]);
@@ -102,3 +103,50 @@ export const exampleOperationsStatus: z.input<typeof operationsStatusSchema> = {
     },
   ],
 };
+
+export const maintenanceSchema = z
+  .object({
+    enabled: z.boolean().describe("Whether the instance is in maintenance mode and refuses changes."),
+    message: z
+      .string()
+      .describe(
+        "The message of the instance administrators shown in the banner. Empty when they wrote none.",
+      ),
+    blockSignIn: z
+      .boolean()
+      .describe("Whether signing in is paused for everyone except instance administrators."),
+    startedAt: z.iso
+      .datetime()
+      .nullable()
+      .describe("When maintenance mode was switched on, or null when it is off."),
+  })
+  .describe("The maintenance mode of the instance.");
+
+export const maintenanceDetailsSchema = maintenanceSchema
+  .extend({
+    changedAt: z.iso.datetime().nullable().describe("When maintenance mode was last switched or changed."),
+    changedBy: z
+      .object({ id: idSchema.describe("Account ID."), name: z.string().describe("Display name.") })
+      .nullable()
+      .describe("Who changed it last, or null when the command line or no one did."),
+  })
+  .describe("The maintenance mode of the instance with who changed it.");
+
+export const maintenanceInputSchema = z
+  .object({
+    enabled: z
+      .boolean()
+      .describe("`true` switches maintenance mode on or changes its message, `false` switches it off."),
+    message: z
+      .string()
+      .max(500)
+      .optional()
+      .describe("Message for the banner, at most 500 characters, for example when the maintenance ends."),
+    blockSignIn: z
+      .boolean()
+      .optional()
+      .describe(
+        "Pause signing in for everyone except instance administrators. Existing sessions stay, read-only.",
+      ),
+  })
+  .describe("Switches maintenance mode.");

@@ -100,6 +100,7 @@ export interface PortalMessages {
   searchFailedText: (query: string) => string;
   searchAgain: string;
   notFoundHeading: string;
+  maintenance: string;
   notFoundLead: string;
   notFoundBrowse: string;
   notFoundLink: string;
@@ -244,6 +245,8 @@ const en: PortalMessages = {
     `The search for “${query}” could not run because the search service did not answer. This is not caused by your input. Try again in a minute, or find the article through the topics.`,
   searchAgain: "Search again",
   notFoundHeading: "We can't find this page",
+  maintenance:
+    "This help is in maintenance. You can read all articles, but feedback cannot be sent until the maintenance ends.",
   notFoundLead: "The link may be outdated, or the article was moved or removed. Search for the topic:",
   notFoundBrowse: "Or browse the topics",
   notFoundLink: "Did the link come from an e-mail or a document? Write to us so we can fix it:",
@@ -393,6 +396,8 @@ const de: PortalMessages = {
     `Die Suche nach „${query}“ konnte nicht ausgeführt werden, weil der Suchdienst nicht antwortet. Das liegt nicht an deiner Eingabe. Versuche es in einer Minute noch einmal oder finde den Artikel über die Themen.`,
   searchAgain: "Erneut suchen",
   notFoundHeading: "Diese Seite finden wir nicht",
+  maintenance:
+    "Diese Hilfe wird gerade gewartet. Du kannst alle Artikel lesen, aber Feedback kann erst nach der Wartung gesendet werden.",
   notFoundLead:
     "Der Link ist vielleicht veraltet, oder der Artikel wurde verschoben oder entfernt. Such nach dem Thema:",
   notFoundBrowse: "Oder stöbere in den Themen",

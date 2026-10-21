@@ -40,6 +40,29 @@ describe("page collaboration", () => {
     expect(collaboration.getSnapshot()).toMatchObject({ loaded: true, synced: false, connected: false });
   });
 
+  it("turns read-only during maintenance and syncs again when it ends", () => {
+    collaboration = new PageCollaboration("01929b1e-0000-7000-8000-0000000000b0", {
+      origin: "http://127.0.0.1:9",
+    });
+    const provider = collaboration.provider as unknown as { emit(event: string, payload: unknown): void };
+    const detach = vi.spyOn(collaboration.provider, "detach").mockImplementation(() => undefined);
+    const attach = vi.spyOn(collaboration.provider, "attach").mockImplementation(() => undefined);
+    provider.emit("stateless", {
+      payload: JSON.stringify({ type: "maintenance", enabled: true, message: "x" }),
+    });
+    expect(collaboration.getSnapshot().problem).toBe("maintenance");
+    provider.emit("stateless", {
+      payload: JSON.stringify({ type: "maintenance", enabled: false, message: "" }),
+    });
+    expect(collaboration.getSnapshot().problem).toBeNull();
+    expect(detach).toHaveBeenCalledTimes(1);
+    expect(attach).toHaveBeenCalledTimes(1);
+    provider.emit("stateless", {
+      payload: JSON.stringify({ type: "maintenance", enabled: false, message: "" }),
+    });
+    expect(attach).toHaveBeenCalledTimes(1);
+  });
+
   it("stops listening to the network once it is destroyed", () => {
     const destroyed = new PageCollaboration("01929b1e-0000-7000-8000-0000000000b0", {
       origin: "http://127.0.0.1:9",

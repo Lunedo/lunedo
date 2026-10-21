@@ -256,9 +256,17 @@ export async function createServerRuntime(options: {
 
     await services.instanceAddress.applyConfigured();
     await services.portals.enableDomainCache(listener);
+    await services.maintenance.enableCache(listener);
 
     if (jobs && keyRotation) {
       if (role === "worker") {
+        const queue = jobs;
+        await queue.pauseForMaintenance((await services.maintenance.status()).enabled);
+        services.maintenance.onChange((status) => {
+          queue
+            .pauseForMaintenance(status.enabled)
+            .catch((error: unknown) => logger.warn({ err: error }, "Pausing jobs for maintenance failed"));
+        });
         await workAccountJobs(jobs, services, settings);
         await startSearchIndexing({ jobs, listener, indexer: services.search.indexer, logger });
         await startBlogAnnouncements({ jobs, listener, subscriptions: services.blogSubscriptions, logger });
@@ -284,6 +292,7 @@ export async function createServerRuntime(options: {
           storage: services.storage,
           mail: services.mail,
           operations: services.operations,
+          maintenance: services.maintenance,
           collaborationProbe: collaborationProbe(config.collabUpstream),
         }),
       );

@@ -17,6 +17,7 @@ const REMINDER_BATCH = 50;
 
 export const meetingRemindersJob = defineJob({
   name: "meetings.send-reminders",
+  duringMaintenance: "run",
   payload: z.object({}),
   retryLimit: 1,
   expireInSeconds: 10 * 60,

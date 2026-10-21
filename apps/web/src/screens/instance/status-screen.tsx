@@ -28,6 +28,7 @@ import { SettingsPage } from "../settings/settings-page.js";
 const REFRESH_MS = 60_000;
 const KNOWN_ITEMS = new Set([
   "version",
+  "maintenance",
   "database",
   "storage",
   "jobs",
@@ -69,7 +70,9 @@ function itemText(t: ReturnType<typeof useTranslation>["t"], item: OperationsSta
   const params = formattedFacts(item.facts, format);
   const base = `operations.status.items.${item.id}`;
   return {
-    label: known ? translateKey(t, `${base}.label`) : translateKey(t, "operations.status.unknownItem", { id: item.id }),
+    label: known
+      ? translateKey(t, `${base}.label`)
+      : translateKey(t, "operations.status.unknownItem", { id: item.id }),
     description: known
       ? item.reason
         ? translateKey(t, `${base}.reasons.${item.reason}`, params)

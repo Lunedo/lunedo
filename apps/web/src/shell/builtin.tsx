@@ -5,6 +5,7 @@ import {
   Bot,
   Building2,
   CircleHelp,
+  Construction,
   FileArchive,
   FileClock,
   Globe,
@@ -250,6 +251,15 @@ navigationItems.register(
     icon: Activity,
     labelKey: "navigation.systemStatus",
     to: `${INSTANCE}/status`,
+    permission: "instance.operations.view",
+  },
+  {
+    id: "instance.maintenance",
+    order: 6,
+    section: "instance",
+    icon: Construction,
+    labelKey: "navigation.maintenance",
+    to: `${INSTANCE}/maintenance`,
     permission: "instance.operations.view",
   },
   {

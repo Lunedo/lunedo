@@ -14,6 +14,7 @@ export const SEARCH_AGGREGATION_SCHEDULE = "47 3 * * *";
 
 export const feedbackDeletionJob = defineJob({
   name: "portal.delete-feedback",
+  duringMaintenance: "run",
   payload: z.object({ feedbackId: z.uuid() }),
   retryLimit: 5,
   retryDelaySeconds: 300,
@@ -21,6 +22,7 @@ export const feedbackDeletionJob = defineJob({
 
 export const feedbackRetentionJob = defineJob({
   name: "portal.feedback-retention",
+  duringMaintenance: "run",
   payload: z.object({ spaceId: z.uuid().optional() }),
   retryLimit: 3,
   retryDelaySeconds: 300,
@@ -28,6 +30,7 @@ export const feedbackRetentionJob = defineJob({
 
 export const searchAggregationJob = defineJob({
   name: "portal.aggregate-searches",
+  duringMaintenance: "run",
   payload: z.object({ spaceId: z.uuid().optional() }),
   retryLimit: 3,
   retryDelaySeconds: 300,

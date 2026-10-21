@@ -3,6 +3,7 @@ import type { Database } from "../database/database.js";
 import type { MailService } from "../mail/mail-service.js";
 import type { StorageService } from "../storage/storage.js";
 import { INSTANCE_METRICS_CACHE_MS, instanceMetricsSource } from "./instance-metrics.js";
+import { MAINTENANCE_OFF, type MaintenanceService } from "./maintenance.js";
 import type { OperationsStatusService } from "./status.js";
 
 function source(options: { now: () => number; failDatabaseSize?: () => boolean }) {
@@ -30,6 +31,7 @@ function source(options: { now: () => number; failDatabaseSize?: () => boolean }
       },
       backups: async () => null,
     } as unknown as OperationsStatusService,
+    maintenance: { status: async () => MAINTENANCE_OFF } as unknown as MaintenanceService,
     now: options.now,
   });
   return { read, reads: () => reads };

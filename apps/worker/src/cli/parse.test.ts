@@ -32,6 +32,25 @@ describe("parseCommand", () => {
     expect(parseCommand(["--help"])).toEqual({ name: "help" });
   });
 
+  it("parses maintenance and version commands", () => {
+    expect(parseCommand(["maintenance", "on", "--message", "Back at 18:00", "--block-sign-in"])).toEqual({
+      name: "maintenance",
+      command: { action: "on", message: "Back at 18:00", blockSignIn: true },
+    });
+    expect(parseCommand(["maintenance", "on"])).toEqual({
+      name: "maintenance",
+      command: { action: "on", message: "", blockSignIn: false },
+    });
+    expect(parseCommand(["maintenance", "off"])).toEqual({ name: "maintenance", command: { action: "off" } });
+    expect(parseCommand(["maintenance", "status"])).toEqual({
+      name: "maintenance",
+      command: { action: "status" },
+    });
+    expect(parseCommand(["version"])).toEqual({ name: "version" });
+    expect(() => parseCommand(["maintenance", "pause"])).toThrow(UsageError);
+    expect(() => parseCommand(["version", "now"])).toThrow(UsageError);
+  });
+
   it("rejects unknown commands, options and missing arguments", () => {
     expect(() => parseCommand(["backup", "delete"])).toThrow(UsageError);
     expect(() => parseCommand(["backup", "create"])).toThrow("--output is required");

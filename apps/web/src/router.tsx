@@ -840,6 +840,11 @@ const instanceStatusRoute = instanceScreen(
   () => import("./screens/instance/status-screen.js"),
   "InstanceStatusScreen",
 );
+const instanceMaintenanceRoute = instanceScreen(
+  "/maintenance",
+  () => import("./screens/instance/maintenance-screen.js"),
+  "InstanceMaintenanceScreen",
+);
 const instanceGeneralRoute = instanceScreen(
   "/general",
   () => import("./screens/instance/general-screen.js"),
@@ -1061,6 +1066,7 @@ const routeTree = rootRoute.addChildren([
       instanceRoute.addChildren([
         instanceIndexRoute,
         instanceStatusRoute,
+        instanceMaintenanceRoute,
         instanceGeneralRoute,
         instanceOrganizationsRoute,
         instanceAccountsRoute,

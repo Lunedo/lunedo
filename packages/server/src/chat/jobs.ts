@@ -6,6 +6,7 @@ import { CHAT_DELIVERIES_CHANNEL, type ChatChannelService } from "./channels.js"
 
 export const chatDeliveryJob = defineJob({
   name: "chat.deliver",
+  duringMaintenance: "run",
   payload: z.object({ deliveryId: z.uuid() }),
   retryLimit: 5,
   retryDelaySeconds: 30,
@@ -15,6 +16,7 @@ export const chatDeliveryJob = defineJob({
 
 export const chatDispatchJob = defineJob({
   name: "chat.dispatch",
+  duringMaintenance: "run",
   payload: z.object({}),
   retryLimit: 5,
   retryDelaySeconds: 5,

@@ -11,10 +11,14 @@ export interface JobDefinition<TPayload> {
   retryBackoff: boolean;
   /** An attempt that runs longer is failed and retried. */
   expireInSeconds: number;
+  duringMaintenance: MaintenanceBehavior;
 }
 
+export type MaintenanceBehavior = "run" | "wait";
+
 export function defineJob<TPayload>(
-  definition: Pick<JobDefinition<TPayload>, "name" | "payload"> & Partial<JobDefinition<TPayload>>,
+  definition: Pick<JobDefinition<TPayload>, "name" | "payload" | "duringMaintenance"> &
+    Partial<JobDefinition<TPayload>>,
 ): JobDefinition<TPayload> {
   if (!/^[a-z][a-z0-9-]*(\.[a-z][a-z0-9-]*)+$/.test(definition.name)) {
     throw new Error(`Job name ${definition.name} must look like <module>.<action>`);
@@ -126,6 +130,7 @@ export interface JobQueue {
   /** Queues a failed job again. */
   retry<TPayload>(definition: JobDefinition<TPayload>, id: string): Promise<void>;
   counts(): Promise<Record<string, QueueCounts>>;
+  pauseForMaintenance(paused: boolean): Promise<void>;
   /** Stops fetching jobs, lets running jobs finish until the timeout and hands the rest back to the queue. */
   stop(options: { timeoutSeconds: number }): Promise<void>;
 }

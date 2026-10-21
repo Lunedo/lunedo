@@ -53,6 +53,7 @@ import { sendAttachment } from "../files/serve.js";
 import { COOKIES, clearCookie, readCookie, setCookie } from "../http/cookies.js";
 import { ownOrigin } from "../http/csrf.js";
 import { instanceUrlOf } from "../http/instance-url.js";
+import { MAINTENANCE_RETRY_SECONDS } from "../http/maintenance.js";
 
 const FLOW_MAX_AGE_SECONDS = 10 * 60;
 const FEEDBACK_BODY_LIMIT = 16 * 1024;
@@ -423,6 +424,7 @@ async function buildView(
     static: false,
     ...(options.languages ?? pageLanguages(target, target.rest)),
     note: options.note ?? null,
+    maintenance: await maintenanceNote(services),
     frameSources: await services.embeds.frameSources(),
     origin: target.origin,
     nonce: randomBytes(16).toString("base64"),
@@ -909,6 +911,11 @@ async function signOut(
   return reply.code(303).header("cache-control", "no-store").redirect(`${target.base}/signed-out`);
 }
 
+async function maintenanceNote(services: AccountServices): Promise<PortalView["maintenance"]> {
+  const status = await services.maintenance.status();
+  return status.enabled ? { message: status.message } : null;
+}
+
 async function feedback(
   request: FastifyRequest,
   reply: FastifyReply,
@@ -916,6 +923,13 @@ async function feedback(
   target: Target,
   viewer: Viewer,
 ): Promise<FastifyReply> {
+  if ((await services.maintenance.status()).enabled) {
+    return reply
+      .code(503)
+      .header("retry-after", String(MAINTENANCE_RETRY_SECONDS))
+      .type("text/plain; charset=utf-8")
+      .send("Feedback cannot be sent during maintenance. Try again when the maintenance has ended.");
+  }
   const body = await readBody(request, FEEDBACK_BODY_LIMIT);
   if (body === null) return reply.code(413).send();
   let parsed: { itemId?: unknown; helpful?: unknown; text?: unknown };

@@ -683,6 +683,15 @@ export {
   removeOldErrorEvents,
 } from "./operations/error-events.js";
 export {
+  MAINTENANCE_CHANNEL,
+  MAINTENANCE_MESSAGE_MAX_LENGTH,
+  MaintenanceInputError,
+  MaintenanceModeError,
+  MaintenanceService,
+  type MaintenanceStatus,
+  SignInBlockedError,
+} from "./operations/maintenance.js";
+export {
   type OperationsStatus,
   OperationsStatusService,
   type QueueStatus,

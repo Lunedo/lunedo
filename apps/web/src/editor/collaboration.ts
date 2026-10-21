@@ -22,6 +22,7 @@ export const connectionCloses = [
 export type CollaborationProblem =
   | (typeof connectionRefusals)[number]
   | (typeof connectionCloses)[number]
+  | "maintenance"
   | "unknown";
 
 export interface CollaborationSnapshot {
@@ -145,10 +146,20 @@ export class PageCollaboration {
   }
 
   #stateless(payload: string): void {
-    let message: { type?: unknown; stateVector?: unknown; revision?: unknown };
+    let message: { type?: unknown; stateVector?: unknown; revision?: unknown; enabled?: unknown };
     try {
-      message = JSON.parse(payload) as { type?: unknown; stateVector?: unknown; revision?: unknown };
+      message = JSON.parse(payload) as typeof message;
     } catch {
+      return;
+    }
+    if (message.type === "maintenance") {
+      if (message.enabled === true) {
+        this.#set({ problem: "maintenance" });
+      } else if (this.#snapshot.problem === "maintenance") {
+        this.#set({ problem: null });
+        this.provider.detach();
+        this.provider.attach();
+      }
       return;
     }
     if (message.type === "saved" && typeof message.stateVector === "string") {

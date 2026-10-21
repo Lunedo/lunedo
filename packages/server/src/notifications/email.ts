@@ -40,6 +40,7 @@ import {
 
 export const notificationEmailJob = defineJob({
   name: "notifications.send-emails",
+  duringMaintenance: "run",
   payload: z.object({}),
   retryLimit: 1,
   expireInSeconds: 10 * 60,

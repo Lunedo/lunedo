@@ -619,6 +619,24 @@ export const auditCatalog = {
     }),
     visibility: "instance",
   }),
+  "maintenance.started": event({
+    actor: ["account", "system"],
+    target: "instance",
+    fields: z.object({ message: z.string(), blockSignIn: z.boolean() }),
+    visibility: "instance",
+  }),
+  "maintenance.changed": event({
+    actor: ["account", "system"],
+    target: "instance",
+    fields: z.object({ message: z.string(), blockSignIn: z.boolean() }),
+    visibility: "instance",
+  }),
+  "maintenance.ended": event({
+    actor: ["account", "system"],
+    target: "instance",
+    fields: z.object({ minutes: z.number().int() }),
+    visibility: "instance",
+  }),
   "storage.contactsChanged": event({
     actor: ["account"],
     target: "instance",

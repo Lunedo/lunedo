@@ -49,6 +49,7 @@ describe.skipIf(!databaseUrl)("idempotency keys", () => {
   function define(options: { retryLimit?: number; retryDelaySeconds?: number } = {}) {
     return defineJob({
       name: `test.idempotency-${randomBytes(4).toString("hex")}`,
+      duringMaintenance: "run",
       payload: z.object({ month: z.string() }),
       retryBackoff: false,
       ...options,

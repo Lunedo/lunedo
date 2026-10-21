@@ -103,6 +103,7 @@ describe.skipIf(!baseUrl)("OperationsStatusService", () => {
         counts: async () => counts,
       } as unknown as JobQueue,
       backups: { status: async () => backup },
+      maintenance: test.services.maintenance,
       collaboration: async () => {
         if (collaborationReady instanceof Error) throw collaborationReady;
         return collaborationReady;
@@ -140,6 +141,7 @@ describe.skipIf(!baseUrl)("OperationsStatusService", () => {
     const status = await service().status();
     expect(status.items.map((entry) => entry.id)).toEqual([
       "version",
+      "maintenance",
       "database",
       "storage",
       "jobs",

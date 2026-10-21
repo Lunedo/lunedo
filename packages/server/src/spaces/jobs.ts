@@ -7,6 +7,7 @@ import type { VersionService } from "./versions.js";
 
 export const trashRetentionJob = defineJob({
   name: "trash.apply-retention",
+  duringMaintenance: "wait",
   payload: z.object({}),
   retryLimit: 3,
   expireInSeconds: 60 * 60,
@@ -16,6 +17,7 @@ export const TRASH_RETENTION_SCHEDULE = "17 * * * *";
 
 export const liveVersionsJob = defineJob({
   name: "pages.version-live-sessions",
+  duringMaintenance: "wait",
   payload: z.object({}),
   retryLimit: 1,
   expireInSeconds: 10 * 60,

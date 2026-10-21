@@ -4,6 +4,7 @@ import { AccountAdministrationService } from "./accounts/administration.js";
 import { InstanceAddressService } from "./accounts/instance-address.js";
 import { AccountLifecycleService } from "./accounts/lifecycle.js";
 import { AccountOverviewService } from "./accounts/overview.js";
+import { accountPrincipal } from "./accounts/principal.js";
 import {
   ANNOUNCEMENT_STARTS_SCHEDULE,
   AnnouncementService,
@@ -152,6 +153,7 @@ import { WatchService } from "./notifications/watches.js";
 import { type BackupStatusSource, commandOnlyBackups } from "./operations/backup-status.js";
 import { removeOldErrorEvents } from "./operations/error-events.js";
 import { REMOVE_OLD_ERROR_EVENTS_SCHEDULE, removeOldErrorEventsJob } from "./operations/jobs.js";
+import { MaintenanceService, SignInBlockedError } from "./operations/maintenance.js";
 import { type CollaborationProbe, OperationsStatusService } from "./operations/status.js";
 import { BreakGlassService } from "./organizations/break-glass.js";
 import { GroupService } from "./organizations/groups.js";
@@ -351,6 +353,7 @@ export interface AccountServices {
   copies: CopyService;
   rendering: RenderService;
   operations: OperationsStatusService;
+  maintenance: MaintenanceService;
 }
 
 export function createAccountServices(options: {
@@ -519,6 +522,7 @@ export function createAccountServices(options: {
   });
   const setupRegistry = new SetupRegistry();
   const setup = new SetupService({ database, registry: setupRegistry, audit, rateLimiter });
+  const maintenance = new MaintenanceService({ database, audit });
   const signIn = new SignInService({
     database,
     accounts,
@@ -536,6 +540,17 @@ export function createAccountServices(options: {
     settings,
     setupComplete: () => setup.isComplete(),
     onIdentityLinked: (tx, link) => groupMapping.applyAtSignIn(tx, link),
+    beforeSession: async (executor, accountId) => {
+      const status = await maintenance.status();
+      if (!status.blockSignIn) return;
+      const administrator = await authorization.authorize(
+        accountPrincipal(accountId),
+        "instance.operations.manage",
+        { type: "instance" },
+        { executor },
+      );
+      if (!administrator) throw new SignInBlockedError(status);
+    },
   });
   const allowInsecure = options.insecureIdentityProviders ?? false;
   const providerAdapters = [
@@ -1041,6 +1056,7 @@ export function createAccountServices(options: {
     keyRotation: options.keyRotation,
     jobs,
     backups: options.backups ?? commandOnlyBackups,
+    maintenance,
     collaboration: options.collaborationProbe,
     filesDir: options.filesDir,
     fileStore: files.store.kind,
@@ -1049,6 +1065,7 @@ export function createAccountServices(options: {
   });
   return {
     operations,
+    maintenance,
     push,
     chatChannels,
     watches,

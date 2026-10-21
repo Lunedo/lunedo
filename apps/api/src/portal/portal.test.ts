@@ -786,4 +786,27 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect(page.body).toContain('class="dd lang"');
     expect(page.body).not.toContain('hreflang="x-default"');
   });
+
+  it("shows the maintenance banner and takes no feedback during maintenance", async () => {
+    const kb = await knowledgeBase("public");
+    const entry = await article(kb.id, null, "Wartung", "Lesbar.");
+    const reader = await person();
+    await services().maintenance.set(SYSTEM, { enabled: true, message: "Bis 18 Uhr" });
+    try {
+      const shown = await anonymous().get(`${kb.path}/${entry.number}-wartung`);
+      expect(shown.statusCode).toBe(200);
+      expect(shown.body).toContain('class="maintnote"');
+      expect(shown.body).toContain("<strong>Bis 18 Uhr</strong>");
+      const refused = await reader.client.post(`${kb.path}/feedback`, { itemId: entry.id, helpful: true });
+      expect(refused.statusCode).toBe(503);
+      expect(refused.body).toContain("during maintenance");
+    } finally {
+      await services().maintenance.set(SYSTEM, { enabled: false });
+    }
+    const after = await anonymous().get(`${kb.path}/${entry.number}-wartung`);
+    expect(after.body).not.toContain('class="maintnote"');
+    expect(
+      (await reader.client.post(`${kb.path}/feedback`, { itemId: entry.id, helpful: true })).statusCode,
+    ).toBe(204);
+  });
 });

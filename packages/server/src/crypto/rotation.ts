@@ -13,6 +13,7 @@ import { masterStreamKeys, rewrapStreamHeader, streamMasterKeyVersion } from "./
 
 export const rotateDataKeysJob = defineJob({
   name: "encryption.rotate-data-keys",
+  duringMaintenance: "wait",
   payload: z.object({ rotationId: z.uuid(), targetVersion: z.int().positive() }),
   retryLimit: 10,
   retryDelaySeconds: 30,

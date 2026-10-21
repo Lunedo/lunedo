@@ -60,16 +60,25 @@ export function isApiError(error: unknown, code?: string): error is ApiError {
 type ReauthenticationHandler = () => Promise<boolean>;
 type SignedOutHandler = (code: string) => void;
 type MovedHandler = (url: string) => void;
+type MaintenanceHandler = () => void;
 
 const handlers: {
   reauthenticate: ReauthenticationHandler | null;
   signedOut: SignedOutHandler | null;
   moved: MovedHandler | null;
+  maintenance: MaintenanceHandler | null;
 } = {
   reauthenticate: null,
   signedOut: null,
   moved: null,
+  maintenance: null,
 };
+
+const MAINTENANCE_CODES = new Set(["maintenanceMode", "signInPaused"]);
+
+export function setMaintenanceHandler(handler: MaintenanceHandler | null): void {
+  handlers.maintenance = handler;
+}
 
 export function setMovedHandler(handler: MovedHandler | null): void {
   handlers.moved = handler;
@@ -111,5 +120,6 @@ export async function request<T>(call: () => Promise<Result<T>>, options: Reques
   if (sessionHandling && SIGNED_OUT.has(error.code)) handlers.signedOut?.(error.code);
   if (error.code === "instanceMoved" && error.problem.instanceUrl)
     handlers.moved?.(error.problem.instanceUrl);
+  if (MAINTENANCE_CODES.has(error.code)) handlers.maintenance?.();
   throw error;
 }

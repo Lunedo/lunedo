@@ -23,6 +23,7 @@ import {
   masterKeyVersionsInUse,
   PgBossQueue,
   PostgresArchiver,
+  pagehallVersion,
   resolveGeneratedSecrets,
   restoreBackup,
   rotateDataKeysJob,
@@ -31,6 +32,7 @@ import {
   verifyBackup,
 } from "@pagehall/server";
 import { verifyAuditLog } from "./audit.js";
+import { maintenance } from "./maintenance.js";
 import { type Command, parseCommand, UsageError, usage } from "./parse.js";
 import { rebuildSearchIndex, searchIndexStatus } from "./search.js";
 
@@ -81,6 +83,10 @@ async function run(command: Command): Promise<void> {
     process.stdout.write(usage);
     return;
   }
+  if (command.name === "version") {
+    write(pagehallVersion());
+    return;
+  }
   const env = process.env;
   const config = loadConfig(env);
   const logger = createLogger({ service: "cli", level: "warn", destination: process.stderr });
@@ -98,7 +104,7 @@ async function run(command: Command): Promise<void> {
         filesDir: config.paths.files,
         objectStore: config.fileStorage.kind === "s3" ? fileStoreOf(config) : undefined,
         config: configurationForBackup(env),
-        pagehallVersion: env.PAGEHALL_VERSION ?? "dev",
+        pagehallVersion: pagehallVersion(env),
         schemaVersion: currentSchemaVersion(),
         logger,
       });
@@ -147,6 +153,10 @@ async function run(command: Command): Promise<void> {
     }
     case "search status": {
       await searchIndexStatus(databaseUrl, write);
+      return;
+    }
+    case "maintenance": {
+      await maintenance(config, command.command, write);
       return;
     }
     case "keys rotate":

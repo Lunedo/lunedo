@@ -7,6 +7,7 @@ import { REVIEW_CHANGES_CHANNEL, type ReviewService } from "./reviews.js";
 
 export const reviewReminderJob = defineJob({
   name: "knowledge-bases.remind-review",
+  duringMaintenance: "run",
   payload: z.object({
     itemId: z.uuid(),
     kind: z.enum(["lead", "due"]),
@@ -21,6 +22,7 @@ export const reviewReminderJob = defineJob({
 
 export const reviewDispatchJob = defineJob({
   name: "knowledge-bases.queue-reviews",
+  duringMaintenance: "run",
   payload: z.object({}),
   retryLimit: 5,
   retryDelaySeconds: 5,
@@ -29,6 +31,7 @@ export const reviewDispatchJob = defineJob({
 
 export const reviewSafetyNetJob = defineJob({
   name: "knowledge-bases.check-reviews",
+  duringMaintenance: "run",
   payload: z.object({}),
   retryLimit: 1,
   expireInSeconds: 10 * 60,
@@ -38,6 +41,7 @@ export const REVIEW_SAFETY_NET_SCHEDULE = "17 * * * *";
 
 export const removedArticlesJob = defineJob({
   name: "knowledge-bases.prune-removed-articles",
+  duringMaintenance: "wait",
   payload: z.object({}),
   retryLimit: 2,
   expireInSeconds: 10 * 60,

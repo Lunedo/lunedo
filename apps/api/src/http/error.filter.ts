@@ -12,6 +12,8 @@ import {
   FileTooLargeError,
   ForbiddenError,
   ImportError,
+  MaintenanceInputError,
+  MaintenanceModeError,
   OrganizationError,
   PasswordPolicyError,
   ProviderResponseError,
@@ -30,6 +32,7 @@ import {
   SetupNotFoundError,
   SetupStepError,
   ShareLinkRateLimitedError,
+  SignInBlockedError,
   SmtpConfigurationError,
   SpaceError,
   StorageFullError,
@@ -41,6 +44,7 @@ import {
 import type { FastifyReply } from "fastify";
 import { ZodError } from "zod";
 import { API_CONTEXT, type ApiContext } from "../context.js";
+import { MAINTENANCE_RETRY_SECONDS } from "./maintenance.js";
 import {
   forbiddenProblem,
   isProblemCode,
@@ -176,6 +180,23 @@ function map(error: unknown): Mapped | null {
       code: problem.code,
       detail: (problem.getResponse() as { detail?: string }).detail ?? "Not allowed",
       extensions: problem.extensions,
+    };
+  }
+  if (error instanceof MaintenanceInputError) return { code: "invalidInput", detail: error.message };
+  if (error instanceof MaintenanceModeError) {
+    return {
+      code: "maintenanceMode",
+      detail:
+        "Pagehall is in maintenance mode and saves no changes until the instance administrators end it. Nothing was changed; try again later.",
+      extensions: { retryAfterSeconds: MAINTENANCE_RETRY_SECONDS, maintenanceMessage: error.status.message },
+    };
+  }
+  if (error instanceof SignInBlockedError) {
+    return {
+      code: "signInPaused",
+      detail:
+        "Signing in is paused during maintenance; only instance administrators can sign in now. Try again after the maintenance.",
+      extensions: { retryAfterSeconds: MAINTENANCE_RETRY_SECONDS, maintenanceMessage: error.status.message },
     };
   }
   if (error instanceof StorageFullError) {

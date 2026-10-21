@@ -176,6 +176,7 @@ describe.skipIf(!testDatabaseUrl)("shutting down the worker runtime", () => {
     const worker = await startWorker();
     const job = defineJob({
       name: `test.shutdown-${randomBytes(4).toString("hex")}`,
+      duringMaintenance: "run",
       payload: z.object({}),
       retryLimit: 2,
     });

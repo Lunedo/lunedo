@@ -69,6 +69,7 @@ describe.skipIf(!baseUrl)("recurring jobs", () => {
   function define() {
     return defineJob({
       name: `test.schedule-${randomBytes(4).toString("hex")}`,
+      duringMaintenance: "run",
       payload: z.object({ source: z.string() }),
     });
   }

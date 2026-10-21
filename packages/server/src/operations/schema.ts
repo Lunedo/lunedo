@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
-import { check, integer, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, check, integer, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { accounts } from "../accounts/schema.js";
 
 const timestampColumn = () => timestamp({ withTimezone: true, mode: "date" });
 
@@ -16,5 +17,22 @@ export const operationsErrorEvents = pgTable(
   (table) => [
     primaryKey({ columns: [table.hour, table.service, table.type, table.code] }),
     check("operations_error_events_count", sql`${table.count} > 0`),
+  ],
+);
+
+export const maintenanceState = pgTable(
+  "maintenance_state",
+  {
+    singleton: boolean().primaryKey().default(true),
+    enabled: boolean().notNull().default(false),
+    message: text().notNull().default(""),
+    blockSignIn: boolean().notNull().default(false),
+    changedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
+    changedAt: timestampColumn(),
+    startedAt: timestampColumn(),
+  },
+  (table) => [
+    check("maintenance_state_singleton", sql`${table.singleton}`),
+    check("maintenance_state_message", sql`char_length(${table.message}) <= 500`),
   ],
 );

@@ -8,6 +8,7 @@ import {
   OrganizationError,
   ProviderResponseError,
   RateLimitedError,
+  SignInBlockedError,
 } from "@pagehall/server";
 import { idSchema } from "@pagehall/shared";
 import type { FastifyReply, FastifyRequest } from "fastify";
@@ -180,11 +181,13 @@ export class ProviderAuthController {
       });
     } catch (error) {
       const code =
-        error instanceof ProviderResponseError
-          ? "providerUnavailable"
-          : error instanceof AuthError || error instanceof OrganizationError
-            ? error.code
-            : null;
+        error instanceof SignInBlockedError
+          ? "signInPaused"
+          : error instanceof ProviderResponseError
+            ? "providerUnavailable"
+            : error instanceof AuthError || error instanceof OrganizationError
+              ? error.code
+              : null;
       if (code === null) throw error;
       await reply
         .status(303)

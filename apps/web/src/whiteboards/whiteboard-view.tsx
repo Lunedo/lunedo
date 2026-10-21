@@ -35,6 +35,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { useTranslation } from "react-i18next";
+import { useMaintenance } from "../api/maintenance.js";
 import type { DescribeElement } from "../collaboration/comments-panel.js";
 import { StarButton, useContentCollaboration } from "../collaboration/content-collaboration.js";
 import { closeCollaboration, openCollaboration, type PageCollaboration } from "../editor/collaboration.js";
@@ -168,7 +169,8 @@ export function WhiteboardView({
   const queryClient = useQueryClient();
   const narrow = useNarrowViewport();
   const archived = board.archived || spaceArchived;
-  const writable = mayEdit && !archived;
+  const maintenance = useMaintenance();
+  const writable = mayEdit && !archived && !maintenance;
   const editing = writable && !narrow;
   const collaboration = useCollaboration(board.id, editing);
   const snapshot = useSyncExternalStore(

@@ -91,6 +91,7 @@ export const graphMailSetting = defineSetting({
 
 export const mailCredentialReminderJob = defineJob({
   name: "mail.send-credential-reminders",
+  duringMaintenance: "run",
   payload: z.object({}),
   retryLimit: 2,
 });
@@ -150,6 +151,7 @@ const storedToken = z.object({ fingerprint: z.string(), token: z.string(), expir
 
 export const deliverMailJob = defineJob({
   name: "mail.deliver",
+  duringMaintenance: "run",
   payload: z.object({ mailId: z.uuid() }),
   retryLimit: 8,
   retryDelaySeconds: 30,
@@ -159,6 +161,7 @@ export const deliverMailJob = defineJob({
 
 export const dispatchPendingMailJob = defineJob({
   name: "mail.dispatch-pending",
+  duringMaintenance: "run",
   payload: z.object({}),
   retryLimit: 1,
 });

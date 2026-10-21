@@ -18,6 +18,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { API_CONTEXT, type ApiContext } from "../context.js";
 import { API_ROUTE, type ApiRouteDefinition } from "../http/api-route.js";
 import { COOKIES, readCookie } from "../http/cookies.js";
+import { writesDuringMaintenance } from "../http/maintenance.js";
 import { forbiddenProblem, ProblemException } from "../http/problems.js";
 import { bearerToken } from "../http/request.js";
 import { ROUTE_ACCESS, type RouteAccess } from "./route-access.js";
@@ -51,6 +52,12 @@ export class RouteAccessGuard implements CanActivate {
     if (route?.params) {
       const params = route.params.safeParse(request.params ?? {});
       if (params.success) request.params = params.data;
+    }
+    if (
+      this.context.services &&
+      writesDuringMaintenance(request.method, request.routeOptions.url) === "refused"
+    ) {
+      await this.context.services.maintenance.requireWritable();
     }
     switch (access.kind) {
       case "public":

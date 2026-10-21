@@ -3,6 +3,7 @@ import { defineJob } from "../jobs/job-queue.js";
 
 export const adoptTemplateFilesJob = defineJob({
   name: "templates.adopt-files",
+  duringMaintenance: "wait",
   payload: z.object({}),
   retryLimit: 3,
   retryDelaySeconds: 60,

@@ -12,12 +12,14 @@ import { checkDatabaseAndClock, checkFileStorage } from "../setup/steps.js";
 import type { StorageService } from "../storage/storage.js";
 import type { BackupStatus, BackupStatusSource } from "./backup-status.js";
 import { type RecentErrorType, recentErrorTypes } from "./error-events.js";
+import type { MaintenanceService } from "./maintenance.js";
 import { pagehallVersion } from "./version.js";
 
 export type StatusLevel = "ok" | "warning" | "error";
 
 export const statusItemIds = [
   "version",
+  "maintenance",
   "database",
   "storage",
   "jobs",
@@ -127,6 +129,7 @@ export class OperationsStatusService {
   readonly #keyRotation: KeyRotation | undefined;
   readonly #jobs: JobQueue | undefined;
   readonly #backups: BackupStatusSource;
+  readonly #maintenance: MaintenanceService;
   readonly #collaboration: CollaborationProbe | undefined;
   readonly #filesDir: string;
   readonly #fileStore: "local" | "s3";
@@ -145,6 +148,7 @@ export class OperationsStatusService {
     keyRotation?: KeyRotation | undefined;
     jobs: JobQueue | undefined;
     backups: BackupStatusSource;
+    maintenance: MaintenanceService;
     collaboration?: CollaborationProbe | undefined;
     filesDir: string;
     fileStore: "local" | "s3";
@@ -162,6 +166,7 @@ export class OperationsStatusService {
     this.#keyRotation = options.keyRotation;
     this.#jobs = options.jobs;
     this.#backups = options.backups;
+    this.#maintenance = options.maintenance;
     this.#collaboration = options.collaboration;
     this.#filesDir = options.filesDir;
     this.#fileStore = options.fileStore;
@@ -199,6 +204,7 @@ export class OperationsStatusService {
     const [database, clock] = databaseAndClock;
     const items: StatusItem[] = [
       item("version", "ok", null, { version: pagehallVersion() }, { docs: "operations.md#updates" }),
+      await this.#maintenanceItem(),
       await this.#databaseItem(database),
       await this.#storageItem(),
       queues ? jobsItem(queues) : item("jobs", "error", "unreachable", {}, { docs: "operations.md#jobs" }),
@@ -243,6 +249,19 @@ export class OperationsStatusService {
         check.status === "error" && check.cause === "unreachable" ? null : await this.databaseSizeBytes(),
     };
     return item("database", check.status, check.cause, facts, { docs: "setup.md#database" });
+  }
+
+  async #maintenanceItem(): Promise<StatusItem> {
+    const status = await this.#maintenance.status();
+    const links = { page: `${INSTANCE_PAGE}/maintenance`, docs: "operations.md#maintenance-mode" };
+    if (!status.enabled) return item("maintenance", "ok", null, {}, links);
+    return item(
+      "maintenance",
+      "warning",
+      status.blockSignIn ? "onSignInPaused" : "on",
+      { startedAt: status.startedAt?.toISOString() ?? null },
+      links,
+    );
   }
 
   async #storageItem(): Promise<StatusItem> {

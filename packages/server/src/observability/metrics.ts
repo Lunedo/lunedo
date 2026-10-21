@@ -168,6 +168,9 @@ export class Metrics {
       "Items whose indexing failed at least once and is retried.",
       (s) => s.search.failingItems,
     );
+    gauge("pagehall_maintenance_mode", "1 while the instance is in maintenance mode.", (s) =>
+      Number(s.maintenance),
+    );
     gauge("pagehall_collab_up", "1 when the collaboration server answers its readiness check.", (s) =>
       s.collaborationReady === null ? null : Number(s.collaborationReady),
     );

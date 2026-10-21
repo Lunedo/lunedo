@@ -238,6 +238,7 @@ const REMINDER_THRESHOLDS = [
 
 export const providerCredentialReminderJob = defineJob({
   name: "identity-providers.send-credential-reminders",
+  duringMaintenance: "run",
   payload: z.object({}),
   retryLimit: 2,
 });
@@ -246,6 +247,7 @@ export const PROVIDER_CREDENTIAL_REMINDER_SCHEDULE = "41 * * * *";
 
 export const samlMetadataRefreshJob = defineJob({
   name: "identity-providers.refresh-saml-metadata",
+  duringMaintenance: "run",
   payload: z.object({}),
   retryLimit: 1,
 });

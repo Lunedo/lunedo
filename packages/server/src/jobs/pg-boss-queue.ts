@@ -69,6 +69,9 @@ export class PgBossQueue implements JobQueue {
   readonly #boss: PgBoss;
   readonly #options: PgBossQueueOptions;
   readonly #registered = new Set<string>();
+  readonly #workers = new Map<string, { waits: boolean; start: () => Promise<void> }>();
+  #maintenance = false;
+  #maintenanceChange: Promise<void> = Promise.resolve();
   #started: Promise<unknown> | undefined;
 
   constructor(options: PgBossQueueOptions) {
@@ -179,6 +182,17 @@ export class PgBossQueue implements JobQueue {
   ): Promise<void> {
     if (this.#options.role !== "worker") throw new Error("Only the worker role runs jobs");
     await this.register(definition);
+    const start = () => this.#startWorking(definition, handler, options);
+    this.#workers.set(definition.name, { waits: definition.duringMaintenance === "wait", start });
+    if (this.#maintenance && definition.duringMaintenance === "wait") return;
+    await start();
+  }
+
+  async #startWorking<TPayload>(
+    definition: JobDefinition<TPayload>,
+    handler: JobHandler<TPayload>,
+    options: { concurrency?: number },
+  ): Promise<void> {
     await this.#boss.work<StoredData>(
       definition.name,
       {
@@ -190,6 +204,20 @@ export class PgBossQueue implements JobQueue {
         if (job) await this.#run(definition, handler, job);
       },
     );
+  }
+
+  async pauseForMaintenance(paused: boolean): Promise<void> {
+    const change = this.#maintenanceChange.then(async () => {
+      if (this.#maintenance === paused) return;
+      this.#maintenance = paused;
+      for (const [name, worker] of this.#workers) {
+        if (!worker.waits) continue;
+        if (paused) await this.#boss.offWork(name, { wait: false });
+        else await worker.start();
+      }
+    });
+    this.#maintenanceChange = change.catch(() => {});
+    await change;
   }
 
   async #run<TPayload>(

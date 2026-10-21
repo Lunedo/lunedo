@@ -21,6 +21,7 @@ import { CommandPaletteHost } from "./command-palette.js";
 import { railItems, type ShellContext, type Shortcut, shortcuts } from "./extensions.js";
 import { Heron } from "./heron.js";
 import { createSequenceMatcher, isTypingTarget, keyName } from "./keyboard.js";
+import { MaintenanceBanner } from "./maintenance-banner.js";
 import { useNavigationFocus } from "./navigation-focus.js";
 import { useRegistry } from "./registry.js";
 import { type ShellState, ShellStateContext } from "./shell.js";
@@ -130,6 +131,7 @@ function ShellFrame() {
         </Rail>
         {notificationsOpen ? <NotificationPanel onClose={() => setNotificationsOpen(false)} /> : null}
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <MaintenanceBanner />
           <AnnouncementBanners />
           <InsecureProvidersBanner />
           <MissingGroupsBanner />
