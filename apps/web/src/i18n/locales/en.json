@@ -9265,6 +9265,7 @@
   "backups": {
     "title": "Backups",
     "description": "Back up the database, the file store and the configuration on a schedule, keep generations and check that backups can be restored.",
+    "readOnly": "You can view the backups and their test restores. Changing settings, backing up, test-restoring and deleting need permission to manage operations.",
     "failures": {
       "load": "The backup settings could not be loaded",
       "list": "The list of backups could not be loaded",
@@ -9357,6 +9358,7 @@
         "full": "{step} failed: the target is full. Free up space or choose another target.",
         "dns": "{step} failed: the host name of the endpoint could not be resolved. Check the endpoint.",
         "blockedAddress": "{step} failed: the endpoint is in a private network. If it should be reached, add its address to PAGEHALL_OUTBOUND_ALLOWED_NETWORKS.",
+        "blockedAddressAt": "{step} failed: the endpoint resolves to {address}, which is in a private network. If Pagehall should reach it, add {network} or the subnet of its network to PAGEHALL_OUTBOUND_ALLOWED_NETWORKS and restart Pagehall.",
         "insecureAddress": "{step} failed: public endpoints need HTTPS. Use an https:// address.",
         "connection": "{step} failed: the endpoint could not be reached. Check the address, the port and the firewall.",
         "tls": "{step} failed: the TLS certificate of the endpoint is not trusted. Check the certificate or the address.",

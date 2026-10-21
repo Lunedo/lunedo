@@ -102,6 +102,7 @@ const STEP_TEXTS: Record<TargetStep, string> = {
 
 export class BackupTargetError extends Error {
   override name = "BackupTargetError";
+  readonly blockedAddress: string | null;
 
   constructor(
     readonly failure: TargetFailure,
@@ -109,7 +110,25 @@ export class BackupTargetError extends Error {
     options?: { cause?: unknown },
   ) {
     super(`${STEP_TEXTS[step]} failed: ${FAILURE_TEXTS[failure]}`, options);
+    this.blockedAddress = failure === "blockedAddress" ? blockedAddressOf(options?.cause) : null;
   }
+
+  get allowedNetwork(): string | null {
+    if (this.blockedAddress === null) return null;
+    return `${this.blockedAddress}/${isIP(this.blockedAddress) === 6 ? 128 : 32}`;
+  }
+
+  get explanation(): string {
+    if (this.blockedAddress === null) return this.message;
+    return `${STEP_TEXTS[this.step]} failed: The endpoint resolves to ${this.blockedAddress}, which is in a private network. If Pagehall should reach it, add ${this.allowedNetwork} or the subnet of its network to PAGEHALL_OUTBOUND_ALLOWED_NETWORKS and restart Pagehall.`;
+  }
+}
+
+function blockedAddressOf(error: unknown): string | null {
+  for (const cause of causes(error)) {
+    if (cause instanceof OutboundError && cause.reason === "blockedAddress") return cause.address;
+  }
+  return null;
 }
 
 const TEST_CONTENT = "Pagehall backup target test\n";

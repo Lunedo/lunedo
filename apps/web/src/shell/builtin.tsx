@@ -323,7 +323,7 @@ navigationItems.register(
     icon: DatabaseBackup,
     labelKey: "navigation.backups",
     to: `${INSTANCE}/backups`,
-    permission: "instance.operations.manage",
+    permission: "instance.operations.view",
   },
   {
     id: "instance.embeds",

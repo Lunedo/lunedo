@@ -60233,12 +60233,12 @@
       "get": {
         "operationId": "backups.overview",
         "summary": "Get the backup settings and state",
-        "description": "Shows the target, the schedule, the retention, backups before updates, the latest runs and active warnings. The secret key of an S3 target is never returned.\n\nRequires the permission `instance.operations.manage` on the instance.",
+        "description": "Shows the target, the schedule, the retention, backups before updates, the latest runs and active warnings. The secret key of an S3 target is never returned.\n\nRequires the permission `instance.operations.view` on the instance.",
         "tags": [
           "Backups"
         ],
         "x-pagehall-permission": {
-          "action": "instance.operations.manage",
+          "action": "instance.operations.view",
           "resource": "instance"
         },
         "security": [
@@ -61070,12 +61070,12 @@
       "get": {
         "operationId": "backups.list",
         "summary": "List the backups in the target",
-        "description": "Lists the backups Pagehall created in the target, with class, size, version and the latest test restore. Backups are never downloaded through the API.\n\nRequires the permission `instance.operations.manage` on the instance.",
+        "description": "Lists the backups Pagehall created in the target, with class, size, version and the latest test restore. Backups are never downloaded through the API.\n\nRequires the permission `instance.operations.view` on the instance.",
         "tags": [
           "Backups"
         ],
         "x-pagehall-permission": {
-          "action": "instance.operations.manage",
+          "action": "instance.operations.view",
           "resource": "instance"
         },
         "security": [
@@ -63917,12 +63917,12 @@
       "get": {
         "operationId": "backups.status",
         "summary": "Get a short backup status",
-        "description": "Last success, last failure, next run and whether backups and backups before updates are on.\n\nRequires the permission `instance.operations.manage` on the instance.",
+        "description": "Last success, last failure, next run and whether backups and backups before updates are on.\n\nRequires the permission `instance.operations.view` on the instance.",
         "tags": [
           "Backups"
         ],
         "x-pagehall-permission": {
-          "action": "instance.operations.manage",
+          "action": "instance.operations.view",
           "resource": "instance"
         },
         "security": [
@@ -65346,13 +65346,29 @@
                         "string",
                         "null"
                       ]
+                    },
+                    "blockedAddress": {
+                      "description": "The private address the endpoint resolved to when it was refused, or null.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "allowedNetwork": {
+                      "description": "The network to add to PAGEHALL_OUTBOUND_ALLOWED_NETWORKS so the refused address can be reached, or null.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     }
                   },
                   "required": [
                     "ok",
                     "failure",
                     "step",
-                    "message"
+                    "message",
+                    "blockedAddress",
+                    "allowedNetwork"
                   ],
                   "additionalProperties": false,
                   "description": "The result of the connection test."
@@ -65361,7 +65377,9 @@
                   "ok": false,
                   "failure": "credentials",
                   "step": "write",
-                  "message": "Writing to the backup target failed: The access key or the secret key was not accepted. Check both keys."
+                  "message": "Writing to the backup target failed: The access key or the secret key was not accepted. Check both keys.",
+                  "blockedAddress": null,
+                  "allowedNetwork": null
                 }
               }
             }
@@ -65485,12 +65503,12 @@
       "get": {
         "operationId": "backups.getTestRestore",
         "summary": "Get a test restore",
-        "description": "Shows how far a test restore got and what it checked.\n\nRequires the permission `instance.operations.manage` on the instance.",
+        "description": "Shows how far a test restore got and what it checked.\n\nRequires the permission `instance.operations.view` on the instance.",
         "tags": [
           "Backups"
         ],
         "x-pagehall-permission": {
-          "action": "instance.operations.manage",
+          "action": "instance.operations.view",
           "resource": "instance"
         },
         "security": [

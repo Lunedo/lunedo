@@ -51,18 +51,21 @@ describe.skipIf(!databaseBaseUrl)("backups through the API", () => {
     await test?.close();
   });
 
-  const routes: [string, string, unknown?][] = [
-    ["GET", "/api/v1/instance/backups"],
-    ["GET", "/api/v1/instance/backups/status"],
+  const reads: [string, number][] = [
+    ["/api/v1/instance/backups", 200],
+    ["/api/v1/instance/backups/status", 200],
+    ["/api/v1/instance/backups/files", 200],
+    ["/api/v1/instance/backups/test-restores/0192f0e0-0000-7000-8000-000000000001", 404],
+  ];
+
+  const changes: [string, string, unknown?][] = [
     ["PATCH", "/api/v1/instance/backups/settings", { enabled: false }],
     ["PUT", "/api/v1/instance/backups/target", { kind: "local", path: "/var/lib/pagehall/backups" }],
     ["POST", "/api/v1/instance/backups/target/test", { kind: "local", path: "/var/lib/pagehall/backups" }],
     ["PUT", "/api/v1/instance/backups/key-confirmation", { confirmed: true }],
-    ["GET", "/api/v1/instance/backups/files"],
     ["POST", "/api/v1/instance/backups/runs"],
     ["DELETE", `/api/v1/instance/backups/files/${NAME}`],
     ["POST", `/api/v1/instance/backups/files/${NAME}/test-restore`],
-    ["GET", "/api/v1/instance/backups/test-restores/0192f0e0-0000-7000-8000-000000000001"],
   ];
 
   async function send(client: TestClient, method: string, url: string, body?: unknown) {
@@ -80,7 +83,37 @@ describe.skipIf(!databaseBaseUrl)("backups through the API", () => {
     }
   }
 
-  it.each(routes)("refuses %s %s to members and security auditors", async (method, url, body) => {
+  it.each(reads)("lets security auditors read %s and refuses it to members", async (url, status) => {
+    expect((await member.get(url)).statusCode).toBe(403);
+    const read = await auditor.get(url);
+    expect(read.statusCode, read.body).toBe(status);
+  });
+
+  it("shows security auditors an S3 target without its secret key", async () => {
+    const secret = "auditor-must-not-see-this-secret";
+    const saved = await owner.put("/api/v1/instance/backups/target", {
+      kind: "s3",
+      endpoint: "https://s3.example.org",
+      region: "eu-central-1",
+      bucket: "pagehall-backups",
+      prefix: "",
+      forcePathStyle: false,
+      accessKeyId: "AKIAEXAMPLE",
+      secretAccessKey: secret,
+    });
+    expect(saved.statusCode, saved.body).toBe(200);
+    const read = await auditor.get("/api/v1/instance/backups");
+    expect(read.statusCode).toBe(200);
+    expect(read.json()).toMatchObject({
+      target: { kind: "s3", bucket: "pagehall-backups", secretKeyConfigured: true },
+    });
+    expect(read.body).not.toContain(secret);
+    expect(
+      (await owner.put("/api/v1/instance/backups/target", { kind: "local", path: targetDir })).statusCode,
+    ).toBe(200);
+  });
+
+  it.each(changes)("refuses %s %s to members and security auditors", async (method, url, body) => {
     expect((await send(member, method, url, body)).statusCode).toBe(403);
     expect((await send(auditor, method, url, body)).statusCode).toBe(403);
   });
@@ -94,7 +127,14 @@ describe.skipIf(!databaseBaseUrl)("backups through the API", () => {
       kind: "local",
       path: targetDir,
     });
-    expect(tested.json()).toEqual({ ok: true, failure: null, step: null, message: null });
+    expect(tested.json()).toEqual({
+      ok: true,
+      failure: null,
+      step: null,
+      message: null,
+      blockedAddress: null,
+      allowedNetwork: null,
+    });
 
     const started = await owner.post("/api/v1/instance/backups/runs");
     expect(started.statusCode, started.body).toBe(202);

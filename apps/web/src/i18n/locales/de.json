@@ -9265,6 +9265,7 @@
   "backups": {
     "title": "Backups",
     "description": "Sichern Sie Datenbank, Dateispeicher und Konfiguration nach Zeitplan, bewahren Sie Generationen auf und prüfen Sie, ob sich Backups wiederherstellen lassen.",
+    "readOnly": "Sie können die Backups und ihre Test-Wiederherstellungen ansehen. Für Änderungen, Backups, Test-Wiederherstellungen und das Löschen brauchen Sie das Recht, den Betrieb zu verwalten.",
     "failures": {
       "load": "Die Backup-Einstellungen konnten nicht geladen werden",
       "list": "Die Liste der Backups konnte nicht geladen werden",
@@ -9357,6 +9358,7 @@
         "full": "{step} fehlgeschlagen: Das Ziel ist voll. Schaffen Sie Platz oder wählen Sie ein anderes Ziel.",
         "dns": "{step} fehlgeschlagen: Der Hostname des Endpunkts ließ sich nicht auflösen. Prüfen Sie den Endpunkt.",
         "blockedAddress": "{step} fehlgeschlagen: Der Endpunkt liegt in einem privaten Netz. Soll er erreichbar sein, tragen Sie seine Adresse in PAGEHALL_OUTBOUND_ALLOWED_NETWORKS ein.",
+        "blockedAddressAt": "{step} fehlgeschlagen: Der Endpunkt löst zu {address} auf, einer Adresse in einem privaten Netz. Soll Pagehall ihn erreichen, tragen Sie {network} oder das Subnetz seines Netzes in PAGEHALL_OUTBOUND_ALLOWED_NETWORKS ein und starten Sie Pagehall neu.",
         "insecureAddress": "{step} fehlgeschlagen: Öffentliche Endpunkte brauchen HTTPS. Verwenden Sie eine https://-Adresse.",
         "connection": "{step} fehlgeschlagen: Der Endpunkt war nicht erreichbar. Prüfen Sie Adresse, Port und Firewall.",
         "tls": "{step} fehlgeschlagen: Dem TLS-Zertifikat des Endpunkts wird nicht vertraut. Prüfen Sie das Zertifikat oder die Adresse.",

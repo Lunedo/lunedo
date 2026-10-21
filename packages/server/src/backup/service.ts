@@ -191,9 +191,27 @@ export interface BackupList {
   backups: BackupListEntry[];
 }
 
+function failedTest(error: BackupTargetError): TargetTestResult {
+  return {
+    ok: false,
+    failure: error.failure,
+    step: error.step,
+    message: error.explanation,
+    blockedAddress: error.blockedAddress,
+    allowedNetwork: error.allowedNetwork,
+  };
+}
+
 export type TargetTestResult =
   | { ok: true }
-  | { ok: false; failure: TargetFailure; step: TargetStep; message: string };
+  | {
+      ok: false;
+      failure: TargetFailure;
+      step: TargetStep;
+      message: string;
+      blockedAddress: string | null;
+      allowedNetwork: string | null;
+    };
 
 interface Announcement {
   type: "backup.failed" | "backup.missing" | "backup.recovered" | "backup.testRestoreFailed";
@@ -700,7 +718,7 @@ export class BackupService {
       target = openTarget(settings, { secret, policy: this.#options.policy });
     } catch (error) {
       if (error instanceof BackupTargetError) {
-        return { ok: false, failure: error.failure, step: error.step, message: error.message };
+        return failedTest(error);
       }
       throw error;
     }
@@ -710,7 +728,7 @@ export class BackupService {
     } catch (error) {
       if (error instanceof BackupTargetError) {
         this.#logger.info({ failure: error.failure, step: error.step }, "Backup target test failed");
-        return { ok: false, failure: error.failure, step: error.step, message: error.message };
+        return failedTest(error);
       }
       throw error;
     } finally {

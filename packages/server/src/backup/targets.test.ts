@@ -155,6 +155,19 @@ describe.skipIf(!endpoint)("S3 backup target", () => {
     expect(() => new S3BackupTarget(config, outboundPolicy([]))).toThrow(
       "PAGEHALL_OUTBOUND_ALLOWED_NETWORKS",
     );
+    const resolvesPrivately = new S3BackupTarget(
+      { ...config, endpoint: "http://storage.internal.test:8333" },
+      outboundPolicy([], async () => [{ address: "172.18.0.7", family: 4 }]),
+    );
+    const refused = await resolvesPrivately.test().then(
+      () => null,
+      (error: unknown) => error,
+    );
+    resolvesPrivately.destroy();
+    expect(refused).toBeInstanceOf(BackupTargetError);
+    expect(refused).toMatchObject({ failure: "blockedAddress", blockedAddress: "172.18.0.7" });
+    expect((refused as BackupTargetError).allowedNetwork).toBe("172.18.0.7/32");
+    expect((refused as BackupTargetError).message).not.toContain("172.18.0.7");
   });
 
   it("streams a backup in parts, lists it by name and header and reads it back", async () => {

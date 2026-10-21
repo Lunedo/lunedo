@@ -28,6 +28,7 @@ import {
 } from "./schemas.js";
 
 const TAG = "Backups";
+const VIEW = "instance.operations.view";
 const MANAGE = "instance.operations.manage";
 
 const iso = (value: Date | null) => value?.toISOString() ?? null;
@@ -86,7 +87,7 @@ export class BackupsController {
   }
 
   @Get()
-  @Permission(MANAGE)
+  @Permission(VIEW)
   @ApiRoute({
     summary: "Get the backup settings and state",
     description:
@@ -103,7 +104,7 @@ export class BackupsController {
   }
 
   @Get("status")
-  @Permission(MANAGE)
+  @Permission(VIEW)
   @ApiRoute({
     summary: "Get a short backup status",
     description:
@@ -176,6 +177,8 @@ export class BackupsController {
         step: "write",
         message:
           "Writing to the backup target failed: The access key or the secret key was not accepted. Check both keys.",
+        blockedAddress: null,
+        allowedNetwork: null,
       },
     },
     errors: ["invalidInput", "invalidBackupSettings"],
@@ -185,8 +188,8 @@ export class BackupsController {
   ): Promise<z.input<typeof targetTestResultSchema>> {
     const result = await this.#backups.testTarget(body);
     return result.ok
-      ? { ok: true, failure: null, step: null, message: null }
-      : { ok: false, failure: result.failure, step: result.step, message: result.message };
+      ? { ok: true, failure: null, step: null, message: null, blockedAddress: null, allowedNetwork: null }
+      : result;
   }
 
   @Put("key-confirmation")
@@ -209,7 +212,7 @@ export class BackupsController {
   }
 
   @Get("files")
-  @Permission(MANAGE)
+  @Permission(VIEW)
   @ApiRoute({
     summary: "List the backups in the target",
     description:
@@ -270,7 +273,7 @@ export class BackupsController {
   }
 
   @Get("test-restores/:id")
-  @Permission(MANAGE)
+  @Permission(VIEW)
   @ApiRoute({
     summary: "Get a test restore",
     description: "Shows how far a test restore got and what it checked.",

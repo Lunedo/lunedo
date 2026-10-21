@@ -25,7 +25,7 @@ Exit codes: 0 success, 1 failure, 64 invalid command, 78 invalid configuration.
 
 ## Scheduled backups
 
-Instance administrators set up backups once under **Settings > Instance > Backups**. The section shows the target, the schedule, the retention, backups before updates, the backup key warning, the latest runs and the backups in the target. Everything in it needs the instance permission to manage operations; backups are never offered for download through the web interface. Changes of the settings and the target (never the secret key), confirmations of the backup key, manual and failed backups, created and deleted backups and test restores are audited as `backup.*` events.
+Instance administrators set up backups once under **Settings > Instance > Backups**. The section shows the target, the schedule, the retention, backups before updates, the backup key warning, the latest runs and the backups in the target. Viewing the section (settings without the secret key, the status, the list and the test restore results) needs the instance permission to view operations, which security auditors have; every change, backup, test restore and deletion needs the permission to manage operations. Backups are never offered for download through the web interface. Changes of the settings and the target (never the secret key), confirmations of the backup key, manual and failed backups, created and deleted backups and test restores are audited as `backup.*` events.
 
 ### Targets
 
@@ -37,6 +37,37 @@ One target per instance:
 **Test connection** writes, reads, lists and deletes a small test object with the entered settings, without saving them, and names the step and the cause of a failure: missing directory, permission, read-only file system, full target, DNS, a refused private address, connection, TLS, credentials or bucket.
 
 The S3 client follows the same outbound rules as chat channels: private, loopback and link-local addresses are refused unless they are listed in `PAGEHALL_OUTBOUND_ALLOWED_NETWORKS`, and public endpoints need HTTPS.
+
+When a private endpoint is refused, **Test connection** names the address the endpoint resolved to and the network to add, for example `172.18.0.7/32`.
+
+#### A storage service on the same Docker network
+
+A storage service in the same Compose project, such as SeaweedFS, Garage or MinIO, gets an address in the private network of the project. Give that network a fixed subnet and allow it, so a new container address after a restart keeps working:
+
+```yaml
+services:
+  pagehall:
+    environment:
+      PAGEHALL_OUTBOUND_ALLOWED_NETWORKS: 172.30.0.0/24
+    networks: [backend]
+  storage:
+    image: chrislusf/seaweedfs:4.48
+    command: server -s3 -dir=/data
+    volumes:
+      - storage:/data
+    networks: [backend]
+
+networks:
+  backend:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+
+volumes:
+  storage:
+```
+
+Use `http://storage:8333` as endpoint, with path-style addressing on. Addresses in allowed networks may use `http://`. Keep the backups on another disk or host than the file store; a storage service on the same disk does not protect against losing it.
 
 | Service | Endpoint | Region | Path-style | Keys |
 |---|---|---|---|---|

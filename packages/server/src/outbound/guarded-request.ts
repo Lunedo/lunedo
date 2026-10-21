@@ -51,10 +51,12 @@ export type OutboundFailure =
 export class OutboundError extends Error {
   override name = "OutboundError";
   readonly reason: OutboundFailure;
+  readonly address: string | null;
 
-  constructor(reason: OutboundFailure, message: string) {
+  constructor(reason: OutboundFailure, message: string, address: string | null = null) {
     super(message);
     this.reason = reason;
+    this.address = address;
   }
 }
 
@@ -114,7 +116,7 @@ function isAllowed(policy: OutboundPolicy, address: string): boolean {
 export function checkAddress(policy: OutboundPolicy, address: string, secure: boolean): void {
   if (isAllowed(policy, address)) return;
   if (!isPublicAddress(address)) {
-    throw new OutboundError("blockedAddress", "The address points to a private or reserved network");
+    throw new OutboundError("blockedAddress", "The address points to a private or reserved network", address);
   }
   if (!secure) throw new OutboundError("insecureAddress", "Public addresses need HTTPS");
 }

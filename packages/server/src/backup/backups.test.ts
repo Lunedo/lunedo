@@ -345,8 +345,15 @@ describe.skipIf(!baseUrl)("backups", () => {
         accessKeyId: "pagehall",
         secretAccessKey: "not used",
       });
-      expect(result).toMatchObject({ ok: false, failure: "blockedAddress" });
-      expect(result.ok === false && result.message).toContain("PAGEHALL_OUTBOUND_ALLOWED_NETWORKS");
+      expect(result).toMatchObject({
+        ok: false,
+        failure: "blockedAddress",
+        blockedAddress: "127.0.0.1",
+        allowedNetwork: "127.0.0.1/32",
+      });
+      expect(result.ok === false && result.message).toContain(
+        "resolves to 127.0.0.1, which is in a private network. If Pagehall should reach it, add 127.0.0.1/32 or the subnet of its network to PAGEHALL_OUTBOUND_ALLOWED_NETWORKS",
+      );
     });
   });
 

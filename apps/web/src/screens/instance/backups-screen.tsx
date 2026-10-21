@@ -371,9 +371,17 @@ function TargetSection({ data, canManage }: { data: BackupOverview; canManage: b
             : {
                 ok: false,
                 text: outcome.failure
-                  ? translateKey(t, `backups.target.failures.${outcome.failure}`, {
-                      step: translateKey(t, `backups.target.steps.${outcome.step ?? "write"}`),
-                    })
+                  ? translateKey(
+                      t,
+                      outcome.blockedAddress
+                        ? "backups.target.failures.blockedAddressAt"
+                        : `backups.target.failures.${outcome.failure}`,
+                      {
+                        step: translateKey(t, `backups.target.steps.${outcome.step ?? "write"}`),
+                        address: outcome.blockedAddress,
+                        network: outcome.allowedNetwork,
+                      },
+                    )
                   : (outcome.message ?? ""),
               },
         );
@@ -1148,6 +1156,7 @@ export function InstanceBackupsScreen() {
       ) : null}
       {data ? (
         <>
+          {canManage ? null : <p className="text-sm text-text-muted">{t("backups.readOnly")}</p>}
           <StatusSection data={data} canManage={canManage} onStarted={started} />
           <KeySection data={data} canManage={canManage} />
           <TargetSection data={data} canManage={canManage} />

@@ -257,6 +257,16 @@ export const targetTestResultSchema = z
     failure: z.enum(targetFailures).nullable().describe("What failed, or null."),
     step: z.enum(["write", "read", "delete", "list"]).nullable().describe("Which step failed, or null."),
     message: z.string().nullable().describe("What failed and what to do, or null."),
+    blockedAddress: z
+      .string()
+      .nullable()
+      .describe("The private address the endpoint resolved to when it was refused, or null."),
+    allowedNetwork: z
+      .string()
+      .nullable()
+      .describe(
+        "The network to add to PAGEHALL_OUTBOUND_ALLOWED_NETWORKS so the refused address can be reached, or null.",
+      ),
   })
   .describe("The result of the connection test.");
 

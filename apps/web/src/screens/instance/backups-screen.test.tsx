@@ -146,6 +146,21 @@ describe("the backup settings", () => {
     expect(await screen.findByRole("heading", { name: "Manual backups" })).toBeTruthy();
   });
 
+  it("shows the backups read-only to people who may only view operations", async () => {
+    api({}, ["instance.operations.view", "instance.settings.view"]);
+    await renderAt("/settings/instance/backups");
+    expect(
+      await screen.findByText(
+        "You can view the backups and their test restores. Changing settings, backing up, test-restoring and deleting need permission to manage operations.",
+      ),
+    ).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Manual backups" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Backups" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Back up now" })).toBeNull();
+    expect(screen.queryByRole("button", { name: `Actions for ${NAME}` })).toBeNull();
+    expect((screen.getByLabelText("Time") as HTMLInputElement).disabled).toBe(true);
+  });
+
   it("starts a backup and says that it runs", async () => {
     const mocked = api({ "POST /api/v1/instance/backups/runs": () => ({ status: 202 }) });
     await renderAt("/settings/instance/backups");
@@ -224,6 +239,28 @@ describe("the backup settings", () => {
     expect(
       await screen.findByText(
         "Writing failed: the directory does not exist in the container. Create it or mount the volume there.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("names the refused private address and the network to allow", async () => {
+    api({
+      "POST /api/v1/instance/backups/target/test": () => ({
+        body: {
+          ok: false,
+          failure: "blockedAddress",
+          step: "write",
+          message: "x",
+          blockedAddress: "172.18.0.7",
+          allowedNetwork: "172.18.0.7/32",
+        },
+      }),
+    });
+    await renderAt("/settings/instance/backups");
+    await userEvent.click(await screen.findByRole("button", { name: "Test connection" }));
+    expect(
+      await screen.findByText(
+        "Writing failed: the endpoint resolves to 172.18.0.7, which is in a private network. If Pagehall should reach it, add 172.18.0.7/32 or the subnet of its network to PAGEHALL_OUTBOUND_ALLOWED_NETWORKS and restart Pagehall.",
       ),
     ).toBeTruthy();
   });
