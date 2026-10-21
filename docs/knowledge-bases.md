@@ -82,7 +82,7 @@ Images in the sections **Steps**, **What you see** and **Solution** are framed b
 
 ### Addresses
 
-Every article gets a number when it is created or moved into the knowledge base. The number is unique within the knowledge base, never reused, and stays when the article moves within it. The address of an article is the number followed by a short form of its title, such as `123-vpn-verbindung-einrichten`. When the published title changes, the old short forms are kept so that old addresses can be redirected. An article moved into another knowledge base gets a number there; its old number keeps pointing to it.
+Every article gets a number when it is created or moved into the knowledge base. The number is unique within the knowledge base, never reused, and stays when the article moves within it. The address of an article is the number followed by a short form of its title, such as `123-vpn-verbindung-einrichten`. When the published title changes, the old short forms are kept so that old addresses can be redirected. Only titles that were published in this knowledge base count: working titles before the first publication never become addresses, and an article moved into another knowledge base starts there without the short forms of its old knowledge base. An article moved into another knowledge base gets a number there; its old number keeps pointing to it.
 
 ## Categories
 

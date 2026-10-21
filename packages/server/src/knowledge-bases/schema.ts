@@ -175,10 +175,13 @@ export const articleSlugs = pgTable(
     itemId: uuid()
       .notNull()
       .references(() => treeItems.id, { onDelete: "cascade" }),
+    spaceId: uuid()
+      .notNull()
+      .references(() => spaces.id, { onDelete: "cascade" }),
     slug: text().notNull(),
     createdAt: timestampColumn().notNull().defaultNow(),
   },
-  (table) => [primaryKey({ columns: [table.itemId, table.slug] })],
+  (table) => [primaryKey({ columns: [table.itemId, table.spaceId, table.slug] }), index().on(table.spaceId)],
 );
 
 export const requiredSections = pgTable(

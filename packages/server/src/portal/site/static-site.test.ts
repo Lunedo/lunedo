@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 import { sql } from "drizzle-orm";
 import MiniSearch from "minisearch";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { accountPrincipal, type Principal } from "../../accounts/principal.js";
+import { ANONYMOUS, accountPrincipal, type Principal } from "../../accounts/principal.js";
 import { bytesOf, unzip } from "../../exports/fixtures.testing.js";
 import { defaultExportOptions } from "../../exports/options.js";
 import { importHarness } from "../../imports/testing/harness.js";
@@ -294,6 +294,83 @@ describe.skipIf(!baseUrl)("static website of a knowledge base", () => {
       state: "failed",
       errorCode: "notPublic",
     });
+  }, 120_000);
+
+  async function knowledgeBase(owner: Principal, organizationId: string, audience: "public" | "signedIn") {
+    const name = `Help ${randomUUID().slice(0, 8)}`;
+    return test.services.spaces.create(
+      owner,
+      organizationId,
+      { name, key: await test.services.spaces.suggestKey(name), type: "knowledgeBase", audience, grants: [] },
+      test.services.spacePermissions.holders,
+    );
+  }
+
+  async function article(owner: Principal, spaceId: string, title: string, text: string) {
+    const created = await test.services.tree.create(owner, spaceId, {
+      kind: "page",
+      title,
+      placement: { parentId: null },
+    });
+    await test.services.documents.replace(owner, created.id, {
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text }] }],
+    });
+    return created.id;
+  }
+
+  async function numberOf(itemId: string, spaceId: string) {
+    const found = await test.database.execute<{ number: number }>(
+      sql`select number from article_numbers where item_id = ${itemId} and space_id = ${spaceId}`,
+    );
+    return Number(found.rows[0]?.number);
+  }
+
+  it("keeps only titles published in this knowledge base as old addresses", async () => {
+    const organization = await fixtures.organization();
+    const owner = accountPrincipal(organization.owner);
+    const open = await knowledgeBase(owner, organization.id, "public");
+    const internal = await knowledgeBase(owner, organization.id, "signedIn");
+    const drafted = await article(owner, open.id, "Entlassungen Standort Nord intern", "Text");
+    await test.services.tree.update(owner, drafted, { title: "Zwischenstand Umzug" });
+    await test.services.tree.update(owner, drafted, { title: "Standortwechsel FAQ" });
+    await test.services.versions.publish(owner, drafted);
+    const moved = await article(owner, internal.id, "Abmahnung Fall Huber Vorlage", "Text");
+    await test.services.versions.publish(owner, moved);
+    await test.services.tree.update(owner, moved, { title: "Abmahnung Vorlage" });
+    await test.services.versions.publish(owner, moved);
+    const internalNumber = await numberOf(moved, internal.id);
+    await test.services.tree.move(owner, moved, { spaceId: open.id, parentId: null });
+    const draftedNumber = await numberOf(drafted, open.id);
+    const movedNumber = await numberOf(moved, open.id);
+
+    const files = await site(owner, open.id, null);
+    const names = [...files.keys()].join("\n");
+    const redirects = files.get("_redirects")?.toString("utf8") ?? "";
+    for (const hidden of ["entlassungen", "zwischenstand", "huber"]) {
+      expect(names).not.toContain(hidden);
+      expect(redirects).not.toContain(hidden);
+    }
+    expect(files.has(`${draftedNumber}-standortwechsel-faq.html`)).toBe(true);
+    expect(files.has(`${movedNumber}-abmahnung-vorlage.html`)).toBe(true);
+
+    const portal = await test.services.portals.config(open.id);
+    const internalPortal = await test.services.portals.config(internal.id);
+    if (!portal || !internalPortal) throw new Error("missing portal");
+    const reader = test.services.portalReader;
+    expect(
+      await reader.article(ANONYMOUS, portal, draftedNumber, "entlassungen-standort-nord-intern", "en"),
+    ).toBeNull();
+    expect(await reader.article(ANONYMOUS, portal, draftedNumber, "zwischenstand-umzug", "en")).toBeNull();
+    expect(
+      await reader.article(ANONYMOUS, portal, movedNumber, "abmahnung-fall-huber-vorlage", "en"),
+    ).toBeNull();
+    expect(
+      await reader.article(ANONYMOUS, portal, draftedNumber, "standortwechsel-faq", "en"),
+    ).not.toBeNull();
+    expect(
+      await reader.article(owner, internalPortal, internalNumber, "abmahnung-fall-huber-vorlage", "en"),
+    ).toMatchObject({ type: "redirect", number: movedNumber });
   }, 120_000);
 
   it("leaves out files of other spaces that an article points to", async () => {

@@ -301,7 +301,8 @@ export class PortalReader {
         (select n2.number from article_numbers n2 where n2.item_id = coalesce(t.translation_of, t.id)
           and n2.space_id = t.space_id) as own_number,
         (${slug} = '' or ${slug} = coalesce(article_slug(v.title), '')
-          or exists (select 1 from article_slugs sl where sl.item_id = t.id and sl.slug = ${slug})) as known_slug
+          or exists (select 1 from article_slugs sl where sl.item_id = t.id and sl.space_id = n.space_id
+            and sl.slug = ${slug})) as known_slug
       from article_numbers n
       join tree_items src on src.id = n.item_id
       join tree_items t on t.id = src.id or (t.translation_of = src.id and t.space_id = src.space_id)

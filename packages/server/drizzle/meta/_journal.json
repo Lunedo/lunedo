@@ -617,6 +617,13 @@
       "when": 1792574921067,
       "tag": "0087_random_statistics_ids",
       "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1792575464178,
+      "tag": "0088_published_slug_history",
+      "breakpoints": true
     }
   ]
 }

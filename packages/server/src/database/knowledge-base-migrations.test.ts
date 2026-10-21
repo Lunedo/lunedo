@@ -180,4 +180,45 @@ describe.skipIf(!baseUrl)("knowledge base data migrations", () => {
       expect(row.id[14]).toBe("4");
     }
   });
+  it("keeps old slugs only for titles published in the current knowledge base", async () => {
+    const target = await migratedBefore("0088_published_slug_history");
+    const organizationId = await organization(target);
+    const space = await knowledgeBase(target, organizationId);
+    const page = async (title: string) => {
+      const id = randomUUID();
+      await target.query(
+        "insert into tree_items (id, space_id, kind, position, title, mode) values ($1, $2, 'page', $3, $4, 'publish')",
+        [id, space, `a${id.slice(0, 4)}`, title],
+      );
+      return id;
+    };
+    const publish = async (itemId: string, number: number, title: string) => {
+      const version = randomUUID();
+      await target.query(
+        `insert into page_versions (id, item_id, number, title, document, schema_version, reason, revision, state_vector)
+         values ($1, $2, $3, $4, '{"type":"doc","content":[]}'::jsonb, 1, 'published', 0, decode('00', 'hex'))`,
+        [version, itemId, number, title],
+      );
+      await target.query("update tree_items set published_version_id = $1 where id = $2", [version, itemId]);
+    };
+    const draft = await page("Entwurf intern");
+    const published = await page("Neuer Titel");
+    await publish(published, 1, "Alter Titel");
+    await publish(published, 2, "Neuer Titel");
+    await target.query(
+      "insert into article_slugs (item_id, slug) values ($1, 'nie-veroeffentlicht'), ($1, 'alter-titel') on conflict do nothing",
+      [published],
+    );
+
+    await runMigrations(target, { logger: createLogger({ service: "test", level: "silent" }) });
+
+    const slugs = await target.query<{ item_id: string; space_id: string; slug: string }>(
+      "select item_id, space_id, slug from article_slugs where item_id = any($1::uuid[]) order by slug",
+      [[draft, published]],
+    );
+    expect(slugs.rows).toEqual([
+      { item_id: published, space_id: space, slug: "alter-titel" },
+      { item_id: published, space_id: space, slug: "neuer-titel" },
+    ]);
+  });
 });
