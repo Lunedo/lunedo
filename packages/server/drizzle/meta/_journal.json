@@ -603,6 +603,13 @@
       "when": 1792573138272,
       "tag": "0085_portal_readers",
       "breakpoints": true
+    },
+    {
+      "idx": 86,
+      "version": "7",
+      "when": 1792574285729,
+      "tag": "0086_portal_accounts_read_only",
+      "breakpoints": true
     }
   ]
 }

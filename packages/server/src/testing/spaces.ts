@@ -8,13 +8,15 @@ import type { SpaceVisibility } from "../spaces/schema.js";
 import type { SpaceGrant } from "../spaces/settings.js";
 
 export function spaceFixtures(test: () => { database: Database; services: AccountServices }) {
-  async function account(options: { type?: "standard" | "guest"; name?: string } = {}): Promise<string> {
+  async function account(
+    options: { type?: "standard" | "guest" | "portal"; name?: string } = {},
+  ): Promise<string> {
     const services = test();
-    if (options.type === "guest") {
+    if (options.type === "guest" || options.type === "portal") {
       const id = randomUUID();
       await services.database.execute(sql`
         insert into accounts (id, type, state, email, name)
-        values (${id}, 'guest', 'active', ${`${id}@guest.example.org`}, ${options.name ?? "Guest"})`);
+        values (${id}, ${options.type}, 'active', ${`${id}@${options.type}.example.org`}, ${options.name ?? "Guest"})`);
       return id;
     }
     const created = await services.database.transaction((tx) =>
@@ -48,6 +50,16 @@ export function spaceFixtures(test: () => { database: Database; services: Accoun
       kind === "guest" ? { type: "guest", ...(name ? { name } : {}) } : name ? { name } : {},
     );
     await join(organizationId, id, kind);
+    return id;
+  }
+
+  async function portalReader(organizationId: string, spaceIds: string[] = []) {
+    const id = await account({ type: "portal", name: "Reader" });
+    await join(organizationId, id, "guest");
+    for (const spaceId of spaceIds) {
+      await test().database.execute(sql`
+        insert into portal_readers (space_id, account_id) values (${spaceId}, ${id})`);
+    }
     return id;
   }
 
@@ -87,5 +99,5 @@ export function spaceFixtures(test: () => { database: Database; services: Accoun
     return (await test().services.authorization.spaceRole(accountId, spaceId, { fresh: true })).role;
   }
 
-  return { account, organization, join, member, group, space, deactivate, role };
+  return { account, organization, join, member, portalReader, group, space, deactivate, role };
 }

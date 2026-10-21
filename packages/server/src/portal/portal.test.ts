@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ANONYMOUS, accountPrincipal, SYSTEM } from "../accounts/principal.js";
 import { generateToken } from "../auth/tokens.js";
+import { itemLevel } from "../authorization/item-access.js";
 import type { KnowledgeBaseAudience } from "../spaces/schema.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
@@ -83,6 +84,57 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
     return page.id;
   }
 
+  it("caps portal accounts at reader in every path, also through groups", async () => {
+    const org = await organization();
+    const kb = await knowledgeBase(org.id, org.owner, "portal");
+    const reader = await fixtures.portalReader(org.id, [kb.id]);
+    const groupId = await group(org.id, [reader]);
+    const owner = accountPrincipal(org.owner);
+    await test.services.spacePermissions.apply(owner, kb.id, {
+      action: "grant",
+      principalKind: "group",
+      principalId: groupId,
+      role: "admin",
+    });
+    const article = await publishedPage(org.owner, kb.id, "Artikel", "Text");
+    const principal = accountPrincipal(reader);
+    const allowed = (action: string, type: string, id: string) =>
+      test.services.authorization.authorize(principal, action, { type, id });
+    expect(await allowed("item.view", "item", article)).toBe(true);
+    expect(await allowed("item.edit", "item", article)).toBe(false);
+    expect(await allowed("item.editDraft", "item", article)).toBe(false);
+    expect(await allowed("item.publish", "item", article)).toBe(false);
+    expect(await allowed("space.manage", "space", kb.id)).toBe(false);
+    expect(await allowed("space.createDraft", "space", kb.id)).toBe(false);
+    expect((await test.services.authorization.spaceRole(reader, kb.id, { fresh: true })).role).toBe("reader");
+    const editable = await test.database.execute<{ level: number }>(sql`
+      select ${itemLevel(sql`${reader}::uuid`, sql`t`, sql`s`)} as level
+      from tree_items t join spaces s on s.id = t.space_id where t.id = ${article}`);
+    expect(editable.rows[0]?.level).toBe(1);
+    const refused = test.services.spacePermissions.apply(owner, kb.id, {
+      action: "grant",
+      principalKind: "account",
+      principalId: reader,
+      role: "editor",
+    });
+    await expect(refused).rejects.toMatchObject({ code: "portalAccountReaderOnly" });
+    const granted = await test.services.spacePermissions.apply(owner, kb.id, {
+      action: "grant",
+      principalKind: "account",
+      principalId: reader,
+      role: "reader",
+    });
+    const own = granted.find((entry) => entry.principalId === reader);
+    if (!own) throw new Error("missing permission");
+    await expect(
+      test.services.spacePermissions.apply(owner, kb.id, {
+        action: "change",
+        permissionId: own.id,
+        role: "editor",
+      }),
+    ).rejects.toMatchObject({ code: "portalAccountReaderOnly" });
+  });
+
   it("keeps portal accounts to knowledge bases in permissions, lists and search", async () => {
     const org = await organization();
     const reader = await portalAccount(org.id);
@@ -158,10 +210,43 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
     const reader = await portalAccount(org.id);
     const uninvited = await portalAccount(org.id);
     const cases: [KnowledgeBaseAudience, Record<string, boolean>][] = [
-      ["public", { anonymous: true, member: true, outsider: true, groupMember: true, portal: true, uninvited: true }],
-      ["signedIn", { anonymous: false, member: true, outsider: true, groupMember: true, portal: false, uninvited: false }],
-      ["groups", { anonymous: false, member: false, outsider: false, groupMember: true, portal: false, uninvited: false }],
-      ["portal", { anonymous: false, member: false, outsider: false, groupMember: false, portal: true, uninvited: false }],
+      [
+        "public",
+        { anonymous: true, member: true, outsider: true, groupMember: true, portal: true, uninvited: true },
+      ],
+      [
+        "signedIn",
+        {
+          anonymous: false,
+          member: true,
+          outsider: true,
+          groupMember: true,
+          portal: false,
+          uninvited: false,
+        },
+      ],
+      [
+        "groups",
+        {
+          anonymous: false,
+          member: false,
+          outsider: false,
+          groupMember: true,
+          portal: false,
+          uninvited: false,
+        },
+      ],
+      [
+        "portal",
+        {
+          anonymous: false,
+          member: false,
+          outsider: false,
+          groupMember: false,
+          portal: true,
+          uninvited: false,
+        },
+      ],
     ];
     for (const [audience, expected] of cases) {
       const kb = await knowledgeBase(org.id, org.owner, "signedIn");

@@ -113,8 +113,9 @@ export function accountItemCondition(
   minimum: SpaceRole,
   options: ItemAccessOptions = {},
 ): SQL {
+  const portal = minimum === "reader" ? sql`${space}.type = 'knowledgeBase'` : sql`false`;
   const active = sql`exists (select 1 from accounts ia where ia.id = ${account} and ia.state = 'active'
-    and (ia.type <> 'portal' or ${space}.type = 'knowledgeBase'))`;
+    and (ia.type <> 'portal' or ${portal}))`;
   const internal = sql`exists (select 1 from accounts sa where sa.id = ${account} and sa.type <> 'portal')`;
   const itemSources = [shareCondition(account, item, space, minimum)];
   if (minimum === "reader") itemSources.push(linkCondition(account, item, space));

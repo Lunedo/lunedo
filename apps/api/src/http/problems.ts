@@ -42,6 +42,7 @@ export const problems = {
   invalidSpaceName: { status: 400, title: "The space name is not valid" },
   invalidSpaceDescription: { status: 400, title: "The space description is too long" },
   invalidHolder: { status: 400, title: "The holder cannot get a role in this space" },
+  portalAccountReaderOnly: { status: 400, title: "Portal accounts can only read" },
   personalSpaceVisibility: { status: 400, title: "Personal spaces are always private" },
   invalidTitle: { status: 400, title: "The title is not valid" },
   invalidDescription: { status: 400, title: "The description is too long" },

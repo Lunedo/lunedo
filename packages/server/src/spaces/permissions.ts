@@ -132,14 +132,17 @@ export class SpaceHolders implements HolderValidation {
       return;
     }
     if (grant.principalKind === "account" && grant.principalId) {
-      const account = await tx.execute<{ id: string }>(sql`
-        select a.id from accounts a
+      const account = await tx.execute<{ id: string; type: string }>(sql`
+        select a.id, a.type from accounts a
         where a.id = ${grant.principalId} and a.state in ('active', 'invited')
           and (exists (select 1 from memberships m where m.account_id = a.id
                 and m.organization_id = ${space.organizationId} and (m.expires_at is null or m.expires_at > now()))
             or exists (select 1 from service_accounts sa where sa.account_id = a.id
                 and sa.organization_id = ${space.organizationId}))`);
       if (!account.rows[0]) invalid("Only people and service accounts of the organization can get a role");
+      if (account.rows[0]?.type === "portal" && grant.role !== "reader") {
+        throw new SpaceError("portalAccountReaderOnly", "Portal accounts can only read");
+      }
       return;
     }
     if (grant.principalKind === "group" && grant.principalId) {
@@ -223,10 +226,26 @@ export class SpacePermissionService {
   async preview(actor: Principal, spaceId: string, change: PermissionChange): Promise<AccessImpact> {
     return this.#database.transaction(async (tx) => {
       const space = await this.#spaces.require(spaceId, tx);
-      const { before, after } = await this.#states(space, change, tx);
+      const { current, before, after } = await this.#states(space, change, tx);
       if (change.action === "grant") await this.#validateGrant(tx, space, change, actor);
+      if (change.action === "change") await this.#validateRoleChange(tx, current, change);
       return accessImpact(tx, before, after, (account) => this.#people.visibleCondition(actor, account));
     });
+  }
+
+  async #validateRoleChange(
+    tx: Transaction,
+    current: StoredPermission[],
+    change: Extract<PermissionChange, { action: "change" }>,
+  ): Promise<void> {
+    const existing = current.find((permission) => permission.id === change.permissionId);
+    if (change.role === "reader" || existing?.principalKind !== "account" || !existing.principalId) return;
+    const account = await tx.execute<{ type: string }>(
+      sql`select type from accounts where id = ${existing.principalId}`,
+    );
+    if (account.rows[0]?.type === "portal") {
+      throw new SpaceError("portalAccountReaderOnly", "Portal accounts can only read");
+    }
   }
 
   async #validateGrant(
@@ -262,6 +281,7 @@ export class SpacePermissionService {
       const space = await this.#spaces.lock(tx, spaceId);
       const { current, before, after } = await this.#states(space, change, tx);
       if (change.action === "grant") await this.#validateGrant(tx, space, change, actor);
+      if (change.action === "change") await this.#validateRoleChange(tx, current, change);
       const administrator = await tx.execute<{ present: boolean }>(sql`
         select ${activeAdministratorCondition(proposedGrants(after.grants), sql`${space.organizationId}::uuid`)} as present`);
       if (!administrator.rows[0]?.present) {

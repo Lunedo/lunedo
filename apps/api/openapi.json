@@ -168927,7 +168927,7 @@
             }
           },
           "400": {
-            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidHolder`: The holder cannot get a role in this space. `invalidInput`: The request is not valid.",
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidHolder`: The holder cannot get a role in this space. `invalidInput`: The request is not valid. `portalAccountReaderOnly`: Portal accounts can only read.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -168956,6 +168956,14 @@
                       "title": "The request is not valid",
                       "status": 400,
                       "code": "invalidInput"
+                    }
+                  },
+                  "portalAccountReaderOnly": {
+                    "value": {
+                      "type": "urn:pagehall:problem:portalAccountReaderOnly",
+                      "title": "Portal accounts can only read",
+                      "status": 400,
+                      "code": "portalAccountReaderOnly"
                     }
                   }
                 }
@@ -169824,7 +169832,7 @@
             }
           },
           "400": {
-            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `audienceGroupsMissing`: Choose at least one group. `invalidAudience`: Only knowledge bases have an audience. `invalidHolder`: The holder cannot get a role in this space. `invalidInput`: The request is not valid. `invalidSpaceDescription`: The space description is too long. `invalidSpaceKey`: The space key is not valid. `invalidSpaceName`: The space name is not valid. `invalidVisibility`: The space needs a visibility. `knowledgeBaseConfidential`: A knowledge base cannot be confidential.",
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `audienceGroupsMissing`: Choose at least one group. `invalidAudience`: Only knowledge bases have an audience. `invalidHolder`: The holder cannot get a role in this space. `invalidInput`: The request is not valid. `invalidSpaceDescription`: The space description is too long. `invalidSpaceKey`: The space key is not valid. `invalidSpaceName`: The space name is not valid. `invalidVisibility`: The space needs a visibility. `knowledgeBaseConfidential`: A knowledge base cannot be confidential. `portalAccountReaderOnly`: Portal accounts can only read.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -169909,6 +169917,14 @@
                       "title": "A knowledge base cannot be confidential",
                       "status": 400,
                       "code": "knowledgeBaseConfidential"
+                    }
+                  },
+                  "portalAccountReaderOnly": {
+                    "value": {
+                      "type": "urn:pagehall:problem:portalAccountReaderOnly",
+                      "title": "Portal accounts can only read",
+                      "status": 400,
+                      "code": "portalAccountReaderOnly"
                     }
                   }
                 }
@@ -217938,7 +217954,7 @@
             }
           },
           "400": {
-            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `audienceGroupsMissing`: Choose at least one group. `invalidHolder`: The holder cannot get a role in this space. `invalidInput`: The request is not valid. `tooManyGroups`: Too many groups.",
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `audienceGroupsMissing`: Choose at least one group. `invalidHolder`: The holder cannot get a role in this space. `invalidInput`: The request is not valid. `portalAccountReaderOnly`: Portal accounts can only read. `tooManyGroups`: Too many groups.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -217975,6 +217991,14 @@
                       "title": "The request is not valid",
                       "status": 400,
                       "code": "invalidInput"
+                    }
+                  },
+                  "portalAccountReaderOnly": {
+                    "value": {
+                      "type": "urn:pagehall:problem:portalAccountReaderOnly",
+                      "title": "Portal accounts can only read",
+                      "status": 400,
+                      "code": "portalAccountReaderOnly"
                     }
                   },
                   "tooManyGroups": {
@@ -226264,7 +226288,7 @@
             }
           },
           "400": {
-            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidHolder`: The holder cannot get a role in this space. `invalidInput`: The request is not valid.",
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidHolder`: The holder cannot get a role in this space. `invalidInput`: The request is not valid. `portalAccountReaderOnly`: Portal accounts can only read.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -226293,6 +226317,14 @@
                       "title": "The request is not valid",
                       "status": 400,
                       "code": "invalidInput"
+                    }
+                  },
+                  "portalAccountReaderOnly": {
+                    "value": {
+                      "type": "urn:pagehall:problem:portalAccountReaderOnly",
+                      "title": "Portal accounts can only read",
+                      "status": 400,
+                      "code": "portalAccountReaderOnly"
                     }
                   }
                 }
@@ -226935,7 +226967,7 @@
             }
           },
           "400": {
-            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidHolder`: The holder cannot get a role in this space. `invalidInput`: The request is not valid.",
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidHolder`: The holder cannot get a role in this space. `invalidInput`: The request is not valid. `portalAccountReaderOnly`: Portal accounts can only read.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -226964,6 +226996,14 @@
                       "title": "The request is not valid",
                       "status": 400,
                       "code": "invalidInput"
+                    }
+                  },
+                  "portalAccountReaderOnly": {
+                    "value": {
+                      "type": "urn:pagehall:problem:portalAccountReaderOnly",
+                      "title": "Portal accounts can only read",
+                      "status": 400,
+                      "code": "portalAccountReaderOnly"
                     }
                   }
                 }

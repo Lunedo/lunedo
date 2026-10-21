@@ -1276,6 +1276,7 @@
     "invalidSpaceName": "The name needs 1 to 100 characters.",
     "invalidSpaceDescription": "The description can have up to 1000 characters. Shorten it and save again.",
     "invalidHolder": "This person or group cannot get a role here. Choose someone from the organization, or for a personal space someone you work with.",
+    "portalAccountReaderOnly": "Portal accounts can only read. Give this account the role “Reader”, or invite the person with a company account to let them edit.",
     "alreadyGranted": "This person or group already has a role in the space. Change that role instead.",
     "permissionNotFound": "Someone changed the permissions at the same moment. Reload the page and try again.",
     "lastSpaceAdmin": "A space needs at least one space admin. Give someone else the space admin role first.",

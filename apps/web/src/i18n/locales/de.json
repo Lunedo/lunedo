@@ -1276,6 +1276,7 @@
     "invalidSpaceName": "Der Name braucht 1 bis 100 Zeichen.",
     "invalidSpaceDescription": "Die Beschreibung darf bis zu 1000 Zeichen haben. Kürze sie und speichere erneut.",
     "invalidHolder": "Diese Person oder Gruppe kann hier keine Rolle bekommen. Wähle jemanden aus der Organisation oder bei einem persönlichen Space jemanden, mit dem du zusammenarbeitest.",
+    "portalAccountReaderOnly": "Portalkonten können nur lesen. Gib diesem Konto die Rolle „Leser“, oder lade die Person mit einem Firmenkonto ein, damit sie bearbeiten kann.",
     "alreadyGranted": "Diese Person oder Gruppe hat bereits eine Rolle im Space. Ändere stattdessen diese Rolle.",
     "permissionNotFound": "Jemand hat die Berechtigungen gleichzeitig geändert. Lade die Seite neu und versuch es erneut.",
     "lastSpaceAdmin": "Ein Space braucht mindestens einen Space-Admin. Gib zuerst jemand anderem die Rolle Space-Admin.",

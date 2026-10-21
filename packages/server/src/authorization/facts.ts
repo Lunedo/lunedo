@@ -360,9 +360,13 @@ export async function spaceFacts(
                 ? { type: "organizationMembers" }
                 : { type: "instanceUsers" },
       }));
+      const capped =
+        account.type === "portal"
+          ? all.map((source): SpaceRoleSource => ({ ...source, role: "reader" }))
+          : all;
       const inert = (source: SpaceRoleSource) => source.via.type === "account" && !inOrganization;
-      const sources = all.filter((source) => !inert(source));
-      const inactiveSources = all.filter(inert);
+      const sources = capped.filter((source) => !inert(source));
+      const inactiveSources = capped.filter(inert);
       if (space.visibility === "organization" && member) {
         sources.push({
           role: "reader",
