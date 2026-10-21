@@ -88,6 +88,7 @@ export class MarkdownTree {
   readonly files = new Map<string, Entry>();
   readonly markdown: string[] = [];
   readonly folders = new Map<string, Folder>();
+  readonly namedFolders: string[] = [];
   readonly root: string;
   readonly #markdown = new Set<string>();
   readonly #stemBest = new Map<string, string>();
@@ -95,7 +96,7 @@ export class MarkdownTree {
   readonly #nameBest = new Map<string, string>();
   readonly #folderByName = new Map<string, string>();
 
-  constructor(entries: readonly Entry[]) {
+  constructor(entries: readonly Entry[], options: { indexOnly?: ReadonlySet<string> } = {}) {
     const visible = entries.filter((entry) => !hidden(entry.path));
     const firsts = new Set(visible.map((entry) => entry.path.split("/")[0]));
     const [only] = firsts;
@@ -139,10 +140,13 @@ export class MarkdownTree {
         .basename(directory)
         .replace(/ \(\d+\)$/, "")
         .toLocaleLowerCase("en");
-      const index =
-        INDEX_NAMES.map((name) => names.get(name)).find((path) => path !== undefined) ??
-        (directory === "" ? undefined : (names.get(`${own}.md`) ?? names.get(`${own}.markdown`))) ??
-        null;
+      const generic = INDEX_NAMES.map((name) => names.get(name)).find((path) => path !== undefined);
+      const named =
+        generic === undefined && directory !== ""
+          ? (names.get(`${own}.md`) ?? names.get(`${own}.markdown`))
+          : undefined;
+      if (named !== undefined) this.namedFolders.push(directory);
+      const index = generic ?? (options.indexOnly?.has(directory) ? undefined : named) ?? null;
       const pageId = index ? pageIdOf(index) : directory === "" ? null : `md:${directory}/`;
       this.folders.set(directory, { path: directory, pageId, index });
     }
@@ -266,6 +270,14 @@ class AttachmentNames {
 export class MarkdownReader extends StagedConfluenceReader {
   readonly source = "markdown" as const;
 
+  async #tree(entries: readonly Entry[], context: ScanContext): Promise<MarkdownTree> {
+    const tree = new MarkdownTree(entries);
+    if (tree.namedFolders.length === 0 || !context.knownPages) return tree;
+    const known = await context.knownPages(tree.namedFolders.map((directory) => `md:${directory}/`));
+    const indexOnly = new Set(tree.namedFolders.filter((directory) => known.has(`md:${directory}/`)));
+    return indexOnly.size === 0 ? tree : new MarkdownTree(entries, { indexOnly });
+  }
+
   async scan(file: ByteSource, context: ScanContext): Promise<void> {
     const archive = await ZipArchive.open(file, MARKDOWN_ZIP_LIMITS);
     const entries: Entry[] = [];
@@ -277,7 +289,7 @@ export class MarkdownReader extends StagedConfluenceReader {
       entries.push({ path: entry.name, size: entry.size, location: entry.location });
     }
     for (const name of duplicates) await context.problem("duplicateEntry", { name });
-    const tree = new MarkdownTree(entries);
+    const tree = await this.#tree(entries, context);
     if (tree.markdown.length === 0) {
       throw new ImportFormatError("noMarkdown", "The ZIP file contains no Markdown files.");
     }

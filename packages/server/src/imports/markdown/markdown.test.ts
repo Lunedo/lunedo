@@ -250,6 +250,52 @@ describe.skipIf(!baseUrl)("Markdown folder imports", () => {
     expect(again.counts).toMatchObject({ new: 0, updated: 1, conflicts: 0, deleted: 0 });
   });
 
+  it("keeps the folder pages of an earlier import when the folder now has its own file", async () => {
+    const organization = await fixtures.organization();
+    const admin = harness.as(organization.owner);
+    const before: ZipFileSpec[] = [
+      { name: "it/README.md", data: "# IT\n" },
+      { name: "it/Netzwerk/VPN-Zugangsdaten.md", data: "Zugang nur für IT.\n" },
+    ];
+    const first = await harness.importedFiles({
+      organizationId: organization.id,
+      admin: organization.owner,
+      source: "markdown",
+      files: [{ name: "it.zip", data: createZip(before) }],
+      key: "MDFOLD",
+    });
+    await test.services.imports.accept(admin, first.id, { visibility: "organization", grants: [] });
+    const folder = await harness.target(first.id, "page", "md:Netzwerk/");
+    const secret = await harness.target(first.id, "page", "md:Netzwerk/VPN-Zugangsdaten.md");
+    expect(folder).not.toBe("");
+    await test.services.pageAccess.change(admin, folder, [{ action: "restrict", kind: "view" }]);
+    const again = await harness.importedFiles({
+      organizationId: organization.id,
+      admin: organization.owner,
+      source: "markdown",
+      files: [
+        {
+          name: "it-2.zip",
+          data: createZip([
+            ...before,
+            { name: "it/Netzwerk/Netzwerk.md", data: "# Netzwerk\n\nÜbersicht.\n" },
+          ]),
+        },
+      ],
+      spaceId: first.quarantineSpace?.id ?? "",
+      key: "MDFOLD",
+    });
+    expect(again.state).toBe("review");
+    expect(again.counts).toMatchObject({ moved: 0, deleted: 0 });
+    await harness.applyChanges(organization.owner, again.id);
+    const parents = await test.database.execute<{ id: string; parent_id: string | null }>(sql`
+      select id, parent_id from tree_items where space_id = ${first.quarantineSpace?.id ?? ""} and kind = 'page'`);
+    const parentOf = (id: string) => parents.rows.find((row) => row.id === id)?.parent_id;
+    expect(parentOf(secret)).toBe(folder);
+    const overview = await harness.target(again.id, "page", "md:Netzwerk/Netzwerk.md");
+    expect(parentOf(overview)).toBe(folder);
+  });
+
   it("starts a re-import of a Markdown space as a Markdown import", async () => {
     const organization = await fixtures.organization();
     const first = await harness.importedFiles({

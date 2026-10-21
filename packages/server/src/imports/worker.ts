@@ -256,6 +256,13 @@ export class ImportWorker {
     return this.#options.readers.get(row.source as ImportSource);
   }
 
+  async #knownPages(spaceId: string, sourceIds: readonly string[]): Promise<ReadonlySet<string>> {
+    const found = await this.#database.execute<{ source_id: string }>(sql`
+      select source_id from import_baselines where space_id = ${spaceId} and kind = 'page'
+        and source_id = any(${sql.param([...sourceIds])}::text[])`);
+    return new Set(found.rows.map((row) => row.source_id));
+  }
+
   async #analyze(row: WorkRow, signal: AbortSignal, deadline: number): Promise<void> {
     const runId = typeof row.checkpoint.run === "string" ? row.checkpoint.run : randomUUID();
     if (row.checkpoint.run !== runId) {
@@ -293,6 +300,9 @@ export class ImportWorker {
         options: row.options ?? {},
         history: row.history,
         signal,
+        ...(row.target_space_id
+          ? { knownPages: (ids) => this.#knownPages(row.target_space_id ?? "", ids) }
+          : {}),
         saveCheckpoint: async (checkpoint) => {
           const updated = await this.#database.execute(sql`
             update imports set checkpoint = ${JSON.stringify({ run: runId, scan: checkpoint })}::jsonb,
