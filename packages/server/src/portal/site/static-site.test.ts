@@ -429,6 +429,76 @@ describe.skipIf(!baseUrl)("static website of a knowledge base", () => {
     expect(JSON.stringify(found.results[0]?.excerpt)).not.toContain("Huber");
   }, 120_000);
 
+  it("leaves restricted, unpublished, trashed and turned-off articles out of every file", async () => {
+    const organization = await fixtures.organization();
+    const owner = accountPrincipal(organization.owner);
+    const open = await knowledgeBase(owner, organization.id, "public");
+    const category = await test.services.tree.create(owner, open.id, {
+      kind: "folder",
+      title: "Hardware",
+      placement: { parentId: null },
+    });
+    const place = async (title: string, text: string) => {
+      const created = await test.services.tree.create(owner, open.id, {
+        kind: "page",
+        title,
+        placement: { parentId: category.id },
+      });
+      await test.services.documents.replace(owner, created.id, {
+        type: "doc",
+        content: [{ type: "paragraph", content: [{ type: "text", text }] }],
+      });
+      return created.id;
+    };
+    const visible = await place("Drucker einrichten", "Sichtbarer Text");
+    await test.services.versions.publish(owner, visible);
+    const restricted = await place("Geheimprojekt Nord", "Geheimer Text");
+    await test.services.versions.publish(owner, restricted);
+    await test.services.tree.update(owner, restricted, { title: "Geheimprojekt Nord neu" });
+    await test.services.versions.publish(owner, restricted);
+    await test.services.pageAccess.change(owner, restricted, [{ action: "restrict", kind: "view" }]);
+    await place("Entwurf Umzug", "Entwurfstext");
+    const trashed = await place("Altes Telefon", "Papierkorbtext");
+    await test.services.versions.publish(owner, trashed);
+    await test.services.trash.deleteItem(owner, trashed);
+    await test.services.translations.update(owner, open.id, { languages: ["en", "de"] });
+    const german = await test.services.translations.create(owner, visible, "de");
+    await test.services.documents.replace(owner, german.id, {
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text: "Ausgeschaltete Sprache" }] }],
+    });
+    await test.services.tree.update(owner, german.id, { title: "Drucker auf Deutsch" });
+    await test.services.versions.publish(owner, german.id);
+    await test.services.translations.update(owner, open.id, { languages: ["en"] });
+
+    const files = await site(owner, open.id, "https://help.example.org/");
+    const everything = [...files.entries()]
+      .filter(([path]) => /\.(html|json|xml|txt)$|_redirects$/.test(path))
+      .map(([path, content]) => `${path}\n${content.toString("utf8")}`)
+      .join("\n");
+    expect(everything).toContain("Sichtbarer Text");
+    for (const hidden of [
+      "Geheimprojekt",
+      "geheimprojekt",
+      "Geheimer Text",
+      "Entwurf",
+      "entwurf",
+      "Altes Telefon",
+      "altes-telefon",
+      "Papierkorbtext",
+      "Ausgeschaltete Sprache",
+      "Drucker auf Deutsch",
+    ]) {
+      expect(everything, hidden).not.toContain(hidden);
+    }
+    expect([...files.keys()].some((path) => path.startsWith("de/"))).toBe(false);
+    const topic = files.get(`topics/${category.id}.html`)?.toString("utf8") ?? "";
+    expect(topic).toContain(">Drucker einrichten<");
+    const start = files.get("index.html")?.toString("utf8") ?? "";
+    expect(start).toContain("1 article");
+    expect(start).not.toMatch(/[2-9] articles/);
+  }, 120_000);
+
   it("leaves out files of other spaces that an article points to", async () => {
     const organization = await fixtures.organization();
     const owner = accountPrincipal(organization.owner);
