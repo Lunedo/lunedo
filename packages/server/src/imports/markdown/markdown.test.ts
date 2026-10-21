@@ -313,6 +313,65 @@ describe.skipIf(!baseUrl)("Markdown folder imports", () => {
     expect(languages.rows[0]).toEqual({ default_language: "de", languages: ["de"] });
   });
 
+  it("imports translations only into languages that fit and reports the others", async () => {
+    const organization = await fixtures.organization();
+    await test.settings.set(languageSetting, { organization: organization.id }, "organization", "de");
+    const file = (name: string, language: string, translation: boolean, text: string): ZipFileSpec => ({
+      name: `hilfe/Drucker/${name}.md`,
+      data: `---\npagehall:\n  kind: page\n  language: ${language}\n${translation ? "  translation: true\n" : ""}---\n${text}\n`,
+    });
+    const view = await harness.importedFiles({
+      organizationId: organization.id,
+      admin: organization.owner,
+      source: "markdown",
+      files: [
+        {
+          name: "hilfe.zip",
+          data: createZip([
+            file("Drucker", "de", false, "Drucker einrichten."),
+            file("Printer 1", "en", true, "Set up the printer."),
+            file("Printer 2", "en", true, "Set up the printer again."),
+            file("Stampante", "it", true, "Configurare la stampante."),
+            file("Unbekannt", "xx", true, "Unbekannte Sprache."),
+            file("Doppelt", "de", true, "Noch einmal Deutsch."),
+          ]),
+        },
+      ],
+      options: { knowledgeBase: true },
+      key: "MDTRANS",
+    });
+    expect(view.state).toBe("review");
+    const spaceId = view.quarantineSpace?.id ?? "";
+    const items = await test.database.execute<{
+      title: string;
+      parent_id: string | null;
+      translation_of: string | null;
+      content_language: string | null;
+    }>(sql`
+      select title, parent_id, translation_of, content_language from tree_items
+      where space_id = ${spaceId} and kind = 'page' order by title`);
+    const byTitle = new Map(items.rows.map((row) => [row.title, row]));
+    const original = await harness.target(view.id, "page", "md:Drucker/Drucker.md");
+    expect(byTitle.get("Printer 1")).toMatchObject({ translation_of: original, content_language: "en" });
+    expect(byTitle.get("Stampante")).toMatchObject({ translation_of: original, content_language: "it" });
+    for (const title of ["Printer 2", "Unbekannt", "Doppelt"]) {
+      expect(byTitle.get(title), title).toMatchObject({ translation_of: null, content_language: null });
+      expect(byTitle.get(title)?.parent_id, title).not.toBe(original);
+    }
+    const languages = await test.database.execute<{ languages: string[] }>(
+      sql`select languages from knowledge_bases where space_id = ${spaceId}`,
+    );
+    expect([...(languages.rows[0]?.languages ?? [])].sort()).toEqual(["de", "en", "it"]);
+    const problems = await test.database.execute<{ reason: string; language: string }>(sql`
+      select details ->> 'reason' as reason, details ->> 'language' as language from import_problems
+      where import_id = ${view.id} and code = 'translationNotImported' order by 1`);
+    expect(problems.rows).toEqual([
+      { reason: "defaultLanguage", language: "de" },
+      { reason: "duplicate", language: "en" },
+      { reason: "unknown", language: "xx" },
+    ]);
+  });
+
   it("starts a re-import of a Markdown space as a Markdown import", async () => {
     const organization = await fixtures.organization();
     const first = await harness.importedFiles({

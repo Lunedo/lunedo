@@ -22,6 +22,7 @@ import { allowedEmbedServicesSetting, embedServicesSetting } from "../embeds/set
 import { type FileService, FileTooLargeError } from "../files/files.js";
 import { cleanFileName, fileNameKey } from "../files/names.js";
 import { MEGABYTE, maxFileSizeSetting } from "../files/settings.js";
+import { isArticleLanguage } from "../knowledge-bases/translations.js";
 import { languageSetting } from "../settings/builtin.js";
 import type { SettingsService } from "../settings/service.js";
 import { encodeState, MAX_LABELS_PER_PAGE, normalizeLabel, recomputeLinks } from "../spaces/documents.js";
@@ -438,6 +439,44 @@ export class ImportPipeline {
     return new Map(rows.rows.map((row) => [row.source_id, row.target_id]));
   }
 
+  async #refusedTranslation(
+    tx: Transaction,
+    spaceId: string,
+    originalId: string,
+    language: string,
+    enable: boolean,
+  ): Promise<"unknown" | "defaultLanguage" | "duplicate" | "turnedOff" | null> {
+    if (!isArticleLanguage(language)) return "unknown";
+    const found = await tx.execute<{ default_language: string; enabled: boolean; taken: boolean }>(sql`
+      select kb.default_language, ${language} = any(kb.languages) as enabled,
+        exists (select 1 from tree_items t where t.translation_of = ${originalId} and t.content_language = ${language}) as taken
+      from knowledge_bases kb where kb.space_id = ${spaceId} for update`);
+    const row = found.rows[0];
+    if (!row || row.default_language === language) return "defaultLanguage";
+    if (row.taken) return "duplicate";
+    if (row.enabled) return null;
+    if (!enable) return "turnedOff";
+    await tx.execute(sql`
+      update knowledge_bases set languages = array_append(languages, ${language}), updated_at = now()
+      where space_id = ${spaceId}`);
+    return null;
+  }
+
+  async #adoptLanguage(tx: Transaction, spaceId: string, language: string): Promise<void> {
+    if (!isArticleLanguage(language)) return;
+    await tx.execute(sql`
+      update knowledge_bases set default_language = ${language}, languages = array[${language}]::text[], updated_at = now()
+      where space_id = ${spaceId} and default_language <> ${language}
+        and not exists (select 1 from tree_items t where t.space_id = ${spaceId} and t.kind = 'page')`);
+  }
+
+  async #parentOf(tx: Transaction, itemId: string): Promise<string | null> {
+    const result = await tx.execute<{ parent_id: string | null }>(
+      sql`select parent_id from tree_items where id = ${itemId}`,
+    );
+    return result.rows[0]?.parent_id ?? null;
+  }
+
   async #inSpace(tx: Transaction, itemId: string, spaceId: string): Promise<boolean> {
     const result = await tx.execute(
       sql`select 1 from tree_items where id = ${itemId} and space_id = ${spaceId}`,
@@ -613,18 +652,39 @@ export class ImportPipeline {
             }
             const creatorId = (page.creatorId ? people.get(page.creatorId) : undefined) ?? run.importerId;
             id = uuidv7();
-            const position = await endPosition(tx, space.spaceId, parentId);
             const linkUrl = links.get(page.sourceId) ?? null;
             const kind = treeKindOf(page, linkUrl);
             const article = kind === "page" && run.knowledgeBase ? page.article : undefined;
-            const translationOf = article?.translation && article.language && parentId ? parentId : null;
+            if (article?.language && !article.translation && !run.reimport) {
+              await this.#adoptLanguage(tx, space.spaceId, article.language);
+            }
+            const refused =
+              article?.translation && article.language && parentId
+                ? await this.#refusedTranslation(tx, space.spaceId, parentId, article.language, !run.reimport)
+                : null;
+            const separate = refused !== null && refused !== "turnedOff";
+            const translationOf =
+              article?.translation && article.language && parentId && !separate ? parentId : null;
+            const placedIn = separate && parentId ? await this.#parentOf(tx, parentId) : parentId;
+            const position = await endPosition(tx, space.spaceId, placedIn);
             await tx.execute(sql`
               insert into tree_items (id, space_id, parent_id, kind, position, title, link_url, mode, creator_id,
                 owner_id, created_at, content_updated_at, article_type, translation_of, content_language)
-              values (${id}, ${space.spaceId}, ${parentId}, ${kind}, ${position}, ${pageTitle(page)}, ${linkUrl},
+              values (${id}, ${space.spaceId}, ${placedIn}, ${kind}, ${position}, ${pageTitle(page)}, ${linkUrl},
                 ${kind === "page" || kind === "blogPost" ? "publish" : "live"}, ${creatorId}, ${ownerId},
                 coalesce(${page.createdAt}::timestamptz, now()), coalesce(${page.modifiedAt}::timestamptz, now()),
                 ${article?.articleType ?? null}, ${translationOf}, ${translationOf ? (article?.language ?? null) : null})`);
+            if (refused) {
+              await recordProblems(tx, run.importId, [
+                {
+                  code: "translationNotImported",
+                  sourceKind: "page",
+                  sourceId: page.sourceId,
+                  itemId: id,
+                  details: { title: pageTitle(page), language: article?.language ?? "", reason: refused },
+                },
+              ]);
+            }
             if (kind === "page" || kind === "blogPost") {
               await tx.execute(sql`
                 insert into page_documents (item_id, state, snapshot, schema_version, updated_by)

@@ -7682,6 +7682,11 @@
           "hint": "Pagehall hat sie ausgelassen; die anderen Dokumente wurden importiert. Teile das Dokument in kleinere Dokumente oder entferne große Teile und importiere es erneut.",
           "entry": "{file}: Der Text des Dokuments ist größer als {limit, number} MB oder braucht zum Umwandeln zu viel Speicher."
         },
+        "translationNotImported": {
+          "title": "{count, plural, one {# Übersetzung passt} other {# Übersetzungen passen}} nicht zu den Sprachen",
+          "hint": "Die Sprache im Front Matter passt nicht zur Wissensdatenbank. Prüfe die Artikel und schalte die Sprache ein oder übernimm den Text in eine Übersetzung.",
+          "entry": "„{title}“: {reason, select, unknown {„{language}“ ist keine Sprache, die Pagehall anbietet, deshalb wurde die Datei ein eigener Artikel} defaultLanguage {„{language}“ ist die Standardsprache, deshalb wurde die Datei ein eigener Artikel} duplicate {der Artikel hat schon eine Übersetzung in „{language}“, deshalb wurde die Datei ein eigener Artikel} turnedOff {„{language}“ ist in der Wissensdatenbank ausgeschaltet, deshalb sehen Lesende die Übersetzung noch nicht} other {die Sprache passt nicht}}."
+        },
         "embedNotAllowed": {
           "title": "{count, plural, one {# Einbettung wird} other {# Einbettungen werden}} als Link angezeigt",
           "hint": "Ihre Adresse steht nicht auf der Liste erlaubter Einbettungen dieser Organisation. Nimm den Dienst in die Liste auf, um sie eingebettet anzuzeigen.",

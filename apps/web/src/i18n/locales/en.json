@@ -7682,6 +7682,11 @@
           "hint": "Pagehall left them out; the other documents were imported. Split the document into smaller documents or remove large parts, then import it again.",
           "entry": "{file}: the document text is larger than {limit, number} MB or needs too much memory to convert."
         },
+        "translationNotImported": {
+          "title": "{count, plural, one {# translation does} other {# translations do}} not fit the languages",
+          "hint": "The language in the front matter does not fit the knowledge base. Check the articles and turn on the language or move the text into a translation.",
+          "entry": "“{title}”: {reason, select, unknown {“{language}” is not a language Pagehall offers, so the file became a separate article} defaultLanguage {“{language}” is the default language, so the file became a separate article} duplicate {the article already has a translation into “{language}”, so the file became a separate article} turnedOff {“{language}” is turned off in the knowledge base, so readers do not see the translation yet} other {the language does not fit}}."
+        },
         "embedNotAllowed": {
           "title": "{count, plural, one {# embed is} other {# embeds are}} shown as a link",
           "hint": "Their address is not on the embed allowlist of this organization. Add the service to the allowlist to show them embedded.",

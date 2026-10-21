@@ -50256,7 +50256,8 @@
                               "embeddedObject",
                               "wordCommentsDropped",
                               "unreadableImage",
-                              "documentTooLarge"
+                              "documentTooLarge",
+                              "translationNotImported"
                             ]
                           },
                           "count": {
