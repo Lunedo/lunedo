@@ -241,11 +241,13 @@ API: `GET /api/v1/spaces/{spaceId}/knowledge-base/portal`, `PUT …/portal/addre
 
 ### Pre-rendered articles
 
-The content of an article is rendered to HTML once per published version and stored; publishing queues the rendering, and a missing rendering is made on first read. Articles with included content or embeds are rendered on every request instead, so that a changed article, restriction or embed setting shows at once. Permissions are checked on every request before the HTML is served.
+The content of an article is rendered to HTML once per published version and stored; publishing queues the rendering, and a missing rendering is made on first read. Articles with included content, embeds, links to other articles or mentions are rendered on every request instead, for the person reading, so that a changed article, restriction, name or embed setting shows at once. Permissions are checked on every request before the HTML is served.
 
 - **Includes and excerpts** from published articles of the same knowledge base are shown, because they have the same readers. An article that a view restriction hides from some readers of the including article, an article of another space and every other page stay hidden. Translations include the translation of the included article in their language where one is published.
 - **Embeds** follow the embed services the organization allows (see [embeds-and-blocks.md](embeds-and-blocks.md)). The portal loads frames only from the addresses of these services; other embeds appear as a link.
-- Child page lists and reports are not shown, links to pages outside the knowledge base show "No access" without their title, and mentions name only members of the organization.
+- **Links to articles** of the same knowledge base show the current published title when the reader can read the target. Links to articles the reader cannot read (restricted, unpublished, in the trash or archived) and to pages outside the knowledge base show "No access" without their title or number.
+- Child page lists and reports are not shown, and mentions show the current name of members of the organization; anonymized people and people who left are not named.
+- Search indexes, in the portal and in the static website, never contain the stored titles of linked pages.
 
 ## Static website
 

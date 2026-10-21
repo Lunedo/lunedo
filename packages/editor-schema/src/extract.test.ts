@@ -69,7 +69,7 @@ describe("extraction", () => {
   });
 
   it("extracts plain text by block", () => {
-    expect(plainText(document)).toBe("Intro\n met KnownPlanned\nIntro\nIn table");
+    expect(plainText(document)).toBe("Intro\n met \nIntro\nIn table");
   });
 
   it("measures the size and creates a valid empty document", () => {

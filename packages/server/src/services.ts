@@ -797,7 +797,7 @@ export function createAccountServices(options: {
   const portals = new PortalService({ database, audit, settings });
   const portalSessions = new PortalSessionService({ database, sessions });
   const embeds = new EmbedServices({ settings });
-  const articleRenderer = new ArticleRenderer({ database, jobs, embeds });
+  const articleRenderer = new ArticleRenderer({ database, authorization, jobs, embeds });
   const articleApi = new ArticleApiService({
     database,
     authorization,

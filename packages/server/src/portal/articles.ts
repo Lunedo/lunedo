@@ -14,6 +14,8 @@ import {
 } from "@pagehall/editor-schema";
 import { type SQL, sql } from "drizzle-orm";
 import { z } from "zod";
+import { ANONYMOUS, type Principal } from "../accounts/principal.js";
+import type { AuthorizationService } from "../authorization/service.js";
 import type { Database } from "../database/database.js";
 import type { EmbedServices } from "../embeds/embeds.js";
 import { exportTexts } from "../exports/texts.js";
@@ -24,7 +26,7 @@ import { includeKey } from "../spaces/includes.js";
 import { interfaceLanguage } from "./portals.js";
 import type { RenderedHeading } from "./schema.js";
 
-export const ARTICLE_RENDERER = 2;
+export const ARTICLE_RENDERER = 3;
 export const PORTAL_BASE_PLACEHOLDER = "/__portal__";
 const TOC_LEVEL = 2;
 const MAX_INCLUDES = 50;
@@ -103,20 +105,23 @@ function references(document: DocumentJson): {
 
 export function hasLiveParts(document: DocumentJson): boolean {
   const found = references(document);
-  return found.includes.length > 0 || found.embeds;
+  return found.includes.length > 0 || found.embeds || found.pages.size > 0 || found.people.size > 0;
 }
 
 export class ArticleRenderer {
   readonly #database: Database;
+  readonly #authorization: AuthorizationService;
   readonly #jobs: JobQueue | undefined;
   readonly #embeds: EmbedServices | undefined;
 
   constructor(options: {
     database: Database;
+    authorization: AuthorizationService;
     jobs?: JobQueue | undefined;
     embeds?: EmbedServices | undefined;
   }) {
     this.#database = options.database;
+    this.#authorization = options.authorization;
     this.#jobs = options.jobs;
     this.#embeds = options.embeds;
   }
@@ -129,13 +134,17 @@ export class ArticleRenderer {
     if (versionId) await this.#jobs?.enqueue(renderArticleJob, { itemId }, { idempotencyKey: versionId });
   }
 
-  async rendered(versionId: string, language: Language): Promise<RenderedArticle | null> {
+  async rendered(
+    versionId: string,
+    language: Language,
+    reader: Principal = ANONYMOUS,
+  ): Promise<RenderedArticle | null> {
     const cached = await this.#database.execute<{ html: string; headings: RenderedHeading[] }>(sql`
       select html, headings from article_renders
       where version_id = ${versionId} and language = ${language} and renderer = ${ARTICLE_RENDERER}`);
     const row = cached.rows[0];
     if (row) return { versionId, html: row.html, headings: row.headings };
-    return this.render(versionId, language);
+    return this.render(versionId, language, reader);
   }
 
   async renderPublished(itemId: string): Promise<RenderedArticle | null> {
@@ -148,10 +157,14 @@ export class ArticleRenderer {
     return row?.version_id ? this.rendered(row.version_id, interfaceLanguage(row.language)) : null;
   }
 
-  async render(versionId: string, language: Language): Promise<RenderedArticle | null> {
+  async render(
+    versionId: string,
+    language: Language,
+    reader: Principal = ANONYMOUS,
+  ): Promise<RenderedArticle | null> {
     const source = await this.versionSource(versionId);
     if (!source) return null;
-    const { html, headings } = await this.renderDocument(source, language, PORTAL_ADDRESSES);
+    const { html, headings } = await this.renderDocument(source, language, PORTAL_ADDRESSES, reader);
     if (!hasLiveParts(source.document)) {
       await this.#database.execute(sql`
         insert into article_renders (version_id, language, renderer, html, headings)
@@ -189,9 +202,10 @@ export class ArticleRenderer {
     source: DocumentSource,
     language: Language,
     addresses: ArticleAddresses,
+    reader: Principal,
   ): Promise<{ html: string; headings: RenderedHeading[] }> {
     const embeds = await this.#embedServices(source.spaceId, source.document);
-    const context = await this.#context(source, language, addresses, embeds, [], {
+    const context = await this.#context(source, language, addresses, embeds, reader, [], {
       remaining: MAX_INCLUDES,
     });
     const html = renderHtml(source.document, context);
@@ -254,6 +268,7 @@ export class ArticleRenderer {
     language: Language,
     addresses: ArticleAddresses,
     embeds: EmbedService[],
+    reader: Principal,
     chain: string[],
     budget: { remaining: number },
   ): Promise<Map<string, IncludedContent>> {
@@ -292,6 +307,7 @@ export class ArticleRenderer {
         language,
         addresses,
         embeds,
+        reader,
         [...chain, target.id],
         budget,
       );
@@ -311,18 +327,25 @@ export class ArticleRenderer {
     language: Language,
     addresses: ArticleAddresses,
     embeds: EmbedService[],
+    reader: Principal,
     chain: string[],
     budget: { remaining: number },
   ): Promise<RenderContext> {
     const { spaceId, document } = source;
     const { images, pages, people } = references(document);
-    const numbers = new Map<string, number>();
+    const targets = new Map<string, { number: number; title: string }>();
     if (pages.size > 0) {
-      const result = await this.#database.execute<{ item_id: string; number: number }>(sql`
-        select n.item_id, n.number from article_numbers n join tree_items t on t.id = n.item_id
-        where n.space_id = ${spaceId} and t.space_id = ${spaceId}
-          and n.item_id = any(${sql.param([...pages])}::uuid[])`);
-      for (const entry of result.rows) numbers.set(entry.item_id, Number(entry.number));
+      const result = await this.#database.execute<{ item_id: string; number: number; title: string }>(sql`
+        select t.id as item_id, n.number, v.title
+        from tree_items t join spaces s on s.id = t.space_id
+        join page_versions v on v.id = t.published_version_id
+        join article_numbers n on n.item_id = t.id and n.space_id = t.space_id
+        where t.id = any(${sql.param([...pages])}::uuid[]) and t.space_id = ${spaceId}
+          and t.kind = 'page' and t.translation_of is null and t.reader_visible
+          and ${this.#authorization.portalFilter(reader, sql`t`, sql`s`)}`);
+      for (const entry of result.rows) {
+        targets.set(entry.item_id, { number: Number(entry.number), title: entry.title });
+      }
     }
     const names = new Map<string, string>();
     if (people.size > 0) {
@@ -333,7 +356,7 @@ export class ArticleRenderer {
             and m.account_id = a.id)`);
       for (const entry of result.rows) names.set(entry.id, entry.name);
     }
-    const included = await this.#includes(source, language, addresses, embeds, chain, budget);
+    const included = await this.#includes(source, language, addresses, embeds, reader, chain, budget);
     return {
       labels: exportTexts(language).labels,
       mention: (id) => {
@@ -341,9 +364,9 @@ export class ArticleRenderer {
         return name ? { name } : null;
       },
       pageLink: (link) => {
-        const number = link.pageId ? numbers.get(link.pageId) : undefined;
-        if (number === undefined) return { href: "", title: "", accessible: false };
-        return { href: addresses.page(number), title: link.title ?? "", accessible: true };
+        const target = link.pageId ? targets.get(link.pageId) : undefined;
+        if (!target) return { href: "", title: "", accessible: false };
+        return { href: addresses.page(target.number), title: target.title, accessible: true };
       },
       attachment: (id) => ({
         href: addresses.file(id, false),

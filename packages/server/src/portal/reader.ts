@@ -330,7 +330,11 @@ export class PortalReader {
     const chosen =
       local.find((row) => row.language === language) ?? local.find((row) => row.translation_of === null);
     if (!chosen) return null;
-    const rendered = await this.#renderer.rendered(chosen.version_id, interfaceLanguage(chosen.language));
+    const rendered = await this.#renderer.rendered(
+      chosen.version_id,
+      interfaceLanguage(chosen.language),
+      principal,
+    );
     if (!rendered) return null;
     const ancestors = chosen.path.filter((id) => id !== chosen.id);
     const contact = await this.#contact(config, ancestors);

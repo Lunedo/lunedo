@@ -520,6 +520,84 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
     expect(again?.html).toBe(rendered.html);
   });
 
+  it("resolves page links and mentions for the current reader on every request", async () => {
+    const org = await organization();
+    const kb = await knowledgeBase(org.id, org.owner, "public");
+    const actor = accountPrincipal(org.owner);
+    const restricted = await publishedPage(org.owner, kb.id, "Kündigungswelle Nord", "Geheim");
+    await test.services.pageAccess.change(actor, restricted, [{ action: "restrict", kind: "view" }]);
+    const unpublished = await test.services.tree.create(actor, kb.id, {
+      kind: "page",
+      title: "Entwurf Sozialplan",
+      placement: { parentId: null },
+    });
+    const trashed = await publishedPage(org.owner, kb.id, "Altes Verfahren", "Alt");
+    await test.services.trash.deleteItem(actor, trashed);
+    const open = await publishedPage(org.owner, kb.id, "Offene Anleitung", "Offen");
+    const colleague = await member(org.id, "member", "Klara Beispiel");
+    const link = (pageId: string, title: string) => ({
+      type: "pageLink",
+      attrs: { pageId, spaceId: kb.id, title },
+    });
+    const source = await test.services.tree.create(actor, kb.id, {
+      kind: "page",
+      title: "Quelle",
+      placement: { parentId: null },
+    });
+    await test.services.documents.replace(actor, source.id, {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            link(restricted, "Kündigungswelle Nord"),
+            link(unpublished.id, "Entwurf Sozialplan"),
+            link(trashed, "Altes Verfahren"),
+            link(open, "Gespeicherter Titel"),
+            { type: "mention", attrs: { id: colleague } },
+          ],
+        },
+      ],
+    });
+    await test.services.versions.publish(actor, source.id);
+    await test.services.articleRenderer.renderPublished(source.id);
+    const numbers = await test.database.execute<{ item_id: string; number: number }>(
+      sql`select item_id, number from article_numbers where space_id = ${kb.id}`,
+    );
+    const numberOf = (id: string) => numbers.rows.find((row) => row.item_id === id)?.number;
+    const config = await test.services.portals.config(kb.id);
+    if (!config) throw new Error("missing config");
+    const html = async () => {
+      const found = await test.services.portalReader.article(ANONYMOUS, config, numberOf(source.id) ?? 0, "");
+      if (found?.type !== "found") throw new Error("missing article");
+      return found.article.html;
+    };
+    const first = await html();
+    for (const hidden of ["Kündigungswelle", "Entwurf Sozialplan", "Altes Verfahren"]) {
+      expect(first).not.toContain(hidden);
+    }
+    for (const id of [restricted, unpublished.id, trashed]) {
+      expect(first).not.toContain(`/__portal__/${numberOf(id)}"`);
+    }
+    expect(first).toContain(`href="/__portal__/${numberOf(open)}"`);
+    expect(first).toContain(">Offene Anleitung<");
+    expect(first).not.toContain("Gespeicherter Titel");
+    expect(first).toContain("Klara Beispiel");
+    await test.services.pageAccess.change(actor, open, [{ action: "restrict", kind: "view" }]);
+    await test.database.execute(
+      sql`update accounts set state = 'anonymized', name = 'Ehemaliges Mitglied' where id = ${colleague}`,
+    );
+    const later = await html();
+    expect(later).not.toContain("Offene Anleitung");
+    expect(later).not.toContain(`/__portal__/${numberOf(open)}"`);
+    expect(later).not.toContain("Klara Beispiel");
+    const cached = await test.database.execute<{ html: string }>(
+      sql`select r.html from article_renders r join tree_items t on t.published_version_id = r.version_id
+        where t.id = ${source.id}`,
+    );
+    expect(cached.rows).toEqual([]);
+  });
+
   it("counts zero-result searches and offers only repeated terms with results as frequent searches", async () => {
     const org = await organization();
     const kb = await knowledgeBase(org.id, org.owner, "public");

@@ -376,6 +376,59 @@ describe.skipIf(!baseUrl)("static website of a knowledge base", () => {
     ).toMatchObject({ type: "redirect", number: movedNumber });
   }, 120_000);
 
+  it("keeps titles of linked pages out of both search indexes", async () => {
+    const organization = await fixtures.organization();
+    const owner = accountPrincipal(organization.owner);
+    const open = await knowledgeBase(owner, organization.id, "public");
+    const secret = await fixtures.space(organization.id, organization.owner);
+    const hidden = await test.services.tree.create(owner, secret.id, {
+      kind: "page",
+      title: "Aufhebungsvertrag Huber",
+      placement: { parentId: null },
+    });
+    const entry = await test.services.tree.create(owner, open.id, {
+      kind: "page",
+      title: "Laptop zurückgeben",
+      placement: { parentId: null },
+    });
+    await test.services.documents.replace(owner, entry.id, {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            { type: "text", text: "Gib den Laptop ab. " },
+            {
+              type: "pageLink",
+              attrs: { pageId: hidden.id, spaceId: secret.id, title: "Aufhebungsvertrag Huber" },
+            },
+          ],
+        },
+      ],
+    });
+    await test.services.versions.publish(owner, entry.id);
+    await test.services.search.indexer.drain();
+
+    const files = await site(owner, open.id, null);
+    const index = files.get("search-index.json")?.toString("utf8") ?? "";
+    expect(index).toContain("Gib den Laptop ab");
+    expect(index).not.toContain("Aufhebungsvertrag");
+    expect(index).not.toContain("Huber");
+    const config = await test.services.portals.config(open.id);
+    if (!config) throw new Error("missing portal");
+    const search = (query: string) =>
+      test.services.portalReader.search(ANONYMOUS, config, {
+        query,
+        categoryId: null,
+        type: null,
+        cursor: null,
+      });
+    expect((await search("Huber")).results).toEqual([]);
+    const found = await search("Laptop");
+    expect(found.results).toHaveLength(1);
+    expect(JSON.stringify(found.results[0]?.excerpt)).not.toContain("Huber");
+  }, 120_000);
+
   it("leaves out files of other spaces that an article points to", async () => {
     const organization = await fixtures.organization();
     const owner = accountPrincipal(organization.owner);

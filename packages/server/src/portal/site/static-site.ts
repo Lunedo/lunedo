@@ -471,6 +471,7 @@ export class StaticSiteBuilder {
         },
         interfaceLanguage(article.language),
         addresses,
+        ANONYMOUS,
       );
       const categories = categoriesOf.get(article.language) ?? [];
       const versions = [...(byNumber.get(article.number)?.values() ?? [])];

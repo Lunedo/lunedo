@@ -170,10 +170,15 @@ export class ArticleApiService {
     if (!article) return null;
     const draft = options.draft === true;
     if (!draft && options.publishedOnly && article.version === null) return null;
-    return this.#present(article, draft, options.origin);
+    return this.#present(viewer, article, draft, options.origin);
   }
 
-  async #present(article: Article, draft: boolean, origin: string): Promise<ArticleRecord> {
+  async #present(
+    viewer: Principal,
+    article: Article,
+    draft: boolean,
+    origin: string,
+  ): Promise<ArticleRecord> {
     const document: DocumentJson = article.document ?? { type: "doc", content: [] };
     const addresses = await this.#addresses(article, origin);
     const language = interfaceLanguage(article.language);
@@ -188,6 +193,7 @@ export class ArticleApiService {
         },
         language,
         addresses.renderer,
+        viewer,
       );
       sections.push({ ...section, html: rendered.html });
     }
