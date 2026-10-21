@@ -1825,7 +1825,9 @@
     "portalInvitationFor": "Read {knowledgeBase}",
     "portalInvitationDescription": "{inviter} invited {email} to read the help {knowledgeBase}. Create a reader account with a password; you can add a passkey afterwards.",
     "portalAccountCreated": "Your reader account is ready. Sign in on the portal of {knowledgeBase}.",
-    "openPortal": "Open {knowledgeBase}"
+    "openPortal": "Open {knowledgeBase}",
+    "passwordRuleMet": "Met.",
+    "passwordRuleOpen": "Not met yet."
   },
   "reauthentication": {
     "withProvider": "Continue with {name}",

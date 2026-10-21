@@ -2,7 +2,8 @@ import { accountNameSchema, passwordSchema } from "@pagehall/shared";
 import { Button, Field, Input, Notice, PasswordInput, Skeleton } from "@pagehall/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { Check, Circle } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { api } from "../../api/client.js";
@@ -15,9 +16,13 @@ import { translateKey } from "../../i18n/translate.js";
 import { forgetLinkToken, useLinkToken } from "../../session/link-token.js";
 import { AuthCard } from "./auth-layout.js";
 
-const detailsForm = z
-  .object({ name: accountNameSchema, password: passwordSchema, repeated: z.string() })
-  .refine((values) => values.password === values.repeated, { path: ["repeated"], message: "mismatch" });
+const DEFAULT_PASSWORD_MINIMUM = 12;
+
+function detailsForm(minimum: number) {
+  return z
+    .object({ name: accountNameSchema, password: passwordSchema.min(minimum), repeated: z.string() })
+    .refine((values) => values.password === values.repeated, { path: ["repeated"], message: "mismatch" });
+}
 
 type State = "start" | "details" | "joined" | "created";
 
@@ -29,10 +34,13 @@ export function AcceptInvitationScreen() {
   const [portalUrl, setPortalUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const form = useSchemaForm(detailsForm, {
+  const minimum = info.data?.passwordMinLength ?? DEFAULT_PASSWORD_MINIMUM;
+  const schema = useMemo(() => detailsForm(minimum), [minimum]);
+  const form = useSchemaForm(schema, {
     defaultValues: { name: "", password: "", repeated: "" },
     messages: { repeated: t("auth.passwordsDiffer") },
   });
+  const longEnough = [...(form.watch("password") ?? "")].length >= minimum;
 
   const preview = useQuery({
     queryKey: ["invitationPreview", token],
@@ -75,6 +83,7 @@ export function AcceptInvitationScreen() {
     knowledgeBase: invitation.knowledgeBaseName ?? "",
   };
   const portal = Boolean(invitation.knowledgeBaseName);
+  const step = state === "start" && invitation.newAccount ? "details" : state;
   if (invitation.state !== "open" && state === "start") {
     const unknown = invitation.invitedByName === null ? "Unknown" : "";
     const message =
@@ -121,12 +130,12 @@ export function AcceptInvitationScreen() {
           {error}
         </Notice>
       ) : null}
-      {state === "start" ? (
+      {step === "start" ? (
         <Button variant="primary" size="lg" block loading={busy} onClick={() => void accept()}>
           {t("auth.acceptInvitation")}
         </Button>
       ) : null}
-      {state === "details" ? (
+      {step === "details" ? (
         <form
           className="flex flex-col gap-4"
           noValidate
@@ -140,7 +149,19 @@ export function AcceptInvitationScreen() {
           </Field>
           <Field
             label={t("auth.password")}
-            hint={t("auth.passwordHint", { minimum: info.data?.passwordMinLength ?? 12 })}
+            hint={
+              <span className={`inline-flex items-center gap-1 ${longEnough ? "text-success" : ""}`}>
+                {longEnough ? (
+                  <Check aria-hidden="true" className="size-icon-sm shrink-0" />
+                ) : (
+                  <Circle aria-hidden="true" className="size-icon-sm shrink-0" />
+                )}
+                {t("auth.passwordHint", { minimum })}
+                <span className="sr-only">
+                  {longEnough ? t("auth.passwordRuleMet") : t("auth.passwordRuleOpen")}
+                </span>
+              </span>
+            }
             error={form.formState.errors.password?.message}
           >
             <PasswordInput autoComplete="new-password" {...form.register("password")} />

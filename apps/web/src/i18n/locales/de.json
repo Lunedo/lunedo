@@ -1825,7 +1825,9 @@
     "portalInvitationFor": "{knowledgeBase} lesen",
     "portalInvitationDescription": "{inviter} hat {email} eingeladen, die Hilfe {knowledgeBase} zu lesen. Lege ein Lesekonto mit Passwort an; einen Passkey kannst du danach hinzufügen.",
     "portalAccountCreated": "Dein Lesekonto ist bereit. Melde dich im Portal von {knowledgeBase} an.",
-    "openPortal": "{knowledgeBase} öffnen"
+    "openPortal": "{knowledgeBase} öffnen",
+    "passwordRuleMet": "Erfüllt.",
+    "passwordRuleOpen": "Noch nicht erfüllt."
   },
   "reauthentication": {
     "withProvider": "Weiter mit {name}",

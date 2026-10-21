@@ -126759,6 +126759,10 @@
                         "string",
                         "null"
                       ]
+                    },
+                    "newAccount": {
+                      "type": "boolean",
+                      "description": "Whether accepting creates an account, so a name and a password are needed. False once the invitation is no longer open."
                     }
                   },
                   "required": [
@@ -126767,7 +126771,8 @@
                     "expiresAt",
                     "organizationName",
                     "invitedByName",
-                    "knowledgeBaseName"
+                    "knowledgeBaseName",
+                    "newAccount"
                   ],
                   "additionalProperties": false
                 }

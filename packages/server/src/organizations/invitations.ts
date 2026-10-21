@@ -58,6 +58,7 @@ export interface InvitationPreview {
   organizationName: string;
   invitedByName: string | null;
   knowledgeBaseName: string | null;
+  newAccount: boolean;
 }
 
 export class InvitationService {
@@ -327,6 +328,7 @@ export class InvitationService {
       .where(eq(invitations.tokenHash, hashToken(token)));
     if (!row) throw new InvalidTokenError();
     const state = row.acceptedAt ? "accepted" : row.revokedAt ? "revoked" : row.expired ? "expired" : "open";
+    const existing = state === "open" ? await this.#accounts.findByEmail(row.email) : null;
     return {
       state,
       email: row.email,
@@ -334,6 +336,7 @@ export class InvitationService {
       organizationName: row.organizationName,
       invitedByName: row.invitedByName,
       knowledgeBaseName: row.knowledgeBaseName,
+      newAccount: state === "open" && !existing,
     };
   }
 
