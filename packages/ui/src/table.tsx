@@ -32,6 +32,7 @@ export interface TableColumn<T> {
   align?: "start" | "end";
   hideBelow?: "sm" | "md";
   sticky?: boolean;
+  grow?: boolean;
 }
 
 export interface TablePagination {
@@ -95,6 +96,7 @@ export function Table<T>({
       column.align === "end" ? "text-right" : "text-left",
       column.hideBelow && HIDDEN[column.hideBelow],
       column.sticky && "sticky right-0",
+      column.grow && "w-full max-w-0",
     );
   return (
     <div className="flex flex-col gap-3">

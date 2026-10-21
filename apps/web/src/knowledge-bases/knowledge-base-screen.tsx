@@ -61,6 +61,7 @@ function ArticleGroup({
     {
       key: "title",
       header: t("knowledgeBase.list.title"),
+      grow: true,
       cell: (article) => {
         const Icon = articleTypeIcon(article.type);
         const href = itemHref({ id: article.id, kind: "page", title: article.title, link: null }, space.key);

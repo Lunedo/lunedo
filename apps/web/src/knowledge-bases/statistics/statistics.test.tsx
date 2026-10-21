@@ -65,6 +65,27 @@ describe("the search statistics", () => {
     );
   });
 
+  it("lets terms and article titles shrink so that counts and actions stay in view", async () => {
+    mockApi({ [`GET /api/v1/spaces/${SPACE_ID}/statistics`]: () => ({ body: statistics }) });
+    await renderWithProviders(inSpace(<StatisticsScreen />, "editor", vi.fn()));
+    await screen.findByText("20%");
+    for (const [name, column] of [
+      ["Searches without results", "Search term"],
+      ["Most frequent search terms", "Search term"],
+      ["Rated as not helpful", "Article"],
+      ["Most read", "Article"],
+    ] as const) {
+      const table = screen.getByRole("table", { name });
+      expect(within(table).getByRole("columnheader", { name: column }).className).toContain("max-w-0");
+    }
+    const unhelpful = screen.getByRole("table", { name: "Rated as not helpful" });
+    expect(
+      within(unhelpful)
+        .getByRole("button", { name: /Read 1 note/ })
+        .closest(".hidden"),
+    ).toBeNull();
+  });
+
   it("lets admins delete a note after asking", async () => {
     const api = mockApi({
       [`GET /api/v1/spaces/${SPACE_ID}/statistics`]: () => ({ body: statistics }),

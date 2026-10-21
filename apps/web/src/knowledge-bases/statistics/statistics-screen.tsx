@@ -236,6 +236,7 @@ export function StatisticsScreen() {
     {
       key: "term",
       header: t("statistics.terms.term"),
+      grow: true,
       cell: (row) => (
         <span className="block truncate font-mono text-sm" title={row.term}>
           {row.term}
@@ -288,6 +289,7 @@ export function StatisticsScreen() {
     {
       key: "article",
       header: t("statistics.articles.article"),
+      grow: true,
       cell: (row) => <ArticleCell article={row.article} spaceKey={space.key} />,
     },
     {
@@ -297,7 +299,7 @@ export function StatisticsScreen() {
       cell: (row) => (
         <span className="flex flex-col items-end">
           <Count>{percent(share(row.unhelpful, row.helpful + row.unhelpful))}</Count>
-          <span className="text-xs text-text-muted tabular-nums">
+          <span className="text-xs whitespace-nowrap text-text-muted tabular-nums">
             {t("statistics.articles.ofRatings", {
               count: row.helpful + row.unhelpful,
               no: format.number(row.unhelpful),
@@ -334,6 +336,7 @@ export function StatisticsScreen() {
     {
       key: "article",
       header: t("statistics.articles.article"),
+      grow: true,
       cell: (row) => <ArticleCell article={row.article} spaceKey={space.key} />,
     },
     {

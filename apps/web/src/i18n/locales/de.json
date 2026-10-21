@@ -9811,14 +9811,7 @@
       "emptyTitle": "In dieser Auswahl ist nichts fällig",
       "emptyDescription": "Neue Fälligkeiten erscheinen hier und auf „Für dich“.",
       "hint": "Hier stehen nur Artikel, die du bearbeiten darfst. „Als geprüft markieren“ setzt die letzte Überprüfung auf heute, ohne eine Version anzulegen. Bei einer veralteten Übersetzung bestätigt es, dass sie noch zum Original passt.",
-      "article": "Artikel",
-      "owner": "Verantwortlich",
-      "interval": "Intervall",
-      "lastReviewed": "Zuletzt geprüft",
-      "state": "Fälligkeit",
-      "actions": "Aktionen",
       "publishedOn": "Veröffentlicht {date}",
-      "never": "Nie",
       "noOwner": "Niemand",
       "ownerLeft": "Niemand ({name} ist nicht mehr dabei)",
       "assignOwner": "Verantwortlich festlegen",
@@ -9833,7 +9826,10 @@
       "offTitle": "Die Überprüfung ist aus",
       "offDescription": "Artikel erscheinen hier, wenn sie ein Überprüfungsintervall haben und fällig werden, wenn sich eine Quellseite ändert oder wenn sie keine Verantwortlichen haben. Lege das Intervall in den Einstellungen der Wissensdatenbank fest.",
       "openSettings": "Überprüfungsintervall festlegen",
-      "translationOutdatedHint": "Übersetzung ({language}) veraltet"
+      "translationOutdatedHint": "Übersetzung ({language}) veraltet",
+      "lastReviewedOn": "Geprüft am {date}",
+      "neverReviewed": "Nie geprüft",
+      "markArticle": "Als geprüft markieren: {title}"
     },
     "settings": {
       "tab": "Überprüfung",

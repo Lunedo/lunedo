@@ -101,12 +101,31 @@ function DomainsSection() {
     {
       key: "domain",
       header: t("portals.domains.domain"),
-      cell: (row) => <span className="font-mono">{row.domain}</span>,
+      grow: true,
+      cell: (row) => {
+        const details = `${row.organizationName} · ${row.spaceName ?? t("portals.domains.unused")}`;
+        return (
+          <span className="flex min-w-0 flex-col">
+            <span className="truncate font-mono" title={row.domain}>
+              {row.domain}
+            </span>
+            <span className="truncate text-xs text-text-muted md:hidden" title={details}>
+              {details}
+            </span>
+          </span>
+        );
+      },
     },
-    { key: "organization", header: t("portals.domains.organization"), cell: (row) => row.organizationName },
+    {
+      key: "organization",
+      header: t("portals.domains.organization"),
+      hideBelow: "md",
+      cell: (row) => row.organizationName,
+    },
     {
       key: "usedBy",
       header: t("portals.domains.usedBy"),
+      hideBelow: "md",
       cell: (row) => row.spaceName ?? <span className="text-text-muted">{t("portals.domains.unused")}</span>,
     },
     {

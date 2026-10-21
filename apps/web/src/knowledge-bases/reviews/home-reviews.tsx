@@ -1,7 +1,8 @@
 import { Badge, Button, Section } from "@pagehall/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { CalendarCheck, Check } from "lucide-react";
+import { CalendarCheck, Check, FilePen } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LoadError } from "../../errors/failure.js";
 import { itemHref } from "../../spaces/item-paths.js";
@@ -13,6 +14,18 @@ export function DueForReview() {
   const { t } = useTranslation();
   const reviews = useQuery({ ...homeReviewsQuery(), throwOnError: false });
   const review = useReviewAction();
+  const buttons = useRef(new Map<string, HTMLButtonElement>());
+  const section = useRef<HTMLUListElement>(null);
+  const [focusAfter, setFocusAfter] = useState<{ id: string; next: string | null } | null>(null);
+  useEffect(() => {
+    if (!focusAfter || review.busy) return;
+    const target =
+      buttons.current.get(focusAfter.id) ??
+      (focusAfter.next ? buttons.current.get(focusAfter.next) : undefined) ??
+      section.current;
+    target?.focus();
+    setFocusAfter(null);
+  }, [focusAfter, review.busy]);
   if (reviews.isError) {
     return (
       <div className="md:col-span-2">
@@ -29,13 +42,18 @@ export function DueForReview() {
     <div className="md:col-span-2">
       <Section title={t("reviews.home.title")} icon={CalendarCheck}>
         <p className="px-4 py-2 text-sm text-text-muted">{t("reviews.home.description")}</p>
-        <ul className="flex flex-col">
-          {items.map((item) => {
+        <ul
+          ref={section}
+          tabIndex={-1}
+          aria-label={t("reviews.home.title")}
+          className="flex flex-col focus-visible:focus-ring"
+        >
+          {items.map((item, index) => {
             const Icon = articleTypeIcon(item.type);
             const href =
               itemHref({ id: item.id, kind: "page", title: item.title, link: null }, item.spaceKey) ?? "";
             return (
-              <li key={item.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-2 py-1">
+              <li key={item.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-2 py-2">
                 <Icon aria-hidden="true" className="size-icon shrink-0 text-text-muted" />
                 <span className="flex min-w-0 flex-1 flex-col">
                   <Link
@@ -48,14 +66,28 @@ export function DueForReview() {
                   <span className="truncate text-xs text-text-muted" title={item.spaceName}>
                     {item.spaceName}
                   </span>
+                  {item.sourceChangedAt ? (
+                    <span className="inline-flex min-w-0 items-center gap-1 text-xs text-warning">
+                      <FilePen aria-hidden="true" className="size-3 shrink-0" />
+                      <span className="truncate">{t("reviews.list.sourceChangedHint")}</span>
+                    </span>
+                  ) : null}
                 </span>
                 <ReviewStatus timing={{ ...item, reviewedAt: null, publishedAt: null }} now={now} fixed />
                 <Button
+                  ref={(element) => {
+                    if (element) buttons.current.set(item.id, element);
+                    else buttons.current.delete(item.id);
+                  }}
                   size="sm"
                   variant="secondary"
                   icon={Check}
                   loading={review.busy === item.id}
-                  onClick={() => void review.run(item.id, item.title)}
+                  aria-label={t("reviews.list.markArticle", { title: item.title })}
+                  onClick={() => {
+                    const next = items[index + 1]?.id ?? items[index - 1]?.id ?? null;
+                    void review.run(item.id, item.title).then(() => setFocusAfter({ id: item.id, next }));
+                  }}
                 >
                   {t("reviews.markReviewed")}
                 </Button>

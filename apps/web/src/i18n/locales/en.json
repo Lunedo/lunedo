@@ -9811,14 +9811,7 @@
       "emptyTitle": "Nothing due in this selection",
       "emptyDescription": "New due dates appear here and on “For you”.",
       "hint": "Only articles you may edit are listed. “Mark as reviewed” sets the last review to today without creating a version. For an outdated translation it confirms that the translation still matches its original.",
-      "article": "Article",
-      "owner": "Owner",
-      "interval": "Interval",
-      "lastReviewed": "Last reviewed",
-      "state": "Due",
-      "actions": "Actions",
       "publishedOn": "Published {date}",
-      "never": "Never",
       "noOwner": "Nobody",
       "ownerLeft": "Nobody ({name} left)",
       "assignOwner": "Set owner",
@@ -9833,7 +9826,10 @@
       "offTitle": "Reviews are off",
       "offDescription": "Articles appear here when they have a review interval and become due, when a source page changes or when they have no owner. Set an interval in the settings of the knowledge base.",
       "openSettings": "Set review interval",
-      "translationOutdatedHint": "{language} translation outdated"
+      "translationOutdatedHint": "{language} translation outdated",
+      "lastReviewedOn": "Reviewed {date}",
+      "neverReviewed": "Never reviewed",
+      "markArticle": "Mark as reviewed: {title}"
     },
     "settings": {
       "tab": "Review",
