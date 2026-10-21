@@ -1077,6 +1077,7 @@
     "exports": "Exports",
     "announcements": "Announcements",
     "storage": "Storage",
+    "backups": "Backups",
     "rendering": "Rendering",
     "embeds": "External embeds",
     "portals": "Knowledge base portals"
@@ -1531,6 +1532,9 @@
     },
     "storageFull": "Storage is almost full. Your instance administrator has been informed. Try again once space has been freed up.",
     "invalidStorageSettings": "The storage settings are not valid. Check the marked fields and try again.",
+    "invalidBackupSettings": "The backup settings are not valid. Check the marked fields and try again.",
+    "backupRunning": "A backup or test restore is already running. Wait until it is done and try again.",
+    "backupNotFound": "The backup is not in the target anymore. Reload the list.",
     "tooManyPagesToPrint": "Browsers print up to 300 pages at once. Export as Word or HTML instead, or as PDF on the server if your administrator set up the render container.",
     "tooManyPagesForFile": "Word and PDF files can hold up to 1,000 pages. Export as an HTML or Markdown archive instead, or export a smaller part.",
     "renderUnavailable": "PDF on the server needs the render container, which is not set up or not reachable. Print the PDF through your browser instead, or ask your instance administrator.",
@@ -2619,6 +2623,10 @@
       "importsAndExports": "Imports and exports",
       "storageLevelReached": "File store fills up",
       "storageLevelCleared": "File store usage falls",
+      "backupFailed": "A backup fails",
+      "backupMissing": "No recent backup",
+      "backupRecovered": "Backups work again",
+      "backupTestRestoreFailed": "A test restore fails",
       "copies": "Copies I made",
       "reviews": "Article reviews"
     },
@@ -2710,6 +2718,12 @@
       "storage": {
         "levelReached": "{level, select, 1 {The file store is {percent, number, ::.0} % full. Nothing is blocked yet.} 2 {The file store is {percent, number, ::.0} % full. New exports and imports are refused.} other {The file store is {percent, number, ::.0} % full. Uploads are refused too.}}",
         "levelCleared": "{level, select, 0 {The file store usage is back to normal ({percent, number, ::.0} %).} 1 {The file store usage fell to {percent, number, ::.0} %. Exports, imports and uploads work again.} other {The file store usage fell to {percent, number, ::.0} %. Uploads work again; new exports and imports are still refused.}}"
+      },
+      "backup": {
+        "failed": "{reminder, select, true {Reminder: backups still fail.} other {A backup failed.}} {reason}",
+        "missing": "There has been no successful backup for {days, plural, one {# day} other {# days}}. Check the schedule, the target and the latest runs.",
+        "recovered": "Backups work again. The last backup succeeded.",
+        "testRestoreFailed": "The test restore of {backupName} failed: {reason}"
       },
       "copy": {
         "finished": "Your copy {itemTitle} is ready in the space {spaceKey}.",
@@ -3730,6 +3744,17 @@
         "graphChanged": "Microsoft Graph e-mail settings changed",
         "credentialAdded": "E-mail credential added",
         "credentialRemoved": "E-mail credential removed"
+      },
+      "backup": {
+        "settingsChanged": "Backup settings changed",
+        "targetChanged": "Backup target changed",
+        "keyConfirmed": "Backup key storage confirmed",
+        "requested": "Backup started by hand",
+        "created": "Backup created",
+        "failed": "Backup failed",
+        "deleted": "Backup deleted",
+        "testRestoreStarted": "Test restore started",
+        "testRestoreFinished": "Test restore finished"
       },
       "storage": {
         "contactsChanged": "Operations contacts changed"
@@ -9234,6 +9259,234 @@
         "invalidTeamsWebhook": "This webhook address cannot be used. Copy the full address from the Teams workflow and try again.",
         "invalidThresholds": "The levels must be whole percentages that rise: warning, then large writes, then critical.",
         "invalidS3Limit": "The limit must be a positive size."
+      }
+    }
+  },
+  "backups": {
+    "title": "Backups",
+    "description": "Back up the database, the file store and the configuration on a schedule, keep generations and check that backups can be restored.",
+    "failures": {
+      "load": "The backup settings could not be loaded",
+      "list": "The list of backups could not be loaded",
+      "testRestore": "The test restore could not be started",
+      "delete": "The backup could not be deleted"
+    },
+    "errors": {
+      "invalidTime": "Enter the time as hours and minutes, for example 02:30.",
+      "invalidDay": "Choose a day from the list.",
+      "invalidCount": "Enter a whole number in the allowed range.",
+      "invalidScope": "Choose what the backups contain.",
+      "invalidPath": "Enter an absolute path inside the container, for example /var/lib/pagehall/backups.",
+      "reservedPath": "This path holds the file store, the secrets or the import folder. Choose a directory of its own.",
+      "invalidEndpoint": "Enter only the address of the service, starting with https://, for example https://s3.example.org.",
+      "invalidRegion": "Enter the region, for example eu-central-1, or auto for Cloudflare R2.",
+      "invalidBucket": "Enter the bucket name: 3 to 63 lowercase letters, digits, dots, hyphens or underscores.",
+      "invalidPrefix": "Leave the prefix empty or end it with a slash, for example pagehall/.",
+      "invalidAccessKey": "Enter the access key.",
+      "secretKeyRequired": "Enter the secret key.",
+      "noTarget": "Set up a backup target first. Backups can be turned on once Pagehall knows where to write them.",
+      "range": "Enter a whole number from {min} to {max}."
+    },
+    "status": {
+      "title": "Status",
+      "failingTitle": "Backups fail",
+      "failingUnknown": "The last backup failed. Check the target and the latest runs below.",
+      "missingTitle": "No recent backup",
+      "missingBody": "No backup has succeeded for {count, plural, one {# day} other {# days}}. Check the schedule and the target.",
+      "lastSuccess": "Last successful backup",
+      "at": "{relative} ({time})",
+      "never": "None yet",
+      "lastFailure": "Last failed backup",
+      "nextRun": "Next scheduled backup",
+      "nextRunAt": "{time} ({zone})",
+      "noSchedule": "Scheduled backups are off",
+      "running": "A backup is running",
+      "backUpNow": "Back up now",
+      "started": "The backup has started. It appears in the list when it is done."
+    },
+    "key": {
+      "title": "Backup key",
+      "warningTitle": "A backup cannot be restored without this key",
+      "warning": "Backups are encrypted with the backup key (PAGEHALL_BACKUP_KEY, or backup-keys in the secrets directory). Keep a copy of the backup key and the master keys outside this server, for example in a password manager. Backups never contain the keys.",
+      "confirm": "The backup key is stored outside Pagehall",
+      "confirmedBy": "Confirmed on {date} by {name}.",
+      "confirmedAt": "Confirmed on {date}.",
+      "notConfirmed": "Not confirmed yet."
+    },
+    "target": {
+      "title": "Target",
+      "noneTitle": "No target set up",
+      "none": "Choose where backups are written. Until then, backups before updates go to the default directory of the container.",
+      "kind": "Where backups are written",
+      "local": "Directory",
+      "localDescription": "A directory inside the container. Mount a network share (NFS, SMB) there to keep backups on another machine.",
+      "s3": "S3-compatible storage",
+      "s3Description": "Amazon S3, Google Cloud Storage, MinIO, Cloudflare R2 and other S3-compatible services.",
+      "path": "Directory",
+      "pathHint": "Absolute path inside the container. It must be writable by the container user.",
+      "sameVolumeTitle": "On the same disk as the file store",
+      "sameVolume": "This directory is on the same volume as the file store, so one disk failure loses both. Mount a separate disk or a network share, or use S3-compatible storage.",
+      "endpoint": "Endpoint",
+      "endpointHint": "Address of the service. Leave it empty for Amazon S3.",
+      "region": "Region",
+      "regionHint": "For example eu-central-1. Cloudflare R2 uses auto.",
+      "bucket": "Bucket",
+      "bucketHint": "The bucket must exist.",
+      "prefix": "Prefix",
+      "prefixHint": "Optional folder for the backups, ending with a slash.",
+      "accessKey": "Access key",
+      "accessKeyHint": "The key needs permission to write, read, list and delete objects.",
+      "secretKey": "Secret key",
+      "secretKeyStored": "A secret key is stored. Leave the field empty to keep it, or enter a new one to replace it.",
+      "secretKeyHint": "Stored encrypted and never shown again.",
+      "pathStyle": "Address the bucket in the path",
+      "pathStyleHint": "Needed by MinIO and some other services.",
+      "test": "Test connection",
+      "testOk": "Pagehall wrote, read, listed and deleted a test object. The target works.",
+      "save": "Save target",
+      "steps": {
+        "write": "Writing",
+        "read": "Reading",
+        "delete": "Deleting",
+        "list": "Listing"
+      },
+      "failures": {
+        "notFound": "{step} failed: the directory does not exist in the container. Create it or mount the volume there.",
+        "permission": "{step} failed: Pagehall is not allowed to. Give the container user, or the access key, permission to write, read, list and delete.",
+        "readOnly": "{step} failed: the file system is mounted read-only. Mount it writable.",
+        "full": "{step} failed: the target is full. Free up space or choose another target.",
+        "dns": "{step} failed: the host name of the endpoint could not be resolved. Check the endpoint.",
+        "blockedAddress": "{step} failed: the endpoint is in a private network. If it should be reached, add its address to PAGEHALL_OUTBOUND_ALLOWED_NETWORKS.",
+        "insecureAddress": "{step} failed: public endpoints need HTTPS. Use an https:// address.",
+        "connection": "{step} failed: the endpoint could not be reached. Check the address, the port and the firewall.",
+        "tls": "{step} failed: the TLS certificate of the endpoint is not trusted. Check the certificate or the address.",
+        "credentials": "{step} failed: the access key or the secret key was not accepted. Check both keys.",
+        "bucket": "{step} failed: the bucket does not exist or is in another region. Check the bucket and the region.",
+        "mismatch": "{step} failed: the test object came back changed. Check the storage service.",
+        "other": "{step} failed: the storage service refused the request. Check the settings and the logs of the service."
+      }
+    },
+    "schedule": {
+      "title": "Schedule",
+      "enabled": "Back up every day",
+      "enabledHint": "Runs once a day on the worker. A run that would overlap a running backup is skipped and listed.",
+      "time": "Time",
+      "timeHint": "In the time zone of the instance: {zone}.",
+      "weekly": "Weekly backup",
+      "weeklyHint": "The backup of this day is kept as a weekly one.",
+      "noWeekly": "No weekly backups",
+      "monthly": "Monthly backup",
+      "monthlyHint": "The backup of this day is kept as a monthly one. In shorter months the last day is used.",
+      "noMonthly": "No monthly backups",
+      "dayOfMonth": "Day {day}"
+    },
+    "retention": {
+      "title": "Retention",
+      "description": "Pagehall deletes only backups it created in this target, never other files. A backup kept as a monthly one does not count as a daily one. Manual backups are kept until you delete them.",
+      "daily": "Daily backups",
+      "dailyHint": "Number to keep.",
+      "weekly": "Weekly backups",
+      "weeklyHint": "Number to keep.",
+      "monthly": "Monthly backups",
+      "monthlyHint": "Number to keep.",
+      "beforeUpdate": "Backups before updates",
+      "beforeUpdateHint": "Number to keep."
+    },
+    "updates": {
+      "title": "Before updates",
+      "environmentTitle": "Turned off for this installation",
+      "environment": "PAGEHALL_BACKUP_BEFORE_UPDATE=false is set, so Pagehall starts without a backup when migrations are pending. Remove the variable to use this setting.",
+      "enabled": "Back up before migrations",
+      "enabledHint": "When a new version starts with pending migrations, it first writes a backup to the target and waits for it.",
+      "defaultTarget": "When a new version starts with pending migrations, it first writes a backup to the default directory of the container, because no target is set up."
+    },
+    "advanced": {
+      "title": "Advanced options",
+      "scope": "Content",
+      "scopeAll": "Everything",
+      "scopeAllHint": "Database, file store and configuration.",
+      "scopeDatabase": "Without the file store",
+      "scopeDatabaseHint": "For installations that snapshot the file store volume themselves. A restore then brings back the database only; restore the file store from your snapshot of the same time, or attachments go missing.",
+      "missingDays": "Warn after days without a backup",
+      "missingDaysHint": "Instance administrators and the operations contacts are told once.",
+      "autoTestRestore": "Test-restore the newest backup every month",
+      "autoTestRestoreHint": "After the first scheduled backup of a month, Pagehall restores it into a temporary database and checks it.",
+      "contacts": "Warnings go to the instance administrators and to the operations contacts set in the storage settings, with the same reminder."
+    },
+    "test": {
+      "title": "Test restore",
+      "states": {
+        "running": "Running",
+        "passed": "Passed",
+        "verified": "Verified only",
+        "failed": "Failed"
+      },
+      "startedBy": "Started {time} by {name}.",
+      "startedAutomatically": "Started {time} by the monthly schedule.",
+      "checks": {
+        "verify": "Backup is complete and readable",
+        "privilege": "Temporary database could not be created",
+        "restore": "Restored into a temporary database",
+        "schemaVersion": "Schema version matches",
+        "rows": "Main tables contain data",
+        "files": "Every referenced file is present"
+      },
+      "filesNotIncluded": "The backup does not contain the file store.",
+      "filesMissing": "{count, plural, one {# file is} other {# files are}} missing.",
+      "privilege": "A full test restore needs a database user that may create databases. Run this as a database superuser:",
+      "copyGrant": "Copy SQL"
+    },
+    "classes": {
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "manual": "Manual",
+      "beforeUpdate": "Before update"
+    },
+    "list": {
+      "title": "Backups in the target",
+      "scheduled": "Scheduled backups",
+      "manual": "Manual backups",
+      "beforeUpdate": "Backups before updates",
+      "created": "Created",
+      "class": "Kind",
+      "size": "Size",
+      "version": "Version",
+      "unreadable": "Unreadable",
+      "testRestore": "Test restore",
+      "notTested": "Not tested",
+      "actions": "Actions",
+      "actionsFor": "Actions for {name}",
+      "runTestRestore": "Test restore",
+      "showTestRestore": "Show test restore result",
+      "delete": "Delete backup",
+      "unavailableTitle": "The target could not be read",
+      "emptyTitle": "No backups yet",
+      "empty": "Backups appear here once the first one is written. Use Back up now to create one."
+    },
+    "delete": {
+      "title": "Delete this backup?",
+      "description": "The backup is removed from the target and cannot be restored anymore. This cannot be undone.",
+      "confirm": "Delete backup",
+      "keep": "Keep backup"
+    },
+    "banner": {
+      "open": "Open the backup settings",
+      "failing": {
+        "title": "Backups fail",
+        "body": "The last backup failed. Open the backup settings to see why."
+      },
+      "missing": {
+        "title": "No recent backup",
+        "body": "No backup has succeeded for {count, plural, one {# day} other {# days}}."
+      },
+      "off": {
+        "title": "Backups are off",
+        "body": "This instance has content but no scheduled backups. Turn them on in the backup settings."
+      },
+      "noTarget": {
+        "title": "Backups are not set up",
+        "body": "This instance has content but no backup target. Set one up in the backup settings."
       }
     }
   },
