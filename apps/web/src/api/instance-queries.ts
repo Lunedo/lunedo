@@ -16,6 +16,7 @@ export const instanceKeys = {
   address: ["instance", "address"] as const,
   storage: ["instance", "storage"] as const,
   rendering: ["instance", "rendering"] as const,
+  operationsStatus: ["instance", "operations", "status"] as const,
 };
 
 export const instanceAddressQuery = queryOptions({
@@ -93,3 +94,11 @@ export const renderingQuery = queryOptions({
 });
 
 export type RenderingStatus = Awaited<ReturnType<NonNullable<(typeof renderingQuery)["queryFn"]>>>;
+
+export const operationsStatusQuery = queryOptions({
+  queryKey: instanceKeys.operationsStatus,
+  queryFn: () => request(() => api.GET("/api/v1/instance/operations/status")),
+});
+
+export type OperationsStatus = Awaited<ReturnType<NonNullable<(typeof operationsStatusQuery)["queryFn"]>>>;
+export type OperationsStatusItem = OperationsStatus["items"][number];

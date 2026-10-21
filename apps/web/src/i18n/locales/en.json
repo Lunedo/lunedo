@@ -1079,7 +1079,8 @@
     "storage": "Storage",
     "rendering": "Rendering",
     "embeds": "External embeds",
-    "portals": "Knowledge base portals"
+    "portals": "Knowledge base portals",
+    "systemStatus": "System status"
   },
   "commands": {
     "label": "Command palette",
@@ -10049,6 +10050,159 @@
       "loadFailed": "The portals could not be loaded",
       "emptyTitle": "No portal to read",
       "emptyDescription": "Your access may have ended. Ask the people who invited you."
+    }
+  },
+  "operations": {
+    "status": {
+      "title": "System status",
+      "description": "Checks of the instance: database, storage, jobs, backups, search, recent errors and the setup checks. Refreshes every minute.",
+      "refresh": "Check again",
+      "loadFailed": "the system status",
+      "checks": "Checks",
+      "checkedAt": "Checked {time}",
+      "openSettings": "Open settings",
+      "documentation": "Documentation",
+      "unknownItem": "Check {id}",
+      "levels": {
+        "ok": "OK",
+        "warning": "Warning",
+        "error": "Error"
+      },
+      "summary": {
+        "okTitle": "Everything is working",
+        "ok": "All checks passed.",
+        "warningTitle": "Some checks need attention",
+        "errorTitle": "Some checks failed",
+        "counts": "{errors, plural, one {# error} other {# errors}} and {warnings, plural, one {# warning} other {# warnings}}. Each check below says what to do."
+      },
+      "queues": {
+        "title": "Job queues",
+        "queue": "Queue",
+        "queued": "Waiting",
+        "active": "Running",
+        "deferred": "Scheduled",
+        "failed": "Failed",
+        "empty": "No jobs are waiting, running or failed."
+      },
+      "errors": {
+        "title": "Recent errors",
+        "description": "Error events from the logs of the last 24 hours, by type. They never contain content or personal data; the full entries are in the container logs.",
+        "type": "Event",
+        "services": "Process",
+        "count": "Count",
+        "lastAt": "Last",
+        "empty": "No errors were logged in the last 24 hours."
+      },
+      "items": {
+        "version": {
+          "label": "Version",
+          "ok": "Pagehall {version}"
+        },
+        "database": {
+          "label": "Database",
+          "ok": "PostgreSQL {version}, {sizeBytes}",
+          "reasons": {
+            "unreachable": "The database does not answer. Check PAGEHALL_DATABASE_URL and that PostgreSQL runs.",
+            "migrationsPending": "The database schema is older than this version. Restart Pagehall so it applies the migrations."
+          }
+        },
+        "storage": {
+          "label": "File storage",
+          "ok": "{usedBytes} of {totalBytes} used ({percent})",
+          "reasons": {
+            "noLimit": "S3 storage reports no free space, so usage is measured only once you set a limit.",
+            "warning": "{percent} of the file store is used. Free space or enlarge the volume before writes are paused.",
+            "largeWritesPaused": "{percent} used: new exports and imports are refused. Free space or enlarge the volume.",
+            "critical": "{percent} used: uploads are refused. Free space or enlarge the volume now."
+          }
+        },
+        "jobs": {
+          "label": "Background jobs",
+          "ok": "{queued} waiting, {active} running",
+          "reasons": {
+            "failedJobs": "{failed, plural, one {# job} other {# jobs}} failed after all attempts. The queues below show where; the worker's container logs show why.",
+            "backlog": "{queued, plural, one {# job is} other {# jobs are}} waiting. Check that the worker runs and is not overloaded.",
+            "unreachable": "The job queue could not be read. Check the database connection and the worker's logs."
+          }
+        },
+        "collaboration": {
+          "label": "Collaboration server",
+          "ok": "The collaboration server answers.",
+          "reasons": {
+            "unavailable": "The collaboration server does not answer, so nobody can edit. Check that it runs and PAGEHALL_COLLAB_UPSTREAM.",
+            "notChecked": "Not checked by this process."
+          }
+        },
+        "backups": {
+          "label": "Backups",
+          "ok": "Last successful backup {lastSuccessAt}.",
+          "reasons": {
+            "commandOnly": "Backups run only with the backup command. Schedule it outside Pagehall until scheduled backups are set up.",
+            "noTarget": "No backup target is set up. Set one up so that backups can run.",
+            "off": "Scheduled backups are off. Turn them on, or make sure your own backups cover the database and the files.",
+            "failed": "The last backup failed: {lastFailureReason}. Check the target and run a backup again.",
+            "noRecentBackup": "There has been no successful backup in the last two days. Check the schedule and the target.",
+            "beforeUpdateOff": "Backups work, but backups before updates are off."
+          }
+        },
+        "searchIndex": {
+          "label": "Search index",
+          "ok": "Up to date, {pendingItems, plural, one {# item} other {# items}} waiting.",
+          "reasons": {
+            "building": "The index is being rebuilt: {done} of {total} items. Search results are incomplete until then.",
+            "failingItems": "{failingItems, plural, one {# item} other {# items}} could not be indexed and {failingItems, plural, one {is} other {are}} retried. The worker's logs show why."
+          }
+        },
+        "recentErrors": {
+          "label": "Recent errors",
+          "ok": "No errors in the last {hours} hours.",
+          "reasons": {
+            "errorsLogged": "{count, plural, one {# error} other {# errors}} of {types, plural, one {# type} other {# types}} in the last {hours} hours. See the list below."
+          }
+        },
+        "tls": {
+          "label": "HTTPS",
+          "ok": "{url} uses HTTPS.",
+          "reasons": {
+            "instanceUrlNotSet": "No instance address is set. Set it so that links in e-mails work.",
+            "instanceUrlNotHttps": "{url} does not use HTTPS. Put Pagehall behind a reverse proxy with TLS and change the address."
+          }
+        },
+        "email": {
+          "label": "E-mail",
+          "ok": "E-mails are delivered.",
+          "reasons": {
+            "notConfigured": "E-mail is not set up, so invitations and notifications are not sent.",
+            "deliveryFailing": "The last delivery failed ({lastFailureCode}). Check the mail settings and send a test mail."
+          }
+        },
+        "encryption": {
+          "label": "Encryption",
+          "ok": "Master key version {currentVersion} is loaded.",
+          "reasons": {
+            "masterKeyMissing": "The master key is not loaded. Check the key settings and restart.",
+            "keysNotBackedUp": "The master keys are stored only in the secrets volume, and their backup was not confirmed. Copy the secrets directory to a safe place.",
+            "rotationRunning": "Master key version {currentVersion} is loaded; a key rotation is running."
+          }
+        },
+        "clock": {
+          "label": "Clock",
+          "ok": "The clocks of Pagehall and the database match.",
+          "reasons": {
+            "offset": "The clocks of Pagehall and the database differ by {offsetMs} ms. Synchronize both hosts with NTP.",
+            "unknown": "The time of the database could not be read. Check the database connection."
+          }
+        },
+        "fileStorage": {
+          "label": "File directory",
+          "ok": "{freeBytes} free in {path}",
+          "reasons": {
+            "missing": "{path} does not exist. Create it with the command below.",
+            "notWritable": "Pagehall cannot write to {path}. Change the owner with the command below.",
+            "lowSpace": "Only {freeBytes} are free in {path}. Free space or enlarge the volume."
+          }
+        }
+      }
     }
   }
 }

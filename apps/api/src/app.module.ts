@@ -17,6 +17,7 @@ import { IdentityModule } from "./identity/identity.module.js";
 import { ImportsModule } from "./imports/imports.module.js";
 import { MetricsController } from "./metrics/metrics.controller.js";
 import { NotificationsModule } from "./notifications/notifications.module.js";
+import { OperationsModule } from "./operations/operations.module.js";
 import { OrganizationsModule } from "./organizations/organizations.module.js";
 import { SearchModule } from "./search/search.module.js";
 import { SetupModule } from "./setup/setup.module.js";
@@ -51,6 +52,7 @@ export class AppModule {
               ImportsModule,
               ExportsModule,
               StorageModule,
+              OperationsModule,
               SharingModule,
               SearchModule,
             ]

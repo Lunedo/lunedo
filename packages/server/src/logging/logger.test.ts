@@ -2,7 +2,7 @@ import { Writable } from "node:stream";
 import { DrizzleQueryError } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { runWithRequestContext } from "../observability/request-context.js";
-import { createLogger } from "./logger.js";
+import { createLogger, loggedErrorOf, OTHER_ERROR_TYPE } from "./logger.js";
 
 function capture() {
   const lines: Record<string, unknown>[] = [];
@@ -86,5 +86,43 @@ describe("request IDs", () => {
     expect(line).not.toContain("portal_searches");
     expect(line).not.toContain("ShareLock");
     expect(lines[0]).toMatchObject({ err: { message: "Failed query", cause: { code: "40P01" } } });
+  });
+});
+
+describe("error events", () => {
+  it("reports error and fatal events with their fixed text and code", () => {
+    const { destination } = capture();
+    const events: unknown[] = [];
+    const logger = createLogger({
+      service: "api",
+      level: "info",
+      destination,
+      onError: (event) => events.push(event),
+    });
+    logger.warn("Not counted");
+    logger.error({ err: Object.assign(new Error("boom"), { code: "ECONNRESET" }) }, "Request failed");
+    logger.child({ module: "jobs" }).fatal("Shutdown failed");
+    expect(events).toEqual([
+      { type: "Request failed", code: "ECONNRESET" },
+      { type: "Shutdown failed", code: null },
+    ]);
+  });
+
+  it("counts texts that could contain data as other errors", () => {
+    expect(loggedErrorOf(["Import 0192f3 failed"])).toEqual({ type: OTHER_ERROR_TYPE, code: null });
+    expect(loggedErrorOf([{}, "Mail to anna@example.org failed"])).toEqual({
+      type: OTHER_ERROR_TYPE,
+      code: null,
+    });
+    expect(loggedErrorOf([{}, "Cannot read /var/lib/pagehall"])).toEqual({
+      type: OTHER_ERROR_TYPE,
+      code: null,
+    });
+    expect(loggedErrorOf([{}, 'Page "Salaries" failed'])).toEqual({ type: OTHER_ERROR_TYPE, code: null });
+    expect(loggedErrorOf([{ err: { code: "a b@c", name: "TypeError" } }, "Request failed"])).toEqual({
+      type: "Request failed",
+      code: "TypeError",
+    });
+    expect(loggedErrorOf([{ err: new Error("x") }])).toEqual({ type: OTHER_ERROR_TYPE, code: "Error" });
   });
 });

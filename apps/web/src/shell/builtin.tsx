@@ -244,6 +244,15 @@ navigationItems.register(
     shortcut: ["G", "A"],
   },
   {
+    id: "instance.status",
+    order: 5,
+    section: "instance",
+    icon: Activity,
+    labelKey: "navigation.systemStatus",
+    to: `${INSTANCE}/status`,
+    permission: "instance.operations.view",
+  },
+  {
     id: "instance.general",
     order: 10,
     section: "instance",

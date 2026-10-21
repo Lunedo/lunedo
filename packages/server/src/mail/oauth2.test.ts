@@ -292,6 +292,9 @@ describe.skipIf(!baseUrl)("SMTP with OAuth2", () => {
       responseCode: 401,
       step: "token",
     });
+    expect(await mail.deliveryState()).toMatchObject({ failedAttempts: 1, failedMessages: 0 });
+    await mail.deliver(testJobContext(deliverMailJob.name, { mailId }, deliverMailJob.retryLimit));
+    expect(await mail.deliveryState()).toMatchObject({ failedAttempts: 2, failedMessages: 1 });
 
     const test2 = await runWithRequestContext({ requestId: "t", actor: { type: "anonymous" } }, () =>
       mail.sendTest("admin@example.org", "en"),

@@ -105,6 +105,10 @@
       "description": ""
     },
     {
+      "name": "Operations",
+      "description": ""
+    },
+    {
       "name": "Organizations",
       "description": "Organizations, their domains and break-glass access."
     },
@@ -113872,6 +113876,373 @@
                       "title": "This endpoint needs a signed-in session",
                       "status": 403,
                       "code": "sessionRequired"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/instance/operations/status": {
+      "get": {
+        "operationId": "operations.status",
+        "summary": "Get the status of the instance",
+        "description": "Runs the operations checks: version, database, file storage, job queues, collaboration server, backups, search index, recent errors, and the setup checks for TLS, e-mail, encryption, clock and the file directory. Each item says `ok`, `warning` or `error` with a reason code and where it is fixed.\n\nRequires the permission `instance.operations.view` on the instance.",
+        "tags": [
+          "Operations"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.operations.view",
+          "resource": "instance"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The status items.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "checkedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the checks ran."
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ok",
+                        "warning",
+                        "error"
+                      ],
+                      "description": "The worst status of all items."
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "enum": [
+                              "version",
+                              "database",
+                              "storage",
+                              "jobs",
+                              "collaboration",
+                              "backups",
+                              "searchIndex",
+                              "recentErrors",
+                              "tls",
+                              "email",
+                              "encryption",
+                              "clock",
+                              "fileStorage"
+                            ],
+                            "description": "What the item checks. New items can be added in later versions; clients show unknown items with their status and documentation link."
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "ok",
+                              "warning",
+                              "error"
+                            ],
+                            "description": "`ok`, `warning` or `error`."
+                          },
+                          "reason": {
+                            "description": "A stable code for the reason of a warning or error, or a note on an item that is ok, for example `noLimit`. Null when there is nothing to say.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "facts": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "type": [
+                                "string",
+                                "number",
+                                "boolean",
+                                "null"
+                              ]
+                            },
+                            "description": "Values the item measured, such as sizes in bytes, counts and times. They never contain content or personal data."
+                          },
+                          "page": {
+                            "description": "Path of the settings page where the cause is fixed, or null.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "docs": {
+                            "type": "string",
+                            "description": "Documentation page and section that explains the item."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "status",
+                          "reason",
+                          "facts",
+                          "page",
+                          "docs"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "The checked items in a fixed order."
+                    },
+                    "queues": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "queue": {
+                            "type": "string",
+                            "description": "Name of the job queue."
+                          },
+                          "queued": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Jobs waiting to run."
+                          },
+                          "active": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Jobs running now."
+                          },
+                          "deferred": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Jobs scheduled for later."
+                          },
+                          "failed": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Jobs that failed after all attempts and are still kept."
+                          }
+                        },
+                        "required": [
+                          "queue",
+                          "queued",
+                          "active",
+                          "deferred",
+                          "failed"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Job queues that have jobs in any state."
+                    },
+                    "recentErrors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "description": "The fixed text of the error-level log event. Texts that could contain data are counted as `Other error`."
+                          },
+                          "code": {
+                            "description": "Error code or class name, if the event carried one.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "services": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Processes that logged it: `api`, `worker` or `collab`."
+                          },
+                          "count": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "How often it was logged."
+                          },
+                          "lastAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "When it was logged last."
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "code",
+                          "services",
+                          "count",
+                          "lastAt"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Error-level log events of the last 24 hours by type, newest first, at most 50 types."
+                    }
+                  },
+                  "required": [
+                    "checkedAt",
+                    "status",
+                    "items",
+                    "queues",
+                    "recentErrors"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The status of the instance."
+                },
+                "example": {
+                  "checkedAt": "2026-10-21T08:00:00.000Z",
+                  "status": "warning",
+                  "items": [
+                    {
+                      "id": "version",
+                      "status": "ok",
+                      "reason": null,
+                      "facts": {
+                        "version": "1.4.2"
+                      },
+                      "page": null,
+                      "docs": "operations.md#updates"
+                    },
+                    {
+                      "id": "storage",
+                      "status": "warning",
+                      "reason": "warning",
+                      "facts": {
+                        "store": "local",
+                        "usedBytes": 86000000000,
+                        "totalBytes": 100000000000,
+                        "percent": 86,
+                        "level": 1
+                      },
+                      "page": "/settings/instance/storage",
+                      "docs": "storage.md"
+                    }
+                  ],
+                  "queues": [
+                    {
+                      "queue": "mail.deliver",
+                      "queued": 2,
+                      "active": 1,
+                      "deferred": 0,
+                      "failed": 0
+                    }
+                  ],
+                  "recentErrors": [
+                    {
+                      "type": "Request failed",
+                      "code": "ECONNRESET",
+                      "services": [
+                        "api"
+                      ],
+                      "count": 3,
+                      "lastAt": "2026-10-21T07:42:10.000Z"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
                     }
                   }
                 }

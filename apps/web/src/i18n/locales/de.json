@@ -1079,7 +1079,8 @@
     "storage": "Speicher",
     "rendering": "Rendering",
     "embeds": "Externe Einbettungen",
-    "portals": "Wissensdatenbank-Portale"
+    "portals": "Wissensdatenbank-Portale",
+    "systemStatus": "Systemstatus"
   },
   "commands": {
     "label": "Befehlspalette",
@@ -10049,6 +10050,159 @@
       "loadFailed": "Die Portale konnten nicht geladen werden",
       "emptyTitle": "Kein Portal zum Lesen",
       "emptyDescription": "Dein Zugang ist vielleicht abgelaufen. Frag die Personen, die dich eingeladen haben."
+    }
+  },
+  "operations": {
+    "status": {
+      "title": "Systemstatus",
+      "description": "Prüfungen der Instanz: Datenbank, Speicher, Jobs, Backups, Suche, letzte Fehler und die Einrichtungsprüfungen. Wird jede Minute aktualisiert.",
+      "refresh": "Erneut prüfen",
+      "loadFailed": "den Systemstatus",
+      "checks": "Prüfungen",
+      "checkedAt": "Geprüft {time}",
+      "openSettings": "Einstellungen öffnen",
+      "documentation": "Dokumentation",
+      "unknownItem": "Prüfung {id}",
+      "levels": {
+        "ok": "OK",
+        "warning": "Warnung",
+        "error": "Fehler"
+      },
+      "summary": {
+        "okTitle": "Alles funktioniert",
+        "ok": "Alle Prüfungen sind bestanden.",
+        "warningTitle": "Einige Prüfungen brauchen Aufmerksamkeit",
+        "errorTitle": "Einige Prüfungen sind fehlgeschlagen",
+        "counts": "{errors, plural, one {# Fehler} other {# Fehler}} und {warnings, plural, one {# Warnung} other {# Warnungen}}. Jede Prüfung unten sagt, was zu tun ist."
+      },
+      "queues": {
+        "title": "Job-Warteschlangen",
+        "queue": "Warteschlange",
+        "queued": "Wartend",
+        "active": "Laufend",
+        "deferred": "Geplant",
+        "failed": "Fehlgeschlagen",
+        "empty": "Keine Jobs warten, laufen oder sind fehlgeschlagen."
+      },
+      "errors": {
+        "title": "Letzte Fehler",
+        "description": "Fehlerereignisse aus den Logs der letzten 24 Stunden, nach Art. Sie enthalten nie Inhalte oder personenbezogene Daten; die vollständigen Einträge stehen in den Container-Logs.",
+        "type": "Ereignis",
+        "services": "Prozess",
+        "count": "Anzahl",
+        "lastAt": "Zuletzt",
+        "empty": "In den letzten 24 Stunden wurden keine Fehler protokolliert."
+      },
+      "items": {
+        "version": {
+          "label": "Version",
+          "ok": "Pagehall {version}"
+        },
+        "database": {
+          "label": "Datenbank",
+          "ok": "PostgreSQL {version}, {sizeBytes}",
+          "reasons": {
+            "unreachable": "Die Datenbank antwortet nicht. Prüfe PAGEHALL_DATABASE_URL und ob PostgreSQL läuft.",
+            "migrationsPending": "Das Datenbankschema ist älter als diese Version. Starte Pagehall neu, damit die Migrationen laufen."
+          }
+        },
+        "storage": {
+          "label": "Dateispeicher",
+          "ok": "{usedBytes} von {totalBytes} belegt ({percent})",
+          "reasons": {
+            "noLimit": "S3-Speicher meldet keinen freien Platz, deshalb wird die Belegung erst mit einem Limit gemessen.",
+            "warning": "{percent} des Dateispeichers sind belegt. Gib Platz frei oder vergrößere das Volume, bevor Schreibvorgänge pausieren.",
+            "largeWritesPaused": "{percent} belegt: Neue Exporte und Importe werden abgelehnt. Gib Platz frei oder vergrößere das Volume.",
+            "critical": "{percent} belegt: Uploads werden abgelehnt. Gib sofort Platz frei oder vergrößere das Volume."
+          }
+        },
+        "jobs": {
+          "label": "Hintergrund-Jobs",
+          "ok": "{queued} wartend, {active} laufend",
+          "reasons": {
+            "failedJobs": "{failed, plural, one {# Job ist} other {# Jobs sind}} nach allen Versuchen fehlgeschlagen. Die Warteschlangen unten zeigen, wo; die Container-Logs des Workers zeigen, warum.",
+            "backlog": "{queued, plural, one {# Job wartet} other {# Jobs warten}}. Prüfe, ob der Worker läuft und nicht überlastet ist.",
+            "unreachable": "Die Job-Warteschlange konnte nicht gelesen werden. Prüfe die Datenbankverbindung und die Logs des Workers."
+          }
+        },
+        "collaboration": {
+          "label": "Kollaborationsserver",
+          "ok": "Der Kollaborationsserver antwortet.",
+          "reasons": {
+            "unavailable": "Der Kollaborationsserver antwortet nicht, deshalb kann niemand bearbeiten. Prüfe, ob er läuft, und PAGEHALL_COLLAB_UPSTREAM.",
+            "notChecked": "Von diesem Prozess nicht geprüft."
+          }
+        },
+        "backups": {
+          "label": "Backups",
+          "ok": "Letztes erfolgreiches Backup {lastSuccessAt}.",
+          "reasons": {
+            "commandOnly": "Backups laufen nur mit dem Backup-Befehl. Plane ihn außerhalb von Pagehall ein, bis geplante Backups eingerichtet sind.",
+            "noTarget": "Es ist kein Backup-Ziel eingerichtet. Richte eines ein, damit Backups laufen können.",
+            "off": "Geplante Backups sind aus. Schalte sie ein oder stelle sicher, dass deine eigenen Backups Datenbank und Dateien abdecken.",
+            "failed": "Das letzte Backup ist fehlgeschlagen: {lastFailureReason}. Prüfe das Ziel und starte erneut ein Backup.",
+            "noRecentBackup": "In den letzten zwei Tagen gab es kein erfolgreiches Backup. Prüfe Zeitplan und Ziel.",
+            "beforeUpdateOff": "Backups funktionieren, aber Backups vor Updates sind aus."
+          }
+        },
+        "searchIndex": {
+          "label": "Suchindex",
+          "ok": "Aktuell, {pendingItems, plural, one {# Eintrag} other {# Einträge}} wartend.",
+          "reasons": {
+            "building": "Der Index wird neu aufgebaut: {done} von {total} Einträgen. Bis dahin sind Suchergebnisse unvollständig.",
+            "failingItems": "{failingItems, plural, one {# Eintrag konnte} other {# Einträge konnten}} nicht indiziert werden und {failingItems, plural, one {wird} other {werden}} erneut versucht. Die Logs des Workers zeigen, warum."
+          }
+        },
+        "recentErrors": {
+          "label": "Letzte Fehler",
+          "ok": "Keine Fehler in den letzten {hours} Stunden.",
+          "reasons": {
+            "errorsLogged": "{count, plural, one {# Fehler} other {# Fehler}} von {types, plural, one {# Art} other {# Arten}} in den letzten {hours} Stunden. Siehe die Liste unten."
+          }
+        },
+        "tls": {
+          "label": "HTTPS",
+          "ok": "{url} verwendet HTTPS.",
+          "reasons": {
+            "instanceUrlNotSet": "Es ist keine Instanzadresse gesetzt. Setze sie, damit Links in E-Mails funktionieren.",
+            "instanceUrlNotHttps": "{url} verwendet kein HTTPS. Betreibe Pagehall hinter einem Reverse Proxy mit TLS und ändere die Adresse."
+          }
+        },
+        "email": {
+          "label": "E-Mail",
+          "ok": "E-Mails werden zugestellt.",
+          "reasons": {
+            "notConfigured": "E-Mail ist nicht eingerichtet, deshalb werden Einladungen und Benachrichtigungen nicht verschickt.",
+            "deliveryFailing": "Die letzte Zustellung ist fehlgeschlagen ({lastFailureCode}). Prüfe die Mail-Einstellungen und sende eine Testmail."
+          }
+        },
+        "encryption": {
+          "label": "Verschlüsselung",
+          "ok": "Hauptschlüssel Version {currentVersion} ist geladen.",
+          "reasons": {
+            "masterKeyMissing": "Der Hauptschlüssel ist nicht geladen. Prüfe die Schlüsseleinstellungen und starte neu.",
+            "keysNotBackedUp": "Die Hauptschlüssel liegen nur im Secrets-Volume, und ihre Sicherung wurde nicht bestätigt. Kopiere das Secrets-Verzeichnis an einen sicheren Ort.",
+            "rotationRunning": "Hauptschlüssel Version {currentVersion} ist geladen; eine Schlüsselrotation läuft."
+          }
+        },
+        "clock": {
+          "label": "Uhrzeit",
+          "ok": "Die Uhren von Pagehall und der Datenbank stimmen überein.",
+          "reasons": {
+            "offset": "Die Uhren von Pagehall und der Datenbank weichen um {offsetMs} ms ab. Synchronisiere beide Hosts mit NTP.",
+            "unknown": "Die Uhrzeit der Datenbank konnte nicht gelesen werden. Prüfe die Datenbankverbindung."
+          }
+        },
+        "fileStorage": {
+          "label": "Dateiverzeichnis",
+          "ok": "{freeBytes} frei in {path}",
+          "reasons": {
+            "missing": "{path} existiert nicht. Lege es mit dem Befehl unten an.",
+            "notWritable": "Pagehall kann nicht in {path} schreiben. Ändere den Besitzer mit dem Befehl unten.",
+            "lowSpace": "In {path} sind nur {freeBytes} frei. Gib Platz frei oder vergrößere das Volume."
+          }
+        }
+      }
     }
   }
 }

@@ -49,6 +49,7 @@ import { copyNotificationTypes } from "./copies/notifications.js";
 import type { Encryption } from "./crypto/envelope.js";
 import type { KeyRing } from "./crypto/key-ring.js";
 import type { KeyRingHolder } from "./crypto/key-ring-holder.js";
+import type { KeyRotation } from "./crypto/rotation.js";
 import type { Database } from "./database/database.js";
 import type { DatabasePool } from "./database/pool.js";
 import { DiagramService } from "./diagrams/diagrams.js";
@@ -148,6 +149,10 @@ import { NotificationService } from "./notifications/service.js";
 import { builtinNotificationTypes } from "./notifications/types.js";
 import { UnsubscribeService } from "./notifications/unsubscribe.js";
 import { WatchService } from "./notifications/watches.js";
+import { type BackupStatusSource, commandOnlyBackups } from "./operations/backup-status.js";
+import { removeOldErrorEvents } from "./operations/error-events.js";
+import { REMOVE_OLD_ERROR_EVENTS_SCHEDULE, removeOldErrorEventsJob } from "./operations/jobs.js";
+import { type CollaborationProbe, OperationsStatusService } from "./operations/status.js";
 import { BreakGlassService } from "./organizations/break-glass.js";
 import { GroupService } from "./organizations/groups.js";
 import { HomeOrganizationService } from "./organizations/home.js";
@@ -345,6 +350,7 @@ export interface AccountServices {
   exports: ExportService;
   copies: CopyService;
   rendering: RenderService;
+  operations: OperationsStatusService;
 }
 
 export function createAccountServices(options: {
@@ -374,6 +380,10 @@ export function createAccountServices(options: {
   chatPolicy?: OutboundPolicy;
   pushPolicy?: OutboundPolicy;
   nodeId?: string;
+  keyRotation?: KeyRotation | undefined;
+  keyProvider?: "env" | "file";
+  backups?: BackupStatusSource;
+  collaborationProbe?: CollaborationProbe;
 }): AccountServices {
   const { database, settings, audit, encryption, jobs, logger } = options;
   const hasher = new PasswordHasher({
@@ -1020,7 +1030,25 @@ export function createAccountServices(options: {
       configuredInstanceUrl: options.configuredInstanceUrl,
     }),
   );
+  const operations = new OperationsStatusService({
+    database,
+    pool: options.pool,
+    settings,
+    storage,
+    mail,
+    indexer: search.indexer,
+    keyRing: options.keyRing,
+    keyRotation: options.keyRotation,
+    jobs,
+    backups: options.backups ?? commandOnlyBackups,
+    collaboration: options.collaborationProbe,
+    filesDir: options.filesDir,
+    fileStore: files.store.kind,
+    keyProvider: options.keyProvider ?? "file",
+    configuredInstanceUrl: options.configuredInstanceUrl,
+  });
   return {
+    operations,
     push,
     chatChannels,
     watches,
@@ -1248,6 +1276,12 @@ export async function workAccountJobs(
     }
     if (removed > 0) job.logger.info({ removed }, "Expired exports removed");
   });
+  await jobs.work(removeOldErrorEventsJob, async (job) => {
+    job.logger.debug(
+      { removed: await removeOldErrorEvents(services.operations.database) },
+      "Old error counts removed",
+    );
+  });
   await jobs.work(storageCheckJob, async () => {
     await services.storage.check();
   });
@@ -1319,6 +1353,7 @@ export async function workAccountJobs(
   await jobs.schedule(dispatchPendingMailJob, DISPATCH_PENDING_MAIL_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(trashRetentionJob, TRASH_RETENTION_SCHEDULE, {}, { key: "hourly" });
   await jobs.schedule(fileCleanupJob, FILE_CLEANUP_SCHEDULE, {}, { key: "hourly" });
+  await jobs.schedule(removeOldErrorEventsJob, REMOVE_OLD_ERROR_EVENTS_SCHEDULE, {}, { key: "daily" });
   await jobs.schedule(storageCheckJob, STORAGE_CHECK_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(storageReconcileJob, STORAGE_RECONCILE_SCHEDULE, {}, { key: "daily" });
   await jobs.schedule(importWatchdogJob, IMPORT_WATCHDOG_SCHEDULE, {}, { key: "regular" });

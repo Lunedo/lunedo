@@ -163,6 +163,7 @@ export {
   watches,
   watchState,
 } from "../notifications/schema.js";
+export { operationsErrorEvents } from "../operations/schema.js";
 export {
   breakGlassAccesses,
   builtInRole,

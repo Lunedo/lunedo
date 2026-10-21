@@ -38,7 +38,7 @@ interface CheckHelp {
   docs: string;
 }
 
-async function checkDatabaseAndClock(
+export async function checkDatabaseAndClock(
   pool: DatabasePool,
 ): Promise<[CheckHelp & Record<string, unknown>, CheckHelp & Record<string, unknown>]> {
   try {

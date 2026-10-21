@@ -617,6 +617,10 @@ export async function createCollabServer(options: {
     extensions: [pagehall, ...(redis ? [redis] : [])],
   });
   const instance = server.hocuspocus;
+  endpoints.metrics.observeCollaboration(() => ({
+    connections: instance.getConnectionsCount(),
+    documents: instance.getDocumentsCount(),
+  }));
 
   const timer = setInterval(() => {
     scheduleRecheck("interval");

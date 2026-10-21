@@ -671,6 +671,34 @@ export {
   type RequestContext,
   runWithRequestContext,
 } from "./observability/request-context.js";
+export {
+  type BackupStatus,
+  type BackupStatusSource,
+  commandOnlyBackups,
+} from "./operations/backup-status.js";
+export {
+  ErrorEvents,
+  type RecentErrorType,
+  recentErrorTypes,
+  removeOldErrorEvents,
+} from "./operations/error-events.js";
+export {
+  type OperationsStatus,
+  OperationsStatusService,
+  type QueueStatus,
+  type StatusItem,
+  type StatusItemId,
+  type StatusLevel,
+  statusItemIds,
+} from "./operations/status.js";
+export {
+  compareVersions,
+  DEVELOPMENT_VERSION,
+  formatVersion,
+  pagehallVersion,
+  parseReleaseVersion,
+  type ReleaseVersion,
+} from "./operations/version.js";
 export type { BreakGlassAccess } from "./organizations/break-glass.js";
 export { breakGlassReasonSchema } from "./organizations/break-glass.js";
 export type { Group, GroupDetails, GroupMember } from "./organizations/groups.js";
