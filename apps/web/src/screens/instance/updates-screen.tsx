@@ -33,7 +33,7 @@ function NotesList({ notes }: { notes: Notes }) {
     <div className="flex flex-col gap-3">
       {groups.map((group) => {
         const list = (
-          <ul className="flex list-disc flex-col gap-1 pl-5 text-sm">
+          <ul key={`${group}-entries`} className="flex list-disc flex-col gap-1 pl-5 text-sm">
             {notes[group].map((entry) => (
               <li key={entry} className="wrap-anywhere whitespace-pre-line">
                 {entry}

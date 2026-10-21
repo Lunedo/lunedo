@@ -262,8 +262,7 @@ export class OperationsStatusService {
     const version = this.#version;
     const links = { page: `${INSTANCE_PAGE}/updates`, docs: "operations.md#updates" };
     const updates = await this.#updates?.status();
-    if (!updates || !updates.enabled)
-      return item("version", "ok", updates ? "checkOff" : null, { version }, links);
+    if (!updates?.enabled) return item("version", "ok", updates ? "checkOff" : null, { version }, links);
     const facts = {
       version,
       latest: updates.latest,

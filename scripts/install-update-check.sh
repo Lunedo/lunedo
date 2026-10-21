@@ -123,7 +123,10 @@ check "the page is untouched" \
   test "$(psql_in "select count(*) from tree_items where title = 'Written before the update'")" = "1"
 
 echo "Following the documented rollback"
-rollback_backup="$(ls -t "$directory"/backups/before-update-*.phbak | head -n 1)"
+rollback_backup=""
+for candidate in "$directory"/backups/before-update-*.phbak; do
+  if [ -z "$rollback_backup" ] || [ "$candidate" -nt "$rollback_backup" ]; then rollback_backup="$candidate"; fi
+done
 compose stop pagehall >/dev/null
 sed -i.bak "s#^    image: $broken\$#    image: $current#" "$directory/compose.yml"
 compose run --rm -T pagehall backup restore --input "/var/lib/pagehall/backups/$(basename "$rollback_backup")" --force
