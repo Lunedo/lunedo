@@ -624,6 +624,13 @@
       "when": 1792575464178,
       "tag": "0088_published_slug_history",
       "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "7",
+      "when": 1792575795269,
+      "tag": "0089_restricted_tombstones",
+      "breakpoints": true
     }
   ]
 }

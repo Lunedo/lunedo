@@ -266,6 +266,12 @@ describe.skipIf(!databaseBaseUrl)("knowledge base articles for programs", () => 
     expect(restricted.statusCode, restricted.body).toBe(200);
     const removed = await published(kb, "Alt", "Veraltet");
     expect((await owner.delete(`/api/v1/items/${removed.id}`)).statusCode).toBeLessThan(300);
+    const confidential = await published(kb, "Sozialplan", "Nur für HR");
+    const closed = await owner.post(`/api/v1/pages/${confidential.id}/access`, {
+      changes: [{ action: "restrict", kind: "view" }],
+    });
+    expect(closed.statusCode, closed.body).toBe(200);
+    expect((await owner.delete(`/api/v1/items/${confidential.id}`)).statusCode).toBeLessThan(300);
     const changes = await client.get(
       `/api/v1/spaces/${kb}/article-changes?changedSince=${encodeURIComponent(start)}&limit=1`,
       bearer(publishing.token),

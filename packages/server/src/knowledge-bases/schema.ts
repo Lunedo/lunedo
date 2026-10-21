@@ -286,6 +286,7 @@ export const articleSync = pgTable(
     changedAt: timestampColumn().notNull().defaultNow(),
     removedAt: timestampColumn(),
     removedReason: text(),
+    removedRestricted: boolean().notNull().default(false),
   },
   (table) => [
     primaryKey({ columns: [table.spaceId, table.itemId] }),
