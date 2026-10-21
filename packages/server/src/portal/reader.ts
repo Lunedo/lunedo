@@ -492,6 +492,19 @@ export class PortalReader {
     return row ? { name: row.name, email: row.email ?? "", type: row.type } : null;
   }
 
+  async admits(principal: Principal, config: PortalConfig): Promise<boolean> {
+    if (config.audience === "public") return true;
+    if (principal.type !== "account") return false;
+    if (await this.#authorization.authorize(principal, "space.view", { type: "space", id: config.spaceId })) {
+      return true;
+    }
+    const result = await this.#database.execute<{ found: boolean }>(sql`
+      select exists (select 1 from tree_items t join spaces s on s.id = t.space_id
+        where t.space_id = ${config.spaceId} and t.kind in ('page', 'folder')
+          and ${this.#authorization.portalFilter(principal, sql`t`, sql`s`)}) as found`);
+    return result.rows[0]?.found ?? false;
+  }
+
   async seesSpaces(principal: Principal): Promise<boolean> {
     if (principal.type !== "account") return false;
     const result = await this.#database.execute<{ found: boolean }>(sql`

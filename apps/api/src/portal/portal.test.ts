@@ -292,6 +292,36 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect(hidden.statusCode).toBe(404);
     expect(missing.statusCode).toBe(404);
     expect(comparable(hidden.body)).toBe(comparable(missing.body));
+    const startPage = await outsider.client.get(`${kb.path}/`);
+    const unknownPortal = await outsider.client.get(`/help/unknown-${counter}x/`);
+    expect(startPage.statusCode).toBe(404);
+    expect(startPage.body).toBe(unknownPortal.body);
+    expect((await member.client.get(`${kb.path}/`)).statusCode).toBe(200);
+  });
+
+  it("lists only free domains and the own domain to a knowledge base", async () => {
+    const first = await knowledgeBase("signedIn");
+    const second = await knowledgeBase("signedIn");
+    const used = `used${counter}.example.org`;
+    const free = `free${counter}.example.org`;
+    for (const domain of [used, free]) {
+      expect((await owner.post("/api/v1/instance/portal-domains", { domain, organizationId })).statusCode).toBe(201);
+    }
+    const set = await owner.put(`/api/v1/spaces/${first.id}/knowledge-base/portal/address`, {
+      path: first.path.slice("/help/".length),
+      domain: used,
+    });
+    expect(set.statusCode, set.body).toBe(200);
+    const listed = (await owner.get(`/api/v1/spaces/${second.id}/knowledge-base/portal/domains`)).json() as {
+      domain: string;
+      spaceName: string | null;
+    }[];
+    expect(listed.map((entry) => entry.domain)).toContain(free);
+    expect(listed.map((entry) => entry.domain)).not.toContain(used);
+    const own = (await owner.get(`/api/v1/spaces/${first.id}/knowledge-base/portal/domains`)).json() as {
+      domain: string;
+    }[];
+    expect(own.map((entry) => entry.domain)).toContain(used);
   });
 
   it("lets portal accounts read a knowledge base for portal accounts but never internal spaces", async () => {

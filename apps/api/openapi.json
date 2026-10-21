@@ -220965,7 +220965,7 @@
       "get": {
         "operationId": "portal.spaceDomains",
         "summary": "List the domains a portal can use",
-        "description": "Domains the instance administrators allowed for the organization of the knowledge base.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
+        "description": "Domains the instance administrators allowed for the organization of the knowledge base that are free or used by this knowledge base. Domains of other knowledge bases are left out.\n\nRequires the permission `space.manage` on the space in `spaceId`.",
         "tags": [
           "Knowledge bases"
         ],

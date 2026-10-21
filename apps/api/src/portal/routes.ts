@@ -490,6 +490,7 @@ async function route(
     }
     return signInScreen(reply, services, target, viewer, new URLSearchParams({ return: request.url }), false);
   }
+  if (!(await services.portalReader.admits(viewer.principal, config))) return bareNotFound(reply);
   const view = await buildView(services, target, viewer);
   if (rest === "/" || rest === "") return start(reply, services, target, viewer, view);
   if (rest === "/search") return search(request, reply, services, target, viewer, view, query);
