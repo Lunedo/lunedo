@@ -67,6 +67,45 @@ describe.skipIf(!baseUrl)("publish and live modes with versions", () => {
     return page;
   }
 
+  it("keeps a draft note only with the draft it was written for", async () => {
+    const context = await setup();
+    const page = await publishedPage(context, "Notiz", "Erste Fassung");
+    const draftNote = async (note: string | null) => {
+      await test.pool.query("update page_documents set draft_note = $1 where item_id = $2", [note, page.id]);
+    };
+    const noteOf = async (number: number) => {
+      const found = await test.pool.query<{ note: string | null }>(
+        "select note from page_versions where item_id = $1 and number = $2",
+        [page.id, number],
+      );
+      return found.rows[0]?.note ?? "";
+    };
+    await test.services.documents.replace(
+      context.editor,
+      page.id,
+      documentWith(paragraph("Vom Assistenten")),
+    );
+    await draftNote("Geprüft von Anna Huber");
+    await test.services.versions.discard(context.editor, page.id);
+    await test.services.documents.replace(context.editor, page.id, documentWith(paragraph("Tippfehler")));
+    const afterDiscard = await test.services.versions.publish(context.editor, page.id);
+    expect(await noteOf(afterDiscard.version)).toBe("");
+    await test.services.documents.replace(context.editor, page.id, documentWith(paragraph("Wieder")));
+    await draftNote("Geprüft von Anna Huber");
+    await test.services.versions.restore(context.editor, page.id, 1);
+    const afterRestore = await test.services.versions.publish(context.editor, page.id);
+    expect(await noteOf(afterRestore.version)).toBe("");
+    await test.services.documents.replace(context.editor, page.id, documentWith(paragraph("Geplant")));
+    await draftNote("Geprüft von Anna Huber");
+    const published = await test.services.versions.publish(context.editor, page.id, { note: "Eigene Notiz" });
+    expect(await noteOf(published.version)).toBe("Eigene Notiz");
+    const left = await test.pool.query<{ draft_note: string | null }>(
+      "select draft_note from page_documents where item_id = $1",
+      [page.id],
+    );
+    expect(left.rows[0]?.draft_note).toBeNull();
+  });
+
   describe("readers never see the draft", () => {
     it("hides a new page in publish mode from readers until its first publication", async () => {
       const context = await setup();
