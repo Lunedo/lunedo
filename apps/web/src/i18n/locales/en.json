@@ -9945,11 +9945,11 @@
   "portalAccounts": {
     "tab": "Portal accounts",
     "title": "Portal accounts",
-    "description": "Readers without a company account sign in with their e-mail address and a password or passkey. They see only the portal of the organization's knowledge bases for portal accounts, never the wiki.",
+    "description": "Readers without a company account sign in with their e-mail address and a password or passkey. They see only the portals of the knowledge bases they were invited to, never the wiki.",
     "notForPortalTitle": "This knowledge base is not for portal accounts",
     "notForPortal": "Portal accounts read only knowledge bases whose audience is portal accounts. Change the audience to invite readers here.",
     "toVisibility": "Open Visibility",
-    "adminsOnly": "Only space admins manage portal accounts.",
+    "managersOnly": "Only people who manage the organization's members invite and manage portal accounts. Ask an organization administrator.",
     "loadFailed": "The portal accounts could not be loaded",
     "accounts": "Readers",
     "invitations": "Open invitations",

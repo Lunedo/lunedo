@@ -596,6 +596,13 @@
       "when": 1792505830911,
       "tag": "0084_kb_languages_export_api",
       "breakpoints": true
+    },
+    {
+      "idx": 85,
+      "version": "7",
+      "when": 1792573138272,
+      "tag": "0085_portal_readers",
+      "breakpoints": true
     }
   ]
 }

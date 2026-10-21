@@ -21,6 +21,7 @@ export interface SearchViewer {
   tokens: string[];
   personalTokens: string[];
   listedRestrictions: string[];
+  portalTokens?: string[];
   spaceIds?: readonly string[] | null;
 }
 
@@ -35,7 +36,7 @@ export function readerTokens(item: SQL, space: SQL, minimum: ReadLevel): SQL {
       ? sql`union all select 'members:' || ${space}.organization_id where ${space}.visibility = 'organization'
         union all select 'internal' where ${space}.visibility = 'instance'
         union all select '${sql.raw(PUBLIC_TOKEN)}' where ${space}.type = 'knowledgeBase' and ${space}.audience = 'public'
-        union all select 'portal:' || ${space}.organization_id
+        union all select 'portal:' || ${space}.id
           where ${space}.type = 'knowledgeBase' and ${space}.audience = 'portal'`
       : sql``;
   return sql`array(select distinct token from (
@@ -82,6 +83,7 @@ export async function loadViewer(
     member: boolean;
     groups: string[];
     listed: string[];
+    portal_spaces: string[];
   }>(sql`
     select a.type, ${membership(sql``)} as in_organization, ${membership(sql`and m.kind = 'member'`)} as member,
       array(select gm.group_id::text from group_members gm
@@ -91,7 +93,10 @@ export async function loadViewer(
         join tree_items t on t.id = r.item_id join spaces s on s.id = t.space_id
         where r.kind = 'view' and (s.organization_id = ${organization} or s.personal_of is not null)
           and ${restrictionListedCondition(sql`r`, sql`a.id`, sql`s.organization_id`)}
-        order by r.item_id) as listed
+        order by r.item_id) as listed,
+      array(select pr.space_id::text from portal_readers pr join spaces ps on ps.id = pr.space_id
+        where pr.account_id = a.id and ps.organization_id = ${organization}
+        order by pr.space_id) as portal_spaces
     from accounts a where a.id = ${principal.id} and a.state = 'active'`);
   const row = result.rows[0];
   if (!row) return null;
@@ -105,6 +110,7 @@ export async function loadViewer(
   if (row.type === "standard") shared.push("internal");
   const tokens = [...(row.in_organization ? own : []), ...shared];
   if (row.member) tokens.push(`members:${organizationId}`);
+  const portalTokens = portal && row.in_organization ? row.portal_spaces.map((space) => `portal:${space}`) : [];
   const personalTokens = token?.organizationId ? [] : [...own, ...shared];
   return {
     accountId: principal.id,
@@ -114,6 +120,7 @@ export async function loadViewer(
     tokens,
     personalTokens,
     listedRestrictions: row.listed,
+    portalTokens,
     spaceIds: token?.knowledgeBaseIds ?? null,
   };
 }
@@ -137,16 +144,15 @@ export async function loadPortalViewer(
   if (principal.type !== "account" || principal.token) return null;
   const viewer = await loadViewer(executor, principal, organizationId);
   if (!viewer) return null;
-  const tokens = [...viewer.tokens, PUBLIC_TOKEN];
-  if (viewer.portal && viewer.tokens.includes(`account:${principal.id}`))
-    tokens.push(`portal:${organizationId}`);
+  const tokens = [...viewer.tokens, ...(viewer.portalTokens ?? []), PUBLIC_TOKEN];
   return { ...viewer, knowledgeBaseOnly: true, tokens, personalTokens: [] };
 }
 
 function audienceFloor(viewer: SearchViewer, target: SQL, targetSpace: SQL): SQL {
   const audiences = [sql`${targetSpace}.audience = 'public'`];
-  if (viewer.tokens.includes(`portal:${viewer.organizationId}`))
-    audiences.push(sql`${targetSpace}.audience = 'portal'`);
+  audiences.push(
+    sql`(${targetSpace}.audience = 'portal' and 'portal:' || ${targetSpace}.id = any(${sql.param(viewer.tokens)}::text[]))`,
+  );
   if (!viewer.tokens.includes(PUBLIC_TOKEN)) return sql`false`;
   const unrestricted =
     viewer.accountId === null

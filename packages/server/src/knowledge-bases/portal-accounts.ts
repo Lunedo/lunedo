@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import type { Principal } from "../accounts/principal.js";
 import type { AuditLog } from "../audit/audit-log.js";
-import type { Database } from "../database/database.js";
+import type { Database, Transaction } from "../database/database.js";
 import type { Invitation, InvitationService } from "../organizations/invitations.js";
 import type { MembershipService } from "../organizations/memberships.js";
 import { auditScopeOf, SpaceError } from "../spaces/common.js";
@@ -79,6 +79,7 @@ export class PortalAccountService {
         exists (select 1 from memberships o where o.account_id = a.id
           and o.organization_id <> ${space.organizationId}) as other_organizations
       from accounts a join memberships m on m.account_id = a.id and m.organization_id = ${space.organizationId}
+      join portal_readers pr on pr.account_id = a.id and pr.space_id = ${spaceId}
       where a.type = 'portal' and a.state in ('active', 'deactivated')
       order by lower(a.name), a.id
       limit ${LISTED}`);
@@ -167,11 +168,12 @@ export class PortalAccountService {
     await this.#invitations.revoke(actor, space.organizationId, invitationId);
   }
 
-  async #requirePortalAccount(organizationId: string, accountId: string) {
+  async #requirePortalAccount(organizationId: string, spaceId: string, accountId: string) {
     const found = await this.#database.execute<{ other_organizations: boolean }>(sql`
       select exists (select 1 from memberships o where o.account_id = a.id
           and o.organization_id <> ${organizationId}) as other_organizations
       from accounts a join memberships m on m.account_id = a.id and m.organization_id = ${organizationId}
+      join portal_readers pr on pr.account_id = a.id and pr.space_id = ${spaceId}
       where a.id = ${accountId} and a.type = 'portal'`);
     const row = found.rows[0];
     if (!row) throw new SpaceError("portalAccountNotFound", "The portal account does not exist");
@@ -180,7 +182,7 @@ export class PortalAccountService {
 
   async deactivate(actor: Principal, spaceId: string, accountId: string): Promise<void> {
     const space = await this.#knowledgeBase(spaceId);
-    const account = await this.#requirePortalAccount(space.organizationId, accountId);
+    const account = await this.#requirePortalAccount(space.organizationId, spaceId, accountId);
     if (account.otherOrganizations) {
       throw new SpaceError(
         "portalAccountShared",
@@ -201,6 +203,7 @@ export class PortalAccountService {
     }>(sql`
       select s.id as space_id, s.name, kb.portal_path, kb.portal_domain
       from spaces s join knowledge_bases kb on kb.space_id = s.id
+      join portal_readers pr on pr.space_id = s.id and pr.account_id = ${accountId}
       join memberships m on m.organization_id = s.organization_id and m.account_id = ${accountId}
         and (m.expires_at is null or m.expires_at > now())
       where s.type = 'knowledgeBase' and s.audience = 'portal' and s.deleted_at is null and s.archived_at is null
@@ -214,9 +217,15 @@ export class PortalAccountService {
     }));
   }
 
+  async afterMembershipEnded(tx: Transaction, organizationId: string, accountId: string): Promise<void> {
+    await tx.execute(sql`
+      delete from portal_readers pr using spaces s
+      where s.id = pr.space_id and s.organization_id = ${organizationId} and pr.account_id = ${accountId}`);
+  }
+
   async remove(actor: Principal, spaceId: string, accountId: string): Promise<void> {
     const space = await this.#knowledgeBase(spaceId);
-    await this.#requirePortalAccount(space.organizationId, accountId);
+    await this.#requirePortalAccount(space.organizationId, spaceId, accountId);
     await this.#memberships.remove(actor, space.organizationId, accountId, "removed");
   }
 }

@@ -9945,11 +9945,11 @@
   "portalAccounts": {
     "tab": "Portalkonten",
     "title": "Portalkonten",
-    "description": "Lesende ohne Firmenkonto melden sich mit E-Mail-Adresse und Passwort oder Passkey an. Sie sehen nur das Portal der Wissensdatenbanken der Organisation für Portalkonten, nie das Wiki.",
+    "description": "Lesende ohne Firmenkonto melden sich mit E-Mail-Adresse und Passwort oder Passkey an. Sie sehen nur die Portale der Wissensdatenbanken, zu denen sie eingeladen wurden, nie das Wiki.",
     "notForPortalTitle": "Diese Wissensdatenbank ist nicht für Portalkonten",
     "notForPortal": "Portalkonten lesen nur Wissensdatenbanken mit der Zielgruppe Portalkonten. Ändere die Zielgruppe, um hier Lesende einzuladen.",
     "toVisibility": "Sichtbarkeit öffnen",
-    "adminsOnly": "Nur Space-Admins verwalten Portalkonten.",
+    "managersOnly": "Nur wer die Mitglieder der Organisation verwaltet, lädt Portalkonten ein und verwaltet sie. Frag die Administration der Organisation.",
     "loadFailed": "Die Portalkonten konnten nicht geladen werden",
     "accounts": "Lesende",
     "invitations": "Offene Einladungen",

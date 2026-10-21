@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { PreferencesProvider } from "../preferences/preferences-provider.js";
 import { SpaceContext, type SpaceContextValue } from "../spaces/space-context.js";
 import type { SpaceWithRole } from "../spaces/space-queries.js";
-import { mockApi, renderWithProviders } from "../testing/render.js";
+import { mockApi, problem, renderWithProviders } from "../testing/render.js";
 import { PortalAccountsScreen } from "./settings/portal-accounts-screen.js";
 
 const SPACE_ID = "01929b1e-0000-7000-8000-0000000000b1";
@@ -100,5 +100,15 @@ describe("portal accounts of a knowledge base", () => {
     await renderWithProviders(inSpace(<PortalAccountsScreen />, "signedIn"));
     expect(await screen.findByText("This knowledge base is not for portal accounts")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Invite reader" })).toBeNull();
+  });
+
+  it("tells space admins without member management who manages portal accounts", async () => {
+    mockApi({
+      [`GET /api/v1/spaces/${SPACE_ID}/portal-accounts`]: () => problem(403, "forbidden"),
+    });
+    await renderWithProviders(inSpace(<PortalAccountsScreen />));
+    expect(await screen.findByText(/Only people who manage the organization's members/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Invite reader" })).toBeNull();
+    expect(screen.queryByText("The portal accounts could not be loaded")).toBeNull();
   });
 });

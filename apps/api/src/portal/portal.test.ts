@@ -297,6 +297,10 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
   it("lets portal accounts read a knowledge base for portal accounts but never internal spaces", async () => {
     const reader = await person({ portal: true });
     const kb = await knowledgeBase("portal");
+    await test.runtime.pool.query("insert into portal_readers (space_id, account_id) values ($1, $2)", [
+      kb.id,
+      reader.id,
+    ]);
     const entry = await article(kb.id, null, "Kundenhilfe", "Für Kunden.");
     const internal = await knowledgeBase("signedIn");
     const secret = await article(internal.id, null, "Intern", "Nur intern.");

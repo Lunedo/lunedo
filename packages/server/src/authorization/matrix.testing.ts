@@ -235,6 +235,7 @@ const EXPECTED: Record<string, Expectation> = {
   "space.manage": { scope: "space" },
   "space.trash": { scope: "space" },
   "space.delete": { scope: "space" },
+  "space.portalAccounts.manage": organization("membersAndGroups", "manage"),
   "space.export": { scope: "space" },
   "deletedSpace.restore": { scope: "instance", rule: "formerAdministrator" },
   "item.view": { scope: "space" },

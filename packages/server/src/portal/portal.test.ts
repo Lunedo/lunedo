@@ -156,11 +156,12 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
     const groupMember = await member(org.id);
     const groupId = await group(org.id, [groupMember]);
     const reader = await portalAccount(org.id);
+    const uninvited = await portalAccount(org.id);
     const cases: [KnowledgeBaseAudience, Record<string, boolean>][] = [
-      ["public", { anonymous: true, member: true, outsider: true, groupMember: true, portal: true }],
-      ["signedIn", { anonymous: false, member: true, outsider: true, groupMember: true, portal: false }],
-      ["groups", { anonymous: false, member: false, outsider: false, groupMember: true, portal: false }],
-      ["portal", { anonymous: false, member: false, outsider: false, groupMember: false, portal: true }],
+      ["public", { anonymous: true, member: true, outsider: true, groupMember: true, portal: true, uninvited: true }],
+      ["signedIn", { anonymous: false, member: true, outsider: true, groupMember: true, portal: false, uninvited: false }],
+      ["groups", { anonymous: false, member: false, outsider: false, groupMember: true, portal: false, uninvited: false }],
+      ["portal", { anonymous: false, member: false, outsider: false, groupMember: false, portal: true, uninvited: false }],
     ];
     for (const [audience, expected] of cases) {
       const kb = await knowledgeBase(org.id, org.owner, "signedIn");
@@ -169,6 +170,8 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
         groupIds: audience === "groups" ? [groupId] : [],
         confirmWidening: true,
       });
+      await test.database.execute(sql`
+        insert into portal_readers (space_id, account_id) values (${kb.id}, ${reader})`);
       const article = await publishedPage(org.owner, kb.id, "Artikel", "Text");
       const config = await test.services.portals.config(kb.id);
       if (!config) throw new Error("missing config");
@@ -181,6 +184,9 @@ describe.skipIf(!baseUrl)("knowledge base portal", () => {
         expected.groupMember,
       );
       expect(await readable(accountPrincipal(reader)), `${audience} portal`).toBe(expected.portal);
+      expect(await readable(accountPrincipal(uninvited)), `${audience} uninvited portal`).toBe(
+        expected.uninvited,
+      );
     }
   });
 

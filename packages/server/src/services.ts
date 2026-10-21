@@ -851,6 +851,9 @@ export function createAccountServices(options: {
   memberships.onMembershipEnded((tx, organizationId, accountId) =>
     savedSearches.afterMembershipEnded(tx, organizationId, accountId),
   );
+  memberships.onMembershipEnded((tx, organizationId, accountId) =>
+    portalAccounts.afterMembershipEnded(tx, organizationId, accountId),
+  );
   const meetings = new MeetingService({
     database,
     authorization,

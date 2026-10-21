@@ -309,3 +309,17 @@ export const portalInvitations = pgTable(
   },
   (table) => [index().on(table.spaceId)],
 );
+
+export const portalReaders = pgTable(
+  "portal_readers",
+  {
+    spaceId: uuid()
+      .notNull()
+      .references(() => spaces.id, { onDelete: "cascade" }),
+    accountId: uuid()
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    createdAt: timestampColumn().notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.spaceId, table.accountId] }), index().on(table.accountId)],
+);

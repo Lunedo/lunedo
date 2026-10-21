@@ -191,6 +191,7 @@ export class InvitationService {
           );
         }
       }
+      const portalSpace = options.portal?.spaceId;
       await tx
         .update(invitations)
         .set({ revokedAt: new Date() })
@@ -200,6 +201,10 @@ export class InvitationService {
             sql`lower(${invitations.email}) = lower(${email})`,
             isNull(invitations.acceptedAt),
             isNull(invitations.revokedAt),
+            portalSpace
+              ? sql`exists (select 1 from portal_invitations pi
+                  where pi.invitation_id = ${invitations.id} and pi.space_id = ${portalSpace})`
+              : sql`true`,
           ),
         );
       const [row] = await tx
@@ -449,6 +454,11 @@ export class InvitationService {
           },
           { tx, collect: events },
         );
+      }
+      if (portalSpaceId) {
+        await tx.execute(sql`
+          insert into portal_readers (space_id, account_id) values (${portalSpaceId}, ${accountId})
+          on conflict do nothing`);
       }
       for (const listener of this.#acceptListeners) await listener(tx, invitation.id, accountId);
       events.push({
