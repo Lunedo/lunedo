@@ -341,6 +341,9 @@ class Sanitizer {
     }
     const namespaces = depth === 0 ? ` xmlns="${SVG_NAMESPACE}"` : "";
     const text = inText || TEXT_ELEMENTS.has(name);
+    if (name === "tspan" && ["x", "y", "dy"].some((attribute) => element.hasAttribute(attribute))) {
+      this.#line += " ";
+    }
     const content = this.#children(element, (child) => this.svg(child, depth + 1, text), text);
     if (name === "text") this.#breakLine();
     return `<${name}${namespaces}${attributesOf(element, this.diagram)}>${content}</${name}>`;

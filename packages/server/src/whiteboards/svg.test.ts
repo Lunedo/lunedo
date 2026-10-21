@@ -95,6 +95,17 @@ describe("sanitizeDiagramSvg", () => {
     expect(result).toMatchObject({ text: "Incident reported\nTicket", width: 300, height: 120 });
   });
 
+  it("separates the words of a label that wraps onto several rows", () => {
+    const row = (y: string, word: string) =>
+      `<tspan class="text-outer-tspan row" x="0" y="${y}" dy="1.1em"><tspan class="text-inner-tspan">${word}</tspan></tspan>`;
+    const result = sanitizeDiagramSvg(
+      `<svg ${NS} viewBox="0 0 180 60"><text y="-10.1">${row("-0.1em", "Incident")}${row("1em", "reported")}</text>
+        <text><tspan class="text-inner-tspan">Open</tspan><tspan class="text-inner-tspan"> ticket</tspan></text></svg>`,
+      MAX_PREVIEW_BYTES,
+    );
+    expect(result.text).toBe("Incident reported\nOpen ticket");
+  });
+
   it("keeps simple formatted labels of draw.io and drops everything active in them", () => {
     const result = sanitizeDiagramSvg(
       `<svg ${NS} viewBox="0 0 50 40"><switch><foreignObject requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" width="100%" height="100%">
