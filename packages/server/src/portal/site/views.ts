@@ -342,7 +342,7 @@ export function startPage(
     <div class="pw">
       ${
         empty
-          ? html`<section class="empty" aria-labelledby="empty-heading"><h2 class="h3" id="empty-heading">${t.emptyHeading}</h2><p>${t.emptyText}</p>${when(view.signInUrl, () => html`<p class="row gap-top"><a class="btn primary" href="${view.signInUrl ?? ""}">${icon("log-in")}${t.signIn}</a></p>`)}</section>`
+          ? html`<section class="empty" aria-labelledby="empty-heading"><h2 class="h3" id="empty-heading">${t.emptyHeading}</h2><p>${view.account ? t.emptyTextSignedIn : t.emptyText}</p>${when(view.signInUrl, () => html`<p class="row gap-top"><a class="btn primary" href="${view.signInUrl ?? ""}">${icon("log-in")}${t.signIn}</a></p>`)}</section>`
           : html`
       ${when(
         view.categories.length > 0,
@@ -730,7 +730,7 @@ export function contactPage(view: PortalView, query: string): string {
       <span class="cicon s56" aria-hidden="true">${icon("message-circle-question")}</span>
       <h1>${t.noAnswerHeading}</h1>
       <p class="lead">${t.noAnswerText}</p>
-      <section class="panel" aria-labelledby="area-heading"><h2 id="area-heading">${t.areaHeading}</h2><p>${t.areaText}</p>
+      <section class="panel" aria-labelledby="area-heading"><h2 id="area-heading">${query ? t.areaHeading : t.contactAreaHeading}</h2><p>${query ? t.areaText : t.contactAreaText}</p>
         ${areaChoice(view, query ? t.searchSubject(query) : view.config.name)}</section>
     </div></div>`,
   );

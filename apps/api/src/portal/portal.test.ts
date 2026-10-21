@@ -346,6 +346,12 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect(blocked.statusCode).toBe(404);
     const standard = await person();
     expect((await standard.client.get(`${kb.path}/${entry.number}-kundenhilfe`)).statusCode).toBe(404);
+    const other = await knowledgeBase("public");
+    const empty = await reader.client.get(`${other.path}/`);
+    expect(empty.statusCode).toBe(200);
+    const t = messagesFor((await services().portals.config(other.id))?.defaultLanguage ?? "en");
+    expect(empty.body).toContain(t.emptyTextSignedIn);
+    expect(empty.body).not.toContain(t.emptyText);
   });
 
   it("hides restricted categories and their articles and does not count them", async () => {
@@ -464,6 +470,13 @@ describe.skipIf(!databaseBaseUrl)("knowledge base portal", () => {
     expect(none.body).toContain("mailto:it@example.org?subject=");
     expect(none.body).toContain("mailto:help@example.org?subject=");
     expect(none.body).toContain(encodeURIComponent("Question from the help search: parkausweis"));
+    const t = messagesFor("en");
+    const contact = await anonymous().get(`${kb.path}/contact`);
+    expect(contact.body).toContain(`<h2 id="area-heading">${t.contactAreaHeading}</h2>`);
+    expect(contact.body).not.toContain(t.areaHeading);
+    expect(contact.body).not.toContain(t.areaText);
+    const asked = await anonymous().get(`${kb.path}/contact?q=parkausweis`);
+    expect(asked.body).toContain(`<h2 id="area-heading">${t.areaHeading}</h2>`);
   });
 
   it("records searches, views and ratings without any personal reference", async () => {
