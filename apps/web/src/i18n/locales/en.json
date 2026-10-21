@@ -5410,7 +5410,8 @@
       "adminsOnlyTitle": "Only space admins manage restrictions",
       "adminsOnly": "Ask a space admin if a restricted page needs attention.",
       "whyDescription": "Search a person to see their role in this space and where it comes from."
-    }
+    },
+    "articlesButton": "Articles"
   },
   "tree": {
     "title": "Pages",
@@ -5497,7 +5498,16 @@
     "createLink": "Create link",
     "failed": "The item could not be created",
     "createWhiteboard": "Create whiteboard",
-    "whiteboardTitle": "New whiteboard"
+    "whiteboardTitle": "New whiteboard",
+    "category": {
+      "title": "New category",
+      "create": "Create category",
+      "descriptionHint": "Optional. Readers see it at the top of the category in the portal."
+    },
+    "subcategory": {
+      "title": "New subcategory",
+      "create": "Create subcategory"
+    }
   },
   "folder": {
     "titleLabel": "Folder title",
@@ -5996,7 +6006,20 @@
     "createSeriesFrom": "Set up series with {name}",
     "seriesTemplate": "This is a template for meeting series. Next you choose the name, members and rhythm; each meeting page then starts from it.",
     "articleTitle": "Title of the article",
-    "articleTitleHint": "Leave it empty to use the title of the template and rename the article later."
+    "articleTitleHint": "Leave it empty to use the title of the template and rename the article later.",
+    "article": {
+      "title": "New article in {space}",
+      "searchPlaceholder": "How-to, troubleshooting …",
+      "blank": "Blank article",
+      "createBlank": "Create blank article",
+      "untitled": "Untitled article",
+      "noInput": "This template needs no input. The article starts with its sections.",
+      "noResultsDescription": "Try another word.",
+      "category": "Category",
+      "categoryHint": "Where the article appears in the portal. You can move it later.",
+      "noCategory": "No category (top level)",
+      "categoriesFailed": "The categories could not be loaded"
+    }
   },
   "home": {
     "title": "For you",
@@ -8537,7 +8560,8 @@
       "menu": "Export space",
       "panelTitle": "Export this space",
       "description": "Export every page and published blog post you can read as PDF, Word, HTML or Markdown. Restricted pages are included only when you can read them; private notes and history are not. Only you can open the download. It is deleted 24 hours after you first downloaded it completely, or after 7 days if you never download it. The export is refused when the storage of Pagehall is almost full.",
-      "empty": "You have no exports of this space."
+      "empty": "You have no exports of this space.",
+      "descriptionArticles": "Export every article you can read as PDF, Word, HTML or Markdown. Restricted articles are included only when you can read them; private notes and history are not. Only you can open the download. It is deleted 24 hours after you first downloaded it completely, or after 7 days if you never download it. The export is refused when the storage of Pagehall is almost full."
     },
     "list": {
       "label": "Your exports",
@@ -8589,7 +8613,8 @@
       "title": "Export",
       "description": "Let people export pages and the whole space as PDF, Word, HTML and Markdown.",
       "settingTitle": "Export setting",
-      "copyNote": "Turning export off does not prevent copying: people who can read a page can still copy its content."
+      "copyNote": "Turning export off does not prevent copying: people who can read a page can still copy its content.",
+      "descriptionArticles": "Let people export articles and the whole knowledge base as PDF, Word, HTML and Markdown, or download it as a static website."
     },
     "dialog": {
       "title": "Export “{name}”",
@@ -8640,7 +8665,9 @@
         "space": {
           "label": "The whole space “{name}”",
           "description": "Every page and published blog post you can read",
-          "counted": "{pages, plural, one {# page} other {# pages}} and {posts, plural, one {# blog post} other {# blog posts}}"
+          "counted": "{pages, plural, one {# page} other {# pages}} and {posts, plural, one {# blog post} other {# blog posts}}",
+          "countedArticles": "{count, plural, one {# article} other {# articles}}",
+          "descriptionArticles": "Every article you can read"
         },
         "adminsOnly": "Only space admins can export several pages at once. Ask a space admin of {name}."
       },
@@ -9467,7 +9494,7 @@
       "narrowHint": "Categories and articles can restrict reading further with view restrictions, never widen it. Who may edit is set in the permissions of the space.",
       "public": {
         "title": "Public",
-        "description": "Everyone, also without signing in, once the portal is available. Until then all signed-in people of this instance read it here."
+        "description": "Everyone, also without signing in. The portal shows the published articles, and search engines can find them."
       },
       "signedIn": {
         "title": "All signed-in people",
@@ -9701,6 +9728,10 @@
       "createFailed": "The translation could not be created",
       "translationOf": "Translation of {title}",
       "badge": "{language}: {state}"
+    },
+    "category": {
+      "empty": "This category has no articles yet",
+      "emptyDescription": "Articles and subcategories you create here appear in this overview and in the portal once they are published."
     }
   },
   "helpTarget": {

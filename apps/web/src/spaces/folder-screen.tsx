@@ -175,15 +175,16 @@ function FolderContents({ folderId, view }: { folderId: string; view: "list" | "
     );
   }
   if (items.length === 0) {
+    const knowledgeBase = isKnowledgeBase(space);
     return (
       <EmptyState
         icon={Folder}
-        title={t("folder.empty")}
-        description={t("folder.emptyDescription")}
+        title={knowledgeBase ? t("knowledgeBase.category.empty") : t("folder.empty")}
+        description={knowledgeBase ? t("knowledgeBase.category.emptyDescription") : t("folder.emptyDescription")}
         action={
           canEdit ? (
             <Button variant="primary" icon={FilePlus} onClick={() => openCreate("page", folderId)}>
-              {t("folder.newPage")}
+              {knowledgeBase ? t("knowledgeBase.newArticle") : t("folder.newPage")}
             </Button>
           ) : undefined
         }

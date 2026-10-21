@@ -47,7 +47,9 @@ export function SpaceExportScreen() {
     <SpaceSettingsPage
       tab="export"
       title={t("exports.settings.title")}
-      description={t("exports.settings.description")}
+      description={
+        isKnowledgeBase(space) ? t("exports.settings.descriptionArticles") : t("exports.settings.description")
+      }
       icon={FileArchive}
     >
       <div className="flex flex-col gap-8">
@@ -86,6 +88,7 @@ export function SpaceExportScreen() {
                 name: spaceDisplayName(t, space),
                 exportEnabled: space.exportEnabled,
                 admin,
+                knowledgeBase: isKnowledgeBase(space),
               }}
             />
           </Panel>

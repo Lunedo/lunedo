@@ -8,7 +8,9 @@ export function SpaceExport({ space }: { space: ExportableSpace }) {
   const { t } = useTranslation();
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-sm text-text-muted">{t("exports.space.description")}</p>
+      <p className="text-sm text-text-muted">
+        {space.knowledgeBase ? t("exports.space.descriptionArticles") : t("exports.space.description")}
+      </p>
       {space.exportEnabled ? (
         <ExportForm space={{ ...space, mayExportPages: true }} onDone={() => {}} />
       ) : (

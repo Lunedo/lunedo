@@ -22,7 +22,7 @@ import { readViewContext } from "../../editor/read-view.js";
 import { searchPeople } from "../../editor/references.js";
 import { LoadError } from "../../errors/failure.js";
 import { problemMessage } from "../../errors/problem-message.js";
-import { isKnowledgeBase } from "../../knowledge-bases/queries.js";
+import { type Category, categoriesQuery, isKnowledgeBase } from "../../knowledge-bases/queries.js";
 import { useFormat } from "../../preferences/preferences-provider.js";
 import { galleryQuery, type PageTemplate, type TemplateField } from "../content-queries.js";
 import { itemHref } from "../item-paths.js";
@@ -31,6 +31,23 @@ import { TEMPLATE_CATEGORIES } from "./template-categories.js";
 import "../../editor/editor.css";
 
 const BLANK = "blank";
+const NO_CATEGORY = "none";
+
+function categoryOptions(categories: Category[], none: string): { value: string; label: string }[] {
+  const byPosition = (left: Category, right: Category) =>
+    left.position < right.position ? -1 : left.position > right.position ? 1 : 0;
+  const tops = categories.filter((category) => category.parentId === null).sort(byPosition);
+  return [
+    { value: NO_CATEGORY, label: none },
+    ...tops.flatMap((top) => [
+      { value: top.id, label: top.title },
+      ...categories
+        .filter((category) => category.parentId === top.id)
+        .sort(byPosition)
+        .map((sub) => ({ value: sub.id, label: `${top.title} › ${sub.title}` })),
+    ]),
+  ];
+}
 
 export function today(): string {
   const now = new Date();
@@ -58,7 +75,11 @@ export function TemplateGallery({
     <Dialog
       open={parentId !== undefined}
       onOpenChange={onOpenChange}
-      title={t("gallery.title", { space: name })}
+      title={
+        isKnowledgeBase(space)
+          ? t("gallery.article.title", { space: name })
+          : t("gallery.title", { space: name })
+      }
       size="lg"
     >
       {parentId !== undefined ? (
@@ -100,6 +121,18 @@ function GalleryContent({
   const [creating, setCreating] = useState(false);
   const [articleTitle, setArticleTitle] = useState(initialTitle);
   const knowledgeBase = isKnowledgeBase(space);
+  const categoryList = useQuery({
+    ...categoriesQuery(space.id),
+    enabled: knowledgeBase,
+    throwOnError: false,
+  });
+  const articleCategories = categoryList.data ?? [];
+  const underArticle =
+    parentId !== null && categoryList.isSuccess && !articleCategories.some((entry) => entry.id === parentId);
+  const [articleCategory, setArticleCategory] = useState<string>(parentId ?? NO_CATEGORY);
+  const target =
+    knowledgeBase && !underArticle ? (articleCategory === NO_CATEGORY ? null : articleCategory) : parentId;
+  const untitled = knowledgeBase ? t("gallery.article.untitled") : t("tree.untitledPage");
 
   const templates = gallery.data ?? [];
   const term = query.trim().toLowerCase();
@@ -151,13 +184,13 @@ function GalleryContent({
             ? {
                 kind: "page",
                 title: articleTitle.trim(),
-                parentId,
+                parentId: target,
                 template: {
                   id: template.id,
                   values: Object.fromEntries(Object.entries(values).filter(([, value]) => value.trim())),
                 },
               }
-            : { kind: "page", title: articleTitle.trim() || t("tree.untitledPage"), parentId },
+            : { kind: "page", title: articleTitle.trim() || untitled, parentId: target },
         }),
       );
       await queryClient.invalidateQueries({ queryKey: ["spaces", space.id, "children"] });
@@ -186,21 +219,25 @@ function GalleryContent({
             <Input
               type="search"
               value={query}
-              placeholder={t("gallery.searchPlaceholder")}
+              placeholder={
+                knowledgeBase ? t("gallery.article.searchPlaceholder") : t("gallery.searchPlaceholder")
+              }
               onChange={(event) => setQuery(event.target.value)}
             />
           </Field>
         </div>
-        <Field label={t("gallery.category")}>
-          <Select
-            value={category}
-            onValueChange={setCategory}
-            options={[
-              { value: "all", label: t("gallery.allCategories") },
-              ...categories.map((value) => ({ value, label: t(`templates.categories.${value}`) })),
-            ]}
-          />
-        </Field>
+        {knowledgeBase ? null : (
+          <Field label={t("gallery.category")}>
+            <Select
+              value={category}
+              onValueChange={setCategory}
+              options={[
+                { value: "all", label: t("gallery.allCategories") },
+                ...categories.map((value) => ({ value, label: t(`templates.categories.${value}`) })),
+              ]}
+            />
+          </Field>
+        )}
       </div>
       {gallery.isError ? (
         <LoadError what={t("gallery.loadFailed")} error={gallery.error} onRetry={() => gallery.refetch()} />
@@ -214,7 +251,7 @@ function GalleryContent({
               selected={selected === BLANK}
               onSelect={() => choose(BLANK)}
               icon={<FilePlus aria-hidden="true" className="size-icon text-text-muted" />}
-              title={t("gallery.blank")}
+              title={knowledgeBase ? t("gallery.article.blank") : t("gallery.blank")}
               description={t("gallery.blankDescription")}
             />
           ) : null}
@@ -234,7 +271,11 @@ function GalleryContent({
               <EmptyState
                 icon={Search}
                 title={t("gallery.noResults")}
-                description={t("gallery.noResultsDescription")}
+                description={
+                  knowledgeBase
+                    ? t("gallery.article.noResultsDescription")
+                    : t("gallery.noResultsDescription")
+                }
                 action={
                   <Button
                     variant="secondary"
@@ -259,7 +300,9 @@ function GalleryContent({
               <p className="text-sm text-text-muted">{t("gallery.seriesTemplate")}</p>
             ) : null}
             {template.series ? null : template.fields.length === 0 ? (
-              <p className="text-sm text-text-muted">{t("gallery.noInput")}</p>
+              <p className="text-sm text-text-muted">
+                {knowledgeBase ? t("gallery.article.noInput") : t("gallery.noInput")}
+              </p>
             ) : (
               template.fields.map((field) => (
                 <FieldInput
@@ -283,14 +326,38 @@ function GalleryContent({
         </div>
       ) : null}
       {knowledgeBase ? (
-        <Field label={t("gallery.articleTitle")} hint={t("gallery.articleTitleHint")}>
-          <Input
-            value={articleTitle}
-            maxLength={255}
-            placeholder={template?.title ?? t("tree.untitledPage")}
-            onChange={(event) => setArticleTitle(event.target.value)}
-          />
-        </Field>
+        <div className="flex flex-wrap items-start gap-3">
+          <div className="min-w-0 flex-1 basis-field">
+            <Field label={t("gallery.articleTitle")} hint={t("gallery.articleTitleHint")}>
+              <Input
+                value={articleTitle}
+                maxLength={255}
+                placeholder={template?.title ?? untitled}
+                onChange={(event) => setArticleTitle(event.target.value)}
+              />
+            </Field>
+          </div>
+          {underArticle ? null : (
+            <div className="min-w-0 flex-1 basis-field">
+              <Field label={t("gallery.article.category")} hint={t("gallery.article.categoryHint")}>
+                {categoryList.isError ? (
+                  <LoadError
+                    what={t("gallery.article.categoriesFailed")}
+                    error={categoryList.error}
+                    onRetry={() => categoryList.refetch()}
+                  />
+                ) : (
+                  <Select
+                    value={articleCategory}
+                    onValueChange={setArticleCategory}
+                    disabled={categoryList.isPending}
+                    options={categoryOptions(articleCategories, t("gallery.article.noCategory"))}
+                  />
+                )}
+              </Field>
+            </div>
+          )}
+        </div>
       ) : null}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="secondary" onClick={onDone}>
@@ -301,7 +368,9 @@ function GalleryContent({
             ? t("gallery.createSeriesFrom", { name: template.name })
             : template
               ? t("gallery.createFrom", { name: template.name })
-              : t("gallery.createBlank")}
+              : knowledgeBase
+                ? t("gallery.article.createBlank")
+                : t("gallery.createBlank")}
         </Button>
       </div>
     </form>
