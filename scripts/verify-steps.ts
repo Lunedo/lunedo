@@ -16,6 +16,7 @@ export function verifySteps(base: string): VerifyStep[] {
     { name: "Patched dependencies", command: "pnpm", args: ["patches:check"] },
     { name: "Playwright image", command: "pnpm", args: ["playwright-image:check"] },
     { name: "Translations", command: "pnpm", args: ["i18n:check"] },
+    { name: "Shell scripts", command: "pnpm", args: ["shell:check"] },
     { name: "Typecheck", command: "pnpm", args: ["typecheck"] },
     { name: "Script tests", command: "node", args: ["--test", "scripts/*.test.ts"] },
     { name: "Sign-off", command: "node", args: ["scripts/check-dco.ts", `${base}..HEAD`] },
