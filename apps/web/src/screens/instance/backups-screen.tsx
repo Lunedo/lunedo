@@ -293,7 +293,12 @@ function TargetSection({ data, canManage }: { data: BackupOverview; canManage: b
     setDraft(initial);
   }
   const changed = JSON.stringify(draft) !== JSON.stringify(saved);
-  const secretConfigured = data.target?.kind === "s3" && data.target.secretKeyConfigured;
+  const secretConfigured =
+    data.target?.kind === "s3" &&
+    data.target.secretKeyConfigured &&
+    (["endpoint", "region", "bucket", "accessKeyId"] as const).every(
+      (field) => draft[field].trim() === saved[field].trim(),
+    );
   const set = (patch: Partial<TargetDraft>) => {
     setDraft((current) => ({ ...current, ...patch }));
     setResult(null);

@@ -7,6 +7,7 @@ import type { DatabasePool } from "../database/pool.js";
 import { ATTACHMENTS_DIRECTORY, assertObjectKey } from "../files/store.js";
 import type { Logger } from "../logging/logger.js";
 import { restoreBackup, verifyBackup } from "./archive.js";
+import { describeFailure } from "./errors.js";
 import { type DatabaseArchiver, PostgresArchiver } from "./postgres.js";
 import type { TestRestoreCheck } from "./schema.js";
 import type { BackupTarget } from "./targets.js";
@@ -239,7 +240,7 @@ export async function runTestRestore(
         .query(`drop database if exists ${quoteIdentifier(databaseName)} with (force)`)
         .catch((error: unknown) =>
           sources.logger.warn(
-            { err: error, database: databaseName },
+            { reason: describeFailure(error), database: databaseName },
             "Removing the test restore database failed",
           ),
         );

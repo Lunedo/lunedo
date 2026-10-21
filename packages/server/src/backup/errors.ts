@@ -1,3 +1,9 @@
+import { BackupError } from "./archive.js";
+import { MissingTargetSecretError } from "./configuration.js";
+import { BackupTargetError } from "./targets.js";
+
+const REASON_LIMIT = 600;
+
 export type BackupSettingsErrorCode =
   | "invalidTime"
   | "invalidDay"
@@ -43,4 +49,20 @@ export class BackupNotFoundError extends Error {
   constructor(name: string) {
     super(`The backup ${name} is not in the backup target. It may have been deleted; reload the list.`);
   }
+}
+
+export function describeFailure(error: unknown): string {
+  if (
+    error instanceof BackupTargetError ||
+    error instanceof BackupError ||
+    error instanceof MissingTargetSecretError ||
+    error instanceof BackupSettingsError
+  ) {
+    return error.message;
+  }
+  const code = (error as NodeJS.ErrnoException).code;
+  if (code === "ENOSPC" || code === "EDQUOT")
+    return "The backup target is full. Free up space or choose another target.";
+  const text = error instanceof Error ? error.message : String(error);
+  return `The backup failed: ${text}`.slice(0, REASON_LIMIT);
 }

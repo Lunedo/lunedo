@@ -34,13 +34,12 @@ import {
   backupS3SecretContext,
   closeTarget,
   localPathProblem,
-  MissingTargetSecretError,
   openTarget,
   readBackupConfiguration,
   readS3Secret,
   type TargetSettings,
 } from "./configuration.js";
-import { BackupBusyError, BackupNotFoundError, BackupSettingsError } from "./errors.js";
+import { BackupBusyError, BackupNotFoundError, BackupSettingsError, describeFailure } from "./errors.js";
 import { backupRunJob, backupTestRestoreJob } from "./jobs.js";
 import { type BackupClass, parseBackupName } from "./naming.js";
 import type { RetentionPolicy } from "./retention.js";
@@ -74,7 +73,6 @@ import { runTestRestore, type TestRestoreSources } from "./test-restore.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const BACKUP_SETTINGS_PATH = "/settings/instance/backups";
-const REASON_LIMIT = 600;
 const RECENT_RUNS = 20;
 
 export type BackupTrigger = "scheduled" | "manual" | "beforeUpdate";
@@ -208,22 +206,6 @@ interface Announcement {
 
 type RunRow = typeof backupRuns.$inferSelect;
 type TestRow = typeof backupTestRestores.$inferSelect;
-
-export function describeFailure(error: unknown): string {
-  if (
-    error instanceof BackupTargetError ||
-    error instanceof BackupError ||
-    error instanceof MissingTargetSecretError ||
-    error instanceof BackupSettingsError
-  ) {
-    return error.message;
-  }
-  const code = (error as NodeJS.ErrnoException).code;
-  if (code === "ENOSPC" || code === "EDQUOT")
-    return "The backup target is full. Free up space or choose another target.";
-  const text = error instanceof Error ? error.message : String(error);
-  return `The backup failed: ${text}`.slice(0, REASON_LIMIT);
-}
 
 function runView(row: RunRow): RunView {
   return {
@@ -618,6 +600,18 @@ export class BackupService {
     };
   }
 
+  async #reusableSecret(target: TargetSettings, executor: Executor = this.#database): Promise<string | null> {
+    if (target.kind !== "s3") return null;
+    const stored = (await this.configuration(executor)).target;
+    const same =
+      stored?.kind === "s3" &&
+      stored.endpoint === target.endpoint &&
+      stored.region === target.region &&
+      stored.bucket === target.bucket &&
+      stored.accessKeyId === target.accessKeyId;
+    return same ? this.#secret(executor) : null;
+  }
+
   #newSecret(input: TargetInput): string | undefined {
     if (input.kind !== "s3" || input.secretAccessKey === undefined) return undefined;
     const secret = input.secretAccessKey.trim();
@@ -632,7 +626,7 @@ export class BackupService {
     const secret = this.#newSecret(input);
     await this.#database.transaction(async (tx) => {
       await tx.execute(sql`select pg_advisory_xact_lock(hashtext('pagehall.backup-configuration'))`);
-      if (target.kind === "s3" && secret === undefined && (await this.#secret(tx)) === null) {
+      if (target.kind === "s3" && secret === undefined && (await this.#reusableSecret(target, tx)) === null) {
         throw new BackupSettingsError("secretKeyRequired", "Enter the secret key.", ["secretAccessKey"]);
       }
       const values =
@@ -697,7 +691,7 @@ export class BackupService {
 
   async testTarget(input: TargetInput): Promise<TargetTestResult> {
     const settings = this.#validateTarget(input);
-    const secret = this.#newSecret(input) ?? (settings.kind === "s3" ? await this.#secret() : null);
+    const secret = this.#newSecret(input) ?? (await this.#reusableSecret(settings));
     if (settings.kind === "s3" && !secret) {
       throw new BackupSettingsError("secretKeyRequired", "Enter the secret key.", ["secretAccessKey"]);
     }
@@ -806,7 +800,7 @@ export class BackupService {
         })),
       };
     } catch (error) {
-      this.#logger.warn({ err: error }, "Listing the backups failed");
+      this.#logger.warn({ reason: describeFailure(error) }, "Listing the backups failed");
       return { available: false, error: describeFailure(error), backups: [] };
     } finally {
       if (target) closeTarget(target);
@@ -1060,7 +1054,7 @@ export class BackupService {
         }
       } catch (error) {
         const reason = describeFailure(error);
-        this.#logger.warn({ err: error, trigger: payload.trigger }, "Backup failed");
+        this.#logger.warn({ reason, trigger: payload.trigger }, "Backup failed");
         await this.#recordRun({ id, state: "failed", error: reason, finishedAt: this.#clock() });
         await this.#options.audit.recordAlone({
           name: "backup.failed",
@@ -1100,7 +1094,7 @@ export class BackupService {
     try {
       await this.#startTestRestore(SYSTEM, name, "automatic");
     } catch (error) {
-      this.#logger.warn({ err: error }, "Starting the monthly test restore failed");
+      this.#logger.warn({ reason: describeFailure(error) }, "Starting the monthly test restore failed");
     }
   }
 

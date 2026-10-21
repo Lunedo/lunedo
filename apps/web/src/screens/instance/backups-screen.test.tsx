@@ -182,6 +182,37 @@ describe("the backup settings", () => {
     expect(put?.body).toMatchObject({ kind: "s3", bucket: "backups", secretAccessKey: "very secret" });
   });
 
+  it("asks for the secret key again when the endpoint changes, not when only the prefix does", async () => {
+    const stored = {
+      kind: "s3",
+      endpoint: "https://s3.example.org",
+      region: "eu-central-1",
+      bucket: "backups",
+      prefix: "",
+      forcePathStyle: false,
+      accessKeyId: "AKIAEXAMPLE",
+      secretKeyConfigured: true,
+    };
+    const mocked = api({
+      "GET /api/v1/instance/backups": () => ({ body: overview({ target: stored }) }),
+      "PUT /api/v1/instance/backups/target": () => ({ body: overview({ target: stored }) }),
+    });
+    await renderAt("/settings/instance/backups");
+    const endpoint = await screen.findByLabelText("Endpoint");
+    await userEvent.clear(endpoint);
+    await userEvent.type(endpoint, "https://collector.example.net");
+    await userEvent.click(screen.getByRole("button", { name: "Save target" }));
+    expect(await screen.findByText("Enter the secret key.")).toBeTruthy();
+    expect(mocked.requests.some((request) => request.method === "PUT")).toBe(false);
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await userEvent.type(screen.getByLabelText("Prefix"), "pagehall/");
+    await userEvent.click(screen.getByRole("button", { name: "Save target" }));
+    await waitFor(() => expect(mocked.requests.some((request) => request.method === "PUT")).toBe(true));
+    const put = mocked.requests.find((request) => request.method === "PUT");
+    expect(put?.body).toMatchObject({ prefix: "pagehall/" });
+    expect(put?.body).not.toHaveProperty("secretAccessKey");
+  });
+
   it("names the failed step of the connection test", async () => {
     api({
       "POST /api/v1/instance/backups/target/test": () => ({

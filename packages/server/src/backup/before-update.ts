@@ -9,6 +9,7 @@ import type { Logger } from "../logging/logger.js";
 import type { OutboundPolicy } from "../outbound/guarded-request.js";
 import { StartupError } from "../runtime/startup-error.js";
 import { closeTarget, openTarget, readBackupConfiguration, readS3Secret } from "./configuration.js";
+import { describeFailure } from "./errors.js";
 import {
   applyRetention,
   type BackupSources,
@@ -17,7 +18,6 @@ import {
   waitForBackupLock,
   writeBackup,
 } from "./runner.js";
-import { describeFailure } from "./service.js";
 import { type BackupTarget, ensureDirectory, LocalBackupTarget } from "./targets.js";
 
 export const SKIP_BEFORE_UPDATE_MARKER = ".pagehall-skip-backup-before-update";
@@ -162,7 +162,7 @@ export async function backupBeforeMigrations(
   try {
     await createBeforeUpdateBackup(options);
   } catch (error) {
-    logger.error({ err: error }, "The backup before the update failed");
+    logger.error({ reason: describeFailure(error) }, "The backup before the update failed");
     throw new BackupBeforeUpdateError(
       `The backup before the database update failed, so the migrations were not run: ${describeFailure(error)} Fix the cause and start Pagehall again, or start once without this backup after running: ${SKIP_COMMAND}`,
     );

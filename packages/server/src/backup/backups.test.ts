@@ -242,17 +242,31 @@ describe.skipIf(!baseUrl)("backups", () => {
       });
       expect(JSON.stringify(changes)).not.toContain(secret);
 
-      const kept = await backups().updateTarget(actor(), {
-        kind: "s3",
+      const same = {
+        kind: "s3" as const,
         endpoint: "https://s3.example.org",
         region: "eu-central-1",
-        bucket: "other-bucket",
-        prefix: "",
+        bucket: "pagehall-backups",
+        prefix: "other/",
         forcePathStyle: true,
         accessKeyId: "AKIAEXAMPLE",
-      });
-      expect(kept.target).toMatchObject({ bucket: "other-bucket", secretKeyConfigured: true });
+      };
+      const kept = await backups().updateTarget(actor(), same);
+      expect(kept.target).toMatchObject({ prefix: "other/", secretKeyConfigured: true });
       expect((await audited("backup.targetChanged")).at(-1)).toMatchObject({ credentialsReplaced: false });
+
+      for (const changed of [
+        { endpoint: "https://collector.example.net" },
+        { bucket: "other-bucket" },
+        { region: "us-east-1" },
+        { accessKeyId: "AKIAOTHER" },
+      ]) {
+        expect(await settingsError(backups().updateTarget(actor(), { ...same, ...changed }))).toBe(
+          "secretKeyRequired",
+        );
+        expect(await settingsError(backups().testTarget({ ...same, ...changed }))).toBe("secretKeyRequired");
+      }
+      expect((await backups().overview()).target).toMatchObject({ endpoint: "https://s3.example.org" });
 
       await useLocalTarget();
       const secrets = await test.database.execute(
@@ -376,6 +390,20 @@ describe.skipIf(!baseUrl)("backups", () => {
         await expect(
           backups().deleteBackup(actor(), "pagehall-backup-20260101T000000Z-daily-00000000.phbak"),
         ).rejects.toThrow("is not in the backup target");
+      },
+    );
+
+    it.skipIf(!hasTools)(
+      "stages the database dump in a private directory, never in the target, and removes stale dumps",
+      async () => {
+        await useLocalTarget();
+        const staging = path.join(backupDir, ".pagehall-staging");
+        await mkdir(staging, { recursive: true });
+        const stale = path.join(staging, ".pagehall-backup-00000000-0000-4000-8000-000000000000.dump");
+        await writeFile(stale, "left over by a killed run");
+        await backups().run({ trigger: "manual", slot: null, actorId: owner });
+        expect(await readdir(staging)).toEqual([]);
+        expect((await files()).filter((name) => name.endsWith(".dump"))).toEqual([]);
       },
     );
 

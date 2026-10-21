@@ -1,3 +1,5 @@
+import { chmod, mkdir, readdir, rm } from "node:fs/promises";
+import path from "node:path";
 import { Transform, type TransformCallback } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { sql } from "drizzle-orm";
@@ -18,6 +20,7 @@ import {
   type BackupScope,
   createBackup,
 } from "./archive.js";
+import { describeFailure } from "./errors.js";
 import { type BackupClass, type BackupName, backupName, parseBackupName } from "./naming.js";
 import type { DatabaseArchiver } from "./postgres.js";
 import { expiredBackups, type RetentionPolicy } from "./retention.js";
@@ -201,6 +204,29 @@ export interface WrittenBackup {
   manifest: BackupManifest;
 }
 
+const STAGING = ".pagehall-staging";
+const STAGED_DUMP = /^\.pagehall-backup-[0-9a-f-]{36}\.dump$/;
+
+async function privateStaging(sources: BackupSources): Promise<string> {
+  const staging = path.join(sources.stagingDir, STAGING);
+  await mkdir(staging, { recursive: true, mode: 0o700 });
+  await chmod(staging, 0o700);
+  return staging;
+}
+
+async function removeStaleDumps(sources: BackupSources): Promise<void> {
+  const staging = path.join(sources.stagingDir, STAGING);
+  let entries: string[];
+  try {
+    entries = await readdir(staging);
+  } catch {
+    return;
+  }
+  for (const entry of entries) {
+    if (STAGED_DUMP.test(entry)) await rm(path.join(staging, entry), { force: true });
+  }
+}
+
 export async function writeBackup(
   sources: BackupSources,
   options: { target: BackupTarget; backupClass: BackupClass; scope: BackupScope; now?: Date },
@@ -216,9 +242,10 @@ export async function writeBackup(
       sources.logger.info({ backup: name, written: formatBytes(bytes) }, "Backup in progress");
     });
     await options.target.removeIncomplete();
+    await removeStaleDumps(sources);
     const manifest = await createBackup({
       output: destination,
-      stagingDir: options.target.stagingDir ?? sources.stagingDir,
+      stagingDir: await privateStaging(sources),
       backupKeys: sources.backupKeys,
       masterKeys,
       database: sources.archiver,
@@ -241,6 +268,7 @@ export async function writeBackupFile(sources: BackupSources, output: string): P
   try {
     return await createBackup({
       output,
+      stagingDir: await privateStaging(sources),
       backupKeys: sources.backupKeys,
       masterKeys: await masterKeysForBackup(sources),
       database: sources.archiver,
@@ -292,7 +320,10 @@ export async function applyRetention(
       await target.delete(backup.name);
       deleted.push(backup.name);
     } catch (error) {
-      options.logger.warn({ err: error, backup: backup.name }, "Deleting an expired backup failed");
+      options.logger.warn(
+        { reason: describeFailure(error), backup: backup.name },
+        "Deleting an expired backup failed",
+      );
     }
   }
   if (deleted.length > 0) options.logger.info({ deleted }, "Expired backups deleted");

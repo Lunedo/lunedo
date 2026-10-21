@@ -46,7 +46,6 @@ export interface TargetCapacity {
 export interface BackupTarget {
   readonly kind: "local" | "s3";
   readonly description: string;
-  readonly stagingDir: string | null;
   location(name: string): string;
   destination(name: string): BackupDestination;
   list(): Promise<StoredBackup[]>;
@@ -115,7 +114,6 @@ export class BackupTargetError extends Error {
 
 const TEST_CONTENT = "Pagehall backup target test\n";
 const PARTIAL = /^pagehall-backup-.+\.phbak\.[0-9a-f-]{36}\.partial$/;
-const STAGED_DUMP = /^\.pagehall-backup-[0-9a-f-]{36}\.dump$/;
 
 function localFailure(error: unknown): TargetFailure {
   switch ((error as NodeJS.ErrnoException).code) {
@@ -157,10 +155,6 @@ export class LocalBackupTarget implements BackupTarget {
   }
 
   get description(): string {
-    return this.#dir;
-  }
-
-  get stagingDir(): string {
     return this.#dir;
   }
 
@@ -241,8 +235,7 @@ export class LocalBackupTarget implements BackupTarget {
   async removeIncomplete(): Promise<void> {
     await guardLocal("delete", async () => {
       for (const entry of await readdir(this.#dir)) {
-        if (PARTIAL.test(entry) || STAGED_DUMP.test(entry))
-          await rm(path.join(this.#dir, entry), { force: true });
+        if (PARTIAL.test(entry)) await rm(path.join(this.#dir, entry), { force: true });
       }
     });
   }
@@ -346,7 +339,6 @@ const PART_SIZE = 8 * 1024 * 1024;
 
 export class S3BackupTarget implements BackupTarget {
   readonly kind = "s3" as const;
-  readonly stagingDir = null;
   readonly #client: S3Client;
   readonly #config: S3TargetConfig;
 

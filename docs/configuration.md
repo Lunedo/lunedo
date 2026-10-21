@@ -58,7 +58,7 @@ The master keys and the backup keys are needed to read encrypted data and backup
 | `PAGEHALL_MASTER_KEYS` | none | yes | Master key ring for the env key provider. |
 | `PAGEHALL_MASTER_KEYS_PATH` | `master-keys` in the secrets directory | | Master key ring file for the file key provider. |
 | `PAGEHALL_BACKUP_KEY` | generated | yes | Key ring that encrypts backups, in the same format as the master keys. |
-| `PAGEHALL_BACKUP_DIR` | `/var/lib/pagehall/backups` | | Default local backup target. Backups before updates go here while no target is set up in the backup settings; backups to S3 stage the database dump here, and test restores use it for their temporary files. See [backup.md](backup.md). |
+| `PAGEHALL_BACKUP_DIR` | `/var/lib/pagehall/backups` | | Default local backup target. Backups before updates go here while no target is set up in the backup settings. Every backup stages its unencrypted database dump in `.pagehall-staging` below it (mode 0700), never in the target, and test restores use it for their temporary files. Keep it on a local volume. See [backup.md](backup.md). |
 | `PAGEHALL_BACKUP_BEFORE_UPDATE` | `true` | | `false` starts without a backup when migrations are pending, for installations with their own backup strategy. The backup settings and the status show that it is off. |
 | `PAGEHALL_METRICS_TOKEN` | generated | yes | Bearer token required by `/metrics`. |
 | `PAGEHALL_RENDER_URL` | none | | Address of the optional render container that creates PDF files on the server, for example `http://pagehall-render:3000`. Set it together with `PAGEHALL_RENDER_TOKEN`; see [rendering.md](rendering.md). |
