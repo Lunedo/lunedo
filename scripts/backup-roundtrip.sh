@@ -191,9 +191,20 @@ subnet="$(docker network inspect -f '{{(index .IPAM.Config 0).Subnet}}' "$networ
 daily_time="$(date -u -d '+2 minutes' +%H:%M)"
 docker run --rm --network "$network" -e PAGEHALL_DATABASE_URL="$(url source)" \
   -v "$source_data:/var/lib/pagehall" -w /app/worker --entrypoint node "$image" --input-type=module -e '
+import { createRequire } from "node:module";
 const { backupS3SecretContext, createDatabasePool, createKeyProvider, Encryption, loadConfig } =
   await import("@pagehall/server");
+const require = createRequire(createRequire(import.meta.url).resolve("@pagehall/server"));
+const { CreateBucketCommand, S3Client } = require("@aws-sdk/client-s3");
 const [endpoint, secret, dailyTime] = process.argv.slice(1);
+const s3 = new S3Client({
+  region: "us-east-1",
+  endpoint,
+  forcePathStyle: true,
+  credentials: { accessKeyId: "pagehall", secretAccessKey: secret },
+});
+await s3.send(new CreateBucketCommand({ Bucket: "roundtrip" }));
+s3.destroy();
 const config = loadConfig(process.env);
 const ring = await createKeyProvider(config).load();
 const value = new Encryption(() => ring).encrypt(secret, backupS3SecretContext());
