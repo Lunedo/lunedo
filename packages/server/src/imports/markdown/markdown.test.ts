@@ -320,23 +320,19 @@ describe.skipIf(!baseUrl)("Markdown folder imports", () => {
       name: `hilfe/Drucker/${name}.md`,
       data: `---\npagehall:\n  kind: page\n  language: ${language}\n${translation ? "  translation: true\n" : ""}---\n${text}\n`,
     });
+    const files = [
+      file("Drucker", "de", false, "Drucker einrichten."),
+      file("Printer 1", "en", true, "Set up the printer."),
+      file("Printer 2", "en", true, "Set up the printer again."),
+      file("Stampante", "it", true, "Configurare la stampante."),
+      file("Unbekannt", "xx", true, "Unbekannte Sprache."),
+      file("Doppelt", "de", true, "Noch einmal Deutsch."),
+    ];
     const view = await harness.importedFiles({
       organizationId: organization.id,
       admin: organization.owner,
       source: "markdown",
-      files: [
-        {
-          name: "hilfe.zip",
-          data: createZip([
-            file("Drucker", "de", false, "Drucker einrichten."),
-            file("Printer 1", "en", true, "Set up the printer."),
-            file("Printer 2", "en", true, "Set up the printer again."),
-            file("Stampante", "it", true, "Configurare la stampante."),
-            file("Unbekannt", "xx", true, "Unbekannte Sprache."),
-            file("Doppelt", "de", true, "Noch einmal Deutsch."),
-          ]),
-        },
-      ],
+      files: [{ name: "hilfe.zip", data: createZip(files) }],
       options: { knowledgeBase: true },
       key: "MDTRANS",
     });

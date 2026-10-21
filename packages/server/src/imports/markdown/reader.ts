@@ -1,4 +1,5 @@
 import { posix } from "node:path";
+import { isArticleLanguage } from "../../knowledge-bases/translations.js";
 import { kinds, StagedConfluenceReader, titleKey } from "../confluence/staged.js";
 import { ImportFormatError } from "../errors.js";
 import type { ByteSource } from "../formats/bytes.js";
@@ -267,6 +268,20 @@ class AttachmentNames {
   }
 }
 
+function refusedTranslation(
+  language: string,
+  originalLanguage: string | null,
+  originalId: string,
+  claimed: Set<string>,
+): "unknown" | "defaultLanguage" | "duplicate" | null {
+  if (!isArticleLanguage(language)) return "unknown";
+  if (language === originalLanguage) return "defaultLanguage";
+  const key = `${originalId} ${language}`;
+  if (claimed.has(key)) return "duplicate";
+  claimed.add(key);
+  return null;
+}
+
 export class MarkdownReader extends StagedConfluenceReader {
   readonly source = "markdown" as const;
 
@@ -297,12 +312,13 @@ export class MarkdownReader extends StagedConfluenceReader {
     const spaceTitle = tree.folders.get("")?.index
       ? await this.#frontMatterTitle(archive, tree, tree.folders.get("")?.index ?? "")
       : null;
-    const articles = new Set<string>();
+    const articles = new Map<string, string | null>();
+    const claimed = new Set<string>();
     if (knowledgeBase) {
       for (const folder of [...tree.folders.values()]) {
         if (!folder.index) continue;
         const facts = (await this.#frontMatter(archive, tree, folder.index))?.pagehall;
-        if (folder.path !== "" && facts?.kind === "page") articles.add(folder.pageId ?? "");
+        if (folder.path !== "" && facts?.kind === "page") articles.set(folder.pageId ?? "", facts.language);
         else tree.separateIndex(folder.path);
       }
     }
@@ -327,7 +343,7 @@ export class MarkdownReader extends StagedConfluenceReader {
     const skip = typeof context.checkpoint.files === "number" ? context.checkpoint.files : 0;
     for (const [index, path] of tree.markdown.entries()) {
       if (index < skip) continue;
-      await this.#page(archive, tree, path, context, knowledgeBase ? { articles, placement } : null);
+      await this.#page(archive, tree, path, context, knowledgeBase ? { articles, claimed, placement } : null);
       if ((index + 1) % BATCH === 0) {
         await context.staging.flush();
         await context.saveCheckpoint({ files: index + 1 });
@@ -387,7 +403,8 @@ export class MarkdownReader extends StagedConfluenceReader {
     path: string,
     context: ScanContext,
     knowledgeBase: {
-      articles: ReadonlySet<string>;
+      articles: ReadonlyMap<string, string | null>;
+      claimed: Set<string>;
       placement: (parentId: string | null, translation: boolean) => string | null;
     } | null,
   ): Promise<void> {
@@ -413,12 +430,30 @@ export class MarkdownReader extends StagedConfluenceReader {
     const title = (converted.frontMatter.title ?? converted.heading ?? displayName(fallback)).slice(0, 255);
     const facts = converted.frontMatter.pagehall;
     const parentId = tree.parentOfFile(path);
-    const translation =
+    const wanted =
       knowledgeBase !== null &&
       facts?.translation === true &&
       facts.language !== null &&
       parentId !== null &&
       knowledgeBase.articles.has(parentId);
+    const refused =
+      wanted && knowledgeBase && facts?.language && parentId
+        ? refusedTranslation(
+            facts.language,
+            knowledgeBase.articles.get(parentId) ?? null,
+            parentId,
+            knowledgeBase.claimed,
+          )
+        : null;
+    if (refused && facts?.language) {
+      await context.problem("translationNotImported", {
+        title,
+        language: facts.language,
+        reason: refused,
+        outcome: "separate",
+      });
+    }
+    const translation = wanted && refused === null;
     await context.staging.put({
       kind: kinds.page,
       sourceId: pageId,
