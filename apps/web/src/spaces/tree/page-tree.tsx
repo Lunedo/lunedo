@@ -425,6 +425,12 @@ function TreeNode({
   const href = itemHref(item, tree.space.key);
   const external = href !== null && isExternal(href);
   const title = item.kind === "link" && !item.link?.accessible ? t("tree.noAccess") : item.title;
+  const draft = item.kind === "page" && !item.published;
+  const named =
+    language && languageName
+      ? t("tree.translationLabel", { title, code: language.toUpperCase(), language: languageName })
+      : title;
+  const label = draft ? t("tree.draftLabel", { label: named }) : named;
   const target = tree.dropTarget?.id === item.id ? tree.dropTarget.zone : null;
   const Glyph = language ? Languages : item.kind === "link" && external ? ExternalLink : itemIcon(item.kind);
 
@@ -452,7 +458,7 @@ function TreeNode({
         aria-posinset={position}
         aria-selected={current}
         {...(expandable ? { "aria-expanded": open } : {})}
-        aria-label={languageName ? t("tree.translationLabel", { title, language: languageName }) : title}
+        aria-label={label}
         data-item-id={item.id}
         data-parent-id={item.parentId ?? ""}
         data-expandable={expandable}
@@ -545,6 +551,8 @@ function TreeNode({
             {title}
           </span>
         )}
+        {/* Separates the badges for axe: https://github.com/dequelabs/axe-core/issues/5459 */}
+        {language && languageName ? " " : null}
         {language && languageName ? (
           <span title={t("tree.translationInto", { language: languageName })} className="shrink-0">
             <Badge variant="neutral">{language.toUpperCase()}</Badge>
@@ -561,9 +569,8 @@ function TreeNode({
             </VisuallyHidden>
           </span>
         ) : null}
-        {item.kind === "page" && !item.published ? (
-          <Badge variant="warning">{t("versions.draftBadge")}</Badge>
-        ) : null}
+        {draft ? " " : null}
+        {draft ? <Badge variant="warning">{t("versions.draftBadge")}</Badge> : null}
         {actions.length > 0 ? (
           <span
             className={classNames(

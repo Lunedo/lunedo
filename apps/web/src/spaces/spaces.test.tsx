@@ -64,6 +64,7 @@ const item = (
   width: "fixed",
   position: "a0",
   hasChildren,
+  published: true,
   link: null,
   creatorId: OLIVIA.id,
   ownerId: OLIVIA.id,

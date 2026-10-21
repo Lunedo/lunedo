@@ -45,7 +45,7 @@ export function FolderDescription({
         <button
           ref={opener}
           type="button"
-          aria-label={t("folder.editDescription")}
+          {...(value === "" ? {} : { "aria-label": t("folder.editDescription", { description: value }) })}
           className="-mx-2 rounded-md px-2 py-1 text-start whitespace-pre-wrap hover:bg-hover focus-visible:focus-ring"
           onClick={() => setEditing(true)}
         >

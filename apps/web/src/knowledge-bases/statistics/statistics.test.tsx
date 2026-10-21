@@ -57,7 +57,7 @@ describe("the search statistics", () => {
     expect(screen.getByText("25%")).toBeTruthy();
     expect(screen.getByText("75%")).toBeTruthy();
     const zero = screen.getByRole("table", { name: "Searches without results" });
-    await userEvent.click(within(zero).getByRole("button", { name: "Create an article for “parkausweis”" }));
+    await userEvent.click(within(zero).getByRole("button", { name: "Create article for “parkausweis”" }));
     expect(openCreate).toHaveBeenCalledWith("page", null, "Parkausweis");
     await userEvent.click(screen.getByRole("radio", { name: "90 days" }));
     await waitFor(() =>

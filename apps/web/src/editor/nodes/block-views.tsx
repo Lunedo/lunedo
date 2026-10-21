@@ -133,7 +133,9 @@ export function CalloutView({ node, editor, updateAttributes }: NodeViewProps) {
               <button
                 type="button"
                 className="ph-callout-label ph-inline-button"
-                aria-label={t("editor.callout.change")}
+                aria-label={t("editor.callout.change", {
+                  type: translateKey(t, `editor.callout.${variant}`),
+                })}
               >
                 <Info aria-hidden="true" className="size-icon-sm" />
                 {translateKey(t, `editor.callout.${variant}`)}
@@ -323,7 +325,13 @@ function FrameMenu({ frame, onChange }: { frame: unknown; onChange: (frame: bool
       <Menu
         align="start"
         trigger={
-          <button type="button" className="ph-inline-button" aria-label={t("knowledgeBase.frame.change")}>
+          <button
+            type="button"
+            className="ph-inline-button"
+            aria-label={t("knowledgeBase.frame.change", {
+              frame: translateKey(t, `knowledgeBase.frame.${current}`),
+            })}
+          >
             <Frame aria-hidden="true" className="size-icon-sm" />
             {translateKey(t, `knowledgeBase.frame.${current}`)}
             <ChevronDown aria-hidden="true" className="size-icon-sm" />

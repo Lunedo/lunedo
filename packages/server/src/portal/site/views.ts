@@ -147,7 +147,7 @@ function shortDate(view: PortalView, date: Date): string {
 function categoryIcon(category: { title: string; icon: string | null }, size: number): Html {
   return hasIcon(category.icon)
     ? html`<span class="cicon s${size}" aria-hidden="true">${icon(category.icon)}</span>`
-    : html`<span class="cicon s${size}" aria-hidden="true">${initialOf(category.title)}</span>`;
+    : html`<span class="cicon s${size}" aria-hidden="true" data-initial="${initialOf(category.title)}"></span>`;
 }
 
 function categoryOf(view: PortalView, id: string | null): PortalCategory | undefined {
@@ -167,7 +167,7 @@ function typeBadge(type: PortalArticleSummary["type"]): Html {
 function brandMark(view: PortalView): Html {
   return view.logoUrl
     ? html`<img src="${view.logoUrl}" alt="">`
-    : html`<span class="mark" aria-hidden="true">${initialOf(view.config.name)}</span>`;
+    : html`<span class="mark" aria-hidden="true" data-initial="${initialOf(view.config.name)}"></span>`;
 }
 
 function searchForm(
@@ -234,7 +234,7 @@ function header(
         )}
         ${
           account
-            ? html`<details class="acct" data-menu><summary aria-label="${view.t.account(account.name)}"><span class="av" aria-hidden="true">${initialOf(account.name).slice(0, 2)}</span><span class="name trunc">${account.name.split(" ")[0]}</span>${icon("chevron-down")}</summary>
+            ? html`<details class="acct" data-menu><summary aria-label="${view.t.account(account.name)}"><span class="av" aria-hidden="true" data-initial="${initialOf(account.name).slice(0, 2)}"></span><span class="name trunc">${account.name.split(" ")[0]}</span>${icon("chevron-down")}</summary>
               <div class="menu"><div class="mh"><b>${account.name}</b><span>${account.email}</span></div>
                 ${when(view.accountLink, () => html`<a href="${view.accountLink ?? ""}">${icon("user-round")}${view.t.accountSettings}</a>`)}
                 ${when(view.appLink, () => html`<a href="${view.appLink?.href ?? ""}">${icon("external-link")}${view.appLink?.label ?? ""}</a>`)}

@@ -4565,7 +4565,7 @@
       "fromLevel": "Ab Ebene {level}"
     },
     "callout": {
-      "change": "Art der Box ändern",
+      "change": "Art der Box: {type}. Ändern",
       "info": "Info",
       "tip": "Tipp",
       "note": "Notiz",
@@ -5450,7 +5450,8 @@
     "newWhiteboard": "Neues Whiteboard",
     "newWhiteboardInside": "Neues Whiteboard darin",
     "copy": "Kopieren…",
-    "translationLabel": "{title} (Übersetzung: {language})",
+    "translationLabel": "{title} {code} (Übersetzung: {language})",
+    "draftLabel": "{label}, Entwurf",
     "translationInto": "Übersetzung: {language}"
   },
   "move": {
@@ -5521,7 +5522,7 @@
     "more": "Weitere Aktionen",
     "description": "Beschreibung",
     "addDescription": "Beschreibung hinzufügen",
-    "editDescription": "Beschreibung des Ordners bearbeiten",
+    "editDescription": "Beschreibung des Ordners bearbeiten: {description}",
     "contents": "Inhalt",
     "loadFailed": "Der Ordner konnte nicht geladen werden",
     "contentsFailed": "Der Inhalt des Ordners konnte nicht geladen werden",
@@ -9024,7 +9025,7 @@
     "failingSince": "fehlerhaft seit {time}",
     "nothingYet": "noch nichts gepostet",
     "sendTestShort": "Test senden",
-    "sendTestTo": "Testnachricht an {name} senden",
+    "sendTestTo": "Test senden an {name}",
     "edit": "{name} bearbeiten",
     "disconnect": "{name} trennen",
     "failingTitle": "{service} nimmt keine Nachrichten mehr für {name} an",
@@ -9578,7 +9579,7 @@
       "atSection": "{title} ist Pflicht. Füge hier Text oder ein Bild ein, bevor du veröffentlichst."
     },
     "frame": {
-      "change": "Rahmen des Bilds",
+      "change": "Rahmen des Bilds: {frame}. Ändern",
       "auto": "Rahmen wie im Abschnitt",
       "on": "Immer mit Rahmen",
       "off": "Ohne Rahmen"
@@ -9945,7 +9946,7 @@
       "last": "Zuletzt gesucht",
       "actions": "Aktionen",
       "create": "Artikel anlegen",
-      "createFor": "Artikel für „{term}“ anlegen",
+      "createFor": "Artikel anlegen für „{term}“",
       "threshold": "Begriffe erscheinen ab 3 Suchen, damit einzelne Suchen nach Namen verborgen bleiben."
     },
     "zero": {
@@ -9972,7 +9973,7 @@
       "ofRatings": "{no} von {count, plural, one {# Bewertung} other {# Bewertungen}}",
       "feedback": "Hinweise",
       "readFeedback": "{count, plural, one {# Hinweis lesen} other {# Hinweise lesen}}",
-      "readFeedbackFor": "{count, plural, one {# Hinweis zu „{title}“ lesen} other {# Hinweise zu „{title}“ lesen}}",
+      "readFeedbackFor": "{count, plural, one {# Hinweis lesen zu „{title}“} other {# Hinweise lesen zu „{title}“}}",
       "noFeedback": "Keine",
       "views": "Aufrufe"
     },
