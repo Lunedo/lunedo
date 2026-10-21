@@ -36,7 +36,7 @@ import { request } from "../../api/request.js";
 import { OwnIdentities } from "../../components/linked-identities.js";
 import { RecoveryCodes } from "../../components/recovery-codes.js";
 import { SecurityActivitySection } from "../../components/security-activity.js";
-import { ContentAccessDialog } from "../../components/token-content-access.js";
+import { ContentAccessDialog, useSpaceNames } from "../../components/token-content-access.js";
 import { CreateTokenDialog, RevokeTokenDialog, scopeSummary } from "../../components/token-dialogs.js";
 import { TotpEnrollment } from "../../components/totp-enrollment.js";
 import { LoadError, useFailureToast } from "../../errors/failure.js";
@@ -572,6 +572,9 @@ function TokensSection() {
   const queryClient = useQueryClient();
   const organization = useOrganizationState();
   const tokens = useQuery(ownTokensQuery);
+  const knowledgeBaseNames = useSpaceNames(
+    tokens.data?.flatMap((token) => token.knowledgeBaseIds ?? []) ?? [],
+  );
   const [creating, setCreating] = useState(false);
   const lifetime = useQuery({
     ...tokenLifetimeQuery(organization.organizationId),
@@ -609,7 +612,7 @@ function TokensSection() {
             icon={KeyRound}
             title={token.name}
             description={[
-              scopeSummary(t, token),
+              scopeSummary(t, token, knowledgeBaseNames),
               token.expiresAt
                 ? t("tokens.expiresOn", { date: format.date(token.expiresAt) })
                 : t("tokens.noExpiry"),

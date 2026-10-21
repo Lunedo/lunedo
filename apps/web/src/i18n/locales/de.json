@@ -2554,7 +2554,8 @@
       "changeFailed": "Der Zugriff auf Inhalte konnte nicht geändert werden",
       "readOnlyScope": "Dieses Token wurde mit Lesezugriff auf Spaces angelegt und kann deshalb nur lesen. Lege für Schreibzugriff ein neues Token an.",
       "save": "Zugriff speichern",
-      "saved": "Zugriff auf Inhalte geändert"
+      "saved": "Zugriff auf Inhalte geändert",
+      "summaryNamed": "{level} in {names}"
     }
   },
   "notifications": {

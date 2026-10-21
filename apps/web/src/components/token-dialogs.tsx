@@ -25,6 +25,7 @@ import type { ApiToken } from "../api/account-queries.js";
 import { problemMessage } from "../errors/problem-message.js";
 import { applyServerFieldErrors, submitWith, useSchemaForm } from "../forms/use-schema-form.js";
 import { translateKey } from "../i18n/translate.js";
+import { useInlineReauthentication } from "../session/reauthentication.js";
 import {
   type ContentAccess,
   ContentAccessFields,
@@ -80,9 +81,10 @@ function pickAreas(values: Record<string, string>): Areas | undefined {
 export function scopeSummary(
   t: Parameters<typeof translateKey>[0],
   token: Pick<ApiToken, "scopes" | "contentLevel" | "knowledgeBaseIds">,
+  names?: ReadonlyMap<string, string>,
 ): string {
   const { scopes } = token;
-  const content = contentSummary(t, token);
+  const content = contentSummary(t, token, names);
   const parts = [
     ...Object.entries(scopes.instance ?? {}).map(
       ([area, level]) =>
@@ -124,6 +126,7 @@ export function CreateTokenDialog({
   const [error, setError] = useState<string | null>(null);
   const [content, setContent] = useState<ContentAccess>(NO_CONTENT_ACCESS);
   const [contentError, setContentError] = useState<string | undefined>();
+  const reauthentication = useInlineReauthentication(open && secret === null);
   const form = useSchemaForm(tokenForm, {
     defaultValues: {
       name: "",
@@ -242,36 +245,64 @@ export function CreateTokenDialog({
           </div>
         </div>
       ) : (
-        <form className="flex flex-col gap-4" noValidate onSubmit={submitWith(submit)}>
-          {error ? (
-            <Notice variant="danger" title={t("failures.createToken")}>
-              {error}
-            </Notice>
-          ) : null}
-          <Field label={t("tokens.name")} error={form.formState.errors.name?.message}>
-            <Input autoComplete="off" autoFocus {...form.register("name")} />
-          </Field>
-          {allowOrganization ? (
-            <ContentAccessFields
-              value={content}
-              onChange={setContent}
-              organizationId={organizationId}
-              error={contentError}
-            />
-          ) : null}
-          {allowOrganization ? (
-            <fieldset className="flex flex-col gap-2">
-              <legend className="mb-1 font-medium">{t("tokens.organizationAccess")}</legend>
-              {organizationAreas
-                .filter((area) => area !== CONTENT_AREA)
-                .map((area) => (
-                  <AreaRow key={area} label={translateKey(t, `areas.organization.${area}`)}>
+        <>
+          {reauthentication.panel}
+          <form
+            className="flex flex-col gap-4"
+            noValidate
+            hidden={reauthentication.active}
+            onSubmit={submitWith(submit)}
+          >
+            {error ? (
+              <Notice variant="danger" title={t("failures.createToken")}>
+                {error}
+              </Notice>
+            ) : null}
+            <Field label={t("tokens.name")} error={form.formState.errors.name?.message}>
+              <Input autoComplete="off" autoFocus {...form.register("name")} />
+            </Field>
+            {allowOrganization ? (
+              <ContentAccessFields
+                value={content}
+                onChange={setContent}
+                organizationId={organizationId}
+                error={contentError}
+              />
+            ) : null}
+            {allowOrganization ? (
+              <fieldset className="flex flex-col gap-2">
+                <legend className="mb-1 font-medium">{t("tokens.organizationAccess")}</legend>
+                {organizationAreas
+                  .filter((area) => area !== CONTENT_AREA)
+                  .map((area) => (
+                    <AreaRow key={area} label={translateKey(t, `areas.organization.${area}`)}>
+                      <Controller
+                        control={form.control}
+                        name={`organization.${area}`}
+                        render={({ field }) => (
+                          <SegmentedControl
+                            label={translateKey(t, `areas.organization.${area}`)}
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            options={levelOptions}
+                          />
+                        )}
+                      />
+                    </AreaRow>
+                  ))}
+              </fieldset>
+            ) : null}
+            {allowInstance ? (
+              <fieldset className="flex flex-col gap-2">
+                <legend className="mb-1 font-medium">{t("tokens.instanceAccess")}</legend>
+                {instanceAreas.map((area) => (
+                  <AreaRow key={area} label={translateKey(t, `areas.instance.${area}`)}>
                     <Controller
                       control={form.control}
-                      name={`organization.${area}`}
+                      name={`instance.${area}`}
                       render={({ field }) => (
                         <SegmentedControl
-                          label={translateKey(t, `areas.organization.${area}`)}
+                          label={translateKey(t, `areas.instance.${area}`)}
                           value={field.value}
                           onValueChange={field.onChange}
                           options={levelOptions}
@@ -280,72 +311,52 @@ export function CreateTokenDialog({
                     />
                   </AreaRow>
                 ))}
-            </fieldset>
-          ) : null}
-          {allowInstance ? (
+              </fieldset>
+            ) : null}
+            <p className="text-sm text-text-muted">{hint ?? t("tokens.neverMore")}</p>
             <fieldset className="flex flex-col gap-2">
-              <legend className="mb-1 font-medium">{t("tokens.instanceAccess")}</legend>
-              {instanceAreas.map((area) => (
-                <AreaRow key={area} label={translateKey(t, `areas.instance.${area}`)}>
-                  <Controller
-                    control={form.control}
-                    name={`instance.${area}`}
-                    render={({ field }) => (
-                      <SegmentedControl
-                        label={translateKey(t, `areas.instance.${area}`)}
-                        value={field.value}
-                        onValueChange={field.onChange}
-                        options={levelOptions}
-                      />
-                    )}
+              <legend className="mb-1 font-medium">{t("tokens.expires")}</legend>
+              {maxLifetimeDays !== null ? (
+                <p className="text-sm text-text-muted">
+                  {t("tokens.maximumApplies", { days: maxLifetimeDays })}
+                </p>
+              ) : null}
+              <Controller
+                control={form.control}
+                name="expiry"
+                render={({ field }) => (
+                  <RadioGroup
+                    label={t("tokens.expires")}
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    options={choices.map((value) => ({
+                      value,
+                      label: translateKey(t, `tokens.expiry.${value}`),
+                    }))}
                   />
-                </AreaRow>
-              ))}
+                )}
+              />
+              {form.watch("expiry") === "custom" ? (
+                <Field label={t("tokens.customDate")} error={form.formState.errors.customDate?.message}>
+                  <Input
+                    type="date"
+                    min={dateInDays(1)}
+                    {...(latestDate ? { max: latestDate } : {})}
+                    {...form.register("customDate")}
+                  />
+                </Field>
+              ) : null}
             </fieldset>
-          ) : null}
-          <p className="text-sm text-text-muted">{hint ?? t("tokens.neverMore")}</p>
-          <fieldset className="flex flex-col gap-2">
-            <legend className="mb-1 font-medium">{t("tokens.expires")}</legend>
-            {maxLifetimeDays !== null ? (
-              <p className="text-sm text-text-muted">
-                {t("tokens.maximumApplies", { days: maxLifetimeDays })}
-              </p>
-            ) : null}
-            <Controller
-              control={form.control}
-              name="expiry"
-              render={({ field }) => (
-                <RadioGroup
-                  label={t("tokens.expires")}
-                  value={field.value}
-                  onValueChange={field.onChange}
-                  options={choices.map((value) => ({
-                    value,
-                    label: translateKey(t, `tokens.expiry.${value}`),
-                  }))}
-                />
-              )}
-            />
-            {form.watch("expiry") === "custom" ? (
-              <Field label={t("tokens.customDate")} error={form.formState.errors.customDate?.message}>
-                <Input
-                  type="date"
-                  min={dateInDays(1)}
-                  {...(latestDate ? { max: latestDate } : {})}
-                  {...form.register("customDate")}
-                />
-              </Field>
-            ) : null}
-          </fieldset>
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => close(false)}>
-              {t("common.cancel")}
-            </Button>
-            <Button type="submit" variant="primary" loading={form.formState.isSubmitting}>
-              {t("tokens.create")}
-            </Button>
-          </div>
-        </form>
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => close(false)}>
+                {t("common.cancel")}
+              </Button>
+              <Button type="submit" variant="primary" loading={form.formState.isSubmitting}>
+                {t("tokens.create")}
+              </Button>
+            </div>
+          </form>
+        </>
       )}
     </Dialog>
   );

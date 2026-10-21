@@ -295,6 +295,61 @@ describe("the web client", () => {
       password: "correct horse battery",
     });
   });
+
+  it("asks for the identity inside the token dialog instead of opening a second dialog", async () => {
+    let confirmed = false;
+    api({
+      "GET /api/v1/auth/session": () => ({ body: SESSION }),
+      "GET /api/v1/account/security": () => ({
+        body: {
+          totp: false,
+          passkeys: [],
+          recoveryCodes: 0,
+          secondFactorRequired: false,
+          secondFactorRequiredBy: null,
+        },
+      }),
+      "GET /api/v1/account/sessions": () => ({ body: { items: [], nextCursor: null } }),
+      "GET /api/v1/account/tokens": () => ({ body: { items: [], nextCursor: null } }),
+      "POST /api/v1/account/tokens": () =>
+        confirmed
+          ? {
+              status: 201,
+              body: {
+                id: "01929b1e-0000-7000-8000-0000000000f9",
+                name: "Chatbot",
+                token: "ph_created_secret",
+                scopes: { organization: { members: "view" } },
+                contentLevel: "read",
+                knowledgeBaseIds: null,
+                expiresAt: null,
+                lastUsedAt: null,
+                createdAt: "2026-10-01T08:00:00.000Z",
+              },
+            }
+          : problem(403, "reauthenticationRequired"),
+      "POST /api/v1/auth/reauthenticate": () => {
+        confirmed = true;
+        return { status: 204 };
+      },
+    });
+    await renderApp("/settings/security");
+    await userEvent.click(await screen.findByRole("button", { name: "Create token" }));
+    const dialog = await screen.findByRole("dialog", { name: "Create API token" });
+    await userEvent.type(within(dialog).getByLabelText("Name"), "Chatbot");
+    await userEvent.click(
+      within(within(dialog).getByRole("radiogroup", { name: "Members and groups" })).getByRole("radio", {
+        name: "View",
+      }),
+    );
+    await userEvent.click(within(dialog).getByRole("button", { name: "Create token" }));
+    const confirm = await within(dialog).findByRole("region", { name: "Confirm your identity" });
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    await userEvent.type(within(confirm).getByLabelText("Password"), "correct horse battery");
+    await userEvent.click(within(confirm).getByRole("button", { name: "Confirm" }));
+    expect(await screen.findByText("ph_created_secret")).toBeTruthy();
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+  });
 });
 
 describe("the command palette", () => {

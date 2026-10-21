@@ -2554,7 +2554,8 @@
       "changeFailed": "The content access could not be changed",
       "readOnlyScope": "This token was created with read access to spaces, so it can only read. Create a new token to write.",
       "save": "Save content access",
-      "saved": "Content access changed"
+      "saved": "Content access changed",
+      "summaryNamed": "{level} in {names}"
     }
   },
   "notifications": {
