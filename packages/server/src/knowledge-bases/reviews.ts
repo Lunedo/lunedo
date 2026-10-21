@@ -114,6 +114,11 @@ export interface ReviewEvent {
   at: Date;
 }
 
+export interface HiddenSources {
+  count: number;
+  changed: boolean;
+}
+
 export interface ArticleSource {
   id: string;
   title: string;
@@ -676,6 +681,46 @@ export class ReviewService {
       spaceName: row.name,
       changedAt: date(row.changed_at),
     }));
+  }
+
+  #hiddenSources(viewer: Principal, articleId: string): SQL {
+    return sql`select a.source_id, a.changed_at from article_sources a
+      where a.article_id = ${articleId} and not exists (select 1 from tree_items t join spaces s on s.id = t.space_id
+        where t.id = a.source_id and s.deleted_at is null and ${visibleItem(this.#authorization, viewer, sql`t`, sql`s`)})`;
+  }
+
+  async hiddenSources(viewer: Principal, articleId: string): Promise<HiddenSources> {
+    await this.#requireArticle(this.#database, articleId);
+    const result = await this.#database.execute<{ count: string; changed: boolean }>(sql`
+      select count(*) as count, coalesce(bool_or(h.changed_at is not null), false) as changed
+      from (${this.#hiddenSources(viewer, articleId)}) h`);
+    return { count: Number(result.rows[0]?.count ?? 0), changed: result.rows[0]?.changed === true };
+  }
+
+  async removeHiddenSources(actor: Principal, articleId: string): Promise<HiddenSources> {
+    await this.#database.transaction(async (tx) => {
+      const article = await this.#requireArticle(tx, articleId, true);
+      const removed = await tx.execute<{ source_id: string }>(sql`
+        delete from article_sources where article_id = ${articleId}
+          and source_id in (select h.source_id from (${this.#hiddenSources(actor, articleId)}) h)
+        returning source_id`);
+      if (!removed.rowCount) return;
+      await tx.execute(sql`
+        update article_reviews set source_changed_at = (select min(changed_at) from article_sources
+          where article_id = ${articleId}), updated_at = now()
+        where item_id = ${articleId}`);
+      for (const row of removed.rows) {
+        await this.#audit.record(tx, {
+          name: "article.sourceRemoved",
+          actor,
+          targetId: articleId,
+          fields: { spaceId: article.spaceId, title: article.title, sourceId: row.source_id },
+          scope: auditScopeOf(article),
+        });
+      }
+      await signalSpaceChange(tx, { spaceId: article.spaceId, kind: "tree", itemId: articleId });
+    });
+    return this.hiddenSources(actor, articleId);
   }
 
   async addSource(actor: Principal, articleId: string, sourceId: string): Promise<ArticleSource[]> {

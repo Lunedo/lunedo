@@ -8,7 +8,8 @@ import { PreferencesProvider } from "../../preferences/preferences-provider.js";
 import { PublishButton } from "../../spaces/page-publishing.js";
 import { SpaceContext, type SpaceContextValue } from "../../spaces/space-context.js";
 import type { ItemDetails, SpaceWithRole } from "../../spaces/space-queries.js";
-import { mockApi, renderWithProviders } from "../../testing/render.js";
+import { mockApi, problem, renderWithProviders } from "../../testing/render.js";
+import { ArticleReviewLine } from "./article-review.js";
 import { DueForReview } from "./home-reviews.js";
 import type { ReviewItem } from "./queries.js";
 import { ReviewScreen } from "./review-screen.js";
@@ -286,5 +287,28 @@ describe("the review ring", () => {
     expect(reviewProgress(timing, NOW)).toBeCloseTo(0.5, 2);
     expect(reviewProgress({ ...timing, dueAt: null }, NOW)).toBe(0);
     expect(reviewProgress({ ...timing, dueAt: day(-1) }, NOW)).toBe(1);
+  });
+});
+
+describe("the source pages of an article", () => {
+  it("lets editors remove source pages they cannot read after asking", async () => {
+    const api = mockApi({
+      [`GET /api/v1/articles/${ARTICLE}/review`]: () => problem(404, "notFound"),
+      [`GET /api/v1/articles/${ARTICLE}/sources`]: () => ({ body: [] }),
+      [`GET /api/v1/articles/${ARTICLE}/hidden-sources`]: () => ({ body: { count: 1, changed: true } }),
+      [`DELETE /api/v1/articles/${ARTICLE}/hidden-sources`]: () => ({ body: { count: 0, changed: false } }),
+    });
+    await renderWithProviders(
+      inSpace(<ArticleReviewLine itemId={ARTICLE} title="Set up the VPN" editable published />),
+    );
+    expect(await screen.findByText("1 source page you cannot read")).toBeTruthy();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Remove this source page" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText(/Only people who can read it can link it again/)).toBeTruthy();
+    expect(api.requests.some((entry) => entry.method === "DELETE")).toBe(false);
+    await user.click(within(dialog).getByRole("button", { name: "Remove this source page" }));
+    await waitFor(() => expect(screen.queryByText("1 source page you cannot read")).toBeNull());
+    expect(api.requests.filter((entry) => entry.method === "DELETE")).toHaveLength(1);
   });
 });

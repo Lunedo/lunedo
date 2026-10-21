@@ -9870,7 +9870,13 @@
       "addConfirm": "Add source page",
       "remove": "Remove source page “{title}”",
       "removed": "Source page “{title}” removed",
-      "removeFailed": "Source page “{title}” was not removed"
+      "removeFailed": "Source page “{title}” was not removed",
+      "hidden": "{count, plural, one {# source page you cannot read} other {# source pages you cannot read}}",
+      "removeHidden": "{count, plural, one {Remove this source page} other {Remove these source pages}}",
+      "removeHiddenTitle": "{count, plural, one {Remove the source page you cannot read?} other {Remove the # source pages you cannot read?}}",
+      "removeHiddenDescription": "The article is no longer reminded of changes to {count, plural, one {this page} other {these pages}}. Only people who can read {count, plural, one {it} other {them}} can link {count, plural, one {it} other {them}} again.",
+      "hiddenRemoved": "{count, plural, one {Source page removed} other {# source pages removed}}",
+      "removeHiddenFailed": "{count, plural, one {The source page was not removed} other {The source pages were not removed}}"
     }
   },
   "statistics": {

@@ -161,7 +161,7 @@ An article can be based on internal pages, for example the operating documentati
 
 When a source page is published with changes, the article shows **Source page changed** in the review list until it is marked as reviewed, and its owner is notified once. Live pages count each saved version as a change. The notification and the review list name the article, never the source page.
 
-In Pagehall, the link to a source page and its title are shown only to people who can read the source page; for everyone else the source does not exist. The portal for readers never shows source pages, and they are not part of the article's content or its machine-readable form. Linking and removing a source page is audited as `article.sourceAdded` and `article.sourceRemoved`.
+In Pagehall, the link to a source page and its title are shown only to people who can read the source page; for everyone else the source does not exist. The portal for readers never shows source pages, and they are not part of the article's content or its machine-readable form. Editors of the article see only how many linked source pages they cannot read, and can remove those links, for example when the person who linked a restricted page has left; only people who can read such a page can link it again. Linking and removing a source page is audited as `article.sourceAdded` and `article.sourceRemoved`.
 
 ## Reviews through the API
 
@@ -176,6 +176,7 @@ In Pagehall, the link to a source page and its title are shown only to people wh
 | `POST /api/v1/articles/{itemId}/reviews` | edit the article | mark as reviewed |
 | `DELETE /api/v1/articles/{itemId}/reviews/{reviewId}` | edit the article | undo the latest own review within two minutes |
 | `GET`, `POST /api/v1/articles/{itemId}/sources`, `DELETE …/sources/{sourceId}` | read, edit the article | source pages the caller can read |
+| `GET`, `DELETE /api/v1/articles/{itemId}/hidden-sources` | edit the article | number of linked source pages the caller cannot read; remove them |
 
 `POST /api/v1/pages/{pageId}/publish` accepts `"reviewed": true` for articles. Reviews also appear in `GET /api/v1/items/{itemId}/activity` with the type `review`.
 

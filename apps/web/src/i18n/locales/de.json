@@ -9870,7 +9870,13 @@
       "addConfirm": "Quellseite hinzufügen",
       "remove": "Quellseite „{title}“ entfernen",
       "removed": "Quellseite „{title}“ entfernt",
-      "removeFailed": "Quellseite „{title}“ wurde nicht entfernt"
+      "removeFailed": "Quellseite „{title}“ wurde nicht entfernt",
+      "hidden": "{count, plural, one {# Quellseite, die du nicht lesen kannst} other {# Quellseiten, die du nicht lesen kannst}}",
+      "removeHidden": "{count, plural, one {Diese Quellseite entfernen} other {Diese Quellseiten entfernen}}",
+      "removeHiddenTitle": "{count, plural, one {Die Quellseite entfernen, die du nicht lesen kannst?} other {Die # Quellseiten entfernen, die du nicht lesen kannst?}}",
+      "removeHiddenDescription": "Der Artikel erinnert dann nicht mehr an Änderungen {count, plural, one {dieser Seite} other {dieser Seiten}}. Nur wer {count, plural, one {sie} other {sie}} lesen kann, kann {count, plural, one {sie} other {sie}} wieder verknüpfen.",
+      "hiddenRemoved": "{count, plural, one {Quellseite entfernt} other {# Quellseiten entfernt}}",
+      "removeHiddenFailed": "{count, plural, one {Die Quellseite wurde nicht entfernt} other {Die Quellseiten wurden nicht entfernt}}"
     }
   },
   "statistics": {

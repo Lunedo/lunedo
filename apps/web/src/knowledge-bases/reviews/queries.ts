@@ -28,6 +28,7 @@ export const reviewKeys = {
     ["spaces", spaceId, "knowledgeBase", "reviews", "list", filter, mine] as const,
   article: (itemId: string) => ["items", itemId, "review"] as const,
   sources: (itemId: string) => ["items", itemId, "sources"] as const,
+  hiddenSources: (itemId: string) => ["items", itemId, "hiddenSources"] as const,
   mine: ["reviews", "mine"] as const,
 };
 
@@ -92,6 +93,14 @@ export function articleSourcesQuery(itemId: string) {
     queryKey: reviewKeys.sources(itemId),
     queryFn: () =>
       request(() => api.GET("/api/v1/articles/{itemId}/sources", { params: { path: { itemId } } })),
+  });
+}
+
+export function hiddenSourcesQuery(itemId: string) {
+  return queryOptions({
+    queryKey: reviewKeys.hiddenSources(itemId),
+    queryFn: () =>
+      request(() => api.GET("/api/v1/articles/{itemId}/hidden-sources", { params: { path: { itemId } } })),
   });
 }
 
