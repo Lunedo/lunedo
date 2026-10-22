@@ -86,12 +86,23 @@ function ItemRow({ item }: { item: OperationsStatusItem }) {
   const format = useFormat();
   const text = itemText(t, item, format);
   const fixCommand = typeof item.facts.fixCommand === "string" ? item.facts.fixCommand : null;
+  const cleanupAt =
+    item.id === "backups" && typeof item.facts.testRestoreCleanupAt === "string"
+      ? item.facts.testRestoreCleanupAt
+      : null;
   return (
     <SettingRow
       label={text.label}
       description={
         <>
           {text.description}
+          {cleanupAt ? (
+            <span className="mt-1 block">
+              {t("operations.status.items.backups.cleanup", {
+                testRestoreCleanupAt: format.relative(cleanupAt),
+              })}
+            </span>
+          ) : null}
           {fixCommand && item.status !== "ok" ? (
             <code className="mt-1 block break-all rounded-sm bg-surface-sunken px-2 py-1 font-mono text-xs">
               {fixCommand}

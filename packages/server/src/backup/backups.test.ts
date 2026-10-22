@@ -645,9 +645,7 @@ describe.skipIf(!baseUrl)("backups", () => {
           "select datname from pg_database where datname like 'pagehall_test_restore_%'",
         );
         expect(leftovers.rows).toEqual([]);
-        expect(
-          (await readdir(backupDir)).filter((entry) => entry.startsWith(".pagehall-test-restore")),
-        ).toEqual([]);
+        expect((await readdir(workDir)).filter((entry) => entry.startsWith("test-restore-"))).toEqual([]);
         expect((await backups().list()).backups[0]?.testRestore).toMatchObject({ id, state: "passed" });
         expect((await audited("backup.testRestoreFinished")).at(-1)).toMatchObject({ state: "passed" });
       },
@@ -696,6 +694,7 @@ describe.skipIf(!baseUrl)("backups", () => {
           const outcome = await runTestRestore(
             new LocalBackupTarget(targetDir),
             created?.name ?? "",
+            "01900000-0000-7000-8000-0000000000aa",
             {
               pool: limited,
               databaseUrl: url.toString(),
@@ -703,7 +702,7 @@ describe.skipIf(!baseUrl)("backups", () => {
               masterKeys: async () => test.keyRing.ring,
               knownSchemaVersions: knownSchemaVersions(),
               migrationTimes: schemaVersionTimes(),
-              workDir: backupDir,
+              workDir,
               logger,
             },
             async () => {},
@@ -719,6 +718,95 @@ describe.skipIf(!baseUrl)("backups", () => {
         }
       },
     );
+
+    it.skipIf(!hasTools)(
+      "only verifies, with the reason, when the work directory has no space for the copy of the files",
+      async () => {
+        await useLocalTarget();
+        await backups().run({ trigger: "manual", slot: null, actorId: owner });
+        const [created] = (await backups().list()).backups;
+        const outcome = await runTestRestore(
+          new LocalBackupTarget(targetDir),
+          created?.name ?? "",
+          "01900000-0000-7000-8000-0000000000bb",
+          {
+            pool: test.pool,
+            databaseUrl: test.url,
+            backupKeys: test.backupKeys,
+            masterKeys: async () => test.keyRing.ring,
+            knownSchemaVersions: knownSchemaVersions(),
+            migrationTimes: schemaVersionTimes(),
+            workDir,
+            logger,
+            diskSpace: async () => ({ free: 1, total: 1024 ** 4, device: 1 }),
+          },
+          async () => {},
+        );
+        expect(outcome).toMatchObject({
+          state: "verified",
+          stage: "done",
+          error: expect.stringContaining("Not enough free space for the copy of the file store"),
+        });
+        expect(outcome.checks.map((check) => [check.check, check.passed])).toEqual([
+          ["verify", true],
+          ["space", false],
+        ]);
+        const databases = await test.pool.query(
+          "select datname from pg_database where datname like 'pagehall_test_restore_%'",
+        );
+        expect(databases.rows).toEqual([]);
+      },
+    );
+
+    it.skipIf(!hasTools)(
+      "keeps a requested test restore queued until its job starts, then runs it",
+      async () => {
+        await useLocalTarget();
+        await backups().run({ trigger: "manual", slot: null, actorId: owner });
+        const [created] = (await backups().list()).backups;
+        const id = await backups().requestTestRestore(actor(), created?.name ?? "");
+        await backups().check();
+        expect(await backups().testRestore(id)).toMatchObject({ state: "running" });
+        await backups().runTestRestore({ testId: id });
+        expect(await backups().testRestore(id)).toMatchObject({ state: "passed" });
+      },
+    );
+
+    it("fails a queued test restore whose job never started after a day", async () => {
+      await useLocalTarget();
+      await test.database.execute(sql`
+        insert into backup_test_restores (id, backup_name, trigger, state, stage, started_at)
+        values (gen_random_uuid(), 'pagehall-backup-20261020T000000Z-daily-00000000.phbak', 'manual',
+          'running', 'verify', ${new Date(now.getTime() - DAY - 60_000)})`);
+      await backups().check();
+      const rows = await test.database.execute<{ state: string; error: string }>(
+        sql`select state, error from backup_test_restores`,
+      );
+      expect(rows.rows).toEqual([
+        { state: "failed", error: "The test restore did not start. Start it again." },
+      ]);
+    });
+
+    it("removes leftovers of an interrupted test restore and shows when it did", async () => {
+      const id = "01900000-0000-7000-8000-000000000001";
+      const key = id.replaceAll("-", "");
+      await test.pool.query(`create database pagehall_test_restore_${key}`);
+      const leftover = path.join(workDir, `test-restore-${key}`);
+      await mkdir(path.join(leftover, "attachments"), { recursive: true });
+      await writeFile(path.join(leftover, "attachments", "copy.txt"), "copy of a stored file");
+      await test.database.execute(sql`
+        insert into backup_test_restores (id, backup_name, trigger, state, stage, started_at, job_started_at)
+        values (${id}, 'pagehall-backup-20261020T000000Z-daily-00000000.phbak', 'automatic', 'running',
+          'restore', ${now}, ${now})`);
+      await backups().check();
+      const databases = await test.pool.query(
+        "select datname from pg_database where datname like 'pagehall_test_restore_%'",
+      );
+      expect(databases.rows).toEqual([]);
+      expect(await readdir(workDir)).not.toContain(`test-restore-${key}`);
+      expect(await backups().testRestore(id)).toMatchObject({ state: "failed" });
+      expect((await backups().status()).testRestoreCleanupAt).toEqual(now);
+    });
 
     it.skipIf(!hasTools)("runs a test restore after the first scheduled backup of a month", async () => {
       await useLocalTarget();

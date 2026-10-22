@@ -328,6 +328,7 @@ export async function createServerRuntime(options: {
             .pauseForMaintenance(status.enabled)
             .catch((error: unknown) => logger.warn({ err: error }, "Pausing jobs for maintenance failed"));
         });
+        await services.backups.cleanUpTestRestores();
         await workAccountJobs(jobs, services, settings);
         await startSearchIndexing({ jobs, listener, indexer: services.search.indexer, logger });
         await startBlogAnnouncements({ jobs, listener, subscriptions: services.blogSubscriptions, logger });

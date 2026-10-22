@@ -1,16 +1,63 @@
-import { randomBytes } from "node:crypto";
-import { mkdir, rm, stat } from "node:fs/promises";
+import { mkdir, readdir, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import pg from "pg";
 import type { KeyRing } from "../crypto/key-ring.js";
 import type { DatabasePool } from "../database/pool.js";
 import { ATTACHMENTS_DIRECTORY, assertObjectKey } from "../files/store.js";
 import type { Logger } from "../logging/logger.js";
-import { restoreBackup, verifyBackup } from "./archive.js";
+import { type BackupManifest, restoreBackup, verifyBackup } from "./archive.js";
 import { describeFailure } from "./errors.js";
 import { type DatabaseArchiver, PostgresArchiver } from "./postgres.js";
+import { checkSpace, criticalPercent, type DiskSpace, NotEnoughSpaceError } from "./runner.js";
 import type { TestRestoreCheck } from "./schema.js";
 import type { BackupTarget } from "./targets.js";
+
+const DATABASE_PREFIX = "pagehall_test_restore_";
+const DIRECTORY_PREFIX = "test-restore-";
+const LEFTOVER_DATABASE = /^pagehall_test_restore_([0-9a-f]{32})$/;
+const LEFTOVER_DIRECTORY = /^test-restore-([0-9a-f]{32})$/;
+const SPACE_MARGIN = 1.2;
+
+function runKey(runId: string): string {
+  return runId.replace(/-/g, "").toLowerCase();
+}
+
+export function testRestoreNames(workDir: string, runId: string): { database: string; directory: string } {
+  const key = runKey(runId);
+  return { database: `${DATABASE_PREFIX}${key}`, directory: path.join(workDir, `${DIRECTORY_PREFIX}${key}`) };
+}
+
+export async function removeTestRestoreLeftovers(
+  sources: Pick<TestRestoreSources, "pool" | "workDir" | "logger">,
+  keepFrom: string | null,
+): Promise<number> {
+  const keep = keepFrom === null ? null : runKey(keepFrom);
+  const stale = (key: string) => keep === null || key < keep;
+  let removed = 0;
+  const databases = await sources.pool.query<{ datname: string }>(
+    "select datname from pg_database where datname like 'pagehall_test_restore_%' and datdba = (select oid from pg_roles where rolname = current_user)",
+  );
+  for (const { datname } of databases.rows) {
+    const key = LEFTOVER_DATABASE.exec(datname)?.[1];
+    if (!key || !stale(key)) continue;
+    await sources.pool.query(`drop database if exists ${quoteIdentifier(datname)} with (force)`);
+    removed += 1;
+  }
+  let entries: string[] = [];
+  try {
+    entries = await readdir(sources.workDir);
+  } catch {
+    entries = [];
+  }
+  for (const entry of entries) {
+    const key = LEFTOVER_DIRECTORY.exec(entry)?.[1];
+    if (!key || !stale(key)) continue;
+    await rm(path.join(sources.workDir, entry), { recursive: true, force: true });
+    removed += 1;
+  }
+  if (removed > 0) sources.logger.info({ removed }, "Leftovers of interrupted test restores removed");
+  return removed;
+}
 
 export const MAIN_TABLES = [
   "instance",

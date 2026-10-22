@@ -129,6 +129,7 @@ export const backupTestRestores = pgTable(
     error: text(),
     actorId: uuid().references(() => accounts.id, { onDelete: "set null" }),
     startedAt: timestampColumn().notNull().defaultNow(),
+    jobStartedAt: timestampColumn(),
     finishedAt: timestampColumn(),
     ...timestamps(),
   },

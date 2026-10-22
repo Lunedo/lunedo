@@ -160,10 +160,13 @@ Rolling back an update means restoring the backup before the update with the pre
 **Test restore** in the list, or the monthly test restore (on by default: after the first scheduled backup of a month), checks one backup:
 
 1. It verifies the backup like `backup verify`.
-2. When the database user may create databases, it restores the backup into a temporary database on the same server and a temporary directory under `PAGEHALL_BACKUP_DIR`, and checks that the schema version matches the backup, that the main tables contain data (the row counts are listed) and that every file the database refers to is present.
-3. It removes the temporary database and directory, also when a step fails.
+2. When the database user may create databases, it checks that the work directory (`PAGEHALL_WORK_DIR`) has free space for the files of the backup plus 20 %, below the critical level of the storage warnings.
+3. It restores the backup into a temporary database on the same server, `pagehall_test_restore_<id>`, and a temporary directory `test-restore-<id>` in the work directory, and checks that the schema version matches the backup, that the main tables contain data (the row counts are listed) and that every file the database refers to is present. The database server needs free space for one more copy of the database.
+4. It removes the temporary database and directory, also when a step fails.
 
-Without the privilege it stops after step 1 with the result "verified only" and shows the SQL that grants it, for example `ALTER ROLE "pagehall" CREATEDB;`. The result is kept with the backup: when, by whom, how far it got and what it checked. Only one test restore runs at a time.
+Without the privilege it stops after step 1 with the result "verified only" and shows the SQL that grants it, for example `ALTER ROLE "pagehall" CREATEDB;`. Without enough space it stops after step 2 with the result "verified only" and says how much space it needs; the monthly test restore then logs a warning instead of reporting a failure.
+
+If the worker is killed during a test restore, the temporary database and directory stay behind. The worker removes them when it starts, and the check that runs every minute removes every leftover older than a running test restore. The status page shows when this happened. A requested test restore counts as interrupted only once its job has started; one whose job never starts is marked as failed after a day. The result is kept with the backup: when, by whom, how far it got and what it checked. Only one test restore runs at a time.
 
 ## Warnings
 
@@ -177,7 +180,7 @@ Warnings go to the instance administrators (notification center, e-mail and push
 
 While the instance has content and backups are off or have no target, a banner on the settings pages says so; there is no mail for it.
 
-For monitoring, `GET /api/v1/instance/backups/status` returns the last success, the last failure, the next run, whether scheduled backups are on and whether backups before updates are on.
+For monitoring, `GET /api/v1/instance/backups/status` returns the last success, the last failure, the next run, whether scheduled backups are on, whether backups before updates are on, whether the backups are paused after a restore, and when leftovers of a test restore were last removed.
 
 ## Upgrading PostgreSQL to a new major version
 

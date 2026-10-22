@@ -70,9 +70,10 @@ import {
   type TargetFailure,
   type TargetStep,
 } from "./targets.js";
-import { runTestRestore, type TestRestoreSources } from "./test-restore.js";
+import { removeTestRestoreLeftovers, runTestRestore, type TestRestoreSources } from "./test-restore.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const QUEUED_TEST_LIMIT_MS = DAY_MS;
 const BACKUP_SETTINGS_PATH = "/settings/instance/backups";
 const RECENT_RUNS = 20;
 
@@ -981,53 +982,74 @@ export class BackupService {
   }
 
   async #markInterrupted(): Promise<void> {
-    if (await isBackupRunning(this.#options.pool)) return;
+    const backupLock = await tryBackupLock(this.#options.pool);
+    if (backupLock) {
+      try {
+        await this.#database
+          .update(backupRuns)
+          .set({
+            state: "failed",
+            error: "The backup was interrupted, for example by a restart of the worker.",
+            finishedAt: this.#clock(),
+          })
+          .where(eq(backupRuns.state, "running"));
+      } finally {
+        await backupLock.release();
+      }
+    }
     await this.#database
-      .update(backupRuns)
+      .update(backupTestRestores)
       .set({
         state: "failed",
-        error: "The backup was interrupted, for example by a restart of the worker.",
+        error: "The test restore did not start. Start it again.",
         finishedAt: this.#clock(),
       })
-      .where(eq(backupRuns.state, "running"));
-    if (!(await isTestRestoreRunning(this.#options.pool))) {
-      await this.#database
-        .update(backupTestRestores)
-        .set({
-          state: "failed",
-          error: "The test restore was interrupted, for example by a restart of the worker.",
-          finishedAt: this.#clock(),
-        })
-        .where(eq(backupTestRestores.state, "running"));
-    }
-  }
-
-  async #estimate(): Promise<number> {
-    const [previous] = await this.#database
-      .select({ size: backupRuns.sizeBytes })
-      .from(backupRuns)
-      .where(and(eq(backupRuns.state, "succeeded"), inArray(backupRuns.trigger, ["scheduled", "manual"])))
-      .orderBy(desc(backupRuns.finishedAt))
-      .limit(1);
-    if (previous?.size) return previous.size;
-    const result = await this.#database.execute<{ size: string }>(
-      sql`select pg_database_size(current_database()) as size`,
-    );
-    return Number(result.rows[0]?.size ?? 0);
-  }
-
-  async #checkFreeSpace(target: BackupTarget): Promise<void> {
-    const capacity = await target.capacity();
-    if (!capacity || capacity.total <= 0) return;
-    const estimate = await this.#estimate();
-    const used = capacity.total - capacity.free;
-    const projected = ((used + estimate) / capacity.total) * 100;
-    const critical = await this.#options.criticalPercent();
-    if (projected >= critical) {
-      throw new BackupError(
-        `Not enough free space in the backup target: the backup needs about ${formatGb(estimate)}, ${formatGb(capacity.free)} are free, and the disk must stay below ${critical} %. Free up space, lower the number of kept backups or choose another target.`,
+      .where(
+        and(
+          eq(backupTestRestores.state, "running"),
+          isNull(backupTestRestores.jobStartedAt),
+          lt(backupTestRestores.startedAt, new Date(this.#clock().getTime() - QUEUED_TEST_LIMIT_MS)),
+        ),
       );
+  }
+
+  async cleanUpTestRestores(): Promise<void> {
+    const lock = await tryTestRestoreLock(this.#options.pool);
+    let removed: number;
+    if (lock) {
+      try {
+        await this.#database
+          .update(backupTestRestores)
+          .set({
+            state: "failed",
+            error: "The test restore was interrupted, for example by a restart of the worker.",
+            finishedAt: this.#clock(),
+          })
+          .where(and(eq(backupTestRestores.state, "running"), isNotNull(backupTestRestores.jobStartedAt)));
+        removed = await removeTestRestoreLeftovers(this.#testRestoreSources(), null);
+      } finally {
+        await lock.release();
+      }
+    } else {
+      const [running] = await this.#database
+        .select({ id: backupTestRestores.id })
+        .from(backupTestRestores)
+        .where(and(eq(backupTestRestores.state, "running"), isNotNull(backupTestRestores.jobStartedAt)))
+        .orderBy(desc(backupTestRestores.jobStartedAt))
+        .limit(1);
+      if (!running) return;
+      removed = await removeTestRestoreLeftovers(this.#testRestoreSources(), running.id);
     }
+    if (removed === 0) return;
+    await this.#state();
+    await this.#database
+      .update(backupState)
+      .set({ testRestoreCleanupAt: this.#clock() })
+      .where(eq(backupState.singleton, true));
+  }
+
+  #testRestoreSources(): TestRestoreSources {
+    return { ...this.#options.testRestore, pool: this.#options.pool, logger: this.#logger };
   }
 
   async run(payload: {
@@ -1173,7 +1195,7 @@ export class BackupService {
       .select()
       .from(backupTestRestores)
       .where(eq(backupTestRestores.id, payload.testId));
-    if (row?.state !== "running") return;
+    if (row?.state !== "running" || row.jobStartedAt !== null) return;
     const actor: Principal = row.actorId ? { type: "account", id: row.actorId } : SYSTEM;
     const lock = await tryTestRestoreLock(this.#options.pool);
     if (!lock) {
@@ -1190,20 +1212,36 @@ export class BackupService {
     let target: BackupTarget | null = null;
     let outcome: Awaited<ReturnType<typeof runTestRestore>>;
     try {
-      target = await this.#requireTarget();
-      outcome = await runTestRestore(
-        target,
-        row.backupName,
-        { ...this.#options.testRestore, pool: this.#options.pool, logger: this.#logger },
-        async (stage, checks) => {
-          await this.#database
-            .update(backupTestRestores)
-            .set({ stage, checks })
-            .where(eq(backupTestRestores.id, row.id));
-        },
-      );
-    } catch (error) {
-      outcome = { state: "failed", stage: "verify", checks: [], error: describeFailure(error) };
+      const started = await this.#database
+        .update(backupTestRestores)
+        .set({ jobStartedAt: this.#clock() })
+        .where(
+          and(
+            eq(backupTestRestores.id, row.id),
+            eq(backupTestRestores.state, "running"),
+            isNull(backupTestRestores.jobStartedAt),
+          ),
+        )
+        .returning({ id: backupTestRestores.id });
+      if (started.length === 0) return;
+      await removeTestRestoreLeftovers(this.#testRestoreSources(), row.id);
+      try {
+        target = await this.#requireTarget();
+        outcome = await runTestRestore(
+          target,
+          row.backupName,
+          row.id,
+          this.#testRestoreSources(),
+          async (stage, checks) => {
+            await this.#database
+              .update(backupTestRestores)
+              .set({ stage, checks })
+              .where(eq(backupTestRestores.id, row.id));
+          },
+        );
+      } catch (error) {
+        outcome = { state: "failed", stage: "verify", checks: [], error: describeFailure(error) };
+      }
     } finally {
       if (target) closeTarget(target);
       await lock.release();
@@ -1251,9 +1289,10 @@ export class BackupService {
 
   async check(): Promise<void> {
     await this.#markInterrupted();
+    await this.cleanUpTestRestores();
     const configuration = await this.configuration();
     const now = this.#clock();
-    if (!configuration.settings.enabled || !configuration.target) {
+    if (!configuration.settings.enabled || !configuration.target || (await this.#paused())) {
       await this.#database
         .update(backupState)
         .set({ alert: "none", alertNotifiedAt: null })
