@@ -25,6 +25,7 @@
     "prepare": "node scripts/install-hooks.ts",
     "lint:fix": "biome check --write .",
     "references:check": "node scripts/check-private-references.ts",
+    "name:check": "node scripts/check-product-name.ts",
     "patches:check": "node scripts/check-patches.ts",
     "playwright-image:check": "node scripts/check-playwright-image.ts",
     "i18n:check": "node scripts/check-i18n.ts",

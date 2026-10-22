@@ -100,6 +100,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm references:check
+      - run: pnpm name:check
       - run: pnpm patches:check
       - run: pnpm playwright-image:check
       - run: pnpm i18n:check
