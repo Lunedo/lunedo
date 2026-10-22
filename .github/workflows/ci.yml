@@ -379,8 +379,6 @@ jobs:
     timeout-minutes: 40
     container:
       image: mcr.microsoft.com/playwright@sha256:7852dc5a7d72f5fe458a597d690f6c42fbc8e9e26ddfa95f8e6ef552558d9bbf # v1.64.1-noble
-      env:
-        HOME: /pagehall-home
       options: >-
         --user ${{ needs.scope.outputs.runner-user }}
         --tmpfs /pagehall-home
@@ -412,6 +410,7 @@ jobs:
           --health-timeout 3s
           --health-retries 10
     env:
+      HOME: /pagehall-home
       PAGEHALL_E2E_DATABASE_URL: postgres://pagehall:pagehall@postgres:5432/pagehall
       PAGEHALL_E2E_MAILPIT_URL: http://mailpit:8025
       PAGEHALL_E2E_REDIS_URL: redis://valkey:6379
