@@ -397,7 +397,7 @@ update_pagehall() {
   fi
   location="$(printf '%s' "$location" | tail -n 1 | tr -d '\r')"
   say "The backup is $(host_location "$location")"
-  compose exec -T pagehall pagehall backup skip-before-update >/dev/null
+  compose exec -T pagehall pagehall backup skip-before-update --for-version "$target" >/dev/null
 
   say "Starting Pagehall $target"
   replace_image "$target_reference"

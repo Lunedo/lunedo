@@ -141,6 +141,8 @@ If the backup fails, the migrations are not run and the process stops with the r
 docker compose run --rm pagehall backup skip-before-update
 ```
 
+The request is written to the work directory and applies only to the next start of the version it was made for: the version of the image the command runs in, or the one given with `--for-version 1.4.2`. Every start removes it, whether migrations are pending or not, and a request for another version is ignored and logged. A request that a patch release without migrations did not need therefore never skips the backup of a later update.
+
 The setting **Back up before migrations** and the environment variable `PAGEHALL_BACKUP_BEFORE_UPDATE=false` turn the backup off for installations with their own backup strategy; the backup section shows which of them did. A fresh installation without migrations applied takes no backup.
 
 Update scripts can take the backup themselves before pulling a new image:
@@ -149,7 +151,7 @@ Update scripts can take the backup themselves before pulling a new image:
 docker compose exec pagehall pagehall backup create --before-update
 ```
 
-It writes a "before update" backup to the target (or to `PAGEHALL_BACKUP_DIR`), applies the retention of that class and prints only the location on standard output: a path, or `s3://<bucket>/<key>`. Messages go to standard error. Run `backup skip-before-update` afterwards if the next start should not take a second backup.
+It writes a "before update" backup to the target (or to `PAGEHALL_BACKUP_DIR`), applies the retention of that class and prints only the location on standard output: a path, or `s3://<bucket>/<key>`. Messages go to standard error. Run `backup skip-before-update --for-version <new version>` afterwards if the first start of the new version should not take a second backup; `./pagehall update` does this.
 
 Rolling back an update means restoring the backup before the update with the previous image.
 

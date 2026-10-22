@@ -23,7 +23,17 @@ describe("parseCommand", () => {
     expect(parseCommand(["backup", "create", "--before-update"])).toEqual({
       name: "backup create before update",
     });
-    expect(parseCommand(["backup", "skip-before-update"])).toEqual({ name: "backup skip-before-update" });
+    expect(parseCommand(["backup", "skip-before-update"])).toEqual({
+      name: "backup skip-before-update",
+      forVersion: null,
+    });
+    expect(parseCommand(["backup", "skip-before-update", "--for-version", "1.4.2"])).toEqual({
+      name: "backup skip-before-update",
+      forVersion: "1.4.2",
+    });
+    expect(() => parseCommand(["backup", "skip-before-update", "--for-version", "1.4.2; rm"])).toThrow(
+      UsageError,
+    );
   });
 
   it("does not combine a backup before an update with an output file", () => {

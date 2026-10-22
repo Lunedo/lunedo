@@ -184,8 +184,9 @@ export async function createServerRuntime(options: {
   try {
     await runMigrations(pool, {
       logger,
-      beforeMigrate: async ({ applied }) => {
-        if (applied === 0) return;
+      beforeMigrate: async ({ applied, expected }) => {
+        const skipRequested = await consumeSkipMarker(config.paths.work, config.version, logger);
+        if (applied === 0 || applied >= expected) return;
         const fileStore = fileStoreOf(config);
         await backupBeforeMigrations({
           sources: {

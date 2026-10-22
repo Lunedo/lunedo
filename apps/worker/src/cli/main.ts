@@ -119,8 +119,11 @@ async function run(command: Command): Promise<void> {
       return;
     }
     case "backup skip-before-update": {
-      const marker = await requestSkipBeforeUpdate(config.paths.backups);
-      write(`The next start applies pending migrations without a backup before the update (${marker}).`);
+      const version = command.forVersion ?? config.version;
+      await requestSkipBeforeUpdate(config.paths.work, version);
+      write(
+        `The next start of Pagehall ${version} applies pending migrations without a backup before the update. Any other start removes this request.`,
+      );
       return;
     }
     case "backup verify": {

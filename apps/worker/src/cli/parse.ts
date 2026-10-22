@@ -5,7 +5,7 @@ import type { ReleaseNotesCommand } from "./release-notes.js";
 export type Command =
   | { name: "backup create"; output: string }
   | { name: "backup create before update" }
-  | { name: "backup skip-before-update" }
+  | { name: "backup skip-before-update"; forVersion: string | null }
   | { name: "backup verify"; input: string }
   | { name: "backup restore"; input: string; force: boolean; configDir: string | undefined }
   | { name: "keys rotate" }
@@ -25,7 +25,7 @@ export class UsageError extends Error {
 export const usage = `Usage:
   pagehall backup create --output <file>
   pagehall backup create --before-update
-  pagehall backup skip-before-update
+  pagehall backup skip-before-update [--for-version <version>]
   pagehall backup verify --input <file>
   pagehall backup restore --input <file> [--force] [--config-dir <dir>]
   pagehall keys rotate
@@ -39,6 +39,8 @@ export const usage = `Usage:
   pagehall version
   pagehall release-notes [--since <version>] [--update-from <version>] [--json]
 `;
+
+const VERSION = /^[0-9A-Za-z][0-9A-Za-z.+-]{0,63}$/;
 
 export function parseCommand(argv: readonly string[]): Command {
   const [group, action, ...rest] = argv;
@@ -74,6 +76,7 @@ export function parseCommand(argv: readonly string[]): Command {
       message: { type: "string" },
       "block-sign-in": { type: "boolean", default: false },
       "before-update": { type: "boolean", default: false },
+      "for-version": { type: "string" },
     },
     strict: true,
     allowPositionals: false,
@@ -92,8 +95,13 @@ export function parseCommand(argv: readonly string[]): Command {
         return { name: "backup create before update" };
       }
       return { name: "backup create", output: require("output") };
-    case "backup skip-before-update":
-      return { name: "backup skip-before-update" };
+    case "backup skip-before-update": {
+      const forVersion = values["for-version"]?.trim() ?? null;
+      if (forVersion !== null && !VERSION.test(forVersion)) {
+        throw new UsageError("--for-version takes a version like 1.4.2");
+      }
+      return { name: "backup skip-before-update", forVersion };
+    }
     case "backup verify":
       return { name: "backup verify", input: require("input") };
     case "backup restore":

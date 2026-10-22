@@ -62,8 +62,7 @@ export async function runMigrations(
     try {
       const before = await appliedMigrationCount(client);
       const expected = readJournal(folder).length;
-      if (options.beforeMigrate && before < expected)
-        await options.beforeMigrate({ applied: before, expected });
+      if (options.beforeMigrate) await options.beforeMigrate({ applied: before, expected });
       await migrate(drizzle({ client }), {
         migrationsFolder: folder,
         migrationsSchema: MIGRATIONS_SCHEMA,

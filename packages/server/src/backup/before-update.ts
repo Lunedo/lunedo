@@ -23,8 +23,10 @@ import {
 } from "./runner.js";
 import { type BackupTarget, ensureDirectory, LocalBackupTarget } from "./targets.js";
 
-export const SKIP_BEFORE_UPDATE_MARKER = ".pagehall-skip-backup-before-update";
+export const SKIP_BEFORE_UPDATE_MARKER = "skip-backup-before-update.json";
 export const SKIP_COMMAND = "docker compose run --rm pagehall backup skip-before-update";
+
+const skipMarkerSchema = z.object({ version: z.string().min(1), createdAt: z.string() });
 
 export class BackupBeforeUpdateError extends StartupError {
   override name = "BackupBeforeUpdateError";
@@ -38,52 +40,106 @@ export interface BeforeUpdateOptions {
   logger: Logger;
 }
 
-export async function requestSkipBeforeUpdate(backupDir: string): Promise<string> {
-  await ensureDirectory(backupDir);
-  const marker = path.join(backupDir, SKIP_BEFORE_UPDATE_MARKER);
-  await writeFile(marker, `${new Date().toISOString()}\n`, { mode: 0o600 });
+export async function requestSkipBeforeUpdate(workDir: string, version: string): Promise<string> {
+  await ensureDirectory(workDir);
+  const marker = path.join(workDir, SKIP_BEFORE_UPDATE_MARKER);
+  await writeFile(marker, `${JSON.stringify({ version, createdAt: new Date().toISOString() })}\n`, {
+    mode: 0o600,
+  });
   return marker;
 }
 
-async function consumeSkip(backupDir: string): Promise<boolean> {
-  const marker = path.join(backupDir, SKIP_BEFORE_UPDATE_MARKER);
+export async function consumeSkipMarker(workDir: string, version: string, logger: Logger): Promise<boolean> {
+  const marker = path.join(workDir, SKIP_BEFORE_UPDATE_MARKER);
+  let content: string;
   try {
-    await stat(marker);
+    content = await readFile(marker, "utf8");
   } catch {
     return false;
   }
   await rm(marker, { force: true });
-  return true;
+  let parsed: z.infer<typeof skipMarkerSchema> | null = null;
+  try {
+    parsed = skipMarkerSchema.parse(JSON.parse(content));
+  } catch {
+    parsed = null;
+  }
+  if (parsed?.version === version) return true;
+  logger.warn(
+    { requestedFor: parsed?.version ?? null, version },
+    "A request to skip the backup before an update was for another version; it was removed and is not applied",
+  );
+  return false;
 }
 
-async function recordRun(
+async function recordStart(
   database: Database,
-  values: {
-    state: "succeeded" | "failed";
-    written?: WrittenBackup;
-    target: string;
-    error?: string;
-    startedAt: Date;
-  },
-): Promise<void> {
+  values: { name: string; target: string },
+): Promise<string | null> {
+  const id = uuidv7();
   try {
     await database.execute(sql`
-      insert into backup_runs (id, trigger, backup_class, state, name, target, size_bytes, error, started_at, finished_at)
-      values (${uuidv7()}, 'beforeUpdate', 'beforeUpdate', ${values.state}, ${values.written?.name ?? null},
-        ${values.target}, ${values.written?.sizeBytes ?? null}, ${values.error ?? null}, ${values.startedAt}, now())`);
+      insert into backup_runs (id, trigger, backup_class, state, name, target, started_at)
+      values (${id}, 'beforeUpdate', 'beforeUpdate', 'running', ${values.name}, ${values.target}, now())`);
+    return id;
+  } catch {
+    return null;
+  }
+}
+
+async function recordEnd(
+  database: Database,
+  id: string | null,
+  values: { state: "succeeded" | "failed"; sizeBytes?: number; error?: string },
+): Promise<void> {
+  if (!id) return;
+  try {
+    await database.execute(sql`
+      update backup_runs set state = ${values.state}, size_bytes = ${values.sizeBytes ?? null},
+        error = ${values.error ?? null}, finished_at = now(), updated_at = now()
+      where id = ${id}`);
   } catch {
     return;
   }
 }
 
+const MISSING_SCHEMA = new Set(["42P01", "42703"]);
+
+async function audit<TName extends AuditEventName>(
+  database: Database,
+  logger: Logger,
+  input: AuditEventInput<TName>,
+): Promise<void> {
+  try {
+    await new AuditLog({ database }).recordAlone(input);
+  } catch (error) {
+    if (MISSING_SCHEMA.has((error as { code?: string }).code ?? "")) return;
+    logger.warn({ reason: describeFailure(error), event: input.name }, "Recording an audit event failed");
+  }
+}
+
+async function restoredAndUnconfirmed(database: Database, filesDir: string): Promise<boolean> {
+  if (await hasRestoredMarker(filesDir)) return true;
+  try {
+    const result = await database.execute<{ restored: boolean }>(
+      sql`select restored_at is not null as restored from backup_state where singleton`,
+    );
+    return result.rows[0]?.restored === true;
+  } catch {
+    return false;
+  }
+}
+
 async function openConfiguredTarget(options: BeforeUpdateOptions, masterKeys: KeyRing | null) {
   const configuration = await readBackupConfiguration(options.database);
-  if (!configuration.target) {
+  const paused = await restoredAndUnconfirmed(options.database, options.sources.filesDir);
+  if (!configuration.target || paused) {
     await ensureDirectory(options.backupDir);
     return {
       configuration,
       target: new LocalBackupTarget(options.backupDir) as BackupTarget,
       configured: false,
+      paused,
     };
   }
   const secret =
@@ -153,7 +209,7 @@ export async function backupBeforeMigrations(
     );
     return;
   }
-  if (await consumeSkip(options.backupDir)) {
+  if (options.skipRequested) {
     logger.warn("Migrations are pending; the backup before the update was skipped once as requested");
     return;
   }
