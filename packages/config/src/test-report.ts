@@ -36,3 +36,9 @@ export function recordTestResult(
     `${JSON.stringify(env.PAGEHALL_TEST_JOB ? { ...entry, job: env.PAGEHALL_TEST_JOB } : entry)}\n`,
   );
 }
+
+export function failedAttemptsMessage(test: string, errors: readonly { message: string }[]): string {
+  const first = errors[0]?.message.split("\n")[0]?.trim() ?? "no error was reported";
+  const more = errors.length > 1 ? ` (and ${errors.length - 1} more)` : "";
+  return `Passed on the retry: ${test}. The failed attempt ended with: ${first}${more}`;
+}
