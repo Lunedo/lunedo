@@ -19,9 +19,7 @@ const HEADINGS: Record<string, ChangelogGroup> = {
 };
 
 const entries = z.array(z.string().min(1).max(MAX_ENTRY_LENGTH)).max(MAX_ENTRIES_PER_GROUP);
-const releaseVersion = z
-  .string()
-  .refine((value) => parseReleaseVersion(value) !== null, "is not a release version");
+const releaseVersion = z.string().regex(/^\d{1,6}\.\d{1,6}\.\d{1,6}$/, "is not a release version like 1.4.2");
 
 export const releaseNotesSchema = z.object({
   new: entries.default([]),
@@ -53,6 +51,22 @@ export const versionFileSchema = z.object({
 });
 
 export type VersionFile = z.output<typeof versionFileSchema>;
+
+const downloadedFileSchema = z.object({
+  schema: z.literal(1),
+  releases: z.array(z.unknown()).max(MAX_RELEASES),
+});
+
+export function downloadedReleases(parsed: unknown): { releases: Release[]; ignored: number } | null {
+  const file = downloadedFileSchema.safeParse(parsed);
+  if (!file.success) return null;
+  const releases: Release[] = [];
+  for (const entry of file.data.releases) {
+    const release = releaseSchema.safeParse(entry);
+    if (release.success) releases.push(release.data);
+  }
+  return { releases, ignored: file.data.releases.length - releases.length };
+}
 
 export interface ChangelogSection {
   version: string;

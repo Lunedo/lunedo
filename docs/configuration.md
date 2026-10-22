@@ -67,7 +67,7 @@ The master keys and the backup keys are needed to read encrypted data and backup
 | `PAGEHALL_WEB_ROOT` | `/app/web` in the image | | Directory with the built web client, served by the API. |
 | `PAGEHALL_SHUTDOWN_TIMEOUT_SECONDS` | `30` | | Time running requests and jobs get to finish on shutdown. |
 | `PAGEHALL_UPDATE_CHECK` | `true` | | `false` turns the update check off completely: no request is made, and the instance setting **Check for updates** cannot turn it on. See [operations.md](operations.md#updates). |
-| `PAGEHALL_UPDATE_CHECK_URL` | the version file of the latest GitHub release | | Address of the version file, for example a mirror in the company network. A private address must be listed in `PAGEHALL_OUTBOUND_ALLOWED_NETWORKS`. |
+| `PAGEHALL_UPDATE_CHECK_URL` | the version file of the latest GitHub release | | Address of the version file, for example a mirror in the company network. A private address must be listed in `PAGEHALL_OUTBOUND_ALLOWED_NETWORKS`. The version file is public, so the address may not contain a user name, a password, a query string or a fragment; Pagehall refuses to start with one. The admin area shows only its scheme, host and path. |
 | `PAGEHALL_CHANGELOG_FILE` | `/app/CHANGELOG.md` in the image | | Changelog shown under **What's new**. |
 | `PAGEHALL_INSTALL_METHOD` | none | | `script`, `compose` or `other`: how the instance was installed. The setup script sets it; the admin area shows the update commands for it. |
 | `PAGEHALL_INSTALL_DIR` | none | | Directory of the installation on the host, used in the update commands. The setup script sets it. |

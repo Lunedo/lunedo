@@ -59,6 +59,27 @@ describe("loadConfig", () => {
     }
   });
 
+  it("refuses an update check address with credentials or a query string", () => {
+    const load = (url: string) => () =>
+      loadConfig({ PAGEHALL_DATABASE_URL: databaseUrl, PAGEHALL_UPDATE_CHECK_URL: url });
+    expectConfigError(load("https://user:secret@mirror.example.org/v.json"), /must not contain a user name/);
+    expectConfigError(load("https://mirror.example.org/v.json?token=abc"), /must not contain a query string/);
+    expect(load("https://mirror.example.org/pagehall/v.json")().updates.url).toBe(
+      "https://mirror.example.org/pagehall/v.json",
+    );
+  });
+
+  it("refuses a work directory that overlaps the backup directory or the file store", () => {
+    const load = (work: string) => () =>
+      loadConfig({ PAGEHALL_DATABASE_URL: databaseUrl, PAGEHALL_WORK_DIR: work });
+    expectConfigError(
+      load("/var/lib/pagehall/backups/work"),
+      /PAGEHALL_WORK_DIR: must not overlap with PAGEHALL_BACKUP_DIR/,
+    );
+    expectConfigError(load("/var/lib/pagehall"), /must not overlap with PAGEHALL_FILES_DIR/);
+    expect(load("/var/lib/pagehall/work")().paths.work).toBe("/var/lib/pagehall/work");
+  });
+
   it("never includes secret values in errors or output", () => {
     const leaking = "postgres-but-not-a-url s3cret";
     let message = "";

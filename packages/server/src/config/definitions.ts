@@ -290,6 +290,22 @@ export const configSettings = [
     "PAGEHALL_UPDATE_CHECK_URL",
     nonEmpty
       .refine((value) => /^https?:\/\/[^\s]+$/.test(value), "must be an http:// or https:// address")
+      .refine((value) => {
+        try {
+          const url = new URL(value);
+          return url.username === "" && url.password === "";
+        } catch {
+          return false;
+        }
+      }, "must not contain a user name or password; the version file is public and needs no credentials")
+      .refine((value) => {
+        try {
+          const url = new URL(value);
+          return url.search === "" && url.hash === "";
+        } catch {
+          return false;
+        }
+      }, "must not contain a query string or fragment, such as a token; the version file is public")
       .default(DEFAULT_UPDATE_CHECK_URL),
     "Address of the version file the update check downloads, for example a mirror inside the company network.",
   ),

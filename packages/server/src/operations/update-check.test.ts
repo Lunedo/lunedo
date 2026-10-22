@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
 import { DEFAULT_UPDATE_CHECK_URL } from "../config/definitions.js";
-import { createLogger } from "../logging/logger.js";
+import { createLogger, type Logger } from "../logging/logger.js";
 import { outboundPolicy } from "../outbound/guarded-request.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { type FakeHandler, type RunningFake, serveFake } from "../testing/fakes/http.js";
@@ -12,6 +12,7 @@ import { spaceFixtures } from "../testing/spaces.js";
 import type { Release } from "./changelog.js";
 import { updateCheckSetting } from "./settings.js";
 import {
+  displayedUrl,
   downloadVersionFile,
   IMAGE_REPOSITORY,
   UpdateCheckError,
@@ -49,6 +50,28 @@ describe("updateCommands", () => {
   });
 });
 
+describe("update commands and the shown address", () => {
+  it("quotes an installation directory with spaces or quotes", () => {
+    expect(updateCommands("script", "/home/ops/Pagehall Wiki", "1.5.0").steps[0]).toEqual({
+      kind: "command",
+      text: "cd '/home/ops/Pagehall Wiki'",
+    });
+    expect(updateCommands("compose", "/srv/it's here", "1.5.0").steps[0]?.text).toBe(
+      "cd '/srv/it'\\''s here'",
+    );
+    expect(updateCommands("script", "/opt/pagehall", "1.5.0").steps[0]?.text).toBe("cd /opt/pagehall");
+  });
+
+  it("shows only the scheme, host and path of the version file address", () => {
+    expect(displayedUrl("https://mirror.example.org:8443/pagehall/versions.json")).toBe(
+      "https://mirror.example.org:8443/pagehall/versions.json",
+    );
+    expect(displayedUrl("https://user:secret@mirror.example.org/v.json?token=abc#x")).toBe(
+      "https://mirror.example.org/v.json",
+    );
+  });
+});
+
 describe("downloadVersionFile", () => {
   let server: RunningFake | undefined;
   let handler: FakeHandler;
@@ -71,6 +94,19 @@ describe("downloadVersionFile", () => {
     expect((await downloadVersionFile(localPolicy, url("/latest"))).map((entry) => entry.version)).toEqual([
       "1.5.0",
     ]);
+  });
+
+  it("ignores and logs entries without a strict release version", async () => {
+    handler = () => ({
+      status: 200,
+      body: { schema: 1, releases: [release("v1.6.0"), release("1.5.0"), release("1.7.0-beta")] },
+    });
+    const warnings: unknown[] = [];
+    const logger = { warn: (...args: unknown[]) => warnings.push(args) } as unknown as Logger;
+    expect((await downloadVersionFile(localPolicy, url(), logger)).map((entry) => entry.version)).toEqual([
+      "1.5.0",
+    ]);
+    expect(warnings).toHaveLength(1);
   });
 
   it("names why the check failed", async () => {
