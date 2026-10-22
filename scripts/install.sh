@@ -273,8 +273,6 @@ install_pagehall() {
 
   mkdir -p "$directory/backups"
   chmod 755 "$directory"
-  if [ "$(id -u)" -eq 0 ]; then chown 1000:1000 "$directory/backups"; fi
-  chmod 750 "$directory/backups"
 
   local code
   code="$(setup_code)"
@@ -309,6 +307,8 @@ install_pagehall() {
   say ""
 
   if [ "$pull" -eq 1 ]; then compose pull --quiet; fi
+  docker run --rm --user 0 --entrypoint sh -v "$directory/backups:/backups" "$reference"     -c 'chown 1000:1000 /backups && chmod 750 /backups' ||
+    fail "The backups directory $directory/backups could not be given to the user of the container."
   if [ -z "$image" ] && [ -z "$version" ]; then
     local resolved
     resolved="$(image_version "$reference")"
