@@ -24,6 +24,7 @@ import {
   RESTORE_ENTRIES,
   RESTORE_STAGING,
   removeRestoreMarker,
+  writeRestoredMarker,
   writeRestoreMarker,
 } from "./restore-marker.js";
 
@@ -664,6 +665,7 @@ async function restoreFrom(source: BackupSource, options: RestoreBackupOptions):
     if (!earlierRestoreIncomplete) await removeRestoreMarker(options.filesDir);
     throw error;
   }
+  await writeRestoredMarker(options.filesDir);
   await removeRestoreMarker(options.filesDir);
   options.logger.info(
     { schemaVersion: first.manifest.schemaVersion, entries: first.manifest.entries.length },

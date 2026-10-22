@@ -62488,6 +62488,17 @@
                       "additionalProperties": false,
                       "description": "The backup settings."
                     },
+                    "restoredAt": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When this instance was restored from a backup while its target is not confirmed yet. Scheduled backups, retention and the monthly test restore are paused until an instance administrator confirms or changes the target; null otherwise. ISO 8601 timestamp in UTC."
+                    },
                     "target": {
                       "anyOf": [
                         {
@@ -63006,6 +63017,7 @@
                   },
                   "required": [
                     "settings",
+                    "restoredAt",
                     "target",
                     "timeZone",
                     "nextRunAt",
@@ -63049,6 +63061,7 @@
                     "accessKeyId": "AKIAEXAMPLE",
                     "secretKeyConfigured": true
                   },
+                  "restoredAt": null,
                   "timeZone": "Europe/Vienna",
                   "nextRunAt": "2026-10-22T00:00:00.000Z",
                   "beforeUpdate": {
@@ -63313,7 +63326,7 @@
                                       "verified",
                                       "failed"
                                     ],
-                                    "description": "`passed`: restored and checked. `verified`: only verified, because the database user may not create databases. `failed`: see `error`."
+                                    "description": "`passed`: restored and checked. `verified`: only verified, because the database user may not create databases or the work directory has too little free space (see `error`). `failed`: see `error`."
                                   },
                                   "stage": {
                                     "type": "string",
@@ -63334,6 +63347,7 @@
                                           "type": "string",
                                           "enum": [
                                             "verify",
+                                            "space",
                                             "privilege",
                                             "restore",
                                             "schemaVersion",
@@ -63811,6 +63825,26 @@
               }
             }
           },
+          "502": {
+            "description": "`backupTargetFailed`: The backup target could not be used.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "backupTargetFailed": {
+                    "value": {
+                      "type": "urn:pagehall:problem:backupTargetFailed",
+                      "title": "The backup target could not be used",
+                      "status": 502,
+                      "code": "backupTargetFailed"
+                    }
+                  }
+                }
+              }
+            }
+          },
           "503": {
             "description": "`maintenanceMode`: The instance is in maintenance mode.",
             "content": {
@@ -64050,6 +64084,26 @@
                 }
               }
             }
+          },
+          "502": {
+            "description": "`backupTargetFailed`: The backup target could not be used.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "backupTargetFailed": {
+                    "value": {
+                      "type": "urn:pagehall:problem:backupTargetFailed",
+                      "title": "The backup target could not be used",
+                      "status": 502,
+                      "code": "backupTargetFailed"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -64216,6 +64270,17 @@
                       ],
                       "additionalProperties": false,
                       "description": "The backup settings."
+                    },
+                    "restoredAt": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When this instance was restored from a backup while its target is not confirmed yet. Scheduled backups, retention and the monthly test restore are paused until an instance administrator confirms or changes the target; null otherwise. ISO 8601 timestamp in UTC."
                     },
                     "target": {
                       "anyOf": [
@@ -64735,6 +64800,7 @@
                   },
                   "required": [
                     "settings",
+                    "restoredAt",
                     "target",
                     "timeZone",
                     "nextRunAt",
@@ -64778,6 +64844,7 @@
                     "accessKeyId": "AKIAEXAMPLE",
                     "secretKeyConfigured": true
                   },
+                  "restoredAt": null,
                   "timeZone": "Europe/Vienna",
                   "nextRunAt": "2026-10-22T00:00:00.000Z",
                   "beforeUpdate": {
@@ -65098,6 +65165,26 @@
                 }
               }
             }
+          },
+          "502": {
+            "description": "`backupTargetFailed`: The backup target could not be used.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "backupTargetFailed": {
+                    "value": {
+                      "type": "urn:pagehall:problem:backupTargetFailed",
+                      "title": "The backup target could not be used",
+                      "status": 502,
+                      "code": "backupTargetFailed"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -65350,6 +65437,17 @@
                       ],
                       "additionalProperties": false,
                       "description": "The backup settings."
+                    },
+                    "restoredAt": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When this instance was restored from a backup while its target is not confirmed yet. Scheduled backups, retention and the monthly test restore are paused until an instance administrator confirms or changes the target; null otherwise. ISO 8601 timestamp in UTC."
                     },
                     "target": {
                       "anyOf": [
@@ -65869,6 +65967,7 @@
                   },
                   "required": [
                     "settings",
+                    "restoredAt",
                     "target",
                     "timeZone",
                     "nextRunAt",
@@ -65912,6 +66011,7 @@
                     "accessKeyId": "AKIAEXAMPLE",
                     "secretKeyConfigured": true
                   },
+                  "restoredAt": null,
                   "timeZone": "Europe/Vienna",
                   "nextRunAt": "2026-10-22T00:00:00.000Z",
                   "beforeUpdate": {
@@ -66125,6 +66225,28 @@
                       "type": "boolean",
                       "description": "Whether scheduled backups run."
                     },
+                    "restoredAt": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When this instance was restored from a backup while its target is not confirmed yet; backups are paused until then. ISO 8601 timestamp in UTC."
+                    },
+                    "testRestoreCleanupAt": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When leftovers of an interrupted test restore (a temporary database or directory) were last removed. ISO 8601 timestamp in UTC."
+                    },
                     "targetConfigured": {
                       "type": "boolean",
                       "description": "Whether a target is set up."
@@ -66258,6 +66380,8 @@
                   },
                   "required": [
                     "enabled",
+                    "restoredAt",
+                    "testRestoreCleanupAt",
                     "targetConfigured",
                     "running",
                     "nextRunAt",
@@ -66271,6 +66395,8 @@
                 },
                 "example": {
                   "enabled": true,
+                  "restoredAt": null,
+                  "testRestoreCleanupAt": null,
                   "targetConfigured": true,
                   "running": false,
                   "nextRunAt": "2026-10-22T00:00:00.000Z",
@@ -66618,6 +66744,17 @@
                       "additionalProperties": false,
                       "description": "The backup settings."
                     },
+                    "restoredAt": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When this instance was restored from a backup while its target is not confirmed yet. Scheduled backups, retention and the monthly test restore are paused until an instance administrator confirms or changes the target; null otherwise. ISO 8601 timestamp in UTC."
+                    },
                     "target": {
                       "anyOf": [
                         {
@@ -67136,6 +67273,7 @@
                   },
                   "required": [
                     "settings",
+                    "restoredAt",
                     "target",
                     "timeZone",
                     "nextRunAt",
@@ -67179,6 +67317,7 @@
                     "accessKeyId": "AKIAEXAMPLE",
                     "secretKeyConfigured": true
                   },
+                  "restoredAt": null,
                   "timeZone": "Europe/Vienna",
                   "nextRunAt": "2026-10-22T00:00:00.000Z",
                   "beforeUpdate": {
@@ -67255,6 +67394,892 @@
                       "title": "The request is not valid",
                       "status": 400,
                       "code": "invalidInput"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalidApiToken`: The API token is not valid. `notSignedIn`: Sign in or send an API token.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "invalidApiToken": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidApiToken",
+                      "title": "The API token is not valid",
+                      "status": 401,
+                      "code": "invalidApiToken"
+                    }
+                  },
+                  "notSignedIn": {
+                    "value": {
+                      "type": "urn:pagehall:problem:notSignedIn",
+                      "title": "Sign in or send an API token",
+                      "status": 401,
+                      "code": "notSignedIn"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`csrfRejected`: The request failed the cross-site request check. `forbidden`: Not allowed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "csrfRejected": {
+                    "value": {
+                      "type": "urn:pagehall:problem:csrfRejected",
+                      "title": "The request failed the cross-site request check",
+                      "status": 403,
+                      "code": "csrfRejected"
+                    }
+                  },
+                  "forbidden": {
+                    "value": {
+                      "type": "urn:pagehall:problem:forbidden",
+                      "title": "Not allowed",
+                      "status": 403,
+                      "code": "forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rateLimited`: Too many requests.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "rateLimited": {
+                    "value": {
+                      "type": "urn:pagehall:problem:rateLimited",
+                      "title": "Too many requests",
+                      "status": 429,
+                      "code": "rateLimited"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`maintenanceMode`: The instance is in maintenance mode.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "maintenanceMode": {
+                    "value": {
+                      "type": "urn:pagehall:problem:maintenanceMode",
+                      "title": "The instance is in maintenance mode",
+                      "status": 503,
+                      "code": "maintenanceMode"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/instance/backups/target/confirmation": {
+      "post": {
+        "operationId": "backups.confirmTarget",
+        "summary": "Confirm the backup target after a restore",
+        "description": "After a restore from a backup, scheduled backups, retention and the monthly test restore are paused, so that a copy of an instance never writes into or deletes from the backups of the original. Confirming the target resumes them. Changing the target resumes them as well. The confirmation is audited.\n\nRequires the permission `instance.operations.manage` on the instance.",
+        "tags": [
+          "Backups"
+        ],
+        "x-pagehall-permission": {
+          "action": "instance.operations.manage",
+          "resource": "instance"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Settings and state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "settings": {
+                      "type": "object",
+                      "properties": {
+                        "enabled": {
+                          "type": "boolean",
+                          "description": "Whether scheduled backups run."
+                        },
+                        "dailyTime": {
+                          "type": "string",
+                          "description": "Time of the daily backup, HH:MM in the time zone of the instance."
+                        },
+                        "weeklyDay": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 7
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Day of the week whose backup is kept as a weekly one, 1 (Monday) to 7 (Sunday), or null."
+                        },
+                        "monthlyDay": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 31
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Day of the month whose backup is kept as a monthly one, or null. In shorter months the last day is used."
+                        },
+                        "retention": {
+                          "type": "object",
+                          "properties": {
+                            "daily": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 1000,
+                              "description": "Daily backups to keep."
+                            },
+                            "weekly": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 1000,
+                              "description": "Weekly backups to keep."
+                            },
+                            "monthly": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 1000,
+                              "description": "Monthly backups to keep."
+                            },
+                            "beforeUpdate": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 1000,
+                              "description": "Backups before updates to keep."
+                            }
+                          },
+                          "required": [
+                            "daily",
+                            "weekly",
+                            "monthly",
+                            "beforeUpdate"
+                          ],
+                          "additionalProperties": false,
+                          "description": "How many backups of each class are kept. Manual backups are kept until they are deleted."
+                        },
+                        "scope": {
+                          "type": "string",
+                          "enum": [
+                            "all",
+                            "database"
+                          ],
+                          "description": "`all`: database, file store and configuration. `database`: without the file store."
+                        },
+                        "beforeUpdate": {
+                          "type": "boolean",
+                          "description": "Whether a backup is taken before migrations run."
+                        },
+                        "missingDays": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 365,
+                          "description": "Days without a successful backup after which administrators are warned."
+                        },
+                        "autoTestRestore": {
+                          "type": "boolean",
+                          "description": "Whether the newest backup is test-restored once a month."
+                        }
+                      },
+                      "required": [
+                        "enabled",
+                        "dailyTime",
+                        "weeklyDay",
+                        "monthlyDay",
+                        "retention",
+                        "scope",
+                        "beforeUpdate",
+                        "missingDays",
+                        "autoTestRestore"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The backup settings."
+                    },
+                    "restoredAt": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When this instance was restored from a backup while its target is not confirmed yet. Scheduled backups, retention and the monthly test restore are paused until an instance administrator confirms or changes the target; null otherwise. ISO 8601 timestamp in UTC."
+                    },
+                    "target": {
+                      "anyOf": [
+                        {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "const": "local",
+                                  "description": "A directory inside the container, also a mounted network share."
+                                },
+                                "path": {
+                                  "type": "string",
+                                  "description": "Absolute path of the directory."
+                                },
+                                "sameVolumeAsFiles": {
+                                  "type": "boolean",
+                                  "description": "Whether the directory is on the same volume as the file store, so one disk failure loses both."
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "path",
+                                "sameVolumeAsFiles"
+                              ],
+                              "additionalProperties": false,
+                              "description": "A local backup target."
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "const": "s3",
+                                  "description": "S3-compatible storage."
+                                },
+                                "endpoint": {
+                                  "description": "Address of the service, or null for Amazon S3.",
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "region": {
+                                  "type": "string",
+                                  "description": "Region of the bucket."
+                                },
+                                "bucket": {
+                                  "type": "string",
+                                  "description": "Bucket name."
+                                },
+                                "prefix": {
+                                  "type": "string",
+                                  "description": "Prefix of the object names, empty or ending with a slash."
+                                },
+                                "forcePathStyle": {
+                                  "type": "boolean",
+                                  "description": "Whether the bucket is addressed in the path."
+                                },
+                                "accessKeyId": {
+                                  "type": "string",
+                                  "description": "Access key."
+                                },
+                                "secretKeyConfigured": {
+                                  "type": "boolean",
+                                  "description": "Whether a secret key is stored. It is never returned."
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "endpoint",
+                                "region",
+                                "bucket",
+                                "prefix",
+                                "forcePathStyle",
+                                "accessKeyId",
+                                "secretKeyConfigured"
+                              ],
+                              "additionalProperties": false,
+                              "description": "An S3-compatible backup target."
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The target, or null."
+                    },
+                    "timeZone": {
+                      "type": "string",
+                      "description": "Time zone of the instance, in which the daily time applies."
+                    },
+                    "nextRunAt": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When the next scheduled backup starts, or null when backups are off. ISO 8601 timestamp in UTC."
+                    },
+                    "beforeUpdate": {
+                      "type": "object",
+                      "properties": {
+                        "enabled": {
+                          "type": "boolean",
+                          "description": "Whether a backup is taken before migrations."
+                        },
+                        "disabledBy": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "setting",
+                                "environment"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "What turned it off: the setting, or PAGEHALL_BACKUP_BEFORE_UPDATE."
+                        }
+                      },
+                      "required": [
+                        "enabled",
+                        "disabledBy"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Backups before updates."
+                    },
+                    "keyConfirmed": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "at": {
+                              "type": "string",
+                              "description": "When it was confirmed. ISO 8601 timestamp in UTC."
+                            },
+                            "by": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "description": "Account ID."
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "description": "Name."
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "name"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Who confirmed it."
+                            }
+                          },
+                          "required": [
+                            "at",
+                            "by"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When an administrator confirmed that the backup key is stored outside Pagehall."
+                    },
+                    "running": {
+                      "type": "boolean",
+                      "description": "Whether a backup is running now."
+                    },
+                    "testRestoreRunning": {
+                      "type": "boolean",
+                      "description": "Whether a test restore is running now."
+                    },
+                    "alert": {
+                      "type": "string",
+                      "enum": [
+                        "none",
+                        "failing",
+                        "missing"
+                      ],
+                      "description": "Active warning: backups fail, or no backup succeeded for the configured days."
+                    },
+                    "warning": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "off",
+                            "noTarget"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Why the admin area shows a banner while the instance has content: backups are off, or no target."
+                    },
+                    "lastSuccess": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "ID of the run."
+                            },
+                            "trigger": {
+                              "type": "string",
+                              "enum": [
+                                "scheduled",
+                                "manual",
+                                "beforeUpdate"
+                              ],
+                              "description": "What started the run."
+                            },
+                            "backupClass": {
+                              "type": "string",
+                              "enum": [
+                                "daily",
+                                "weekly",
+                                "monthly",
+                                "manual",
+                                "beforeUpdate"
+                              ],
+                              "description": "Retention class of the backup."
+                            },
+                            "state": {
+                              "type": "string",
+                              "enum": [
+                                "running",
+                                "succeeded",
+                                "failed",
+                                "skipped"
+                              ],
+                              "description": "State of the run."
+                            },
+                            "name": {
+                              "description": "Name of the backup, once written.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "sizeBytes": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Size of the backup in bytes, once written."
+                            },
+                            "error": {
+                              "description": "Why the run failed or was skipped.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "startedAt": {
+                              "type": "string",
+                              "description": "When the run started. ISO 8601 timestamp in UTC."
+                            },
+                            "finishedAt": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "When the run ended. ISO 8601 timestamp in UTC."
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "trigger",
+                            "backupClass",
+                            "state",
+                            "name",
+                            "sizeBytes",
+                            "error",
+                            "startedAt",
+                            "finishedAt"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "A backup run."
+                    },
+                    "lastFailure": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "ID of the run."
+                            },
+                            "trigger": {
+                              "type": "string",
+                              "enum": [
+                                "scheduled",
+                                "manual",
+                                "beforeUpdate"
+                              ],
+                              "description": "What started the run."
+                            },
+                            "backupClass": {
+                              "type": "string",
+                              "enum": [
+                                "daily",
+                                "weekly",
+                                "monthly",
+                                "manual",
+                                "beforeUpdate"
+                              ],
+                              "description": "Retention class of the backup."
+                            },
+                            "state": {
+                              "type": "string",
+                              "enum": [
+                                "running",
+                                "succeeded",
+                                "failed",
+                                "skipped"
+                              ],
+                              "description": "State of the run."
+                            },
+                            "name": {
+                              "description": "Name of the backup, once written.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "sizeBytes": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Size of the backup in bytes, once written."
+                            },
+                            "error": {
+                              "description": "Why the run failed or was skipped.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "startedAt": {
+                              "type": "string",
+                              "description": "When the run started. ISO 8601 timestamp in UTC."
+                            },
+                            "finishedAt": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "When the run ended. ISO 8601 timestamp in UTC."
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "trigger",
+                            "backupClass",
+                            "state",
+                            "name",
+                            "sizeBytes",
+                            "error",
+                            "startedAt",
+                            "finishedAt"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "A backup run."
+                    },
+                    "runs": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "ID of the run."
+                          },
+                          "trigger": {
+                            "type": "string",
+                            "enum": [
+                              "scheduled",
+                              "manual",
+                              "beforeUpdate"
+                            ],
+                            "description": "What started the run."
+                          },
+                          "backupClass": {
+                            "type": "string",
+                            "enum": [
+                              "daily",
+                              "weekly",
+                              "monthly",
+                              "manual",
+                              "beforeUpdate"
+                            ],
+                            "description": "Retention class of the backup."
+                          },
+                          "state": {
+                            "type": "string",
+                            "enum": [
+                              "running",
+                              "succeeded",
+                              "failed",
+                              "skipped"
+                            ],
+                            "description": "State of the run."
+                          },
+                          "name": {
+                            "description": "Name of the backup, once written.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "sizeBytes": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Size of the backup in bytes, once written."
+                          },
+                          "error": {
+                            "description": "Why the run failed or was skipped.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "startedAt": {
+                            "type": "string",
+                            "description": "When the run started. ISO 8601 timestamp in UTC."
+                          },
+                          "finishedAt": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "When the run ended. ISO 8601 timestamp in UTC."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "trigger",
+                          "backupClass",
+                          "state",
+                          "name",
+                          "sizeBytes",
+                          "error",
+                          "startedAt",
+                          "finishedAt"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A backup run."
+                      },
+                      "description": "The latest runs, newest first."
+                    }
+                  },
+                  "required": [
+                    "settings",
+                    "restoredAt",
+                    "target",
+                    "timeZone",
+                    "nextRunAt",
+                    "beforeUpdate",
+                    "keyConfirmed",
+                    "running",
+                    "testRestoreRunning",
+                    "alert",
+                    "warning",
+                    "lastSuccess",
+                    "lastFailure",
+                    "runs"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Settings and state of the backups."
+                },
+                "example": {
+                  "settings": {
+                    "enabled": true,
+                    "dailyTime": "02:00",
+                    "weeklyDay": 7,
+                    "monthlyDay": 1,
+                    "retention": {
+                      "daily": 7,
+                      "weekly": 4,
+                      "monthly": 6,
+                      "beforeUpdate": 3
+                    },
+                    "scope": "all",
+                    "beforeUpdate": true,
+                    "missingDays": 2,
+                    "autoTestRestore": true
+                  },
+                  "target": {
+                    "kind": "s3",
+                    "endpoint": "https://s3.example.org",
+                    "region": "eu-central-1",
+                    "bucket": "pagehall-backups",
+                    "prefix": "pagehall/",
+                    "forcePathStyle": false,
+                    "accessKeyId": "AKIAEXAMPLE",
+                    "secretKeyConfigured": true
+                  },
+                  "restoredAt": null,
+                  "timeZone": "Europe/Vienna",
+                  "nextRunAt": "2026-10-22T00:00:00.000Z",
+                  "beforeUpdate": {
+                    "enabled": true,
+                    "disabledBy": null
+                  },
+                  "keyConfirmed": {
+                    "at": "2026-10-01T09:00:00.000Z",
+                    "by": {
+                      "id": "0192f0e0-1a2b-7c3d-8e4f-5a6b7c8d9e03",
+                      "name": "Olivia Owner"
+                    }
+                  },
+                  "running": false,
+                  "testRestoreRunning": false,
+                  "alert": "none",
+                  "warning": null,
+                  "lastSuccess": {
+                    "id": "0192f0e0-1a2b-7c3d-8e4f-5a6b7c8d9e01",
+                    "trigger": "scheduled",
+                    "backupClass": "daily",
+                    "state": "succeeded",
+                    "name": "pagehall-backup-20261021T000000Z-daily-3f0c8a1b.phbak",
+                    "sizeBytes": 524288000,
+                    "error": null,
+                    "startedAt": "2026-10-21T00:00:02.000Z",
+                    "finishedAt": "2026-10-21T00:04:41.000Z"
+                  },
+                  "lastFailure": null,
+                  "runs": [
+                    {
+                      "id": "0192f0e0-1a2b-7c3d-8e4f-5a6b7c8d9e01",
+                      "trigger": "scheduled",
+                      "backupClass": "daily",
+                      "state": "succeeded",
+                      "name": "pagehall-backup-20261021T000000Z-daily-3f0c8a1b.phbak",
+                      "sizeBytes": 524288000,
+                      "error": null,
+                      "startedAt": "2026-10-21T00:00:02.000Z",
+                      "finishedAt": "2026-10-21T00:04:41.000Z"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`ambiguousCredentials`: The request carries both a session and an API token. `invalidBackupSettings`: The backup settings are not valid.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                },
+                "examples": {
+                  "ambiguousCredentials": {
+                    "value": {
+                      "type": "urn:pagehall:problem:ambiguousCredentials",
+                      "title": "The request carries both a session and an API token",
+                      "status": 400,
+                      "code": "ambiguousCredentials"
+                    }
+                  },
+                  "invalidBackupSettings": {
+                    "value": {
+                      "type": "urn:pagehall:problem:invalidBackupSettings",
+                      "title": "The backup settings are not valid",
+                      "status": 400,
+                      "code": "invalidBackupSettings"
                     }
                   }
                 }
@@ -67779,7 +68804,7 @@
                         "verified",
                         "failed"
                       ],
-                      "description": "`passed`: restored and checked. `verified`: only verified, because the database user may not create databases. `failed`: see `error`."
+                      "description": "`passed`: restored and checked. `verified`: only verified, because the database user may not create databases or the work directory has too little free space (see `error`). `failed`: see `error`."
                     },
                     "stage": {
                       "type": "string",
@@ -67800,6 +68825,7 @@
                             "type": "string",
                             "enum": [
                               "verify",
+                              "space",
                               "privilege",
                               "restore",
                               "schemaVersion",

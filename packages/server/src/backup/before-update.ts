@@ -10,9 +10,12 @@ import type { OutboundPolicy } from "../outbound/guarded-request.js";
 import { StartupError } from "../runtime/startup-error.js";
 import { closeTarget, openTarget, readBackupConfiguration, readS3Secret } from "./configuration.js";
 import { describeFailure } from "./errors.js";
+import { backupName } from "./naming.js";
+import { hasRestoredMarker } from "./restore-marker.js";
 import {
   applyRetention,
   type BackupSources,
+  recordedBackupNames,
   tryBackupLock,
   type WrittenBackup,
   waitForBackupLock,

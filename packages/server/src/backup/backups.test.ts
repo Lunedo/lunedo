@@ -19,6 +19,8 @@ import { createTestServices, type TestServices } from "../testing/services.js";
 import { spaceFixtures } from "../testing/spaces.js";
 import { readBackupHeader } from "./archive.js";
 import { BackupSettingsError } from "./errors.js";
+import { writeRestoredMarker } from "./restore-marker.js";
+import { pauseBackupsAfterRestore } from "./restored.js";
 import { tryBackupLock } from "./runner.js";
 import { LocalBackupTarget } from "./targets.js";
 import { runTestRestore } from "./test-restore.js";
@@ -726,6 +728,55 @@ describe.skipIf(!baseUrl)("backups", () => {
       await backups().run({ trigger: "scheduled", slot: now.toISOString(), actorId: null });
       expect(enqueued.filter((job) => job.name === "backup.test-restore")).toHaveLength(1);
       expect((await audited("backup.testRestoreStarted")).at(-1)).toMatchObject({ trigger: "automatic" });
+    });
+  });
+
+  describe("after a restore", () => {
+    it.skipIf(!hasTools)(
+      "pauses scheduled backups, retention and the monthly test restore until the target is confirmed",
+      async () => {
+        await useLocalTarget();
+        await backups().updateSettings(actor(), { enabled: true, retention: { daily: 1 } });
+        now = new Date(Date.UTC(2026, 9, 22, 1, 0, 30));
+        await backups().run({ trigger: "scheduled", slot: "2026-10-22T00:00:00.000Z", actorId: null });
+        const before = await files();
+        enqueued.length = 0;
+
+        await writeRestoredMarker(test.filesDir);
+        await pauseBackupsAfterRestore(test.filesDir, test.database, logger);
+        await expect(stat(path.join(test.filesDir, ".pagehall-restored"))).rejects.toThrow();
+        const paused = await backups().overview();
+        expect(paused.restoredAt).not.toBeNull();
+        expect(paused.nextRunAt).toBeNull();
+
+        now = new Date(Date.UTC(2026, 9, 23, 1, 0, 30));
+        await backups().check();
+        expect(enqueued).toEqual([]);
+        await backups().run({ trigger: "scheduled", slot: "2026-10-23T00:00:00.000Z", actorId: null });
+        expect(await files()).toEqual(before);
+        await backups().run({ trigger: "manual", slot: null, actorId: owner });
+        expect((await files()).filter((name) => name.endsWith(".phbak"))).toHaveLength(2);
+        expect(enqueued.filter((job) => job.name === "backup.test-restore")).toEqual([]);
+
+        const confirmed = await backups().confirmTarget(actor());
+        expect(confirmed.restoredAt).toBeNull();
+        expect(await audited("backup.targetConfirmed")).toEqual([{ location: targetDir }]);
+        await backups().check();
+        expect(enqueued.filter((job) => job.name === "backup.run")).toHaveLength(1);
+      },
+    );
+
+    it("ends the pause when the target is changed", async () => {
+      await useLocalTarget();
+      await writeRestoredMarker(test.filesDir);
+      await pauseBackupsAfterRestore(test.filesDir, test.database, logger);
+      expect((await backups().overview()).restoredAt).not.toBeNull();
+      const other = await mkdtemp(path.join(tmpdir(), "pagehall-backup-other-"));
+      try {
+        expect((await backups().updateTarget(actor(), { kind: "local", path: other })).restoredAt).toBeNull();
+      } finally {
+        await rm(other, { recursive: true, force: true });
+      }
     });
   });
 

@@ -91,6 +91,8 @@ export const backupState = pgTable(
     alert: backupAlert().notNull().default("none"),
     alertNotifiedAt: timestampColumn(),
     lastAutomaticTestAt: timestampColumn(),
+    restoredAt: timestampColumn(),
+    testRestoreCleanupAt: timestampColumn(),
     ...timestamps(),
   },
   (table) => [check("backup_state_singleton", sql`${table.singleton}`)],

@@ -1,5 +1,5 @@
 import { uuidv7 } from "@pagehall/shared";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import { instanceNameSetting, instanceUrlSetting } from "../accounts/instance-settings.js";
 import type { Principal } from "../accounts/principal.js";
 import { SYSTEM } from "../accounts/principal.js";
@@ -41,7 +41,7 @@ import {
 } from "./configuration.js";
 import { BackupBusyError, BackupNotFoundError, BackupSettingsError, describeFailure } from "./errors.js";
 import { backupRunJob, backupTestRestoreJob } from "./jobs.js";
-import { type BackupClass, parseBackupName } from "./naming.js";
+import { type BackupClass, backupName, parseBackupName } from "./naming.js";
 import type { RetentionPolicy } from "./retention.js";
 import {
   applyRetention,
@@ -50,6 +50,7 @@ import {
   isTestRestoreRunning,
   type ListedBackup,
   listBackups,
+  recordedBackupNames,
   tryBackupLock,
   tryTestRestoreLock,
   writeBackup,
@@ -148,6 +149,7 @@ export interface BeforeUpdateState {
 
 export interface BackupOverview {
   settings: BackupSettings;
+  restoredAt: Date | null;
   target: TargetView | null;
   timeZone: string;
   nextRunAt: Date | null;
@@ -164,6 +166,8 @@ export interface BackupOverview {
 
 export interface BackupStatus {
   enabled: boolean;
+  restoredAt: Date | null;
+  testRestoreCleanupAt: Date | null;
   targetConfigured: boolean;
   running: boolean;
   nextRunAt: Date | null;
@@ -231,7 +235,7 @@ function runView(row: RunRow): RunView {
     trigger: row.trigger,
     backupClass: row.backupClass,
     state: row.state,
-    name: row.name,
+    name: row.state === "succeeded" ? row.name : null,
     sizeBytes: row.sizeBytes,
     error: row.error,
     startedAt: row.startedAt,
@@ -352,8 +356,12 @@ export class BackupService {
     return current.target ? "off" : "noTarget";
   }
 
+  async #paused(): Promise<boolean> {
+    return (await this.#state()).restoredAt !== null;
+  }
+
   async #nextRun(configuration: BackupConfiguration): Promise<Date | null> {
-    if (!configuration.settings.enabled || !configuration.target) return null;
+    if (!configuration.settings.enabled || !configuration.target || (await this.#paused())) return null;
     return nextSlot(this.#clock(), await this.#schedule(configuration.settings));
   }
 
@@ -378,6 +386,7 @@ export class BackupService {
     }
     return {
       settings: configuration.settings,
+      restoredAt: state.restoredAt,
       target: await this.#targetView(configuration.target),
       timeZone: await this.#options.settings.get(timeZoneSetting, {}),
       nextRunAt: await this.#nextRun(configuration),
@@ -400,6 +409,8 @@ export class BackupService {
     const lastFailure = await this.#lastRun("failed");
     return {
       enabled: configuration.settings.enabled,
+      restoredAt: state.restoredAt,
+      testRestoreCleanupAt: state.testRestoreCleanupAt,
       targetConfigured: configuration.target !== null,
       running: await isBackupRunning(this.#options.pool),
       nextRunAt: await this.#nextRun(configuration),
@@ -677,6 +688,8 @@ export class BackupService {
         .insert(backupConfiguration)
         .values({ singleton: true, ...values })
         .onConflictDoUpdate({ target: backupConfiguration.singleton, set: values });
+      await this.#state(tx);
+      await tx.update(backupState).set({ restoredAt: null }).where(eq(backupState.singleton, true));
       if (target.kind === "local") {
         await tx.delete(instanceSecrets).where(eq(instanceSecrets.name, BACKUP_S3_SECRET));
       } else if (secret !== undefined) {
@@ -738,6 +751,32 @@ export class BackupService {
     } finally {
       closeTarget(target);
     }
+  }
+
+  async confirmTarget(actor: Principal): Promise<BackupOverview> {
+    await this.#database.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext('pagehall.backup-configuration'))`);
+      const { target } = await this.configuration(tx);
+      if (!target) {
+        throw new BackupSettingsError("noTarget", "Set up a backup target first.", ["target"]);
+      }
+      await this.#state(tx);
+      const confirmed = await tx
+        .update(backupState)
+        .set({ restoredAt: null })
+        .where(and(eq(backupState.singleton, true), isNotNull(backupState.restoredAt)))
+        .returning({ singleton: backupState.singleton });
+      if (confirmed.length === 0) return;
+      await this.#options.audit.record(tx, {
+        name: "backup.targetConfirmed",
+        actor,
+        targetId: null,
+        fields: {
+          location: target.kind === "local" ? target.path : `s3://${target.bucket}/${target.prefix}`,
+        },
+      });
+    });
+    return this.overview();
   }
 
   async confirmKey(actor: Principal, confirmed: boolean): Promise<BackupOverview> {
@@ -997,7 +1036,12 @@ export class BackupService {
     actorId: string | null;
   }): Promise<void> {
     const configuration = await this.configuration();
-    if (payload.trigger === "scheduled" && (!configuration.settings.enabled || !configuration.target)) return;
+    const paused = await this.#paused();
+    if (
+      payload.trigger === "scheduled" &&
+      (!configuration.settings.enabled || !configuration.target || paused)
+    )
+      return;
     const actor: Principal = payload.actorId ? { type: "account", id: payload.actorId } : SYSTEM;
     const backupClass: BackupClass =
       payload.trigger === "scheduled" && payload.slot
@@ -1029,21 +1073,22 @@ export class BackupService {
           finishedAt: this.#clock(),
         })
         .where(eq(backupRuns.state, "running"));
+      const name = backupName(backupClass, this.#clock());
       await this.#database.insert(backupRuns).values({
         id,
         trigger: payload.trigger,
         backupClass,
         state: "running",
+        name,
         actorId: payload.actorId,
         startedAt: this.#clock(),
       });
       try {
         target = await this.#target(configuration);
         if (!target) throw new BackupSettingsError("noTarget", "No backup target is set up.", ["target"]);
-        await this.#checkFreeSpace(target);
         const written = await writeBackup(
           { ...this.#options.sources, logger: this.#logger },
-          { target, backupClass, scope: configuration.settings.scope, now: this.#clock() },
+          { target, backupClass, scope: configuration.settings.scope, name },
         );
         await this.#recordRun({
           id,
@@ -1065,13 +1110,16 @@ export class BackupService {
             sizeBytes: written.sizeBytes,
           },
         });
-        const deleted = await applyRetention(target, configuration.settings.retention, {
-          classes: ["daily", "weekly", "monthly"],
-          logger: this.#logger,
-        });
-        await this.#auditExpired(deleted);
+        if (!paused) {
+          const deleted = await applyRetention(target, configuration.settings.retention, {
+            classes: ["daily", "weekly", "monthly"],
+            own: await recordedBackupNames(this.#database, "succeeded"),
+            logger: this.#logger,
+          });
+          await this.#auditExpired(deleted);
+        }
         await this.#succeeded();
-        if (payload.trigger === "scheduled" && configuration.settings.autoTestRestore) {
+        if (payload.trigger === "scheduled" && configuration.settings.autoTestRestore && !paused) {
           await this.#automaticTestRestore(written.name);
         }
       } catch (error) {

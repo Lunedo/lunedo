@@ -1,4 +1,4 @@
-import { readFile, rm, writeFile } from "node:fs/promises";
+import { readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 import { StartupError } from "../runtime/startup-error.js";
@@ -8,8 +8,14 @@ export const RESTORE_MARKER = ".pagehall-restore-incomplete";
 /** Files of a restore are extracted here and moved into the file store after the database restore. */
 export const RESTORE_STAGING = ".pagehall-restore-staging";
 
+export const RESTORED_MARKER = ".pagehall-restored";
+
 /** Entries of the file store that belong to a restore, not to the stored files. */
-export const RESTORE_ENTRIES: ReadonlySet<string> = new Set([RESTORE_MARKER, RESTORE_STAGING]);
+export const RESTORE_ENTRIES: ReadonlySet<string> = new Set([
+  RESTORE_MARKER,
+  RESTORE_STAGING,
+  RESTORED_MARKER,
+]);
 
 const markerSchema = z.object({ input: z.string(), startedAt: z.string() });
 
@@ -33,6 +39,29 @@ async function readRestoreMarker(filesDir: string): Promise<string | undefined> 
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
     throw error;
   }
+}
+
+export async function writeRestoredMarker(filesDir: string): Promise<void> {
+  await writeFile(
+    path.join(filesDir, RESTORED_MARKER),
+    `${new Date().toISOString()}
+`,
+    { mode: 0o600 },
+  );
+}
+
+export async function hasRestoredMarker(filesDir: string): Promise<boolean> {
+  try {
+    await stat(path.join(filesDir, RESTORED_MARKER));
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw error;
+  }
+}
+
+export async function removeRestoredMarker(filesDir: string): Promise<void> {
+  await rm(path.join(filesDir, RESTORED_MARKER), { force: true });
 }
 
 export async function hasRestoreMarker(filesDir: string): Promise<boolean> {

@@ -657,6 +657,12 @@ export const auditCatalog = {
     }),
     visibility: "instance",
   }),
+  "backup.targetConfirmed": event({
+    actor: ["account"],
+    target: "instance",
+    fields: z.object({ location: z.string() }),
+    visibility: "instance",
+  }),
   "backup.keyConfirmed": event({
     actor: ["account"],
     target: "instance",

@@ -490,10 +490,13 @@ export async function listBackups(target: BackupTarget): Promise<ListedBackup[]>
 export async function applyRetention(
   target: BackupTarget,
   policy: RetentionPolicy,
-  options: { classes?: readonly BackupClass[]; logger: Logger },
+  options: { classes?: readonly BackupClass[]; own: ReadonlySet<string>; logger: Logger },
 ): Promise<string[]> {
   const listed = (await listBackups(target)).filter(
-    (backup) => backup.header !== null && (!options.classes || options.classes.includes(backup.backupClass)),
+    (backup) =>
+      backup.header !== null &&
+      options.own.has(backup.name) &&
+      (!options.classes || options.classes.includes(backup.backupClass)),
   );
   const deleted: string[] = [];
   for (const backup of expiredBackups(listed, policy)) {

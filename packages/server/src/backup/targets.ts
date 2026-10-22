@@ -53,7 +53,7 @@ export interface BackupTarget {
   source(name: string): Promise<BackupSource>;
   delete(name: string): Promise<void>;
   capacity(): Promise<TargetCapacity | null>;
-  removeIncomplete(): Promise<void>;
+  removeIncomplete(names: ReadonlySet<string>): Promise<void>;
   test(): Promise<void>;
 }
 
@@ -132,7 +132,7 @@ function blockedAddressOf(error: unknown): string | null {
 }
 
 const TEST_CONTENT = "Pagehall backup target test\n";
-const PARTIAL = /^pagehall-backup-.+\.phbak\.[0-9a-f-]{36}\.partial$/;
+const PARTIAL = /^(pagehall-backup-.+\.phbak)\.[0-9a-f-]{36}\.partial$/;
 
 function localFailure(error: unknown): TargetFailure {
   switch ((error as NodeJS.ErrnoException).code) {
@@ -251,10 +251,11 @@ export class LocalBackupTarget implements BackupTarget {
     return { free: stats.bavail * stats.bsize, total: stats.blocks * stats.bsize };
   }
 
-  async removeIncomplete(): Promise<void> {
+  async removeIncomplete(names: ReadonlySet<string>): Promise<void> {
     await guardLocal("delete", async () => {
       for (const entry of await readdir(this.#dir)) {
-        if (PARTIAL.test(entry)) await rm(path.join(this.#dir, entry), { force: true });
+        const name = PARTIAL.exec(entry)?.[1];
+        if (name && names.has(name)) await rm(path.join(this.#dir, entry), { force: true });
       }
     });
   }
@@ -430,27 +431,26 @@ export class S3BackupTarget implements BackupTarget {
       abort: async () => {
         await upload?.abort().catch(() => undefined);
         await done?.catch(() => undefined);
-        await this.#abortUploads(key).catch(() => undefined);
+        await this.#abortUploads(new Set([key])).catch(() => undefined);
       },
     };
   }
 
-  async #abortUploads(key: string | null): Promise<void> {
+  async #abortUploads(keys: ReadonlySet<string>): Promise<void> {
     let keyMarker: string | undefined;
     let uploadMarker: string | undefined;
     do {
       const page = await this.#client.send(
         new ListMultipartUploadsCommand({
           Bucket: this.#config.bucket,
-          Prefix: key ?? this.#config.prefix,
+          Prefix: keys.size === 1 ? [...keys][0] : this.#config.prefix,
           ...(keyMarker ? { KeyMarker: keyMarker } : {}),
           ...(uploadMarker ? { UploadIdMarker: uploadMarker } : {}),
         }),
       );
       for (const pending of page.Uploads ?? []) {
         if (!pending.Key || !pending.UploadId) continue;
-        const name = pending.Key.slice(this.#config.prefix.length);
-        if (!parseBackupName(name) || (key !== null && pending.Key !== key)) continue;
+        if (!keys.has(pending.Key)) continue;
         await this.#client.send(
           new AbortMultipartUploadCommand({
             Bucket: this.#config.bucket,
@@ -543,8 +543,10 @@ export class S3BackupTarget implements BackupTarget {
     return null;
   }
 
-  async removeIncomplete(): Promise<void> {
-    await guardS3("delete", () => this.#abortUploads(null));
+  async removeIncomplete(names: ReadonlySet<string>): Promise<void> {
+    const keys = new Set([...names].filter((name) => parseBackupName(name)).map((name) => this.#key(name)));
+    if (keys.size === 0) return;
+    await guardS3("delete", () => this.#abortUploads(keys));
   }
 
   async test(): Promise<void> {

@@ -44,6 +44,7 @@ function presentTest(test: TestRestoreView): z.input<typeof testRestoreSchema> {
 function presentOverview(overview: BackupOverview): z.input<typeof backupOverviewSchema> {
   return {
     ...overview,
+    restoredAt: iso(overview.restoredAt),
     nextRunAt: iso(overview.nextRunAt),
     keyConfirmed: overview.keyConfirmed
       ? { at: overview.keyConfirmed.at.toISOString(), by: overview.keyConfirmed.by }
@@ -57,6 +58,8 @@ function presentOverview(overview: BackupOverview): z.input<typeof backupOvervie
 function presentStatus(status: BackupStatus): z.input<typeof backupStatusSchema> {
   return {
     ...status,
+    restoredAt: iso(status.restoredAt),
+    testRestoreCleanupAt: iso(status.testRestoreCleanupAt),
     nextRunAt: iso(status.nextRunAt),
     lastSuccess: status.lastSuccess
       ? { ...status.lastSuccess, at: status.lastSuccess.at.toISOString() }
@@ -209,6 +212,24 @@ export class BackupsController {
   })
   async confirmKey(@Body() body: z.output<typeof keyConfirmationSchema>, @Req() request: FastifyRequest) {
     return presentOverview(await this.#backups.confirmKey(actorOf(request), body.confirmed));
+  }
+
+  @Post("target/confirmation")
+  @Permission(MANAGE)
+  @ApiRoute({
+    summary: "Confirm the backup target after a restore",
+    description:
+      "After a restore from a backup, scheduled backups, retention and the monthly test restore are paused, so that a copy of an instance never writes into or deletes from the backups of the original. Confirming the target resumes them. Changing the target resumes them as well. The confirmation is audited.",
+    tags: [TAG],
+    response: {
+      description: "Settings and state.",
+      schema: backupOverviewSchema,
+      example: exampleBackupOverview,
+    },
+    errors: ["invalidBackupSettings"],
+  })
+  async confirmTarget(@Req() request: FastifyRequest) {
+    return presentOverview(await this.#backups.confirmTarget(actorOf(request)));
   }
 
   @Get("files")
