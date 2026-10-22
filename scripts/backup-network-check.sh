@@ -2,7 +2,7 @@
 set -euo pipefail
 export MSYS_NO_PATHCONV=1
 
-image="${1:?usage: scripts/backup-network-check.sh <image>}"
+image="${1:?usage: scripts/backup-network-check.sh <image with node, such as the Pagehall image under test>}"
 curl_image="curlimages/curl:8.18.0@sha256:d94d07ba9e7d6de898b6d96c1a072f6f8266c687af78a74f380087a0addf5d17"
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -41,19 +41,17 @@ sed -i.bak "s#^    image: ghcr.io/pagehall/pagehall:.*#    image: $image#" "$wor
 
 echo "Checking the storage example of docs/backup.md with the Compose file of the setup script"
 compose config --format json >"$work/config.json"
-allowed="$(node -e '
-  const config = JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"));
-  process.stdout.write(config.services.pagehall.environment.PAGEHALL_OUTBOUND_ALLOWED_NETWORKS ?? "");
-' "$work/config.json")"
-storage_address="$(node -e '
-  const config = JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"));
+read_config() {
+  docker run --rm -i --entrypoint node "$image" -e "
+    const config = JSON.parse(require('node:fs').readFileSync(0, 'utf8'));
+    $1
+  " <"$work/config.json"
+}
+allowed="$(read_config 'process.stdout.write(config.services.pagehall.environment.PAGEHALL_OUTBOUND_ALLOWED_NETWORKS ?? "");')"
+storage_address="$(read_config '
   const networks = config.services.storage.networks ?? {};
-  process.stdout.write(Object.values(networks).map((network) => network?.ipv4_address).find(Boolean) ?? "");
-' "$work/config.json")"
-pagehall_networks="$(node -e '
-  const config = JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"));
-  process.stdout.write(Object.keys(config.services.pagehall.networks ?? {}).sort().join(" "));
-' "$work/config.json")"
+  process.stdout.write(Object.values(networks).map((network) => network?.ipv4_address).find(Boolean) ?? "");')"
+pagehall_networks="$(read_config 'process.stdout.write(Object.keys(config.services.pagehall.networks ?? {}).sort().join(" "));')"
 
 [ -n "$storage_address" ] || fail "The storage service has no fixed address"
 [ "$allowed" = "$storage_address/32" ] ||
