@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createZip } from "../zip-writer.js";
 import {
   type Actor,
+  bundle,
   canonicalQuery,
   collectIds,
   createAnonymizer,
@@ -14,6 +15,7 @@ import {
   prepare,
   projectFolder,
   readZip,
+  renameProductInFixtures,
   TEST_DATA_FOLDER,
 } from "./prepare.js";
 
@@ -321,5 +323,49 @@ source=cloud
     expect(() => prepare(folder, path.join(folder, "out"), projectOf(folder))).toThrow(
       "looks like a Atlassian API token",
     );
+  });
+});
+
+describe("renaming the product in the committed fixtures", () => {
+  const folders: string[] = [];
+
+  afterEach(() => {
+    for (const folder of folders.splice(0)) rmSync(folder, { recursive: true, force: true });
+  });
+
+  it("writes the current product name in texts, text bodies and the expectations, and leaves binary data alone", () => {
+    const folder = mkdtempSync(path.join(tmpdir(), "confluence-rename-"));
+    folders.push(folder);
+    const binary = Buffer.from([0, 1, 2, 0x70, 0x61, 0x67, 0x65]).toString("base64");
+    const lines = [
+      { name: "entities.xml", text: "<title>Pagehall Test</title> key pagehall probe" },
+      {
+        key: "admin GET /wiki/x",
+        status: 200,
+        base64: Buffer.from('{"name":"PAGEHALL"}').toString("base64"),
+      },
+      { key: "admin GET /wiki/y", body: { properties: { pagehall_test_meta: "" } } },
+      { name: "image.png", base64: binary },
+    ];
+    writeFileSync(path.join(folder, "PHIT.jsonl.gz"), bundle(lines));
+    writeFileSync(
+      path.join(folder, "expected.json"),
+      `${JSON.stringify({ space: "Testdaten für Pagehall" })}\n`,
+    );
+    writeFileSync(path.join(folder, "unchanged.jsonl.gz"), bundle([{ name: "a", text: "Lunedo" }]));
+    const { files } = renameProductInFixtures(folder);
+    expect(files.map((file) => file.name)).toEqual(["PHIT.jsonl.gz", "expected.json"]);
+    const written = gunzipSync(readFileSync(path.join(folder, "PHIT.jsonl.gz")))
+      .toString("utf8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    expect(written[0].text).toBe("<title>Lunedo Test</title> key lunedo probe");
+    expect(Buffer.from(written[1].base64, "base64").toString("utf8")).toBe('{"name":"LUNEDO"}');
+    expect(written[2].body.properties).toEqual({ lunedo_test_meta: "" });
+    expect(written[3].base64).toBe(binary);
+    expect(JSON.parse(readFileSync(path.join(folder, "expected.json"), "utf8"))).toEqual({
+      space: "Testdaten für Lunedo",
+    });
   });
 });
