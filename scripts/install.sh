@@ -16,6 +16,8 @@ image=""
 port=""
 bind=""
 subnet=""
+proxy=""
+proxy_given=0
 pull=1
 
 usage() {
@@ -34,7 +36,9 @@ Options:
   --image <reference>   Image to use instead of ghcr.io/pagehall/pagehall:<version>
   --port <port>         Host port of Pagehall (default 3000)
   --bind <address>      Host address the port listens on (default 127.0.0.1)
-  --subnet <cidr>       Subnet of the Compose network, trusted for forwarded headers (default 172.30.0.0/24)
+  --subnet <cidr>       Subnet of the Compose network (default 172.30.0.0/24)
+  --proxy <address>     Fixed address of a reverse proxy on the Compose network, the only address
+                        Pagehall trusts for forwarded headers (default: none)
   --no-pull             Use a local image without pulling it
   --yes                 Answer every question with its default, for unattended runs
   --help                Show this help
@@ -78,6 +82,32 @@ version_lt() {
     if ((10#${left[index]} > 10#${right[index]})); then return 1; fi
   done
   return 1
+}
+
+directory_mode() { stat -c '%a' "$1" 2>/dev/null || stat -f '%Lp' "$1" 2>/dev/null || true; }
+
+check_directory_mode() {
+  local mode
+  mode="$(directory_mode "$1")"
+  [[ "$mode" =~ ^[0-7]{3,4}$ ]] || return 0
+  if (((8#$mode & 8#022) != 0)); then
+    fail "$1 has mode $mode, so other accounts on this host can create or replace files in it, such as compose.yml. Restrict it, for example with: chmod 700 '$1', and run the command again."
+  fi
+  if (((8#$mode & 8#027) != 0)); then
+    say "Warning: $1 has mode $mode, so other accounts on this host can reach the backups and the" >&2
+    say "         configuration in it. Restrict it, for example with: chmod 700 '$1'" >&2
+  fi
+}
+
+valid_ipv4() {
+  [[ "$1" =~ ^([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})$ ]] || return 1
+  local part
+  for part in "${BASH_REMATCH[@]:1}"; do ((10#$part <= 255)) || return 1; done
+}
+
+gateway_of() {
+  local base="${1%/*}"
+  printf '%s.%s' "${base%.*}" "$((${base##*.} + 1))"
 }
 
 random_key() { head -c 32 /dev/urandom | base64 | tr -d '\n'; }
@@ -237,6 +267,11 @@ install_pagehall() {
   port="${port:-3000}"
   bind="${bind:-127.0.0.1}"
   subnet="${subnet:-172.30.0.0/24}"
+  local existed=0
+  if [ -d "$directory" ]; then
+    existed=1
+    check_directory_mode "$directory"
+  fi
 
   if [ -f "$directory/$RECORD" ] || [ -f "$directory/compose.yml" ] || [ -f "$directory/.env" ]; then
     say "Pagehall is already installed in $directory (version $(record_value version))."
@@ -263,6 +298,15 @@ install_pagehall() {
     *) say "Warning: $instance_url does not use HTTPS. Signing in needs HTTPS; put Pagehall behind a reverse proxy with TLS." ;;
   esac
 
+  if [ "$proxy_given" -eq 0 ]; then
+    proxy="$(ask "Fixed address of a reverse proxy in this Compose project, trusted for forwarded headers (empty: none)" "")"
+  fi
+  if [ -n "$proxy" ]; then
+    valid_ipv4 "$proxy" || fail "$proxy is not an IPv4 address like 172.30.0.10."
+    [ "$proxy" != "$(gateway_of "$subnet")" ] ||
+      fail "$proxy is the gateway of the Compose network. Every program on this host connects from it, so it must not be trusted. Give the proxy a fixed address of its own on the network."
+  fi
+
   local reference target
   if [ -n "$image" ]; then
     reference="$image"
@@ -271,8 +315,11 @@ install_pagehall() {
     reference="$IMAGE_REPOSITORY:$target"
   fi
 
+  if [ "$existed" -eq 0 ]; then
+    mkdir -p "$(dirname "$directory")"
+    mkdir -m 700 "$directory"
+  fi
   mkdir -p "$directory/backups"
-  chmod 755 "$directory"
 
   local code
   code="$(setup_code)"
@@ -285,7 +332,7 @@ install_pagehall() {
       printf 'PAGEHALL_MASTER_KEYS=1:%s\n' "$(random_key)"
       printf 'PAGEHALL_BACKUP_KEY=1:%s\n' "$(random_key)"
       printf 'PAGEHALL_METRICS_TOKEN=%s\n' "$(random_text 43 'A-Za-z0-9')"
-      printf 'PAGEHALL_TRUSTED_PROXIES=%s\n' "$subnet"
+      printf 'PAGEHALL_TRUSTED_PROXIES=%s\n' "${proxy:+$proxy/32}"
       printf 'PAGEHALL_SUBNET=%s\n' "$subnet"
       printf 'PAGEHALL_PORT=%s\n' "$port"
       printf 'PAGEHALL_BIND=%s\n' "$bind"
@@ -293,8 +340,7 @@ install_pagehall() {
       printf 'PAGEHALL_INSTALL_DIR=%s\n' "$directory"
     } >"$directory/.env"
   )
-  compose_file "$reference" >"$directory/compose.yml"
-  chmod 644 "$directory/compose.yml"
+  write_compose "$reference"
   cp "$0" "$directory/pagehall"
   chmod 755 "$directory/pagehall"
 
@@ -315,7 +361,7 @@ install_pagehall() {
     if is_release "$resolved"; then
       reference="$IMAGE_REPOSITORY:$resolved"
       docker image tag "$IMAGE_REPOSITORY:latest" "$reference"
-      compose_file "$reference" >"$directory/compose.yml"
+      write_compose "$reference"
     fi
   fi
 
@@ -331,7 +377,15 @@ install_pagehall() {
   say ""
   say "Next steps:"
   say "  1. Set up the instance: $instance_url/setup#code=$code"
-  say "  2. Put a reverse proxy with TLS in front of $bind:$port and keep the trusted subnet $subnet:"
+  if [ -n "$proxy" ]; then
+    say "  2. Run your reverse proxy with TLS at $proxy on the Compose network; only that address is"
+    say "     trusted for forwarded headers:"
+  else
+    say "  2. Put a reverse proxy with TLS in front of $bind:$port. No proxy is trusted yet, so Pagehall"
+    say "     ignores forwarded headers and sees every client as the proxy. Give a proxy in this Compose"
+    say "     project a fixed address and set PAGEHALL_TRUSTED_PROXIES in .env to it, never to the"
+    say "     whole subnet or its gateway:"
+  fi
   say "     https://github.com/pagehall/pagehall/blob/main/docs/reverse-proxy.md"
   say "  3. Copy $directory/.env to a safe place. It holds the master key and the backup key;"
   say "     a backup cannot be restored without them."
@@ -344,6 +398,7 @@ update_pagehall() {
     fail "$directory is not a Pagehall installation. Run the update from the installation directory, or pass --dir."
   [ "$(record_value method)" = "script" ] ||
     fail "$directory was not installed with the setup script. Update it as described in docs/setup.md."
+  check_directory_mode "$directory"
   check_requirements_for_update
 
   local current_reference current target_reference target
@@ -397,10 +452,12 @@ update_pagehall() {
   fi
   location="$(printf '%s' "$location" | tail -n 1 | tr -d '\r')"
   say "The backup is $(host_location "$location")"
-  compose exec -T pagehall pagehall backup skip-before-update >/dev/null
 
   say "Starting Pagehall $target"
   replace_image "$target_reference"
+  if ! compose run --rm --no-deps -T pagehall backup skip-before-update --for-version "$target" >/dev/null 2>&1; then
+    say "Pagehall $target could not record that the backup before the update is done; its first start takes a second one."
+  fi
   if ! wait_ready; then
     say "" >&2
     say "Pagehall $target did not become ready. The last log lines:" >&2
@@ -456,13 +513,25 @@ check_requirements_for_update() {
   docker compose version >/dev/null 2>&1 || fail "Docker Compose v2 is missing."
 }
 
+write_compose() {
+  (
+    umask 077
+    compose_file "$1" >"$directory/compose.yml.tmp"
+  )
+  chmod 600 "$directory/compose.yml.tmp"
+  mv "$directory/compose.yml.tmp" "$directory/compose.yml"
+}
+
 replace_image() {
   local reference="$1"
-  awk -v reference="$reference" '
-    !done && /^    image: / && $0 ~ /pagehall/ { print "    image: " reference; done = 1; next }
-    { print }
-  ' "$directory/compose.yml" >"$directory/compose.yml.tmp"
-  chmod 644 "$directory/compose.yml.tmp"
+  (
+    umask 077
+    awk -v reference="$reference" '
+      !done && /^    image: / && $0 ~ /pagehall/ { print "    image: " reference; done = 1; next }
+      { print }
+    ' "$directory/compose.yml" >"$directory/compose.yml.tmp"
+  )
+  chmod 600 "$directory/compose.yml.tmp"
   mv "$directory/compose.yml.tmp" "$directory/compose.yml"
 }
 
@@ -495,6 +564,7 @@ while [ "$#" -gt 0 ]; do
     --port) port="${2:?--port needs a port}"; shift 2 ;;
     --bind) bind="${2:?--bind needs an address}"; shift 2 ;;
     --subnet) subnet="${2:?--subnet needs a CIDR range}"; shift 2 ;;
+    --proxy) proxy="${2?--proxy needs an address}"; proxy_given=1; shift 2 ;;
     --no-pull) pull=0; shift ;;
     --yes | -y) assume_yes=1; shift ;;
     --help | -h) command="help"; shift ;;

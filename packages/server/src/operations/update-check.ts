@@ -8,12 +8,12 @@ import type { NotificationService } from "../notifications/service.js";
 import { OutboundError, type OutboundPolicy, openOutbound } from "../outbound/guarded-request.js";
 import type { SettingsService } from "../settings/service.js";
 import {
+  downloadedReleases,
   newerReleases,
   type Release,
   type RunningChangelog,
   releaseSchema,
   runningChangelog,
-  versionFileSchema,
 } from "./changelog.js";
 import { updateCheckSetting } from "./settings.js";
 import { parseReleaseVersion } from "./version.js";
@@ -100,7 +100,11 @@ function failureOf(error: unknown): UpdateCheckError {
   return new UpdateCheckError("unreachable", "The server of the version file could not be reached");
 }
 
-export async function downloadVersionFile(policy: OutboundPolicy, address: string): Promise<Release[]> {
+export async function downloadVersionFile(
+  policy: OutboundPolicy,
+  address: string,
+  logger?: Logger,
+): Promise<Release[]> {
   let url = address;
   try {
     for (let hop = 0; ; hop += 1) {
@@ -138,13 +142,32 @@ export async function downloadVersionFile(policy: OutboundPolicy, address: strin
       } catch {
         throw new UpdateCheckError("invalidFile", "The version file is not valid JSON");
       }
-      const file = versionFileSchema.safeParse(parsed);
-      if (!file.success)
+      const file = downloadedReleases(parsed);
+      if (!file)
         throw new UpdateCheckError("invalidFile", "The version file does not have the expected form");
-      return file.data.releases;
+      if (file.ignored > 0) {
+        logger?.warn(
+          { ignored: file.ignored },
+          "Entries of the version file without a release version like 1.4.2 or with an invalid form were ignored",
+        );
+      }
+      return file.releases;
     }
   } catch (error) {
     throw failureOf(error);
+  }
+}
+
+function shellQuote(value: string): string {
+  return /^[A-Za-z0-9_./:@%+=-]+$/.test(value) ? value : `'${value.replaceAll("'", "'\\''")}'`;
+}
+
+export function displayedUrl(address: string): string {
+  try {
+    const url = new URL(address);
+    return `${url.protocol}//${url.host}${url.pathname}`;
+  } catch {
+    return "";
   }
 }
 
@@ -154,7 +177,7 @@ export function updateCommands(
   version: string,
 ): UpdateCommands {
   const image = `${IMAGE_REPOSITORY}:${version}`;
-  const folder = directory ?? "<installation directory>";
+  const folder = directory ? shellQuote(directory) : "<installation directory>";
   switch (method) {
     case "script":
       return {
@@ -209,7 +232,7 @@ export class UpdateCheckService {
   readonly #logger: Logger;
   readonly #environment: UpdateEnvironment;
   readonly #running: () => string;
-  readonly #download: (policy: OutboundPolicy, url: string) => Promise<Release[]>;
+  readonly #download: (policy: OutboundPolicy, url: string, logger: Logger) => Promise<Release[]>;
   readonly #now: () => Date;
 
   constructor(options: {
@@ -220,7 +243,7 @@ export class UpdateCheckService {
     logger: Logger;
     environment: UpdateEnvironment;
     running: () => string;
-    download?: (policy: OutboundPolicy, url: string) => Promise<Release[]>;
+    download?: (policy: OutboundPolicy, url: string, logger: Logger) => Promise<Release[]>;
     now?: () => Date;
   }) {
     this.#database = options.database;
@@ -251,7 +274,7 @@ export class UpdateCheckService {
     if (!(await this.enabled()).enabled) return this.status();
     const now = this.#now();
     try {
-      const releases = await this.#download(this.#policy, this.#environment.url);
+      const releases = await this.#download(this.#policy, this.#environment.url, this.#logger);
       await this.#database.transaction(async (tx) => {
         await tx.execute(sql`
           insert into update_check_state (singleton, checked_at, succeeded, failure, releases)
@@ -315,7 +338,7 @@ export class UpdateCheckService {
     return {
       enabled,
       disabledBy,
-      url: this.#environment.url,
+      url: displayedUrl(this.#environment.url),
       running,
       runningIsRelease: parseReleaseVersion(running) !== null,
       checkedAt: enabled && state?.checked_at ? new Date(state.checked_at) : null,

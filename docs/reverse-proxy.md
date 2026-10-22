@@ -16,7 +16,8 @@ This page has tested examples for [Caddy](#caddy), [Nginx](#nginx) and [Traefik]
 Pagehall reads the client address from `X-Forwarded-For`, the protocol from `X-Forwarded-Proto` and the host from `X-Forwarded-Host`, but only from proxies listed in `PAGEHALL_TRUSTED_PROXIES` (comma-separated addresses and CIDR ranges). From every other address these headers are ignored, so nobody can fake a client address to get around rate limits.
 
 - The proxy must set all three headers and replace values sent by the client. Caddy and Traefik do this by default; the Nginx example sets them.
-- With the proxy in the same Compose project, list the subnet of the network. The Compose file of the setup script gives its network the fixed subnet `172.30.0.0/24` (`--subnet` changes it) and trusts it. With the proxy on the host, Pagehall sees the gateway of that network, which is in the same subnet.
+- Trust only the address of the proxy, never a whole subnet: every container in a trusted subnet could set these headers. Run the proxy in the Compose project of Pagehall with a fixed address, as the Caddy example does, and set `PAGEHALL_TRUSTED_PROXIES` to that one address. The setup script does this with `--proxy 172.30.0.10`; without it, it trusts no proxy.
+- Never trust the gateway of the Compose network (`172.30.0.1` with the setup script). A proxy on the host reaches Pagehall through the published port and arrives from the gateway, but so does every other program on the host, which could then fake client addresses, get around rate limits and write wrong addresses into sessions and the audit log. With a proxy on the host, leave `PAGEHALL_TRUSTED_PROXIES` empty: Pagehall then ignores the forwarded headers and sees every request as coming from the gateway, so rate limits per client address apply to all clients together. Moving the proxy into the Compose project avoids that.
 - The system status page shows a warning under HTTPS when the instance address does not use HTTPS.
 
 ### WebSockets
@@ -44,7 +45,7 @@ A knowledge base portal can have its own domain ([knowledge-bases.md](knowledge-
 
 ## Caddy
 
-Caddy in the same Compose project as Pagehall. Add the service to the `compose.yml` of the setup script, or to your own; it joins the default network, whose subnet `PAGEHALL_TRUSTED_PROXIES` already trusts (`172.30.0.0/24` with the setup script). Caddy gets certificates from Let's Encrypt for the instance address and, on demand, for allowed portal domains.
+Caddy in the same Compose project as Pagehall. Add the service to the `compose.yml` of the setup script, or to your own; it joins the default network with the fixed address `172.30.0.10`, the one address `PAGEHALL_TRUSTED_PROXIES` lists (`--proxy 172.30.0.10` with the setup script, or `PAGEHALL_TRUSTED_PROXIES=172.30.0.10/32` in `.env`). Caddy gets certificates from Let's Encrypt for the instance address and, on demand, for allowed portal domains.
 
 <!-- reverse-proxy-check: caddy-compose -->
 ```yaml
@@ -59,6 +60,9 @@ services:
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
+    networks:
+      default:
+        ipv4_address: 172.30.0.10
 
 volumes:
   caddy-data:
@@ -137,7 +141,7 @@ server {
 }
 ```
 
-Docker forwards the published port, so Pagehall sees the connection from the gateway of its Compose network, not from `127.0.0.1`; the trusted subnet of the setup script (`172.30.0.0/24`) covers it. With your own Compose file, set `PAGEHALL_TRUSTED_PROXIES` to the subnet of the network. `$proxy_add_x_forwarded_for` appends to a header a client sent; Pagehall reads the entries from the right and stops at the first address that is not a trusted proxy, so a faked entry on the left is ignored. Each portal domain needs a certificate that covers it; add it to `server_name` in both blocks, or give it a server block of its own.
+Docker forwards the published port, so Pagehall sees the connection from the gateway of its Compose network, not from `127.0.0.1`. Do not trust the gateway (see [Forwarded headers](#forwarded-headers-and-pagehall_trusted_proxies)); leave `PAGEHALL_TRUSTED_PROXIES` empty, or run Nginx as a container in the Compose project with a fixed address, use `server pagehall:3000;` as upstream and trust that address. `$proxy_add_x_forwarded_for` appends to a header a client sent; Pagehall reads the entries from the right and stops at the first address that is not a trusted proxy, so a faked entry on the left is ignored. Each portal domain needs a certificate that covers it; add it to `server_name` in both blocks, or give it a server block of its own.
 
 ## Traefik
 
@@ -190,7 +194,7 @@ http:
           - url: http://pagehall:3000
 ```
 
-Traefik passes WebSockets and the forwarded headers by default and has no body limit. Its `readTimeout` of 60 seconds would cut off long uploads, so the example raises it. Run Traefik in the Compose project of Pagehall as in the Caddy example, so that the trusted subnet covers it. With Docker labels instead of the file provider, put the same rule, entry point and resolver on the `pagehall` service and set `traefik.http.services.pagehall.loadbalancer.server.port=3000`.
+Traefik passes WebSockets and the forwarded headers by default and has no body limit. Its `readTimeout` of 60 seconds would cut off long uploads, so the example raises it. Run Traefik in the Compose project of Pagehall with a fixed address as in the Caddy example, and trust that address. With Docker labels instead of the file provider, put the same rule, entry point and resolver on the `pagehall` service and set `traefik.http.services.pagehall.loadbalancer.server.port=3000`.
 
 ## Checking a proxy
 

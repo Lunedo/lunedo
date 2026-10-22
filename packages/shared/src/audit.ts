@@ -78,6 +78,7 @@ export const auditEventNames = [
   "mail.credentialRemoved",
   "backup.settingsChanged",
   "backup.targetChanged",
+  "backup.targetConfirmed",
   "backup.keyConfirmed",
   "backup.requested",
   "backup.created",

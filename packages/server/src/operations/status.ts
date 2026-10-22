@@ -94,8 +94,11 @@ export function backupItem(backup: BackupStatus): StatusItem {
     lastFailureAt: backup.lastFailure?.at.toISOString() ?? null,
     lastFailureReason: backup.lastFailure?.reason ?? null,
     nextRunAt: backup.nextRunAt?.toISOString() ?? null,
+    restoredAt: backup.restoredAt?.toISOString() ?? null,
+    testRestoreCleanupAt: backup.testRestoreCleanupAt?.toISOString() ?? null,
   };
   if (!backup.targetConfigured) return item("backups", "warning", "noTarget", facts, links);
+  if (backup.restoredAt) return item("backups", "warning", "restored", facts, links);
   if (!backup.enabled) return item("backups", "warning", "off", facts, links);
   if (backup.alert === "failing") return item("backups", "error", "failed", facts, links);
   if (backup.alert === "missing") return item("backups", "warning", "noRecentBackup", facts, links);

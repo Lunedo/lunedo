@@ -40,6 +40,8 @@ export const maintenanceState = pgTable(
     changedBy: uuid().references(() => accounts.id, { onDelete: "set null" }),
     changedAt: timestampColumn(),
     startedAt: timestampColumn(),
+    lastStartedAt: timestampColumn(),
+    lastEndedAt: timestampColumn(),
   },
   (table) => [
     check("maintenance_state_singleton", sql`${table.singleton}`),

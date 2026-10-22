@@ -29,6 +29,7 @@
     "playwright-image:check": "node scripts/check-playwright-image.ts",
     "i18n:check": "node scripts/check-i18n.ts",
     "shell:check": "node scripts/check-shell.ts",
+    "release-jobs:check": "node scripts/check-release-jobs.ts",
     "verify": "node scripts/verify.ts"
   },
   "devDependencies": {

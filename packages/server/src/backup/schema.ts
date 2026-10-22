@@ -91,6 +91,8 @@ export const backupState = pgTable(
     alert: backupAlert().notNull().default("none"),
     alertNotifiedAt: timestampColumn(),
     lastAutomaticTestAt: timestampColumn(),
+    restoredAt: timestampColumn(),
+    testRestoreCleanupAt: timestampColumn(),
     ...timestamps(),
   },
   (table) => [check("backup_state_singleton", sql`${table.singleton}`)],
@@ -127,6 +129,7 @@ export const backupTestRestores = pgTable(
     error: text(),
     actorId: uuid().references(() => accounts.id, { onDelete: "set null" }),
     startedAt: timestampColumn().notNull().defaultNow(),
+    jobStartedAt: timestampColumn(),
     finishedAt: timestampColumn(),
     ...timestamps(),
   },
@@ -134,7 +137,7 @@ export const backupTestRestores = pgTable(
 );
 
 export interface TestRestoreCheck {
-  check: "verify" | "privilege" | "restore" | "schemaVersion" | "rows" | "files";
+  check: "verify" | "space" | "privilege" | "restore" | "schemaVersion" | "rows" | "files";
   passed: boolean;
   detail: Record<string, string | number | boolean | null>;
 }

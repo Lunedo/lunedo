@@ -1538,6 +1538,7 @@
     "invalidBackupSettings": "The backup settings are not valid. Check the marked fields and try again.",
     "backupRunning": "A backup or test restore is already running. Wait until it is done and try again.",
     "backupNotFound": "The backup is not in the target anymore. Reload the list.",
+    "backupTargetFailed": "The backup target could not be used. The message names the cause; fix it in the backup settings, use Test connection to check it, and try again.",
     "tooManyPagesToPrint": "Browsers print up to 300 pages at once. Export as Word or HTML instead, or as PDF on the server if your administrator set up the render container.",
     "tooManyPagesForFile": "Word and PDF files can hold up to 1,000 pages. Export as an HTML or Markdown archive instead, or export a smaller part.",
     "renderUnavailable": "PDF on the server needs the render container, which is not set up or not reachable. Print the PDF through your browser instead, or ask your instance administrator.",
@@ -3761,6 +3762,7 @@
       "backup": {
         "settingsChanged": "Backup settings changed",
         "targetChanged": "Backup target changed",
+        "targetConfirmed": "Backup target confirmed after a restore",
         "keyConfirmed": "Backup key storage confirmed",
         "requested": "Backup started by hand",
         "created": "Backup created",
@@ -9449,6 +9451,7 @@
       "startedAutomatically": "Started {time} by the monthly schedule.",
       "checks": {
         "verify": "Backup is complete and readable",
+        "space": "Enough free space for a full test restore",
         "privilege": "Temporary database could not be created",
         "restore": "Restored into a temporary database",
         "schemaVersion": "Schema version matches",
@@ -9496,6 +9499,13 @@
     },
     "banner": {
       "open": "Open the backup settings",
+      "restored": {
+        "title": "This instance was restored from a backup",
+        "body": "This instance was restored from a backup. Backups are paused until you confirm the target.",
+        "target": "Target: {location}. If this instance is a copy, for example a test system, change the target so that it does not write into or delete the backups of the original.",
+        "change": "To use another target, change it below; that also resumes the backups.",
+        "confirm": "Confirm target and resume backups"
+      },
       "failing": {
         "title": "Backups fail",
         "body": "The last backup failed. Open the backup settings to see why."
@@ -10417,12 +10427,14 @@
         "backups": {
           "label": "Backups",
           "ok": "Last successful backup {lastSuccessAt}.",
+          "cleanup": "Leftovers of an interrupted test restore were removed {testRestoreCleanupAt}.",
           "reasons": {
             "noTarget": "No backup target is set up. Set one up so that backups can run.",
             "off": "Scheduled backups are off. Turn them on, or make sure your own backups cover the database and the files.",
             "failed": "The last backup failed: {lastFailureReason}. Check the target and run a backup again.",
             "noRecentBackup": "There has been no successful backup for longer than the backup settings allow. Check the schedule and the target.",
-            "beforeUpdateOff": "Backups work, but backups before updates are off."
+            "beforeUpdateOff": "Backups work, but backups before updates are off.",
+            "restored": "This instance was restored from a backup. Backups are paused until you confirm the target."
           }
         },
         "searchIndex": {

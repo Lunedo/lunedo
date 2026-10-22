@@ -7,6 +7,7 @@ import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
 import { spaceFixtures } from "../testing/spaces.js";
 import {
+  idleOutsideMaintenance,
   MAINTENANCE_MESSAGE_MAX_LENGTH,
   MaintenanceInputError,
   MaintenanceModeError,
@@ -99,6 +100,30 @@ describe.skipIf(!baseUrl)("MaintenanceService", () => {
       { name: "maintenance.changed", fields: { message: "Update until 19:00", blockSignIn: false } },
       { name: "maintenance.ended", fields: { minutes: 0 } },
     ]);
+  });
+
+  it("keeps the last maintenance period out of the time a job counts as idle", async () => {
+    await test.services.maintenance.set(SYSTEM, { enabled: true, message: "" });
+    await test.services.maintenance.set(SYSTEM, { enabled: false });
+    const recorded = await test.database.execute<{ started: boolean; ended: boolean }>(sql`
+      select last_started_at is not null as started, last_ended_at is not null as ended from maintenance_state`);
+    expect(recorded.rows).toEqual([{ started: true, ended: true }]);
+    await test.database.execute(sql`
+      update maintenance_state set last_started_at = now() - interval '10 minutes',
+        last_ended_at = now() - interval '2 minutes'`);
+    const idle = async (minutesAgo: number) => {
+      const since = sql`now() - make_interval(mins => ${minutesAgo})`;
+      const result = await test.database.execute<{ idle: boolean }>(
+        sql`select ${idleOutsideMaintenance(since, sql`interval '3 minutes'`)} as idle`,
+      );
+      return result.rows[0]?.idle;
+    };
+    expect(await idle(5)).toBe(false);
+    expect(await idle(11)).toBe(false);
+    expect(await idle(12)).toBe(true);
+    await test.services.maintenance.set(SYSTEM, { enabled: true, message: "" });
+    expect(await idle(60)).toBe(false);
+    await test.services.maintenance.set(SYSTEM, { enabled: false });
   });
 
   it("refuses messages that are too long and changes nothing", async () => {

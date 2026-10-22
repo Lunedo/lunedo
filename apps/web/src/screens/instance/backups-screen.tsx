@@ -875,7 +875,9 @@ function TestRestoreDetails({ test, onClose }: { test: TestRestore | null; onClo
               ? t("backups.test.startedBy", { time: format.dateTime(test.startedAt), name: test.actor.name })
               : t("backups.test.startedAutomatically", { time: format.dateTime(test.startedAt) })}
           </p>
-          {test.error ? <Notice variant="danger">{test.error}</Notice> : null}
+          {test.error ? (
+            <Notice variant={test.state === "verified" ? "warning" : "danger"}>{test.error}</Notice>
+          ) : null}
           <ul className="flex flex-col gap-3">
             {test.checks.map((check) => (
               <li key={check.check} className="flex flex-col gap-1">

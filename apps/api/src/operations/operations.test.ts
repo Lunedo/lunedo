@@ -1,4 +1,4 @@
-import { accountAttemptLimitSetting, clientAttemptLimitSetting } from "@pagehall/server";
+import { accountAttemptLimitSetting, clientAttemptLimitSetting, SYSTEM } from "@pagehall/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addTotp,
@@ -54,6 +54,31 @@ describe.skipIf(!databaseBaseUrl)("operations status through the API", () => {
 
     expect((await member.get("/api/v1/instance/operations/status")).statusCode).toBe(403);
     expect((await new TestClient(test.app).get("/api/v1/instance/operations/status")).statusCode).toBe(401);
+  });
+
+  it("lets viewers of operations read, but only managers change maintenance and run the update check", async () => {
+    const watcher = await createAccount(test, "operations-auditor@pagehall.test", "a long enough passphrase");
+    await test.runtime.services.roles.assign(SYSTEM, {
+      scope: "instance",
+      organizationId: null,
+      role: { builtIn: "securityAuditor" },
+      principal: { kind: "account", id: watcher.id },
+    });
+    const auditor = await signedInClient(
+      test,
+      "operations-auditor@pagehall.test",
+      "a long enough passphrase",
+    );
+    for (const url of [
+      "/api/v1/instance/operations/status",
+      "/api/v1/instance/maintenance",
+      "/api/v1/instance/updates",
+    ]) {
+      expect((await auditor.get(url)).statusCode, url).toBe(200);
+    }
+    expect((await auditor.put("/api/v1/instance/maintenance", { enabled: true })).statusCode).toBe(403);
+    expect((await auditor.post("/api/v1/instance/updates/check")).statusCode).toBe(403);
+    expect((await owner.get("/api/v1/instance/maintenance")).json()).toMatchObject({ enabled: false });
   });
 
   it("exposes the instance metrics with the token", async () => {

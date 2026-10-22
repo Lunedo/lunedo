@@ -4,9 +4,11 @@ import { instanceSettings } from "../accounts/instance-settings.js";
 import { AuditLog, auditSettingChanges } from "../audit/audit-log.js";
 import { auditRetentionSetting } from "../audit/retention.js";
 import { authSettings } from "../auth/settings.js";
-import { backupBeforeMigrations } from "../backup/before-update.js";
+import { backupBeforeMigrations, consumeSkipMarker } from "../backup/before-update.js";
 import { PostgresArchiver } from "../backup/postgres.js";
 import { checkRestoreComplete } from "../backup/restore-marker.js";
+import { pauseBackupsAfterRestore } from "../backup/restored.js";
+import { removeStaleStaging } from "../backup/runner.js";
 import { startChatDelivery } from "../chat/jobs.js";
 import { startBlogAnnouncements } from "../collaboration/jobs.js";
 import { collaborationSettings } from "../collaboration/settings.js";
@@ -182,8 +184,9 @@ export async function createServerRuntime(options: {
   try {
     await runMigrations(pool, {
       logger,
-      beforeMigrate: async ({ applied }) => {
-        if (applied === 0) return;
+      beforeMigrate: async ({ applied, expected }) => {
+        const skipRequested = await consumeSkipMarker(config.paths.work, config.version, logger);
+        if (applied === 0 || applied >= expected) return;
         const fileStore = fileStoreOf(config);
         await backupBeforeMigrations({
           sources: {
@@ -195,7 +198,7 @@ export async function createServerRuntime(options: {
             streamOwners: options.encrypted?.streamOwners ?? encryptedStreamOwnersOf(fileStore),
             backupKeys,
             masterKeys: () => availableMasterKeys(config),
-            stagingDir: config.paths.backups,
+            workDir: config.paths.work,
             configuration: configurationForBackup(options.env),
             pagehallVersion: options.env.PAGEHALL_VERSION ?? "dev",
             schemaVersion: knownSchemaVersions()[applied - 1] ?? currentSchemaVersion(),
@@ -205,10 +208,14 @@ export async function createServerRuntime(options: {
           backupDir: config.paths.backups,
           policy: outboundPolicy(config.outboundAllowedNetworks),
           environmentAllows: config.backupBeforeUpdate,
+          skipRequested,
           logger,
         });
       },
     });
+
+    await pauseBackupsAfterRestore(config.paths.work, database, logger);
+    await removeStaleStaging(pool, config.paths.work, logger);
 
     const columns = options.encrypted?.columns ?? encryptedColumns;
     const fileStore = fileStoreOf(config);
@@ -300,6 +307,7 @@ export async function createServerRuntime(options: {
       backup: {
         databaseUrl: connectionString,
         backupDir: config.paths.backups,
+        workDir: config.paths.work,
         secretsDir: config.paths.secrets,
         configuration: configurationForBackup(options.env),
         pagehallVersion: options.env.PAGEHALL_VERSION ?? "dev",
@@ -320,6 +328,7 @@ export async function createServerRuntime(options: {
             .pauseForMaintenance(status.enabled)
             .catch((error: unknown) => logger.warn({ err: error }, "Pausing jobs for maintenance failed"));
         });
+        await services.backups.cleanUpTestRestores();
         await workAccountJobs(jobs, services, settings);
         await startSearchIndexing({ jobs, listener, indexer: services.search.indexer, logger });
         await startBlogAnnouncements({ jobs, listener, subscriptions: services.blogSubscriptions, logger });

@@ -6,15 +6,20 @@ previous="${1:?usage: scripts/install-update-check.sh <previous image> <image un
 current="${2:?usage: scripts/install-update-check.sh <previous image> <image under test>}"
 root="$(cd "$(dirname "$0")/.." && pwd)"
 suffix="$$"
-directory="$(mktemp -d "${TMPDIR:-/tmp}/pagehall-install-${suffix}-XXXX")"
-if command -v cygpath >/dev/null; then directory="$(cygpath -m "$directory")"; fi
+parent="$(mktemp -d "${TMPDIR:-/tmp}/pagehall-install-${suffix}-XXXX")"
+if command -v cygpath >/dev/null; then parent="$(cygpath -m "$parent")"; fi
+directory="$parent/installation"
 port=$((20000 + suffix % 20000))
 subnet="172.31.$((suffix % 200 + 20)).0/24"
+proxy="172.31.$((suffix % 200 + 20)).10"
+linux=1
+case "$(uname -s)" in MINGW* | MSYS* | CYGWIN* | Darwin) linux=0 ;; esac
 
 compose() { docker compose --project-directory "$directory" -f "$directory/compose.yml" "$@"; }
 
 newest_backup() {
-  docker run --rm --user 0 --entrypoint sh -v "$directory/backups:/backups:ro" "$current"     -c 'ls -t /backups/pagehall-backup-*-before-update-*.phbak 2>/dev/null | head -n 1' | tr -d ''
+  docker run --rm --user 0 --entrypoint sh -v "$directory/backups:/backups:ro" "$current"     -c 'ls -t /backups/pagehall-backup-*-before-update-*.phbak 2>/dev/null | head -n 1' | tr -d '
+'
 }
 
 cleanup() {
@@ -22,9 +27,19 @@ cleanup() {
   if [ -d "$directory/backups" ]; then
     docker run --rm --user 0 --entrypoint rm -v "$directory:/installation" "$current" -rf /installation/backups       >/dev/null 2>&1 || true
   fi
-  rm -rf "$directory"
+  rm -rf "$parent"
 }
 trap cleanup EXIT
+
+mode_of() { stat -c '%a' "$1" 2>/dev/null || stat -f '%Lp' "$1"; }
+
+other_account_cannot_list() {
+  if ! sudo -n true 2>/dev/null; then
+    echo "  skipped: no sudo to try another account"
+    return 0
+  fi
+  ! sudo -n -u nobody ls "$directory/backups" >/dev/null 2>&1
+}
 
 check() {
   local description="$1"
@@ -43,12 +58,18 @@ psql_in() { compose exec -T postgres psql -v ON_ERROR_STOP=1 -qAt -U pagehall -d
 
 echo "Installing $previous with the setup script"
 bash "$root/scripts/install.sh" install --dir "$directory" --url "http://localhost:$port" --image "$previous" \
-  --port "$port" --subnet "$subnet" --no-pull --yes
+  --port "$port" --subnet "$subnet" --proxy "$proxy" --no-pull --yes
 check "the installation is recorded" grep -q '^method=script$' "$directory/.pagehall-install"
-case "$(uname -s)" in
-  MINGW* | MSYS* | CYGWIN*) echo "  skipped: file permissions cannot be checked on Windows" ;;
-  *) check "the environment file is readable by the owner only"     test "$(stat -c '%a' "$directory/.env" 2>/dev/null || stat -f '%Lp' "$directory/.env")" = "600" ;;
-esac
+check "only the proxy address is trusted for forwarded headers" \
+  grep -qx "PAGEHALL_TRUSTED_PROXIES=$proxy/32" "$directory/.env"
+if [ "$linux" -eq 1 ]; then
+  check "the installation directory is reachable by its owner only" test "$(mode_of "$directory")" = "700"
+  check "the environment file is readable by the owner only" test "$(mode_of "$directory/.env")" = "600"
+  check "the Compose file is readable by the owner only" test "$(mode_of "$directory/compose.yml")" = "600"
+  check "another account cannot list the backups" other_account_cannot_list
+else
+  echo "  skipped: file permissions are only checked on Linux"
+fi
 check "the setup code is in the environment file" grep -Eq '^PAGEHALL_SETUP_CODE=[A-Z0-9]{4}(-[A-Z0-9]{4}){3}$' "$directory/.env"
 
 echo "Adding synthetic content"
@@ -93,9 +114,14 @@ echo "Updating to $current with one command"
 "$directory/pagehall" update --image "$current" --no-pull --yes
 
 check "the instance runs the image under test" grep -q "^    image: $current\$" "$directory/compose.yml"
+if [ "$linux" -eq 1 ]; then
+  check "the Compose file stays readable by the owner only" test "$(mode_of "$directory/compose.yml")" = "600"
+fi
 check "the update is recorded with the previous version" grep -q '^previous=' "$directory/.pagehall-install"
 backup_file="$(newest_backup)"
 check "a backup was taken before the update" test -n "$backup_file"
+before_update_backups="$(docker run --rm --user 0 --entrypoint sh -v "$directory/backups:/backups:ro" "$current"   -c 'ls /backups/pagehall-backup-*-before-update-*.phbak 2>/dev/null | wc -l' | tr -d ' ')"
+check "the first start of the new version took no second backup" test "$before_update_backups" = "1"
 check "the backup is complete and readable" \
   compose exec -T pagehall pagehall backup verify --input "/var/lib/pagehall/backups/$(basename "$backup_file")"
 check "the page is still there" \
@@ -109,8 +135,22 @@ check "the update command was replaced by the one of the new image" cmp -s "$dir
 
 echo "Running the setup script again leaves the installation alone"
 secrets="$(cat "$directory/.env")"
-bash "$root/scripts/install.sh" install --dir "$directory" --yes </dev/null >/dev/null
+if [ "$linux" -eq 1 ]; then chmod 755 "$directory"; fi
+rerun="$(bash "$root/scripts/install.sh" install --dir "$directory" --yes </dev/null 2>&1 >/dev/null)"
 check "the secrets are unchanged" test "$secrets" = "$(cat "$directory/.env")"
+if [ "$linux" -eq 1 ]; then
+  check "it warns about a directory other accounts can reach" grep -q "has mode 755" <<<"$rerun"
+  check "it does not change the mode of the directory" test "$(mode_of "$directory")" = "755"
+  chmod 775 "$directory"
+  set +e
+  refused="$(bash "$root/scripts/install.sh" install --dir "$directory" --yes </dev/null 2>&1 >/dev/null)"
+  refused_status=$?
+  set -e
+  check "it refuses a directory other accounts can write to" test "$refused_status" -ne 0
+  check "it says how to restrict the directory" grep -q "chmod 700" <<<"$refused"
+  check "it still does not change the mode" test "$(mode_of "$directory")" = "775"
+  chmod 700 "$directory"
+fi
 
 echo "An update to a version that does not start stops with the rollback and restores nothing"
 broken="pagehall:broken-${suffix}"

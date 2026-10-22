@@ -58,7 +58,8 @@ The master keys and the backup keys are needed to read encrypted data and backup
 | `PAGEHALL_MASTER_KEYS` | none | yes | Master key ring for the env key provider. |
 | `PAGEHALL_MASTER_KEYS_PATH` | `master-keys` in the secrets directory | | Master key ring file for the file key provider. |
 | `PAGEHALL_BACKUP_KEY` | generated | yes | Key ring that encrypts backups, in the same format as the master keys. |
-| `PAGEHALL_BACKUP_DIR` | `/var/lib/pagehall/backups` | | Default local backup target. Backups before updates go here while no target is set up in the backup settings. Every backup stages its unencrypted database dump in `.pagehall-staging` below it (mode 0700), never in the target, and test restores use it for their temporary files. Keep it on a local volume. See [backup.md](backup.md). |
+| `PAGEHALL_BACKUP_DIR` | `/var/lib/pagehall/backups` | | Default local backup target. Backups before updates go here while no target is set up in the backup settings. See [backup.md](backup.md). |
+| `PAGEHALL_WORK_DIR` | `/var/lib/pagehall/work` | | Private directory (mode 0700) for temporary files of backups and test restores. A running backup stages its database dump here, encrypted under a key that exists only in memory, so neither a crash nor another account can read it; a test restore puts its copy of the file store here. It must not overlap with the backup directory, a backup target, the file store, the secrets or the import folder. It needs free space for the database and, during a test restore, for the file store. Leftovers of interrupted runs are removed at start. |
 | `PAGEHALL_BACKUP_BEFORE_UPDATE` | `true` | | `false` starts without a backup when migrations are pending, for installations with their own backup strategy. The backup settings and the status show that it is off. |
 | `PAGEHALL_METRICS_TOKEN` | generated | yes | Bearer token required by `/metrics`. |
 | `PAGEHALL_RENDER_URL` | none | | Address of the optional render container that creates PDF files on the server, for example `http://pagehall-render:3000`. Set it together with `PAGEHALL_RENDER_TOKEN`; see [rendering.md](rendering.md). |
@@ -66,7 +67,7 @@ The master keys and the backup keys are needed to read encrypted data and backup
 | `PAGEHALL_WEB_ROOT` | `/app/web` in the image | | Directory with the built web client, served by the API. |
 | `PAGEHALL_SHUTDOWN_TIMEOUT_SECONDS` | `30` | | Time running requests and jobs get to finish on shutdown. |
 | `PAGEHALL_UPDATE_CHECK` | `true` | | `false` turns the update check off completely: no request is made, and the instance setting **Check for updates** cannot turn it on. See [operations.md](operations.md#updates). |
-| `PAGEHALL_UPDATE_CHECK_URL` | the version file of the latest GitHub release | | Address of the version file, for example a mirror in the company network. A private address must be listed in `PAGEHALL_OUTBOUND_ALLOWED_NETWORKS`. |
+| `PAGEHALL_UPDATE_CHECK_URL` | the version file of the latest GitHub release | | Address of the version file, for example a mirror in the company network. A private address must be listed in `PAGEHALL_OUTBOUND_ALLOWED_NETWORKS`. The version file is public, so the address may not contain a user name, a password, a query string or a fragment; Pagehall refuses to start with one. The admin area shows only its scheme, host and path. |
 | `PAGEHALL_CHANGELOG_FILE` | `/app/CHANGELOG.md` in the image | | Changelog shown under **What's new**. |
 | `PAGEHALL_INSTALL_METHOD` | none | | `script`, `compose` or `other`: how the instance was installed. The setup script sets it; the admin area shows the update commands for it. |
 | `PAGEHALL_INSTALL_DIR` | none | | Directory of the installation on the host, used in the update commands. The setup script sets it. |

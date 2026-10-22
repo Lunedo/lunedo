@@ -4,6 +4,7 @@ import {
   BackupBusyError,
   BackupNotFoundError,
   BackupSettingsError,
+  BackupTargetError,
   BusyError,
   ChatChannelError,
   CommentInvalidError,
@@ -17,6 +18,7 @@ import {
   ImportError,
   MaintenanceInputError,
   MaintenanceModeError,
+  MissingTargetSecretError,
   OrganizationError,
   PasswordPolicyError,
   ProviderResponseError,
@@ -224,6 +226,16 @@ function map(error: unknown): Mapped | null {
   }
   if (error instanceof BackupNotFoundError) {
     return { code: "backupNotFound", detail: error.message };
+  }
+  if (error instanceof BackupTargetError) {
+    return {
+      code: "backupTargetFailed",
+      detail: error.explanation,
+      extensions: { problem: error.failure, step: error.step },
+    };
+  }
+  if (error instanceof MissingTargetSecretError) {
+    return { code: "backupTargetFailed", detail: error.message, extensions: { problem: "missingSecret" } };
   }
   if (error instanceof ExportBusyError) {
     return {

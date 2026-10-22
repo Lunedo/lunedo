@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { sql } from "drizzle-orm";
@@ -19,6 +19,9 @@ import { createTestServices, type TestServices } from "../testing/services.js";
 import { spaceFixtures } from "../testing/spaces.js";
 import { readBackupHeader } from "./archive.js";
 import { BackupSettingsError } from "./errors.js";
+import type { DatabaseArchiver } from "./postgres.js";
+import { writeRestoredMarker } from "./restore-marker.js";
+import { pauseBackupsAfterRestore } from "./restored.js";
 import { tryBackupLock } from "./runner.js";
 import { LocalBackupTarget } from "./targets.js";
 import { runTestRestore } from "./test-restore.js";
@@ -39,6 +42,7 @@ interface Enqueued {
 describe.skipIf(!baseUrl)("backups", () => {
   let test: TestServices;
   let backupDir: string;
+  let workDir: string;
   let targetDir: string;
   let now = new Date("2026-10-21T08:00:00.000Z");
   const enqueued: Enqueued[] = [];
@@ -61,12 +65,14 @@ describe.skipIf(!baseUrl)("backups", () => {
 
   beforeAll(async () => {
     backupDir = await mkdtemp(path.join(tmpdir(), "pagehall-backup-default-"));
+    workDir = await mkdtemp(path.join(tmpdir(), "pagehall-backup-work-"));
     test = await createTestServices(baseUrl ?? "", {
       configuredInstanceUrl: "https://wiki.example.org",
       jobs,
       backup: (url) => ({
         databaseUrl: url,
         backupDir,
+        workDir,
         secretsDir: path.join(backupDir, "secrets"),
         configuration: { "environment.json": '{"PAGEHALL_HOST":"0.0.0.0"}\n' },
         pagehallVersion: "1.2.3",
@@ -107,6 +113,7 @@ describe.skipIf(!baseUrl)("backups", () => {
   afterAll(async () => {
     await test?.close();
     await rm(backupDir, { recursive: true, force: true });
+    await rm(workDir, { recursive: true, force: true });
   });
 
   beforeEach(async () => {
@@ -401,16 +408,66 @@ describe.skipIf(!baseUrl)("backups", () => {
     );
 
     it.skipIf(!hasTools)(
-      "stages the database dump in a private directory, never in the target, and removes stale dumps",
+      "stages the database dump in the private work directory, never in the target, and removes stale dumps",
       async () => {
-        await useLocalTarget();
-        const staging = path.join(backupDir, ".pagehall-staging");
+        await useLocalTarget(backupDir);
+        const staging = path.join(workDir, "backup-staging");
         await mkdir(staging, { recursive: true });
-        const stale = path.join(staging, ".pagehall-backup-00000000-0000-4000-8000-000000000000.dump");
+        const stale = path.join(staging, "backup-00000000-0000-4000-8000-000000000000.dump.enc");
         await writeFile(stale, "left over by a killed run");
         await backups().run({ trigger: "manual", slot: null, actorId: owner });
+        expect(await runs()).toMatchObject([{ state: "succeeded" }]);
         expect(await readdir(staging)).toEqual([]);
-        expect((await files()).filter((name) => name.endsWith(".dump"))).toEqual([]);
+        expect(
+          (await readdir(backupDir, { recursive: true })).filter((name) => name.includes("dump")),
+        ).toEqual([]);
+        if (process.platform !== "win32") {
+          expect((await stat(staging)).mode & 0o777).toBe(0o700);
+          expect((await stat(workDir)).mode & 0o777).toBe(0o700);
+        }
+      },
+    );
+
+    it("refuses a target that contains the work directory", async () => {
+      expect(
+        await settingsError(backups().updateTarget(actor(), { kind: "local", path: path.dirname(workDir) })),
+      ).toBe("reservedPath");
+      expect(await settingsError(backups().updateTarget(actor(), { kind: "local", path: workDir }))).toBe(
+        "reservedPath",
+      );
+    });
+
+    it.skipIf(!hasTools)(
+      "deletes only backups this instance recorded and removes only its own unfinished files",
+      async () => {
+        await useLocalTarget();
+        await backups().updateSettings(actor(), { enabled: true, retention: { daily: 1 } });
+        now = new Date(Date.UTC(2026, 9, 22, 1, 0, 30));
+        await backups().run({ trigger: "scheduled", slot: "2026-10-22T00:00:00.000Z", actorId: null });
+        const [foreign] = (await backups().list()).backups;
+        await test.database.execute(sql`delete from backup_runs`);
+        const foreignPartial = `${foreign?.name}.00000000-0000-4000-8000-000000000000.partial`;
+        await writeFile(path.join(targetDir, foreignPartial), "an upload of another instance");
+        const ownName = "pagehall-backup-20261022T010000Z-daily-0000abcd.phbak";
+        await test.database.execute(sql`
+          insert into backup_runs (id, trigger, backup_class, state, name, started_at, finished_at)
+          values (gen_random_uuid(), 'scheduled', 'daily', 'failed', ${ownName}, now(), now())`);
+        const ownPartial = `${ownName}.00000000-0000-4000-8000-000000000001.partial`;
+        await writeFile(path.join(targetDir, ownPartial), "left over by an interrupted run");
+        for (let day = 1; day < 4; day += 1) {
+          now = new Date(Date.UTC(2026, 9, 22 + day, 1, 0, 30));
+          await backups().run({
+            trigger: "scheduled",
+            slot: new Date(Date.UTC(2026, 9, 22 + day, 0, 0)).toISOString(),
+            actorId: null,
+          });
+        }
+        const names = await files();
+        expect(names).toContain(foreign?.name);
+        expect(names).toContain(foreignPartial);
+        expect(names).not.toContain(ownPartial);
+        expect(names.filter((name) => name.endsWith(".phbak"))).toHaveLength(2);
+        expect((await audited("backup.deleted")).map((fields) => fields.name)).not.toContain(foreign?.name);
       },
     );
 
@@ -464,15 +521,18 @@ describe.skipIf(!baseUrl)("backups", () => {
       expect(await files()).toEqual([]);
     });
 
-    it.skipIf(!hasTools)("refuses a backup that would fill a local target", async () => {
-      await useLocalTarget();
-      await test.settings.set(storageCriticalPercentSetting, {}, "instance", 1);
-      await backups().run({ trigger: "manual", slot: null, actorId: owner });
-      expect(await runs()).toMatchObject([
-        { state: "failed", error: expect.stringContaining("Not enough free space") },
-      ]);
-      expect(await files()).toEqual([]);
-    });
+    it.skipIf(!hasTools)(
+      "refuses a backup that would fill the disk of the work directory or the target",
+      async () => {
+        await useLocalTarget();
+        await test.settings.set(storageCriticalPercentSetting, {}, "instance", 1);
+        await backups().run({ trigger: "manual", slot: null, actorId: owner });
+        expect(await runs()).toMatchObject([
+          { state: "failed", error: expect.stringContaining("Not enough free space") },
+        ]);
+        expect(await files()).toEqual([]);
+      },
+    );
 
     it("queues manual backups for the worker and audits the request", async () => {
       await useLocalTarget();
@@ -589,9 +649,7 @@ describe.skipIf(!baseUrl)("backups", () => {
           "select datname from pg_database where datname like 'pagehall_test_restore_%'",
         );
         expect(leftovers.rows).toEqual([]);
-        expect(
-          (await readdir(backupDir)).filter((entry) => entry.startsWith(".pagehall-test-restore")),
-        ).toEqual([]);
+        expect((await readdir(workDir)).filter((entry) => entry.startsWith("test-restore-"))).toEqual([]);
         expect((await backups().list()).backups[0]?.testRestore).toMatchObject({ id, state: "passed" });
         expect((await audited("backup.testRestoreFinished")).at(-1)).toMatchObject({ state: "passed" });
       },
@@ -640,6 +698,7 @@ describe.skipIf(!baseUrl)("backups", () => {
           const outcome = await runTestRestore(
             new LocalBackupTarget(targetDir),
             created?.name ?? "",
+            "01900000-0000-7000-8000-0000000000aa",
             {
               pool: limited,
               databaseUrl: url.toString(),
@@ -647,7 +706,7 @@ describe.skipIf(!baseUrl)("backups", () => {
               masterKeys: async () => test.keyRing.ring,
               knownSchemaVersions: knownSchemaVersions(),
               migrationTimes: schemaVersionTimes(),
-              workDir: backupDir,
+              workDir,
               logger,
             },
             async () => {},
@@ -664,6 +723,149 @@ describe.skipIf(!baseUrl)("backups", () => {
       },
     );
 
+    it.skipIf(!hasTools)(
+      "only verifies, with the reason, when there is no space for the copies of the database and the files",
+      async () => {
+        await useLocalTarget();
+        await backups().run({ trigger: "manual", slot: null, actorId: owner });
+        const [created] = (await backups().list()).backups;
+        const outcome = await runTestRestore(
+          new LocalBackupTarget(targetDir),
+          created?.name ?? "",
+          "01900000-0000-7000-8000-0000000000bb",
+          {
+            pool: test.pool,
+            databaseUrl: test.url,
+            backupKeys: test.backupKeys,
+            masterKeys: async () => test.keyRing.ring,
+            knownSchemaVersions: knownSchemaVersions(),
+            migrationTimes: schemaVersionTimes(),
+            workDir,
+            logger,
+            diskSpace: async () => ({ free: 1, total: 1024 ** 4, device: 1 }),
+          },
+          async () => {},
+        );
+        expect(outcome).toMatchObject({
+          state: "verified",
+          stage: "done",
+          error: expect.stringContaining(
+            "Not enough free space for the copy of the database and the copy of the file store",
+          ),
+        });
+        expect(outcome.checks.map((check) => [check.check, check.passed])).toEqual([
+          ["verify", true],
+          ["space", false],
+        ]);
+        const space = outcome.checks.find((check) => check.check === "space")?.detail;
+        expect(space?.databaseBytes).toBeGreaterThan(0);
+        expect(space?.neededBytes).toBe(Number(space?.databaseBytes) + Number(space?.filesBytes));
+        const databases = await test.pool.query(
+          "select datname from pg_database where datname like 'pagehall_test_restore_%'",
+        );
+        expect(databases.rows).toEqual([]);
+      },
+    );
+
+    it.skipIf(!hasTools)(
+      "stops cleanly and reports the space it needed when the database server runs out of space",
+      async () => {
+        await useLocalTarget();
+        await backups().run({ trigger: "manual", slot: null, actorId: owner });
+        const [created] = (await backups().list()).backups;
+        const full = {
+          dump: () => {
+            throw new Error("not used");
+          },
+          isEmpty: async () => true,
+          restore: async (content: NodeJS.ReadableStream) => {
+            content.resume();
+            throw new Error(
+              'psql exited with code 3: ERROR:  could not extend file "base/16384/2619": No space left on device',
+            );
+          },
+        };
+        const outcome = await runTestRestore(
+          new LocalBackupTarget(targetDir),
+          created?.name ?? "",
+          "01900000-0000-7000-8000-0000000000cc",
+          {
+            pool: test.pool,
+            databaseUrl: test.url,
+            backupKeys: test.backupKeys,
+            masterKeys: async () => test.keyRing.ring,
+            knownSchemaVersions: knownSchemaVersions(),
+            migrationTimes: schemaVersionTimes(),
+            workDir,
+            logger,
+            archiver: () => full as unknown as DatabaseArchiver,
+          },
+          async () => {},
+        );
+        expect(outcome).toMatchObject({
+          state: "verified",
+          stage: "done",
+          error: expect.stringContaining("The database server ran out of space for the copy of the database"),
+        });
+        expect(outcome.checks.at(-1)).toMatchObject({ check: "space", passed: false });
+        const databases = await test.pool.query(
+          "select datname from pg_database where datname like 'pagehall_test_restore_%'",
+        );
+        expect(databases.rows).toEqual([]);
+        expect((await readdir(workDir)).filter((entry) => entry.startsWith("test-restore-"))).toEqual([]);
+      },
+    );
+
+    it.skipIf(!hasTools)(
+      "keeps a requested test restore queued until its job starts, then runs it",
+      async () => {
+        await useLocalTarget();
+        await backups().run({ trigger: "manual", slot: null, actorId: owner });
+        const [created] = (await backups().list()).backups;
+        const id = await backups().requestTestRestore(actor(), created?.name ?? "");
+        await backups().check();
+        expect(await backups().testRestore(id)).toMatchObject({ state: "running" });
+        await backups().runTestRestore({ testId: id });
+        expect(await backups().testRestore(id)).toMatchObject({ state: "passed" });
+      },
+    );
+
+    it("fails a queued test restore whose job never started after a day", async () => {
+      await useLocalTarget();
+      await test.database.execute(sql`
+        insert into backup_test_restores (id, backup_name, trigger, state, stage, started_at)
+        values (gen_random_uuid(), 'pagehall-backup-20261020T000000Z-daily-00000000.phbak', 'manual',
+          'running', 'verify', ${new Date(now.getTime() - DAY - 60_000)})`);
+      await backups().check();
+      const rows = await test.database.execute<{ state: string; error: string }>(
+        sql`select state, error from backup_test_restores`,
+      );
+      expect(rows.rows).toEqual([
+        { state: "failed", error: "The test restore did not start. Start it again." },
+      ]);
+    });
+
+    it("removes leftovers of an interrupted test restore and shows when it did", async () => {
+      const id = "01900000-0000-7000-8000-000000000001";
+      const key = id.replaceAll("-", "");
+      await test.pool.query(`create database pagehall_test_restore_${key}`);
+      const leftover = path.join(workDir, `test-restore-${key}`);
+      await mkdir(path.join(leftover, "attachments"), { recursive: true });
+      await writeFile(path.join(leftover, "attachments", "copy.txt"), "copy of a stored file");
+      await test.database.execute(sql`
+        insert into backup_test_restores (id, backup_name, trigger, state, stage, started_at, job_started_at)
+        values (${id}, 'pagehall-backup-20261020T000000Z-daily-00000000.phbak', 'automatic', 'running',
+          'restore', ${now}, ${now})`);
+      await backups().check();
+      const databases = await test.pool.query(
+        "select datname from pg_database where datname like 'pagehall_test_restore_%'",
+      );
+      expect(databases.rows).toEqual([]);
+      expect(await readdir(workDir)).not.toContain(`test-restore-${key}`);
+      expect(await backups().testRestore(id)).toMatchObject({ state: "failed" });
+      expect((await backups().status()).testRestoreCleanupAt).toEqual(now);
+    });
+
     it.skipIf(!hasTools)("runs a test restore after the first scheduled backup of a month", async () => {
       await useLocalTarget();
       await backups().updateSettings(actor(), { enabled: true });
@@ -672,6 +874,55 @@ describe.skipIf(!baseUrl)("backups", () => {
       await backups().run({ trigger: "scheduled", slot: now.toISOString(), actorId: null });
       expect(enqueued.filter((job) => job.name === "backup.test-restore")).toHaveLength(1);
       expect((await audited("backup.testRestoreStarted")).at(-1)).toMatchObject({ trigger: "automatic" });
+    });
+  });
+
+  describe("after a restore", () => {
+    it.skipIf(!hasTools)(
+      "pauses scheduled backups, retention and the monthly test restore until the target is confirmed",
+      async () => {
+        await useLocalTarget();
+        await backups().updateSettings(actor(), { enabled: true, retention: { daily: 1 } });
+        now = new Date(Date.UTC(2026, 9, 22, 1, 0, 30));
+        await backups().run({ trigger: "scheduled", slot: "2026-10-22T00:00:00.000Z", actorId: null });
+        const before = await files();
+        enqueued.length = 0;
+
+        await writeRestoredMarker(workDir);
+        await pauseBackupsAfterRestore(workDir, test.database, logger);
+        await expect(stat(path.join(workDir, "restored"))).rejects.toThrow();
+        const paused = await backups().overview();
+        expect(paused.restoredAt).not.toBeNull();
+        expect(paused.nextRunAt).toBeNull();
+
+        now = new Date(Date.UTC(2026, 9, 23, 1, 0, 30));
+        await backups().check();
+        expect(enqueued).toEqual([]);
+        await backups().run({ trigger: "scheduled", slot: "2026-10-23T00:00:00.000Z", actorId: null });
+        expect(await files()).toEqual(before);
+        await backups().run({ trigger: "manual", slot: null, actorId: owner });
+        expect((await files()).filter((name) => name.endsWith(".phbak"))).toHaveLength(2);
+        expect(enqueued.filter((job) => job.name === "backup.test-restore")).toEqual([]);
+
+        const confirmed = await backups().confirmTarget(actor());
+        expect(confirmed.restoredAt).toBeNull();
+        expect(await audited("backup.targetConfirmed")).toEqual([{ location: targetDir }]);
+        await backups().check();
+        expect(enqueued.filter((job) => job.name === "backup.run")).toHaveLength(1);
+      },
+    );
+
+    it("ends the pause when the target is changed", async () => {
+      await useLocalTarget();
+      await writeRestoredMarker(workDir);
+      await pauseBackupsAfterRestore(workDir, test.database, logger);
+      expect((await backups().overview()).restoredAt).not.toBeNull();
+      const other = await mkdtemp(path.join(tmpdir(), "pagehall-backup-other-"));
+      try {
+        expect((await backups().updateTarget(actor(), { kind: "local", path: other })).restoredAt).toBeNull();
+      } finally {
+        await rm(other, { recursive: true, force: true });
+      }
     });
   });
 

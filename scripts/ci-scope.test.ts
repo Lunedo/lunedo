@@ -128,6 +128,8 @@ describe("scopeOf", () => {
       "scripts/install.sh",
       "scripts/reverse-proxy-check.sh",
       "docs/reverse-proxy.md",
+      "scripts/backup-network-check.sh",
+      "docs/backup.md",
       "packages/server/src/operations/status.ts",
       "packages/server/src/portal/portals.ts",
       "packages/server/drizzle/0094_operations.sql",

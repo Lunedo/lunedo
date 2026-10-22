@@ -18,6 +18,7 @@ docs="$root/docs/reverse-proxy.md"
 suffix="$$"
 network="pagehall-proxy-${suffix}"
 subnet="172.30.$((suffix % 200 + 20)).0/24"
+proxy_address="172.30.$((suffix % 200 + 20)).10"
 postgres="pagehall-proxy-db-${suffix}"
 app="pagehall-proxy-app-${suffix}"
 proxy="pagehall-proxy-${suffix}"
@@ -74,7 +75,7 @@ for _ in $(seq 1 60); do
 done
 docker run -d --name "$app" --network "$network" --network-alias pagehall \
   -e PAGEHALL_DATABASE_URL="postgres://pagehall:${password}@${postgres}:5432/pagehall" \
-  -e PAGEHALL_INSTANCE_URL=https://wiki.example.org -e PAGEHALL_TRUSTED_PROXIES="$subnet" \
+  -e PAGEHALL_INSTANCE_URL=https://wiki.example.org -e PAGEHALL_TRUSTED_PROXIES="$proxy_address/32" \
   -e PAGEHALL_UPDATE_CHECK=false \
   -e PAGEHALL_OWNER_EMAIL=owner@example.org -e PAGEHALL_OWNER_NAME=Owner \
   -e PAGEHALL_OWNER_PASSWORD="proxy owner ${suffix}" -e PAGEHALL_ORGANIZATION_NAME=Proxy \
@@ -100,14 +101,14 @@ chmod 644 "$work/upload.bin"
 
 start_caddy() {
   block caddy | sed 's/^\temail admin@example.org$/\tlocal_certs/' > "$work/Caddyfile"
-  docker run -d --name "$proxy" --network "$network" \
+  docker run -d --name "$proxy" --network "$network" --ip "$proxy_address" \
     --network-alias wiki.example.org --network-alias help.example.org --network-alias other.example.org \
     -v "$work/Caddyfile:/etc/caddy/Caddyfile:ro" "$caddy_image" >/dev/null
 }
 
 start_nginx() {
   block nginx | sed 's/server 127\.0\.0\.1:3000;/server pagehall:3000;/' > "$work/pagehall.conf"
-  docker run -d --name "$proxy" --network "$network" \
+  docker run -d --name "$proxy" --network "$network" --ip "$proxy_address" \
     --network-alias wiki.example.org --network-alias help.example.org \
     -v "$work/pagehall.conf:/etc/nginx/conf.d/default.conf:ro" \
     -v "$work/fullchain.pem:/etc/ssl/pagehall/fullchain.pem:ro" \
@@ -117,7 +118,7 @@ start_nginx() {
 start_traefik() {
   block traefik | awk '/^certificatesResolvers:/ { exit } { print }' > "$work/traefik.yml"
   block traefik-dynamic | sed 's/certResolver: letsencrypt/options: default/' > "$work/dynamic.yml"
-  docker run -d --name "$proxy" --network "$network" \
+  docker run -d --name "$proxy" --network "$network" --ip "$proxy_address" \
     --network-alias wiki.example.org --network-alias help.example.org \
     -v "$work/traefik.yml:/etc/traefik/traefik.yml:ro" \
     -v "$work/dynamic.yml:/etc/traefik/dynamic.yml:ro" "$traefik_image" >/dev/null

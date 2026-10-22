@@ -67,7 +67,7 @@ describe.skipIf(!baseUrl)("the collaboration server during maintenance", () => {
     await first.runtime.services.maintenance.set(SYSTEM, { enabled: true, message: "Back at 18:00" });
     await waitFor(() =>
       [editing, watching].every((client) =>
-        client.stateless.some((message) => message.type === "maintenance"),
+        client.stateless.some((message) => message.type === "maintenance" && message.enabled === true),
       ),
     );
     expect(watching.stateless.at(-1)).toEqual({
@@ -90,12 +90,27 @@ describe.skipIf(!baseUrl)("the collaboration server during maintenance", () => {
     await waitFor(() => text(watching.doc).includes("written afterwards"));
   });
 
+  it("tells a reconnecting editor that maintenance is off, also when it missed the message", async () => {
+    await first.runtime.services.maintenance.set(SYSTEM, { enabled: true, message: "" });
+    await first.runtime.services.maintenance.set(SYSTEM, { enabled: false });
+    const reconnected = open(second);
+    await reconnected.authenticated;
+    await waitFor(() => reconnected.stateless.some((message) => message.type === "maintenance"));
+    expect(reconnected.stateless.find((message) => message.type === "maintenance")).toEqual({
+      type: "maintenance",
+      enabled: false,
+      message: "",
+    });
+  });
+
   it("opens documents read-only while maintenance is on", async () => {
     await first.runtime.services.maintenance.set(SYSTEM, { enabled: true, message: "" });
     const late = open(second);
     const reader = open(first);
     await Promise.all([late.authenticated, reader.authenticated]);
-    await waitFor(() => late.stateless.some((message) => message.type === "maintenance"));
+    await waitFor(() =>
+      late.stateless.some((message) => message.type === "maintenance" && message.enabled === true),
+    );
     appendParagraph(late.doc, "late change");
     await new Promise((resolve) => setTimeout(resolve, 500));
     expect(text(reader.doc)).not.toContain("late change");

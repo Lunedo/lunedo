@@ -1,3 +1,5 @@
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { uuidv7 } from "@pagehall/shared";
 import { AccountService } from "./accounts/accounts.js";
 import { AccountAdministrationService } from "./accounts/administration.js";
@@ -404,6 +406,7 @@ export function createAccountServices(options: {
   backup?: {
     databaseUrl: string;
     backupDir: string;
+    workDir: string;
     secretsDir: string;
     configuration: Record<string, string>;
     pagehallVersion: string;
@@ -798,6 +801,7 @@ export function createAccountServices(options: {
     backupOptions?.archiver ?? ((url: string) => new PostgresArchiver({ databaseUrl: url }));
   const backupDatabaseUrl = backupOptions?.databaseUrl ?? "";
   const backupDir = backupOptions?.backupDir ?? options.filesDir;
+  const workDir = backupOptions?.workDir ?? path.join(tmpdir(), `pagehall-work-${process.pid}`);
   const masterKeysOfInstance = async () => options.keyRing.ring;
   const backups = new BackupService({
     database,
@@ -818,7 +822,7 @@ export function createAccountServices(options: {
       streamOwners: encryptedStreamOwnersOf(files.store),
       backupKeys: options.backupKeys,
       masterKeys: masterKeysOfInstance,
-      stagingDir: backupDir,
+      workDir,
       configuration: backupOptions?.configuration ?? {},
       pagehallVersion: backupOptions?.pagehallVersion ?? "dev",
       schemaVersion: currentSchemaVersion(),
@@ -829,7 +833,7 @@ export function createAccountServices(options: {
       masterKeys: masterKeysOfInstance,
       knownSchemaVersions: knownSchemaVersions(),
       migrationTimes: schemaVersionTimes(),
-      workDir: backupDir,
+      workDir,
       archiver: backupArchiver,
     },
     policy: backupOptions?.policy ?? outboundPolicy(options.outboundAllowedNetworks ?? []),
@@ -838,10 +842,10 @@ export function createAccountServices(options: {
       secrets: backupOptions?.secretsDir ?? options.filesDir,
       imports: options.importDir ?? options.filesDir,
       backups: backupDir,
+      work: workDir,
     },
     fileStoreKind: files.store.kind,
     beforeUpdateEnvironment: backupOptions?.beforeUpdateEnvironment ?? true,
-    criticalPercent: async () => (await storage.thresholds()).critical,
     logger,
     ...(backupOptions?.clock ? { clock: backupOptions.clock } : {}),
   });

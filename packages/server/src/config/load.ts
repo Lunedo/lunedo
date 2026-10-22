@@ -35,7 +35,14 @@ export interface ServerConfig {
   redisUrl: Secret | undefined;
   logLevel: LogLevel;
   database: { url: Secret; poolSize: number };
-  paths: { files: string; secrets: string; webRoot: string | undefined; imports: string; backups: string };
+  paths: {
+    files: string;
+    secrets: string;
+    webRoot: string | undefined;
+    imports: string;
+    backups: string;
+    work: string;
+  };
   backupBeforeUpdate: boolean;
   fileStorage: FileStorageConfig;
   filesUrl: string | undefined;
@@ -160,6 +167,32 @@ function collectRawValues(env: Env): Record<string, string | undefined> {
   return raw;
 }
 
+function overlaps(first: string, second: string): boolean {
+  const inside = (parent: string, child: string) => {
+    const relative = path.relative(path.resolve(parent), path.resolve(child));
+    return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+  };
+  return inside(first, second) || inside(second, first);
+}
+
+function checkWorkDir(values: Record<ConfigSettingName, unknown>, problems: string[]): void {
+  const work = values.PAGEHALL_WORK_DIR as string | undefined;
+  if (!work) return;
+  for (const name of [
+    "PAGEHALL_BACKUP_DIR",
+    "PAGEHALL_FILES_DIR",
+    "PAGEHALL_SECRETS_DIR",
+    "PAGEHALL_IMPORT_DIR",
+  ] as const) {
+    const other = values[name] as string | undefined;
+    if (other && overlaps(work, other)) {
+      problems.push(
+        `PAGEHALL_WORK_DIR: must not overlap with ${name} (${other}); choose a directory of its own`,
+      );
+    }
+  }
+}
+
 /**
  * Reads and validates the configuration. Every problem is reported with the name of the
  * setting; secret values never appear in messages.
@@ -199,6 +232,7 @@ export function loadConfig(env: Env): ServerConfig {
   if (Boolean(values.PAGEHALL_S3_ACCESS_KEY_ID) !== Boolean(values.PAGEHALL_S3_SECRET_ACCESS_KEY)) {
     problems.push("PAGEHALL_S3_ACCESS_KEY_ID and PAGEHALL_S3_SECRET_ACCESS_KEY: set both or neither");
   }
+  checkWorkDir(values, problems);
   const setup = configuredSetup(values, problems);
   checkSetupCode(values.PAGEHALL_SETUP_CODE as string | undefined, problems);
   if (problems.length > 0) {
@@ -246,6 +280,7 @@ export function loadConfig(env: Env): ServerConfig {
       files: values.PAGEHALL_FILES_DIR as string,
       imports: values.PAGEHALL_IMPORT_DIR as string,
       backups: values.PAGEHALL_BACKUP_DIR as string,
+      work: values.PAGEHALL_WORK_DIR as string,
       secrets: secretsDir,
       webRoot: values.PAGEHALL_WEB_ROOT as string | undefined,
     },

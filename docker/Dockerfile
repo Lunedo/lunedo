@@ -49,7 +49,7 @@ ENV NODE_ENV=production \
     PAGEHALL_VERSION=${VERSION} \
     PAGEHALL_WEB_ROOT=/app/web     PAGEHALL_CHANGELOG_FILE=/app/CHANGELOG.md
 RUN install -d -o node -g node -m 700 /var/lib/pagehall /var/lib/pagehall/files /var/lib/pagehall/secrets \
-    /var/lib/pagehall/backups
+    /var/lib/pagehall/backups /var/lib/pagehall/work
 RUN install -d -o root -g root -m 755 /data/import
 WORKDIR /app
 COPY --from=build --chown=root:root /out/api ./api

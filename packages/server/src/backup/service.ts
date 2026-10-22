@@ -1,5 +1,5 @@
 import { uuidv7 } from "@pagehall/shared";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import { instanceNameSetting, instanceUrlSetting } from "../accounts/instance-settings.js";
 import type { Principal } from "../accounts/principal.js";
 import { SYSTEM } from "../accounts/principal.js";
@@ -26,7 +26,7 @@ import { languageSetting, timeZoneSetting } from "../settings/builtin.js";
 import type { SettingsService } from "../settings/service.js";
 import { storageOperationsEmailsSetting, storageReminderSetting } from "../storage/settings.js";
 import { reminderDue } from "../storage/storage.js";
-import { BackupError, type BackupScope } from "./archive.js";
+import type { BackupScope } from "./archive.js";
 import {
   BACKUP_S3_SECRET,
   type BackupConfiguration,
@@ -41,7 +41,7 @@ import {
 } from "./configuration.js";
 import { BackupBusyError, BackupNotFoundError, BackupSettingsError, describeFailure } from "./errors.js";
 import { backupRunJob, backupTestRestoreJob } from "./jobs.js";
-import { type BackupClass, parseBackupName } from "./naming.js";
+import { type BackupClass, backupName, parseBackupName } from "./naming.js";
 import type { RetentionPolicy } from "./retention.js";
 import {
   applyRetention,
@@ -50,6 +50,7 @@ import {
   isTestRestoreRunning,
   type ListedBackup,
   listBackups,
+  recordedBackupNames,
   tryBackupLock,
   tryTestRestoreLock,
   writeBackup,
@@ -69,9 +70,10 @@ import {
   type TargetFailure,
   type TargetStep,
 } from "./targets.js";
-import { runTestRestore, type TestRestoreSources } from "./test-restore.js";
+import { removeTestRestoreLeftovers, runTestRestore, type TestRestoreSources } from "./test-restore.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const QUEUED_TEST_LIMIT_MS = DAY_MS;
 const BACKUP_SETTINGS_PATH = "/settings/instance/backups";
 const RECENT_RUNS = 20;
 
@@ -148,6 +150,7 @@ export interface BeforeUpdateState {
 
 export interface BackupOverview {
   settings: BackupSettings;
+  restoredAt: Date | null;
   target: TargetView | null;
   timeZone: string;
   nextRunAt: Date | null;
@@ -164,6 +167,8 @@ export interface BackupOverview {
 
 export interface BackupStatus {
   enabled: boolean;
+  restoredAt: Date | null;
+  testRestoreCleanupAt: Date | null;
   targetConfigured: boolean;
   running: boolean;
   nextRunAt: Date | null;
@@ -231,7 +236,7 @@ function runView(row: RunRow): RunView {
     trigger: row.trigger,
     backupClass: row.backupClass,
     state: row.state,
-    name: row.name,
+    name: row.state === "succeeded" ? row.name : null,
     sizeBytes: row.sizeBytes,
     error: row.error,
     startedAt: row.startedAt,
@@ -257,10 +262,9 @@ export interface BackupServiceOptions {
   sources: Omit<BackupSources, "logger">;
   testRestore: Omit<TestRestoreSources, "logger" | "pool">;
   policy: OutboundPolicy;
-  paths: { files: string; secrets: string; imports: string; backups: string };
+  paths: { files: string; secrets: string; imports: string; backups: string; work: string };
   fileStoreKind: "local" | "s3";
   beforeUpdateEnvironment: boolean;
-  criticalPercent: () => Promise<number>;
   logger: Logger;
   clock?: () => Date;
 }
@@ -353,8 +357,12 @@ export class BackupService {
     return current.target ? "off" : "noTarget";
   }
 
+  async #paused(): Promise<boolean> {
+    return (await this.#state()).restoredAt !== null;
+  }
+
   async #nextRun(configuration: BackupConfiguration): Promise<Date | null> {
-    if (!configuration.settings.enabled || !configuration.target) return null;
+    if (!configuration.settings.enabled || !configuration.target || (await this.#paused())) return null;
     return nextSlot(this.#clock(), await this.#schedule(configuration.settings));
   }
 
@@ -379,6 +387,7 @@ export class BackupService {
     }
     return {
       settings: configuration.settings,
+      restoredAt: state.restoredAt,
       target: await this.#targetView(configuration.target),
       timeZone: await this.#options.settings.get(timeZoneSetting, {}),
       nextRunAt: await this.#nextRun(configuration),
@@ -401,6 +410,8 @@ export class BackupService {
     const lastFailure = await this.#lastRun("failed");
     return {
       enabled: configuration.settings.enabled,
+      restoredAt: state.restoredAt,
+      testRestoreCleanupAt: state.testRestoreCleanupAt,
       targetConfigured: configuration.target !== null,
       running: await isBackupRunning(this.#options.pool),
       nextRunAt: await this.#nextRun(configuration),
@@ -538,11 +549,16 @@ export class BackupService {
   #validateTarget(input: TargetInput): TargetSettings {
     if (input.kind === "local") {
       const candidate = input.path.trim();
-      const problem = localPathProblem(candidate, [
-        this.#options.paths.files,
-        this.#options.paths.secrets,
-        this.#options.paths.imports,
-      ]);
+      const problem = localPathProblem(
+        candidate,
+        [
+          this.#options.paths.files,
+          this.#options.paths.secrets,
+          this.#options.paths.imports,
+          this.#options.paths.work,
+        ],
+        [this.#options.paths.work],
+      );
       if (problem === "relative") {
         throw new BackupSettingsError(
           "invalidPath",
@@ -553,7 +569,7 @@ export class BackupService {
       if (problem === "reserved") {
         throw new BackupSettingsError(
           "reservedPath",
-          "This path holds the file store, the secrets or the import folder, or is the root directory. Choose a directory of its own.",
+          "This path holds the file store, the secrets, the import folder or the work directory for temporary backup files, or is the root directory. Choose a directory of its own.",
           ["path"],
         );
       }
@@ -673,6 +689,8 @@ export class BackupService {
         .insert(backupConfiguration)
         .values({ singleton: true, ...values })
         .onConflictDoUpdate({ target: backupConfiguration.singleton, set: values });
+      await this.#state(tx);
+      await tx.update(backupState).set({ restoredAt: null }).where(eq(backupState.singleton, true));
       if (target.kind === "local") {
         await tx.delete(instanceSecrets).where(eq(instanceSecrets.name, BACKUP_S3_SECRET));
       } else if (secret !== undefined) {
@@ -734,6 +752,32 @@ export class BackupService {
     } finally {
       closeTarget(target);
     }
+  }
+
+  async confirmTarget(actor: Principal): Promise<BackupOverview> {
+    await this.#database.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext('pagehall.backup-configuration'))`);
+      const { target } = await this.configuration(tx);
+      if (!target) {
+        throw new BackupSettingsError("noTarget", "Set up a backup target first.", ["target"]);
+      }
+      await this.#state(tx);
+      const confirmed = await tx
+        .update(backupState)
+        .set({ restoredAt: null })
+        .where(and(eq(backupState.singleton, true), isNotNull(backupState.restoredAt)))
+        .returning({ singleton: backupState.singleton });
+      if (confirmed.length === 0) return;
+      await this.#options.audit.record(tx, {
+        name: "backup.targetConfirmed",
+        actor,
+        targetId: null,
+        fields: {
+          location: target.kind === "local" ? target.path : `s3://${target.bucket}/${target.prefix}`,
+        },
+      });
+    });
+    return this.overview();
   }
 
   async confirmKey(actor: Principal, confirmed: boolean): Promise<BackupOverview> {
@@ -938,53 +982,74 @@ export class BackupService {
   }
 
   async #markInterrupted(): Promise<void> {
-    if (await isBackupRunning(this.#options.pool)) return;
+    const backupLock = await tryBackupLock(this.#options.pool);
+    if (backupLock) {
+      try {
+        await this.#database
+          .update(backupRuns)
+          .set({
+            state: "failed",
+            error: "The backup was interrupted, for example by a restart of the worker.",
+            finishedAt: this.#clock(),
+          })
+          .where(eq(backupRuns.state, "running"));
+      } finally {
+        await backupLock.release();
+      }
+    }
     await this.#database
-      .update(backupRuns)
+      .update(backupTestRestores)
       .set({
         state: "failed",
-        error: "The backup was interrupted, for example by a restart of the worker.",
+        error: "The test restore did not start. Start it again.",
         finishedAt: this.#clock(),
       })
-      .where(eq(backupRuns.state, "running"));
-    if (!(await isTestRestoreRunning(this.#options.pool))) {
-      await this.#database
-        .update(backupTestRestores)
-        .set({
-          state: "failed",
-          error: "The test restore was interrupted, for example by a restart of the worker.",
-          finishedAt: this.#clock(),
-        })
-        .where(eq(backupTestRestores.state, "running"));
-    }
-  }
-
-  async #estimate(): Promise<number> {
-    const [previous] = await this.#database
-      .select({ size: backupRuns.sizeBytes })
-      .from(backupRuns)
-      .where(and(eq(backupRuns.state, "succeeded"), inArray(backupRuns.trigger, ["scheduled", "manual"])))
-      .orderBy(desc(backupRuns.finishedAt))
-      .limit(1);
-    if (previous?.size) return previous.size;
-    const result = await this.#database.execute<{ size: string }>(
-      sql`select pg_database_size(current_database()) as size`,
-    );
-    return Number(result.rows[0]?.size ?? 0);
-  }
-
-  async #checkFreeSpace(target: BackupTarget): Promise<void> {
-    const capacity = await target.capacity();
-    if (!capacity || capacity.total <= 0) return;
-    const estimate = await this.#estimate();
-    const used = capacity.total - capacity.free;
-    const projected = ((used + estimate) / capacity.total) * 100;
-    const critical = await this.#options.criticalPercent();
-    if (projected >= critical) {
-      throw new BackupError(
-        `Not enough free space in the backup target: the backup needs about ${formatGb(estimate)}, ${formatGb(capacity.free)} are free, and the disk must stay below ${critical} %. Free up space, lower the number of kept backups or choose another target.`,
+      .where(
+        and(
+          eq(backupTestRestores.state, "running"),
+          isNull(backupTestRestores.jobStartedAt),
+          lt(backupTestRestores.startedAt, new Date(this.#clock().getTime() - QUEUED_TEST_LIMIT_MS)),
+        ),
       );
+  }
+
+  async cleanUpTestRestores(): Promise<void> {
+    const lock = await tryTestRestoreLock(this.#options.pool);
+    let removed: number;
+    if (lock) {
+      try {
+        await this.#database
+          .update(backupTestRestores)
+          .set({
+            state: "failed",
+            error: "The test restore was interrupted, for example by a restart of the worker.",
+            finishedAt: this.#clock(),
+          })
+          .where(and(eq(backupTestRestores.state, "running"), isNotNull(backupTestRestores.jobStartedAt)));
+        removed = await removeTestRestoreLeftovers(this.#testRestoreSources(), null);
+      } finally {
+        await lock.release();
+      }
+    } else {
+      const [running] = await this.#database
+        .select({ id: backupTestRestores.id })
+        .from(backupTestRestores)
+        .where(and(eq(backupTestRestores.state, "running"), isNotNull(backupTestRestores.jobStartedAt)))
+        .orderBy(desc(backupTestRestores.jobStartedAt))
+        .limit(1);
+      if (!running) return;
+      removed = await removeTestRestoreLeftovers(this.#testRestoreSources(), running.id);
     }
+    if (removed === 0) return;
+    await this.#state();
+    await this.#database
+      .update(backupState)
+      .set({ testRestoreCleanupAt: this.#clock() })
+      .where(eq(backupState.singleton, true));
+  }
+
+  #testRestoreSources(): TestRestoreSources {
+    return { ...this.#options.testRestore, pool: this.#options.pool, logger: this.#logger };
   }
 
   async run(payload: {
@@ -993,7 +1058,12 @@ export class BackupService {
     actorId: string | null;
   }): Promise<void> {
     const configuration = await this.configuration();
-    if (payload.trigger === "scheduled" && (!configuration.settings.enabled || !configuration.target)) return;
+    const paused = await this.#paused();
+    if (
+      payload.trigger === "scheduled" &&
+      (!configuration.settings.enabled || !configuration.target || paused)
+    )
+      return;
     const actor: Principal = payload.actorId ? { type: "account", id: payload.actorId } : SYSTEM;
     const backupClass: BackupClass =
       payload.trigger === "scheduled" && payload.slot
@@ -1025,21 +1095,22 @@ export class BackupService {
           finishedAt: this.#clock(),
         })
         .where(eq(backupRuns.state, "running"));
+      const name = backupName(backupClass, this.#clock());
       await this.#database.insert(backupRuns).values({
         id,
         trigger: payload.trigger,
         backupClass,
         state: "running",
+        name,
         actorId: payload.actorId,
         startedAt: this.#clock(),
       });
       try {
         target = await this.#target(configuration);
         if (!target) throw new BackupSettingsError("noTarget", "No backup target is set up.", ["target"]);
-        await this.#checkFreeSpace(target);
         const written = await writeBackup(
           { ...this.#options.sources, logger: this.#logger },
-          { target, backupClass, scope: configuration.settings.scope, now: this.#clock() },
+          { target, backupClass, scope: configuration.settings.scope, name },
         );
         await this.#recordRun({
           id,
@@ -1061,13 +1132,16 @@ export class BackupService {
             sizeBytes: written.sizeBytes,
           },
         });
-        const deleted = await applyRetention(target, configuration.settings.retention, {
-          classes: ["daily", "weekly", "monthly"],
-          logger: this.#logger,
-        });
-        await this.#auditExpired(deleted);
+        if (!paused) {
+          const deleted = await applyRetention(target, configuration.settings.retention, {
+            classes: ["daily", "weekly", "monthly"],
+            own: await recordedBackupNames(this.#database, "succeeded"),
+            logger: this.#logger,
+          });
+          await this.#auditExpired(deleted);
+        }
         await this.#succeeded();
-        if (payload.trigger === "scheduled" && configuration.settings.autoTestRestore) {
+        if (payload.trigger === "scheduled" && configuration.settings.autoTestRestore && !paused) {
           await this.#automaticTestRestore(written.name);
         }
       } catch (error) {
@@ -1121,7 +1195,7 @@ export class BackupService {
       .select()
       .from(backupTestRestores)
       .where(eq(backupTestRestores.id, payload.testId));
-    if (row?.state !== "running") return;
+    if (row?.state !== "running" || row.jobStartedAt !== null) return;
     const actor: Principal = row.actorId ? { type: "account", id: row.actorId } : SYSTEM;
     const lock = await tryTestRestoreLock(this.#options.pool);
     if (!lock) {
@@ -1138,20 +1212,36 @@ export class BackupService {
     let target: BackupTarget | null = null;
     let outcome: Awaited<ReturnType<typeof runTestRestore>>;
     try {
-      target = await this.#requireTarget();
-      outcome = await runTestRestore(
-        target,
-        row.backupName,
-        { ...this.#options.testRestore, pool: this.#options.pool, logger: this.#logger },
-        async (stage, checks) => {
-          await this.#database
-            .update(backupTestRestores)
-            .set({ stage, checks })
-            .where(eq(backupTestRestores.id, row.id));
-        },
-      );
-    } catch (error) {
-      outcome = { state: "failed", stage: "verify", checks: [], error: describeFailure(error) };
+      const started = await this.#database
+        .update(backupTestRestores)
+        .set({ jobStartedAt: this.#clock() })
+        .where(
+          and(
+            eq(backupTestRestores.id, row.id),
+            eq(backupTestRestores.state, "running"),
+            isNull(backupTestRestores.jobStartedAt),
+          ),
+        )
+        .returning({ id: backupTestRestores.id });
+      if (started.length === 0) return;
+      await removeTestRestoreLeftovers(this.#testRestoreSources(), row.id);
+      try {
+        target = await this.#requireTarget();
+        outcome = await runTestRestore(
+          target,
+          row.backupName,
+          row.id,
+          this.#testRestoreSources(),
+          async (stage, checks) => {
+            await this.#database
+              .update(backupTestRestores)
+              .set({ stage, checks })
+              .where(eq(backupTestRestores.id, row.id));
+          },
+        );
+      } catch (error) {
+        outcome = { state: "failed", stage: "verify", checks: [], error: describeFailure(error) };
+      }
     } finally {
       if (target) closeTarget(target);
       await lock.release();
@@ -1172,6 +1262,12 @@ export class BackupService {
       targetId: null,
       fields: { name: row.backupName, trigger: row.trigger, state: outcome.state, stage: outcome.stage },
     });
+    if (outcome.checks.some((check) => check.check === "space" && !check.passed)) {
+      this.#logger.warn(
+        { backup: row.backupName, trigger: row.trigger },
+        "The test restore only verified the backup because there is not enough free space for a full restore",
+      );
+    }
     if (outcome.state === "failed") {
       await this.#announce({
         type: "backup.testRestoreFailed",
@@ -1199,9 +1295,10 @@ export class BackupService {
 
   async check(): Promise<void> {
     await this.#markInterrupted();
+    await this.cleanUpTestRestores();
     const configuration = await this.configuration();
     const now = this.#clock();
-    if (!configuration.settings.enabled || !configuration.target) {
+    if (!configuration.settings.enabled || !configuration.target || (await this.#paused())) {
       await this.#database
         .update(backupState)
         .set({ alert: "none", alertNotifiedAt: null })
@@ -1410,8 +1507,4 @@ export class BackupService {
         });
     }
   }
-}
-
-function formatGb(bytes: number): string {
-  return `${(bytes / 1024 ** 3).toFixed(1)} GB`;
 }

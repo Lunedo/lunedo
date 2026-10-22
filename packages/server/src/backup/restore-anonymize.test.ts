@@ -63,6 +63,7 @@ describe.skipIf(!baseUrl || !hasTools)("anonymizing after a restore", () => {
     const output = path.join(dir, "backup.phbak");
     await createBackup({
       output,
+      stagingDir: path.join(path.dirname(output), "work"),
       backupKeys,
       masterKeys: [{ version: 1, fingerprint: keyFingerprint("master", masterKeys.get(1)) }],
       database: new PostgresArchiver({ databaseUrl: source.url }),

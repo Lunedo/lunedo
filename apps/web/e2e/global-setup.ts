@@ -96,6 +96,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     PAGEHALL_SECRETS_DIR: path.join(dataDir, "secrets"),
     PAGEHALL_FILES_DIR: path.join(dataDir, "files"),
     PAGEHALL_BACKUP_DIR: path.join(dataDir, "backups"),
+    PAGEHALL_WORK_DIR: path.join(dataDir, "work"),
     PAGEHALL_IMPORT_DIR: IMPORT_DIR,
     PAGEHALL_LOG_LEVEL: "info",
     PAGEHALL_TRUSTED_PROXIES: "127.0.0.1,::1",

@@ -1538,6 +1538,7 @@
     "invalidBackupSettings": "Die Backup-Einstellungen sind ungültig. Prüfen Sie die markierten Felder und versuchen Sie es erneut.",
     "backupRunning": "Ein Backup oder eine Test-Wiederherstellung läuft bereits. Warten Sie, bis sie fertig ist, und versuchen Sie es erneut.",
     "backupNotFound": "Das Backup ist nicht mehr im Ziel. Laden Sie die Liste neu.",
+    "backupTargetFailed": "Das Backup-Ziel konnte nicht verwendet werden. Die Meldung nennt den Grund; beheben Sie ihn in den Backup-Einstellungen, prüfen Sie ihn mit „Verbindung testen“ und versuchen Sie es erneut.",
     "tooManyPagesToPrint": "Browser drucken bis zu 300 Seiten auf einmal. Exportieren Sie stattdessen als Word oder HTML, oder als PDF auf dem Server, falls Ihre Administration den Render-Container eingerichtet hat.",
     "tooManyPagesForFile": "Word- und PDF-Dateien nehmen bis zu 1.000 Seiten auf. Exportieren Sie stattdessen als HTML- oder Markdown-Archiv oder einen kleineren Teil.",
     "renderUnavailable": "PDF auf dem Server braucht den Render-Container, der nicht eingerichtet oder nicht erreichbar ist. Drucken Sie das PDF stattdessen über Ihren Browser oder fragen Sie Ihre Instanz-Administration.",
@@ -3761,6 +3762,7 @@
       "backup": {
         "settingsChanged": "Backup-Einstellungen geändert",
         "targetChanged": "Backup-Ziel geändert",
+        "targetConfirmed": "Backup-Ziel nach einer Wiederherstellung bestätigt",
         "keyConfirmed": "Aufbewahrung des Backup-Schlüssels bestätigt",
         "requested": "Backup von Hand gestartet",
         "created": "Backup erstellt",
@@ -9449,6 +9451,7 @@
       "startedAutomatically": "Gestartet {time} durch den monatlichen Zeitplan.",
       "checks": {
         "verify": "Backup ist vollständig und lesbar",
+        "space": "Genug freier Speicherplatz für eine vollständige Test-Wiederherstellung",
         "privilege": "Temporäre Datenbank konnte nicht angelegt werden",
         "restore": "In eine temporäre Datenbank wiederhergestellt",
         "schemaVersion": "Schemaversion stimmt",
@@ -9496,6 +9499,13 @@
     },
     "banner": {
       "open": "Backup-Einstellungen öffnen",
+      "restored": {
+        "title": "Diese Instanz wurde aus einem Backup wiederhergestellt",
+        "body": "Diese Instanz wurde aus einem Backup wiederhergestellt. Backups sind pausiert, bis Sie das Ziel bestätigen.",
+        "target": "Ziel: {location}. Wenn diese Instanz eine Kopie ist, zum Beispiel ein Testsystem, ändern Sie das Ziel, damit sie nicht in die Backups des Originals schreibt oder sie löscht.",
+        "change": "Für ein anderes Ziel ändern Sie es unten; auch das setzt die Backups fort.",
+        "confirm": "Ziel bestätigen und Backups fortsetzen"
+      },
       "failing": {
         "title": "Backups schlagen fehl",
         "body": "Das letzte Backup ist fehlgeschlagen. Öffnen Sie die Backup-Einstellungen, um den Grund zu sehen."
@@ -10417,12 +10427,14 @@
         "backups": {
           "label": "Backups",
           "ok": "Letztes erfolgreiches Backup {lastSuccessAt}.",
+          "cleanup": "Reste einer unterbrochenen Test-Wiederherstellung wurden {testRestoreCleanupAt} entfernt.",
           "reasons": {
             "noTarget": "Es ist kein Backup-Ziel eingerichtet. Richte eines ein, damit Backups laufen können.",
             "off": "Geplante Backups sind aus. Schalte sie ein oder stelle sicher, dass deine eigenen Backups Datenbank und Dateien abdecken.",
             "failed": "Das letzte Backup ist fehlgeschlagen: {lastFailureReason}. Prüfe das Ziel und starte erneut ein Backup.",
             "noRecentBackup": "Seit länger als in den Backup-Einstellungen erlaubt gab es kein erfolgreiches Backup. Prüfe Zeitplan und Ziel.",
-            "beforeUpdateOff": "Backups funktionieren, aber Backups vor Updates sind aus."
+            "beforeUpdateOff": "Backups funktionieren, aber Backups vor Updates sind aus.",
+            "restored": "Diese Instanz wurde aus einem Backup wiederhergestellt. Backups sind pausiert, bis du das Ziel bestätigst."
           }
         },
         "searchIndex": {

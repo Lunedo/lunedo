@@ -25,6 +25,32 @@ export const MAINTENANCE_ALLOWED_WRITES = [
   "PUT /api/v1/instance/maintenance",
   "POST /api/v1/instance/backups/runs",
   "POST /api/v1/instance/backups/files/:name/test-restore",
+  "POST /api/v1/share-links/:token/open",
+] as const;
+
+export const MAINTENANCE_ACCESS_REMOVALS = [
+  "DELETE /api/v1/account/sessions/:id",
+  "POST /api/v1/account/sessions/end-others",
+  "POST /api/v1/accounts/:accountId/sessions/end",
+  "POST /api/v1/accounts/:accountId/deactivate",
+  "DELETE /api/v1/account/tokens/:tokenId",
+  "DELETE /api/v1/service-accounts/:serviceAccountId/tokens/:tokenId",
+  "DELETE /api/v1/organizations/:organizationId/api-tokens/:tokenId",
+  "POST /api/v1/service-accounts/:serviceAccountId/deactivate",
+  "DELETE /api/v1/instance/identity-providers/:providerId/scim/tokens/:tokenId",
+  "POST /api/v1/instance/identity-providers/:providerId/deactivate",
+  "DELETE /api/v1/pages/:pageId/share-links/:linkId",
+  "DELETE /api/v1/organizations/:organizationId/members/:accountId",
+  "DELETE /api/v1/organizations/:organizationId/membership",
+  "DELETE /api/v1/groups/:groupId/members/:accountId",
+  "DELETE /api/v1/groups/:groupId/managers/:accountId",
+  "DELETE /api/v1/spaces/:spaceId/permissions/:permissionId",
+  "DELETE /api/v1/instance/role-assignments/:assignmentId",
+  "DELETE /api/v1/organizations/:organizationId/role-assignments/:assignmentId",
+  "DELETE /api/v1/organizations/:organizationId/break-glass/:accessId",
+  "POST /api/v1/spaces/:spaceId/portal-accounts/:accountId/deactivate",
+  "DELETE /api/v1/spaces/:spaceId/portal-accounts/:accountId",
+  "DELETE /api/v1/spaces/:spaceId/portal-invitations/:invitationId",
 ] as const;
 
 export const SESSION_ROUTES = [
@@ -41,7 +67,7 @@ export function createsSession(method: string, route: string): boolean {
 }
 
 const READING_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
-const ALLOWED: ReadonlySet<string> = new Set(MAINTENANCE_ALLOWED_WRITES);
+const ALLOWED: ReadonlySet<string> = new Set([...MAINTENANCE_ALLOWED_WRITES, ...MAINTENANCE_ACCESS_REMOVALS]);
 
 export function writesDuringMaintenance(method: string, route: string | undefined): "allowed" | "refused" {
   const upper = method.toUpperCase();

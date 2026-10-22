@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { createReadStream, createWriteStream, type Dirent } from "node:fs";
 import { mkdir, open, readdir, rename, rm, stat } from "node:fs/promises";
 import path from "node:path";
@@ -7,13 +7,14 @@ import { pipeline } from "node:stream/promises";
 import { createGunzip, createGzip } from "node:zlib";
 import tar from "tar-stream";
 import { z } from "zod";
-import { type KeyRing, keyFingerprint } from "../crypto/key-ring.js";
+import { KeyRing, keyFingerprint, SecretKey } from "../crypto/key-ring.js";
 import {
   backupKeyFingerprint,
   backupStreamKeys,
   createDecryptStream,
   createEncryptStream,
   DEFAULT_CHUNK_SIZE,
+  type StreamKeys,
 } from "../crypto/stream.js";
 import { ATTACHMENTS_DIRECTORY, type FileStore } from "../files/store.js";
 import type { Logger } from "../logging/logger.js";
@@ -23,6 +24,7 @@ import {
   RESTORE_ENTRIES,
   RESTORE_STAGING,
   removeRestoreMarker,
+  writeRestoredMarker,
   writeRestoreMarker,
 } from "./restore-marker.js";
 
@@ -360,9 +362,15 @@ export function fileDestination(output: string): BackupDestination {
   };
 }
 
+export const STAGED_DUMP = /^backup-[0-9a-f-]{36}\.dump\.enc$/;
+
+function ephemeralStreamKeys(): StreamKeys {
+  return backupStreamKeys(new KeyRing(new Map([[1, new SecretKey(randomBytes(32))]])));
+}
+
 export interface CreateBackupOptions {
   output: string | BackupDestination;
-  stagingDir?: string | undefined;
+  stagingDir: string;
   backupKeys: KeyRing;
   /** Master key versions used by encrypted data in the database and the file store. */
   masterKeys: BackupHeader["masterKeys"];
@@ -384,15 +392,24 @@ export interface CreateBackupOptions {
  */
 export async function createBackup(options: CreateBackupOptions): Promise<BackupManifest> {
   const destination = typeof options.output === "string" ? fileDestination(options.output) : options.output;
-  const stagingDir =
-    options.stagingDir ?? (typeof options.output === "string" ? path.dirname(options.output) : undefined);
-  if (!stagingDir) throw new BackupError("A staging directory is needed for the database dump");
-  const staged = path.join(stagingDir, `.pagehall-backup-${randomUUID()}.dump`);
+  const staged = path.join(options.stagingDir, `backup-${randomUUID()}.dump.enc`);
+  const stagingKeys = ephemeralStreamKeys();
   const entries: BackupManifest["entries"] = [];
   let committed = false;
   try {
-    await mkdir(stagingDir, { recursive: true });
-    await pipeline(options.database.dump(), createWriteStream(staged, { mode: 0o600 }));
+    await mkdir(options.stagingDir, { recursive: true, mode: 0o700 });
+    let dumpSize = 0;
+    await pipeline(
+      options.database.dump(),
+      new Transform({
+        transform(chunk: Buffer, _encoding, callback) {
+          dumpSize += chunk.length;
+          callback(null, chunk);
+        },
+      }),
+      createEncryptStream(stagingKeys),
+      createWriteStream(staged, { mode: 0o600, flags: "wx" }),
+    );
 
     const scope = options.scope ?? "all";
     const { header, pack, finished } = openBackupArchive({
@@ -405,14 +422,14 @@ export async function createBackup(options: CreateBackupOptions): Promise<Backup
     });
     finished.catch(() => {});
 
-    const add = async (name: string, source: Readable, size: number) => {
+    const add = async (name: string, source: Readable | [Readable, Transform], size: number) => {
       const hasher = new Hasher();
       const entry = pack.entry({ name, size, mode: 0o600, mtime: new Date(0) });
-      await pipeline(source, hasher, entry);
+      await pipeline([...(Array.isArray(source) ? source : [source]), hasher, entry]);
       entries.push({ path: name, size: hasher.size, sha256: hasher.digest() });
     };
 
-    await add(DATABASE_ENTRY, createReadStream(staged), (await stat(staged)).size);
+    await add(DATABASE_ENTRY, [createReadStream(staged), createDecryptStream(stagingKeys)], dumpSize);
     for (const file of scope === "all" ? await listFiles(options.filesDir) : []) {
       const full = path.join(options.filesDir, ...file.split("/"));
       await add(`${FILES_PREFIX}${file}`, createReadStream(full), (await stat(full)).size);
@@ -555,6 +572,7 @@ export interface RestoreBackupOptions extends ReadOptions {
   configDir?: string | undefined;
   /** Overwrite a database or file store that is not empty. */
   force: boolean;
+  markRestoredIn?: string | undefined;
   logger: Logger;
 }
 
@@ -648,6 +666,7 @@ async function restoreFrom(source: BackupSource, options: RestoreBackupOptions):
     if (!earlierRestoreIncomplete) await removeRestoreMarker(options.filesDir);
     throw error;
   }
+  if (options.markRestoredIn) await writeRestoredMarker(options.markRestoredIn);
   await removeRestoreMarker(options.filesDir);
   options.logger.info(
     { schemaVersion: first.manifest.schemaVersion, entries: first.manifest.entries.length },

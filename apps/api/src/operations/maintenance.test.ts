@@ -3,12 +3,17 @@ import { accountAttemptLimitSetting, clientAttemptLimitSetting, SYSTEM } from "@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { registeredRoutes } from "../access/route-access.verifier.js";
 import { CSRF_HEADER } from "../http/csrf.js";
-import { MAINTENANCE_ALLOWED_WRITES, writesDuringMaintenance } from "../http/maintenance.js";
+import {
+  MAINTENANCE_ACCESS_REMOVALS,
+  MAINTENANCE_ALLOWED_WRITES,
+  writesDuringMaintenance,
+} from "../http/maintenance.js";
 import {
   addTotp,
   completeConfiguredSetup,
   configuredSetupEnv,
   createAccount,
+  firstOrganizationId,
   OWNER,
   signedInClient,
 } from "../testing/accounts.js";
@@ -35,7 +40,40 @@ describe("writesDuringMaintenance", () => {
     expect(writesDuringMaintenance("POST", "/api/v1/instance/maintenance")).toBe("refused");
     expect(writesDuringMaintenance("PUT", "/api/v1/instance/settings/:key")).toBe("refused");
     expect(writesDuringMaintenance("POST", "/api/v1/a-route-added-later")).toBe("refused");
+    expect(writesDuringMaintenance("POST", "/api/v1/share-links/:token/open")).toBe("allowed");
     expect(writesDuringMaintenance("POST", undefined)).toBe("refused");
+  });
+});
+
+describe("removing access during maintenance", () => {
+  it("allows every route that only removes access", () => {
+    for (const route of [
+      "DELETE /api/v1/account/sessions/:id",
+      "POST /api/v1/account/sessions/end-others",
+      "POST /api/v1/accounts/:accountId/deactivate",
+      "DELETE /api/v1/account/tokens/:tokenId",
+      "DELETE /api/v1/instance/identity-providers/:providerId/scim/tokens/:tokenId",
+      "DELETE /api/v1/pages/:pageId/share-links/:linkId",
+      "DELETE /api/v1/organizations/:organizationId/members/:accountId",
+      "DELETE /api/v1/groups/:groupId/members/:accountId",
+    ]) {
+      const [method = "", path] = route.split(" ");
+      expect(writesDuringMaintenance(method, path), route).toBe("allowed");
+    }
+  });
+
+  it("keeps refusing routes that can also grant access or change content", () => {
+    for (const route of [
+      "PATCH /api/v1/organizations/:organizationId/members/:accountId",
+      "POST /api/v1/pages/:pageId/access",
+      "DELETE /api/v1/spaces/:spaceId/restricted-pages/:itemId/restrictions/:kind",
+      "DELETE /api/v1/meetings/:meetingId/attendees/:accountId",
+      "POST /api/v1/instance/accounts/:accountId/anonymize",
+    ]) {
+      const [method = "", path] = route.split(" ");
+      expect(writesDuringMaintenance(method, path), route).toBe("refused");
+    }
+    expect(MAINTENANCE_ACCESS_REMOVALS.filter((route) => !/^(DELETE|POST) /.test(route))).toEqual([]);
   });
 });
 
@@ -132,7 +170,9 @@ describe.skipIf(!databaseBaseUrl)("maintenance mode through the API", () => {
       .map((route) => ({ method: route.route.split(" ")[0] ?? "", path: route.path }))
       .filter((route) => !["GET", "HEAD", "OPTIONS"].includes(route.method));
     const listed = new Set(writes.map((route) => `${route.method} ${route.path}`));
-    for (const allowed of MAINTENANCE_ALLOWED_WRITES) expect(listed.has(allowed), allowed).toBe(true);
+    for (const allowed of [...MAINTENANCE_ALLOWED_WRITES, ...MAINTENANCE_ACCESS_REMOVALS]) {
+      expect(listed.has(allowed), allowed).toBe(true);
+    }
 
     const unexpected: string[] = [];
     for (const route of writes) {
@@ -149,6 +189,42 @@ describe.skipIf(!databaseBaseUrl)("maintenance mode through the API", () => {
     }
     expect(unexpected).toEqual([]);
     expect(writes.length).toBeGreaterThan(100);
+  });
+
+  it("lets people and administrators remove access while everything else is refused", async () => {
+    const organizationId = await firstOrganizationId(test);
+    const person = await createAccount(test, "maintenance-leaver@pagehall.test", MEMBER.password);
+    const first = await signedInClient(test, person.email, MEMBER.password);
+    const second = await signedInClient(test, person.email, MEMBER.password);
+    const created = await first.post("/api/v1/account/tokens", {
+      name: "Leaked script",
+      scopes: { organization: { membersAndGroups: "view" } },
+    });
+    expect(created.statusCode, created.body).toBe(201);
+    const { token, apiToken } = created.json() as { token: string; apiToken: { id: string } };
+    const bearer = { authorization: `Bearer ${token}` };
+    const script = new TestClient(test.app);
+    expect((await script.get(`/api/v1/organizations/${organizationId}/members`, bearer)).statusCode).toBe(
+      200,
+    );
+
+    await owner.put("/api/v1/instance/maintenance", { enabled: true, message: "Update" });
+    expect((await first.post("/api/v1/account/sessions/end-others")).statusCode).toBe(200);
+    expect((await second.get("/api/v1/auth/session")).statusCode).toBe(401);
+    expect((await first.delete(`/api/v1/account/tokens/${apiToken.id}`)).statusCode).toBe(204);
+    expect((await script.get(`/api/v1/organizations/${organizationId}/members`, bearer)).statusCode).toBe(
+      401,
+    );
+
+    const deactivated = await owner.post(`/api/v1/accounts/${person.id}/deactivate`);
+    expect(deactivated.statusCode, deactivated.body).toBe(200);
+    expect((await first.get("/api/v1/auth/session")).statusCode).toBe(401);
+  });
+
+  it("opens a share link during maintenance", async () => {
+    await test.runtime.services.maintenance.set(SYSTEM, { enabled: true, message: "" });
+    const opened = await new TestClient(test.app).post("/api/v1/share-links/not-a-real-link-token/open", {});
+    expect(opened.statusCode).not.toBe(503);
   });
 
   it("pauses signing in for everyone except instance administrators when asked", async () => {

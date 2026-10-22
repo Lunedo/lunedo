@@ -25,6 +25,8 @@ const healthyBackup: BackupStatus = {
   lastFailure: null,
   alert: "none",
   beforeUpdate: { enabled: true, disabledBy: null },
+  restoredAt: null,
+  testRestoreCleanupAt: null,
 };
 
 describe("backupItem", () => {
@@ -42,6 +44,14 @@ describe("backupItem", () => {
   it("warns when backups are off, have no target or are missing, and fails while they fail", () => {
     expect(backupItem({ ...healthyBackup, targetConfigured: false }).reason).toBe("noTarget");
     expect(backupItem({ ...healthyBackup, enabled: false }).reason).toBe("off");
+    expect(backupItem({ ...healthyBackup, restoredAt: NOW })).toMatchObject({
+      status: "warning",
+      reason: "restored",
+      facts: { restoredAt: NOW.toISOString() },
+    });
+    expect(backupItem({ ...healthyBackup, testRestoreCleanupAt: NOW }).facts).toMatchObject({
+      testRestoreCleanupAt: NOW.toISOString(),
+    });
     expect(backupItem({ ...healthyBackup, alert: "missing" })).toMatchObject({
       status: "warning",
       reason: "noRecentBackup",

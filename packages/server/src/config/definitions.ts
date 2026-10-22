@@ -138,7 +138,12 @@ export const configSettings = [
   setting(
     "PAGEHALL_BACKUP_DIR",
     path.default("/var/lib/pagehall/backups"),
-    "Default local backup target, used for backups before updates while no target is set up. Backups to S3 stage the database dump here.",
+    "Default local backup target, used for backups before updates while no target is set up.",
+  ),
+  setting(
+    "PAGEHALL_WORK_DIR",
+    path.default("/var/lib/pagehall/work"),
+    "Private directory (mode 0700) for temporary files of backups and test restores: the encrypted database dump of a running backup and the copy of the file store a test restore checks. It must not lie inside the backup directory, a backup target or the file store, and needs free space for the database and, during a test restore, for the file store.",
   ),
   setting(
     "PAGEHALL_BACKUP_BEFORE_UPDATE",
@@ -285,6 +290,22 @@ export const configSettings = [
     "PAGEHALL_UPDATE_CHECK_URL",
     nonEmpty
       .refine((value) => /^https?:\/\/[^\s]+$/.test(value), "must be an http:// or https:// address")
+      .refine((value) => {
+        try {
+          const url = new URL(value);
+          return url.username === "" && url.password === "";
+        } catch {
+          return false;
+        }
+      }, "must not contain a user name or password; the version file is public and needs no credentials")
+      .refine((value) => {
+        try {
+          const url = new URL(value);
+          return url.search === "" && url.hash === "";
+        } catch {
+          return false;
+        }
+      }, "must not contain a query string or fragment, such as a token; the version file is public")
       .default(DEFAULT_UPDATE_CHECK_URL),
     "Address of the version file the update check downloads, for example a mirror inside the company network.",
   ),

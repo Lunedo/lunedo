@@ -63,6 +63,7 @@ describe.skipIf(!databaseBaseUrl)("backups through the API", () => {
     ["PUT", "/api/v1/instance/backups/target", { kind: "local", path: "/var/lib/pagehall/backups" }],
     ["POST", "/api/v1/instance/backups/target/test", { kind: "local", path: "/var/lib/pagehall/backups" }],
     ["PUT", "/api/v1/instance/backups/key-confirmation", { confirmed: true }],
+    ["POST", "/api/v1/instance/backups/target/confirmation"],
     ["POST", "/api/v1/instance/backups/runs"],
     ["DELETE", `/api/v1/instance/backups/files/${NAME}`],
     ["POST", `/api/v1/instance/backups/files/${NAME}/test-restore`],
@@ -183,6 +184,43 @@ describe.skipIf(!databaseBaseUrl)("backups through the API", () => {
     });
     const invalidName = await owner.delete("/api/v1/instance/backups/files/notes.txt");
     expect(invalidName.statusCode).toBe(400);
+  });
+
+  it("answers with the cause when the target cannot be used", async () => {
+    const missing = path.join(targetDir, "missing");
+    expect(
+      (await owner.put("/api/v1/instance/backups/target", { kind: "local", path: missing })).statusCode,
+    ).toBe(200);
+    const removed = await owner.delete(`/api/v1/instance/backups/files/${NAME}`);
+    expect(removed.statusCode, removed.body).toBe(502);
+    expect(removed.json()).toMatchObject({ code: "backupTargetFailed", problem: "notFound" });
+    expect(removed.json().detail).toContain("does not exist");
+
+    await test.runtime.pool.query(`
+      update backup_configuration set target_kind = 's3', target_path = null, s3_region = 'us-east-1',
+        s3_bucket = 'pagehall-backups', s3_access_key_id = 'pagehall'`);
+    await test.runtime.pool.query("delete from instance_secrets where name like 'backup.%'");
+    const started = await owner.post("/api/v1/instance/backups/runs");
+    expect(started.statusCode, started.body).toBe(502);
+    expect(started.json()).toMatchObject({ code: "backupTargetFailed", problem: "missingSecret" });
+    const testRestore = await owner.post(`/api/v1/instance/backups/files/${NAME}/test-restore`);
+    expect(testRestore.json()).toMatchObject({ code: "backupTargetFailed", problem: "missingSecret" });
+
+    expect(
+      (await owner.put("/api/v1/instance/backups/target", { kind: "local", path: targetDir })).statusCode,
+    ).toBe(200);
+  });
+
+  it("resumes backups after a restore once the owner confirms the target", async () => {
+    await test.runtime.pool.query(`
+      insert into backup_state (singleton, restored_at) values (true, now())
+      on conflict (singleton) do update set restored_at = now()`);
+    expect((await auditor.get("/api/v1/instance/backups")).json()).toMatchObject({
+      restoredAt: expect.any(String),
+    });
+    const confirmed = await owner.post("/api/v1/instance/backups/target/confirmation");
+    expect(confirmed.statusCode, confirmed.body).toBe(200);
+    expect(confirmed.json()).toMatchObject({ restoredAt: null });
   });
 
   it("returns the short status for monitoring", async () => {

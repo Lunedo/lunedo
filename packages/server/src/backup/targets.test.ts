@@ -87,8 +87,14 @@ describe("local backup target", () => {
     await new Promise<void>((resolve) => output.end("partial", () => resolve()));
     await writeFile(path.join(dir, "keep.txt"), "x");
     expect((await readdir(dir)).some((entry) => entry.endsWith(".partial"))).toBe(true);
-    await target.removeIncomplete();
-    expect(await readdir(dir)).toEqual(["keep.txt"]);
+    const foreign = target.destination(backupName("daily", new Date(Date.UTC(2026, 0, 1))));
+    const foreignOutput = foreign.open();
+    await new Promise<void>((resolve) => foreignOutput.end("partial", () => resolve()));
+    await target.removeIncomplete(new Set([name]));
+    const left = await readdir(dir);
+    expect(left.filter((entry) => entry.endsWith(".partial"))).toHaveLength(1);
+    expect(left.find((entry) => entry.endsWith(".partial"))).not.toContain(name);
+    expect(left).toContain("keep.txt");
   });
 });
 
@@ -209,7 +215,11 @@ describe.skipIf(!endpoint)("S3 backup target", () => {
     } finally {
       await source.close();
     }
-    await applyRetention(target, { daily: 1, weekly: 1, monthly: 1, beforeUpdate: 1 }, { logger });
+    await applyRetention(
+      target,
+      { daily: 1, weekly: 1, monthly: 1, beforeUpdate: 1 },
+      { own: new Set([name, lookalike]), logger },
+    );
     await target.delete(name);
     expect(await keys("backups/")).toEqual(["backups/notes.txt", `backups/${lookalike}`]);
     target.destroy();
@@ -251,13 +261,17 @@ describe.skipIf(!endpoint)("S3 backup target", () => {
     target.destroy();
   });
 
-  it("aborts uploads that a killed process left behind, and only those of backups", async () => {
+  it("aborts only the uploads this instance started and a killed process left behind", async () => {
     const target = new S3BackupTarget(config, policy);
-    const stale = `backups/${backupName("daily", new Date())}`;
-    await client.send(new CreateMultipartUploadCommand({ Bucket: bucket, Key: stale }));
+    const own = backupName("daily", new Date());
+    const foreign = `backups/${backupName("daily", new Date())}`;
+    await client.send(new CreateMultipartUploadCommand({ Bucket: bucket, Key: `backups/${own}` }));
+    await client.send(new CreateMultipartUploadCommand({ Bucket: bucket, Key: foreign }));
     await client.send(new CreateMultipartUploadCommand({ Bucket: bucket, Key: "backups/other-upload.bin" }));
-    await target.removeIncomplete();
-    expect((await pendingUploads()).map((upload) => upload.Key)).toEqual(["backups/other-upload.bin"]);
+    await target.removeIncomplete(new Set([own]));
+    expect((await pendingUploads()).map((upload) => upload.Key).sort()).toEqual(
+      ["backups/other-upload.bin", foreign].sort(),
+    );
     target.destroy();
   });
 });
