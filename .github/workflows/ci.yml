@@ -354,6 +354,8 @@ jobs:
         run: scripts/install-update-check.sh "$PREVIOUS" pagehall:operations-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Check the reverse proxy examples
         run: scripts/reverse-proxy-check.sh pagehall:operations-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Check the storage service example of the backup documentation
+        run: scripts/backup-network-check.sh pagehall:operations-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Remove the images of this job
         if: always()
         env:

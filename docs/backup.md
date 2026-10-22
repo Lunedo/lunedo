@@ -42,32 +42,40 @@ When a private endpoint is refused, **Test connection** names the address the en
 
 #### A storage service on the same Docker network
 
-A storage service in the same Compose project, such as SeaweedFS, Garage or MinIO, gets an address in the private network of the project. Give that network a fixed subnet and allow it, so a new container address after a restart keeps working:
+A storage service in the same Compose project, such as SeaweedFS, Garage or MinIO, has an address in a private network, which Pagehall refuses until it is allowed. Allow **only the address of the storage service**, never a whole subnet: `PAGEHALL_OUTBOUND_ALLOWED_NETWORKS` also applies to chat channels, which space administrators set up, and to Confluence Cloud imports. A subnet that contains PostgreSQL or other containers of the installation would let them probe those services through a chat channel test. Put the storage service on a network of its own with a fixed address, keep Pagehall on the default network as well (PostgreSQL is there), and give the storage service credentials, so that other containers cannot write to it without a key:
 
+<!-- backup-network-check -->
 ```yaml
 services:
   pagehall:
     environment:
-      PAGEHALL_OUTBOUND_ALLOWED_NETWORKS: 172.30.0.0/24
-    networks: [backend]
+      PAGEHALL_OUTBOUND_ALLOWED_NETWORKS: 172.30.1.10/32
+    networks: [default, storage]
   storage:
     image: chrislusf/seaweedfs:4.48
-    command: server -s3 -dir=/data
+    restart: unless-stopped
+    environment:
+      AWS_ACCESS_KEY_ID: ${STORAGE_ACCESS_KEY:?Set STORAGE_ACCESS_KEY in .env}
+      AWS_SECRET_ACCESS_KEY: ${STORAGE_SECRET_KEY:?Set STORAGE_SECRET_KEY in .env}
     volumes:
       - storage:/data
-    networks: [backend]
+    networks:
+      storage:
+        ipv4_address: 172.30.1.10
 
 networks:
-  backend:
+  storage:
     ipam:
       config:
-        - subnet: 172.30.0.0/24
+        - subnet: 172.30.1.0/28
 
 volumes:
   storage:
 ```
 
-Use `http://storage:8333` as endpoint, with path-style addressing on. Addresses in allowed networks may use `http://`. Keep the backups on another disk or host than the file store; a storage service on the same disk does not protect against losing it.
+Add `STORAGE_ACCESS_KEY` and a long random `STORAGE_SECRET_KEY` to `.env` (for example `head -c 32 /dev/urandom | base64`), and enter the same two values as access key and secret key of the target. Choose a subnet that no other network on the host uses; `172.30.1.0/28` does not overlap the default network of the setup script (`172.30.0.0/24`). `scripts/backup-network-check.sh` starts this example together with the Compose file of the setup script and checks that the allowed address is only the storage service and that the storage service refuses requests without a key.
+
+Use `http://172.30.1.10:8333` as endpoint, with path-style addressing on. The host name `storage` works as well, because Pagehall checks the address a name resolves to. Addresses in allowed networks may use `http://`. Keep the backups on another disk or host than the file store; a storage service on the same disk does not protect against losing it.
 
 | Service | Endpoint | Region | Path-style | Keys |
 |---|---|---|---|---|
@@ -97,7 +105,7 @@ volumes:
       device: ":/export/pagehall-backups"
 ```
 
-For SMB, use `type: cifs`, `device: "//nas.example.org/pagehall-backups"` and `o: "username=pagehall,password=…,uid=1000,gid=1000,file_mode=0600,dir_mode=0700"`. The container runs as user 1000 (`node`). Then set the directory target to `/mnt/backups`.
+For SMB, use `type: cifs`, `device: "//nas.example.org/pagehall-backups"` and `o: "username=pagehall,password=${SMB_PASSWORD:?Set SMB_PASSWORD in .env},uid=1000,gid=1000,file_mode=0600,dir_mode=0700"`, and put `SMB_PASSWORD` into `.env` (mode 600) instead of writing the password into `compose.yml`. The container runs as user 1000 (`node`). Then set the directory target to `/mnt/backups`.
 
 ### Schedule
 
