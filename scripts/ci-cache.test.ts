@@ -30,10 +30,11 @@ function fakeFileSystem(entry: CacheEntry | undefined, writable = true, failingM
 const directory = (uid: number): CacheEntry => ({ isDirectory: () => true, uid });
 
 describe("parseOwner", () => {
-  it("accepts host and container only", () => {
+  it("accepts host and e2e only", () => {
     assert.equal(parseOwner("host"), "host");
-    assert.equal(parseOwner("container"), "container");
+    assert.equal(parseOwner("e2e"), "e2e");
     assert.throws(() => parseOwner("vm"), /Unknown cache owner "vm"/);
+    assert.throws(() => parseOwner("container"), /Unknown cache owner "container"/);
     assert.throws(() => parseOwner(undefined), /Unknown cache owner ""/);
   });
 });
@@ -59,11 +60,11 @@ describe("cacheEnvironment", () => {
     });
   });
 
-  it("keeps files written by root in the container apart from those of the runner user", () => {
-    assert.deepEqual(cacheEnvironment("/ci-cache", "container", "r2", "write"), {
-      pnpm_config_store_dir: "/ci-cache/container/pnpm-store",
-      TURBO_CACHE_DIR: "/ci-cache/container/turbo/r2",
-      pnpm_config_cache_dir: "/ci-cache/container/pnpm-cache/r2",
+  it("keeps the end-to-end container apart from the jobs on the host and from the root-owned tree of earlier runs", () => {
+    assert.deepEqual(cacheEnvironment("/ci-cache", "e2e", "r2", "write"), {
+      pnpm_config_store_dir: "/ci-cache/e2e/pnpm-store",
+      TURBO_CACHE_DIR: "/ci-cache/e2e/turbo/r2",
+      pnpm_config_cache_dir: "/ci-cache/e2e/pnpm-cache/r2",
     });
   });
 });
@@ -86,10 +87,10 @@ describe("cacheEnvironment for pull requests", () => {
       TURBO_CACHE_DIR: "/srv/ci-cache/host/turbo/r1",
       TURBO_CACHE: "local:r",
     });
-    assert.deepEqual(cacheEnvironment("/ci-cache", "container", "r2", "read"), {
-      pnpm_config_store_dir: "/ci-cache/container/pnpm-store-pull-requests",
-      TURBO_CACHE_DIR: "/ci-cache/container/turbo/r2",
-      pnpm_config_cache_dir: "/ci-cache/container/pnpm-cache-pull-requests/r2",
+    assert.deepEqual(cacheEnvironment("/ci-cache", "e2e", "r2", "read"), {
+      pnpm_config_store_dir: "/ci-cache/e2e/pnpm-store-pull-requests",
+      TURBO_CACHE_DIR: "/ci-cache/e2e/turbo/r2",
+      pnpm_config_cache_dir: "/ci-cache/e2e/pnpm-cache-pull-requests/r2",
       TURBO_CACHE: "local:r",
     });
   });
@@ -104,7 +105,7 @@ describe("cacheEnvironment for pull requests", () => {
 describe("rootProblem", () => {
   it("accepts a writable directory", () => {
     assert.equal(rootProblem("/srv/ci-cache", "host", fakeFileSystem(directory(1001)).fs), undefined);
-    assert.equal(rootProblem("/ci-cache", "container", fakeFileSystem(directory(1001)).fs), undefined);
+    assert.equal(rootProblem("/ci-cache", "e2e", fakeFileSystem(directory(1001)).fs), undefined);
   });
 
   it("names a missing directory and where the setup is described", () => {
@@ -128,7 +129,7 @@ describe("rootProblem", () => {
 
   it("recognizes the empty directory Docker creates for a missing mount source", () => {
     assert.match(
-      rootProblem("/ci-cache", "container", fakeFileSystem(directory(0)).fs) ?? "",
+      rootProblem("/ci-cache", "e2e", fakeFileSystem(directory(0)).fs) ?? "",
       /belongs to root, so Docker most likely created it/,
     );
   });

@@ -66,9 +66,13 @@ jobs:
           done
       - name: Prune the pnpm store of the end-to-end container and old Turborepo entries
         run: >-
-          docker run --rm --volume "$CI_CACHE_DIR:/ci-cache" --volume "$GITHUB_WORKSPACE:/repo:ro" --workdir /repo
+          docker run --rm --user "$(id -u):$(id -g)" --env HOME=/tmp
+          --volume "$CI_CACHE_DIR:/ci-cache" --volume "$GITHUB_WORKSPACE:/repo:ro" --workdir /repo
           --env COREPACK_ENABLE_DOWNLOAD_PROMPT=0 "$PLAYWRIGHT_IMAGE" sh -ec
-          'mkdir -p /ci-cache/container/pnpm-store /ci-cache/container/pnpm-store-pull-requests /ci-cache/container/turbo;
-          corepack pnpm store prune --store-dir /ci-cache/container/pnpm-store;
-          corepack pnpm store prune --store-dir /ci-cache/container/pnpm-store-pull-requests;
-          find /ci-cache/host/turbo /ci-cache/container/turbo -type f -mtime +3 -delete'
+          'mkdir -p /ci-cache/e2e/pnpm-store /ci-cache/e2e/pnpm-store-pull-requests /ci-cache/e2e/turbo;
+          corepack pnpm store prune --store-dir /ci-cache/e2e/pnpm-store;
+          corepack pnpm store prune --store-dir /ci-cache/e2e/pnpm-store-pull-requests;
+          find /ci-cache/host/turbo /ci-cache/e2e/turbo -type f -mtime +3 -delete'
+      - name: Check that every file in the workspace and the caches belongs to the runner user
+        if: always()
+        run: node scripts/check-file-owners.ts "$GITHUB_WORKSPACE" "$CI_CACHE_DIR"

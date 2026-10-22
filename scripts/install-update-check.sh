@@ -108,7 +108,7 @@ in_pagehall node --input-type=module -e '
 '
 check "the page exists before the update" \
   test "$(psql_in "select count(*) from tree_items where title = 'Written before the update'")" = "1"
-before_migrations="$(psql_in "select count(*) from drizzle.__drizzle_migrations")"
+shipped_migrations="$(grep -c '"tag"' "$root/packages/server/drizzle/meta/_journal.json")"
 
 echo "Updating to $current with one command"
 "$directory/pagehall" update --image "$current" --no-pull --yes
@@ -127,8 +127,8 @@ check "the backup is complete and readable" \
 check "the page is still there" \
   test "$(psql_in "select count(*) from tree_items where title = 'Written before the update'")" = "1"
 check "the space is still there" test "$(psql_in "select count(*) from spaces where key = 'SURVIVE'")" = "1"
-check "the migrations of the new version ran" \
-  test "$(psql_in "select count(*) from drizzle.__drizzle_migrations")" -gt "$before_migrations"
+check "every migration of the new version ran" \
+  test "$(psql_in "select count(*) from drizzle.__drizzle_migrations")" = "$shipped_migrations"
 check "the instance is ready" compose exec -T pagehall node -e \
   "fetch('http://127.0.0.1:3000/health/ready').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
 check "the update command was replaced by the one of the new image" cmp -s "$directory/pagehall" "$root/scripts/install.sh"

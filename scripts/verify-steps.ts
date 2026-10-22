@@ -18,6 +18,7 @@ export function verifySteps(base: string): VerifyStep[] {
     { name: "Translations", command: "pnpm", args: ["i18n:check"] },
     { name: "Shell scripts", command: "pnpm", args: ["shell:check"] },
     { name: "Release jobs", command: "pnpm", args: ["release-jobs:check"] },
+    { name: "Container users", command: "pnpm", args: ["container-users:check"] },
     { name: "Typecheck", command: "pnpm", args: ["typecheck"] },
     { name: "Script tests", command: "node", args: ["--test", "scripts/*.test.ts"] },
     { name: "Sign-off", command: "node", args: ["scripts/check-dco.ts", `${base}..HEAD`] },

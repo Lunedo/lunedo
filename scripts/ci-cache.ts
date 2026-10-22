@@ -1,7 +1,7 @@
 import { accessSync, constants, mkdirSync, statSync } from "node:fs";
 import path from "node:path";
 
-export type CacheOwner = "host" | "container";
+export type CacheOwner = "host" | "e2e";
 
 export interface CacheEntry {
   isDirectory: () => boolean;
@@ -33,8 +33,8 @@ export const nodeFileSystem: CacheFileSystem = {
 };
 
 export function parseOwner(value: string | undefined): CacheOwner {
-  if (value === "host" || value === "container") return value;
-  throw new Error(`Unknown cache owner "${value ?? ""}". Use host or container.`);
+  if (value === "host" || value === "e2e") return value;
+  throw new Error(`Unknown cache owner "${value ?? ""}". Use host or e2e.`);
 }
 
 export function runnerDirectory(runner: string | undefined): string {
@@ -63,7 +63,7 @@ export function cacheEnvironment(
     pnpm_config_store_dir: path.posix.join(base, `pnpm-store${own}`),
     TURBO_CACHE_DIR: path.posix.join(base, "turbo", runner),
   };
-  if (owner === "container") env.pnpm_config_cache_dir = path.posix.join(base, `pnpm-cache${own}`, runner);
+  if (owner === "e2e") env.pnpm_config_cache_dir = path.posix.join(base, `pnpm-cache${own}`, runner);
   if (access === "read") env.TURBO_CACHE = "local:r";
   return env;
 }
@@ -72,7 +72,7 @@ export function rootProblem(root: string, owner: CacheOwner, fs: CacheFileSystem
   const stats = fs.stat(root);
   if (!stats) return `The CI cache directory ${root} does not exist on this runner. ${SETUP_HINT}`;
   if (!stats.isDirectory()) return `The CI cache path ${root} is not a directory. ${SETUP_HINT}`;
-  if (owner === "container" && stats.uid === 0) {
+  if (owner === "e2e" && stats.uid === 0) {
     return `The CI cache directory mounted at ${root} belongs to root, so Docker most likely created it because it is missing on the runner host. ${SETUP_HINT}`;
   }
   if (!fs.writable(root))
