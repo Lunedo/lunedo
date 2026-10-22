@@ -574,7 +574,7 @@ export async function createCollabServer(options: {
     async connected({ documentName, instance: server, connection }) {
       const maintenance = await services.maintenance.status();
       connection.readOnly = maintenance.enabled;
-      if (maintenance.enabled) connection.sendStateless(maintenanceMessage(maintenance));
+      connection.sendStateless(maintenanceMessage(maintenance));
       const { signalsBeforeCheck, checkedAt } = connection.context as CollabContext;
       if (signalsBeforeCheck !== signals) {
         await check(connection, { sessions: true, reasons: new Set(["connected"]), since: checkedAt });
