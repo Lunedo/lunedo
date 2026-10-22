@@ -133,7 +133,7 @@ Deleting a backup in the list asks for its name and cannot be undone.
 
 ## Backups before updates
 
-When a process starts and migrations are pending, Pagehall first writes a backup with the class "before update" to the target and waits for it, logging its progress every 30 seconds. While no target is set up, it goes to `PAGEHALL_BACKUP_DIR`, and the log says so. Only the first process applies migrations; the others wait. The backup carries the schema version of the database before the update, so the previous version can restore it.
+When a process starts and migrations are pending, Pagehall first writes a backup with the class "before update" to the target and waits for it, logging its progress every 30 seconds. While no target is set up, or while a restored instance waits for its target to be confirmed, it goes to `PAGEHALL_BACKUP_DIR`, and the log says so. Backups before updates and the deletions of their retention are audited like other backups (`backup.created`, `backup.failed`, `backup.deleted`, with the class "before update"). Only the first process applies migrations; the others wait. The backup carries the schema version of the database before the update, so the previous version can restore it.
 
 If the backup fails, the migrations are not run and the process stops with the reason and the command to start once without it:
 

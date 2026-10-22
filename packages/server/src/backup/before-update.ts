@@ -1,7 +1,11 @@
-import { rm, stat, writeFile } from "node:fs/promises";
+import { readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { uuidv7 } from "@pagehall/shared";
 import { sql } from "drizzle-orm";
+import { z } from "zod";
+import { SYSTEM } from "../accounts/principal.js";
+import { type AuditEventInput, AuditLog } from "../audit/audit-log.js";
+import type { AuditEventName } from "../audit/catalog.js";
 import { Encryption } from "../crypto/envelope.js";
 import type { KeyRing } from "../crypto/key-ring.js";
 import type { Database } from "../database/database.js";
@@ -150,57 +154,106 @@ async function openConfiguredTarget(options: BeforeUpdateOptions, masterKeys: Ke
     configuration,
     target: openTarget(configuration.target, { secret, policy: options.policy }),
     configured: true,
+    paused,
   };
 }
 
 export async function createBeforeUpdateBackup(options: BeforeUpdateOptions): Promise<WrittenBackup> {
-  const { logger } = options;
-  const { configuration, target, configured } = await openConfiguredTarget(
-    options,
-    await options.sources.masterKeys(),
-  );
-  if (!configured) {
-    logger.warn(
-      { target: target.description },
-      `No backup target is set up, so the backup before the update goes to ${target.description}`,
-    );
-  }
-  const startedAt = new Date();
+  const { logger, database } = options;
   let lock = await tryBackupLock(options.sources.pool);
   if (!lock) {
     logger.info("Waiting for a running backup to finish before the backup before the update starts");
     lock = await waitForBackupLock(options.sources.pool);
   }
+  let target: BackupTarget | null = null;
   try {
-    logger.info({ target: target.description }, "Creating the backup before the update");
-    const written = await writeBackup(options.sources, {
-      target,
-      backupClass: "beforeUpdate",
-      scope: configuration.settings.scope,
-    });
-    await recordRun(options.database, { state: "succeeded", written, target: target.description, startedAt });
-    await applyRetention(target, configuration.settings.retention, { classes: ["beforeUpdate"], logger });
-    logger.info(
-      { location: written.location, sizeBytes: written.sizeBytes },
-      "Backup before the update created",
-    );
-    return written;
-  } catch (error) {
-    await recordRun(options.database, {
-      state: "failed",
-      target: target.description,
-      error: describeFailure(error),
-      startedAt,
-    });
-    throw error;
+    let opened: Awaited<ReturnType<typeof openConfiguredTarget>>;
+    try {
+      opened = await openConfiguredTarget(options, await options.sources.masterKeys());
+    } catch (error) {
+      await audit(database, logger, {
+        name: "backup.failed",
+        actor: SYSTEM,
+        targetId: null,
+        fields: { backupClass: "beforeUpdate", trigger: "beforeUpdate", reason: describeFailure(error) },
+      });
+      throw error;
+    }
+    const { configuration, configured, paused } = opened;
+    target = opened.target;
+    if (paused) {
+      logger.warn(
+        { target: target.description },
+        `This instance was restored from a backup and its backup target is not confirmed yet, so the backup before the update goes to ${target.description}`,
+      );
+    } else if (!configured) {
+      logger.warn(
+        { target: target.description },
+        `No backup target is set up, so the backup before the update goes to ${target.description}`,
+      );
+    }
+    const name = backupName("beforeUpdate", new Date());
+    const runId = await recordStart(database, { name, target: target.description });
+    try {
+      logger.info({ target: target.description }, "Creating the backup before the update");
+      const written = await writeBackup(options.sources, {
+        target,
+        backupClass: "beforeUpdate",
+        scope: configuration.settings.scope,
+        name,
+      });
+      await recordEnd(database, runId, { state: "succeeded", sizeBytes: written.sizeBytes });
+      await audit(database, logger, {
+        name: "backup.created",
+        actor: SYSTEM,
+        targetId: null,
+        fields: {
+          name: written.name,
+          backupClass: "beforeUpdate",
+          trigger: "beforeUpdate",
+          location: written.location,
+          sizeBytes: written.sizeBytes,
+        },
+      });
+      if (!paused) {
+        const deleted = await applyRetention(target, configuration.settings.retention, {
+          classes: ["beforeUpdate"],
+          own: await recordedBackupNames(database, "succeeded"),
+          logger,
+        });
+        for (const expired of deleted) {
+          await audit(database, logger, {
+            name: "backup.deleted",
+            actor: SYSTEM,
+            targetId: null,
+            fields: { name: expired, backupClass: "beforeUpdate", reason: "retention" },
+          });
+        }
+      }
+      logger.info(
+        { location: written.location, sizeBytes: written.sizeBytes },
+        "Backup before the update created",
+      );
+      return written;
+    } catch (error) {
+      const reason = describeFailure(error);
+      await recordEnd(database, runId, { state: "failed", error: reason });
+      await audit(database, logger, {
+        name: "backup.failed",
+        actor: SYSTEM,
+        targetId: null,
+        fields: { backupClass: "beforeUpdate", trigger: "beforeUpdate", reason },
+      });
+      throw error;
+    }
   } finally {
-    closeTarget(target);
+    if (target) closeTarget(target);
     await lock.release();
   }
 }
 
 export async function backupBeforeMigrations(
-  options: BeforeUpdateOptions & { environmentAllows: boolean },
+  options: BeforeUpdateOptions & { environmentAllows: boolean; skipRequested: boolean },
 ): Promise<void> {
   const { logger } = options;
   if (!options.environmentAllows) {
