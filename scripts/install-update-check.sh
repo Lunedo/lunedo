@@ -13,8 +13,15 @@ subnet="172.31.$((suffix % 200 + 20)).0/24"
 
 compose() { docker compose --project-directory "$directory" -f "$directory/compose.yml" "$@"; }
 
+newest_backup() {
+  docker run --rm --user 0 --entrypoint sh -v "$directory/backups:/backups:ro" "$current"     -c 'ls -t /backups/pagehall-backup-*-before-update-*.phbak 2>/dev/null | head -n 1' | tr -d ''
+}
+
 cleanup() {
   if [ -f "$directory/compose.yml" ]; then compose down --volumes --remove-orphans >/dev/null 2>&1 || true; fi
+  if [ -d "$directory/backups" ]; then
+    docker run --rm --user 0 --entrypoint rm -v "$directory:/installation" "$current" -rf /installation/backups       >/dev/null 2>&1 || true
+  fi
   rm -rf "$directory"
 }
 trap cleanup EXIT
@@ -87,7 +94,7 @@ echo "Updating to $current with one command"
 
 check "the instance runs the image under test" grep -q "^    image: $current\$" "$directory/compose.yml"
 check "the update is recorded with the previous version" grep -q '^previous=' "$directory/.pagehall-install"
-backup_file="$(compgen -G "$directory/backups/pagehall-backup-*-before-update-*.phbak" | head -n 1 || true)"
+backup_file="$(newest_backup)"
 check "a backup was taken before the update" test -n "$backup_file"
 check "the backup is complete and readable" \
   compose exec -T pagehall pagehall backup verify --input "/var/lib/pagehall/backups/$(basename "$backup_file")"
@@ -123,10 +130,7 @@ check "the page is untouched" \
   test "$(psql_in "select count(*) from tree_items where title = 'Written before the update'")" = "1"
 
 echo "Following the documented rollback"
-rollback_backup=""
-for candidate in "$directory"/backups/pagehall-backup-*-before-update-*.phbak; do
-  if [ -z "$rollback_backup" ] || [ "$candidate" -nt "$rollback_backup" ]; then rollback_backup="$candidate"; fi
-done
+rollback_backup="$(newest_backup)"
 compose stop pagehall >/dev/null
 sed -i.bak "s#^    image: $broken\$#    image: $current#" "$directory/compose.yml"
 compose run --rm -T pagehall backup restore --input "/var/lib/pagehall/backups/$(basename "$rollback_backup")" --force

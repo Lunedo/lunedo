@@ -41,7 +41,7 @@ The installation directory then holds:
 |---|---|
 | `compose.yml` | The Compose file, with the exact Pagehall version. |
 | `.env` | The configuration and the secrets, readable by its owner only (mode 600). Copy it to a safe place: it holds the master key and the backup key, and a backup cannot be restored without them. |
-| `backups/` | Backups, among them the ones taken before every update. |
+| `backups/` | Backups, among them the ones taken before every update. It belongs to the user of the container (UID 1000) with mode 750; copy backups off the host as root or as that user. |
 | `pagehall` | The command for updates, maintenance mode and backups. |
 | `.pagehall-install` | The installation method and the installed version, read by the update command. |
 
