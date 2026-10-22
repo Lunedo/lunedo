@@ -36,7 +36,13 @@ test("a dialog opened from a menu starts in its first field and returns the focu
 
 test("the shortcut to the audit log leads to the audit log from a space", async ({ page, organization }) => {
   const { spaceKey } = await place(page, organization, "Shortcut");
+  const permissions = page.waitForResponse(
+    (response) =>
+      response.url().includes("/api/v1/account/permissions") &&
+      response.url().includes(`organizationId=${organization.id}`),
+  );
   await page.goto(`/spaces/${spaceKey}/meetings`);
+  await permissions;
   await expect(page.getByRole("main")).toBeVisible();
   await page.keyboard.press("g");
   await page.keyboard.press("a");

@@ -209,7 +209,8 @@ These patterns made tests fail now and then, mostly under load:
 - Slow cleanup inside the test body. `DROP DATABASE` waits for a server-wide checkpoint; test databases are therefore dropped in the background (see [database.md](database.md)). Create what a test needs from the migrated template, not from an empty database.
 - Reading a result that the server records after the response, such as the first complete download of an export. Wait until the recorded state appears.
 - State shared between runs: a fixed mail address, or clearing Mailpit for everyone while another run or the development instance waits for its mail. Give each test its own addresses and organization.
-- Acting during a transition: clicking the next button while the step changes, or typing before the editor is ready. Assert the state that the next action needs (the next step's heading, the editor's save state) before acting.
+- Acting during a transition: clicking the next button while the step changes, typing before the editor is ready, or pressing a shortcut before the permissions it checks have loaded. Assert the state that the next action needs (the next step's heading, the editor's save state, the permissions response) before acting.
+- Asserting on text the server shortens or splits, such as an ID inside a search excerpt. Assert on the link or on a distinct word the test wrote.
 - Accessibility checks that run while a screen loads. A component must be valid in each of its loading states, not only once it has loaded; a loading row inside a `tree` is hidden from assistive technology while the tree is `aria-busy`, because accessibility checks reject a status element there even in a busy tree or a group.
 
 ### Caches on self-hosted runners
