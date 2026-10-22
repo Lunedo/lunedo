@@ -452,10 +452,12 @@ update_pagehall() {
   fi
   location="$(printf '%s' "$location" | tail -n 1 | tr -d '\r')"
   say "The backup is $(host_location "$location")"
-  compose exec -T pagehall pagehall backup skip-before-update --for-version "$target" >/dev/null
 
   say "Starting Pagehall $target"
   replace_image "$target_reference"
+  if ! compose run --rm --no-deps -T pagehall backup skip-before-update --for-version "$target" >/dev/null 2>&1; then
+    say "Pagehall $target could not record that the backup before the update is done; its first start takes a second one."
+  fi
   if ! wait_ready; then
     say "" >&2
     say "Pagehall $target did not become ready. The last log lines:" >&2

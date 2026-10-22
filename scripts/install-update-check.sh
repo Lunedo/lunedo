@@ -120,6 +120,8 @@ fi
 check "the update is recorded with the previous version" grep -q '^previous=' "$directory/.pagehall-install"
 backup_file="$(newest_backup)"
 check "a backup was taken before the update" test -n "$backup_file"
+before_update_backups="$(docker run --rm --user 0 --entrypoint sh -v "$directory/backups:/backups:ro" "$current"   -c 'ls /backups/pagehall-backup-*-before-update-*.phbak 2>/dev/null | wc -l' | tr -d ' ')"
+check "the first start of the new version took no second backup" test "$before_update_backups" = "1"
 check "the backup is complete and readable" \
   compose exec -T pagehall pagehall backup verify --input "/var/lib/pagehall/backups/$(basename "$backup_file")"
 check "the page is still there" \
