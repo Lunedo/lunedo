@@ -19,6 +19,7 @@ import { createTestServices, type TestServices } from "../testing/services.js";
 import { spaceFixtures } from "../testing/spaces.js";
 import { readBackupHeader } from "./archive.js";
 import { BackupSettingsError } from "./errors.js";
+import type { DatabaseArchiver } from "./postgres.js";
 import { writeRestoredMarker } from "./restore-marker.js";
 import { pauseBackupsAfterRestore } from "./restored.js";
 import { tryBackupLock } from "./runner.js";
@@ -723,7 +724,7 @@ describe.skipIf(!baseUrl)("backups", () => {
     );
 
     it.skipIf(!hasTools)(
-      "only verifies, with the reason, when the work directory has no space for the copy of the files",
+      "only verifies, with the reason, when there is no space for the copies of the database and the files",
       async () => {
         await useLocalTarget();
         await backups().run({ trigger: "manual", slot: null, actorId: owner });
@@ -748,16 +749,70 @@ describe.skipIf(!baseUrl)("backups", () => {
         expect(outcome).toMatchObject({
           state: "verified",
           stage: "done",
-          error: expect.stringContaining("Not enough free space for the copy of the file store"),
+          error: expect.stringContaining(
+            "Not enough free space for the copy of the database and the copy of the file store",
+          ),
         });
         expect(outcome.checks.map((check) => [check.check, check.passed])).toEqual([
           ["verify", true],
           ["space", false],
         ]);
+        const space = outcome.checks.find((check) => check.check === "space")?.detail;
+        expect(space?.databaseBytes).toBeGreaterThan(0);
+        expect(space?.neededBytes).toBe(Number(space?.databaseBytes) + Number(space?.filesBytes));
         const databases = await test.pool.query(
           "select datname from pg_database where datname like 'pagehall_test_restore_%'",
         );
         expect(databases.rows).toEqual([]);
+      },
+    );
+
+    it.skipIf(!hasTools)(
+      "stops cleanly and reports the space it needed when the database server runs out of space",
+      async () => {
+        await useLocalTarget();
+        await backups().run({ trigger: "manual", slot: null, actorId: owner });
+        const [created] = (await backups().list()).backups;
+        const full = {
+          dump: () => {
+            throw new Error("not used");
+          },
+          isEmpty: async () => true,
+          restore: async (content: NodeJS.ReadableStream) => {
+            content.resume();
+            throw new Error(
+              'psql exited with code 3: ERROR:  could not extend file "base/16384/2619": No space left on device',
+            );
+          },
+        };
+        const outcome = await runTestRestore(
+          new LocalBackupTarget(targetDir),
+          created?.name ?? "",
+          "01900000-0000-7000-8000-0000000000cc",
+          {
+            pool: test.pool,
+            databaseUrl: test.url,
+            backupKeys: test.backupKeys,
+            masterKeys: async () => test.keyRing.ring,
+            knownSchemaVersions: knownSchemaVersions(),
+            migrationTimes: schemaVersionTimes(),
+            workDir,
+            logger,
+            archiver: () => full as unknown as DatabaseArchiver,
+          },
+          async () => {},
+        );
+        expect(outcome).toMatchObject({
+          state: "verified",
+          stage: "done",
+          error: expect.stringContaining("The database server ran out of space for the copy of the database"),
+        });
+        expect(outcome.checks.at(-1)).toMatchObject({ check: "space", passed: false });
+        const databases = await test.pool.query(
+          "select datname from pg_database where datname like 'pagehall_test_restore_%'",
+        );
+        expect(databases.rows).toEqual([]);
+        expect((await readdir(workDir)).filter((entry) => entry.startsWith("test-restore-"))).toEqual([]);
       },
     );
 

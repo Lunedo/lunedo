@@ -189,6 +189,29 @@ async function inspect(
   }
 }
 
+const DISK_FULL = /could not extend file|no space left on device|disk full|\b53100\b/i;
+
+function databaseFull(error: unknown): boolean {
+  for (let current: unknown = error, depth = 0; current && depth < 6; depth += 1) {
+    if ((current as { code?: string }).code === "53100") return true;
+    if (current instanceof Error && DISK_FULL.test(current.message)) return true;
+    current = typeof current === "object" && "cause" in current ? current.cause : undefined;
+  }
+  return false;
+}
+
+const SPACE_ADVICE =
+  "The backup itself was checked and is complete and readable. Free up space in the work directory and on the database server, or move PAGEHALL_WORK_DIR to a larger disk, and start the test restore again.";
+
+function formatGb(bytes: number): string {
+  return `${(bytes / 1024 ** 3).toFixed(1)} GB`;
+}
+
+async function liveDatabaseSize(pool: DatabasePool): Promise<number> {
+  const result = await pool.query<{ size: string }>("select pg_database_size(current_database()) as size");
+  return Number(result.rows[0]?.size ?? 0);
+}
+
 function filesSize(manifest: BackupManifest): number {
   return manifest.entries
     .filter((entry) => entry.path.startsWith("files/"))
@@ -243,20 +266,34 @@ export async function runTestRestore(
     return { state: "verified", stage: "done", checks, error: null };
   }
 
-  const neededBytes = Math.ceil(filesSize(manifest) * SPACE_MARGIN);
+  const filesBytes = Math.ceil(filesSize(manifest) * SPACE_MARGIN);
+  const databaseBytes = Math.ceil((await liveDatabaseSize(sources.pool)) * SPACE_MARGIN);
+  const neededBytes = filesBytes + databaseBytes;
+  const shortOfSpace = (message: string): TestRestoreOutcome => {
+    checks.push({ check: "space", passed: false, detail: { neededBytes, databaseBytes, filesBytes } });
+    return { state: "verified", stage: "done", checks, error: message };
+  };
   try {
     await mkdir(sources.workDir, { recursive: true, mode: 0o700 });
-    await checkSpace([{ dir: sources.workDir, bytes: neededBytes, label: "the copy of the file store" }], {
-      critical: await criticalPercent(sources.pool),
-      ...(sources.diskSpace ? { measure: sources.diskSpace } : {}),
-      advice:
-        "The backup itself was checked and is complete and readable. Free up space in the work directory, or move PAGEHALL_WORK_DIR to a larger disk, and start the test restore again.",
-    });
+    await checkSpace(
+      [
+        { dir: sources.workDir, bytes: databaseBytes, label: "the copy of the database" },
+        { dir: sources.workDir, bytes: filesBytes, label: "the copy of the file store" },
+      ],
+      {
+        critical: await criticalPercent(sources.pool),
+        ...(sources.diskSpace ? { measure: sources.diskSpace } : {}),
+        advice: SPACE_ADVICE,
+      },
+    );
   } catch (error) {
     if (!(error instanceof NotEnoughSpaceError)) throw error;
-    checks.push({ check: "space", passed: false, detail: { neededBytes } });
-    return { state: "verified", stage: "done", checks, error: error.message };
+    return shortOfSpace(error.message);
   }
+  const databaseServerFull = () =>
+    shortOfSpace(
+      `The database server ran out of space for the copy of the database, which needs about ${formatGb(databaseBytes)}. ${SPACE_ADVICE}`,
+    );
 
   stage = "restore";
   await onStage(stage, checks);
@@ -264,7 +301,12 @@ export async function runTestRestore(
   const databaseUrl = databaseUrlFor(sources.databaseUrl, databaseName);
   let created = false;
   try {
-    await sources.pool.query(`create database ${quoteIdentifier(databaseName)}`);
+    try {
+      await sources.pool.query(`create database ${quoteIdentifier(databaseName)}`);
+    } catch (error) {
+      sources.logger.warn({ reason: describeFailure(error) }, "Creating the test restore database failed");
+      return databaseServerFull();
+    }
     created = true;
     await mkdir(filesDir, { recursive: true, mode: 0o700 });
     const source = await target.source(name);
@@ -301,6 +343,7 @@ export async function runTestRestore(
       ? { state: "passed", stage: "done", checks, error: null }
       : { state: "failed", stage, checks, error: "A plausibility check of the restored backup failed" };
   } catch (error) {
+    if (databaseFull(error)) return databaseServerFull();
     if (stage === "restore") checks.push({ check: "restore", passed: false, detail: {} });
     return fail(error);
   } finally {
