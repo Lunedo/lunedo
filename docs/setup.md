@@ -31,17 +31,18 @@ bash install.sh --dir /opt/pagehall --url https://wiki.example.org --version 1.4
 | `--version <version>` | Version to install; the newest release by default. |
 | `--image <reference>` | Another image, for example from a mirror registry. |
 | `--port <port>`, `--bind <address>` | Host port and address of Pagehall, `3000` on `127.0.0.1` by default, for a reverse proxy on the same host. |
-| `--subnet <cidr>` | Subnet of the Compose network, `172.30.0.0/24` by default. Pagehall trusts forwarded headers from it, see [reverse-proxy.md](reverse-proxy.md#forwarded-headers-and-pagehall_trusted_proxies). |
+| `--subnet <cidr>` | Subnet of the Compose network, `172.30.0.0/24` by default. |
+| `--proxy <address>` | Fixed address of a reverse proxy that runs in the Compose project, for example `172.30.0.10`. It becomes the only entry of `PAGEHALL_TRUSTED_PROXIES`; never the whole subnet or its gateway, from which every program on the host connects. Without it no proxy is trusted; see [reverse-proxy.md](reverse-proxy.md#forwarded-headers-and-pagehall_trusted_proxies). |
 | `--no-pull` | Use an image that is already on the host. |
 | `--yes` | Accept every default without asking. |
 
-The installation directory then holds:
+The installation directory then holds the files below. The script creates it with mode 700, so only its owner (and root, through Docker) can reach the configuration, the secrets and the backups in it; `750` with the group `docker` works as well. It never changes the mode of a directory that already existed, but warns when other accounts can reach it. The container runs as UID 1000, which on many hosts is also the first login account, for example `ubuntu` or `pi`: that account owns `backups/` on the host, so no other host account may be able to open the installation directory.
 
 | File | Content |
 |---|---|
-| `compose.yml` | The Compose file, with the exact Pagehall version. |
+| `compose.yml` | The Compose file, with the exact Pagehall version, readable by its owner only (mode 600), also after updates. |
 | `.env` | The configuration and the secrets, readable by its owner only (mode 600). Copy it to a safe place: it holds the master key and the backup key, and a backup cannot be restored without them. |
-| `backups/` | Backups, among them the ones taken before every update. It belongs to the user of the container (UID 1000) with mode 750; copy backups off the host as root or as that user. |
+| `backups/` | Backups, among them the ones taken before every update. It belongs to the user of the container (UID 1000) with mode 750; copy backups off the host as root. Temporary files of backups and test restores are not here but in the data volume (`PAGEHALL_WORK_DIR`). |
 | `pagehall` | The command for updates, maintenance mode and backups. |
 | `.pagehall-install` | The installation method and the installed version, read by the update command. |
 
@@ -121,10 +122,17 @@ PAGEHALL_INSTANCE_URL=https://wiki.example.org
 PAGEHALL_SETUP_CODE=<optional, at least 12 characters>
 PAGEHALL_MASTER_KEYS=1:<32 random bytes in base64>
 PAGEHALL_BACKUP_KEY=1:<32 random bytes in base64>
-PAGEHALL_TRUSTED_PROXIES=172.30.0.0/24
+PAGEHALL_TRUSTED_PROXIES=<the fixed address of your reverse proxy, or empty>
 ```
 
-`head -c 32 /dev/urandom | base64` creates a key. Without `PAGEHALL_MASTER_KEYS` and `PAGEHALL_BACKUP_KEY`, Pagehall generates both into the secrets directory of the data volume; then back up that directory separately. Container templates can offer `PAGEHALL_SETUP_CODE` and `PAGEHALL_INSTANCE_URL` as fields. Every other setting is in [configuration.md](configuration.md). Create the `backups` directory and give it to the user of the container (`mkdir backups && chown 1000:1000 backups`), then start with `docker compose up -d --wait`.
+`head -c 32 /dev/urandom | base64` creates a key. Without `PAGEHALL_MASTER_KEYS` and `PAGEHALL_BACKUP_KEY`, Pagehall generates both into the secrets directory of the data volume; then back up that directory separately. Container templates can offer `PAGEHALL_SETUP_CODE` and `PAGEHALL_INSTANCE_URL` as fields. Every other setting is in [configuration.md](configuration.md). Keep `compose.yml`, `.env` and `backups` in a directory that only you can open, and give `backups` to the user of the container, which runs as UID 1000:
+
+```sh
+mkdir -m 700 /opt/pagehall && cd /opt/pagehall
+mkdir backups && chown 1000:1000 backups && chmod 750 backups
+```
+
+Then start with `docker compose up -d --wait`.
 
 ## Updates
 

@@ -80,6 +80,29 @@ version_lt() {
   return 1
 }
 
+directory_mode() { stat -c '%a' "$1" 2>/dev/null || stat -f '%Lp' "$1" 2>/dev/null || true; }
+
+warn_open_directory() {
+  local mode
+  mode="$(directory_mode "$1")"
+  [[ "$mode" =~ ^[0-7]{3,4}$ ]] || return 0
+  if (((8#$mode & 8#027) != 0)); then
+    say "Warning: $1 has mode $mode, so other accounts on this host can reach the backups and the" >&2
+    say "         configuration in it. Restrict it, for example with: chmod 700 '$1'" >&2
+  fi
+}
+
+valid_ipv4() {
+  [[ "$1" =~ ^([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})$ ]] || return 1
+  local part
+  for part in "${BASH_REMATCH[@]:1}"; do ((10#$part <= 255)) || return 1; done
+}
+
+gateway_of() {
+  local base="${1%/*}"
+  printf '%s.%s' "${base%.*}" "$((${base##*.} + 1))"
+}
+
 random_key() { head -c 32 /dev/urandom | base64 | tr -d '\n'; }
 
 random_text() {
@@ -237,6 +260,11 @@ install_pagehall() {
   port="${port:-3000}"
   bind="${bind:-127.0.0.1}"
   subnet="${subnet:-172.30.0.0/24}"
+  local existed=0
+  if [ -d "$directory" ]; then
+    existed=1
+    warn_open_directory "$directory"
+  fi
 
   if [ -f "$directory/$RECORD" ] || [ -f "$directory/compose.yml" ] || [ -f "$directory/.env" ]; then
     say "Pagehall is already installed in $directory (version $(record_value version))."
@@ -271,8 +299,11 @@ install_pagehall() {
     reference="$IMAGE_REPOSITORY:$target"
   fi
 
+  if [ "$existed" -eq 0 ]; then
+    mkdir -p "$(dirname "$directory")"
+    mkdir -m 700 "$directory"
+  fi
   mkdir -p "$directory/backups"
-  chmod 755 "$directory"
 
   local code
   code="$(setup_code)"
@@ -293,8 +324,7 @@ install_pagehall() {
       printf 'PAGEHALL_INSTALL_DIR=%s\n' "$directory"
     } >"$directory/.env"
   )
-  compose_file "$reference" >"$directory/compose.yml"
-  chmod 644 "$directory/compose.yml"
+  write_compose "$reference"
   cp "$0" "$directory/pagehall"
   chmod 755 "$directory/pagehall"
 
@@ -315,7 +345,7 @@ install_pagehall() {
     if is_release "$resolved"; then
       reference="$IMAGE_REPOSITORY:$resolved"
       docker image tag "$IMAGE_REPOSITORY:latest" "$reference"
-      compose_file "$reference" >"$directory/compose.yml"
+      write_compose "$reference"
     fi
   fi
 
@@ -344,6 +374,7 @@ update_pagehall() {
     fail "$directory is not a Pagehall installation. Run the update from the installation directory, or pass --dir."
   [ "$(record_value method)" = "script" ] ||
     fail "$directory was not installed with the setup script. Update it as described in docs/setup.md."
+  warn_open_directory "$directory"
   check_requirements_for_update
 
   local current_reference current target_reference target
@@ -456,13 +487,25 @@ check_requirements_for_update() {
   docker compose version >/dev/null 2>&1 || fail "Docker Compose v2 is missing."
 }
 
+write_compose() {
+  (
+    umask 077
+    compose_file "$1" >"$directory/compose.yml.tmp"
+  )
+  chmod 600 "$directory/compose.yml.tmp"
+  mv "$directory/compose.yml.tmp" "$directory/compose.yml"
+}
+
 replace_image() {
   local reference="$1"
-  awk -v reference="$reference" '
-    !done && /^    image: / && $0 ~ /pagehall/ { print "    image: " reference; done = 1; next }
-    { print }
-  ' "$directory/compose.yml" >"$directory/compose.yml.tmp"
-  chmod 644 "$directory/compose.yml.tmp"
+  (
+    umask 077
+    awk -v reference="$reference" '
+      !done && /^    image: / && $0 ~ /pagehall/ { print "    image: " reference; done = 1; next }
+      { print }
+    ' "$directory/compose.yml" >"$directory/compose.yml.tmp"
+  )
+  chmod 600 "$directory/compose.yml.tmp"
   mv "$directory/compose.yml.tmp" "$directory/compose.yml"
 }
 

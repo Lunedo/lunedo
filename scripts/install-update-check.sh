@@ -6,15 +6,20 @@ previous="${1:?usage: scripts/install-update-check.sh <previous image> <image un
 current="${2:?usage: scripts/install-update-check.sh <previous image> <image under test>}"
 root="$(cd "$(dirname "$0")/.." && pwd)"
 suffix="$$"
-directory="$(mktemp -d "${TMPDIR:-/tmp}/pagehall-install-${suffix}-XXXX")"
-if command -v cygpath >/dev/null; then directory="$(cygpath -m "$directory")"; fi
+parent="$(mktemp -d "${TMPDIR:-/tmp}/pagehall-install-${suffix}-XXXX")"
+if command -v cygpath >/dev/null; then parent="$(cygpath -m "$parent")"; fi
+directory="$parent/installation"
 port=$((20000 + suffix % 20000))
 subnet="172.31.$((suffix % 200 + 20)).0/24"
+proxy="172.31.$((suffix % 200 + 20)).10"
+linux=1
+case "$(uname -s)" in MINGW* | MSYS* | CYGWIN* | Darwin) linux=0 ;; esac
 
 compose() { docker compose --project-directory "$directory" -f "$directory/compose.yml" "$@"; }
 
 newest_backup() {
-  docker run --rm --user 0 --entrypoint sh -v "$directory/backups:/backups:ro" "$current"     -c 'ls -t /backups/pagehall-backup-*-before-update-*.phbak 2>/dev/null | head -n 1' | tr -d ''
+  docker run --rm --user 0 --entrypoint sh -v "$directory/backups:/backups:ro" "$current"     -c 'ls -t /backups/pagehall-backup-*-before-update-*.phbak 2>/dev/null | head -n 1' | tr -d '
+'
 }
 
 cleanup() {
@@ -22,9 +27,19 @@ cleanup() {
   if [ -d "$directory/backups" ]; then
     docker run --rm --user 0 --entrypoint rm -v "$directory:/installation" "$current" -rf /installation/backups       >/dev/null 2>&1 || true
   fi
-  rm -rf "$directory"
+  rm -rf "$parent"
 }
 trap cleanup EXIT
+
+mode_of() { stat -c '%a' "$1" 2>/dev/null || stat -f '%Lp' "$1"; }
+
+other_account_cannot_list() {
+  if ! sudo -n true 2>/dev/null; then
+    echo "  skipped: no sudo to try another account"
+    return 0
+  fi
+  ! sudo -n -u nobody ls "$directory/backups" >/dev/null 2>&1
+}
 
 check() {
   local description="$1"
@@ -93,6 +108,9 @@ echo "Updating to $current with one command"
 "$directory/pagehall" update --image "$current" --no-pull --yes
 
 check "the instance runs the image under test" grep -q "^    image: $current\$" "$directory/compose.yml"
+if [ "$linux" -eq 1 ]; then
+  check "the Compose file stays readable by the owner only" test "$(mode_of "$directory/compose.yml")" = "600"
+fi
 check "the update is recorded with the previous version" grep -q '^previous=' "$directory/.pagehall-install"
 backup_file="$(newest_backup)"
 check "a backup was taken before the update" test -n "$backup_file"
@@ -109,8 +127,14 @@ check "the update command was replaced by the one of the new image" cmp -s "$dir
 
 echo "Running the setup script again leaves the installation alone"
 secrets="$(cat "$directory/.env")"
-bash "$root/scripts/install.sh" install --dir "$directory" --yes </dev/null >/dev/null
+if [ "$linux" -eq 1 ]; then chmod 755 "$directory"; fi
+rerun="$(bash "$root/scripts/install.sh" install --dir "$directory" --yes </dev/null 2>&1 >/dev/null)"
 check "the secrets are unchanged" test "$secrets" = "$(cat "$directory/.env")"
+if [ "$linux" -eq 1 ]; then
+  check "it warns about a directory other accounts can reach" grep -q "has mode 755" <<<"$rerun"
+  check "it does not change the mode of the directory" test "$(mode_of "$directory")" = "755"
+  chmod 700 "$directory"
+fi
 
 echo "An update to a version that does not start stops with the rollback and restores nothing"
 broken="pagehall:broken-${suffix}"
