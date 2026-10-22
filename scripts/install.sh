@@ -16,6 +16,8 @@ image=""
 port=""
 bind=""
 subnet=""
+proxy=""
+proxy_given=0
 pull=1
 
 usage() {
@@ -34,7 +36,9 @@ Options:
   --image <reference>   Image to use instead of ghcr.io/pagehall/pagehall:<version>
   --port <port>         Host port of Pagehall (default 3000)
   --bind <address>      Host address the port listens on (default 127.0.0.1)
-  --subnet <cidr>       Subnet of the Compose network, trusted for forwarded headers (default 172.30.0.0/24)
+  --subnet <cidr>       Subnet of the Compose network (default 172.30.0.0/24)
+  --proxy <address>     Fixed address of a reverse proxy on the Compose network, the only address
+                        Pagehall trusts for forwarded headers (default: none)
   --no-pull             Use a local image without pulling it
   --yes                 Answer every question with its default, for unattended runs
   --help                Show this help
@@ -291,6 +295,15 @@ install_pagehall() {
     *) say "Warning: $instance_url does not use HTTPS. Signing in needs HTTPS; put Pagehall behind a reverse proxy with TLS." ;;
   esac
 
+  if [ "$proxy_given" -eq 0 ]; then
+    proxy="$(ask "Fixed address of a reverse proxy in this Compose project, trusted for forwarded headers (empty: none)" "")"
+  fi
+  if [ -n "$proxy" ]; then
+    valid_ipv4 "$proxy" || fail "$proxy is not an IPv4 address like 172.30.0.10."
+    [ "$proxy" != "$(gateway_of "$subnet")" ] ||
+      fail "$proxy is the gateway of the Compose network. Every program on this host connects from it, so it must not be trusted. Give the proxy a fixed address of its own on the network."
+  fi
+
   local reference target
   if [ -n "$image" ]; then
     reference="$image"
@@ -316,7 +329,7 @@ install_pagehall() {
       printf 'PAGEHALL_MASTER_KEYS=1:%s\n' "$(random_key)"
       printf 'PAGEHALL_BACKUP_KEY=1:%s\n' "$(random_key)"
       printf 'PAGEHALL_METRICS_TOKEN=%s\n' "$(random_text 43 'A-Za-z0-9')"
-      printf 'PAGEHALL_TRUSTED_PROXIES=%s\n' "$subnet"
+      printf 'PAGEHALL_TRUSTED_PROXIES=%s\n' "${proxy:+$proxy/32}"
       printf 'PAGEHALL_SUBNET=%s\n' "$subnet"
       printf 'PAGEHALL_PORT=%s\n' "$port"
       printf 'PAGEHALL_BIND=%s\n' "$bind"
@@ -361,7 +374,15 @@ install_pagehall() {
   say ""
   say "Next steps:"
   say "  1. Set up the instance: $instance_url/setup#code=$code"
-  say "  2. Put a reverse proxy with TLS in front of $bind:$port and keep the trusted subnet $subnet:"
+  if [ -n "$proxy" ]; then
+    say "  2. Run your reverse proxy with TLS at $proxy on the Compose network; only that address is"
+    say "     trusted for forwarded headers:"
+  else
+    say "  2. Put a reverse proxy with TLS in front of $bind:$port. No proxy is trusted yet, so Pagehall"
+    say "     ignores forwarded headers and sees every client as the proxy. Give a proxy in this Compose"
+    say "     project a fixed address and set PAGEHALL_TRUSTED_PROXIES in .env to it, never to the"
+    say "     whole subnet or its gateway:"
+  fi
   say "     https://github.com/pagehall/pagehall/blob/main/docs/reverse-proxy.md"
   say "  3. Copy $directory/.env to a safe place. It holds the master key and the backup key;"
   say "     a backup cannot be restored without them."
@@ -538,6 +559,7 @@ while [ "$#" -gt 0 ]; do
     --port) port="${2:?--port needs a port}"; shift 2 ;;
     --bind) bind="${2:?--bind needs an address}"; shift 2 ;;
     --subnet) subnet="${2:?--subnet needs a CIDR range}"; shift 2 ;;
+    --proxy) proxy="${2?--proxy needs an address}"; proxy_given=1; shift 2 ;;
     --no-pull) pull=0; shift ;;
     --yes | -y) assume_yes=1; shift ;;
     --help | -h) command="help"; shift ;;

@@ -58,12 +58,18 @@ psql_in() { compose exec -T postgres psql -v ON_ERROR_STOP=1 -qAt -U pagehall -d
 
 echo "Installing $previous with the setup script"
 bash "$root/scripts/install.sh" install --dir "$directory" --url "http://localhost:$port" --image "$previous" \
-  --port "$port" --subnet "$subnet" --no-pull --yes
+  --port "$port" --subnet "$subnet" --proxy "$proxy" --no-pull --yes
 check "the installation is recorded" grep -q '^method=script$' "$directory/.pagehall-install"
-case "$(uname -s)" in
-  MINGW* | MSYS* | CYGWIN*) echo "  skipped: file permissions cannot be checked on Windows" ;;
-  *) check "the environment file is readable by the owner only"     test "$(stat -c '%a' "$directory/.env" 2>/dev/null || stat -f '%Lp' "$directory/.env")" = "600" ;;
-esac
+check "only the proxy address is trusted for forwarded headers" \
+  grep -qx "PAGEHALL_TRUSTED_PROXIES=$proxy/32" "$directory/.env"
+if [ "$linux" -eq 1 ]; then
+  check "the installation directory is reachable by its owner only" test "$(mode_of "$directory")" = "700"
+  check "the environment file is readable by the owner only" test "$(mode_of "$directory/.env")" = "600"
+  check "the Compose file is readable by the owner only" test "$(mode_of "$directory/compose.yml")" = "600"
+  check "another account cannot list the backups" other_account_cannot_list
+else
+  echo "  skipped: file permissions are only checked on Linux"
+fi
 check "the setup code is in the environment file" grep -Eq '^PAGEHALL_SETUP_CODE=[A-Z0-9]{4}(-[A-Z0-9]{4}){3}$' "$directory/.env"
 
 echo "Adding synthetic content"
