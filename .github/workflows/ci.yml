@@ -100,6 +100,7 @@ jobs:
       - run: pnpm playwright-image:check
       - run: pnpm i18n:check
       - run: pnpm shell:check
+      - run: pnpm release-jobs:check
       - run: pnpm typecheck
       - name: Script tests
         run: node --test "scripts/*.test.ts"
