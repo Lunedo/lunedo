@@ -4,11 +4,11 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
+import type { BackupStatus } from "../backup/service.js";
 import type { JobQueue } from "../jobs/job-queue.js";
 import { smtpSetting } from "../mail/mail-service.js";
 import { testDatabaseBaseUrl } from "../testing/database.js";
 import { createTestServices, type TestServices } from "../testing/services.js";
-import type { BackupStatus } from "../backup/service.js";
 import { ErrorEvents } from "./error-events.js";
 import { backupItem, jobsItem, OperationsStatusService, type StatusItem } from "./status.js";
 
@@ -34,9 +34,9 @@ describe("backupItem", () => {
       reason: null,
       page: "/settings/instance/backups",
     });
-    expect(backupItem({ ...healthyBackup, beforeUpdate: { enabled: false, disabledBy: "environment" } })).toMatchObject(
-      { status: "ok", reason: "beforeUpdateOff" },
-    );
+    expect(
+      backupItem({ ...healthyBackup, beforeUpdate: { enabled: false, disabledBy: "environment" } }),
+    ).toMatchObject({ status: "ok", reason: "beforeUpdateOff" });
   });
 
   it("warns when backups are off, have no target or are missing, and fails while they fail", () => {
@@ -52,7 +52,11 @@ describe("backupItem", () => {
         alert: "failing",
         lastFailure: { at: new Date(NOW.getTime() - HOUR), reason: "The target is full" },
       }),
-    ).toMatchObject({ status: "error", reason: "failed", facts: { lastFailureReason: "The target is full" } });
+    ).toMatchObject({
+      status: "error",
+      reason: "failed",
+      facts: { lastFailureReason: "The target is full" },
+    });
   });
 });
 

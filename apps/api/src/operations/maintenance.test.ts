@@ -30,6 +30,8 @@ describe("writesDuringMaintenance", () => {
     expect(writesDuringMaintenance("post", "/api/v1/auth/sign-in")).toBe("allowed");
     expect(writesDuringMaintenance("PATCH", "/scim/v2/:providerId/Users/:id")).toBe("allowed");
     expect(writesDuringMaintenance("PUT", "/api/v1/instance/maintenance")).toBe("allowed");
+    expect(writesDuringMaintenance("POST", "/api/v1/instance/backups/runs")).toBe("allowed");
+    expect(writesDuringMaintenance("PUT", "/api/v1/instance/backups/target")).toBe("refused");
     expect(writesDuringMaintenance("POST", "/api/v1/instance/maintenance")).toBe("refused");
     expect(writesDuringMaintenance("PUT", "/api/v1/instance/settings/:key")).toBe("refused");
     expect(writesDuringMaintenance("POST", "/api/v1/a-route-added-later")).toBe("refused");

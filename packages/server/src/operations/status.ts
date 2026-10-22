@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { instanceUrlSetting } from "../accounts/instance-settings.js";
+import type { BackupStatus } from "../backup/service.js";
 import type { KeyRingHolder } from "../crypto/key-ring-holder.js";
 import type { KeyRotation } from "../crypto/rotation.js";
 import type { Database } from "../database/database.js";
@@ -10,7 +11,6 @@ import type { SearchIndexer } from "../search/indexer.js";
 import type { SettingsService } from "../settings/service.js";
 import { checkDatabaseAndClock, checkFileStorage } from "../setup/steps.js";
 import type { StorageService } from "../storage/storage.js";
-import type { BackupStatus } from "../backup/service.js";
 import type { BackupStatusSource } from "./backup-status.js";
 import { type RecentErrorType, recentErrorTypes } from "./error-events.js";
 import type { MaintenanceService } from "./maintenance.js";

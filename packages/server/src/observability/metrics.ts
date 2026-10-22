@@ -139,9 +139,7 @@ export class Metrics {
       seconds(s.backup.lastSuccessAt),
     );
     counter("pagehall_backup_failures_total", "Backups that failed.", (s) => s.backup.failures);
-    gauge("pagehall_backup_scheduled", "1 when scheduled backups are on.", (s) =>
-      Number(s.backup.scheduled),
-    );
+    gauge("pagehall_backup_scheduled", "1 when scheduled backups are on.", (s) => Number(s.backup.scheduled));
     counter(
       "pagehall_mail_delivery_failures_total",
       "Failed attempts to deliver an e-mail.",

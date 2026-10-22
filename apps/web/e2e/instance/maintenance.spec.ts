@@ -47,7 +47,7 @@ test("an administrator switches maintenance on, a colleague can only read, and i
     await page.goto("/settings/instance/maintenance");
     await page.getByRole("textbox", { name: "Message" }).fill("Update until 18:00");
     await page.getByRole("button", { name: "Switch on maintenance mode" }).click();
-    await expect(page.getByText("Maintenance mode is on")).toBeVisible();
+    await expect(page.getByText("Maintenance mode is on", { exact: true })).toBeVisible();
     await expect(page.getByText("Maintenance in progress")).toBeVisible();
 
     await expect(other.getByText("Maintenance in progress")).toBeVisible();
@@ -77,7 +77,7 @@ test("an administrator switches maintenance on, a colleague can only read, and i
 
     await page.goto("/settings/instance/maintenance");
     await page.getByRole("button", { name: "Switch off maintenance mode" }).click();
-    await expect(page.getByText("Maintenance mode is off")).toBeVisible();
+    await expect(page.getByText("Maintenance mode is off", { exact: true })).toBeVisible();
 
     await expect(other.getByText("Maintenance in progress")).toBeHidden();
     await expect(content(other)).toHaveAttribute("contenteditable", "true");

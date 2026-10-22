@@ -23,6 +23,8 @@ export const MAINTENANCE_ALLOWED_WRITES = [
   "PATCH /scim/v2/:providerId/Groups/:id",
   "DELETE /scim/v2/:providerId/Groups/:id",
   "PUT /api/v1/instance/maintenance",
+  "POST /api/v1/instance/backups/runs",
+  "POST /api/v1/instance/backups/files/:name/test-restore",
 ] as const;
 
 export const SESSION_ROUTES = [

@@ -182,7 +182,10 @@ export function updateCommands(
       return {
         method: method ?? "unknown",
         steps: [
-          { kind: "note", text: "Create a backup with pagehall backup create --before-update before you update." },
+          {
+            kind: "note",
+            text: "Create a backup with pagehall backup create --before-update before you update.",
+          },
           { kind: "command", text: `docker pull ${image}` },
           { kind: "note", text: `Restart every Pagehall container with ${image}.` },
         ],
