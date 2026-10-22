@@ -6,6 +6,7 @@ import { defineJob } from "./job-queue.js";
 /** Removes progress rows whose job the queue has deleted after its retention period. */
 export const cleanupJobProgressJob = defineJob({
   name: "jobs.cleanup-progress",
+  duringMaintenance: "run",
   payload: z.object({}),
   retryLimit: 2,
 });

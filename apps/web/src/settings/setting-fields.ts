@@ -67,6 +67,7 @@ const fields: SettingField[] = [
       labelPrefix: "settings.values.storageReminder",
     },
   },
+  { key: "operations.updateCheck", type: { kind: "boolean" } },
   { key: "sharing.shareLinks", type: { kind: "boolean" } },
   { key: "sharing.anyoneLinks", type: { kind: "boolean" } },
   { key: "sharing.anyoneLinkMaxDays", type: days(1, 3650, [7, 30, 90]) },

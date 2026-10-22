@@ -91,6 +91,7 @@ export const graphMailSetting = defineSetting({
 
 export const mailCredentialReminderJob = defineJob({
   name: "mail.send-credential-reminders",
+  duringMaintenance: "run",
   payload: z.object({}),
   retryLimit: 2,
 });
@@ -128,6 +129,8 @@ export interface MailTestResult {
 
 export interface MailDeliveryState {
   lastSuccessAt: Date | null;
+  failedAttempts: number;
+  failedMessages: number;
   lastFailure: (MailFailure & { at: Date }) | null;
 }
 
@@ -148,6 +151,7 @@ const storedToken = z.object({ fingerprint: z.string(), token: z.string(), expir
 
 export const deliverMailJob = defineJob({
   name: "mail.deliver",
+  duringMaintenance: "run",
   payload: z.object({ mailId: z.uuid() }),
   retryLimit: 8,
   retryDelaySeconds: 30,
@@ -157,6 +161,7 @@ export const deliverMailJob = defineJob({
 
 export const dispatchPendingMailJob = defineJob({
   name: "mail.dispatch-pending",
+  duringMaintenance: "run",
   payload: z.object({}),
   retryLimit: 1,
 });
@@ -430,7 +435,7 @@ export class MailService {
         })
         .where(eq(mailOutbox.id, mailId));
       const details = describeFailure(error);
-      await this.#recordDelivery(details);
+      await this.#recordDelivery(details, last);
       job.logger.warn(
         { mailId, template: row.template, attempt: job.retryCount + 1, ...details },
         last ? "Mail delivery failed for good" : "Mail delivery failed",
@@ -448,7 +453,7 @@ export class MailService {
     return `<${mailId}@${host}>`;
   }
 
-  async #recordDelivery(failure: MailFailure | null): Promise<void> {
+  async #recordDelivery(failure: MailFailure | null, final = false): Promise<void> {
     const now = new Date();
     const values = failure
       ? {
@@ -458,16 +463,30 @@ export class MailService {
           lastFailureStep: failure.step,
         }
       : { lastSuccessAt: now };
+    const counters = failure ? { failedAttempts: 1, failedMessages: final ? 1 : 0 } : {};
     await this.#database
       .insert(mailDeliveryStatus)
-      .values({ id: 1, ...values })
-      .onConflictDoUpdate({ target: mailDeliveryStatus.id, set: values });
+      .values({ id: 1, ...values, ...counters })
+      .onConflictDoUpdate({
+        target: mailDeliveryStatus.id,
+        set: {
+          ...values,
+          ...(failure
+            ? {
+                failedAttempts: sql`${mailDeliveryStatus.failedAttempts} + 1`,
+                failedMessages: sql`${mailDeliveryStatus.failedMessages} + ${final ? 1 : 0}`,
+              }
+            : {}),
+        },
+      });
   }
 
   async deliveryState(): Promise<MailDeliveryState> {
     const [row] = await this.#database.select().from(mailDeliveryStatus);
     return {
       lastSuccessAt: row?.lastSuccessAt ?? null,
+      failedAttempts: row?.failedAttempts ?? 0,
+      failedMessages: row?.failedMessages ?? 0,
       lastFailure: row?.lastFailureAt
         ? {
             at: row.lastFailureAt,

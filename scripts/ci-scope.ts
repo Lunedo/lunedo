@@ -12,6 +12,7 @@ export interface Scope {
   sweeps: boolean;
   identityProviders: boolean;
   backup: boolean;
+  operations: boolean;
 }
 
 export const everythingPaths = [
@@ -70,6 +71,26 @@ export const backupPaths = [
   "scripts/backup-roundtrip.sh",
 ];
 
+export const operationsPaths = [
+  "docker/Dockerfile",
+  "docker/start.sh",
+  "docker/compose.yml",
+  "scripts/install.sh",
+  "scripts/install-update-check.sh",
+  "scripts/reverse-proxy-check.sh",
+  "docs/reverse-proxy.md",
+  "packages/server/src/operations/",
+  "packages/server/src/portal/",
+  "packages/server/src/config/",
+  "packages/server/drizzle/",
+  "apps/api/src/health/",
+  "apps/api/src/portal/",
+  "apps/api/src/http/",
+  "apps/api/src/main.ts",
+  "apps/collab/",
+  "apps/worker/src/cli/",
+];
+
 export function matches(file: string, paths: readonly string[]): boolean {
   return paths.some((path) => (path.endsWith("/") ? file.startsWith(path) : file === path));
 }
@@ -82,10 +103,17 @@ export function scopeOf(input: ScopeInput): Scope {
   const pullRequest = input.event === "pull_request";
   const lane: Lane = pullRequest && input.draft ? "fast" : "full";
   if (lane === "fast")
-    return { lane, endToEnd: false, sweeps: false, identityProviders: false, backup: false };
+    return {
+      lane,
+      endToEnd: false,
+      sweeps: false,
+      identityProviders: false,
+      backup: false,
+      operations: false,
+    };
   const files = input.files;
   if (!pullRequest || files === null || touches(files, everythingPaths)) {
-    return { lane, endToEnd: true, sweeps: true, identityProviders: true, backup: true };
+    return { lane, endToEnd: true, sweeps: true, identityProviders: true, backup: true, operations: true };
   }
   const endToEnd = touches(files, endToEndPaths);
   return {
@@ -94,5 +122,6 @@ export function scopeOf(input: ScopeInput): Scope {
     sweeps: endToEnd && touches(files, sweepPaths),
     identityProviders: touches(files, identityProviderPaths),
     backup: touches(files, backupPaths),
+    operations: touches(files, operationsPaths),
   };
 }

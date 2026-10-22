@@ -1080,7 +1080,10 @@
     "backups": "Backups",
     "rendering": "Rendering",
     "embeds": "External embeds",
-    "portals": "Knowledge base portals"
+    "portals": "Knowledge base portals",
+    "systemStatus": "System status",
+    "maintenance": "Maintenance mode",
+    "updates": "Updates"
   },
   "commands": {
     "label": "Command palette",
@@ -1620,7 +1623,9 @@
     "portalAccountNotFound": "The portal account no longer belongs to this organization. Reload the list.",
     "portalAccountShared": "The account also reads knowledge bases of other organizations, so it cannot be deactivated here. Remove it from this organization instead.",
     "portalInvitationAccountExists": "This e-mail address already belongs to a Pagehall account. Sign in with it and ask the people who invited you to give that account access.",
-    "staticSiteNotPublic": "Only public knowledge bases can be downloaded as a static website, because a static website has no sign-in. Make the knowledge base public in its visibility settings first."
+    "staticSiteNotPublic": "Only public knowledge bases can be downloaded as a static website, because a static website has no sign-in. Make the knowledge base public in its visibility settings first.",
+    "maintenanceMode": "Pagehall is in maintenance and saves no changes right now. Nothing was changed; try again when the maintenance has ended.",
+    "signInPaused": "Signing in is paused during maintenance; only instance administrators can sign in now. Try again when the maintenance has ended."
   },
   "access": {
     "gainsAccess": "Who gains access",
@@ -2400,6 +2405,10 @@
       "storage_reminder": {
         "label": "Reminder while a level is active",
         "description": "How often Pagehall repeats the current state to the people who were told, while a warning level stays active."
+      },
+      "operations_updateCheck": {
+        "label": "Check for updates",
+        "description": "Downloads the public version file once a day and tells instance administrators about new versions. Off: Pagehall makes no request for it."
       }
     },
     "disabled": {
@@ -2628,7 +2637,8 @@
       "backupRecovered": "Backups work again",
       "backupTestRestoreFailed": "A test restore fails",
       "copies": "Copies I made",
-      "reviews": "Article reviews"
+      "reviews": "Article reviews",
+      "operationsUpdateAvailable": "New Pagehall version"
     },
     "types": {
       "identityProvider": {
@@ -2732,6 +2742,9 @@
       "article": {
         "reviewDue": "{itemTitle} is due for review on {dueAt}.",
         "sourceChanged": "A source page of {itemTitle} changed. Check whether the article needs an update."
+      },
+      "operations": {
+        "updateAvailable": "{breaking, select, true {Pagehall {version} is available. Its notes list breaking changes or manual steps.} other {Pagehall {version} is available.}}"
       }
     },
     "channelFor": "{event}: {channel}",
@@ -3965,6 +3978,11 @@
       },
       "portalHandoff": {
         "consented": "Signing in on a portal domain allowed"
+      },
+      "maintenance": {
+        "started": "Maintenance mode switched on",
+        "changed": "Maintenance mode changed",
+        "ended": "Maintenance mode switched off"
       }
     },
     "action": "Action",
@@ -4793,6 +4811,10 @@
       "unknown": {
         "title": "Editing stopped",
         "description": "The connection to the server was closed. Reload to continue editing."
+      },
+      "maintenance": {
+        "title": "Read-only during maintenance",
+        "description": "You can read the page. Editing works again when the maintenance ends, without reloading the page."
       }
     },
     "placeholderNode": {
@@ -10304,6 +10326,289 @@
       "loadFailed": "The portals could not be loaded",
       "emptyTitle": "No portal to read",
       "emptyDescription": "Your access may have ended. Ask the people who invited you."
+    }
+  },
+  "operations": {
+    "status": {
+      "title": "System status",
+      "description": "Checks of the instance: database, storage, jobs, backups, search, recent errors and the setup checks. Refreshes every minute.",
+      "refresh": "Check again",
+      "loadFailed": "the system status",
+      "checks": "Checks",
+      "checkedAt": "Checked {time}",
+      "openSettings": "Open settings",
+      "documentation": "Documentation",
+      "unknownItem": "Check {id}",
+      "levels": {
+        "ok": "OK",
+        "warning": "Warning",
+        "error": "Error"
+      },
+      "summary": {
+        "okTitle": "Everything is working",
+        "ok": "All checks passed.",
+        "warningTitle": "Some checks need attention",
+        "errorTitle": "Some checks failed",
+        "counts": "{errors, plural, one {# error} other {# errors}} and {warnings, plural, one {# warning} other {# warnings}}. Each check below says what to do."
+      },
+      "queues": {
+        "title": "Job queues",
+        "queue": "Queue",
+        "queued": "Waiting",
+        "active": "Running",
+        "deferred": "Scheduled",
+        "failed": "Failed",
+        "empty": "No jobs are waiting, running or failed."
+      },
+      "errors": {
+        "title": "Recent errors",
+        "description": "Error events from the logs of the last 24 hours, by type. They never contain content or personal data; the full entries are in the container logs.",
+        "type": "Event",
+        "services": "Process",
+        "count": "Count",
+        "lastAt": "Last",
+        "empty": "No errors were logged in the last 24 hours."
+      },
+      "items": {
+        "version": {
+          "label": "Version",
+          "ok": "Pagehall {version}",
+          "reasons": {
+            "updateAvailable": "Pagehall {version} runs; {latest} is available. The update page shows the changes and the commands.",
+            "checkFailed": "Pagehall {version}. The last update check failed; the update page says why.",
+            "checkOff": "Pagehall {version}. The update check is off."
+          }
+        },
+        "database": {
+          "label": "Database",
+          "ok": "PostgreSQL {version}, {sizeBytes}",
+          "reasons": {
+            "unreachable": "The database does not answer. Check PAGEHALL_DATABASE_URL and that PostgreSQL runs.",
+            "migrationsPending": "The database schema is older than this version. Restart Pagehall so it applies the migrations."
+          }
+        },
+        "storage": {
+          "label": "File storage",
+          "ok": "{usedBytes} of {totalBytes} used ({percent})",
+          "reasons": {
+            "noLimit": "S3 storage reports no free space, so usage is measured only once you set a limit.",
+            "warning": "{percent} of the file store is used. Free space or enlarge the volume before writes are paused.",
+            "largeWritesPaused": "{percent} used: new exports and imports are refused. Free space or enlarge the volume.",
+            "critical": "{percent} used: uploads are refused. Free space or enlarge the volume now."
+          }
+        },
+        "jobs": {
+          "label": "Background jobs",
+          "ok": "{queued} waiting, {active} running",
+          "reasons": {
+            "failedJobs": "{failed, plural, one {# job} other {# jobs}} failed after all attempts. The queues below show where; the worker's container logs show why.",
+            "backlog": "{queued, plural, one {# job is} other {# jobs are}} waiting. Check that the worker runs and is not overloaded.",
+            "unreachable": "The job queue could not be read. Check the database connection and the worker's logs."
+          }
+        },
+        "collaboration": {
+          "label": "Collaboration server",
+          "ok": "The collaboration server answers.",
+          "reasons": {
+            "unavailable": "The collaboration server does not answer, so nobody can edit. Check that it runs and PAGEHALL_COLLAB_UPSTREAM.",
+            "notChecked": "Not checked by this process."
+          }
+        },
+        "backups": {
+          "label": "Backups",
+          "ok": "Last successful backup {lastSuccessAt}.",
+          "reasons": {
+            "noTarget": "No backup target is set up. Set one up so that backups can run.",
+            "off": "Scheduled backups are off. Turn them on, or make sure your own backups cover the database and the files.",
+            "failed": "The last backup failed: {lastFailureReason}. Check the target and run a backup again.",
+            "noRecentBackup": "There has been no successful backup for longer than the backup settings allow. Check the schedule and the target.",
+            "beforeUpdateOff": "Backups work, but backups before updates are off."
+          }
+        },
+        "searchIndex": {
+          "label": "Search index",
+          "ok": "Up to date, {pendingItems, plural, one {# item} other {# items}} waiting.",
+          "reasons": {
+            "building": "The index is being rebuilt: {done} of {total} items. Search results are incomplete until then.",
+            "failingItems": "{failingItems, plural, one {# item} other {# items}} could not be indexed and {failingItems, plural, one {is} other {are}} retried. The worker's logs show why."
+          }
+        },
+        "recentErrors": {
+          "label": "Recent errors",
+          "ok": "No errors in the last {hours} hours.",
+          "reasons": {
+            "errorsLogged": "{count, plural, one {# error} other {# errors}} of {types, plural, one {# type} other {# types}} in the last {hours} hours. See the list below."
+          }
+        },
+        "tls": {
+          "label": "HTTPS",
+          "ok": "{url} uses HTTPS.",
+          "reasons": {
+            "instanceUrlNotSet": "No instance address is set. Set it so that links in e-mails work.",
+            "instanceUrlNotHttps": "{url} does not use HTTPS. Put Pagehall behind a reverse proxy with TLS and change the address."
+          }
+        },
+        "email": {
+          "label": "E-mail",
+          "ok": "E-mails are delivered.",
+          "reasons": {
+            "notConfigured": "E-mail is not set up, so invitations and notifications are not sent.",
+            "deliveryFailing": "The last delivery failed ({lastFailureCode}). Check the mail settings and send a test mail."
+          }
+        },
+        "encryption": {
+          "label": "Encryption",
+          "ok": "Master key version {currentVersion} is loaded.",
+          "reasons": {
+            "masterKeyMissing": "The master key is not loaded. Check the key settings and restart.",
+            "keysNotBackedUp": "The master keys are stored only in the secrets volume, and their backup was not confirmed. Copy the secrets directory to a safe place.",
+            "rotationRunning": "Master key version {currentVersion} is loaded; a key rotation is running."
+          }
+        },
+        "clock": {
+          "label": "Clock",
+          "ok": "The clocks of Pagehall and the database match.",
+          "reasons": {
+            "offset": "The clocks of Pagehall and the database differ by {offsetMs} ms. Synchronize both hosts with NTP.",
+            "unknown": "The time of the database could not be read. Check the database connection."
+          }
+        },
+        "fileStorage": {
+          "label": "File directory",
+          "ok": "{freeBytes} free in {path}",
+          "reasons": {
+            "missing": "{path} does not exist. Create it with the command below.",
+            "notWritable": "Pagehall cannot write to {path}. Change the owner with the command below.",
+            "lowSpace": "Only {freeBytes} are free in {path}. Free space or enlarge the volume."
+          }
+        },
+        "maintenance": {
+          "label": "Maintenance mode",
+          "ok": "Off. Everyone can make changes.",
+          "reasons": {
+            "on": "On since {startedAt}: the instance is read-only. Switch it off when the maintenance is done.",
+            "onSignInPaused": "On since {startedAt}: the instance is read-only and only instance administrators can sign in. Switch it off when the maintenance is done."
+          }
+        }
+      }
+    }
+  },
+  "maintenance": {
+    "title": "Maintenance mode",
+    "description": "Makes the instance read-only for scripted maintenance, for example an update or a data migration, with a message for everyone.",
+    "loadFailed": "the maintenance mode",
+    "banner": {
+      "title": "Maintenance in progress",
+      "readOnly": "You can read and search, but changes are not saved until the maintenance ends.",
+      "signInPaused": "Signing in is paused for everyone except instance administrators.",
+      "message": "From the administrators:"
+    },
+    "state": {
+      "title": "State",
+      "label": "Maintenance mode",
+      "on": "On",
+      "off": "Off",
+      "offDescription": "Everyone can make changes.",
+      "since": "On since {time}.",
+      "sinceBy": "On since {time}, switched by {name}.",
+      "signInPaused": "Signing in is paused for everyone except instance administrators. Existing sessions stay signed in, read-only."
+    },
+    "effects": {
+      "title": "What happens while it is on",
+      "readOnly": "Every change through the interface and the API is refused, also for instance administrators. Reading, search and exports of single pages keep working.",
+      "editors": "Open editors switch to read-only and show the message; they become editable again when maintenance ends, without reloading.",
+      "jobs": "Background jobs that change content, such as imports, copies and scheduled publications, wait and run afterwards.",
+      "running": "Backups, mail delivery, search indexing, SCIM and identity provider synchronization keep running, so access is still removed when someone leaves.",
+      "sessions": "Nobody is signed out. Switching on and off is recorded in the audit log and shown on the system status page."
+    },
+    "form": {
+      "title": "Switch on",
+      "changeTitle": "Change or switch off",
+      "message": "Message",
+      "messageHint": "Shown in the banner on every page and in knowledge base portals, for example when the maintenance ends. At most {max} characters.",
+      "messageTooLong": "The message has {count} characters. Shorten it to at most {max}.",
+      "blockSignIn": "Pause signing in for everyone except instance administrators",
+      "blockSignInHint": "People who are signed in stay signed in, but can only read.",
+      "switchOn": "Switch on maintenance mode",
+      "switchOff": "Switch off maintenance mode",
+      "save": "Save message and sign-in setting",
+      "switchedOn": "Maintenance mode is on",
+      "switchedOff": "Maintenance mode is off",
+      "updated": "Maintenance message saved",
+      "undoFailed": "The previous state could not be restored",
+      "commandLine": "Scripts switch it with ./pagehall maintenance on or off in the installation directory, or with the command pagehall maintenance in the container."
+    }
+  },
+  "updates": {
+    "title": "Updates",
+    "description": "The running version, what is new in it, and updates with their changes and the commands for this installation.",
+    "loadFailed": "the update information",
+    "running": {
+      "title": "This instance",
+      "version": "Running version"
+    },
+    "available": {
+      "title": "Pagehall {version} is available",
+      "upToDateTitle": "Pagehall is up to date",
+      "upToDate": "{version} is the newest release.",
+      "notRelease": "This instance runs the build {version}, which is not a release, so it cannot be compared. The newest release is listed below."
+    },
+    "commands": {
+      "title": "How to update",
+      "copy": "Copy command",
+      "docs": "Updates and rollback in the documentation",
+      "methods": {
+        "script": "Installed with the setup script. The update command takes a backup first, then pulls the new image and restarts Pagehall.",
+        "compose": "Installed with a Compose file of your own. Take a backup first, then change the image and restart.",
+        "other": "Installed in another way. Take a backup first, then start every Pagehall container with the new image.",
+        "unknown": "The installation method is not recorded (PAGEHALL_INSTALL_METHOD). Take a backup first, then start every Pagehall container with the new image."
+      }
+    },
+    "release": {
+      "title": "Pagehall {version}",
+      "titleDated": "Pagehall {version} · {date}",
+      "minimum": "Update to it from {version} or later.",
+      "link": "Release page of {version}"
+    },
+    "notes": {
+      "empty": "No changes are listed.",
+      "groups": {
+        "breaking": "Breaking changes: read before you update",
+        "manualSteps": "Manual steps during the update",
+        "new": "New",
+        "improved": "Improved",
+        "fixed": "Fixed"
+      }
+    },
+    "check": {
+      "title": "Update check",
+      "now": "Check now",
+      "failedToStart": "The check could not start",
+      "offByEnvironmentTitle": "Turned off by the configuration",
+      "offByEnvironment": "PAGEHALL_UPDATE_CHECK=false turns the update check off completely; Pagehall makes no request for it. Remove the variable and restart to turn it on.",
+      "privacy": "Once a day the worker downloads the public version file {url}. The request sends nothing about this instance.",
+      "last": "Last check",
+      "checkedAt": "Checked {time}",
+      "notYet": "Not checked yet.",
+      "succeeded": "Succeeded",
+      "failed": "Failed",
+      "failedTitle": "Update check failed",
+      "failures": {
+        "unreachable": "The server of the version file could not be reached. Check the network and PAGEHALL_UPDATE_CHECK_URL; Pagehall tries again tomorrow.",
+        "timeout": "The version file did not arrive within 15 seconds. Check the network; Pagehall tries again tomorrow.",
+        "blockedAddress": "The address of the version file is in a private network. List it in PAGEHALL_OUTBOUND_ALLOWED_NETWORKS or use a public mirror.",
+        "insecureAddress": "Public addresses of the version file must use HTTPS. Change PAGEHALL_UPDATE_CHECK_URL.",
+        "untrustedCertificate": "The certificate of the server is not trusted. Check the mirror's certificate.",
+        "tooManyRedirects": "The server redirected too often. Check PAGEHALL_UPDATE_CHECK_URL.",
+        "httpStatus": "The server answered with an error, for example because the file does not exist there yet. Check PAGEHALL_UPDATE_CHECK_URL; Pagehall tries again tomorrow.",
+        "tooLarge": "The version file is larger than 2 MB, so it is not a Pagehall version file. Check PAGEHALL_UPDATE_CHECK_URL.",
+        "invalidFile": "The file is not a Pagehall version file. Check PAGEHALL_UPDATE_CHECK_URL."
+      }
+    },
+    "whatsNew": {
+      "title": "What's new in {version}",
+      "noSection": "The changelog has no entry for this version.",
+      "unavailable": "This image contains no changelog."
     }
   }
 }

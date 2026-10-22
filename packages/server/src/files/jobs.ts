@@ -7,6 +7,7 @@ import { DISPLAY_VERSIONS_CHANNEL } from "./files.js";
 
 export const fileCleanupJob = defineJob({
   name: "files.remove-orphaned",
+  duringMaintenance: "wait",
   payload: z.object({}),
   retryLimit: 3,
   expireInSeconds: 30 * 60,
@@ -16,6 +17,7 @@ export const FILE_CLEANUP_SCHEDULE = "41 * * * *";
 
 export const displayVersionJob = defineJob({
   name: "files.create-display-versions",
+  duringMaintenance: "wait",
   payload: z.object({ fileId: z.uuid() }),
   retryLimit: 3,
   retryDelaySeconds: 60,
@@ -25,6 +27,7 @@ export const displayVersionJob = defineJob({
 
 export const queueDisplayVersionsJob = defineJob({
   name: "files.queue-display-versions",
+  duringMaintenance: "run",
   payload: z.object({}),
   retryLimit: 5,
   retryDelaySeconds: 10,

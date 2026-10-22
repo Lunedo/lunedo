@@ -9,6 +9,7 @@ import { useEffect } from "react";
 import { api } from "../api/client.js";
 import { identityKeys } from "../api/identity-queries.js";
 import { instanceKeys } from "../api/instance-queries.js";
+import { maintenanceChanged } from "../api/maintenance.js";
 import { organizationKeys } from "../api/organization-queries.js";
 import { queryKeys } from "../api/queries.js";
 import { request } from "../api/request.js";
@@ -241,8 +242,10 @@ export function useNotificationStream(enabled: boolean): void {
       }
     };
     const onAnnouncements = () => announcementsChanged(queryClient);
+    const onMaintenance = () => maintenanceChanged(queryClient);
     source.addEventListener("notifications", onChange);
     source.addEventListener("announcements", onAnnouncements);
+    source.addEventListener("maintenance", onMaintenance);
     source.addEventListener("imports", onImports);
     source.addEventListener("spaces", onSpaces);
     source.addEventListener("changes", onObjects);
@@ -256,6 +259,7 @@ export function useNotificationStream(enabled: boolean): void {
       source.removeEventListener("spaces", onSpaces);
       source.removeEventListener("imports", onImports);
       source.removeEventListener("announcements", onAnnouncements);
+      source.removeEventListener("maintenance", onMaintenance);
       if (flush) clearTimeout(flush);
       if (flushSpaces) clearTimeout(flushSpaces);
       source.close();

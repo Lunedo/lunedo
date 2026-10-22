@@ -48,6 +48,11 @@ import type { MailTransport, SmtpOptions } from "../mail/transport.js";
 import { NotificationHub } from "../notifications/hub.js";
 import { notificationSettings } from "../notifications/types.js";
 import { Metrics } from "../observability/metrics.js";
+import { ErrorEvents } from "../operations/error-events.js";
+import { instanceMetricsSource } from "../operations/instance-metrics.js";
+import { startUpdateChecks } from "../operations/jobs.js";
+import { operationsSettings } from "../operations/settings.js";
+import type { CollaborationProbe } from "../operations/status.js";
 import { organizationSettings } from "../organizations/settings.js";
 import { outboundPolicy } from "../outbound/guarded-request.js";
 import { portalSettings } from "../portal/settings.js";
@@ -65,6 +70,19 @@ import { storageSettings } from "../storage/settings.js";
 import { tokenSettings } from "../tokens/settings.js";
 
 export type ProcessRole = "api" | "collab" | "worker";
+
+const ERROR_FLUSH_INTERVAL_MS = 60_000;
+const COLLABORATION_PROBE_TIMEOUT_MS = 2_000;
+
+export function collaborationProbe(upstream: string): CollaborationProbe {
+  return async () => {
+    const response = await fetch(new URL("/health/ready", upstream), {
+      signal: AbortSignal.timeout(COLLABORATION_PROBE_TIMEOUT_MS),
+    });
+    await response.body?.cancel();
+    return response.ok;
+  };
+}
 
 export interface ServerRuntime {
   role: ProcessRole;
@@ -139,7 +157,8 @@ export async function createServerRuntime(options: {
 }): Promise<ServerRuntime> {
   const { role } = options;
   const config = loadConfig(options.env);
-  const logger = createLogger({ service: role, level: config.logLevel });
+  const errorEvents = new ErrorEvents({ service: role });
+  const logger = createLogger({ service: role, level: config.logLevel, onError: errorEvents.record });
   for (const warning of startupWarnings(config)) logger.warn(warning);
   await checkRestoreComplete(config.paths.files);
   const { metricsToken, backupKeys } = resolveGeneratedSecrets(config);
@@ -155,6 +174,9 @@ export async function createServerRuntime(options: {
   const listener = new NotificationListener({ connectionString, logger });
   const metrics = new Metrics(role);
   metrics.observeDatabasePool(pool);
+  metrics.observeBuild(config.version);
+  errorEvents.onRecord(metrics.countLoggedError);
+  let flushing: NodeJS.Timeout | undefined;
 
   let jobs: PgBossQueue | undefined;
   try {
@@ -215,6 +237,7 @@ export async function createServerRuntime(options: {
         ...sharingSettings,
         ...fileSettings,
         ...storageSettings,
+        ...operationsSettings,
         ...importSettings,
         ...embedSettings,
         ...searchSettings,
@@ -264,6 +287,11 @@ export async function createServerRuntime(options: {
       importDir: config.paths.imports,
       fileStore,
       configuredInstanceUrl: config.instanceUrl,
+      keyRotation,
+      keyProvider: config.keys.provider,
+      updates: config.updates,
+      version: config.version,
+      ...(role === "api" ? { collaborationProbe: collaborationProbe(config.collabUpstream) } : {}),
       passwordHashConcurrency: config.passwordHashConcurrency,
       insecureIdentityProviders: config.insecureIdentityProviders,
       outboundAllowedNetworks: config.outboundAllowedNetworks,
@@ -281,9 +309,17 @@ export async function createServerRuntime(options: {
 
     await services.instanceAddress.applyConfigured();
     await services.portals.enableDomainCache(listener);
+    await services.maintenance.enableCache(listener);
 
     if (jobs && keyRotation) {
       if (role === "worker") {
+        const queue = jobs;
+        await queue.pauseForMaintenance((await services.maintenance.status()).enabled);
+        services.maintenance.onChange((status) => {
+          queue
+            .pauseForMaintenance(status.enabled)
+            .catch((error: unknown) => logger.warn({ err: error }, "Pausing jobs for maintenance failed"));
+        });
         await workAccountJobs(jobs, services, settings);
         await startSearchIndexing({ jobs, listener, indexer: services.search.indexer, logger });
         await startBlogAnnouncements({ jobs, listener, subscriptions: services.blogSubscriptions, logger });
@@ -292,7 +328,7 @@ export async function createServerRuntime(options: {
         await startDisplayVersions({ jobs, listener, displayVersions: services.displayVersions, logger });
         await startReviewReminders({ jobs, listener, reviews: services.reviews, logger });
         await startRemovedArticlePruning({ jobs, articles: services.articleApi });
-        metrics.observeJobQueue(jobs);
+        await startUpdateChecks({ jobs, listener, updates: services.updates, logger });
         await jobs.work(rotateDataKeysJob, keyRotation.run);
         await jobs.work(cleanupJobProgressJob, async () => {
           await cleanupJobProgress(database);
@@ -302,6 +338,27 @@ export async function createServerRuntime(options: {
         await jobs.register(rotateDataKeysJob);
       }
     }
+    if (role === "api") {
+      if (jobs) metrics.observeJobQueue(jobs);
+      metrics.observeInstance(
+        instanceMetricsSource({
+          database,
+          storage: services.storage,
+          mail: services.mail,
+          operations: services.operations,
+          maintenance: services.maintenance,
+          updates: services.updates,
+          collaborationProbe: collaborationProbe(config.collabUpstream),
+        }),
+      );
+    }
+
+    flushing = setInterval(() => {
+      errorEvents
+        .flush(database)
+        .catch((error: unknown) => logger.warn({ err: error }, "Storing error counts failed"));
+    }, ERROR_FLUSH_INTERVAL_MS);
+    flushing.unref();
 
     const shutdownTimeoutSeconds = config.shutdownTimeoutSeconds;
     const activeJobs = jobs;
@@ -326,12 +383,15 @@ export async function createServerRuntime(options: {
       metricsToken,
       readiness: readinessChecks({ pool, keyRing }),
       async close() {
+        clearInterval(flushing);
+        await errorEvents.flush(database).catch(() => 0);
         await activeJobs?.stop({ timeoutSeconds: shutdownTimeoutSeconds });
         await listener.close();
         await pool.end();
       },
     };
   } catch (error) {
+    clearInterval(flushing);
     await jobs?.stop({ timeoutSeconds: 1 }).catch(() => {});
     await listener.close().catch(() => {});
     await pool.end().catch(() => {});

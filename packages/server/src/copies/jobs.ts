@@ -3,6 +3,7 @@ import { defineJob } from "../jobs/job-queue.js";
 
 export const copyItemsJob = defineJob({
   name: "copies.run",
+  duringMaintenance: "wait",
   payload: z.object({ copyId: z.uuid() }),
   retryLimit: 2,
   retryDelaySeconds: 30,
@@ -12,6 +13,7 @@ export const copyItemsJob = defineJob({
 
 export const copyWatchdogJob = defineJob({
   name: "copies.watchdog",
+  duringMaintenance: "run",
   payload: z.object({}),
   retryLimit: 1,
   expireInSeconds: 10 * 60,

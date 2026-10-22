@@ -14,6 +14,7 @@ export const auditRetentionSetting = defineSetting({
 
 export const auditRetentionJob = defineJob({
   name: "audit.apply-retention",
+  duringMaintenance: "run",
   payload: z.object({}),
   retryLimit: 3,
   expireInSeconds: 60 * 60,

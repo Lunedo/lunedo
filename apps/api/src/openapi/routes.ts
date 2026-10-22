@@ -27,6 +27,7 @@ import { OneOnOnesController } from "../meetings/one-on-ones.controller.js";
 import { NotificationsController } from "../notifications/notifications.controller.js";
 import { PushController } from "../notifications/push.controller.js";
 import { AccountWatchesController, WatchesController } from "../notifications/watches.controller.js";
+import { OperationsController } from "../operations/operations.controller.js";
 import { AccountsController } from "../organizations/accounts.controller.js";
 import { AnnouncementsController } from "../organizations/announcements.controller.js";
 import { GroupsController } from "../organizations/groups.controller.js";
@@ -118,6 +119,7 @@ export const apiControllers = (): Type[] => [
   ExportsController,
   RenderingController,
   StorageController,
+  OperationsController,
   BackupsController,
   SearchController,
   SavedSearchesController,

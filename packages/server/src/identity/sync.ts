@@ -41,6 +41,7 @@ export const syncLogRetentionDaysSetting = defineSetting({
 
 export const providerSyncJob = defineJob({
   name: "identity-providers.synchronize",
+  duringMaintenance: "run",
   payload: z.object({
     providerId: z.uuid(),
     trigger: z.enum(["schedule", "manual", "reconciliation"]),
@@ -53,12 +54,14 @@ export const providerSyncJob = defineJob({
 
 export const providerSyncScheduleJob = defineJob({
   name: "identity-providers.schedule-synchronization",
+  duringMaintenance: "run",
   payload: z.object({}),
   retryLimit: 1,
 });
 
 export const providerSyncRetentionJob = defineJob({
   name: "identity-providers.remove-old-sync-runs",
+  duringMaintenance: "run",
   payload: z.object({}),
   retryLimit: 2,
 });

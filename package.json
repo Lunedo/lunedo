@@ -28,6 +28,7 @@
     "patches:check": "node scripts/check-patches.ts",
     "playwright-image:check": "node scripts/check-playwright-image.ts",
     "i18n:check": "node scripts/check-i18n.ts",
+    "shell:check": "node scripts/check-shell.ts",
     "verify": "node scripts/verify.ts"
   },
   "devDependencies": {

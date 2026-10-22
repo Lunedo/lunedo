@@ -30,7 +30,11 @@ describe.skipIf(!databaseUrl)("cleanupJobProgress", () => {
   });
 
   it("removes progress rows of jobs the queue has deleted and keeps the others", async () => {
-    const job = defineJob({ name: `test.cleanup-${randomBytes(4).toString("hex")}`, payload: z.object({}) });
+    const job = defineJob({
+      name: `test.cleanup-${randomBytes(4).toString("hex")}`,
+      duringMaintenance: "run",
+      payload: z.object({}),
+    });
     const existing = await queue.enqueue(job, {}, { startAfter: new Date(Date.now() + 60_000) });
     const deleted = randomUUID();
     await database.insert(jobProgress).values([

@@ -1,5 +1,15 @@
 import { sql } from "drizzle-orm";
-import { check, index, integer, pgEnum, pgTable, smallint, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  bigint,
+  check,
+  index,
+  integer,
+  pgEnum,
+  pgTable,
+  smallint,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
 import { encrypted } from "../crypto/encrypted-column.js";
 import { primaryId, timestamps } from "../database/columns.js";
 
@@ -51,6 +61,8 @@ export const mailDeliveryStatus = pgTable(
     lastFailureCode: text(),
     lastFailureResponseCode: integer(),
     lastFailureStep: text(),
+    failedAttempts: bigint({ mode: "number" }).notNull().default(0),
+    failedMessages: bigint({ mode: "number" }).notNull().default(0),
   },
   (table) => [check("mail_delivery_status_single_row", sql`${table.id} = 1`)],
 );

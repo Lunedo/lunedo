@@ -6,6 +6,7 @@ import { BLOG_ANNOUNCEMENTS_CHANNEL, type BlogSubscriptionService } from "./blog
 
 export const scheduledBlogPostsJob = defineJob({
   name: "blog.publish-scheduled",
+  duringMaintenance: "wait",
   payload: z.object({}),
   retryLimit: 1,
   expireInSeconds: 10 * 60,
@@ -15,6 +16,7 @@ export const SCHEDULED_BLOG_POSTS_SCHEDULE = "* * * * *";
 
 export const collaborationCleanupJob = defineJob({
   name: "content.cleanup",
+  duringMaintenance: "wait",
   payload: z.object({}),
   retryLimit: 3,
   expireInSeconds: 60 * 60,
@@ -24,6 +26,7 @@ export const COLLABORATION_CLEANUP_SCHEDULE = "41 * * * *";
 
 export const blogAnnouncementsJob = defineJob({
   name: "blog.announce-posts",
+  duringMaintenance: "run",
   payload: z.object({}),
   retryLimit: 10,
   retryDelaySeconds: 5,

@@ -85,6 +85,13 @@ export interface MailTemplates {
     link: string | null;
   };
   storageTest: { instanceName: string; link: string | null };
+  updateAvailable: {
+    instanceName: string;
+    version: string;
+    current: string;
+    breaking: boolean;
+    link: string | null;
+  };
   backupFailed: BackupFailedText;
   backupMissing: BackupMissingText;
   backupRecovered: BackupRecoveredText;
@@ -306,6 +313,16 @@ const catalogs: Record<Language, Catalog> = {
     }),
     storageLevelReached: (params) => storageReached("en", params),
     storageLevelCleared: (params) => storageCleared("en", params),
+    updateAvailable: ({ instanceName, version, current, breaking, link }) => ({
+      subject: `Pagehall ${version} is available for ${instanceName}`,
+      paragraphs: [
+        `${instanceName} runs Pagehall ${current}. Version ${version} is available.`,
+        breaking
+          ? "The release notes list breaking changes or manual steps. Read them before you update."
+          : "The admin area shows what changed and the commands for your installation. The update takes a backup first.",
+      ],
+      ...(link ? { action: { label: "Show the update", url: link } } : {}),
+    }),
     storageTest: (params) => storageTest("en", params),
     backupFailed: (params) => backupFailed("en", params),
     backupMissing: (params) => backupMissing("en", params),
@@ -500,6 +517,16 @@ const catalogs: Record<Language, Catalog> = {
     }),
     storageLevelReached: (params) => storageReached("de", params),
     storageLevelCleared: (params) => storageCleared("de", params),
+    updateAvailable: ({ instanceName, version, current, breaking, link }) => ({
+      subject: `Pagehall ${version} ist für ${instanceName} verfügbar`,
+      paragraphs: [
+        `${instanceName} läuft mit Pagehall ${current}. Version ${version} ist verfügbar.`,
+        breaking
+          ? "Die Versionshinweise nennen inkompatible Änderungen oder manuelle Schritte. Lesen Sie sie vor dem Update."
+          : "Der Administrationsbereich zeigt, was sich geändert hat, und die Befehle für Ihre Installation. Das Update legt vorher ein Backup an.",
+      ],
+      ...(link ? { action: { label: "Update anzeigen", url: link } } : {}),
+    }),
     storageTest: (params) => storageTest("de", params),
     backupFailed: (params) => backupFailed("de", params),
     backupMissing: (params) => backupMissing("de", params),

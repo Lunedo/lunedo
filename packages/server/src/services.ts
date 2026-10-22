@@ -4,6 +4,7 @@ import { AccountAdministrationService } from "./accounts/administration.js";
 import { InstanceAddressService } from "./accounts/instance-address.js";
 import { AccountLifecycleService } from "./accounts/lifecycle.js";
 import { AccountOverviewService } from "./accounts/overview.js";
+import { accountPrincipal } from "./accounts/principal.js";
 import {
   ANNOUNCEMENT_STARTS_SCHEDULE,
   AnnouncementService,
@@ -47,12 +48,15 @@ import {
 import { collaborationNotificationTypes } from "./collaboration/notifications.js";
 import { ReactionService } from "./collaboration/reactions.js";
 import { TaskService } from "./collaboration/tasks.js";
+import { DEFAULT_UPDATE_CHECK_URL } from "./config/definitions.js";
+import type { ServerConfig } from "./config/load.js";
 import { CopyService } from "./copies/copies.js";
 import { COPY_WATCHDOG_SCHEDULE, copyItemsJob, copyWatchdogJob } from "./copies/jobs.js";
 import { copyNotificationTypes } from "./copies/notifications.js";
 import type { Encryption } from "./crypto/envelope.js";
 import type { KeyRing } from "./crypto/key-ring.js";
 import type { KeyRingHolder } from "./crypto/key-ring-holder.js";
+import type { KeyRotation } from "./crypto/rotation.js";
 import type { Database } from "./database/database.js";
 import { currentSchemaVersion, knownSchemaVersions, schemaVersionTimes } from "./database/migrate.js";
 import type { DatabasePool } from "./database/pool.js";
@@ -154,6 +158,13 @@ import { NotificationService } from "./notifications/service.js";
 import { builtinNotificationTypes } from "./notifications/types.js";
 import { UnsubscribeService } from "./notifications/unsubscribe.js";
 import { WatchService } from "./notifications/watches.js";
+import { removeOldErrorEvents } from "./operations/error-events.js";
+import { REMOVE_OLD_ERROR_EVENTS_SCHEDULE, removeOldErrorEventsJob } from "./operations/jobs.js";
+import { MaintenanceService, SignInBlockedError } from "./operations/maintenance.js";
+import { operationsNotificationTypes } from "./operations/notifications.js";
+import { type CollaborationProbe, OperationsStatusService } from "./operations/status.js";
+import { UpdateCheckService } from "./operations/update-check.js";
+import { pagehallVersion } from "./operations/version.js";
 import { BreakGlassService } from "./organizations/break-glass.js";
 import { GroupService } from "./organizations/groups.js";
 import { HomeOrganizationService } from "./organizations/home.js";
@@ -352,6 +363,9 @@ export interface AccountServices {
   exports: ExportService;
   copies: CopyService;
   rendering: RenderService;
+  operations: OperationsStatusService;
+  maintenance: MaintenanceService;
+  updates: UpdateCheckService;
 }
 
 export function createAccountServices(options: {
@@ -381,6 +395,12 @@ export function createAccountServices(options: {
   chatPolicy?: OutboundPolicy;
   pushPolicy?: OutboundPolicy;
   nodeId?: string;
+  keyRotation?: KeyRotation | undefined;
+  keyProvider?: "env" | "file";
+  collaborationProbe?: CollaborationProbe;
+  updates?: ServerConfig["updates"];
+  version?: string;
+  updatePolicy?: OutboundPolicy;
   backup?: {
     databaseUrl: string;
     backupDir: string;
@@ -452,6 +472,7 @@ export function createAccountServices(options: {
       ...copyNotificationTypes,
       ...chatNotificationTypes,
       ...storageNotificationTypes,
+      ...operationsNotificationTypes,
       ...backupNotificationTypes,
       ...knowledgeBaseNotificationTypes,
     ),
@@ -528,6 +549,7 @@ export function createAccountServices(options: {
   });
   const setupRegistry = new SetupRegistry();
   const setup = new SetupService({ database, registry: setupRegistry, audit, rateLimiter });
+  const maintenance = new MaintenanceService({ database, audit });
   const signIn = new SignInService({
     database,
     accounts,
@@ -545,6 +567,17 @@ export function createAccountServices(options: {
     settings,
     setupComplete: () => setup.isComplete(),
     onIdentityLinked: (tx, link) => groupMapping.applyAtSignIn(tx, link),
+    beforeSession: async (executor, accountId) => {
+      const status = await maintenance.status();
+      if (!status.blockSignIn) return;
+      const administrator = await authorization.authorize(
+        accountPrincipal(accountId),
+        "instance.operations.manage",
+        { type: "instance" },
+        { executor },
+      );
+      if (!administrator) throw new SignInBlockedError(status);
+    },
   });
   const allowInsecure = options.insecureIdentityProviders ?? false;
   const providerAdapters = [
@@ -1091,7 +1124,46 @@ export function createAccountServices(options: {
       configuredInstanceUrl: options.configuredInstanceUrl,
     }),
   );
+  const version = options.version ?? pagehallVersion();
+  const updates = new UpdateCheckService({
+    database,
+    settings,
+    notifications,
+    policy: options.updatePolicy ?? outboundPolicy(options.outboundAllowedNetworks ?? []),
+    logger,
+    environment: options.updates ?? {
+      check: false,
+      url: DEFAULT_UPDATE_CHECK_URL,
+      installMethod: undefined,
+      installDir: undefined,
+      changelogFile: "CHANGELOG.md",
+    },
+    running: () => version,
+  });
+  const operations = new OperationsStatusService({
+    database,
+    pool: options.pool,
+    settings,
+    storage,
+    mail,
+    indexer: search.indexer,
+    keyRing: options.keyRing,
+    keyRotation: options.keyRotation,
+    jobs,
+    backups,
+    maintenance,
+    updates,
+    collaboration: options.collaborationProbe,
+    filesDir: options.filesDir,
+    fileStore: files.store.kind,
+    keyProvider: options.keyProvider ?? "file",
+    configuredInstanceUrl: options.configuredInstanceUrl,
+    version,
+  });
   return {
+    operations,
+    maintenance,
+    updates,
     backups,
     push,
     chatChannels,
@@ -1320,6 +1392,12 @@ export async function workAccountJobs(
     }
     if (removed > 0) job.logger.info({ removed }, "Expired exports removed");
   });
+  await jobs.work(removeOldErrorEventsJob, async (job) => {
+    job.logger.debug(
+      { removed: await removeOldErrorEvents(services.operations.database) },
+      "Old error counts removed",
+    );
+  });
   await jobs.work(storageCheckJob, async (job) => {
     try {
       await services.storage.check();
@@ -1403,6 +1481,7 @@ export async function workAccountJobs(
   await jobs.schedule(dispatchPendingMailJob, DISPATCH_PENDING_MAIL_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(trashRetentionJob, TRASH_RETENTION_SCHEDULE, {}, { key: "hourly" });
   await jobs.schedule(fileCleanupJob, FILE_CLEANUP_SCHEDULE, {}, { key: "hourly" });
+  await jobs.schedule(removeOldErrorEventsJob, REMOVE_OLD_ERROR_EVENTS_SCHEDULE, {}, { key: "daily" });
   await jobs.schedule(storageCheckJob, STORAGE_CHECK_SCHEDULE, {}, { key: "minutely" });
   await jobs.schedule(storageReconcileJob, STORAGE_RECONCILE_SCHEDULE, {}, { key: "daily" });
   await jobs.schedule(importWatchdogJob, IMPORT_WATCHDOG_SCHEDULE, {}, { key: "regular" });

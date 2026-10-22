@@ -1,10 +1,177 @@
 # Setup
 
-A new instance is set up once, either through the setup assistant or through configuration.
+Pagehall runs as a container image with Docker Compose. The setup script installs it in a few minutes and later updates it with one command; [your own Compose file](#installation-with-your-own-compose-file) works as well. After the containers run, the instance is set up once, either through the setup assistant or through configuration.
+
+## Installation with the setup script
+
+Requirements: Linux or macOS with Docker Engine 24 or newer and Docker Compose v2, at least 4 GB of free disk space, and a free port for Pagehall (3000 by default). Download the script of the newest release and run it:
+
+```sh
+curl -fsSLO https://github.com/pagehall/pagehall/releases/latest/download/install.sh && bash install.sh
+```
+
+The script:
+
+1. checks Docker, Compose, the free disk space and the port, and says exactly what is missing;
+2. asks for the installation directory (`/opt/pagehall`, on macOS `~/pagehall`) and the address people open, for example `https://wiki.example.org`;
+3. writes `compose.yml` and `.env` and generates the secrets: the database password, the master key, the backup key, the metrics token and the setup code;
+4. shows the setup link with the code **before** it downloads the images, so you can copy it while the download runs;
+5. downloads and starts Pagehall, waits until `/health/ready` answers and prints the next steps: [a reverse proxy with TLS](reverse-proxy.md) and keeping the keys safe.
+
+For unattended installations, pass every answer as an option:
+
+```sh
+bash install.sh --dir /opt/pagehall --url https://wiki.example.org --version 1.4.2 --yes
+```
+
+| Option | Meaning |
+|---|---|
+| `--dir <directory>` | Installation directory. |
+| `--url <address>` | Address people open, with `https://` and without a path. |
+| `--version <version>` | Version to install; the newest release by default. |
+| `--image <reference>` | Another image, for example from a mirror registry. |
+| `--port <port>`, `--bind <address>` | Host port and address of Pagehall, `3000` on `127.0.0.1` by default, for a reverse proxy on the same host. |
+| `--subnet <cidr>` | Subnet of the Compose network, `172.30.0.0/24` by default. Pagehall trusts forwarded headers from it, see [reverse-proxy.md](reverse-proxy.md#forwarded-headers-and-pagehall_trusted_proxies). |
+| `--no-pull` | Use an image that is already on the host. |
+| `--yes` | Accept every default without asking. |
+
+The installation directory then holds:
+
+| File | Content |
+|---|---|
+| `compose.yml` | The Compose file, with the exact Pagehall version. |
+| `.env` | The configuration and the secrets, readable by its owner only (mode 600). Copy it to a safe place: it holds the master key and the backup key, and a backup cannot be restored without them. |
+| `backups/` | Backups, among them the ones taken before every update. It belongs to the user of the container (UID 1000) with mode 750; copy backups off the host as root or as that user. |
+| `pagehall` | The command for updates, maintenance mode and backups. |
+| `.pagehall-install` | The installation method and the installed version, read by the update command. |
+
+The script prints no secret except the setup code. Running it again in an existing installation directory changes nothing: it says that Pagehall is installed there and offers to update it instead.
+
+## Installation with your own Compose file
+
+The Compose file the script writes, for container platforms and for your own setup. Replace `<version>` with a release such as `1.4.2`; never use `latest`, so that a restart does not update by accident.
+
+<!-- compose-file -->
+```yaml
+name: pagehall
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pagehall
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: pagehall
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pagehall -d pagehall"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  pagehall:
+    image: ghcr.io/pagehall/pagehall:<version>
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 45s
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PAGEHALL_DATABASE_URL: postgres://pagehall:${POSTGRES_PASSWORD}@postgres:5432/pagehall
+      PAGEHALL_INSTANCE_URL: ${PAGEHALL_INSTANCE_URL:-}
+      PAGEHALL_SETUP_CODE: ${PAGEHALL_SETUP_CODE:-}
+      PAGEHALL_MASTER_KEYS: ${PAGEHALL_MASTER_KEYS:-}
+      PAGEHALL_BACKUP_KEY: ${PAGEHALL_BACKUP_KEY:-}
+      PAGEHALL_METRICS_TOKEN: ${PAGEHALL_METRICS_TOKEN:-}
+      PAGEHALL_TRUSTED_PROXIES: ${PAGEHALL_TRUSTED_PROXIES:-}
+      PAGEHALL_UPDATE_CHECK: ${PAGEHALL_UPDATE_CHECK:-true}
+      PAGEHALL_INSTALL_METHOD: ${PAGEHALL_INSTALL_METHOD:-compose}
+      PAGEHALL_INSTALL_DIR: ${PAGEHALL_INSTALL_DIR:-}
+    ports:
+      - "${PAGEHALL_BIND:-127.0.0.1}:${PAGEHALL_PORT:-3000}:3000"
+    volumes:
+      - pagehall-data:/var/lib/pagehall
+      - ./backups:/var/lib/pagehall/backups
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health/ready').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      start_period: 300s
+      retries: 6
+
+volumes:
+  postgres-data:
+  pagehall-data:
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: ${PAGEHALL_SUBNET:-172.30.0.0/24}
+```
+
+Put the values into `.env` next to it, with mode 600:
+
+```sh
+POSTGRES_PASSWORD=<a long random password>
+PAGEHALL_INSTANCE_URL=https://wiki.example.org
+PAGEHALL_SETUP_CODE=<optional, at least 12 characters>
+PAGEHALL_MASTER_KEYS=1:<32 random bytes in base64>
+PAGEHALL_BACKUP_KEY=1:<32 random bytes in base64>
+PAGEHALL_TRUSTED_PROXIES=172.30.0.0/24
+```
+
+`head -c 32 /dev/urandom | base64` creates a key. Without `PAGEHALL_MASTER_KEYS` and `PAGEHALL_BACKUP_KEY`, Pagehall generates both into the secrets directory of the data volume; then back up that directory separately. Container templates can offer `PAGEHALL_SETUP_CODE` and `PAGEHALL_INSTANCE_URL` as fields. Every other setting is in [configuration.md](configuration.md). Create the `backups` directory and give it to the user of the container (`mkdir backups && chown 1000:1000 backups`), then start with `docker compose up -d --wait`.
+
+## Updates
+
+An update starts a newer image; Pagehall applies the migrations when it starts. The admin area shows new versions with their changes and the exact commands for your installation under **Instance settings → Updates** (see [operations.md](operations.md#updates)).
+
+### With the update command
+
+```sh
+cd /opt/pagehall
+./pagehall update
+```
+
+`./pagehall update 1.5.0` updates to a given version. The command:
+
+1. downloads the image of the target version, without changing the running instance;
+2. shows the breaking changes, manual steps and other changes of every release since the installed version, and stops when the target cannot be reached directly (`Update from … or later` in the [changelog](operations.md#changelog));
+3. asks for confirmation (`--yes` skips it);
+4. creates a backup of the class "before update" with the running version (`pagehall backup create --before-update`, see [backup.md](backup.md#backups-before-updates)) and stops if that fails, so that the new version does not take a second one when it starts;
+5. starts the new version and waits until `/health/ready` answers;
+6. reports the result, records the new version and replaces itself with the update command of the new version.
+
+If the new version does not become ready, the command stops, prints the last log lines and the [rollback](#rollback). It never restores anything on its own.
+
+The update command is part of the setup script, so installation and update are the same file and cannot drift apart. It runs on the host, where it can pull images and restart containers, which Pagehall inside its container cannot.
+
+### With your own Compose file
+
+1. Create a backup: `docker compose exec pagehall pagehall backup create --before-update`. It prints where it wrote the backup. Without this step, the new version takes the same backup itself when it starts, before its migrations.
+2. Read the breaking changes and manual steps of the new version under **Instance settings → Updates** or with `docker run --rm ghcr.io/pagehall/pagehall:<new version> release-notes --update-from <installed version>`.
+3. Change the image in `compose.yml` to the new version, then run `docker compose pull` and `docker compose up -d --wait`.
+
+### Rollback
+
+Migrations only go forward, so going back means restoring the backup from before the update with the previous version. Set the image in `compose.yml` back to the previous version, then:
+
+```sh
+cd /opt/pagehall
+docker compose stop pagehall
+docker compose run --rm pagehall backup restore --input /var/lib/pagehall/backups/<backup before the update> --force
+docker compose up -d --wait
+```
+
+The update command prints the exact commands with the name of its backup. A backup in S3 storage is downloaded to the `backups` directory first. `--force` replaces the database and the files with the content of the backup; changes made after the backup are lost. The `.env` with the keys stays as it is. See [backup.md](backup.md#commands).
 
 ## Setup code
 
-While setup is not complete, every start of an API node prints a link to the setup page with a one-time setup code to the log:
+The setup script generates the setup code, writes it to `.env` as `PAGEHALL_SETUP_CODE` and shows the setup link. Without the script, while setup is not complete, every start of an API node prints a link to the setup page with a one-time setup code to the log:
 
 ```
 Setup link: https://wiki.example.org/setup#code=7KQ2-M9XA-P4RT-HB3C. Open it in a browser to set up the instance.

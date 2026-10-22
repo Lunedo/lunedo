@@ -256,7 +256,7 @@ export { configurationForBackup } from "./config/backup-view.js";
 export { clientAddress, trustedProxyList } from "./config/client-address.js";
 export { configSettings, isAddressOrRange } from "./config/definitions.js";
 export type { ConfiguredSetup } from "./config/load.js";
-export { ConfigError, type Env, loadConfig, type ServerConfig } from "./config/load.js";
+export { ConfigError, changelogFileOf, type Env, loadConfig, type ServerConfig } from "./config/load.js";
 export { Secret } from "./config/secret.js";
 export {
   COPY_IN_REQUEST_LIMIT,
@@ -698,6 +698,57 @@ export {
   type RequestContext,
   runWithRequestContext,
 } from "./observability/request-context.js";
+export {
+  type ChangelogSection,
+  parseChangelog,
+  type Release,
+  type RunningChangelog,
+  releaseNotesText,
+  UNRELEASED,
+  versionFileOf,
+} from "./operations/changelog.js";
+export {
+  ErrorEvents,
+  type RecentErrorType,
+  recentErrorTypes,
+  removeOldErrorEvents,
+} from "./operations/error-events.js";
+export {
+  MAINTENANCE_CHANNEL,
+  MAINTENANCE_MESSAGE_MAX_LENGTH,
+  MaintenanceInputError,
+  MaintenanceModeError,
+  MaintenanceService,
+  type MaintenanceStatus,
+  SignInBlockedError,
+} from "./operations/maintenance.js";
+export { updateCheckSetting } from "./operations/settings.js";
+export {
+  type OperationsStatus,
+  OperationsStatusService,
+  type QueueStatus,
+  type StatusItem,
+  type StatusItemId,
+  type StatusLevel,
+  statusItemIds,
+} from "./operations/status.js";
+export {
+  IMAGE_REPOSITORY,
+  RELEASES_URL,
+  type UpdateCheckFailure,
+  UpdateCheckService,
+  type UpdateCheckStatus,
+  type UpdateCommands,
+  updateCheckFailures,
+} from "./operations/update-check.js";
+export {
+  compareVersions,
+  DEVELOPMENT_VERSION,
+  formatVersion,
+  pagehallVersion,
+  parseReleaseVersion,
+  type ReleaseVersion,
+} from "./operations/version.js";
 export type { BreakGlassAccess } from "./organizations/break-glass.js";
 export { breakGlassReasonSchema } from "./organizations/break-glass.js";
 export type { Group, GroupDetails, GroupMember } from "./organizations/groups.js";

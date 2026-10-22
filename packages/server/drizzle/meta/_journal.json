@@ -666,6 +666,13 @@
       "when": 1792607580057,
       "tag": "0094_backup_schedules",
       "breakpoints": true
+    },
+    {
+      "idx": 95,
+      "version": "7",
+      "when": 1792617490167,
+      "tag": "0095_operations",
+      "breakpoints": true
     }
   ]
 }

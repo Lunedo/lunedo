@@ -47,6 +47,7 @@ export const PUSH_WATCHDOG_SCHEDULE = "*/10 * * * *";
 
 export const pushDeliveryJob = defineJob({
   name: "push.deliver",
+  duringMaintenance: "run",
   payload: z.object({ entryId: z.uuid() }),
   retryLimit: 4,
   retryDelaySeconds: 30,
@@ -56,6 +57,7 @@ export const pushDeliveryJob = defineJob({
 
 export const pushDispatchJob = defineJob({
   name: "push.dispatch",
+  duringMaintenance: "run",
   payload: z.object({}),
   retryLimit: 5,
   retryDelaySeconds: 5,

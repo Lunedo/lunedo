@@ -158,6 +158,7 @@ export class SignInService {
   readonly #settings: SettingsService;
   readonly #setupComplete: () => Promise<boolean>;
   readonly #onIdentityLinked: IdentityLinkedHook | undefined;
+  readonly #beforeSession: ((executor: Executor, accountId: string) => Promise<void>) | undefined;
 
   constructor(options: {
     database: Database;
@@ -176,6 +177,7 @@ export class SignInService {
     settings: SettingsService;
     setupComplete: () => Promise<boolean>;
     onIdentityLinked?: IdentityLinkedHook;
+    beforeSession?: (executor: Executor, accountId: string) => Promise<void>;
   }) {
     this.#database = options.database;
     this.#accounts = options.accounts;
@@ -193,6 +195,7 @@ export class SignInService {
     this.#settings = options.settings;
     this.#setupComplete = options.setupComplete;
     this.#onIdentityLinked = options.onIdentityLinked;
+    this.#beforeSession = options.beforeSession;
   }
 
   async secondFactorRequired(accountId: string, executor: Executor = this.#database): Promise<boolean> {
@@ -356,6 +359,7 @@ export class SignInService {
   ): Promise<{ pendingToken: string; factors: SecondFactorType[] } | null> {
     const factors = await secondFactorsOf(tx, account.id);
     if (!hasSecondFactor(factors)) return null;
+    await this.#beforeSession?.(tx, account.id);
     const pending = await this.#challenges.create(tx, {
       purpose: "secondFactor",
       accountId: account.id,
@@ -377,6 +381,7 @@ export class SignInService {
     verifiedSince: Date,
     provider: { providerId: string; identityId: string; providerSessionId: string | null } | null = null,
   ): Promise<SignedIn> {
+    await this.#beforeSession?.(tx, account.id);
     const [current] = await tx
       .select({ resetAt: accounts.secondFactorResetAt })
       .from(accounts)
@@ -485,6 +490,7 @@ export class SignInService {
 
     const factors = await secondFactorsOf(this.#database, account.id);
     if (hasSecondFactor(factors)) {
+      await this.#beforeSession?.(this.#database, account.id);
       const pending = await this.#challenges.create(this.#database, {
         purpose: "secondFactor",
         accountId: account.id,

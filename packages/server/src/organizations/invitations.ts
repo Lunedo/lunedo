@@ -33,6 +33,7 @@ const REGISTRATIONS_PER_ADDRESS = 3;
 
 export const registrationRequestJob = defineJob({
   name: "organizations.registration-request",
+  duringMaintenance: "run",
   payload: z.object({ email: z.string().max(254) }),
   retryLimit: 3,
 });

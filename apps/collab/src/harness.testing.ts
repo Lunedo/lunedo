@@ -112,7 +112,7 @@ export interface Client {
   provider: HocuspocusProvider;
   socket: HocuspocusProviderWebsocket;
   closeReasons: string[];
-  stateless: { type: string; revision?: number; stateVector?: string }[];
+  stateless: { type: string; revision?: number; stateVector?: string; enabled?: boolean; message?: string }[];
   authenticated: Promise<void>;
   destroy(): void;
 }

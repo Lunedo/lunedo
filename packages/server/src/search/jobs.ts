@@ -6,6 +6,7 @@ import { SEARCH_CHANGES_CHANNEL, type SearchIndexer } from "./indexer.js";
 
 export const searchIndexJob = defineJob({
   name: "search.update-index",
+  duringMaintenance: "run",
   payload: z.object({}),
   retryLimit: 10,
   retryDelaySeconds: 5,

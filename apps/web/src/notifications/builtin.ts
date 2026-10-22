@@ -1,5 +1,6 @@
 import { slugify } from "@pagehall/editor-schema";
 import {
+  ArrowUpCircle,
   AtSign,
   Bot,
   Building2,
@@ -111,6 +112,11 @@ notificationTypes.register(
     id: "backup.testRestoreFailed",
     icon: DatabaseBackup,
     link: () => ({ to: "/settings/instance/backups" }),
+  },
+  {
+    id: "operations.updateAvailable",
+    icon: ArrowUpCircle,
+    link: () => ({ to: "/settings/instance/updates" }),
   },
   {
     id: "identityProvider.syncHeld",

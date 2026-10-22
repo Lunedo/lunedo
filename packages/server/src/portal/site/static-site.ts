@@ -313,6 +313,7 @@ export class StaticSiteBuilder {
         static: true,
         ...pageLanguages,
         note: options.note ?? null,
+        maintenance: null,
         frameSources: [],
         origin: "",
         nonce: "",

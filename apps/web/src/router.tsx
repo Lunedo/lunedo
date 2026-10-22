@@ -835,6 +835,21 @@ const instanceIndexRoute = createRoute({
     throw redirect({ to: "/settings/instance/general" });
   },
 });
+const instanceStatusRoute = instanceScreen(
+  "/status",
+  () => import("./screens/instance/status-screen.js"),
+  "InstanceStatusScreen",
+);
+const instanceUpdatesRoute = instanceScreen(
+  "/updates",
+  () => import("./screens/instance/updates-screen.js"),
+  "InstanceUpdatesScreen",
+);
+const instanceMaintenanceRoute = instanceScreen(
+  "/maintenance",
+  () => import("./screens/instance/maintenance-screen.js"),
+  "InstanceMaintenanceScreen",
+);
 const instanceGeneralRoute = instanceScreen(
   "/general",
   () => import("./screens/instance/general-screen.js"),
@@ -1060,6 +1075,9 @@ const routeTree = rootRoute.addChildren([
       ]),
       instanceRoute.addChildren([
         instanceIndexRoute,
+        instanceStatusRoute,
+        instanceUpdatesRoute,
+        instanceMaintenanceRoute,
         instanceGeneralRoute,
         instanceOrganizationsRoute,
         instanceAccountsRoute,

@@ -103,3 +103,83 @@ describe("Metrics", () => {
     expect(output).toContain('pagehall_jobs{queue="test.job",state="failed",service="worker"} 2');
   });
 });
+
+describe("Pagehall metrics", () => {
+  const snapshot = {
+    databaseSizeBytes: 5_000_000,
+    storage: { usedBytes: 800, totalBytes: 1000, ratio: 0.8, level: 1 },
+    storageLevel: 1,
+    backup: { lastSuccessAt: new Date("2026-10-21T03:00:00Z"), failures: 2, scheduled: true },
+    mail: {
+      failedAttempts: 7,
+      failedMessages: 1,
+      lastSuccessAt: new Date("2026-10-21T07:00:00Z"),
+      lastFailureAt: null,
+    },
+    search: { pendingItems: 4, failingItems: 1 },
+    collaborationReady: true,
+    maintenance: true,
+    updateAvailable: true,
+  };
+
+  it("exposes build info, logged errors and collaboration connections", async () => {
+    const metrics = new Metrics("collab");
+    metrics.observeBuild("1.4.2");
+    metrics.countLoggedError({ type: "Request failed", code: "ECONNRESET" });
+    metrics.countLoggedError({ type: "Request failed", code: null });
+    metrics.observeCollaboration(() => ({ connections: 3, documents: 2 }));
+    const output = await metrics.render();
+    expect(output).toContain('pagehall_build_info{version="1.4.2",service="collab"} 1');
+    expect(output).toContain('pagehall_log_errors_total{type="Request failed",service="collab"} 2');
+    expect(output).toContain('pagehall_collab_connections{service="collab"} 3');
+    expect(output).toContain('pagehall_collab_documents{service="collab"} 2');
+  });
+
+  it("exposes the instance values only Pagehall knows", async () => {
+    const metrics = new Metrics("api");
+    metrics.observeInstance(async () => snapshot);
+    const output = await metrics.render();
+    for (const line of [
+      'pagehall_database_size_bytes{service="api"} 5000000',
+      'pagehall_storage_used_bytes{service="api"} 800',
+      'pagehall_storage_size_bytes{service="api"} 1000',
+      'pagehall_storage_usage_ratio{service="api"} 0.8',
+      'pagehall_storage_level{service="api"} 1',
+      'pagehall_backup_last_success_timestamp_seconds{service="api"} 1792551600',
+      'pagehall_backup_failures_total{service="api"} 2',
+      'pagehall_backup_scheduled{service="api"} 1',
+      'pagehall_mail_delivery_failures_total{service="api"} 7',
+      'pagehall_mail_undelivered_total{service="api"} 1',
+      'pagehall_mail_last_success_timestamp_seconds{service="api"} 1792566000',
+      'pagehall_search_pending_items{service="api"} 4',
+      'pagehall_search_failing_items{service="api"} 1',
+      'pagehall_collab_up{service="api"} 1',
+      'pagehall_maintenance_mode{service="api"} 1',
+      'pagehall_update_available{service="api"} 1',
+    ]) {
+      expect(output).toContain(line);
+    }
+    expect(output).not.toMatch(/^pagehall_mail_last_failure_timestamp_seconds\{/m);
+  });
+
+  it("leaves out values that are not known", async () => {
+    const metrics = new Metrics("api");
+    metrics.observeInstance(async () => ({
+      ...snapshot,
+      storage: null,
+      backup: { lastSuccessAt: null, failures: 0, scheduled: false },
+      collaborationReady: null,
+      updateAvailable: null,
+    }));
+    const output = await metrics.render();
+    expect(output).toContain('pagehall_storage_level{service="api"} 1');
+    for (const name of [
+      "pagehall_storage_used_bytes",
+      "pagehall_backup_last_success_timestamp_seconds",
+      "pagehall_collab_up",
+      "pagehall_update_available",
+    ]) {
+      expect(output).not.toMatch(new RegExp(`^${name}{`, "m"));
+    }
+  });
+});

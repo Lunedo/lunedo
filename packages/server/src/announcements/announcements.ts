@@ -128,6 +128,7 @@ function cleanLink(link: { url: string; label: string } | null): { url: string; 
 
 export const announcementStartsJob = defineJob({
   name: "announcements.signal-starts",
+  duringMaintenance: "run",
   payload: z.object({}),
   retryLimit: 1,
   expireInSeconds: 5 * 60,

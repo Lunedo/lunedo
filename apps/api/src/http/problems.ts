@@ -452,6 +452,8 @@ export const problems = {
   tooManyRequests: { status: 429, title: "Too many access requests today" },
   internalError: { status: 500, title: "Internal server error" },
   busy: { status: 503, title: "The server is busy" },
+  maintenanceMode: { status: 503, title: "The instance is in maintenance mode" },
+  signInPaused: { status: 503, title: "Signing in is paused during maintenance" },
   uploadTimeout: { status: 408, title: "The upload took too long" },
 } as const satisfies Record<string, { status: number; title: string }>;
 
@@ -631,6 +633,12 @@ export const problemSchema = z
       )
       .optional()
       .describe("What is wrong with the templates of the file, for `invalidTemplatesInFile`."),
+    maintenanceMessage: z
+      .string()
+      .optional()
+      .describe(
+        "The message of the instance administrators about the maintenance, for `maintenanceMode` and `signInPaused`. Empty when they wrote none.",
+      ),
     problems: z
       .array(
         z

@@ -69,6 +69,7 @@ export interface PortalView {
   languageLinks: LanguageLink[];
   alternates: { hreflang: string; href: string }[];
   note: { text: string; lang: string } | null;
+  maintenance: { message: string } | null;
   frameSources: string[];
   origin: string;
   nonce: string;
@@ -295,7 +296,7 @@ ${view.alternates.map((alternate) => html`<link rel="alternate" hreflang="${alte
 <script src="${view.assets.script}" defer></script>
 </head><body><a class="skip" href="#content">${view.t.skipToContent}</a><div class="page">
 ${header(view, options)}
-<main id="content" tabindex="-1">${when(view.note, () => html`<div class="pw"><p class="langnote" role="note" lang="${view.note?.lang ?? ""}">${icon("languages")}${view.note?.text ?? ""}</p></div>`)}${content}</main>
+<main id="content" tabindex="-1">${when(view.maintenance, () => html`<div class="pw"><p class="maintnote" role="status">${icon("wrench")}<span>${view.t.maintenance}${when(Boolean(view.maintenance?.message), () => html` <strong>${view.maintenance?.message ?? ""}</strong>`)}</span></p></div>`)}${when(view.note, () => html`<div class="pw"><p class="langnote" role="note" lang="${view.note?.lang ?? ""}">${icon("languages")}${view.note?.text ?? ""}</p></div>`)}${content}</main>
 ${footer(view)}
 </div><div class="toast" role="status" aria-live="polite" hidden data-toast></div></body></html>`.value
   }`;

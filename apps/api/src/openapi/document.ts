@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 import type { RouteAccess } from "../access/route-access.js";
 import { type ApiRouteDefinition, successStatus } from "../http/api-route.js";
+import { createsSession, writesDuringMaintenance } from "../http/maintenance.js";
 import { type ProblemCode, problemBody, problemSchema, problems } from "../http/problems.js";
 import { EXTENSIBLE_ENUM } from "../http/schemas.js";
 import { GETTING_STARTED } from "./getting-started.js";
@@ -215,6 +216,8 @@ function automaticErrors(route: ApiRouteInfo, definition: ApiRouteDefinition): P
   if (access?.kind === "setupSession") codes.push("setupSessionRequired", "notFound");
   if (definition.params) codes.push("notFound");
   if (route.method !== "GET") codes.push("csrfRejected");
+  if (writesDuringMaintenance(route.method, route.path) === "refused") codes.push("maintenanceMode");
+  if (createsSession(route.method, route.path)) codes.push("signInPaused");
   return codes;
 }
 

@@ -17,6 +17,7 @@ import {
   DOCUMENT_CHANGES_CHANNEL,
   handleOperationsRequest,
   instanceUrlSetting,
+  type MaintenanceStatus,
   type OperationsEndpoints,
   parseAuditChangeSignal,
   parseDocumentChangeSignal,
@@ -150,6 +151,10 @@ const DOCUMENT_PREFIXES: Record<DocumentKind, string> = {
   page: DOCUMENT_PREFIX,
   whiteboard: WHITEBOARD_PREFIX,
 };
+
+export function maintenanceMessage(status: Pick<MaintenanceStatus, "enabled" | "message">): string {
+  return JSON.stringify({ type: "maintenance", enabled: status.enabled, message: status.message });
+}
 
 export function parseDocumentName(documentName: string): { kind: DocumentKind; itemId: string } | null {
   for (const [kind, prefix] of Object.entries(DOCUMENT_PREFIXES) as [DocumentKind, string][]) {
@@ -430,7 +435,7 @@ export async function createCollabServer(options: {
       if (!(await handleOperationsRequest(request, response, endpoints))) response.writeHead(404).end();
       return Promise.reject();
     },
-    async onAuthenticate({ requestHeaders, documentName }): Promise<CollabContext> {
+    async onAuthenticate({ requestHeaders, documentName, connectionConfig }): Promise<CollabContext> {
       try {
         const signalsBeforeCheck = signals;
         const checkedAt = Date.now();
@@ -464,6 +469,7 @@ export async function createCollabServer(options: {
           throw new Refusal("pageNotFound");
         }
         if (!(await may(context, "item.edit"))) throw new Refusal("noEditPermission");
+        if ((await services.maintenance.status()).enabled) connectionConfig.readOnly = true;
         return context;
       } catch (error) {
         if (error instanceof Refusal) throw { reason: error.reason };
@@ -566,6 +572,9 @@ export async function createCollabServer(options: {
       }
     },
     async connected({ documentName, instance: server, connection }) {
+      const maintenance = await services.maintenance.status();
+      connection.readOnly = maintenance.enabled;
+      if (maintenance.enabled) connection.sendStateless(maintenanceMessage(maintenance));
       const { signalsBeforeCheck, checkedAt } = connection.context as CollabContext;
       if (signalsBeforeCheck !== signals) {
         await check(connection, { sessions: true, reasons: new Set(["connected"]), since: checkedAt });
@@ -617,6 +626,18 @@ export async function createCollabServer(options: {
     extensions: [pagehall, ...(redis ? [redis] : [])],
   });
   const instance = server.hocuspocus;
+  services.maintenance.onChange((status) => {
+    for (const document of instance.documents.values()) {
+      for (const connection of document.getConnections()) {
+        connection.readOnly = status.enabled;
+        connection.sendStateless(maintenanceMessage(status));
+      }
+    }
+  });
+  endpoints.metrics.observeCollaboration(() => ({
+    connections: instance.getConnectionsCount(),
+    documents: instance.getDocumentsCount(),
+  }));
 
   const timer = setInterval(() => {
     scheduleRecheck("interval");

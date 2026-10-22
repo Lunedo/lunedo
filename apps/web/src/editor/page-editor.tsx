@@ -53,7 +53,7 @@ export interface PageEditorProps {
   missingSections?: readonly MissingSection[];
 }
 
-const READ_ONLY_PROBLEMS = new Set(["permissionRevoked", "noEditPermission", "pageNotFound"]);
+const READ_ONLY_PROBLEMS = new Set(["permissionRevoked", "noEditPermission", "pageNotFound", "maintenance"]);
 
 export function PageEditor(props: PageEditorProps) {
   const [collaboration, setCollaboration] = useState<PageCollaboration | null>(null);

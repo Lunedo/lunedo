@@ -28,7 +28,9 @@ async function waitFor<T>(check: () => Promise<T | undefined | false>, timeoutMs
 
 describe("defineJob", () => {
   it("requires module-qualified names", () => {
-    expect(() => defineJob({ name: "nomodule", payload: z.object({}) })).toThrow("<module>.<action>");
+    expect(() => defineJob({ name: "nomodule", duringMaintenance: "run", payload: z.object({}) })).toThrow(
+      "<module>.<action>",
+    );
   });
 });
 
@@ -62,7 +64,12 @@ describe.skipIf(!databaseUrl)("PgBossQueue", () => {
   });
 
   function define(action: string, options: Partial<JobDefinition<{ value: number }>> = {}) {
-    return defineJob({ name: uniqueName(action), payload: z.object({ value: z.number() }), ...options });
+    return defineJob({
+      name: uniqueName(action),
+      duringMaintenance: "run",
+      payload: z.object({ value: z.number() }),
+      ...options,
+    });
   }
 
   it("runs enqueued jobs in the worker and reports progress", async () => {
@@ -81,6 +88,39 @@ describe.skipIf(!databaseUrl)("PgBossQueue", () => {
     expect(seen).toEqual([7]);
     expect(info.progress).toEqual({ done: 2, total: 2, message: "done" });
     expect(finished.find((event) => event.name === job.name)?.state).toBe("completed");
+  });
+
+  it("holds jobs that wait during maintenance and runs them when it ends", async () => {
+    const waiting = define("maintenance-wait", { duringMaintenance: "wait" });
+    const running = define("maintenance-run", { duringMaintenance: "run" });
+    const before = define("maintenance-before", { duringMaintenance: "wait" });
+    const seen: string[] = [];
+    await worker.work(before, async () => {
+      seen.push("before");
+    });
+    await worker.pauseForMaintenance(true);
+    try {
+      await worker.work(waiting, async () => {
+        seen.push("waiting");
+      });
+      await worker.work(running, async () => {
+        seen.push("running");
+      });
+      const ids = {
+        waiting: await producer.enqueue(waiting, { value: 1 }),
+        running: await producer.enqueue(running, { value: 1 }),
+        before: await producer.enqueue(before, { value: 1 }),
+      };
+      await waitFor(async () => (await producer.get(running, ids.running))?.state === "completed");
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      expect(seen).toEqual(["running"]);
+      expect((await producer.get(waiting, ids.waiting))?.state).toBe("created");
+      expect((await producer.get(before, ids.before))?.state).toBe("created");
+    } finally {
+      await worker.pauseForMaintenance(false);
+    }
+    await waitFor(async () => seen.length === 3);
+    expect([...seen].sort()).toEqual(["before", "running", "waiting"]);
   });
 
   it("validates payloads before enqueueing", async () => {
@@ -216,7 +256,7 @@ describe.skipIf(!databaseUrl)("graceful shutdown", () => {
 
   it("lets running jobs finish within the timeout", async () => {
     const queue = newWorker();
-    const job = defineJob({ name: uniqueName("finish"), payload: z.object({}) });
+    const job = defineJob({ name: uniqueName("finish"), duringMaintenance: "run", payload: z.object({}) });
     let started = false;
     await queue.work(job, async () => {
       started = true;
@@ -233,7 +273,12 @@ describe.skipIf(!databaseUrl)("graceful shutdown", () => {
 
   it("hands jobs back to the queue when they do not finish in time", async () => {
     const queue = newWorker();
-    const job = defineJob({ name: uniqueName("handback"), payload: z.object({}), retryLimit: 2 });
+    const job = defineJob({
+      name: uniqueName("handback"),
+      duringMaintenance: "run",
+      payload: z.object({}),
+      retryLimit: 2,
+    });
     let started = false;
     let aborted = false;
     await queue.work(job, async ({ signal }) => {

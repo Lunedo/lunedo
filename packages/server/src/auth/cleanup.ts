@@ -3,6 +3,7 @@ import { defineJob } from "../jobs/job-queue.js";
 
 export const authCleanupJob = defineJob({
   name: "auth.cleanup",
+  duringMaintenance: "run",
   payload: z.object({}),
   retryLimit: 2,
 });

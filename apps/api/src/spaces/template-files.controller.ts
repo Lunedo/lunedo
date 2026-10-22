@@ -7,6 +7,7 @@ import {
   type ExportSource,
   FILE_NAME_MAX_LENGTH,
   MAX_TEMPLATES_PER_UPLOAD,
+  pagehallVersion,
   type TemplateExport,
   type TemplateLanguage,
   type TemplateScope,
@@ -338,10 +339,6 @@ function sendExport(reply: FastifyReply, file: TemplateExport) {
   reply.header("cache-control", "private, no-store");
   reply.header("content-length", String(file.body.length));
   return file.body;
-}
-
-function pagehallVersion(): string {
-  return process.env.PAGEHALL_VERSION ?? "dev";
 }
 
 @Controller("api/v1")

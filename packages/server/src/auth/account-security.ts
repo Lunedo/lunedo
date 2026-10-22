@@ -46,6 +46,7 @@ const EMAIL_CHANGES_PER_ADDRESS = 3;
 
 export const passwordResetRequestJob = defineJob({
   name: "auth.password-reset-request",
+  duringMaintenance: "run",
   payload: z.object({ email: z.string().max(254) }),
   retryLimit: 3,
 });

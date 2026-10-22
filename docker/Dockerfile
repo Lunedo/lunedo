@@ -47,7 +47,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production \
     PAGEHALL_VERSION=${VERSION} \
-    PAGEHALL_WEB_ROOT=/app/web
+    PAGEHALL_WEB_ROOT=/app/web     PAGEHALL_CHANGELOG_FILE=/app/CHANGELOG.md
 RUN install -d -o node -g node -m 700 /var/lib/pagehall /var/lib/pagehall/files /var/lib/pagehall/secrets \
     /var/lib/pagehall/backups
 RUN install -d -o root -g root -m 755 /data/import
@@ -56,6 +56,8 @@ COPY --from=build --chown=root:root /out/api ./api
 COPY --from=build --chown=root:root /out/collab ./collab
 COPY --from=build --chown=root:root /out/worker ./worker
 COPY --from=build --chown=root:root /repo/apps/web/dist ./web
+COPY --chown=root:root CHANGELOG.md ./CHANGELOG.md
+COPY --chown=root:root --chmod=644 scripts/install.sh ./install.sh
 COPY --chmod=755 docker/start.sh /usr/local/bin/pagehall
 # sharp loads its prebuilt libvips for the architecture of this image; fail the build if it cannot.
 RUN for app in api worker; do \

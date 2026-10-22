@@ -3,6 +3,7 @@ import { defineJob } from "../jobs/job-queue.js";
 
 export const backupRunJob = defineJob({
   name: "backup.run",
+  duringMaintenance: "run",
   payload: z.object({
     trigger: z.enum(["scheduled", "manual"]),
     slot: z.iso.datetime().nullable(),
@@ -14,6 +15,7 @@ export const backupRunJob = defineJob({
 
 export const backupTestRestoreJob = defineJob({
   name: "backup.test-restore",
+  duringMaintenance: "run",
   payload: z.object({ testId: z.uuid() }),
   retryLimit: 0,
   expireInSeconds: 12 * 60 * 60,

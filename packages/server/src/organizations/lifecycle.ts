@@ -18,6 +18,7 @@ import {
 
 export const organizationExpiryJob = defineJob({
   name: "organizations.process-expiry",
+  duringMaintenance: "run",
   payload: z.object({}),
   retryLimit: 2,
 });
@@ -26,6 +27,7 @@ export const ORGANIZATION_EXPIRY_SCHEDULE = "* * * * *";
 
 export const organizationRemindersJob = defineJob({
   name: "organizations.send-reminders",
+  duringMaintenance: "run",
   payload: z.object({}),
   retryLimit: 2,
 });

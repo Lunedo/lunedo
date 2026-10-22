@@ -3,6 +3,7 @@ import { defineJob } from "../jobs/job-queue.js";
 
 export const notificationRetentionJob = defineJob({
   name: "notifications.apply-retention",
+  duringMaintenance: "run",
   payload: z.object({}),
   retryLimit: 2,
 });

@@ -60,14 +60,19 @@ export function CollaborationProblemNotice({ problem }: { problem: Collaboration
     </Button>
   ) : problem === "noEditPermission" ||
     problem === "permissionRevoked" ||
-    problem === "pageNotFound" ? null : (
+    problem === "pageNotFound" ||
+    problem === "maintenance" ? null : (
     <Button size="sm" variant="outline" onClick={() => globalThis.location.reload()}>
       {t("editor.problems.reload")}
     </Button>
   );
   return (
     <Notice
-      variant={problem === "permissionRevoked" || problem === "noEditPermission" ? "warning" : "danger"}
+      variant={
+        problem === "permissionRevoked" || problem === "noEditPermission" || problem === "maintenance"
+          ? "warning"
+          : "danger"
+      }
       title={translateKey(t, `editor.problems.${problem}.title`)}
       action={action}
     >
