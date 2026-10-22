@@ -86,10 +86,13 @@ version_lt() {
 
 directory_mode() { stat -c '%a' "$1" 2>/dev/null || stat -f '%Lp' "$1" 2>/dev/null || true; }
 
-warn_open_directory() {
+check_directory_mode() {
   local mode
   mode="$(directory_mode "$1")"
   [[ "$mode" =~ ^[0-7]{3,4}$ ]] || return 0
+  if (((8#$mode & 8#022) != 0)); then
+    fail "$1 has mode $mode, so other accounts on this host can create or replace files in it, such as compose.yml. Restrict it, for example with: chmod 700 '$1', and run the command again."
+  fi
   if (((8#$mode & 8#027) != 0)); then
     say "Warning: $1 has mode $mode, so other accounts on this host can reach the backups and the" >&2
     say "         configuration in it. Restrict it, for example with: chmod 700 '$1'" >&2
@@ -267,7 +270,7 @@ install_pagehall() {
   local existed=0
   if [ -d "$directory" ]; then
     existed=1
-    warn_open_directory "$directory"
+    check_directory_mode "$directory"
   fi
 
   if [ -f "$directory/$RECORD" ] || [ -f "$directory/compose.yml" ] || [ -f "$directory/.env" ]; then
@@ -395,7 +398,7 @@ update_pagehall() {
     fail "$directory is not a Pagehall installation. Run the update from the installation directory, or pass --dir."
   [ "$(record_value method)" = "script" ] ||
     fail "$directory was not installed with the setup script. Update it as described in docs/setup.md."
-  warn_open_directory "$directory"
+  check_directory_mode "$directory"
   check_requirements_for_update
 
   local current_reference current target_reference target

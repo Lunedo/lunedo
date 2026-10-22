@@ -139,6 +139,14 @@ check "the secrets are unchanged" test "$secrets" = "$(cat "$directory/.env")"
 if [ "$linux" -eq 1 ]; then
   check "it warns about a directory other accounts can reach" grep -q "has mode 755" <<<"$rerun"
   check "it does not change the mode of the directory" test "$(mode_of "$directory")" = "755"
+  chmod 775 "$directory"
+  set +e
+  refused="$(bash "$root/scripts/install.sh" install --dir "$directory" --yes </dev/null 2>&1 >/dev/null)"
+  refused_status=$?
+  set -e
+  check "it refuses a directory other accounts can write to" test "$refused_status" -ne 0
+  check "it says how to restrict the directory" grep -q "chmod 700" <<<"$refused"
+  check "it still does not change the mode" test "$(mode_of "$directory")" = "775"
   chmod 700 "$directory"
 fi
 

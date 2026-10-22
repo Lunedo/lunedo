@@ -36,7 +36,7 @@ bash install.sh --dir /opt/pagehall --url https://wiki.example.org --version 1.4
 | `--no-pull` | Use an image that is already on the host. |
 | `--yes` | Accept every default without asking. |
 
-The installation directory then holds the files below. The script creates it with mode 700, so only its owner (and root, through Docker) can reach the configuration, the secrets and the backups in it; `750` with the group `docker` works as well. It never changes the mode of a directory that already existed, but warns when other accounts can reach it. The container runs as UID 1000, which on many hosts is also the first login account, for example `ubuntu` or `pi`: that account owns `backups/` on the host, so no other host account may be able to open the installation directory.
+The installation directory then holds the files below. The script creates it with mode 700, so only its owner (and root, through Docker) can reach the configuration, the secrets and the backups in it; `750` with the group `docker` works as well. It never changes the mode of a directory that already existed: it refuses one that other accounts can write to and warns about one they can read. The container runs as UID 1000, which on many hosts is also the first login account, for example `ubuntu` or `pi`: that account owns `backups/` on the host, so no other host account may be able to open the installation directory.
 
 | File | Content |
 |---|---|
