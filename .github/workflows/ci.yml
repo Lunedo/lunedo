@@ -41,6 +41,7 @@ jobs:
       operations: ${{ steps.scope.outputs.operations }}
       base: ${{ steps.scope.outputs.base }}
       head: ${{ steps.scope.outputs.head }}
+      runner-user: ${{ steps.runner.outputs.user }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -51,6 +52,9 @@ jobs:
           node-version-file: .nvmrc
       - id: scope
         run: node scripts/check-ci-scope.ts
+      - name: Record the user of the runner for the end-to-end container
+        id: runner
+        run: echo "user=$(id -u):$(id -g)" >> "$GITHUB_OUTPUT"
 
   browsers-first:
     name: Give the end-to-end tests a runner first
@@ -101,6 +105,7 @@ jobs:
       - run: pnpm i18n:check
       - run: pnpm shell:check
       - run: pnpm release-jobs:check
+      - run: pnpm container-users:check
       - run: pnpm typecheck
       - name: Script tests
         run: node --test "scripts/*.test.ts"
@@ -374,9 +379,8 @@ jobs:
     timeout-minutes: 40
     container:
       image: mcr.microsoft.com/playwright@sha256:7852dc5a7d72f5fe458a597d690f6c42fbc8e9e26ddfa95f8e6ef552558d9bbf # v1.64.1-noble
-      env:
-        HOME: /root
       options: >-
+        --user ${{ needs.scope.outputs.runner-user }}
         --tmpfs /pagehall-e2e
         ${{ contains(vars.RUNNER_LABELS, 'self-hosted') && format('--volume {0}:/ci-cache', vars.CI_CACHE_DIR || '/srv/ci-cache') || '' }}
     services:
@@ -419,8 +423,12 @@ jobs:
         run: nohup node scripts/record-vm-load.ts record "$RUNNER_TEMP/vm-load.jsonl" > /dev/null 2>&1 &
       - name: Use the caches on the runner
         if: ${{ contains(vars.RUNNER_LABELS, 'self-hosted') }}
-        run: node scripts/prepare-ci-cache.ts container /ci-cache
-      - run: corepack enable
+        run: node scripts/prepare-ci-cache.ts e2e /ci-cache
+      - name: Enable pnpm for the runner user
+        run: |
+          mkdir -p "$RUNNER_TEMP/bin"
+          corepack enable --install-directory "$RUNNER_TEMP/bin"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
       - name: Locate the pnpm store
         id: pnpm
         run: echo "store=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
@@ -437,7 +445,7 @@ jobs:
           key: turbo-e2e-${{ github.sha }}
           restore-keys: turbo-e2e-
       - name: Install PostgreSQL client tools for the backup test
-        run: command -v pg_dump > /dev/null || (apt-get update && apt-get install -y --no-install-recommends postgresql-client)
+        run: scripts/install-postgres-client.sh "$RUNNER_TEMP/postgresql-client" 16 >> "$GITHUB_PATH"
       - run: pnpm install --frozen-lockfile
       - name: Turn off durability in the test database
         run: node scripts/tune-test-postgres.ts "$PAGEHALL_E2E_DATABASE_URL"
@@ -467,9 +475,11 @@ jobs:
           name: playwright-report
           path: apps/web/playwright-report
           retention-days: 7
-      - name: Give the workspace back to the runner user
+      - name: Check that every file in the workspace and the caches belongs to the runner user
         if: always()
-        run: chown -R "$(stat -c %u:%g "$GITHUB_WORKSPACE")" "$GITHUB_WORKSPACE"
+        env:
+          CACHE: ${{ contains(vars.RUNNER_LABELS, 'self-hosted') && '/ci-cache' || '' }}
+        run: node scripts/check-file-owners.ts "$GITHUB_WORKSPACE" ${CACHE:+"$CACHE"}
 
   identity-providers:
     name: Sign-in through identity providers

@@ -220,14 +220,14 @@ On self-hosted runners no job uploads or downloads the pnpm store or the Turbore
 |---|---|---|
 | `host/pnpm-store` | jobs that run directly on the runner, as the runner user | by all runners; pnpm installs may fill one store at the same time |
 | `host/turbo/<runner name>` | the same jobs | no, one per runner, so parallel jobs never write the same entries |
-| `container/pnpm-store` | the end-to-end job, as root inside its container (mounted at `/ci-cache`) | by all runners |
-| `container/turbo/<runner name>`, `container/pnpm-cache/<runner name>` | the same job | no, one per runner |
+| `e2e/pnpm-store` | the end-to-end job inside its container (mounted at `/ci-cache`), as the runner user | by all runners |
+| `e2e/turbo/<runner name>`, `e2e/pnpm-cache/<runner name>` | the same job | no, one per runner |
 
-Only pushes to `main` write these caches. Pull requests, scheduled and manual runs read the Turborepo cache of `main` with `TURBO_CACHE=local:r` and never write to it, so a pull request cannot place a result under a task hash that `main` would replay without running the task. pnpm has no read-only store, so those runs fill their own stores, `host/pnpm-store-pull-requests` and `container/pnpm-store-pull-requests` (plus `container/pnpm-cache-pull-requests/<runner name>`), which `main` never reads. `scripts/prepare-ci-cache.ts` decides this from `GITHUB_EVENT_NAME` and `GITHUB_REF`; its tests cover each event.
+Only pushes to `main` write these caches. Pull requests, scheduled and manual runs read the Turborepo cache of `main` with `TURBO_CACHE=local:r` and never write to it, so a pull request cannot place a result under a task hash that `main` would replay without running the task. pnpm has no read-only store, so those runs fill their own stores, `host/pnpm-store-pull-requests` and `e2e/pnpm-store-pull-requests` (plus `e2e/pnpm-cache-pull-requests/<runner name>`), which `main` never reads. `scripts/prepare-ci-cache.ts` decides this from `GITHUB_EVENT_NAME` and `GITHUB_REF`; its tests cover each event.
 
 This stops Turborepo and pnpm from writing where `main` reads, but code of a pull request still runs as the runner user, which can write to the whole cache directory. Same-repository pull requests come from people with write access and from Dependabot, whose updates can run install scripts. To rule that out as well, run pull requests on runners whose user cannot write `host/turbo` and `host/pnpm-store`: register separate runners with their own label for pull requests under another user, or give the pull-request runners their own `CI_CACHE_DIR`.
 
-Files written by root in the container and by the runner user on the host stay in separate trees, so neither side meets files it cannot change. A job fails at the start with a message pointing here when the directory is missing or not writable; inside the container a directory owned by root means Docker created it because it is missing on the host. GitHub-hosted runners keep `actions/cache`. `pnpm` reads only `pnpm_config_*` variables, so an `npm_config_store_dir` in a runner's `.env` has no effect; the job sets `pnpm_config_store_dir` itself. `PLAYWRIGHT_BROWSERS_PATH`, `COREPACK_HOME` and `XDG_CACHE_HOME` stay per runner in the runner's `.env`.
+The end-to-end tests keep their own tree, because they install and build inside the Playwright image, not on the host. A job fails at the start with a message pointing here when the directory is missing or not writable; inside the container a directory owned by root means Docker created it because it is missing on the host. GitHub-hosted runners keep `actions/cache`. `pnpm` reads only `pnpm_config_*` variables, so an `npm_config_store_dir` in a runner's `.env` has no effect; the job sets `pnpm_config_store_dir` itself. `PLAYWRIGHT_BROWSERS_PATH`, `COREPACK_HOME` and `XDG_CACHE_HOME` stay per runner in the runner's `.env`.
 
 Set the directory up once on the runner host, as root, with the user the runner services run as (here `runner`):
 
@@ -235,6 +235,12 @@ Set the directory up once on the runner host, as root, with the user the runner 
 install -d -o runner -g runner -m 0755 /srv/ci-cache
 ```
 
-The end-to-end container runs as root and creates `container/` itself; the runner user needs to own the top directory only. Use the same path in `CI_CACHE_DIR` if you choose another one.
+The jobs create their subdirectories themselves; the runner user needs to own the top directory only. Use the same path in `CI_CACHE_DIR` if you choose another one. Earlier versions ran the end-to-end container as root and kept its caches in `container/`; remove that directory once as root (`rm -rf /srv/ci-cache/container`), otherwise the ownership check below fails.
+
+### Containers and file owners
+
+A job that writes into the workspace or the caches from a container runs that container with the runner's UID and GID, so every file stays removable by the runner user, also when the job is cancelled or killed. The job `Scope` records `id -u:id -g` of the runner, and the end-to-end job starts the Playwright container with `--user` set to it; all runners on a host must therefore run as the same user. Inside, `HOME` is the runner's `/github/home`, pnpm is enabled with `corepack enable --install-directory` in the job's temporary directory, and `scripts/install-postgres-client.sh` unpacks the PostgreSQL client tools for the backup test from the distribution's packages into the same directory, without root. The cache pruning of the `Audit` workflow runs its container the same way.
+
+After these jobs, `scripts/check-file-owners.ts` fails the job when any file in the workspace or under `CI_CACHE_DIR` belongs to another user than the owner of the workspace, and names the files; it also runs when the job failed or was cancelled. `pnpm container-users:check` (`scripts/check-container-users.ts`) fails when a job container has no `--user`, or a `docker run` mounts the workspace or the CI cache without it.
 
 The weekly workflow `Audit` keeps the caches bounded on self-hosted runners: the job `Prune the caches on the runner` runs `pnpm store prune` on all four stores and removes Turborepo entries older than three days. The container store loses the packages of workspaces it cannot see then; the next end-to-end job downloads them once.
