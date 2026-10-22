@@ -168,7 +168,7 @@ export {
   requestSkipBeforeUpdate,
   SKIP_BEFORE_UPDATE_MARKER,
 } from "./backup/before-update.js";
-export { BACKUP_S3_SECRET, backupS3SecretContext } from "./backup/configuration.js";
+export { BACKUP_S3_SECRET, backupS3SecretContext, MissingTargetSecretError } from "./backup/configuration.js";
 export { BackupBusyError, BackupNotFoundError, BackupSettingsError } from "./backup/errors.js";
 export { backupRunJob, backupTestRestoreJob } from "./backup/jobs.js";
 export { type BackupClass, backupClasses } from "./backup/naming.js";
@@ -187,7 +187,7 @@ export {
   type TargetTestResult,
   type TestRestoreView,
 } from "./backup/service.js";
-export { targetFailures } from "./backup/targets.js";
+export { BackupTargetError, targetFailures } from "./backup/targets.js";
 export {
   type ChatChannel,
   ChatChannelError,

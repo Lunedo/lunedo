@@ -271,6 +271,8 @@ Verification and restore reject a backup when:
 
 Because the whole backup is verified before anything is written, a rejected backup leaves the target untouched.
 
+Deleting a backup, starting a test restore and **Back up now** answer with the problem `backupTargetFailed` (status 502) when the target cannot be used: `problem` names the cause (`notFound`, `permission`, `connection`, `credentials`, `missingSecret` and the other causes of **Test connection**), and the detail says what to do.
+
 ## How a restore changes the instance
 
 A restore runs in three phases, so that a failure leaves either the old instance or a clearly marked incomplete one, never a silent mix:

@@ -253,7 +253,7 @@ export class BackupsController {
       "Starts a manual backup to the target. Manual backups are kept until they are deleted. The list shows the backup when it is done.",
     tags: [TAG],
     status: 202,
-    errors: ["invalidBackupSettings", "backupRunning"],
+    errors: ["invalidBackupSettings", "backupRunning", "backupTargetFailed"],
   })
   async run(@Req() request: FastifyRequest) {
     await this.#backups.requestBackup(actorOf(request));
@@ -267,7 +267,7 @@ export class BackupsController {
       "Deletes a backup Pagehall created from the target. This cannot be undone. Deletions are audited.",
     tags: [TAG],
     params: backupNameParams,
-    errors: ["backupNotFound", "invalidBackupSettings"],
+    errors: ["backupNotFound", "invalidBackupSettings", "backupTargetFailed"],
   })
   async remove(@Param("name") name: string, @Req() request: FastifyRequest) {
     await this.#backups.deleteBackup(actorOf(request), name);
@@ -287,7 +287,7 @@ export class BackupsController {
       schema: startedTestRestoreSchema,
       example: { id: exampleTestRestore.id },
     },
-    errors: ["backupNotFound", "backupRunning", "invalidBackupSettings"],
+    errors: ["backupNotFound", "backupRunning", "invalidBackupSettings", "backupTargetFailed"],
   })
   async testRestore(@Param("name") name: string, @Req() request: FastifyRequest) {
     return { id: await this.#backups.requestTestRestore(actorOf(request), name) };

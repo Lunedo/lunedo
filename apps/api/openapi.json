@@ -264249,8 +264249,18 @@
             "maximum": 9007199254740991
           },
           "problem": {
-            "description": "Which password rule failed, for `passwordPolicy`; why the address of a chat channel was refused, for `invalidChatAddress`; which storage setting was refused (`invalidThresholds`, `invalidS3Limit`, `invalidContacts` or `invalidTeamsWebhook`), for `invalidStorageSettings`; which backup setting was refused, for `invalidBackupSettings`; whether a `backup` or a `testRestore` is running, for `backupRunning`.",
+            "description": "Which password rule failed, for `passwordPolicy`; why the address of a chat channel was refused, for `invalidChatAddress`; which storage setting was refused (`invalidThresholds`, `invalidS3Limit`, `invalidContacts` or `invalidTeamsWebhook`), for `invalidStorageSettings`; which backup setting was refused, for `invalidBackupSettings`; whether a `backup` or a `testRestore` is running, for `backupRunning`; why the backup target could not be used (a failure of **Test connection**, such as `notFound` or `credentials`, or `missingSecret`), for `backupTargetFailed`.",
             "type": "string"
+          },
+          "step": {
+            "description": "What Pagehall was doing with the backup target when it failed, for `backupTargetFailed`.",
+            "type": "string",
+            "enum": [
+              "write",
+              "read",
+              "delete",
+              "list"
+            ]
           },
           "refusal": {
             "description": "What the full storage refuses, for `storageFull`: an `upload`, or a large write such as an import.",

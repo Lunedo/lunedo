@@ -1538,6 +1538,7 @@
     "invalidBackupSettings": "Die Backup-Einstellungen sind ungültig. Prüfen Sie die markierten Felder und versuchen Sie es erneut.",
     "backupRunning": "Ein Backup oder eine Test-Wiederherstellung läuft bereits. Warten Sie, bis sie fertig ist, und versuchen Sie es erneut.",
     "backupNotFound": "Das Backup ist nicht mehr im Ziel. Laden Sie die Liste neu.",
+    "backupTargetFailed": "Das Backup-Ziel konnte nicht verwendet werden. Die Meldung nennt den Grund; beheben Sie ihn in den Backup-Einstellungen, prüfen Sie ihn mit „Verbindung testen“ und versuchen Sie es erneut.",
     "tooManyPagesToPrint": "Browser drucken bis zu 300 Seiten auf einmal. Exportieren Sie stattdessen als Word oder HTML, oder als PDF auf dem Server, falls Ihre Administration den Render-Container eingerichtet hat.",
     "tooManyPagesForFile": "Word- und PDF-Dateien nehmen bis zu 1.000 Seiten auf. Exportieren Sie stattdessen als HTML- oder Markdown-Archiv oder einen kleineren Teil.",
     "renderUnavailable": "PDF auf dem Server braucht den Render-Container, der nicht eingerichtet oder nicht erreichbar ist. Drucken Sie das PDF stattdessen über Ihren Browser oder fragen Sie Ihre Instanz-Administration.",

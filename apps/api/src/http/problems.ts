@@ -161,6 +161,7 @@ export const problems = {
   invalidBackupSettings: { status: 400, title: "The backup settings are not valid" },
   backupRunning: { status: 409, title: "A backup or test restore is already running" },
   backupNotFound: { status: 404, title: "The backup is not in the backup target" },
+  backupTargetFailed: { status: 502, title: "The backup target could not be used" },
   tooManyExports: { status: 409, title: "You keep as many exports as allowed" },
   tooManyPagesToPrint: { status: 409, title: "Too many pages to print in a browser" },
   tooManyPagesForFile: { status: 409, title: "Too many pages for a Word or PDF file" },
@@ -503,8 +504,12 @@ export const problemSchema = z
       .string()
       .optional()
       .describe(
-        "Which password rule failed, for `passwordPolicy`; why the address of a chat channel was refused, for `invalidChatAddress`; which storage setting was refused (`invalidThresholds`, `invalidS3Limit`, `invalidContacts` or `invalidTeamsWebhook`), for `invalidStorageSettings`; which backup setting was refused, for `invalidBackupSettings`; whether a `backup` or a `testRestore` is running, for `backupRunning`.",
+        "Which password rule failed, for `passwordPolicy`; why the address of a chat channel was refused, for `invalidChatAddress`; which storage setting was refused (`invalidThresholds`, `invalidS3Limit`, `invalidContacts` or `invalidTeamsWebhook`), for `invalidStorageSettings`; which backup setting was refused, for `invalidBackupSettings`; whether a `backup` or a `testRestore` is running, for `backupRunning`; why the backup target could not be used (a failure of **Test connection**, such as `notFound` or `credentials`, or `missingSecret`), for `backupTargetFailed`.",
       ),
+    step: z
+      .enum(["write", "read", "delete", "list"])
+      .optional()
+      .describe("What Pagehall was doing with the backup target when it failed, for `backupTargetFailed`."),
     refusal: z
       .enum(["upload", "largeWrite"])
       .optional()
